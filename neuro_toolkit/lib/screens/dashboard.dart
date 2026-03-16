@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/module.dart';
 import '../providers/module_provider.dart';
+import 'tool_view.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -36,9 +37,11 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       ElevatedButton(
                         onPressed: () {
-                          // Launch logic will go here
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Launching ${module.name}...')),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ToolViewScreen(module: module),
+                            ),
                           );
                         },
                         child: const Text('Launch'),
