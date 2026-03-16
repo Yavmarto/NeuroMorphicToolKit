@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'providers/module_provider.dart';
 import 'screens/dashboard.dart';
 import 'screens/catalog.dart';
@@ -22,10 +23,8 @@ class NeuroToolkitApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'NeuroToolkit',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       home: const MainScreen(),
     );
   }
@@ -54,25 +53,22 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.store),
-            label: 'Catalog',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.deepPurple,
-        onTap: _onItemTapped,
-      ),
+    return ResponsiveScaffold(
+      currentIndex: _selectedIndex,
+      onNavigationTargetSelected: _onItemTapped,
+      destinations: const [
+        NavigationDestinationData(
+          icon: Icons.dashboard_outlined,
+          selectedIcon: Icons.dashboard,
+          label: 'Dashboard',
+        ),
+        NavigationDestinationData(
+          icon: Icons.store_outlined,
+          selectedIcon: Icons.store,
+          label: 'Catalog',
+        ),
+      ],
+      body: _widgetOptions.elementAt(_selectedIndex),
     );
   }
 }
