@@ -16,3 +16,6 @@
 [submodule "Neurochip"]
 	path = Neurochip
 	url = https://github.com/Yavmarto/Neurochip.git
+[submodule "Neurohub"]
+	path = Neurohub
+	url = https://github.com/Yavmarto/Neurohub
