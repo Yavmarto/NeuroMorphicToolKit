@@ -4,3 +4,15 @@
 [submodule "Neuro-Dream-Hand"]
 	path = Neuro-Dream-Hand
 	url = https://github.com/Yavmarto/Neuro-Dream-Hand.git
+[submodule "Neurobench"]
+	path = Neurobench
+	url = https://github.com/Yavmarto/Neurobench.git
+[submodule "Neurosim"]
+	path = Neurosim
+	url = https://github.com/Yavmarto/Neurosim.git
+[submodule "Neurosense"]
+	path = Neurosense
+	url = https://github.com/Yavmarto/Neurosense.git
+[submodule "Neurochip"]
+	path = Neurochip
+	url = https://github.com/Yavmarto/Neurochip.git
