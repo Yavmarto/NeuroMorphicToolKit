@@ -1,0 +1,6 @@
+[submodule "neurocnl"]
+	path = neurocnl
+	url = https://github.com/Yavmarto/neurocnl.git
+[submodule "Neuro-Dream-Hand"]
+	path = Neuro-Dream-Hand
+	url = https://github.com/Yavmarto/Neuro-Dream-Hand.git
