@@ -18,7 +18,7 @@ jobs:
       - name: Invoke Jules
         # SECURITY: Only allow trusted maintainers to trigger Jules via label
         # (checks who added the label, not who filed the issue)
-        if: ${{ contains(fromJSON('["Yavmarto"]'), github.event.sender.login) }}
+        if: ${{ contains(fromJSON('["Completed-Spoon-6"]'), github.event.sender.login) }}
         uses: google-labs-code/jules-invoke@v1
         with:
           prompt: |
