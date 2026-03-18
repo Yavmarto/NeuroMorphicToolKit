@@ -52,13 +52,32 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
   }
 
   @override
-  ThemeExtension<NmtkThemeExtension> lerp(ThemeExtension<NmtkThemeExtension>? other, double t) {
+  ThemeExtension<NmtkThemeExtension> lerp(
+    ThemeExtension<NmtkThemeExtension>? other,
+    double t,
+  ) {
     if (other is! NmtkThemeExtension) return this;
     return NmtkThemeExtension(
-      terminalBackground: Color.lerp(terminalBackground, other.terminalBackground, t)!,
-      syntaxHighlightColor: Color.lerp(syntaxHighlightColor, other.syntaxHighlightColor, t)!,
-      brandGradient: LinearGradient.lerp(brandGradient, other.brandGradient, t)!,
-      glassmorphismColor: Color.lerp(glassmorphismColor, other.glassmorphismColor, t)!,
+      terminalBackground: Color.lerp(
+        terminalBackground,
+        other.terminalBackground,
+        t,
+      )!,
+      syntaxHighlightColor: Color.lerp(
+        syntaxHighlightColor,
+        other.syntaxHighlightColor,
+        t,
+      )!,
+      brandGradient: LinearGradient.lerp(
+        brandGradient,
+        other.brandGradient,
+        t,
+      )!,
+      glassmorphismColor: Color.lerp(
+        glassmorphismColor,
+        other.glassmorphismColor,
+        t,
+      )!,
     );
   }
 }
@@ -96,17 +115,19 @@ class AppTheme {
           brandGradient: LinearGradient(
             colors: [colorScheme.primary, colorScheme.tertiary],
           ),
-          glassmorphismColor: Colors.white.withOpacity(0.7),
+          glassmorphismColor: Colors.white.withValues(alpha: 0.7),
         ),
       ],
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.cardShape),
         elevation: 0,
         clipBehavior: Clip.antiAlias,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.buttonShape),
+          shape: RoundedRectangleBorder(
+            borderRadius: NmtkDesignTokens.buttonShape,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           minimumSize: const Size(48, 48), // Ensures 48dp modern touch targets
         ),
@@ -137,25 +158,36 @@ class AppTheme {
           brandGradient: LinearGradient(
             colors: [colorScheme.primary, colorScheme.secondaryContainer],
           ),
-          glassmorphismColor: NmtkDesignTokens.backgroundDark.withOpacity(0.8),
+          glassmorphismColor: NmtkDesignTokens.backgroundDark.withValues(
+            alpha: 0.8,
+          ),
         ),
       ],
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: colorScheme.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.cardShape),
+        shape: RoundedRectangleBorder(
+          borderRadius: NmtkDesignTokens.cardShape,
+          side: const BorderSide(
+            color: Color(0xFF1E293B),
+            width: 1,
+          ), // Slate 800
+        ),
         elevation: 0,
-        side: const BorderSide(color: Color(0xFF1E293B), width: 1), // Slate 800
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.buttonShape),
+          shape: RoundedRectangleBorder(
+            borderRadius: NmtkDesignTokens.buttonShape,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           minimumSize: const Size(48, 48),
         ),
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: NmtkDesignTokens.surfaceDark,
-        indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
     );
   }
@@ -173,13 +205,13 @@ class ResponsiveScaffold extends StatefulWidget {
   final Widget? floatingActionButton;
 
   const ResponsiveScaffold({
-    Key? key,
+    super.key,
     required this.body,
     required this.currentIndex,
     required this.onNavigationTargetSelected,
     required this.destinations,
     this.floatingActionButton,
-  }) : super(key: key);
+  });
 
   @override
   State<ResponsiveScaffold> createState() => _ResponsiveScaffoldState();
@@ -197,7 +229,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double screenWidth = constraints.maxWidth;
-        
+
         // Mobile Layout (< 600px)
         if (screenWidth < 600) {
           return Scaffold(
@@ -216,7 +248,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
             ),
           );
         }
-        
+
         // Tablet App-Rail Layout (600px - 1000px)
         if (screenWidth < 1000) {
           return Scaffold(
@@ -241,7 +273,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
             ),
           );
         }
-        
+
         // Full Desktop / Web Layout (>= 1000px)
         return Scaffold(
           floatingActionButton: widget.floatingActionButton,
@@ -256,12 +288,15 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                     _buildDesktopBrandHeader(),
                     Expanded(
                       child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 16,
+                        ),
                         itemCount: widget.destinations.length,
                         itemBuilder: (context, idx) {
                           final isSelected = widget.currentIndex == idx;
                           final dest = widget.destinations[idx];
-                          
+
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
                             child: Material(
@@ -270,32 +305,57 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                               child: InkWell(
                                 borderRadius: NmtkDesignTokens.buttonShape,
                                 // Defined Hover & Touch targets
-                                hoverColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
-                                onTap: () => widget.onNavigationTargetSelected(idx),
+                                hoverColor: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withValues(alpha: 0.08),
+                                onTap: () =>
+                                    widget.onNavigationTargetSelected(idx),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: isSelected 
-                                      ? Theme.of(context).colorScheme.primaryContainer.withOpacity(_isDesktopContext ? 0.8 : 1)
-                                      : Colors.transparent,
+                                    color: isSelected
+                                        ? Theme.of(context)
+                                              .colorScheme
+                                              .primaryContainer
+                                              .withValues(
+                                                alpha: _isDesktopContext
+                                                    ? 0.8
+                                                    : 1,
+                                              )
+                                        : Colors.transparent,
                                     borderRadius: NmtkDesignTokens.buttonShape,
                                   ),
                                   child: Row(
                                     children: [
                                       Icon(
-                                        isSelected ? (dest.selectedIcon ?? dest.icon) : dest.icon,
-                                        color: isSelected 
-                                          ? Theme.of(context).colorScheme.onPrimaryContainer
-                                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                                        isSelected
+                                            ? (dest.selectedIcon ?? dest.icon)
+                                            : dest.icon,
+                                        color: isSelected
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.onPrimaryContainer
+                                            : Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
                                       ),
                                       const SizedBox(width: 16),
                                       Text(
                                         dest.label,
                                         style: TextStyle(
-                                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                                          color: isSelected 
-                                            ? Theme.of(context).colorScheme.onPrimaryContainer
-                                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w600
+                                              : FontWeight.w500,
+                                          color: isSelected
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.onPrimaryContainer
+                                              : Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                                     ],
@@ -341,20 +401,20 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "NMTK Hub",
+                  'NMTK Hub',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  "Neuromorphic Toolkit",
+                  'Neuromorphic Toolkit',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

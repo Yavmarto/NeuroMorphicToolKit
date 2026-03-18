@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/module.dart';
-import '../providers/module_provider.dart';
-import 'tool_view.dart';
+import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/screens/tool_view.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -19,7 +18,9 @@ class DashboardScreen extends StatelessWidget {
 
           if (installedModules.isEmpty) {
             return const Center(
-              child: Text('No modules installed yet. Go to the Catalog to install modules.'),
+              child: Text(
+                'No modules installed yet. Go to the Catalog to install modules.',
+              ),
             );
           }
 
@@ -39,8 +40,9 @@ class DashboardScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) => ToolViewScreen(module: module),
+                            MaterialPageRoute<void>(
+                              builder: (context) =>
+                                  ToolViewScreen(module: module),
                             ),
                           );
                         },
