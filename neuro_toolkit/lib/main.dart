@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'providers/module_provider.dart';
-import 'screens/dashboard.dart';
-import 'screens/catalog.dart';
+import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/screens/dashboard.dart';
+import 'package:neuro_toolkit/screens/catalog.dart';
 
 void main() {
   runApp(
