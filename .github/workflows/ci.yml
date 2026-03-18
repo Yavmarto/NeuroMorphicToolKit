@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -78,7 +78,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -103,7 +103,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -129,7 +129,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -154,7 +154,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -179,7 +179,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -201,7 +201,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -236,7 +236,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -283,7 +283,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -305,7 +305,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -327,7 +327,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -347,7 +347,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -367,7 +367,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -387,7 +387,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
