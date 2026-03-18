@@ -9,6 +9,9 @@ on:
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       neurosim: ${{ steps.filter.outputs.neurosim }}
       neurochip: ${{ steps.filter.outputs.neurochip }}
@@ -26,6 +29,8 @@ jobs:
       nmtk_ui_core: ${{ steps.filter.outputs.nmtk_ui_core }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -75,6 +80,8 @@ jobs:
         working-directory: Neurosim
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -98,6 +105,8 @@ jobs:
         working-directory: Neurochip/neurochip
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -122,6 +131,8 @@ jobs:
         working-directory: Neurosense/neurosense
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -145,6 +156,8 @@ jobs:
         working-directory: Neurohub/neurohub
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -168,6 +181,8 @@ jobs:
         working-directory: Neuro-Dream-Hand
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -188,6 +203,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -221,6 +238,8 @@ jobs:
         working-directory: Neurobench/neurobench
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -266,6 +285,8 @@ jobs:
         working-directory: neuro_toolkit
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -286,6 +307,8 @@ jobs:
         working-directory: neurocnl/frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -306,6 +329,8 @@ jobs:
         working-directory: Neurochip/frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -324,6 +349,8 @@ jobs:
         working-directory: Neurohub/frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -342,6 +369,8 @@ jobs:
         working-directory: Neurosense/frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -360,6 +389,8 @@ jobs:
         working-directory: Neurobench/frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
