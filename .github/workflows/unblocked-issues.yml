@@ -51,7 +51,7 @@ jobs:
 
       - name: Invoke Jules on Unblocked Issue
         # SECURITY: Only implement issues filed by trusted maintainers
-        if: ${{ contains(fromJSON('["Yavmarto"]'), fromJson(steps.get_issue.outputs.result).user.login) }}
+        if: ${{ contains(fromJSON('["Completed-Spoon-6"]'), fromJson(steps.get_issue.outputs.result).user.login) }}
         uses: google-labs-code/jules-invoke@v1
         with:
           prompt: |
