@@ -1,21 +1,21 @@
 [submodule "neurocnl"]
 	path = neurocnl
-	url = ../neurocnl.git
+	url = https://github.com/Yavmarto/neurocnl
 [submodule "Neuro-Dream-Hand"]
 	path = Neuro-Dream-Hand
-	url = ../Neuro-Dream-Hand.git
+	url = https://github.com/Yavmarto/Neuro-Dream-Hand
 [submodule "Neurobench"]
 	path = Neurobench
-	url = ../Neurobench.git
+	url = https://github.com/Yavmarto/Neurobench
 [submodule "Neurosim"]
 	path = Neurosim
-	url = ../Neurosim.git
+	url = https://github.com/Yavmarto/Neurosim
 [submodule "Neurosense"]
 	path = Neurosense
-	url = ../Neurosense.git
+	url = https://github.com/Yavmarto/Neurosense
 [submodule "Neurochip"]
 	path = Neurochip
-	url = ../Neurochip.git
+	url = https://github.com/Yavmarto/Neurochip
 [submodule "Neurohub"]
 	path = Neurohub
-	url = ../Neurohub.git
+	url = https://github.com/Yavmarto/Neurohub
