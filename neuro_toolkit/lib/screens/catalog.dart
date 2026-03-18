@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/module.dart';
-import '../providers/module_provider.dart';
+import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/providers/module_provider.dart';
 
 class CatalogScreen extends StatelessWidget {
   const CatalogScreen({super.key});
@@ -17,7 +17,7 @@ class CatalogScreen extends StatelessWidget {
           final availableModules = provider.availableModules;
 
           if (availableModules.isEmpty) {
-             return const Center(
+            return const Center(
               child: Text('All modules are installed.'),
             );
           }
@@ -43,7 +43,9 @@ class CatalogScreen extends StatelessWidget {
                       if (module.status == ModuleStatus.installing)
                         Column(
                           children: [
-                            LinearProgressIndicator(value: module.installProgress),
+                            LinearProgressIndicator(
+                              value: module.installProgress,
+                            ),
                             const SizedBox(height: 8),
                             Text('${(module.installProgress * 100).toInt()}%'),
                           ],
