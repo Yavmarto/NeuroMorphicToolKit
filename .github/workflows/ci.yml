@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
@@ -30,7 +34,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: false
+          fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -81,7 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -106,7 +111,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -132,7 +137,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -157,7 +162,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -182,7 +187,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -197,14 +202,33 @@ jobs:
       - name: Run tests
         run: pytest --tb=short
 
+  test-neurobench:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurobench == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Neurobench/neurobench
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install poetry && poetry install
+      - name: Run tests
+        run: poetry run pytest --tb=short
+
   test-neurocnl-backend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
+      - name: Update neurocnl submodule
+        run: git submodule update --init neurocnl
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -412,6 +436,7 @@ jobs:
       - test-neurohub
       - test-neurohub-frontend
       - test-neurodreamhand
+      - test-neurobench
       - test-neurocnl-backend
       - test-neurocnl-frontend
       - test-neurobench
@@ -423,20 +448,13 @@ jobs:
       - name: Check results
         run: |
           echo "Results:"
-          echo "  neurosim:            ${{ needs.test-neurosim.result }}"
-          echo "  neurochip:           ${{ needs.test-neurochip.result }}"
-          echo "  neurochip_frontend:  ${{ needs.test-neurochip-frontend.result }}"
-          echo "  neurosense:          ${{ needs.test-neurosense.result }}"
-          echo "  neurosense_frontend: ${{ needs.test-neurosense-frontend.result }}"
-          echo "  neurohub:            ${{ needs.test-neurohub.result }}"
-          echo "  neurohub_frontend:   ${{ needs.test-neurohub-frontend.result }}"
-          echo "  neurodreamhand:      ${{ needs.test-neurodreamhand.result }}"
-          echo "  neurocnl_backend:    ${{ needs.test-neurocnl-backend.result }}"
-          echo "  neurocnl_frontend:   ${{ needs.test-neurocnl-frontend.result }}"
-          echo "  neurobench:          ${{ needs.test-neurobench.result }}"
-          echo "  neurobench_frontend: ${{ needs.test-neurobench-frontend.result }}"
-          echo "  neurotoolkit:        ${{ needs.test-neurotoolkit.result }}"
-          echo "  nmtk_ui_core:        ${{ needs.test-nmtk-ui-core.result }}"
+          echo "  neurosim:       ${{ needs.test-neurosim.result }}"
+          echo "  neurochip:      ${{ needs.test-neurochip.result }}"
+          echo "  neurosense:     ${{ needs.test-neurosense.result }}"
+          echo "  neurohub:       ${{ needs.test-neurohub.result }}"
+          echo "  neurodreamhand: ${{ needs.test-neurodreamhand.result }}"
+          echo "  neurobench:     ${{ needs.test-neurobench.result }}"
+          echo "  neurocnl:       ${{ needs.test-neurocnl-backend.result }}"
 
           # Fail if any job failed (skipped is OK — means no changes in that module)
           for result in \
@@ -448,12 +466,8 @@ jobs:
             "${{ needs.test-neurohub.result }}" \
             "${{ needs.test-neurohub-frontend.result }}" \
             "${{ needs.test-neurodreamhand.result }}" \
-            "${{ needs.test-neurocnl-backend.result }}" \
-            "${{ needs.test-neurocnl-frontend.result }}" \
             "${{ needs.test-neurobench.result }}" \
-            "${{ needs.test-neurobench-frontend.result }}" \
-            "${{ needs.test-neurotoolkit.result }}" \
-            "${{ needs.test-nmtk-ui-core.result }}"; do
+            "${{ needs.test-neurocnl-backend.result }}"; do
             if [ "$result" = "failure" ]; then
               echo "::error::One or more test jobs failed"
               exit 1
