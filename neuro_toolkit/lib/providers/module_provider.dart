@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
-import '../models/module.dart';
+import 'package:neuro_toolkit/models/module.dart';
 
 class ModuleProvider with ChangeNotifier {
   final List<Module> _modules = [
     Module(
       id: 'neuro_dream_hand',
       name: 'Neuro-Dream-Hand',
-      description: 'Neuromorphic simulation framework for prosthetic hand control.',
+      description:
+          'Neuromorphic simulation framework for prosthetic hand control.',
     ),
     Module(
       id: 'neurocnl',
@@ -41,7 +42,7 @@ class ModuleProvider with ChangeNotifier {
 
     // Mock installation process
     for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future<void>.delayed(const Duration(milliseconds: 300));
       _modules[index] = _modules[index].copyWith(installProgress: i / 10.0);
       notifyListeners();
     }
