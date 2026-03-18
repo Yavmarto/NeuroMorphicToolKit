@@ -99,7 +99,7 @@ class AppTheme {
           glassmorphismColor: Colors.white.withOpacity(0.7),
         ),
       ],
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.cardShape),
         elevation: 0,
         clipBehavior: Clip.antiAlias,
@@ -140,11 +140,13 @@ class AppTheme {
           glassmorphismColor: NmtkDesignTokens.backgroundDark.withOpacity(0.8),
         ),
       ],
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: colorScheme.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.cardShape),
+        shape: RoundedRectangleBorder(
+          borderRadius: NmtkDesignTokens.cardShape,
+          side: const BorderSide(color: Color(0xFF1E293B), width: 1), // Slate 800
+        ),
         elevation: 0,
-        side: const BorderSide(color: Color(0xFF1E293B), width: 1), // Slate 800
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
