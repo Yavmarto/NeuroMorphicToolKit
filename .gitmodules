@@ -1,21 +1,21 @@
 [submodule "neurocnl"]
 	path = neurocnl
-	url = ../neurocnl
+	url = https://github.com/Completed-Spoon-6/neurocnl.git
 [submodule "Neuro-Dream-Hand"]
 	path = Neuro-Dream-Hand
-	url = ../Neuro-Dream-Hand
+	url = https://github.com/Completed-Spoon-6/Neuro-Dream-Hand.git
 [submodule "Neurobench"]
 	path = Neurobench
-	url = ../Neurobench
+	url = https://github.com/Completed-Spoon-6/Neurobench.git
 [submodule "Neurosim"]
 	path = Neurosim
-	url = ../Neurosim
+	url = https://github.com/Completed-Spoon-6/Neurosim.git
 [submodule "Neurosense"]
 	path = Neurosense
-	url = ../Neurosense
+	url = https://github.com/Completed-Spoon-6/Neurosense.git
 [submodule "Neurochip"]
 	path = Neurochip
-	url = ../Neurochip
+	url = https://github.com/Completed-Spoon-6/Neurochip.git
 [submodule "Neurohub"]
 	path = Neurohub
-	url = ../Neurohub
+	url = https://github.com/Completed-Spoon-6/Neurohub.git

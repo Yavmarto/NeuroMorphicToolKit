@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/module.dart';
+import 'package:neuro_toolkit/models/module.dart';
 
 class ToolViewScreen extends StatefulWidget {
   final Module module;
@@ -14,7 +14,7 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   final List<String> _logs = [];
   bool _isRunning = false;
 
-  void _runTool() async {
+  Future<void> _runTool() async {
     setState(() {
       _isRunning = true;
       _logs.add('--- Starting ${widget.module.name} ---');
@@ -23,7 +23,7 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
 
     // Mock execution process
     for (int i = 1; i <= 5; i++) {
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
       setState(() {
         _logs.add('Executing step $i/5: Processing data...');
