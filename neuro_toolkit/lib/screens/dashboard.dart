@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
-import 'package:neuro_toolkit/screens/tool_view.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -37,15 +37,7 @@ class DashboardScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (context) =>
-                                  ToolViewScreen(module: module),
-                            ),
-                          );
-                        },
+                        onPressed: () => context.go('/tool/${module.id}'),
                         child: const Text('Launch'),
                       ),
                       const SizedBox(width: 8),
