@@ -13,14 +13,24 @@ permissions:
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       neurosim: ${{ steps.filter.outputs.neurosim }}
       neurochip: ${{ steps.filter.outputs.neurochip }}
+      neurochip_frontend: ${{ steps.filter.outputs.neurochip_frontend }}
       neurosense: ${{ steps.filter.outputs.neurosense }}
+      neurosense_frontend: ${{ steps.filter.outputs.neurosense_frontend }}
       neurohub: ${{ steps.filter.outputs.neurohub }}
+      neurohub_frontend: ${{ steps.filter.outputs.neurohub_frontend }}
       neurodreamhand: ${{ steps.filter.outputs.neurodreamhand }}
       neurocnl: ${{ steps.filter.outputs.neurocnl }}
+      neurocnl_frontend: ${{ steps.filter.outputs.neurocnl_frontend }}
       neurobench: ${{ steps.filter.outputs.neurobench }}
+      neurobench_frontend: ${{ steps.filter.outputs.neurobench_frontend }}
+      neurotoolkit: ${{ steps.filter.outputs.neurotoolkit }}
+      nmtk_ui_core: ${{ steps.filter.outputs.nmtk_ui_core }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,17 +43,38 @@ jobs:
             neurosim:
               - 'Neurosim/**'
             neurochip:
-              - 'Neurochip/**'
+              - 'Neurochip/neurochip/**'
+            neurochip_frontend:
+              - 'Neurochip/frontend/**'
+              - 'nmtk_ui_core/**'
             neurosense:
-              - 'Neurosense/**'
+              - 'Neurosense/neurosense/**'
+            neurosense_frontend:
+              - 'Neurosense/frontend/**'
+              - 'nmtk_ui_core/**'
             neurohub:
-              - 'Neurohub/**'
+              - 'Neurohub/neurohub/**'
+            neurohub_frontend:
+              - 'Neurohub/frontend/**'
+              - 'nmtk_ui_core/**'
             neurodreamhand:
               - 'Neuro-Dream-Hand/**'
             neurocnl:
               - 'neurocnl/**'
+              - '!neurocnl/frontend/**'
+            neurocnl_frontend:
+              - 'neurocnl/frontend/**'
+              - 'nmtk_ui_core/**'
             neurobench:
-              - 'Neurobench/**'
+              - 'Neurobench/neurobench/**'
+            neurobench_frontend:
+              - 'Neurobench/frontend/**'
+              - 'nmtk_ui_core/**'
+            neurotoolkit:
+              - 'neuro_toolkit/**'
+              - 'nmtk_ui_core/**'
+            nmtk_ui_core:
+              - 'nmtk_ui_core/**'
 
   test-neurosim:
     needs: detect-changes
@@ -60,7 +91,13 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -e . && pip install pytest httpx
+        run: pip install -e . && pip install pytest httpx ruff mypy
+      - name: Lint with ruff
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Type check with mypy
+        run: mypy .
       - name: Run tests
         run: pytest --tb=short
 
@@ -80,6 +117,13 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: pip install poetry && poetry install
+      - name: Lint with ruff
+        run: |
+          poetry run ruff check .
+          poetry run ruff format --check .
+        continue-on-error: true # Allow for now if not configured
+      - name: Type check with mypy
+        run: poetry run mypy .
       - name: Run tests
         run: poetry run pytest --tb=short
 
@@ -98,7 +142,13 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: pip install -e ".[dev]" && pip install ruff mypy
+      - name: Lint with ruff
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Type check with mypy
+        run: mypy .
       - name: Run tests
         run: pytest --tb=short
 
@@ -117,7 +167,13 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -e . && pip install pytest httpx
+        run: pip install -e . && pip install pytest httpx ruff mypy
+      - name: Lint with ruff
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Type check with mypy
+        run: mypy .
       - name: Run tests
         run: pytest --tb=short
 
@@ -136,7 +192,13 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -e . && pip install pytest
+        run: pip install -e . && pip install pytest ruff mypy
+      - name: Lint with ruff
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Type check with mypy
+        run: mypy .
       - name: Run tests
         run: pytest --tb=short
 
@@ -172,9 +234,15 @@ jobs:
           python-version: '3.11'
       - name: Install core package
         working-directory: neurocnl
-        run: pip install -e . && pip install pytest httpx
-      - name: Install neurodreamhand dependency
-        run: pip install -e Neuro-Dream-Hand
+        run: pip install -e . && pip install pytest httpx ruff mypy
+      - name: Lint with ruff
+        working-directory: neurocnl
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Type check with mypy
+        working-directory: neurocnl
+        run: mypy .
       - name: Install backend deps
         working-directory: neurocnl/backend
         run: pip install -r requirements.txt
@@ -185,17 +253,196 @@ jobs:
         working-directory: neurocnl/backend
         run: pytest --tb=short
 
+  test-neurobench:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurobench == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Neurobench/neurobench
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install
+      - name: Lint with ruff
+        run: |
+          poetry run ruff check .
+          poetry run ruff format --check .
+      - name: Type check with mypy
+        run: poetry run mypy .
+      - name: Run tests
+        run: poetry run pytest --tb=short
+
+  test-nmtk-ui-core:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.nmtk_ui_core == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nmtk_ui_core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Run tests
+        run: flutter test
+
+  test-neurotoolkit:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurotoolkit == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: neuro_toolkit
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Run tests
+        run: flutter test
+
+  test-neurocnl-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurocnl_frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: neurocnl/frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Run tests
+        run: flutter test
+
+  test-neurochip-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurochip_frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Neurochip/frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+
+  test-neurohub-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurohub_frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Neurohub/frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+
+  test-neurosense-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurosense_frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Neurosense/frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+
+  test-neurobench-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurobench_frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Neurobench/frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+
   # Summary job that branch protection can require
   ci-passed:
     runs-on: ubuntu-latest
     needs:
       - test-neurosim
       - test-neurochip
+      - test-neurochip-frontend
       - test-neurosense
+      - test-neurosense-frontend
       - test-neurohub
+      - test-neurohub-frontend
       - test-neurodreamhand
       - test-neurobench
       - test-neurocnl-backend
+      - test-neurocnl-frontend
+      - test-neurobench
+      - test-neurobench-frontend
+      - test-neurotoolkit
+      - test-nmtk-ui-core
     if: always()
     steps:
       - name: Check results
@@ -213,8 +460,11 @@ jobs:
           for result in \
             "${{ needs.test-neurosim.result }}" \
             "${{ needs.test-neurochip.result }}" \
+            "${{ needs.test-neurochip-frontend.result }}" \
             "${{ needs.test-neurosense.result }}" \
+            "${{ needs.test-neurosense-frontend.result }}" \
             "${{ needs.test-neurohub.result }}" \
+            "${{ needs.test-neurohub-frontend.result }}" \
             "${{ needs.test-neurodreamhand.result }}" \
             "${{ needs.test-neurobench.result }}" \
             "${{ needs.test-neurocnl-backend.result }}"; do
