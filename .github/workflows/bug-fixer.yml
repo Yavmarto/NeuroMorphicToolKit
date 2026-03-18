@@ -1,0 +1,43 @@
+name: Auto-Fix Bugs
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  fix-bug:
+    # Only run when the 'bug' label is added
+    if: ${{ github.event.label.name == 'bug' }}
+    runs-on: self-hosted
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: write
+
+    steps:
+      - name: Invoke Jules
+        # SECURITY: Only allow trusted maintainers to trigger Jules via label
+        # (checks who added the label, not who filed the issue)
+        if: ${{ contains(fromJSON('["Yavmarto"]'), github.event.sender.login) }}
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          prompt: |
+            Please diagnose and fix the following bug:
+
+            ## ${{ github.event.issue.title }}
+
+            ${{ github.event.issue.body }}
+
+            Debugging Process:
+            1. **Analysis** - Review the bug report and identify the root cause
+            2. **Diagnosis** - Trace the issue through the codebase
+            3. **Fix** - Implement a minimal, targeted fix
+            4. **Testing** - Add a regression test that would have caught this bug
+            5. **Documentation** - Add comments explaining the fix
+
+            Please provide:
+            - Clear explanation of the root cause
+            - The complete fix with all necessary changes
+            - Test cases to prevent regression
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ github.event.repository.default_branch }}
