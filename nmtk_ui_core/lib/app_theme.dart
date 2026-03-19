@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'widgets/nmtk_navigation_rail.dart';
 
 /// ----------------------------------------------------------------------------
 /// NMTK BRAND TOKENS & EXPRESSIVE SHAPES
@@ -132,6 +133,11 @@ class AppTheme {
           minimumSize: const Size(48, 48), // Ensures 48dp modern touch targets
         ),
       ),
+      navigationRailTheme: NavigationRailThemeData(
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
     );
   }
 
@@ -249,23 +255,30 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           );
         }
 
-        // Tablet App-Rail Layout (600px - 1000px)
-        if (screenWidth < 1000) {
+        // Tablet/Desktop App-Rail Layout (600px - 1240px)
+        if (screenWidth < 1240) {
           return Scaffold(
             floatingActionButton: widget.floatingActionButton,
             body: Row(
               children: [
-                NavigationRail(
+                NmtkNavigationRail(
                   selectedIndex: widget.currentIndex,
                   onDestinationSelected: widget.onNavigationTargetSelected,
-                  labelType: NavigationRailLabelType.selected,
-                  destinations: widget.destinations.map((d) {
-                    return NavigationRailDestination(
-                      icon: Icon(d.icon),
-                      selectedIcon: Icon(d.selectedIcon ?? d.icon),
-                      label: Text(d.label),
-                    );
-                  }).toList(),
+                  destinations: widget.destinations,
+                  leading: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.memory,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
                 ),
                 const VerticalDivider(thickness: 1, width: 1),
                 Expanded(child: widget.body),
@@ -274,7 +287,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           );
         }
 
-        // Full Desktop / Web Layout (>= 1000px)
+        // Full Desktop / Web Layout (>= 1240px)
         return Scaffold(
           floatingActionButton: widget.floatingActionButton,
           body: Row(
