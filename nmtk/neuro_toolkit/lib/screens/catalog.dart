@@ -50,6 +50,20 @@ class CatalogScreen extends StatelessWidget {
                             Text('${(module.installProgress * 100).toInt()}%'),
                           ],
                         )
+                      else if (module.status == ModuleStatus.error)
+                         Row(
+                           children: [
+                             const Icon(Icons.error_outline, color: Colors.red),
+                             const SizedBox(width: 8),
+                             Expanded(child: Text('Installation failed: ${module.healthStatus ?? "Unknown error"}', style: const TextStyle(color: Colors.red))),
+                             ElevatedButton(
+                                onPressed: () {
+                                  provider.installModule(module.id);
+                                },
+                                child: const Text('Retry'),
+                              ),
+                           ],
+                         )
                       else
                         Align(
                           alignment: Alignment.centerRight,
