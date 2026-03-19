@@ -94,4 +94,4 @@ jobs:
             - No `pass` bodies or `raise NotImplementedError` — use minimal working implementations
             - Tests must pass on first run
           jules_api_key: ${{ secrets.JULES_API_KEY }}
-          starting_branch: dev
+          starting_branch: ${{ github.event.repository.default_branch }}

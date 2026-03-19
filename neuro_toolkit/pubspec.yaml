@@ -37,6 +37,7 @@ dependencies:
   nmtk_ui_core:
     path: ../nmtk_ui_core
   provider: ^6.1.5+1
+  go_router: ^14.0.0
 
 dev_dependencies:
   # The "flutter_lints" package below contains a set of recommended lints to
