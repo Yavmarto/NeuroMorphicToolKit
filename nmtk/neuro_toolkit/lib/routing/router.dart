@@ -28,9 +28,7 @@ final goRouter = GoRouter(
           name: 'tool',
           builder: (context, state) {
             final moduleId = state.pathParameters['moduleId']!;
-            final provider = context.read<ModuleProvider>();
-            final module = provider.modules.firstWhere((m) => m.id == moduleId);
-            return ToolViewScreen(module: module);
+            return ToolViewScreen(initialModuleId: moduleId);
           },
         ),
       ],
@@ -45,33 +43,48 @@ class MainScreen extends StatelessWidget {
   int _selectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/catalog')) return 1;
+    if (location.startsWith('/tool/')) return 2;
     return 0;
   }
 
   void _onItemTapped(BuildContext context, int index) {
     if (index == 0) {
       context.go('/');
-    } else {
+    } else if (index == 1) {
       context.go('/catalog');
+    } else if (index == 2) {
+      final provider = context.read<ModuleProvider>();
+      if (provider.activeModuleIds.isNotEmpty) {
+        context.go('/tool/${provider.activeModuleIds.last}');
+      } else {
+        context.go('/');
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<ModuleProvider>();
     return ResponsiveScaffold(
       currentIndex: _selectedIndex(context),
       onNavigationTargetSelected: (index) => _onItemTapped(context, index),
-      destinations: const [
-        NavigationDestinationData(
+      destinations: [
+        const NavigationDestinationData(
           icon: Icons.dashboard_outlined,
           selectedIcon: Icons.dashboard,
           label: 'Dashboard',
         ),
-        NavigationDestinationData(
+        const NavigationDestinationData(
           icon: Icons.store_outlined,
           selectedIcon: Icons.store,
           label: 'Catalog',
         ),
+        if (provider.activeModuleIds.isNotEmpty)
+          const NavigationDestinationData(
+            icon: Icons.laptop_outlined,
+            selectedIcon: Icons.laptop,
+            label: 'Workspace',
+          ),
       ],
       body: child,
     );

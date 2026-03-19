@@ -31,14 +31,21 @@ class DashboardScreen extends StatelessWidget {
               return Card(
                 margin: const EdgeInsets.all(8.0),
                 child: ListTile(
+                  leading: Icon(
+                    module.hasFrontend ? Icons.web : Icons.api,
+                    color: module.isLaunched ? Colors.green : null,
+                  ),
                   title: Text(module.name),
                   subtitle: Text(module.description),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       ElevatedButton(
-                        onPressed: () => context.go('/tool/${module.id}'),
-                        child: const Text('Launch'),
+                        onPressed: () {
+                          provider.launchModule(module.id);
+                          context.go('/tool/${module.id}');
+                        },
+                        child: Text(module.isLaunched ? 'View' : 'Launch'),
                       ),
                       const SizedBox(width: 8),
                       IconButton(
