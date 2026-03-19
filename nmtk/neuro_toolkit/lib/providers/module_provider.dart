@@ -4,20 +4,45 @@ import 'package:neuro_toolkit/models/module.dart';
 class ModuleProvider with ChangeNotifier {
   final List<Module> _modules = [
     Module(
+      id: 'neurocnl',
+      name: 'NeuroCNL',
+      description:
+          'Translates plain-English specifications into verified Spiking Neural Networks (SNNs).',
+    ),
+    Module(
+      id: 'neurosim',
+      name: 'Neurosim',
+      description:
+          'A robust simulation environment to test neuromorphic models before physical deployment.',
+    ),
+    Module(
+      id: 'neurosense',
+      name: 'Neurosense',
+      description:
+          'Sensory processing and encoding. Converts traditional data modalities into spike trains.',
+    ),
+    Module(
+      id: 'neurochip',
+      name: 'Neurochip',
+      description: 'Interfacing directly with neuromorphic hardware backends.',
+    ),
+    Module(
+      id: 'neurobench',
+      name: 'Neurobench',
+      description:
+          'Standardized benchmarking and testing of neuromorphic models and hardware configurations.',
+    ),
+    Module(
+      id: 'neurohub',
+      name: 'Neurohub',
+      description:
+          'A central repository for sharing pre-trained neuromorphic models, datasets, and configurations.',
+    ),
+    Module(
       id: 'neuro_dream_hand',
       name: 'Neuro-Dream-Hand',
       description:
-          'Neuromorphic simulation framework for prosthetic hand control.',
-    ),
-    Module(
-      id: 'neurocnl',
-      name: 'neurocnl',
-      description: 'Controlled Natural Language specifications compiler.',
-    ),
-    Module(
-      id: 'nmtk',
-      name: 'nmtk',
-      description: 'Neuromorphic Toolkit hub for utilities.',
+          'Applied hardware robotics and edge integration (e.g., controlling a robotic hand via SNNs).',
     ),
   ];
 
