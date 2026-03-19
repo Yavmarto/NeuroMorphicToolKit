@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -31,15 +32,61 @@ class DashboardScreen extends StatelessWidget {
               return Card(
                 margin: const EdgeInsets.all(8.0),
                 child: ListTile(
-                  title: Text(module.name),
-                  subtitle: Text(module.description),
+                  title: Row(
+                    children: [
+                      Text(module.name),
+                      const SizedBox(width: 8),
+                      _buildStatusIndicator(module.status),
+                    ],
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(module.description),
+                      if (module.healthStatus != null)
+                        Text(
+                          'Health: ${module.healthStatus}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      ElevatedButton(
-                        onPressed: () => context.go('/tool/${module.id}'),
-                        child: const Text('Launch'),
-                      ),
+                      if (module.status == ModuleStatus.installed ||
+                          module.status == ModuleStatus.error)
+                        ElevatedButton(
+                          onPressed: () => provider.launchModule(module.id),
+                          child: const Text('Start'),
+                        )
+                      else if (module.status == ModuleStatus.starting)
+                        const CircularProgressIndicator()
+                      else if (module.status == ModuleStatus.running ||
+                          module.status == ModuleStatus.degraded)
+                        Row(
+                          children: [
+                            ElevatedButton(
+                              onPressed: () => context.go('/tool/${module.id}'),
+                              child: const Text('Open'),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () => provider.stopModule(module.id),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Stop'),
+                            ),
+                          ],
+                        )
+                      else if (module.status == ModuleStatus.stopping)
+                         const CircularProgressIndicator(color: Colors.orange),
                       const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
@@ -55,6 +102,53 @@ class DashboardScreen extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator(ModuleStatus status) {
+    Color color;
+    String label;
+    switch (status) {
+      case ModuleStatus.running:
+        color = Colors.green;
+        label = 'Running';
+        break;
+      case ModuleStatus.degraded:
+        color = Colors.yellow[700]!;
+        label = 'Degraded';
+        break;
+      case ModuleStatus.error:
+        color = Colors.red;
+        label = 'Error';
+        break;
+      case ModuleStatus.starting:
+        color = Colors.blue;
+        label = 'Starting';
+        break;
+      case ModuleStatus.stopping:
+        color = Colors.orange;
+        label = 'Stopping';
+        break;
+      default:
+        color = Colors.grey;
+        label = 'Stopped';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
