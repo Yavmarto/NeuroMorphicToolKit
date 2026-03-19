@@ -163,10 +163,10 @@ packages:
   nmtk_ui_core:
     dependency: "direct main"
     description:
-      path: "../nmtk_ui_core"
+      path: "../../nmtk_ui_core"
       relative: true
     source: path
-    version: "0.0.1"
+    version: "0.1.0"
   path:
     dependency: transitive
     description:
@@ -253,5 +253,5 @@ packages:
     source: hosted
     version: "15.0.2"
 sdks:
-  dart: ">=3.9.0 <4.0.0"
-  flutter: ">=3.22.0"
+  dart: ">=3.11.0 <4.0.0"
+  flutter: ">=3.41.0"

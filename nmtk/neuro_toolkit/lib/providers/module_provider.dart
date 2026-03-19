@@ -1,33 +1,51 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:neuro_toolkit/models/module.dart';
 
 class ModuleProvider with ChangeNotifier {
-  final List<Module> _modules = [
-    Module(
-      id: 'neuro_dream_hand',
-      name: 'Neuro-Dream-Hand',
-      description:
-          'Neuromorphic simulation framework for prosthetic hand control.',
-    ),
-    Module(
-      id: 'neurocnl',
-      name: 'neurocnl',
-      description: 'Controlled Natural Language specifications compiler.',
-    ),
-    Module(
-      id: 'nmtk',
-      name: 'nmtk',
-      description: 'Neuromorphic Toolkit hub for utilities.',
-    ),
-  ];
+  List<Module> _modules = [];
+  bool _isLoading = false;
+  String? _error;
+
+  ModuleProvider() {
+    loadModules();
+  }
 
   List<Module> get modules => _modules;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
   List<Module> get installedModules =>
-      _modules.where((m) => m.status == ModuleStatus.installed).toList();
+      _modules.where((m) => m.status == ModuleStatus.installed || m.status == ModuleStatus.running).toList();
 
   List<Module> get availableModules =>
-      _modules.where((m) => m.status != ModuleStatus.installed).toList();
+      _modules.where((m) => m.status == ModuleStatus.notInstalled || m.status == ModuleStatus.installing).toList();
+
+  Future<void> loadModules() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final String response = await rootBundle.loadString('assets/modules.json');
+      final List<dynamic> data = json.decode(response);
+      _modules = data.map((json) => Module.fromJson(json as Map<String, dynamic>)).toList();
+
+      // For POC, simulate some modules being installed
+      for (int i = 0; i < _modules.length; i++) {
+        if (_modules[i].id == 'neurocnl' || _modules[i].id == 'neuro_dream_hand') {
+           _modules[i].status = ModuleStatus.installed;
+        }
+      }
+
+    } catch (e) {
+      _error = 'Failed to load modules: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<void> installModule(String moduleId) async {
     final index = _modules.indexWhere((m) => m.id == moduleId);
@@ -64,5 +82,10 @@ class ModuleProvider with ChangeNotifier {
       );
       notifyListeners();
     }
+  }
+
+  // Mock method to check MuJoCo availability
+  bool isMuJoCoAvailable() {
+    return false; // Mocking as unavailable for now
   }
 }

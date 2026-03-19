@@ -1,0 +1,79 @@
+[
+  {
+    "id": "neurocnl",
+    "name": "CNL Studio",
+    "description": "CNL parser, SNN generator, and simulation engine",
+    "icon": "code",
+    "port": 8000,
+    "installPath": "neurocnl/",
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
+    "requiresMuJoCo": false
+  },
+  {
+    "id": "Neurosim",
+    "name": "NeuroSim",
+    "description": "Visual drag-and-drop SNN design canvas",
+    "icon": "architecture",
+    "port": 8001,
+    "installPath": "Neurosim/",
+    "hasFrontend": true,
+    "frontendStatus": "Minimal",
+    "requiresMuJoCo": false
+  },
+  {
+    "id": "Neurochip",
+    "name": "NeuroChip",
+    "description": "Hardware deployment and firmware generation",
+    "icon": "memory",
+    "port": 8002,
+    "installPath": "Neurochip/",
+    "hasFrontend": true,
+    "frontendStatus": "Partial",
+    "requiresMuJoCo": false
+  },
+  {
+    "id": "Neurobench",
+    "name": "NeuroBench",
+    "description": "SNN testing and benchmarking workbench",
+    "icon": "speed",
+    "port": 8003,
+    "installPath": "Neurobench/",
+    "hasFrontend": true,
+    "frontendStatus": "Scaffold",
+    "requiresMuJoCo": false
+  },
+  {
+    "id": "Neurosense",
+    "name": "NeuroSense",
+    "description": "Biosignal acquisition and spike encoding",
+    "icon": "sensors",
+    "port": 8004,
+    "installPath": "Neurosense/",
+    "hasFrontend": true,
+    "frontendStatus": "Partial",
+    "requiresMuJoCo": false
+  },
+  {
+    "id": "Neurohub",
+    "name": "NeuroHub",
+    "description": "Suite dashboard and project orchestrator",
+    "icon": "hub",
+    "port": 8005,
+    "installPath": "Neurohub/",
+    "hasFrontend": true,
+    "frontendStatus": "Scaffold",
+    "requiresMuJoCo": false
+  },
+  {
+    "id": "neuro_dream_hand",
+    "name": "NDH Simulator",
+    "description": "Prosthetic SNN physics simulation (CLI only)",
+    "icon": "precision_manufacturing",
+    "port": null,
+    "installPath": "Neuro-Dream-Hand/",
+    "hasFrontend": false,
+    "frontendStatus": "No",
+    "requiresMuJoCo": true
+  }
+]

@@ -14,59 +14,178 @@ class CatalogScreen extends StatelessWidget {
       ),
       body: Consumer<ModuleProvider>(
         builder: (context, provider, child) {
-          final availableModules = provider.availableModules;
-
-          if (availableModules.isEmpty) {
+          if (provider.isLoading) {
             return const Center(
-              child: Text('All modules are installed.'),
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (provider.error != null) {
+            return Center(
+              child: Text(provider.error!),
+            );
+          }
+
+          final modules = provider.modules;
+
+          if (modules.isEmpty) {
+            return const Center(
+              child: Text('No modules available.'),
             );
           }
 
           return ListView.builder(
-            itemCount: availableModules.length,
+            itemCount: modules.length,
             itemBuilder: (context, index) {
-              final module = availableModules[index];
-              return Card(
-                margin: const EdgeInsets.all(8.0),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        module.name,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(module.description),
-                      const SizedBox(height: 16),
-                      if (module.status == ModuleStatus.installing)
-                        Column(
+              final module = modules[index];
+              final isMuJoCoUnavailable = module.requiresMuJoCo && !provider.isMuJoCoAvailable();
+
+              return Opacity(
+                opacity: isMuJoCoUnavailable ? 0.5 : 1.0,
+                child: Card(
+                  margin: const EdgeInsets.all(8.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            LinearProgressIndicator(
-                              value: module.installProgress,
+                            Icon(_getIconData(module.icon), size: 32),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    module.name,
+                                    style: Theme.of(context).textTheme.titleLarge,
+                                  ),
+                                  Text(
+                                    'ID: ${module.id}',
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 8),
-                            Text('${(module.installProgress * 100).toInt()}%'),
+                            _buildStatusBadge(context, module, isMuJoCoUnavailable),
                           ],
-                        )
-                      else
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              provider.installModule(module.id);
-                            },
-                            child: const Text('Install'),
-                          ),
                         ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(module.description),
+                        const SizedBox(height: 16),
+                        if (module.status == ModuleStatus.installing)
+                          Column(
+                            children: [
+                              LinearProgressIndicator(
+                                value: module.installProgress,
+                              ),
+                              const SizedBox(height: 8),
+                              Text('${(module.installProgress * 100).toInt()}%'),
+                            ],
+                          )
+                        else if (module.status == ModuleStatus.notInstalled)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: ElevatedButton(
+                              onPressed: isMuJoCoUnavailable
+                                  ? null
+                                  : () {
+                                      provider.installModule(module.id);
+                                    },
+                              child: const Text('Install'),
+                            ),
+                          )
+                        else if (module.status == ModuleStatus.installed)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                // For now just mock uninstall
+                                provider.uninstallModule(module.id);
+                              },
+                              child: const Text('Installed'),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'code':
+        return Icons.code;
+      case 'architecture':
+        return Icons.architecture;
+      case 'memory':
+        return Icons.memory;
+      case 'speed':
+        return Icons.speed;
+      case 'sensors':
+        return Icons.sensors;
+      case 'hub':
+        return Icons.hub;
+      case 'precision_manufacturing':
+        return Icons.precision_manufacturing;
+      default:
+        return Icons.extension;
+    }
+  }
+
+  Widget _buildStatusBadge(BuildContext context, Module module, bool isMuJoCoUnavailable) {
+    String text;
+    Color color;
+
+    if (isMuJoCoUnavailable) {
+      text = 'MuJoCo Missing';
+      color = Colors.grey;
+    } else {
+      switch (module.status) {
+        case ModuleStatus.notInstalled:
+          text = 'Not Installed';
+          color = Colors.orange;
+          break;
+        case ModuleStatus.installing:
+          text = 'Installing';
+          color = Colors.blue;
+          break;
+        case ModuleStatus.installed:
+          text = 'Installed';
+          color = Colors.green;
+          break;
+        case ModuleStatus.updateAvailable:
+          text = 'Update Available';
+          color = Colors.purple;
+          break;
+        case ModuleStatus.running:
+          text = 'Running';
+          color = Colors.teal;
+          break;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
