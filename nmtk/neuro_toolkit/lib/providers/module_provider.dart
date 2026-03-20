@@ -100,6 +100,12 @@ class ModuleProvider with ChangeNotifier {
   List<Module> get availableModules =>
       _modules.where((m) => m.status == ModuleStatus.notInstalled || m.status == ModuleStatus.installing).toList();
 
+  List<String> get activeModuleIds => _activeModuleIds;
+
+  List<Module> get activeModules => _activeModuleIds
+      .map((id) => _modules.firstWhere((m) => m.id == id))
+      .toList();
+
   Future<void> installModule(String moduleId) async {
     final index = _modules.indexWhere((m) => m.id == moduleId);
     if (index == -1) return;
@@ -158,6 +164,35 @@ class ModuleProvider with ChangeNotifier {
         installProgress: 0.0,
         healthStatus: null,
       );
+      _activeModuleIds.remove(moduleId);
+      notifyListeners();
+    }
+  }
+
+  void launchModule(String moduleId) {
+    final index = _modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) return;
+
+    if (!_modules[index].isLaunched) {
+      _modules[index] = _modules[index].copyWith(isLaunched: true);
+    }
+
+    if (!_activeModuleIds.contains(moduleId)) {
+      _activeModuleIds.add(moduleId);
+    }
+    notifyListeners();
+  }
+
+  void closeTab(String moduleId) {
+    _activeModuleIds.remove(moduleId);
+    notifyListeners();
+  }
+
+  void stopModule(String moduleId) {
+    final index = _modules.indexWhere((m) => m.id == moduleId);
+    if (index != -1) {
+      _modules[index] = _modules[index].copyWith(isLaunched: false);
+      _activeModuleIds.remove(moduleId);
       notifyListeners();
       await _processManager.saveModuleState(_modules[index]);
     }
