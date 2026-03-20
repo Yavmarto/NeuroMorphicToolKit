@@ -62,18 +62,38 @@ fi
 header "Duplicate Dart definitions"
 
 find "$TARGET_DIR" -name '*.dart' -not -path '*/.*' -not -path '*/build/*' | sort | while read -r file; do
-  # Extract top-level and class-level definitions.
-  # Matches: class Foo, mixin Foo, enum Foo, extension Foo,
-  #          void foo(, Future<void> foo(, factory Foo.bar(, etc.
-  # We strip generics and return types to get the bare name.
-  defs=$(grep -nE '^\s*(factory|class|mixin|enum|extension|void|Future|Stream|String|int|double|bool|List|Map|Set|Widget|dynamic|static)?\s*(<[^>]*>)?\s*[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?\s*[\({]' "$file" 2>/dev/null \
+  # Extract class/mixin/enum/extension and method/function definitions.
+  # Two-pass approach: first find type declarations, then find method signatures.
+
+  # Pass 1: Type declarations (class, mixin, enum, extension, factory)
+  type_defs=$(grep -nE '^\s*(abstract\s+)?(class|mixin|enum|extension)\s+[A-Za-z_][A-Za-z0-9_]*' "$file" 2>/dev/null \
     | grep -vE '^\s*//' \
-    | grep -vE '(if|else|for|while|switch|return|throw|catch|case)\s*\(' \
-    | sed -E 's/^([0-9]+):\s*/\1:/' \
-    | sed -E 's/^([0-9]+):.*\b(class|mixin|enum|extension|factory)\s+([A-Za-z_][A-Za-z0-9_.]*).*/\1:\2 \3/' \
-    | sed -E 's/^([0-9]+):.*\b([A-Za-z_][A-Za-z0-9_]*)\s*\(.*/\1:fn \2/' \
-    | grep -E '^[0-9]+:(class|mixin|enum|extension|factory|fn) ' \
+    | sed -E 's/^([0-9]+):.*\b(class|mixin|enum|extension)\s+([A-Za-z_][A-Za-z0-9_]*).*/\1:\2 \3/' \
     || true)
+
+  # Pass 2: Factory constructors
+  factory_defs=$(grep -nE '^\s*factory\s+[A-Za-z_][A-Za-z0-9_.]*\s*\(' "$file" 2>/dev/null \
+    | grep -vE '^\s*//' \
+    | sed -E 's/^([0-9]+):.*\bfactory\s+([A-Za-z_][A-Za-z0-9_.]*)\s*\(.*/\1:factory \2/' \
+    || true)
+
+  # Pass 3: Method/function definitions — lines starting with a return type + name + (
+  # Must start at beginning of line (with optional indentation) to avoid matching calls.
+  method_defs=$(grep -nE '^\s+(void|Future|Stream|String|int|double|bool|List|Map|Set|Widget|dynamic|static\s+\S+)\s*(<[^>]*>)?\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(' "$file" 2>/dev/null \
+    | grep -vE '^\s*//' \
+    | grep -vE '\b(if|else|for|while|switch|return|throw|catch|case|new|const)\s*\(' \
+    | sed -E 's/^([0-9]+):.*\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(.*/\1:fn \2/' \
+    | grep -E '^[0-9]+:fn ' \
+    || true)
+
+  # Also catch top-level functions
+  toplevel_defs=$(grep -nE '^(void|Future|Stream|String|int|double|bool|List|Map|Set|dynamic)\s*(<[^>]*>)?\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(' "$file" 2>/dev/null \
+    | grep -vE '^\s*//' \
+    | sed -E 's/^([0-9]+):.*\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(.*/\1:fn \2/' \
+    | grep -E '^[0-9]+:fn ' \
+    || true)
+
+  defs=$(printf '%s\n%s\n%s\n%s' "$type_defs" "$factory_defs" "$method_defs" "$toplevel_defs" | grep -v '^$' || true)
 
   if [ -z "$defs" ]; then
     continue
@@ -83,7 +103,7 @@ find "$TARGET_DIR" -name '*.dart' -not -path '*/.*' -not -path '*/build/*' | sor
   echo "$defs" | awk -F: '{print $2}' | sort | uniq -d | while read -r dup; do
     if [ -n "$dup" ]; then
       fail "Duplicate definition in ${file#$REPO_ROOT/}: $dup"
-      echo "$defs" | grep ": *$dup$" | while read -r loc; do
+      echo "$defs" | grep ":${dup}$" | while read -r loc; do
         printf "      line %s\n" "$loc"
       done
     fi
@@ -208,7 +228,10 @@ if [ -n "$FLUTTER_PROJECT" ]; then
   PROJECT_DIR=$(dirname "$FLUTTER_PROJECT")
   printf "  Running flutter analyze in %s ...\n" "${PROJECT_DIR#$REPO_ROOT/}"
 
-  ANALYZE_OUTPUT=$(cd "$PROJECT_DIR" && flutter analyze --no-pub 2>&1 || true)
+  # Ensure packages are resolved first
+  (cd "$PROJECT_DIR" && flutter pub get --no-example 2>/dev/null) || warn "flutter pub get failed — analysis may show false positives"
+
+  ANALYZE_OUTPUT=$(cd "$PROJECT_DIR" && flutter analyze 2>&1 || true)
 
   ERROR_COUNT=$(echo "$ANALYZE_OUTPUT" | grep -cE '(error •|error -)' || true)
   WARN_COUNT=$(echo "$ANALYZE_OUTPUT" | grep -cE '(warning •|warning -)' || true)

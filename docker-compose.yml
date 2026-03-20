@@ -24,7 +24,7 @@ services:
       args:
         INSTALL_PHYSICS: 1
     ports:
-      - "${NEUROCNL_PORT:-8000}:8000"
+      - "${NEUROCNL_PHYSICS_PORT:-8006}:8000"
     environment:
       - PYTHONUNBUFFERED=1
     healthcheck:

@@ -13,7 +13,7 @@ echo "📍 Using API Base URL: $API_BASE_URL"
 
 # 1. Start backends
 echo "🚀 Starting neurocnl backend..."
-PYTHONPATH=neurocnl:neurocnl/backend /home/jules/.pyenv/versions/3.12.13/bin/python -m uvicorn backend.app.main:app --port 8000 > /tmp/nmtk_smoke_test_backend.log 2>&1 &
+PYTHONPATH=neurocnl:neurocnl/backend python3 -m uvicorn backend.app.main:app --port 8000 > /tmp/nmtk_smoke_test_backend.log 2>&1 &
 BACKEND_PID=$!
 
 cleanup() {
