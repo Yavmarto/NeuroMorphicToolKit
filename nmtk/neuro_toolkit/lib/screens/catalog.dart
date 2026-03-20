@@ -70,30 +70,6 @@ class CatalogScreen extends StatelessWidget {
                             ),
                             _buildStatusBadge(context, module, isMuJoCoUnavailable),
                           ],
-                        )
-                      else if (module.status == ModuleStatus.error)
-                         Row(
-                           children: [
-                             const Icon(Icons.error_outline, color: Colors.red),
-                             const SizedBox(width: 8),
-                             Expanded(child: Text('Installation failed: ${module.healthStatus ?? "Unknown error"}', style: const TextStyle(color: Colors.red))),
-                             ElevatedButton(
-                                onPressed: () {
-                                  provider.installModule(module.id);
-                                },
-                                child: const Text('Retry'),
-                              ),
-                           ],
-                         )
-                      else
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              provider.installModule(module.id);
-                            },
-                            child: const Text('Install'),
-                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(module.description),
@@ -108,6 +84,25 @@ class CatalogScreen extends StatelessWidget {
                               Text('${(module.installProgress * 100).toInt()}%'),
                             ],
                           )
+                        else if (module.status == ModuleStatus.error)
+                          Row(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Installation failed: ${module.healthStatus ?? "Unknown error"}',
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  provider.installModule(module.id);
+                                },
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          )
                         else if (module.status == ModuleStatus.notInstalled)
                           Align(
                             alignment: Alignment.centerRight,
@@ -120,15 +115,18 @@ class CatalogScreen extends StatelessWidget {
                               child: const Text('Install'),
                             ),
                           )
-                        else if (module.status == ModuleStatus.installed)
+                        else if (module.status == ModuleStatus.installed ||
+                                 module.status == ModuleStatus.running ||
+                                 module.status == ModuleStatus.degraded)
                           Align(
                             alignment: Alignment.centerRight,
                             child: OutlinedButton(
                               onPressed: () {
-                                // For now just mock uninstall
                                 provider.uninstallModule(module.id);
                               },
-                              child: const Text('Installed'),
+                              child: Text(module.status == ModuleStatus.installed
+                                  ? 'Installed'
+                                  : 'Running'),
                             ),
                           ),
                       ],
@@ -185,13 +183,25 @@ class CatalogScreen extends StatelessWidget {
           text = 'Installed';
           color = Colors.green;
           break;
-        case ModuleStatus.updateAvailable:
-          text = 'Update Available';
-          color = Colors.purple;
+        case ModuleStatus.starting:
+          text = 'Starting';
+          color = Colors.blue;
           break;
         case ModuleStatus.running:
           text = 'Running';
           color = Colors.teal;
+          break;
+        case ModuleStatus.stopping:
+          text = 'Stopping';
+          color = Colors.orange;
+          break;
+        case ModuleStatus.error:
+          text = 'Error';
+          color = Colors.red;
+          break;
+        case ModuleStatus.degraded:
+          text = 'Degraded';
+          color = Colors.yellow.shade700;
           break;
       }
     }

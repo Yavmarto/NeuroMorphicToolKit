@@ -9,77 +9,45 @@ import 'package:path/path.dart' as p;
 class ModuleProvider with ChangeNotifier {
   final ProcessManager _processManager = ProcessManager();
 
-  final List<Module> _modules = [
-    Module(
-      id: 'neurocnl',
-      name: 'neurocnl',
-      description: 'Controlled Natural Language specifications compiler.',
-      directory: 'neurocnl',
-      port: 8000,
-    ),
-    Module(
-      id: 'Neurosim',
-      name: 'Neurosim',
-      description: 'Neuromorphic simulator for hardware-accurate modeling.',
-      directory: 'Neurosim',
-      port: 8001,
-    ),
-    Module(
-      id: 'Neurochip',
-      name: 'Neurochip',
-      description: 'Hardware abstraction layer for neuromorphic chips.',
-      directory: 'Neurochip',
-      port: 8002,
-    ),
-    Module(
-      id: 'Neurobench',
-      name: 'Neurobench',
-      description: 'Benchmarking suite for neuromorphic algorithms.',
-      directory: 'Neurobench',
-      port: 8003,
-    ),
-    Module(
-      id: 'Neurosense',
-      name: 'Neurosense',
-      description: 'Sensing and perception modules for neuromorphic systems.',
-      directory: 'Neurosense',
-      port: 8004,
-    ),
-    Module(
-      id: 'Neurohub',
-      name: 'Neurohub',
-      description: 'Data management and collaboration hub.',
-      directory: 'Neurohub',
-      port: 8005,
-    ),
-  ];
+  List<Module> _modules = [];
+  bool _isLoading = true;
+  String? _error;
+  final List<String> _activeModuleIds = [];
 
   ModuleProvider() {
     _init();
   }
 
   Future<void> _init() async {
-    // Correct directories to be absolute paths relative to repo root
-    // In this environment, we are at the repo root.
-    // The flutter app is in nmtk/neuro_toolkit.
-    // So the modules are at ../../<module_name>
+    try {
+      // Load modules from JSON manifest
+      final jsonString = await rootBundle.loadString('assets/modules.json');
+      final List<dynamic> jsonList = jsonDecode(jsonString);
+      _modules = jsonList.map((json) => Module.fromJson(json)).toList();
 
-    for (var i = 0; i < _modules.length; i++) {
-       _modules[i] = _modules[i].copyWith(
-         directory: p.normalize(p.absolute('../../', _modules[i].directory))
-       );
-    }
-
-    await _processManager.init(_modules);
-
-    _processManager.statusUpdates.listen((updatedModule) {
-      final index = _modules.indexWhere((m) => m.id == updatedModule.id);
-      if (index != -1) {
-        _modules[index] = updatedModule;
-        notifyListeners();
+      // Resolve directories to absolute paths relative to repo root.
+      // The flutter app is in nmtk/neuro_toolkit, so modules are at ../../<dir>.
+      for (var i = 0; i < _modules.length; i++) {
+        _modules[i] = _modules[i].copyWith(
+          directory: p.normalize(p.join(p.current, '..', '..', _modules[i].directory)),
+        );
       }
-    });
 
+      await _processManager.init(_modules);
+
+      _processManager.statusUpdates.listen((updatedModule) {
+        final index = _modules.indexWhere((m) => m.id == updatedModule.id);
+        if (index != -1) {
+          _modules[index] = updatedModule;
+          notifyListeners();
+        }
+      });
+
+      _isLoading = false;
+    } catch (e) {
+      _error = 'Failed to load modules: $e';
+      _isLoading = false;
+    }
     notifyListeners();
   }
 
@@ -98,13 +66,25 @@ class ModuleProvider with ChangeNotifier {
       ).toList();
 
   List<Module> get availableModules =>
-      _modules.where((m) => m.status == ModuleStatus.notInstalled || m.status == ModuleStatus.installing).toList();
+      _modules.where((m) =>
+        m.status == ModuleStatus.notInstalled ||
+        m.status == ModuleStatus.installing
+      ).toList();
 
   List<String> get activeModuleIds => _activeModuleIds;
 
   List<Module> get activeModules => _activeModuleIds
       .map((id) => _modules.firstWhere((m) => m.id == id))
       .toList();
+
+  bool isMuJoCoAvailable() {
+    try {
+      final result = Process.runSync('which', ['mujoco']);
+      return result.exitCode == 0;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<void> installModule(String moduleId) async {
     final index = _modules.indexWhere((m) => m.id == moduleId);
@@ -126,13 +106,18 @@ class ModuleProvider with ChangeNotifier {
       );
     } catch (e) {
       debugPrint('Installation failed for $moduleId: $e');
-      // Status is updated via stream in _init
     }
   }
 
   Future<void> launchModule(String moduleId) async {
     final index = _modules.indexWhere((m) => m.id == moduleId);
     if (index == -1) return;
+
+    // Add to active tabs for workspace view
+    if (!_activeModuleIds.contains(moduleId)) {
+      _activeModuleIds.add(moduleId);
+    }
+    notifyListeners();
 
     try {
       await _processManager.startModule(_modules[index]);
@@ -146,6 +131,7 @@ class ModuleProvider with ChangeNotifier {
     if (index == -1) return;
 
     _modules[index] = _modules[index].copyWith(status: ModuleStatus.stopping);
+    _activeModuleIds.remove(moduleId);
     notifyListeners();
 
     try {
@@ -156,7 +142,6 @@ class ModuleProvider with ChangeNotifier {
   }
 
   Future<void> uninstallModule(String moduleId) async {
-    // For now, just reset the state. In a real app, we might delete the venv.
     final index = _modules.indexWhere((m) => m.id == moduleId);
     if (index != -1) {
       _modules[index] = _modules[index].copyWith(
@@ -169,33 +154,9 @@ class ModuleProvider with ChangeNotifier {
     }
   }
 
-  void launchModule(String moduleId) {
-    final index = _modules.indexWhere((m) => m.id == moduleId);
-    if (index == -1) return;
-
-    if (!_modules[index].isLaunched) {
-      _modules[index] = _modules[index].copyWith(isLaunched: true);
-    }
-
-    if (!_activeModuleIds.contains(moduleId)) {
-      _activeModuleIds.add(moduleId);
-    }
-    notifyListeners();
-  }
-
   void closeTab(String moduleId) {
     _activeModuleIds.remove(moduleId);
     notifyListeners();
-  }
-
-  void stopModule(String moduleId) {
-    final index = _modules.indexWhere((m) => m.id == moduleId);
-    if (index != -1) {
-      _modules[index] = _modules[index].copyWith(isLaunched: false);
-      _activeModuleIds.remove(moduleId);
-      notifyListeners();
-      await _processManager.saveModuleState(_modules[index]);
-    }
   }
 
   Stream<String>? getModuleOutput(String moduleId) {

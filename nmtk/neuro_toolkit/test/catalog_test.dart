@@ -2,12 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
+import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/services.dart';
 
-class MockModuleProvider extends ModuleProvider {
+class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockModules = [];
 
   @override
@@ -20,7 +19,43 @@ class MockModuleProvider extends ModuleProvider {
   String? get error => null;
 
   @override
-  Future<void> loadModules() async {
+  List<Module> get installedModules => _mockModules.where((m) =>
+      m.status != ModuleStatus.notInstalled &&
+      m.status != ModuleStatus.installing).toList();
+
+  @override
+  List<Module> get availableModules => _mockModules.where((m) =>
+      m.status == ModuleStatus.notInstalled ||
+      m.status == ModuleStatus.installing).toList();
+
+  @override
+  List<String> get activeModuleIds => [];
+
+  @override
+  List<Module> get activeModules => [];
+
+  @override
+  bool isMuJoCoAvailable() => false;
+
+  @override
+  Future<void> installModule(String moduleId) async {}
+
+  @override
+  Future<void> launchModule(String moduleId) async {}
+
+  @override
+  Future<void> stopModule(String moduleId) async {}
+
+  @override
+  Future<void> uninstallModule(String moduleId) async {}
+
+  @override
+  void closeTab(String moduleId) {}
+
+  @override
+  Stream<String>? getModuleOutput(String moduleId) => null;
+
+  void loadModules() {
     final List<Map<String, dynamic>> mockData = [
       {
         "id": "neurocnl",
@@ -111,12 +146,11 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('CatalogScreen shows all 7 modules', (WidgetTester tester) async {
-    // Set a larger surface size to ensure all items are visible without scrolling
-    tester.view.physicalSize = const Size(1920, 2000); // Very tall
+    tester.view.physicalSize = const Size(1920, 2000);
     tester.view.devicePixelRatio = 1.0;
 
     final provider = MockModuleProvider();
-    await provider.loadModules();
+    provider.loadModules();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -129,7 +163,6 @@ void main() {
 
     await tester.pump();
 
-    // Check for some expected module names
     expect(find.text('CNL Studio'), findsOneWidget);
     expect(find.text('NeuroSim'), findsOneWidget);
     expect(find.text('NeuroChip'), findsOneWidget);

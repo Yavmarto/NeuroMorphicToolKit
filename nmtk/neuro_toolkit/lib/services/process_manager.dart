@@ -108,6 +108,9 @@ class ProcessManager {
 
   Future<void> startModule(Module module) async {
     if (_runningProcesses.containsKey(module.id)) return;
+    if (module.port == null) {
+      throw Exception('Cannot start module ${module.id}: no port configured');
+    }
 
     final venvPath = p.join(module.directory, 'venv');
     final pythonPath = Platform.isWindows
@@ -120,7 +123,7 @@ class ProcessManager {
     try {
       final process = await Process.start(
         pythonPath,
-        ['-m', 'uvicorn', 'app.main:app', '--port', module.port.toString()],
+        ['-m', 'uvicorn', 'app.main:app', '--port', (module.port ?? 8000).toString()],
         workingDirectory: module.directory,
       );
 
@@ -179,6 +182,7 @@ class ProcessManager {
   }
 
   Future<void> _checkHealth(Module module) async {
+    if (module.port == null) return;
     try {
       final response = await http
           .get(Uri.parse('http://localhost:${module.port}/health'))

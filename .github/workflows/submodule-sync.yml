@@ -1,0 +1,78 @@
+name: Sync Submodule Pointers
+
+# When a submodule's dev branch is updated, this workflow checks whether the
+# parent repo's submodule pointer is behind and opens a PR to update it.
+# Runs on a schedule and can be triggered manually.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Every 6 hours
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update all submodules to latest dev
+        run: |
+          git submodule foreach 'git fetch origin dev && git checkout origin/dev || true'
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Updated submodules:"
+            git diff --name-only
+          fi
+
+      - name: Create PR if submodules updated
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          BRANCH="auto/sync-submodules-$(date +%Y%m%d-%H%M%S)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore: sync submodule pointers to latest dev"
+          git push origin "$BRANCH"
+
+          BODY=$(git submodule foreach --quiet '
+            LOCAL=$(git rev-parse HEAD)
+            REMOTE=$(git rev-parse origin/dev 2>/dev/null || echo "unknown")
+            if [ "$LOCAL" != "$REMOTE" ]; then
+              echo "- **$name**: $(git log --oneline -3 HEAD)"
+            fi
+          ')
+
+          gh pr create \
+            --base dev \
+            --head "$BRANCH" \
+            --title "chore: sync submodule pointers" \
+            --body "$(cat <<EOF
+          ## Summary
+          - Automated submodule pointer update to latest \`dev\` commits
+
+          ## Changes
+          ${BODY:-"All submodules updated to latest dev HEAD."}
+
+          ## Test plan
+          - [ ] CI passes on all affected modules
+
+          🤖 Generated automatically by submodule-sync workflow
+          EOF
+          )"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

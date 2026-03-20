@@ -13,8 +13,12 @@ class Module {
   final String id;
   final String name;
   final String description;
+  final String icon;
   final String directory;
-  final int port;
+  final int? port;
+  final bool hasFrontend;
+  final String frontendStatus;
+  final bool requiresMuJoCo;
   ModuleStatus status;
   double installProgress;
   String? healthStatus;
@@ -23,8 +27,12 @@ class Module {
     required this.id,
     required this.name,
     required this.description,
+    this.icon = 'extension',
     required this.directory,
-    required this.port,
+    this.port,
+    this.hasFrontend = false,
+    this.frontendStatus = 'No',
+    this.requiresMuJoCo = false,
     this.status = ModuleStatus.notInstalled,
     this.installProgress = 0.0,
     this.healthStatus,
@@ -35,22 +43,30 @@ class Module {
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String,
-      icon: json['icon'] as String,
-      backendPort: json['port'] as int?,
-      installPath: json['installPath'] as String,
-      hasFrontend: json['hasFrontend'] as bool,
-      frontendStatus: json['frontendStatus'] as String,
-      requiresMuJoCo: json['requiresMuJoCo'] as bool,
+      icon: json['icon'] as String? ?? 'extension',
+      directory: json['installPath'] as String? ?? json['directory'] as String? ?? '',
+      port: json['port'] as int?,
+      hasFrontend: json['hasFrontend'] as bool? ?? false,
+      frontendStatus: json['frontendStatus'] as String? ?? 'No',
+      requiresMuJoCo: json['requiresMuJoCo'] as bool? ?? false,
+      status: json['status'] != null
+          ? ModuleStatus.values[json['status'] as int]
+          : ModuleStatus.notInstalled,
+      installProgress: (json['installProgress'] as num?)?.toDouble() ?? 0.0,
+      healthStatus: json['healthStatus'] as String?,
     );
   }
 
-  // Create a copy of the module with potentially updated fields
   Module copyWith({
     String? id,
     String? name,
     String? description,
+    String? icon,
     String? directory,
     int? port,
+    bool? hasFrontend,
+    String? frontendStatus,
+    bool? requiresMuJoCo,
     ModuleStatus? status,
     double? installProgress,
     String? healthStatus,
@@ -59,8 +75,12 @@ class Module {
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
+      icon: icon ?? this.icon,
       directory: directory ?? this.directory,
       port: port ?? this.port,
+      hasFrontend: hasFrontend ?? this.hasFrontend,
+      frontendStatus: frontendStatus ?? this.frontendStatus,
+      requiresMuJoCo: requiresMuJoCo ?? this.requiresMuJoCo,
       status: status ?? this.status,
       installProgress: installProgress ?? this.installProgress,
       healthStatus: healthStatus ?? this.healthStatus,
@@ -71,21 +91,14 @@ class Module {
         'id': id,
         'name': name,
         'description': description,
+        'icon': icon,
         'directory': directory,
         'port': port,
+        'hasFrontend': hasFrontend,
+        'frontendStatus': frontendStatus,
+        'requiresMuJoCo': requiresMuJoCo,
         'status': status.index,
         'installProgress': installProgress,
         'healthStatus': healthStatus,
       };
-
-  factory Module.fromJson(Map<String, dynamic> json) => Module(
-        id: json['id'],
-        name: json['name'],
-        description: json['description'],
-        directory: json['directory'],
-        port: json['port'],
-        status: ModuleStatus.values[json['status']],
-        installProgress: json['installProgress']?.toDouble() ?? 0.0,
-        healthStatus: json['healthStatus'],
-      );
 }

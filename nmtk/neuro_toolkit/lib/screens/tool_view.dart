@@ -64,6 +64,7 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   void _pollModuleHealth(Module module) {
     _pollTimers[module.id] = Timer.periodic(const Duration(seconds: 2), (timer) async {
       try {
+        if (module.port == null) return;
         final response = await http
             .get(Uri.parse('http://localhost:${module.port}/health'))
             .timeout(const Duration(seconds: 1));

@@ -202,25 +202,6 @@ jobs:
       - name: Run tests
         run: pytest --tb=short
 
-  test-neurobench:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.neurobench == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurobench/neurobench
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: pip install poetry && poetry install
-      - name: Run tests
-        run: poetry run pytest --tb=short
-
   test-neurocnl-backend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl == 'true'
@@ -439,7 +420,6 @@ jobs:
       - test-neurobench
       - test-neurocnl-backend
       - test-neurocnl-frontend
-      - test-neurobench
       - test-neurobench-frontend
       - test-neurotoolkit
       - test-nmtk-ui-core
@@ -455,6 +435,8 @@ jobs:
           echo "  neurodreamhand: ${{ needs.test-neurodreamhand.result }}"
           echo "  neurobench:     ${{ needs.test-neurobench.result }}"
           echo "  neurocnl:       ${{ needs.test-neurocnl-backend.result }}"
+          echo "  nmtk-ui-core:   ${{ needs.test-nmtk-ui-core.result }}"
+          echo "  neurotoolkit:   ${{ needs.test-neurotoolkit.result }}"
 
           # Fail if any job failed (skipped is OK — means no changes in that module)
           for result in \
@@ -467,7 +449,11 @@ jobs:
             "${{ needs.test-neurohub-frontend.result }}" \
             "${{ needs.test-neurodreamhand.result }}" \
             "${{ needs.test-neurobench.result }}" \
-            "${{ needs.test-neurocnl-backend.result }}"; do
+            "${{ needs.test-neurobench-frontend.result }}" \
+            "${{ needs.test-neurocnl-backend.result }}" \
+            "${{ needs.test-neurocnl-frontend.result }}" \
+            "${{ needs.test-nmtk-ui-core.result }}" \
+            "${{ needs.test-neurotoolkit.result }}"; do
             if [ "$result" = "failure" ]; then
               echo "::error::One or more test jobs failed"
               exit 1
