@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:path/path.dart' as p;
@@ -82,6 +84,8 @@ class ModuleProvider with ChangeNotifier {
   }
 
   List<Module> get modules => _modules;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
   List<Module> get installedModules =>
       _modules.where((m) =>

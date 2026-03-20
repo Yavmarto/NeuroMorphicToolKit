@@ -30,6 +30,20 @@ class Module {
     this.healthStatus,
   });
 
+  factory Module.fromJson(Map<String, dynamic> json) {
+    return Module(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      icon: json['icon'] as String,
+      backendPort: json['port'] as int?,
+      installPath: json['installPath'] as String,
+      hasFrontend: json['hasFrontend'] as bool,
+      frontendStatus: json['frontendStatus'] as String,
+      requiresMuJoCo: json['requiresMuJoCo'] as bool,
+    );
+  }
+
   // Create a copy of the module with potentially updated fields
   Module copyWith({
     String? id,
