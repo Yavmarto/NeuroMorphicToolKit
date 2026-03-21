@@ -20,7 +20,9 @@ class Module {
   final String frontendStatus;
   final bool requiresMuJoCo;
   final String sourcePath;
+  final String runPath;
   final String uvicornTarget;
+  final List<String> localDeps;
   ModuleStatus status;
   double installProgress;
   String? healthStatus;
@@ -36,7 +38,9 @@ class Module {
     this.frontendStatus = 'No',
     this.requiresMuJoCo = false,
     this.sourcePath = '.',
+    this.runPath = '.',
     this.uvicornTarget = 'app.main:app',
+    this.localDeps = const [],
     this.status = ModuleStatus.notInstalled,
     this.installProgress = 0.0,
     this.healthStatus,
@@ -54,7 +58,9 @@ class Module {
       frontendStatus: json['frontendStatus'] as String? ?? 'No',
       requiresMuJoCo: json['requiresMuJoCo'] as bool? ?? false,
       sourcePath: json['sourcePath'] as String? ?? '.',
+      runPath: json['runPath'] as String? ?? json['sourcePath'] as String? ?? '.',
       uvicornTarget: json['uvicornTarget'] as String? ?? 'app.main:app',
+      localDeps: (json['localDeps'] as List<dynamic>?)?.cast<String>() ?? const [],
       status: json['status'] != null
           ? ModuleStatus.values[json['status'] as int]
           : ModuleStatus.notInstalled,
@@ -74,7 +80,9 @@ class Module {
     String? frontendStatus,
     bool? requiresMuJoCo,
     String? sourcePath,
+    String? runPath,
     String? uvicornTarget,
+    List<String>? localDeps,
     ModuleStatus? status,
     double? installProgress,
     String? healthStatus,
@@ -90,7 +98,9 @@ class Module {
       frontendStatus: frontendStatus ?? this.frontendStatus,
       requiresMuJoCo: requiresMuJoCo ?? this.requiresMuJoCo,
       sourcePath: sourcePath ?? this.sourcePath,
+      runPath: runPath ?? this.runPath,
       uvicornTarget: uvicornTarget ?? this.uvicornTarget,
+      localDeps: localDeps ?? this.localDeps,
       status: status ?? this.status,
       installProgress: installProgress ?? this.installProgress,
       healthStatus: healthStatus ?? this.healthStatus,
@@ -108,6 +118,7 @@ class Module {
         'frontendStatus': frontendStatus,
         'requiresMuJoCo': requiresMuJoCo,
         'sourcePath': sourcePath,
+        'runPath': runPath,
         'uvicornTarget': uvicornTarget,
         'status': status.index,
         'installProgress': installProgress,

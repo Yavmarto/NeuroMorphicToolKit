@@ -366,3 +366,48 @@ All Dockerfiles now exist. Neurobench docker-compose populated. Only Neurohub do
 2. Run `docker-compose up` from root and validate all services start
 3. Test the full launcher flow: install neurocnl → launch → WebView → write CNL → simulate
 4. Integration-test Neurosense and Neurochip frontends against their backends
+
+---
+
+## Addendum: Self-Contained Desktop App (21 March PM)
+
+Major launcher infrastructure work completed on 21 March to make the desktop app self-contained:
+
+### New Capabilities
+- **`BundleManager` service** — Detects dev vs standalone mode, resolves Python paths, handles first-run module extraction
+- **Python detection with 4-tier fallback** — bundled → PATH → login shell → known absolute paths (Homebrew, Anaconda, pyenv)
+- **`PythonSetupScreen`** — Shown when no Python found; offers Homebrew install button and python.org link
+- **`build-standalone.sh`** — Builds a self-contained .app with bundled Python 3.12 + all module source
+- **Auto-reinstall on launch** — If venv is missing when user clicks Start, auto-installs before starting
+- **Split install/run paths** — `sourcePath` (where pyproject.toml is) vs `runPath` (where uvicorn cwd should be)
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `nmtk/neuro_toolkit/lib/services/bundle_manager.dart` | **New** — Python detection, module extraction, dev/bundled detection |
+| `nmtk/neuro_toolkit/lib/services/process_manager.dart` | Bundled Python, non-editable install, venv fallback, auto-reinstall |
+| `nmtk/neuro_toolkit/lib/models/module.dart` | Added `sourcePath`, `runPath`, `uvicornTarget` fields |
+| `nmtk/neuro_toolkit/lib/providers/module_provider.dart` | Python availability check, `recheckPython()` |
+| `nmtk/neuro_toolkit/lib/screens/python_setup.dart` | **New** — Setup screen for missing Python |
+| `nmtk/neuro_toolkit/lib/routing/router.dart` | Python check gate in MainScreen |
+| `nmtk/neuro_toolkit/assets/modules.json` | Per-module sourcePath, runPath, uvicornTarget |
+| `nmtk/neuro_toolkit/macos/Runner/Release.entitlements` | Sandbox disabled for subprocess spawning |
+| `nmtk/neuro_toolkit/macos/Runner/DebugProfile.entitlements` | Sandbox disabled + network entitlements |
+| `nmtk/installer/macos/build-standalone.sh` | **New** — Standalone .app build script |
+| `nmtk/installer/macos/create-dmg.sh` | Updated for new app name/paths |
+| `neurocnl/pyproject.toml` | Added fastapi, uvicorn, pydantic to dependencies |
+| `Neurochip/neurochip/pyproject.toml` | Added `packages = [{include = "app"}]` for poetry-core |
+| `Neurobench/neurobench/pyproject.toml` | Added `packages = [{include = "app"}]` for poetry-core |
+| `Neurohub/pyproject.toml` | Fixed package discovery to `neurohub*` |
+| `Neurosense/pyproject.toml` | Fixed package discovery to `neurosense*` |
+
+### Current Module Startup Status (via launcher)
+| Module | Install | Start | Issue |
+|--------|---------|-------|-------|
+| Neurochip | OK | OK | WebView `opaque` not implemented (minor) |
+| Neurobench | OK | OK | WebView `opaque` not implemented (minor) |
+| Neurosim | OK | OK | No `/health` endpoint defined yet |
+| Neurosense | OK | OK | No `/health` endpoint defined yet |
+| Neurohub | OK | Needs test | `db` import may fail without PYTHONPATH |
+| neurocnl | OK | FAIL | `neurodreamhand.hardware.quantization.analyze_quantization` doesn't exist — backend code bug |
+| NDH | N/A | N/A | CLI only, requires MuJoCo |

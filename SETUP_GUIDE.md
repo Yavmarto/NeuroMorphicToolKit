@@ -284,15 +284,54 @@ flutter run -d macos
    - Neuro-Dream-Hand (Prosthetic Simulator — CLI only)
 3. **Install** — Click Install on a module. The launcher will:
    - Create a Python virtual environment
-   - Run `pip install -e .` for the module
+   - Run `pip install .` for the module
    - Mark the module as installed
 4. **Launch** — Click Launch on an installed module. The launcher will:
    - Start `uvicorn` as a subprocess on the configured port
    - Poll the health endpoint until the service is ready
    - Open the module UI in an embedded WebView
+   - If the venv is missing, auto-reinstall before starting
 5. **Stop** — Click Stop to terminate the backend subprocess
 
-### 5d. Running with custom API URL
+### 5d. Building a Self-Contained macOS App (DMG)
+
+For end-user distribution, you can build a standalone `.app` that bundles Python and all module source code. No Python pre-installation required by the end user.
+
+```bash
+# Build the standalone .app
+cd nmtk/installer/macos
+./build-standalone.sh
+
+# Or build and create a DMG:
+./build-standalone.sh --dmg
+
+# Skip Flutter rebuild (if you already built):
+./build-standalone.sh --skip-flutter
+```
+
+**What it does:**
+1. Downloads a standalone Python 3.12 interpreter (python-build-standalone)
+2. Builds the Flutter macOS app (`flutter build macos --release`)
+3. Bundles Python into `.app/Contents/Frameworks/python/`
+4. Copies all 7 module source dirs into `.app/Contents/Resources/modules/`
+5. Code signs and optionally creates a DMG
+
+**End-user flow:**
+1. Open the DMG, drag `.app` to Applications
+2. Launch the app — modules are extracted to `~/Library/Application Support/` on first run
+3. Click Install on a module — venv created with bundled Python
+4. Click Launch — backend starts, WebView shows the UI
+
+**Python detection (when not bundled):**
+The launcher searches for Python in this order:
+1. Bundled Python inside the `.app`
+2. `python3` / `python` on PATH
+3. User's login shell PATH (via `zsh -lc 'which python3'`)
+4. Known paths: `/opt/homebrew/bin/`, `~/anaconda3/bin/`, `~/.pyenv/shims/`, etc.
+
+If no Python is found, a setup screen is shown with install instructions and a Homebrew install button.
+
+### 5e. Running with custom API URL
 
 ```bash
 flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8000

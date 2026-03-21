@@ -328,3 +328,32 @@ Submodule activity (19–21 Mar):
 **The project has transformed in 48 hours from "beautiful shell with no wiring" to a functional platform.** The critical blockers (launcher orchestration, root Docker, WebView integration) are all resolved. Three module frontends have grown substantially. All modules now have CI, tests, and strict typing.
 
 **The question has shifted from "Can we build a POC?" to "Does it work end-to-end?"** The remaining work is validation (run docker-compose, test the launcher flow) and integration testing (wire frontends to backends). Estimated time to demo-ready POC: **3-5 days of focused testing.**
+
+---
+
+## Addendum: Self-Contained Desktop App (21 March PM)
+
+The desktop launcher was made self-contained. Key achievements:
+
+### Working
+- **Standalone .app build** — `build-standalone.sh` bundles Python 3.12 + all module source into a distributable macOS .app
+- **Python auto-detection** — 4-tier fallback: bundled → PATH → login shell → known paths (Homebrew, Anaconda, pyenv)
+- **Setup screen** — Shows when Python not found, with Homebrew install button
+- **Auto-reinstall** — If venv missing on Launch, automatically installs first
+- **Split paths** — `sourcePath` (pip install), `runPath` (uvicorn cwd), `uvicornTarget` per module
+- **Debug mode works** — Dev builds correctly use repo-relative paths instead of Application Support
+- **Neurochip, Neurobench** — Install + Start both work (WebView `opaque` error is minor/known)
+- **Neurosim, Neurosense** — Install + Start work (no `/health` endpoint yet, but server runs)
+
+### Remaining Backend Code Issues (not launcher issues)
+| Module | Issue | Fix Needed |
+|--------|-------|-----------|
+| neurocnl | Imports `analyze_quantization` from `neurodreamhand` — function doesn't exist | Fix import in `backend/app/routers/prosthetic/analysis.py` |
+| Neurohub | `from db.database` fails — `db` is sibling package not on PYTHONPATH | Add `sys.path` fix or restructure imports |
+| All modules | Missing `/health` endpoint on some | Add `GET /health` route returning `{"status": "ok"}` |
+
+### Key Files
+- `nmtk/installer/macos/build-standalone.sh` — Builds the standalone .app
+- `nmtk/neuro_toolkit/lib/services/bundle_manager.dart` — Python detection + module extraction
+- `nmtk/neuro_toolkit/lib/screens/python_setup.dart` — Setup screen for missing Python
+- `SETUP_GUIDE.md` section 5d — End-user instructions for building/using the standalone app

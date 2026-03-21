@@ -39,15 +39,23 @@ class ProcessManager {
     }
   }
 
-  /// The directory containing pyproject.toml for a given module.
+  /// The directory containing pyproject.toml (for pip install).
   String _installDir(Module module) {
     return p.normalize(p.join(module.directory, module.sourcePath));
+  }
+
+  /// The working directory for uvicorn (may differ from install dir).
+  String _runDir(Module module) {
+    return p.normalize(p.join(module.directory, module.runPath));
   }
 
   Future<void> installModule(Module module, {Function(double)? onProgress}) async {
     final installDir = _installDir(module);
     final moduleDir = Directory(installDir);
+    debugPrint('[${module.id}] installModule: installDir=$installDir');
+
     if (!await moduleDir.exists()) {
+      debugPrint('[${module.id}] ERROR: directory not found: $installDir');
       throw Exception('Module directory not found: $installDir');
     }
 
@@ -57,10 +65,9 @@ class ProcessManager {
     try {
       if (!await venvDir.exists()) {
         onProgress?.call(0.1);
-
         final pythonBin = await BundleManager().pythonPath;
+        debugPrint('[${module.id}] Creating venv with: $pythonBin -m venv venv (in $installDir)');
 
-        // Try normal venv creation first
         var venvResult = await Process.run(
           pythonBin,
           ['-m', 'venv', 'venv'],
@@ -68,10 +75,8 @@ class ProcessManager {
         );
 
         if (venvResult.exitCode != 0) {
-          // Fallback: create venv without pip, then bootstrap pip separately.
-          // This handles cases where ensurepip is broken (e.g. missing wheels).
-          debugPrint('Normal venv failed, trying --without-pip fallback...');
-          // Clean up partial venv if any
+          debugPrint('[${module.id}] Normal venv failed (exit ${venvResult.exitCode}): ${venvResult.stderr}');
+          debugPrint('[${module.id}] Trying --without-pip fallback...');
           if (await venvDir.exists()) {
             await venvDir.delete(recursive: true);
           }
@@ -86,33 +91,25 @@ class ProcessManager {
             throw Exception('Failed to create venv: ${venvResult.stderr}');
           }
 
-          // Bootstrap pip into the venv
           final venvPython = Platform.isWindows
               ? p.join(venvPath, 'Scripts', 'python.exe')
               : p.join(venvPath, 'bin', 'python');
 
-          // Try ensurepip first (it may work inside the venv even if it failed during venv creation)
           var pipBootstrap = await Process.run(
-            venvPython,
-            ['-m', 'ensurepip', '--default-pip'],
+            venvPython, ['-m', 'ensurepip', '--default-pip'],
             workingDirectory: installDir,
           );
 
           if (pipBootstrap.exitCode != 0) {
-            // Last resort: download get-pip.py
-            debugPrint('ensurepip failed, downloading get-pip.py...');
+            debugPrint('[${module.id}] ensurepip failed, downloading get-pip.py...');
             final getPipPath = p.join(installDir, 'get-pip.py');
             final curlResult = await Process.run(
-              'curl',
-              ['-sS', 'https://bootstrap.pypa.io/get-pip.py', '-o', getPipPath],
+              'curl', ['-sS', 'https://bootstrap.pypa.io/get-pip.py', '-o', getPipPath],
             );
             if (curlResult.exitCode == 0) {
               pipBootstrap = await Process.run(
-                venvPython,
-                [getPipPath],
-                workingDirectory: installDir,
+                venvPython, [getPipPath], workingDirectory: installDir,
               );
-              // Clean up get-pip.py
               try { await File(getPipPath).delete(); } catch (_) {}
             }
             if (pipBootstrap.exitCode != 0) {
@@ -120,6 +117,9 @@ class ProcessManager {
             }
           }
         }
+        debugPrint('[${module.id}] venv created successfully');
+      } else {
+        debugPrint('[${module.id}] venv already exists at $venvPath');
       }
 
       onProgress?.call(0.3);
@@ -128,8 +128,23 @@ class ProcessManager {
           ? p.join(venvPath, 'Scripts', 'pip.exe')
           : p.join(venvPath, 'bin', 'pip');
 
-      // Use non-editable install. Editable (-e) fails with poetry-core
-      // projects where the package dir name matches the project dir name.
+      // Install local sibling dependencies first (e.g. Neuro-Dream-Hand for neurocnl)
+      if (module.localDeps.isNotEmpty) {
+        final repoRoot = p.normalize(p.join(module.directory, '..'));
+        for (final dep in module.localDeps) {
+          final depDir = p.join(repoRoot, dep);
+          debugPrint('[${module.id}] Installing local dep: $pipPath install $depDir');
+          final depResult = await Process.run(pipPath, ['install', depDir], workingDirectory: installDir);
+          if (depResult.exitCode != 0) {
+            debugPrint('[${module.id}] Local dep $dep FAILED: ${depResult.stderr}');
+            // Non-fatal — continue, the main install might still work
+          } else {
+            debugPrint('[${module.id}] Local dep $dep installed');
+          }
+        }
+      }
+
+      debugPrint('[${module.id}] Running: $pipPath install . (in $installDir)');
       final pipResult = await Process.run(
         pipPath,
         ['install', '.'],
@@ -137,9 +152,12 @@ class ProcessManager {
       );
 
       if (pipResult.exitCode != 0) {
+        debugPrint('[${module.id}] pip install FAILED (exit ${pipResult.exitCode})');
+        debugPrint('[${module.id}] stderr: ${pipResult.stderr}');
         throw Exception('Failed to install dependencies: ${pipResult.stderr}');
       }
 
+      debugPrint('[${module.id}] pip install SUCCESS');
       onProgress?.call(1.0);
 
       final updatedModule = module.copyWith(
@@ -149,6 +167,7 @@ class ProcessManager {
       _statusController.add(updatedModule);
       await saveModuleState(updatedModule);
     } catch (e) {
+      debugPrint('[${module.id}] installModule EXCEPTION: $e');
       final updatedModule = module.copyWith(
         status: ModuleStatus.error,
         healthStatus: e.toString(),
@@ -158,26 +177,69 @@ class ProcessManager {
     }
   }
 
+  /// Kill any leftover process listening on a port (from a previous crash/session).
+  Future<void> _killProcessOnPort(int port) async {
+    try {
+      final result = await Process.run('lsof', ['-ti', ':$port']);
+      if (result.exitCode == 0) {
+        final pids = result.stdout.toString().trim().split('\n');
+        for (final pid in pids) {
+          if (pid.isNotEmpty) {
+            debugPrint('Killing leftover process $pid on port $port');
+            Process.killPid(int.parse(pid), ProcessSignal.sigkill);
+          }
+        }
+        // Brief wait for port to be released
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+    } catch (_) {}
+  }
+
   Future<void> startModule(Module module) async {
     if (_runningProcesses.containsKey(module.id)) return;
     if (module.port == null) {
       throw Exception('Cannot start module ${module.id}: no port configured');
     }
 
+    // Kill any zombie process from a previous session occupying our port
+    await _killProcessOnPort(module.port!);
+
     final installDir = _installDir(module);
+    final runDir = _runDir(module);
     final venvPath = p.join(installDir, 'venv');
     final pythonPath = Platform.isWindows
         ? p.join(venvPath, 'Scripts', 'python.exe')
         : p.join(venvPath, 'bin', 'python');
 
+    debugPrint('[${module.id}] startModule: installDir=$installDir runDir=$runDir');
+    debugPrint('[${module.id}] startModule: pythonPath=$pythonPath target=${module.uvicornTarget} port=${module.port}');
+
+    // Guard: if venv doesn't exist, the module needs to be (re-)installed first
+    if (!await File(pythonPath).exists()) {
+      debugPrint('[${module.id}] venv python not found — installing first...');
+      try {
+        await installModule(module);
+      } catch (e) {
+        debugPrint('[${module.id}] Auto-install failed: $e');
+        rethrow;
+      }
+      // Verify the install actually created the venv
+      if (!await File(pythonPath).exists()) {
+        throw Exception('Install completed but venv python still not found at $pythonPath');
+      }
+    }
+
     final updatedModuleStarting = module.copyWith(status: ModuleStatus.starting);
     _statusController.add(updatedModuleStarting);
 
     try {
+      debugPrint('[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port ${module.port}');
+      debugPrint('[${module.id}] Working directory: $runDir');
+
       final process = await Process.start(
         pythonPath,
         ['-m', 'uvicorn', module.uvicornTarget, '--port', (module.port ?? 8000).toString()],
-        workingDirectory: installDir,
+        workingDirectory: runDir,
       );
 
       _runningProcesses[module.id] = process;
@@ -186,10 +248,12 @@ class ProcessManager {
 
       process.stdout.transform(utf8.decoder).listen((data) {
         controller.add(data);
+        debugPrint('[${module.id}] stdout: ${data.trim()}');
       });
 
       process.stderr.transform(utf8.decoder).listen((data) {
         controller.add(data);
+        debugPrint('[${module.id}] stderr: ${data.trim()}');
       });
 
       process.exitCode.then((code) {
@@ -250,6 +314,10 @@ class ProcessManager {
       } else if (response.statusCode == 503) {
         newStatus = ModuleStatus.degraded;
         healthInfo = response.body;
+      } else if (response.statusCode == 404) {
+        // Server is running but has no /health endpoint — treat as running
+        newStatus = ModuleStatus.running;
+        healthInfo = 'No /health endpoint (server is up)';
       } else {
         newStatus = ModuleStatus.error;
         healthInfo = 'Health check failed: ${response.statusCode}';
