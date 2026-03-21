@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Create DMG installer for NeuroCNL Studio (macOS)
+# Create DMG installer for NeuroMorphic ToolKit (macOS)
 # Usage: ./create-dmg.sh [path-to-app-bundle] [version]
 
-APP_PATH="${1:-build/macos/Build/Products/Release/neurocnl_studio.app}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+TOOLKIT_DIR="$REPO_ROOT/nmtk/neuro_toolkit"
+
+APP_PATH="${1:-$TOOLKIT_DIR/build/macos/Build/Products/Release/neuro_toolkit.app}"
 VERSION="${2:-dev}"
-OUTPUT="neurocnl-studio-${VERSION}-macos.dmg"
+OUTPUT="NeuroMorphicToolKit-${VERSION}-macos.dmg"
 
 if [ ! -d "$APP_PATH" ]; then
   echo "Error: App bundle not found at $APP_PATH"
-  echo "Run 'flutter build macos --release' first."
+  echo "Run build-standalone.sh first, or 'flutter build macos --release'."
   exit 1
 fi
 
@@ -19,8 +23,11 @@ if ! command -v create-dmg &>/dev/null; then
   brew install create-dmg
 fi
 
+# Remove old DMG if present (create-dmg fails if output exists)
+rm -f "$OUTPUT"
+
 create-dmg \
-  --volname "NeuroCNL Studio ${VERSION}" \
+  --volname "NeuroMorphic ToolKit ${VERSION}" \
   --window-pos 200 120 \
   --window-size 600 400 \
   --icon-size 100 \
@@ -29,4 +36,4 @@ create-dmg \
   "$OUTPUT" \
   "$APP_PATH"
 
-echo "✅ Created $OUTPUT"
+echo "Created $OUTPUT ($(du -sh "$OUTPUT" | awk '{print $1}'))"

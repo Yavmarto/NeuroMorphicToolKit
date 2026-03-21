@@ -6,6 +6,8 @@
     "icon": "code",
     "port": 8000,
     "installPath": "neurocnl/",
+    "sourcePath": ".",
+    "uvicornTarget": "backend.app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false
@@ -17,6 +19,8 @@
     "icon": "architecture",
     "port": 8001,
     "installPath": "Neurosim/",
+    "sourcePath": ".",
+    "uvicornTarget": "neurosim.app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Minimal",
     "requiresMuJoCo": false
@@ -28,6 +32,8 @@
     "icon": "memory",
     "port": 8002,
     "installPath": "Neurochip/",
+    "sourcePath": "neurochip/",
+    "uvicornTarget": "app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Partial",
     "requiresMuJoCo": false
@@ -39,6 +45,8 @@
     "icon": "speed",
     "port": 8003,
     "installPath": "Neurobench/",
+    "sourcePath": "neurobench/",
+    "uvicornTarget": "app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Scaffold",
     "requiresMuJoCo": false
@@ -50,6 +58,8 @@
     "icon": "sensors",
     "port": 8004,
     "installPath": "Neurosense/",
+    "sourcePath": ".",
+    "uvicornTarget": "neurosense.app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Partial",
     "requiresMuJoCo": false
@@ -61,6 +71,8 @@
     "icon": "hub",
     "port": 8005,
     "installPath": "Neurohub/",
+    "sourcePath": ".",
+    "uvicornTarget": "neurohub.app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Scaffold",
     "requiresMuJoCo": false
@@ -72,6 +84,8 @@
     "icon": "precision_manufacturing",
     "port": null,
     "installPath": "Neuro-Dream-Hand/",
+    "sourcePath": ".",
+    "uvicornTarget": "",
     "hasFrontend": false,
     "frontendStatus": "No",
     "requiresMuJoCo": true

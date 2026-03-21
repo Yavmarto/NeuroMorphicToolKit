@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -38,37 +39,86 @@ class ProcessManager {
     }
   }
 
+  /// The directory containing pyproject.toml for a given module.
+  String _installDir(Module module) {
+    return p.normalize(p.join(module.directory, module.sourcePath));
+  }
+
   Future<void> installModule(Module module, {Function(double)? onProgress}) async {
-    final moduleDir = Directory(module.directory);
+    final installDir = _installDir(module);
+    final moduleDir = Directory(installDir);
     if (!await moduleDir.exists()) {
-      throw Exception('Module directory not found: ${module.directory}');
+      throw Exception('Module directory not found: $installDir');
     }
 
-    final venvPath = p.join(module.directory, 'venv');
+    final venvPath = p.join(installDir, 'venv');
     final venvDir = Directory(venvPath);
 
     try {
       if (!await venvDir.exists()) {
         onProgress?.call(0.1);
 
-        ProcessResult venvResult;
-        try {
-          venvResult = await Process.run(
-            'python3',
-            ['-m', 'venv', 'venv'],
-            workingDirectory: module.directory,
-          );
-        } catch (_) {
-          // Fallback to 'python' for Windows or environments without 'python3' alias
-           venvResult = await Process.run(
-            'python',
-            ['-m', 'venv', 'venv'],
-            workingDirectory: module.directory,
-          );
-        }
+        final pythonBin = await BundleManager().pythonPath;
+
+        // Try normal venv creation first
+        var venvResult = await Process.run(
+          pythonBin,
+          ['-m', 'venv', 'venv'],
+          workingDirectory: installDir,
+        );
 
         if (venvResult.exitCode != 0) {
-          throw Exception('Failed to create venv: ${venvResult.stderr}');
+          // Fallback: create venv without pip, then bootstrap pip separately.
+          // This handles cases where ensurepip is broken (e.g. missing wheels).
+          debugPrint('Normal venv failed, trying --without-pip fallback...');
+          // Clean up partial venv if any
+          if (await venvDir.exists()) {
+            await venvDir.delete(recursive: true);
+          }
+
+          venvResult = await Process.run(
+            pythonBin,
+            ['-m', 'venv', '--without-pip', 'venv'],
+            workingDirectory: installDir,
+          );
+
+          if (venvResult.exitCode != 0) {
+            throw Exception('Failed to create venv: ${venvResult.stderr}');
+          }
+
+          // Bootstrap pip into the venv
+          final venvPython = Platform.isWindows
+              ? p.join(venvPath, 'Scripts', 'python.exe')
+              : p.join(venvPath, 'bin', 'python');
+
+          // Try ensurepip first (it may work inside the venv even if it failed during venv creation)
+          var pipBootstrap = await Process.run(
+            venvPython,
+            ['-m', 'ensurepip', '--default-pip'],
+            workingDirectory: installDir,
+          );
+
+          if (pipBootstrap.exitCode != 0) {
+            // Last resort: download get-pip.py
+            debugPrint('ensurepip failed, downloading get-pip.py...');
+            final getPipPath = p.join(installDir, 'get-pip.py');
+            final curlResult = await Process.run(
+              'curl',
+              ['-sS', 'https://bootstrap.pypa.io/get-pip.py', '-o', getPipPath],
+            );
+            if (curlResult.exitCode == 0) {
+              pipBootstrap = await Process.run(
+                venvPython,
+                [getPipPath],
+                workingDirectory: installDir,
+              );
+              // Clean up get-pip.py
+              try { await File(getPipPath).delete(); } catch (_) {}
+            }
+            if (pipBootstrap.exitCode != 0) {
+              throw Exception('Failed to bootstrap pip in venv');
+            }
+          }
         }
       }
 
@@ -78,10 +128,12 @@ class ProcessManager {
           ? p.join(venvPath, 'Scripts', 'pip.exe')
           : p.join(venvPath, 'bin', 'pip');
 
+      // Use non-editable install. Editable (-e) fails with poetry-core
+      // projects where the package dir name matches the project dir name.
       final pipResult = await Process.run(
         pipPath,
-        ['install', '-e', '.'],
-        workingDirectory: module.directory,
+        ['install', '.'],
+        workingDirectory: installDir,
       );
 
       if (pipResult.exitCode != 0) {
@@ -112,7 +164,8 @@ class ProcessManager {
       throw Exception('Cannot start module ${module.id}: no port configured');
     }
 
-    final venvPath = p.join(module.directory, 'venv');
+    final installDir = _installDir(module);
+    final venvPath = p.join(installDir, 'venv');
     final pythonPath = Platform.isWindows
         ? p.join(venvPath, 'Scripts', 'python.exe')
         : p.join(venvPath, 'bin', 'python');
@@ -123,8 +176,8 @@ class ProcessManager {
     try {
       final process = await Process.start(
         pythonPath,
-        ['-m', 'uvicorn', 'app.main:app', '--port', (module.port ?? 8000).toString()],
-        workingDirectory: module.directory,
+        ['-m', 'uvicorn', module.uvicornTarget, '--port', (module.port ?? 8000).toString()],
+        workingDirectory: installDir,
       );
 
       _runningProcesses[module.id] = process;
@@ -258,17 +311,19 @@ class ProcessManager {
         final states = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
         for (var i = 0; i < modules.length; i++) {
           if (states.containsKey(modules[i].id)) {
-            final savedModule = Module.fromJson(states[modules[i].id]);
-            // Only keep installation status, not runtime status
-            if (savedModule.status == ModuleStatus.installed ||
-                savedModule.status == ModuleStatus.running ||
-                savedModule.status == ModuleStatus.degraded ||
-                savedModule.status == ModuleStatus.error) {
-              modules[i].status = ModuleStatus.installed;
-              modules[i].installProgress = 1.0;
-            } else {
-               modules[i].status = savedModule.status;
-               modules[i].installProgress = savedModule.installProgress;
+            final saved = states[modules[i].id] as Map<String, dynamic>;
+            final savedStatus = saved['status'] as int?;
+            // Only restore installation status, not runtime status or paths.
+            // Paths are always freshly resolved from BundleManager + modules.json.
+            if (savedStatus != null) {
+              final status = ModuleStatus.values[savedStatus];
+              if (status == ModuleStatus.installed ||
+                  status == ModuleStatus.running ||
+                  status == ModuleStatus.degraded ||
+                  status == ModuleStatus.error) {
+                modules[i].status = ModuleStatus.installed;
+                modules[i].installProgress = 1.0;
+              }
             }
           }
         }

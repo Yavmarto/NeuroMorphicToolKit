@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
+import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 
@@ -65,6 +66,12 @@ class MainScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ModuleProvider>();
+
+    // If Python is not available, show setup screen instead of normal UI
+    if (!provider.pythonAvailable && !provider.isLoading) {
+      return const PythonSetupScreen();
+    }
+
     return ResponsiveScaffold(
       currentIndex: _selectedIndex(context),
       onNavigationTargetSelected: (index) => _onItemTapped(context, index),

@@ -19,6 +19,8 @@ class Module {
   final bool hasFrontend;
   final String frontendStatus;
   final bool requiresMuJoCo;
+  final String sourcePath;
+  final String uvicornTarget;
   ModuleStatus status;
   double installProgress;
   String? healthStatus;
@@ -33,6 +35,8 @@ class Module {
     this.hasFrontend = false,
     this.frontendStatus = 'No',
     this.requiresMuJoCo = false,
+    this.sourcePath = '.',
+    this.uvicornTarget = 'app.main:app',
     this.status = ModuleStatus.notInstalled,
     this.installProgress = 0.0,
     this.healthStatus,
@@ -49,6 +53,8 @@ class Module {
       hasFrontend: json['hasFrontend'] as bool? ?? false,
       frontendStatus: json['frontendStatus'] as String? ?? 'No',
       requiresMuJoCo: json['requiresMuJoCo'] as bool? ?? false,
+      sourcePath: json['sourcePath'] as String? ?? '.',
+      uvicornTarget: json['uvicornTarget'] as String? ?? 'app.main:app',
       status: json['status'] != null
           ? ModuleStatus.values[json['status'] as int]
           : ModuleStatus.notInstalled,
@@ -67,6 +73,8 @@ class Module {
     bool? hasFrontend,
     String? frontendStatus,
     bool? requiresMuJoCo,
+    String? sourcePath,
+    String? uvicornTarget,
     ModuleStatus? status,
     double? installProgress,
     String? healthStatus,
@@ -81,6 +89,8 @@ class Module {
       hasFrontend: hasFrontend ?? this.hasFrontend,
       frontendStatus: frontendStatus ?? this.frontendStatus,
       requiresMuJoCo: requiresMuJoCo ?? this.requiresMuJoCo,
+      sourcePath: sourcePath ?? this.sourcePath,
+      uvicornTarget: uvicornTarget ?? this.uvicornTarget,
       status: status ?? this.status,
       installProgress: installProgress ?? this.installProgress,
       healthStatus: healthStatus ?? this.healthStatus,
@@ -97,6 +107,8 @@ class Module {
         'hasFrontend': hasFrontend,
         'frontendStatus': frontendStatus,
         'requiresMuJoCo': requiresMuJoCo,
+        'sourcePath': sourcePath,
+        'uvicornTarget': uvicornTarget,
         'status': status.index,
         'installProgress': installProgress,
         'healthStatus': healthStatus,
