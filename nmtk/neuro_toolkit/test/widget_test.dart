@@ -11,6 +11,7 @@ import 'package:neuro_toolkit/main.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'catalog_test.dart';
 
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
@@ -50,6 +51,8 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
 void main() {
   testWidgets('App loads smoke test', (WidgetTester tester) async {
+    final mockProvider = MockModuleProvider();
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       MultiProvider(

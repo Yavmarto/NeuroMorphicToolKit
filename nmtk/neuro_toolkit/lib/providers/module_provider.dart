@@ -8,15 +8,22 @@ import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:path/path.dart' as p;
 
 class ModuleProvider with ChangeNotifier {
-  final ProcessManager _processManager = ProcessManager();
+  late final ProcessManager _processManager;
 
-  List<Module> _modules = [];
+  @visibleForTesting
+  List<Module> modulesForTesting = [];
+
+  List<Module> get _modules => modulesForTesting.isEmpty ? _internalModules : modulesForTesting;
+  set _modules(List<Module> val) => _internalModules = val;
+
+  List<Module> _internalModules = [];
   bool _isLoading = true;
   bool _pythonAvailable = true; // assume true until checked
   String? _error;
   final List<String> _activeModuleIds = [];
 
-  ModuleProvider() {
+  ModuleProvider({ProcessManager? processManager}) {
+    _processManager = processManager ?? ProcessManager();
     _init();
   }
 
@@ -67,6 +74,11 @@ class ModuleProvider with ChangeNotifier {
   }
 
   List<Module> get modules => _modules;
+  @visibleForTesting
+  set modules(List<Module> val) {
+    _modules = val;
+    notifyListeners();
+  }
   bool get isLoading => _isLoading;
   bool get pythonAvailable => _pythonAvailable;
   String? get error => _error;
