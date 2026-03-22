@@ -71,7 +71,7 @@ jobs:
               - 'Neurobench/frontend/**'
               - 'nmtk_ui_core/**'
             neurotoolkit:
-              - 'neuro_toolkit/**'
+              - 'nmtk/neuro_toolkit/**'
               - 'nmtk_ui_core/**'
             nmtk_ui_core:
               - 'nmtk_ui_core/**'
@@ -209,7 +209,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules
+        run: |
+          git submodule update --init neurocnl
+          git submodule update --init Neuro-Dream-Hand
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -289,7 +294,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: neuro_toolkit
+        working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
         with:
