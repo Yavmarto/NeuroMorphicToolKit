@@ -1,7 +1,7 @@
 # NeuroMorphicToolKit — Complete Setup & Installation Guide
 
-**Last updated:** 2026-03-21
-**Covers:** Docker setup, manual setup, Flutter desktop launcher, developer workflow
+**Last updated:** 2026-03-22
+**Covers:** Docker setup, manual setup, Web frontend build, developer workflow
 
 ---
 
@@ -16,7 +16,8 @@
 7. [Running the Demo Walkthrough](#7-running-the-demo-walkthrough)
 8. [Port Reference](#8-port-reference)
 9. [Testing](#9-testing)
-10. [Troubleshooting](#10-troubleshooting)
+10. [Developer Workflow](#10-developer-workflow)
+11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
@@ -187,8 +188,8 @@ Each backend can be started independently. Open a separate terminal for each.
 source .venv/bin/activate
 cd neurocnl
 pip install -e ".[dev]"
-cd backend
-uvicorn app.main:app --reload --port 8000
+# Note: must run from neurocnl/ root for 'backend' import to work
+uvicorn backend.app.main:app --reload --port 8000
 ```
 
 **Neurosim backend (port 8001):**
@@ -204,6 +205,7 @@ uvicorn app.main:app --reload --port 8001
 ```bash
 cd Neurochip/neurochip
 poetry install
+# Note: must run from Neurochip/neurochip root
 poetry run uvicorn app.main:app --reload --port 8002
 ```
 
@@ -211,6 +213,7 @@ poetry run uvicorn app.main:app --reload --port 8002
 ```bash
 cd Neurobench/neurobench
 poetry install
+# Note: must run from Neurobench/neurobench root
 poetry run uvicorn app.main:app --reload --port 8003
 ```
 
@@ -229,7 +232,8 @@ source .venv/bin/activate
 cd Neurohub
 pip install -e ".[dev]"
 cd neurohub
-uvicorn app.main:app --reload --port 8005
+# Note: PYTHONPATH=. required for 'db' and 'app' sibling imports
+PYTHONPATH=. uvicorn app.main:app --reload --port 8005
 ```
 
 ### 4c. Verify each backend
@@ -243,7 +247,7 @@ curl http://localhost:8004/health   # Neurosense
 curl http://localhost:8005/health   # Neurohub
 ```
 
-Each should return a JSON response with `"status": "ok"` or similar.
+Each should return a JSON response with `"status": "ok"`, `"status": "healthy"`, or similar.
 
 ---
 
@@ -339,9 +343,31 @@ flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8000
 
 ---
 
-## 6. Running Individual Module Frontends
+## 6. Building and Running Module Frontends
 
-Each module with a Flutter frontend can be run standalone (useful for development).
+Each module with a Flutter frontend can be run standalone (useful for development) or built as a web application and served by the corresponding backend.
+
+### 6a. Building Flutter Web Frontends
+
+To serve the frontend from the backend's `/` route, you must build the Flutter web app first.
+
+```bash
+# Example: Building neurocnl web frontend
+cd neurocnl/frontend
+flutter pub get
+flutter build web --release --dart-define=API_BASE_URL=http://localhost:8000
+
+# After building, the backend (if configured) will serve it at http://localhost:8000/
+```
+
+Repeat for other modules, replacing the directory and port in `API_BASE_URL`:
+- **Neurosim:** `cd Neurosim/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8001`
+- **Neurochip:** `cd Neurochip/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8002`
+- **Neurobench:** `cd Neurobench/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8003`
+- **Neurosense:** `cd Neurosense/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8004`
+- **Neurohub:** `cd Neurohub/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8005`
+
+### 6b. Running Standalone Desktop Frontends (Development)
 
 ### neurocnl frontend (most complete)
 
@@ -466,7 +492,7 @@ See `DEMO_WALKTHROUGH.md` for the full step-by-step guide with troubleshooting.
 | Neurochip | 8002 | default | `/health` |
 | Neurobench | 8003 | full | `/health` |
 | Neurosense | 8004 | full | `/health` |
-| Neurohub | 8005 | full | `/api/neurohub/health` |
+| Neurohub | 8005 | full | `/health` |
 | neurocnl-physics | 8006 | physics | `/health` |
 
 ---
@@ -540,7 +566,75 @@ flutter analyze
 
 ---
 
-## 10. Troubleshooting
+## 10. Developer Workflow
+
+To ensure consistency and quality across the suite, developers should follow these practices.
+
+### 10a. Conventional Commits
+
+We use [Conventional Commits](https://www.conventionalcommits.org/) for all repositories. This enables automated changelog generation and version bumping.
+
+**Format:** `<type>(<scope>): <description>`
+
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation only changes
+- `style`: Changes that do not affect the meaning of the code (white-space, formatting, etc)
+- `refactor`: A code change that neither fixes a bug nor adds a feature
+- `perf`: A code change that improves performance
+- `test`: Adding missing tests or correcting existing tests
+- `build`: Changes that affect the build system or external dependencies
+- `ci`: Changes to CI configuration files and scripts
+- `chore`: Other changes that don't modify src or test files
+
+**Example:**
+`feat(neurocnl): add support for axonal delay in simulation`
+
+### 10b. Submodule Management
+
+This is a monorepo that manages 7 git submodules.
+
+**Checking out changes:**
+Always use `git submodule update --init --recursive` after pulling the root repository to ensure your local submodules match the tracked commits.
+
+**Making changes within a submodule:**
+1. `cd <submodule_directory>`
+2. Create a branch and make your changes.
+3. Commit and push inside the submodule.
+4. `cd ..` (back to root)
+5. `git add <submodule_directory>` to update the pointer in the root repo.
+6. Commit the pointer update in the root repo.
+
+### 10c. Local Linting and Testing
+
+Before submitting a PR, ensure all tests pass and the code is linted correctly.
+
+**Python:**
+```bash
+ruff check .
+ruff format .
+mypy . --strict
+pytest
+```
+
+**Flutter/Dart:**
+```bash
+flutter analyze
+flutter test
+```
+
+### 10d. Pre-commit Hooks
+
+We recommend installing [pre-commit](https://pre-commit.com/) to automate these checks.
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+---
+
+## 11. Troubleshooting
 
 ### Docker issues
 
@@ -606,6 +700,12 @@ curl -sSL https://install.python-poetry.org | python3 -
 **uvicorn not found:**
 ```bash
 pip install uvicorn[standard]
+```
+
+**Headless MuJoCo rendering issues:**
+If you are running on a headless server (e.g., CI or a Linux server without a display), set `MUJOCO_GL=egl` before starting the simulation:
+```bash
+export MUJOCO_GL=egl
 ```
 
 ### Submodule issues

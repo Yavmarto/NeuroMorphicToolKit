@@ -197,6 +197,12 @@ class ModuleProvider with ChangeNotifier {
     }
   }
 
+  @override
+  void dispose() {
+    _processManager.dispose();
+    super.dispose();
+  }
+
   void closeTab(String moduleId) {
     _activeModuleIds.remove(moduleId);
     notifyListeners();
