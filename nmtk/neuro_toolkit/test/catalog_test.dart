@@ -16,7 +16,13 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   bool get isLoading => false;
 
   @override
+  bool get pythonAvailable => true;
+
+  @override
   String? get error => null;
+
+  @override
+  Future<void> recheckPython() async {}
 
   @override
   List<Module> get installedModules => _mockModules.where((m) =>
@@ -35,7 +41,25 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   List<Module> get activeModules => [];
 
   @override
+  List<Module> modulesForTesting = [];
+
+  @override
+  set modules(List<Module> val) {}
+
+  @override
+  bool get pythonAvailable => true;
+
+  @override
+  Future<void> recheckPython() async {}
+
+  @override
   bool isMuJoCoAvailable() => false;
+
+  @override
+  bool get pythonAvailable => true;
+
+  @override
+  Future<void> recheckPython() async {}
 
   @override
   Future<void> installModule(String moduleId) async {}
