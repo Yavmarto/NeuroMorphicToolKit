@@ -8,10 +8,90 @@ import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+abstract class ProcessRunner {
+  Future<Process> start(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment = true,
+    bool runInShell = false,
+    ProcessStartMode mode = ProcessStartMode.normal,
+  });
+
+  Future<ProcessResult> run(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment = true,
+    bool runInShell = false,
+    Encoding? stdoutEncoding = systemEncoding,
+    Encoding? stderrEncoding = systemEncoding,
+  });
+}
+
+class DefaultProcessRunner implements ProcessRunner {
+  @override
+  Future<Process> start(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment = true,
+    bool runInShell = false,
+    ProcessStartMode mode = ProcessStartMode.normal,
+  }) {
+    return Process.start(
+      executable,
+      arguments,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      includeParentEnvironment: includeParentEnvironment,
+      runInShell: runInShell,
+      mode: mode,
+    );
+  }
+
+  @override
+  Future<ProcessResult> run(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment = true,
+    bool runInShell = false,
+    Encoding? stdoutEncoding = systemEncoding,
+    Encoding? stderrEncoding = systemEncoding,
+  }) {
+    return Process.run(
+      executable,
+      arguments,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      includeParentEnvironment: includeParentEnvironment,
+      runInShell: runInShell,
+      stdoutEncoding: stdoutEncoding,
+      stderrEncoding: stderrEncoding,
+    );
+  }
+}
+
 class ProcessManager {
   static final ProcessManager _instance = ProcessManager._internal();
-  factory ProcessManager() => _instance;
+  factory ProcessManager({ProcessRunner? processRunner}) {
+    if (processRunner != null) {
+      _instance._processRunner = processRunner;
+    }
+    return _instance;
+  }
+
+  @visibleForTesting
+  set processRunner(ProcessRunner runner) => _processRunner = runner;
+
   ProcessManager._internal();
+
+  ProcessRunner _processRunner = DefaultProcessRunner();
 
   final Map<String, Process> _runningProcesses = {};
   final Map<String, StreamController<String>> _outputControllers = {};
@@ -68,7 +148,7 @@ class ProcessManager {
         final pythonBin = await BundleManager().pythonPath;
         debugPrint('[${module.id}] Creating venv with: $pythonBin -m venv venv (in $installDir)');
 
-        var venvResult = await Process.run(
+        var venvResult = await _processRunner.run(
           pythonBin,
           ['-m', 'venv', 'venv'],
           workingDirectory: installDir,
@@ -81,7 +161,7 @@ class ProcessManager {
             await venvDir.delete(recursive: true);
           }
 
-          venvResult = await Process.run(
+          venvResult = await _processRunner.run(
             pythonBin,
             ['-m', 'venv', '--without-pip', 'venv'],
             workingDirectory: installDir,
@@ -95,7 +175,7 @@ class ProcessManager {
               ? p.join(venvPath, 'Scripts', 'python.exe')
               : p.join(venvPath, 'bin', 'python');
 
-          var pipBootstrap = await Process.run(
+          var pipBootstrap = await _processRunner.run(
             venvPython, ['-m', 'ensurepip', '--default-pip'],
             workingDirectory: installDir,
           );
@@ -103,11 +183,11 @@ class ProcessManager {
           if (pipBootstrap.exitCode != 0) {
             debugPrint('[${module.id}] ensurepip failed, downloading get-pip.py...');
             final getPipPath = p.join(installDir, 'get-pip.py');
-            final curlResult = await Process.run(
+            final curlResult = await _processRunner.run(
               'curl', ['-sS', 'https://bootstrap.pypa.io/get-pip.py', '-o', getPipPath],
             );
             if (curlResult.exitCode == 0) {
-              pipBootstrap = await Process.run(
+              pipBootstrap = await _processRunner.run(
                 venvPython, [getPipPath], workingDirectory: installDir,
               );
               try { await File(getPipPath).delete(); } catch (_) {}
@@ -134,7 +214,7 @@ class ProcessManager {
         for (final dep in module.localDeps) {
           final depDir = p.join(repoRoot, dep);
           debugPrint('[${module.id}] Installing local dep: $pipPath install $depDir');
-          final depResult = await Process.run(pipPath, ['install', depDir], workingDirectory: installDir);
+          final depResult = await _processRunner.run(pipPath, ['install', depDir], workingDirectory: installDir);
           if (depResult.exitCode != 0) {
             debugPrint('[${module.id}] Local dep $dep FAILED: ${depResult.stderr}');
             // Non-fatal — continue, the main install might still work
@@ -145,7 +225,7 @@ class ProcessManager {
       }
 
       debugPrint('[${module.id}] Running: $pipPath install . (in $installDir)');
-      final pipResult = await Process.run(
+      final pipResult = await _processRunner.run(
         pipPath,
         ['install', '.'],
         workingDirectory: installDir,
@@ -180,7 +260,7 @@ class ProcessManager {
   /// Kill any leftover process listening on a port (from a previous crash/session).
   Future<void> _killProcessOnPort(int port) async {
     try {
-      final result = await Process.run('lsof', ['-ti', ':$port']);
+      final result = await _processRunner.run('lsof', ['-ti', ':$port']);
       if (result.exitCode == 0) {
         final pids = result.stdout.toString().trim().split('\n');
         for (final pid in pids) {
@@ -236,7 +316,7 @@ class ProcessManager {
       debugPrint('[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port ${module.port}');
       debugPrint('[${module.id}] Working directory: $runDir');
 
-      final process = await Process.start(
+      final process = await _processRunner.start(
         pythonPath,
         ['-m', 'uvicorn', module.uvicornTarget, '--port', (module.port ?? 8000).toString()],
         workingDirectory: runDir,
