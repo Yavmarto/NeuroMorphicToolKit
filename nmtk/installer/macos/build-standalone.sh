@@ -21,6 +21,8 @@ TOOLKIT_DIR="$REPO_ROOT/nmtk/neuro_toolkit"
 # Python version to bundle
 PYTHON_VERSION="3.12.7"
 PYTHON_RELEASE="20241016"
+# Extracts major.minor (e.g., 3.12)
+PYTHON_MAJ_MIN=$(echo "$PYTHON_VERSION" | cut -d. -f1,2)
 
 SKIP_FLUTTER=false
 CREATE_DMG=false
@@ -107,6 +109,9 @@ if [ ! -d "$APP_PATH" ]; then
   exit 1
 fi
 
+# Resolve absolute path for APP_PATH
+APP_PATH="$(cd "$(dirname "$APP_PATH")" && pwd)/$(basename "$APP_PATH")"
+
 echo "==> App bundle: $APP_PATH"
 
 # --- Bundle Python into .app ---
@@ -119,20 +124,20 @@ cp -R "$PYTHON_ROOT"/* "$FRAMEWORKS_DIR/"
 # Slim down Python: remove test suites, idle, tkinter, Tcl/Tk to save space.
 # NOTE: Do NOT remove ensurepip or its bundled .whl files — they are needed
 # for `python -m venv` to bootstrap pip inside virtual environments.
-echo "==> Trimming Python bundle..."
-rm -rf "$FRAMEWORKS_DIR/lib/python3.12/test" \
-       "$FRAMEWORKS_DIR/lib/python3.12/idlelib" \
-       "$FRAMEWORKS_DIR/lib/python3.12/tkinter" \
-       "$FRAMEWORKS_DIR/lib/python3.12/turtledemo" \
-       "$FRAMEWORKS_DIR/lib/tk8.6" \
-       "$FRAMEWORKS_DIR/lib/tcl8.6" \
+echo "==> Trimming Python bundle (using version $PYTHON_MAJ_MIN)..."
+rm -rf "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/test" \
+       "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/idlelib" \
+       "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/tkinter" \
+       "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/turtledemo" \
+       "$FRAMEWORKS_DIR/lib/tk"* \
+       "$FRAMEWORKS_DIR/lib/tcl"* \
        "$FRAMEWORKS_DIR/lib/libtk"* \
        "$FRAMEWORKS_DIR/lib/libtcl"* \
        "$FRAMEWORKS_DIR/lib/Tix"* \
        "$FRAMEWORKS_DIR/lib/itcl"* \
        "$FRAMEWORKS_DIR/lib/tdbc"* \
        "$FRAMEWORKS_DIR/lib/thread"* \
-       "$FRAMEWORKS_DIR/lib/python3.12/lib-dynload/_tkinter"* \
+       "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/lib-dynload/_tkinter"* \
        "$FRAMEWORKS_DIR/share" 2>/dev/null || true
 
 # --- Bundle module source code ---

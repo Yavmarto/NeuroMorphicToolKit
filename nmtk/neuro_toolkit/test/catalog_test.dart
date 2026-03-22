@@ -41,7 +41,25 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   List<Module> get activeModules => [];
 
   @override
+  List<Module> modulesForTesting = [];
+
+  @override
+  set modules(List<Module> val) {}
+
+  @override
+  bool get pythonAvailable => true;
+
+  @override
+  Future<void> recheckPython() async {}
+
+  @override
   bool isMuJoCoAvailable() => false;
+
+  @override
+  bool get pythonAvailable => true;
+
+  @override
+  Future<void> recheckPython() async {}
 
   @override
   Future<void> installModule(String moduleId) async {}
