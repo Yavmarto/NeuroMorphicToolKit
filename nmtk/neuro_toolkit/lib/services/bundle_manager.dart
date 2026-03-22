@@ -26,33 +26,59 @@ class BundleManager {
 
   bool? _isBundledCache;
 
-  /// Whether the app is running from a STANDALONE .app bundle that has
-  /// bundled modules inside Contents/Resources/modules/.
+  /// Whether the app is running from a STANDALONE bundle that has
+  /// bundled modules inside.
   ///
-  /// Returns false for debug builds (which are also inside a .app but
-  /// don't have bundled modules) and for command-line runs.
+  /// Returns false for debug builds and for command-line runs.
   bool get isBundled {
     if (_isBundledCache != null) return _isBundledCache!;
     final exe = Platform.resolvedExecutable;
-    if (!exe.contains('.app/Contents/MacOS/')) {
+
+    if (Platform.isMacOS) {
+      if (!exe.contains('.app/Contents/MacOS/')) {
+        _isBundledCache = false;
+        return false;
+      }
+      // Distinguish standalone (has Resources/modules/) from debug (doesn't).
+      final bundlePath = p.dirname(p.dirname(p.dirname(exe)));
+      final modulesDir = Directory(p.join(bundlePath, 'Contents', 'Resources', 'modules'));
+      _isBundledCache = modulesDir.existsSync();
+    } else if (Platform.isWindows) {
+      // On Windows, modules are placed next to the executable in the installer.
+      final exeDir = p.dirname(exe);
+      final modulesDir = Directory(p.join(exeDir, 'modules'));
+      _isBundledCache = modulesDir.existsSync();
+    } else {
       _isBundledCache = false;
-      return false;
     }
-    // Distinguish standalone (has Resources/modules/) from debug (doesn't).
-    final bundlePath = p.dirname(p.dirname(p.dirname(exe)));
-    final modulesDir = Directory(p.join(bundlePath, 'Contents', 'Resources', 'modules'));
-    _isBundledCache = modulesDir.existsSync();
-    if (!_isBundledCache!) {
-      debugPrint('BundleManager: inside .app but no bundled modules — using dev mode');
+
+    if (_isBundledCache == true) {
+      debugPrint('BundleManager: Running in BUNDLED mode');
+    } else {
+      debugPrint('BundleManager: Running in DEV mode');
     }
     return _isBundledCache!;
   }
 
-  /// The root of the .app bundle. Only valid when [isBundled] is true.
-  String get appBundlePath {
-    assert(isBundled, 'appBundlePath called outside of a bundled .app');
-    // Platform.resolvedExecutable is .app/Contents/MacOS/<binary>
-    return p.dirname(p.dirname(p.dirname(Platform.resolvedExecutable)));
+  /// The root of the bundle (e.g., .app on macOS or exe dir on Windows).
+  /// Only valid when [isBundled] is true.
+  String get bundleRootPath {
+    assert(isBundled, 'bundleRootPath called outside of a bundled app');
+    final exe = Platform.resolvedExecutable;
+    if (Platform.isMacOS) {
+      return p.dirname(p.dirname(p.dirname(exe)));
+    } else {
+      return p.dirname(exe);
+    }
+  }
+
+  /// The path to the bundled modules directory.
+  String get bundledModulesPath {
+    if (Platform.isMacOS) {
+      return p.join(bundleRootPath, 'Contents', 'Resources', 'modules');
+    } else {
+      return p.join(bundleRootPath, 'modules');
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -71,23 +97,32 @@ class BundleManager {
   Future<String?> findPython() async {
     if (_cachedPythonPath != null) return _cachedPythonPath;
 
-    // 1. If running from a .app bundle, check bundled Python first
+    // 1. If running from a bundle, check bundled Python first
     if (isBundled) {
-      for (final name in ['python3', 'python']) {
-        final bundled = p.join(
-          appBundlePath, 'Contents', 'Frameworks', 'python', 'bin', name,
-        );
-        if (await _isPythonWorking(bundled)) {
-          debugPrint('BundleManager: using bundled Python at $bundled');
-          _cachedPythonPath = bundled;
-          return bundled;
+      final List<String> bundledPaths = [];
+      if (Platform.isMacOS) {
+        bundledPaths.addAll([
+          p.join(bundleRootPath, 'Contents', 'Frameworks', 'python', 'bin', 'python3'),
+          p.join(bundleRootPath, 'Contents', 'Frameworks', 'python', 'bin', 'python'),
+        ]);
+      } else if (Platform.isWindows) {
+        bundledPaths.addAll([
+          p.join(bundleRootPath, 'python', 'python.exe'),
+        ]);
+      }
+
+      for (final path in bundledPaths) {
+        if (await _isPythonWorking(path)) {
+          debugPrint('BundleManager: using bundled Python at $path');
+          _cachedPythonPath = path;
+          return path;
         }
       }
       debugPrint('BundleManager: bundled Python not found, trying system...');
     }
 
     // 2. Try simple command names (works when PATH is properly inherited)
-    for (final name in ['python3', 'python']) {
+    for (final name in ['python3', 'python', 'python.exe']) {
       if (await _isPythonWorking(name)) {
         debugPrint('BundleManager: using system Python "$name"');
         _cachedPythonPath = name;
@@ -95,41 +130,52 @@ class BundleManager {
       }
     }
 
-    // 3. When launched from Finder, PATH is minimal (/usr/bin:/bin:...).
-    //    Ask the user's login shell for the real PATH to find python.
-    debugPrint('BundleManager: simple names failed, trying login shell...');
-    for (final name in ['python3', 'python']) {
-      final resolved = await _resolveViaLoginShell(name);
-      if (resolved != null && await _isPythonWorking(resolved)) {
-        debugPrint('BundleManager: found via login shell: $resolved');
-        _cachedPythonPath = resolved;
-        return resolved;
+    // 3. On macOS/Linux, try resolving via login shell if simple names fail
+    if (!Platform.isWindows) {
+      debugPrint('BundleManager: simple names failed, trying login shell...');
+      for (final name in ['python3', 'python']) {
+        final resolved = await _resolveViaLoginShell(name);
+        if (resolved != null && await _isPythonWorking(resolved)) {
+          debugPrint('BundleManager: found via login shell: $resolved');
+          _cachedPythonPath = resolved;
+          return resolved;
+        }
       }
     }
 
     // 4. Last resort: probe well-known absolute paths
-    debugPrint('BundleManager: login shell failed, probing known paths...');
-    final home = Platform.environment['HOME'] ?? '/Users/${Platform.environment['USER']}';
-    final knownPaths = [
-      // Homebrew (Apple Silicon)
-      '/opt/homebrew/bin/python3',
-      '/opt/homebrew/bin/python',
-      // Homebrew (Intel)
-      '/usr/local/bin/python3',
-      '/usr/local/bin/python',
-      // Anaconda / Miniconda (common locations)
-      '$home/anaconda3/bin/python3',
-      '$home/anaconda3/bin/python',
-      '$home/anaconda/anaconda3/bin/python3',
-      '$home/anaconda/anaconda3/bin/python',
-      '$home/miniconda3/bin/python3',
-      '$home/miniconda3/bin/python',
-      // pyenv
-      '$home/.pyenv/shims/python3',
-      '$home/.pyenv/shims/python',
-      // System
-      '/usr/bin/python3',
-    ];
+    debugPrint('BundleManager: probing known paths...');
+    final List<String> knownPaths = [];
+
+    if (Platform.isMacOS) {
+      final home = Platform.environment['HOME'] ?? '/Users/${Platform.environment['USER']}';
+      knownPaths.addAll([
+        '/opt/homebrew/bin/python3',
+        '/opt/homebrew/bin/python',
+        '/usr/local/bin/python3',
+        '/usr/local/bin/python',
+        '$home/anaconda3/bin/python3',
+        '$home/anaconda3/bin/python',
+        '$home/miniconda3/bin/python3',
+        '$home/miniconda3/bin/python',
+        '$home/.pyenv/shims/python3',
+        '$home/.pyenv/shims/python',
+        '/usr/bin/python3',
+      ]);
+    } else if (Platform.isWindows) {
+      final localAppData = Platform.environment['LOCALAPPDATA'];
+      final programFiles = Platform.environment['ProgramFiles'];
+      if (localAppData != null) {
+        knownPaths.add(p.join(localAppData, 'Programs', 'Python', 'Python312', 'python.exe'));
+        knownPaths.add(p.join(localAppData, 'Programs', 'Python', 'Python311', 'python.exe'));
+        knownPaths.add(p.join(localAppData, 'Programs', 'Python', 'Python310', 'python.exe'));
+      }
+      if (programFiles != null) {
+        knownPaths.add(p.join(programFiles, 'Python312', 'python.exe'));
+        knownPaths.add(p.join(programFiles, 'Python311', 'python.exe'));
+        knownPaths.add(p.join(programFiles, 'Python310', 'python.exe'));
+      }
+    }
 
     for (final absPath in knownPaths) {
       if (await File(absPath).exists() && await _isPythonWorking(absPath)) {
@@ -243,14 +289,11 @@ class BundleManager {
     return installedVersion.trim() != _appVersion;
   }
 
-  /// Extract bundled module sources from .app/Contents/Resources/modules/
-  /// to ~/Library/Application Support/.
+  /// Extract bundled module sources to the application support directory.
   Future<void> extractModules({Function(double)? onProgress}) async {
     if (!isBundled) return;
 
-    final sourceDir = Directory(
-      p.join(appBundlePath, 'Contents', 'Resources', 'modules'),
-    );
+    final sourceDir = Directory(bundledModulesPath);
     if (!await sourceDir.exists()) {
       debugPrint('BundleManager: no bundled modules at ${sourceDir.path}');
       return;
