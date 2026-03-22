@@ -208,14 +208,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
+      - name: Initialize required submodules
+        run: git submodule update --init neurocnl Neuro-Dream-Hand
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install core package
         working-directory: neurocnl
-        run: pip install -e . && pip install pytest httpx ruff mypy
+        run: pip install -e . && pip install -e ../Neuro-Dream-Hand && pip install pytest httpx ruff mypy
       - name: Lint with ruff
         working-directory: neurocnl
         run: |
