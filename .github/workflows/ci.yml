@@ -208,7 +208,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update neurocnl submodule
+      - name: Update required submodules
         run: |
           git submodule update --init neurocnl
           git submodule update --init Neuro-Dream-Hand
