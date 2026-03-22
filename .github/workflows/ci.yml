@@ -71,7 +71,7 @@ jobs:
               - 'Neurobench/frontend/**'
               - 'nmtk_ui_core/**'
             neurotoolkit:
-              - 'neuro_toolkit/**'
+              - 'nmtk/neuro_toolkit/**'
               - 'nmtk_ui_core/**'
             nmtk_ui_core:
               - 'nmtk_ui_core/**'
@@ -208,14 +208,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update neurocnl submodule
-        run: git submodule update --init neurocnl
+        with:
+          submodules: recursive
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install core package
-        working-directory: neurocnl
-        run: pip install -e . && pip install pytest httpx ruff mypy
+      - name: Install dependencies
+        run: |
+          pip install -e ./Neuro-Dream-Hand
+          pip install -e ./neurocnl
+          pip install pytest httpx ruff mypy
       - name: Lint with ruff
         working-directory: neurocnl
         run: |
@@ -287,11 +289,11 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: neuro_toolkit
+        working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
