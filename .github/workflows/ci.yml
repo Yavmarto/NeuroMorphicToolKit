@@ -209,12 +209,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
           fetch-depth: 0
-      - name: Update submodules
-        run: |
-          git submodule update --init neurocnl
-          git submodule update --init Neuro-Dream-Hand
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
