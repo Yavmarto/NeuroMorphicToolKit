@@ -38,6 +38,12 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   bool isMuJoCoAvailable() => false;
 
   @override
+  bool get pythonAvailable => true;
+
+  @override
+  Future<void> recheckPython() async {}
+
+  @override
   Future<void> installModule(String moduleId) async {}
 
   @override
