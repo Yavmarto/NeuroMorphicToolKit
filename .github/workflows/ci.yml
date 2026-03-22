@@ -208,21 +208,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fetch submodules manually
-        run: |
-          git submodule update --init --depth 1 neurocnl Neuro-Dream-Hand
+        with:
+          submodules: recursive
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          if [ -d "neurocnl" ] && [ -d "Neuro-Dream-Hand" ]; then
-            pip install -e ./Neuro-Dream-Hand
-            pip install -e ./neurocnl
-            pip install pytest httpx ruff mypy
-          else
-            echo "Submodules missing, skipping install"
-          fi
+      - name: Install core package
+        working-directory: neurocnl
+        run: pip install -e . && pip install pytest httpx ruff mypy
+      - name: Install Neuro-Dream-Hand
+        run: pip install -e ./Neuro-Dream-Hand
       - name: Lint with ruff
         run: |
           if [ -d "neurocnl" ]; then
