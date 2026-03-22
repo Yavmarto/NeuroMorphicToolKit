@@ -10,8 +10,8 @@
     "runPath": ".",
     "uvicornTarget": "backend.app.main:app",
     "localDeps": ["Neuro-Dream-Hand/"],
-    "hasFrontend": false,
-    "frontendStatus": "API only (use /docs)",
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
     "requiresMuJoCo": false
   },
   {
@@ -24,8 +24,8 @@
     "sourcePath": ".",
     "runPath": "neurosim/",
     "uvicornTarget": "app.main:app",
-    "hasFrontend": false,
-    "frontendStatus": "API only (use /docs)",
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
     "requiresMuJoCo": false
   },
   {
@@ -38,8 +38,8 @@
     "sourcePath": "neurochip/",
     "runPath": "neurochip/",
     "uvicornTarget": "app.main:app",
-    "hasFrontend": false,
-    "frontendStatus": "API only (use /docs)",
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
     "requiresMuJoCo": false
   },
   {
@@ -52,8 +52,8 @@
     "sourcePath": "neurobench/",
     "runPath": "neurobench/",
     "uvicornTarget": "app.main:app",
-    "hasFrontend": false,
-    "frontendStatus": "API only (use /docs)",
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
     "requiresMuJoCo": false
   },
   {
@@ -66,8 +66,8 @@
     "sourcePath": ".",
     "runPath": "neurosense/",
     "uvicornTarget": "app.main:app",
-    "hasFrontend": false,
-    "frontendStatus": "API only (use /docs)",
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
     "requiresMuJoCo": false
   },
   {
@@ -80,8 +80,8 @@
     "sourcePath": ".",
     "runPath": "neurohub/",
     "uvicornTarget": "app.main:app",
-    "hasFrontend": false,
-    "frontendStatus": "API only (use /docs)",
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
     "requiresMuJoCo": false
   },
   {
