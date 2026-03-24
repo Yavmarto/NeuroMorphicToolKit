@@ -1,0 +1,89 @@
+name: Auto-merge Agent PRs
+
+# This replaces the broken auto-merge-jules-prs.yml.
+# It waits for CI to pass, then auto-merges agent PRs —
+# UNLESS the PR touches protected files that need human review.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    # Only run for agent branches
+    if: >-
+      github.event_name == 'pull_request' &&
+      (startsWith(github.head_ref, 'jules/') || startsWith(github.head_ref, 'auto/'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for protected file changes
+        id: protected
+        run: |
+          PROTECTED_PATTERNS=(
+            "**/layer1_invariants.py"
+            "**/contracts/**"
+            "**/properties/**"
+            "**/AGENTS.md"
+            "**/GUARDRAILS.md"
+            ".github/workflows/**"
+          )
+
+          CHANGED_FILES=$(gh pr diff ${{ github.event.pull_request.number }} --name-only)
+          NEEDS_REVIEW=false
+
+          for pattern in "${PROTECTED_PATTERNS[@]}"; do
+            # Use bash pattern matching
+            while IFS= read -r file; do
+              case "$file" in
+                $pattern)
+                  echo "::warning::Protected file changed: $file"
+                  NEEDS_REVIEW=true
+                  ;;
+              esac
+            done <<< "$CHANGED_FILES"
+          done
+
+          echo "needs_review=$NEEDS_REVIEW" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Wait for CI checks
+        if: steps.protected.outputs.needs_review != 'true'
+        run: |
+          echo "Waiting for CI checks to complete..."
+          # Give CI time to start
+          sleep 30
+          # Wait up to 20 minutes for checks
+          gh pr checks ${{ github.event.pull_request.number }} --watch --fail-fast
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Auto-approve and merge
+        if: steps.protected.outputs.needs_review != 'true'
+        run: |
+          echo "All CI checks passed. Auto-merging..."
+          gh pr review ${{ github.event.pull_request.number }} --approve \
+            --body "Auto-approved: all CI checks passed, no protected files changed."
+          gh pr merge ${{ github.event.pull_request.number }} --squash --auto
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Request human review for protected changes
+        if: steps.protected.outputs.needs_review == 'true'
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "This PR modifies protected files (contracts, invariants, AGENTS.md, GUARDRAILS.md, or workflows). **Human review required** before merge."
+          # Add a label to flag it
+          gh pr edit ${{ github.event.pull_request.number }} --add-label "needs-human-review"
+        env:
+          GH_TOKEN: ${{ github.token }}

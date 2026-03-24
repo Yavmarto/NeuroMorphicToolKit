@@ -1,0 +1,46 @@
+name: Sync CDD-PBT Migration Issues
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: Optional module folder name, such as Neurosim
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate previews
+        run: |
+          if [ -n "${{ github.event.inputs.module }}" ]; then
+            python Research-Spec-driven-development/gpt5.4-dev-pipeline/scripts/generate_issue_previews.py \
+              --module "${{ github.event.inputs.module }}"
+          else
+            python Research-Spec-driven-development/gpt5.4-dev-pipeline/scripts/generate_issue_previews.py
+          fi
+
+      - name: Publish issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ github.event.inputs.module }}" ]; then
+            python Research-Spec-driven-development/gpt5.4-dev-pipeline/scripts/publish_github_issues.py \
+              --module "${{ github.event.inputs.module }}" \
+              --execute
+          else
+            python Research-Spec-driven-development/gpt5.4-dev-pipeline/scripts/publish_github_issues.py \
+              --execute
+          fi

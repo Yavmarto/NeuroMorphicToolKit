@@ -1,0 +1,143 @@
+{
+  "module_name": "Neurosim",
+  "repo_path": "Neurosim",
+  "github_repo": null,
+  "python_version": "3.12",
+  "spec_paths": [
+    "Neurosim/neurosim_spec.md",
+    "Neurosim/README.md"
+  ],
+  "existing_workflows": [
+    "ci.yml"
+  ],
+  "workflow_gaps": [
+    "Missing ci-failure-fix.yml",
+    "Missing feature-builder.yml",
+    "Missing bug-fixer.yml",
+    "Missing unblocked-issues.yml",
+    "Missing auto-merge-jules-prs.yml",
+    "Current CI does not run lint, mypy, or property tests"
+  ],
+  "required_updates": [
+    "Expand ci.yml to full validation",
+    "Add the missing Jules issue workflows",
+    "Add reusable CDD-PBT CI job",
+    "Add safe auto-merge template"
+  ],
+  "setup_commands": [
+    "python -m pip install --upgrade pip",
+    "python -m pip install -e './Neurosim[test]'",
+    "python -m pip install ruff mypy hypothesis"
+  ],
+  "baseline_commands": [
+    "cd Neurosim && ruff check .",
+    "cd Neurosim && mypy .",
+    "cd Neurosim && pytest --tb=short"
+  ],
+  "migration_commands": [
+    "cd Neurosim && pytest neurosim/tests/properties -m property --tb=short"
+  ],
+  "migration_issues": [
+    {
+      "id": "NS-CDD-001",
+      "title": "Neurosim: extract canvas, project, and CNL-sync contracts from the spec",
+      "labels": ["feature", "cdd-pbt", "migration", "contracts"],
+      "spec_refs": [
+        "Neurosim/neurosim_spec.md#NS-D1",
+        "Neurosim/neurosim_spec.md#NS-D2",
+        "Neurosim/neurosim_spec.md#NS-D5",
+        "Neurosim/neurosim_spec.md#NS-S3",
+        "Neurosim/neurosim_spec.md#NS-C1"
+      ],
+      "objective": "Convert canvas nodes, edges, projects, sweep configs, and CNL synchronization payloads into explicit contracts.",
+      "conversion_steps": [
+        "Create contract models for node types, connections, parameter panels, project files, and sync payloads.",
+        "Validate connection weights, delays, and allowed layer references before backend simulation calls.",
+        "Make .neurosim project files parse through a single shared contract layer."
+      ],
+      "contract_targets": [
+        "Neurosim/neurosim/app/contracts/canvas_contracts.py",
+        "Neurosim/neurosim/app/contracts/project_contracts.py",
+        "Neurosim/neurosim/tests/contracts/test_canvas_contracts.py"
+      ],
+      "property_targets": [
+        "Neurosim/neurosim/tests/properties/test_canvas_roundtrip_properties.py",
+        "Neurosim/neurosim/tests/properties/test_sync_contract_properties.py"
+      ],
+      "acceptance_checks": [
+        "Canvas JSON round-trips through contracts without topology loss.",
+        "Invalid connection payloads fail fast with clear reasons.",
+        "CNL sync payloads cannot omit required network metadata."
+      ],
+      "workflow_updates": [],
+      "depends_on": []
+    },
+    {
+      "id": "NS-CDD-002",
+      "title": "Neurosim: add property tests for topology and simulation invariants",
+      "labels": ["feature", "cdd-pbt", "migration", "properties"],
+      "spec_refs": [
+        "Neurosim/neurosim_spec.md#NS-D3",
+        "Neurosim/neurosim_spec.md#NS-S1",
+        "Neurosim/neurosim_spec.md#NS-S2",
+        "Neurosim/neurosim_spec.md#NS-E1"
+      ],
+      "objective": "Encode the visual editor and simulation invariants so invalid graphs and impossible parameter states cannot pass CI.",
+      "conversion_steps": [
+        "Add properties for parameter bounds, sweep ranges, and graph consistency.",
+        "Add properties for canvas-to-CNL and CNL-to-canvas round trips.",
+        "Add export properties ensuring the canonical CNL export stays stable across conversions."
+      ],
+      "contract_targets": [
+        "Neurosim/neurosim/app/contracts/export_contracts.py"
+      ],
+      "property_targets": [
+        "Neurosim/neurosim/tests/properties/test_parameter_bounds.py",
+        "Neurosim/neurosim/tests/properties/test_cnl_roundtrip_properties.py",
+        "Neurosim/neurosim/tests/properties/test_export_properties.py"
+      ],
+      "acceptance_checks": [
+        "Parameter sweeps reject invalid ranges and step counts.",
+        "Graph round trips preserve directed-edge semantics.",
+        "Export paths cannot silently drop project metadata."
+      ],
+      "workflow_updates": [],
+      "depends_on": ["NS-CDD-001"]
+    },
+    {
+      "id": "NS-CDD-003",
+      "title": "Neurosim: add missing Jules workflows and full contract CI",
+      "labels": ["feature", "cdd-pbt", "migration", "ci"],
+      "spec_refs": [
+        "Neurosim/.github/workflows/ci.yml"
+      ],
+      "objective": "Bring Neurosim up to the same operational baseline as the other modules so migration issues can be picked up, fixed, and merged automatically.",
+      "conversion_steps": [
+        "Extend ci.yml with lint, mypy, unit tests, and property tests.",
+        "Add feature-builder.yml, bug-fixer.yml, ci-failure-fix.yml, unblocked-issues.yml, and auto-merge-jules-prs.yml.",
+        "Use the shared templates so failure repair and auto-merge behave consistently with the other modules."
+      ],
+      "contract_targets": [
+        "Neurosim/.github/workflows/ci.yml",
+        "Neurosim/.github/workflows/feature-builder.yml",
+        "Neurosim/.github/workflows/bug-fixer.yml",
+        "Neurosim/.github/workflows/ci-failure-fix.yml",
+        "Neurosim/.github/workflows/unblocked-issues.yml",
+        "Neurosim/.github/workflows/auto-merge-jules-prs.yml"
+      ],
+      "property_targets": [
+        "Research-Spec-driven-development/gpt5.4-dev-pipeline/workflows/cdd-pbt-module-ci.yml"
+      ],
+      "acceptance_checks": [
+        "Neurosim has the same core issue-driven automation surface as the mature modules.",
+        "CI failures can trigger a Jules repair attempt.",
+        "Agent PRs can auto-merge after all checks pass."
+      ],
+      "workflow_updates": [
+        "Create the missing workflows using the patterns already used by Neurobench and the shared templates in this folder.",
+        "Invoke the shared CDD-PBT workflow from Neurosim CI."
+      ],
+      "depends_on": ["NS-CDD-002"]
+    }
+  ]
+}

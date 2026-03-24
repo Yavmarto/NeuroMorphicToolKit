@@ -1,0 +1,145 @@
+{
+  "module_name": "neurocnl",
+  "repo_path": "neurocnl",
+  "github_repo": null,
+  "python_version": "3.11",
+  "spec_paths": [
+    "neurocnl/neuromorphic_spec_plan.md",
+    "neurocnl/README.md"
+  ],
+  "existing_workflows": [
+    "ci.yml",
+    "ci-failure-fix.yml",
+    "feature-builder.yml",
+    "bug-fixer.yml",
+    "unblocked-issues.yml",
+    "auto-merge-jules-prs.yml"
+  ],
+  "workflow_gaps": [
+    "mypy is present but not strict in pyproject.toml",
+    "No property-test gate in CI",
+    "Auto-merge and failure-fix templates are the older variants"
+  ],
+  "required_updates": [
+    "Tighten type checking around the contract layer",
+    "Add reusable CDD-PBT CI job",
+    "Replace ci-failure-fix.yml and auto-merge-jules-prs.yml"
+  ],
+  "setup_commands": [
+    "python -m pip install --upgrade pip",
+    "python -m pip install -e './neurocnl[dev]'",
+    "python -m pip install hypothesis"
+  ],
+  "baseline_commands": [
+    "cd neurocnl && ruff check .",
+    "cd neurocnl && mypy .",
+    "cd neurocnl && pytest --tb=short"
+  ],
+  "migration_commands": [
+    "cd neurocnl && pytest neurocnl/tests/properties -m property --tb=short"
+  ],
+  "migration_issues": [
+    {
+      "id": "CNL-CDD-001",
+      "title": "neurocnl: extract grammar, invariant, and export contracts from the spec plan",
+      "labels": ["feature", "cdd-pbt", "migration", "contracts"],
+      "spec_refs": [
+        "neurocnl/neuromorphic_spec_plan.md#Layer 1 — Physical Invariants",
+        "neurocnl/neuromorphic_spec_plan.md#Layer 2 — Behavioral Spec",
+        "neurocnl/neuromorphic_spec_plan.md#Layer 3 — Validation Assertions",
+        "neurocnl/neuromorphic_spec_plan.md#Step 1 — Define the CNL Grammar for the Reflex Arc Only",
+        "neurocnl/neuromorphic_spec_plan.md#Step 2 — Build the Layer 1 → Layer 2 Validator"
+      ],
+      "objective": "Turn the CNL grammar, invariant checker, and export packages into explicit contracts so agent-written compiler code is forced to target a stable model boundary.",
+      "conversion_steps": [
+        "Create contract models for parsed statements, grammar patterns, invariant violations, compiler outputs, and export manifests.",
+        "Separate Layer 1 invariant objects from Layer 2 statements and Layer 3 assertions.",
+        "Route parser and export code through the new contract layer."
+      ],
+      "contract_targets": [
+        "neurocnl/neurocnl/contracts/grammar_contracts.py",
+        "neurocnl/neurocnl/contracts/invariant_contracts.py",
+        "neurocnl/neurocnl/contracts/export_contracts.py",
+        "neurocnl/neurocnl/tests/contracts/test_grammar_contracts.py"
+      ],
+      "property_targets": [
+        "neurocnl/neurocnl/tests/properties/test_parser_contract_properties.py",
+        "neurocnl/neurocnl/tests/properties/test_export_contract_properties.py"
+      ],
+      "acceptance_checks": [
+        "Parsed statements have a stable typed representation.",
+        "Invariant violations report a typed code and human-readable explanation.",
+        "Export manifests cannot omit target-specific metadata."
+      ],
+      "workflow_updates": [],
+      "depends_on": []
+    },
+    {
+      "id": "CNL-CDD-002",
+      "title": "neurocnl: add property tests for grammar and invariant preservation",
+      "labels": ["feature", "cdd-pbt", "migration", "properties"],
+      "spec_refs": [
+        "neurocnl/neuromorphic_spec_plan.md#The Honest Risk",
+        "neurocnl/neuromorphic_spec_plan.md#Step 3 — Prototype the Layer 2 → Layer 3 Pipeline",
+        "neurocnl/neuromorphic_spec_plan.md#Step 4 — Validate Against Nengo Simulation"
+      ],
+      "objective": "Add property suites for parser stability and biological invariant preservation so the compiler cannot silently drift from the spec plan.",
+      "conversion_steps": [
+        "Add parser and serializer round-trip properties for the constrained grammar.",
+        "Add invariant-preservation properties for threshold, refractory, and time-constant rules.",
+        "Add export properties that keep target configuration consistent after conversion."
+      ],
+      "contract_targets": [
+        "neurocnl/neurocnl/contracts/assertion_contracts.py"
+      ],
+      "property_targets": [
+        "neurocnl/neurocnl/tests/properties/test_parser_roundtrip_properties.py",
+        "neurocnl/neurocnl/tests/properties/test_invariant_preservation_properties.py",
+        "neurocnl/neurocnl/tests/properties/test_export_properties.py"
+      ],
+      "acceptance_checks": [
+        "Round trips preserve the intended grammar structure for valid reflex-arc statements.",
+        "The compiler rejects contradictory or physically impossible specs.",
+        "Generated outputs never report negative time constants or invalid refractory windows."
+      ],
+      "workflow_updates": [],
+      "depends_on": ["CNL-CDD-001"]
+    },
+    {
+      "id": "CNL-CDD-003",
+      "title": "neurocnl: tighten CI around contracts, properties, and safe agent merge",
+      "labels": ["feature", "cdd-pbt", "migration", "ci"],
+      "spec_refs": [
+        "neurocnl/pyproject.toml",
+        "neurocnl/.github/workflows/ci.yml",
+        "neurocnl/.github/workflows/ci-failure-fix.yml",
+        "neurocnl/.github/workflows/auto-merge-jules-prs.yml"
+      ],
+      "objective": "Make the compiler repo enforce the new contract/property layer with stronger typing and better automation around agent pull requests.",
+      "conversion_steps": [
+        "Raise mypy strictness for the contract modules and property test helpers.",
+        "Add a property-test stage to CI.",
+        "Replace ci-failure-fix.yml and auto-merge-jules-prs.yml with the shared templates."
+      ],
+      "contract_targets": [
+        "neurocnl/pyproject.toml",
+        "neurocnl/.github/workflows/ci.yml",
+        "neurocnl/.github/workflows/ci-failure-fix.yml",
+        "neurocnl/.github/workflows/auto-merge-jules-prs.yml"
+      ],
+      "property_targets": [
+        "Research-Spec-driven-development/gpt5.4-dev-pipeline/workflows/cdd-pbt-module-ci.yml"
+      ],
+      "acceptance_checks": [
+        "Contract and property suites run on pull requests.",
+        "Failure-fix prompts include failing-log context.",
+        "Agent pull requests can auto-merge after synchronize and ready-for-review transitions."
+      ],
+      "workflow_updates": [
+        "Copy the shared auto-merge and ci-failure-fix templates into neurocnl/.github/workflows/.",
+        "Invoke the shared CDD-PBT workflow from neurocnl CI."
+      ],
+      "depends_on": ["CNL-CDD-002"]
+    }
+  ]
+}

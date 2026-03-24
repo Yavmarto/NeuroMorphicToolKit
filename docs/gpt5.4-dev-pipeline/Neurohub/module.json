@@ -1,0 +1,144 @@
+{
+  "module_name": "Neurohub",
+  "repo_path": "Neurohub",
+  "github_repo": null,
+  "python_version": "3.11",
+  "spec_paths": [
+    "Neurohub/neurohub_spec.md",
+    "Neurohub/README.md"
+  ],
+  "existing_workflows": [
+    "ci-failure-fix.yml",
+    "feature-builder.yml",
+    "bug-fixer.yml",
+    "unblocked-issues.yml",
+    "auto-merge-jules-prs.yml"
+  ],
+  "workflow_gaps": [
+    "Missing ci.yml entirely",
+    "ci-failure-fix.yml is orphaned because there is no CI workflow to monitor",
+    "No property-test gate",
+    "Auto-merge template is the older variant"
+  ],
+  "required_updates": [
+    "Create ci.yml first",
+    "Add reusable CDD-PBT CI job",
+    "Replace ci-failure-fix.yml and auto-merge-jules-prs.yml"
+  ],
+  "setup_commands": [
+    "python -m pip install --upgrade pip",
+    "python -m pip install -e './Neurohub[dev]'",
+    "python -m pip install hypothesis"
+  ],
+  "baseline_commands": [
+    "cd Neurohub && ruff check .",
+    "cd Neurohub && mypy .",
+    "cd Neurohub && pytest --tb=short"
+  ],
+  "migration_commands": [
+    "cd Neurohub && pytest neurohub/tests/properties -m property --tb=short"
+  ],
+  "migration_issues": [
+    {
+      "id": "NH-CDD-001",
+      "title": "Neurohub: extract project, workflow, and bundle contracts from the spec",
+      "labels": ["feature", "cdd-pbt", "migration", "contracts"],
+      "spec_refs": [
+        "Neurohub/neurohub_spec.md#NH-P1",
+        "Neurohub/neurohub_spec.md#NH-P2",
+        "Neurohub/neurohub_spec.md#NH-A2",
+        "Neurohub/neurohub_spec.md#NH-W1",
+        "Neurohub/neurohub_spec.md#NH-H2"
+      ],
+      "objective": "Convert cross-app project metadata, workflow templates, health configuration, and bundle import/export formats into explicit contracts.",
+      "conversion_steps": [
+        "Create contract models for projects, milestones, bundle manifests, workflow steps, and suite configuration entries.",
+        "Require step success criteria and failure actions in workflow definitions.",
+        "Validate bundle manifests before import or export starts."
+      ],
+      "contract_targets": [
+        "Neurohub/neurohub/app/contracts/project_contracts.py",
+        "Neurohub/neurohub/app/contracts/workflow_contracts.py",
+        "Neurohub/neurohub/app/contracts/bundle_contracts.py",
+        "Neurohub/neurohub/tests/contracts/test_project_contracts.py"
+      ],
+      "property_targets": [
+        "Neurohub/neurohub/tests/properties/test_project_roundtrip_properties.py",
+        "Neurohub/neurohub/tests/properties/test_workflow_contract_properties.py"
+      ],
+      "acceptance_checks": [
+        "Workflow definitions reject missing success criteria or invalid failure actions.",
+        "Bundle manifests preserve project metadata across export/import round trips.",
+        "Health configuration accepts only known suite services."
+      ],
+      "workflow_updates": [],
+      "depends_on": []
+    },
+    {
+      "id": "NH-CDD-002",
+      "title": "Neurohub: add property tests for orchestration invariants",
+      "labels": ["feature", "cdd-pbt", "migration", "properties"],
+      "spec_refs": [
+        "Neurohub/neurohub_spec.md#NH-W1",
+        "Neurohub/neurohub_spec.md#NH-W2",
+        "Neurohub/neurohub_spec.md#NH-W3",
+        "Neurohub/neurohub_spec.md#NH-H1"
+      ],
+      "objective": "Use property tests to enforce orchestration behavior, especially for pipeline stop conditions, cross-app links, and bundle integrity.",
+      "conversion_steps": [
+        "Add properties ensuring workflow steps execute in topological order and stop on configured hard failures.",
+        "Add properties for bundle round trips and cross-app asset link preservation.",
+        "Add properties constraining suite health states and response-time fields."
+      ],
+      "contract_targets": [
+        "Neurohub/neurohub/app/contracts/health_contracts.py"
+      ],
+      "property_targets": [
+        "Neurohub/neurohub/tests/properties/test_workflow_execution_properties.py",
+        "Neurohub/neurohub/tests/properties/test_bundle_roundtrip_properties.py",
+        "Neurohub/neurohub/tests/properties/test_health_state_properties.py"
+      ],
+      "acceptance_checks": [
+        "A pipeline cannot report success if a hard-fail step is skipped after an error.",
+        "Bundle import and export preserve linked asset references.",
+        "Health entries stay within the online/offline/degraded state set."
+      ],
+      "workflow_updates": [],
+      "depends_on": ["NH-CDD-001"]
+    },
+    {
+      "id": "NH-CDD-003",
+      "title": "Neurohub: create working CI and replace broken automation templates",
+      "labels": ["feature", "cdd-pbt", "migration", "ci"],
+      "spec_refs": [
+        "Neurohub/.github/workflows/ci-failure-fix.yml",
+        "Neurohub/.github/workflows/auto-merge-jules-prs.yml",
+        "Neurohub/.github/workflows/feature-builder.yml"
+      ],
+      "objective": "Create the missing CI workflow, wire in contract/property validation, and make the existing issue-driven automation usable.",
+      "conversion_steps": [
+        "Add ci.yml that installs the package, runs lint, mypy, tests, and property tests.",
+        "Replace ci-failure-fix.yml so it monitors the new CI workflow and passes structured logs to Jules.",
+        "Replace auto-merge-jules-prs.yml so it responds after Jules updates a pull request."
+      ],
+      "contract_targets": [
+        "Neurohub/.github/workflows/ci.yml",
+        "Neurohub/.github/workflows/ci-failure-fix.yml",
+        "Neurohub/.github/workflows/auto-merge-jules-prs.yml"
+      ],
+      "property_targets": [
+        "Research-Spec-driven-development/gpt5.4-dev-pipeline/workflows/cdd-pbt-module-ci.yml"
+      ],
+      "acceptance_checks": [
+        "Neurohub pull requests have an actual CI workflow protecting merge.",
+        "CI failures can trigger an automated Jules repair attempt.",
+        "Generated migration issues can be labeled feature and handled by the existing issue pickup workflow."
+      ],
+      "workflow_updates": [
+        "Create Neurohub/.github/workflows/ci.yml from the shared module CI template.",
+        "Copy the shared auto-merge and ci-failure-fix templates into Neurohub/.github/workflows/."
+      ],
+      "depends_on": ["NH-CDD-002"]
+    }
+  ]
+}

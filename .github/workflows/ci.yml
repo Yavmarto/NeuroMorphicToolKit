@@ -99,7 +99,7 @@ jobs:
       - name: Type check with mypy
         run: mypy .
       - name: Run tests
-        run: pytest --tb=short
+        run: pytest --tb=short --hypothesis-show-statistics
 
   test-neurochip:
     needs: detect-changes
@@ -125,7 +125,7 @@ jobs:
       - name: Type check with mypy
         run: poetry run mypy .
       - name: Run tests
-        run: poetry run pytest --tb=short
+        run: poetry run pytest --tb=short --hypothesis-show-statistics
 
   test-neurosense:
     needs: detect-changes
@@ -150,7 +150,7 @@ jobs:
       - name: Type check with mypy
         run: mypy .
       - name: Run tests
-        run: pytest --tb=short
+        run: pytest --tb=short --hypothesis-show-statistics
 
   test-neurohub:
     needs: detect-changes
@@ -175,7 +175,7 @@ jobs:
       - name: Type check with mypy
         run: mypy .
       - name: Run tests
-        run: pytest --tb=short
+        run: pytest --tb=short --hypothesis-show-statistics
 
   test-neurodreamhand:
     needs: detect-changes
@@ -200,7 +200,7 @@ jobs:
       - name: Type check with mypy
         run: mypy .
       - name: Run tests
-        run: pytest --tb=short
+        run: pytest --tb=short --hypothesis-show-statistics
 
   test-neurocnl-backend:
     needs: detect-changes
@@ -287,7 +287,7 @@ jobs:
       - name: Type check with mypy
         run: poetry run mypy .
       - name: Run tests
-        run: poetry run pytest --tb=short
+        run: poetry run pytest --tb=short --hypothesis-show-statistics
 
   test-nmtk-ui-core:
     needs: detect-changes
