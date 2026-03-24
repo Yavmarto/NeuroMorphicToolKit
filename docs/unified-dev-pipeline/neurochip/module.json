@@ -1,7 +1,7 @@
 {
   "module_name": "Neurochip",
   "repo_path": "Neurochip",
-  "github_repo": null,
+  "github_repo": "Completed-Spoon-6/Neurochip",
   "python_version": "3.12",
   "framework": "python-poetry",
   "spec_paths": [

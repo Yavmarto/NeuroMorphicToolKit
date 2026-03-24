@@ -1,7 +1,7 @@
 {
   "module_name": "Neurohub",
   "repo_path": "Neurohub",
-  "github_repo": null,
+  "github_repo": "Completed-Spoon-6/Neurohub",
   "python_version": "3.11",
   "framework": "python-pip",
   "spec_paths": [

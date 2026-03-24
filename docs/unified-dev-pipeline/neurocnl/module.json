@@ -1,7 +1,7 @@
 {
   "module_name": "neurocnl",
   "repo_path": "neurocnl",
-  "github_repo": null,
+  "github_repo": "Completed-Spoon-6/neurocnl",
   "python_version": "3.11",
   "framework": "python-pip",
   "spec_paths": [

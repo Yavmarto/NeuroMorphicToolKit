@@ -1,7 +1,7 @@
 {
   "module_name": "Neurobench",
   "repo_path": "Neurobench",
-  "github_repo": null,
+  "github_repo": "Completed-Spoon-6/Neurobench",
   "python_version": "3.11",
   "framework": "python-poetry",
   "spec_paths": [

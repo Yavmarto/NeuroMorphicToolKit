@@ -1,7 +1,7 @@
 {
   "module_name": "Neurosense",
   "repo_path": "Neurosense",
-  "github_repo": null,
+  "github_repo": "Completed-Spoon-6/Neurosense",
   "python_version": "3.11",
   "framework": "python-pip",
   "spec_paths": [

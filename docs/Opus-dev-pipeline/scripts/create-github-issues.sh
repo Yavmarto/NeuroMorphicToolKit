@@ -17,7 +17,7 @@ set -euo pipefail
 
 REPO_FLAG=""
 # Uncomment and set if not using default repo:
-# REPO_FLAG="--repo Yavmarto/NeuroMorphicToolKit"
+# REPO_FLAG="--repo Completed-Spoon-6/NeuroMorphicToolKit"
 
 LABEL_MIGRATION="cdd-pbt-migration"
 LABEL_CONTRACTS="contracts"

@@ -1,7 +1,7 @@
 {
   "module_name": "Neurosim",
   "repo_path": "Neurosim",
-  "github_repo": null,
+  "github_repo": "Completed-Spoon-6/Neurosim",
   "python_version": "3.12",
   "framework": "python-pip",
   "spec_paths": [
