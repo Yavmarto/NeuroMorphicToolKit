@@ -1,0 +1,139 @@
+{
+  "module_name": "neurocnl",
+  "repo_path": "neurocnl",
+  "github_repo": null,
+  "python_version": "3.11",
+  "framework": "python-pip",
+  "spec_paths": [
+    "neurocnl/neuromorphic_spec_plan.md",
+    "neurocnl/README.md"
+  ],
+  "contract_kit": {
+    "contracts_dir": "docs/unified-dev-pipeline/neurocnl/contracts",
+    "properties_dir": "docs/unified-dev-pipeline/neurocnl/properties",
+    "agents_md": "docs/unified-dev-pipeline/neurocnl/AGENTS.md",
+    "guardrails_md": "docs/unified-dev-pipeline/neurocnl/GUARDRAILS.md"
+  },
+  "existing_workflows": [
+    "ci.yml",
+    "ci-failure-fix.yml",
+    "feature-builder.yml",
+    "bug-fixer.yml",
+    "unblocked-issues.yml",
+    "auto-merge-jules-prs.yml"
+  ],
+  "workflow_gaps": [
+    "mypy is present but not strict in pyproject.toml",
+    "No property-test gate in CI",
+    "Auto-merge and failure-fix templates are the older variants"
+  ],
+  "required_updates": [
+    "Tighten type checking around the contract layer",
+    "Add reusable CDD-PBT CI job",
+    "Replace ci-failure-fix.yml and auto-merge-jules-prs.yml"
+  ],
+  "setup_commands": [
+    "python -m pip install --upgrade pip",
+    "python -m pip install -e './neurocnl[dev]'",
+    "python -m pip install hypothesis pydantic"
+  ],
+  "baseline_commands": [
+    "cd neurocnl && ruff check .",
+    "cd neurocnl && mypy .",
+    "cd neurocnl && pytest --tb=short"
+  ],
+  "migration_commands": [
+    "cd neurocnl && pytest neurocnl/tests/properties -m property --tb=short"
+  ],
+  "migration_issues": [
+    {
+      "id": "CNL-CDD-001",
+      "title": "neurocnl: extract grammar, invariant, and export contracts from the spec plan",
+      "labels": ["feature", "cdd-pbt", "migration", "contracts"],
+      "spec_refs": [
+        "neurocnl/neuromorphic_spec_plan.md#Layer 1 — Physical Invariants",
+        "neurocnl/neuromorphic_spec_plan.md#Layer 2 — Behavioral Spec",
+        "neurocnl/neuromorphic_spec_plan.md#Layer 3 — Validation Assertions"
+      ],
+      "objective": "Create Pydantic v2 contracts for LIF neurons (18 Layer 1 invariants), hardware exports (Loihi, SpiNNaker, Teensy), and the CNL parse → validate → simulate pipeline. Reference implementation in docs/unified-dev-pipeline/neurocnl/contracts/.",
+      "conversion_steps": [
+        "Copy neuron_params.py — LIFNeuronContract, SynapticContract, STDPContract, PopulationContract",
+        "Copy hardware_export.py — LoihiExportContract, SpiNNakerExportContract, TeensyExportContract",
+        "Copy pipeline_contracts.py — CNLParseResultContract, ValidationResultContract, SimulationResultContract, API contracts",
+        "Route parser and export code through the new contract layer"
+      ],
+      "contract_targets": [
+        "neurocnl/neurocnl/contracts/__init__.py",
+        "neurocnl/neurocnl/contracts/neuron_params.py",
+        "neurocnl/neurocnl/contracts/hardware_export.py",
+        "neurocnl/neurocnl/contracts/pipeline_contracts.py"
+      ],
+      "property_targets": [],
+      "acceptance_checks": [
+        "All contract classes importable: from neurocnl.contracts import LIFNeuronContract",
+        "Invalid physics params raise ValidationError with descriptive messages",
+        "Existing layer1_invariants.py tests still pass (contracts are additive)",
+        "mypy --strict neurocnl/contracts/ passes"
+      ],
+      "workflow_updates": [],
+      "depends_on": []
+    },
+    {
+      "id": "CNL-CDD-002",
+      "title": "neurocnl: add property tests for grammar and invariant preservation",
+      "labels": ["feature", "cdd-pbt", "migration", "properties"],
+      "spec_refs": [
+        "neurocnl/neuromorphic_spec_plan.md#The Honest Risk",
+        "neurocnl/neuromorphic_spec_plan.md#Step 4 — Validate Against Nengo Simulation"
+      ],
+      "objective": "Add 12+ Hypothesis property tests covering physics invariants, contract rejection, Loihi export, metamorphic relations, and CNL pipeline consistency. Reference implementation in docs/unified-dev-pipeline/neurocnl/properties/.",
+      "conversion_steps": [
+        "Copy test_physics_properties.py — TestPhysicsInvariants (500 examples each), TestContractRejection, TestLoihiProperties, TestMetamorphicProperties, TestCNLPipelineProperties",
+        "Configure Hypothesis CI profile (200 examples, deterministic seed)"
+      ],
+      "contract_targets": [],
+      "property_targets": [
+        "neurocnl/neurocnl/tests/properties/test_physics_properties.py"
+      ],
+      "acceptance_checks": [
+        "pytest neurocnl/properties/ -v --hypothesis-seed=0 passes",
+        "At least 5000 total test cases generated across all properties",
+        "No existing tests broken"
+      ],
+      "workflow_updates": [],
+      "depends_on": ["CNL-CDD-001"]
+    },
+    {
+      "id": "CNL-CDD-003",
+      "title": "neurocnl: tighten CI around contracts, properties, and safe agent merge",
+      "labels": ["feature", "cdd-pbt", "migration", "ci"],
+      "spec_refs": [
+        "neurocnl/pyproject.toml",
+        "neurocnl/.github/workflows/ci.yml"
+      ],
+      "objective": "Wire contract/property validation into CI, replace old automation templates with protected-file-aware auto-merge and structured-log failure-fix.",
+      "conversion_steps": [
+        "Add property-test stage to CI",
+        "Raise mypy strictness for contract modules",
+        "Replace ci-failure-fix.yml and auto-merge-jules-prs.yml with shared templates"
+      ],
+      "contract_targets": [
+        "neurocnl/.github/workflows/ci.yml",
+        "neurocnl/.github/workflows/ci-failure-fix.yml",
+        "neurocnl/.github/workflows/auto-merge-jules-prs.yml"
+      ],
+      "property_targets": [],
+      "acceptance_checks": [
+        "Contract and property suites run on pull requests",
+        "Failure-fix prompts include failing-log context",
+        "Agent PRs can auto-merge after synchronize and ready-for-review transitions",
+        "PRs touching contracts/ or properties/ require human review"
+      ],
+      "workflow_updates": [
+        "Copy shared auto-merge and ci-failure-fix templates",
+        "Invoke shared CDD-PBT workflow from neurocnl CI"
+      ],
+      "depends_on": ["CNL-CDD-002"]
+    }
+  ]
+}

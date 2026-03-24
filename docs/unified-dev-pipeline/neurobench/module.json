@@ -1,0 +1,129 @@
+{
+  "module_name": "Neurobench",
+  "repo_path": "Neurobench",
+  "github_repo": null,
+  "python_version": "3.11",
+  "framework": "python-poetry",
+  "spec_paths": [
+    "Neurobench/neurobench_spec.md",
+    "Neurobench/README.md"
+  ],
+  "contract_kit": {
+    "contracts_dir": "docs/unified-dev-pipeline/neurobench/contracts",
+    "properties_dir": "docs/unified-dev-pipeline/neurobench/properties",
+    "agents_md": null,
+    "guardrails_md": null
+  },
+  "existing_workflows": [
+    "ci.yml"
+  ],
+  "workflow_gaps": [
+    "Missing ci-failure-fix.yml",
+    "Missing auto-merge-jules-prs.yml",
+    "CI does not run property tests",
+    "Flutter frontend CI not wired into contract gate"
+  ],
+  "required_updates": [
+    "Add property test step to CI",
+    "Add reusable CDD-PBT CI job",
+    "Add auto-merge and failure-fix workflows",
+    "Wire Flutter frontend CI to contract verification gate"
+  ],
+  "setup_commands": [
+    "pip install poetry",
+    "cd Neurobench && poetry install --with test",
+    "cd Neurobench && poetry run pip install hypothesis pydantic"
+  ],
+  "baseline_commands": [
+    "cd Neurobench && poetry run ruff check .",
+    "cd Neurobench && poetry run mypy .",
+    "cd Neurobench && poetry run pytest --tb=short"
+  ],
+  "migration_commands": [
+    "cd Neurobench && poetry run pytest neurobench/tests/properties -m property --tb=short"
+  ],
+  "migration_issues": [
+    {
+      "id": "NB-CDD-001",
+      "title": "Neurobench: extract benchmark suite and regression contracts from the spec",
+      "labels": ["feature", "cdd-pbt", "migration", "contracts"],
+      "spec_refs": [
+        "Neurobench/neurobench_spec.md#NB-D1",
+        "Neurobench/neurobench_spec.md#NB-D2",
+        "Neurobench/neurobench_spec.md#NB-D3"
+      ],
+      "objective": "Create Pydantic contracts for benchmark suite definitions (task name, dataset, metric), run results (score, timestamp, hardware tag), and regression thresholds. Enforce that no benchmark run can silently degrade.",
+      "conversion_steps": [
+        "Create BenchmarkSuite contract: task name non-empty, dataset path exists, metric in allowed set",
+        "Create RunResult contract: score >= 0, timestamp ISO-8601, hardware tag non-empty",
+        "Create RegressionThreshold contract: tolerance > 0, comparison direction (higher/lower is better)"
+      ],
+      "contract_targets": [
+        "Neurobench/neurobench/contracts/benchmark_contracts.py",
+        "Neurobench/neurobench/contracts/regression_contracts.py"
+      ],
+      "property_targets": [],
+      "acceptance_checks": [
+        "Benchmark contracts reject empty task names",
+        "Run result contracts reject negative scores",
+        "Regression thresholds enforce tolerance > 0"
+      ],
+      "workflow_updates": [],
+      "depends_on": []
+    },
+    {
+      "id": "NB-CDD-002",
+      "title": "Neurobench: add property tests for benchmark stability and regression detection",
+      "labels": ["feature", "cdd-pbt", "migration", "properties"],
+      "spec_refs": [
+        "Neurobench/neurobench_spec.md#NB-S1",
+        "Neurobench/neurobench_spec.md#NB-S2"
+      ],
+      "objective": "Add Hypothesis property tests for benchmark result stability, score ordering, and regression detection accuracy.",
+      "conversion_steps": [
+        "Add properties for benchmark score reproducibility under seed control",
+        "Add properties for regression detection: degradation beyond threshold always flagged",
+        "Add properties for score format round-trip (serialize → deserialize → compare)"
+      ],
+      "contract_targets": [],
+      "property_targets": [
+        "Neurobench/neurobench/tests/properties/test_benchmark_properties.py",
+        "Neurobench/neurobench/tests/properties/test_regression_properties.py"
+      ],
+      "acceptance_checks": [
+        "200+ examples generated per property in CI",
+        "Regression beyond threshold never passes silently",
+        "Score round-trips preserve precision to 6 decimal places"
+      ],
+      "workflow_updates": [],
+      "depends_on": ["NB-CDD-001"]
+    },
+    {
+      "id": "NB-CDD-003",
+      "title": "Neurobench: add CDD-PBT verification and Jules workflows",
+      "labels": ["feature", "cdd-pbt", "migration", "ci"],
+      "spec_refs": [],
+      "objective": "Add property tests to the Poetry-based CI, add ci-failure-fix and auto-merge workflows, wire Flutter frontend CI into the contract gate.",
+      "conversion_steps": [
+        "Add property test step to CI using poetry run pytest",
+        "Wire Flutter frontend CI to fail if backend contracts break",
+        "Add ci-failure-fix.yml and auto-merge-jules-prs.yml"
+      ],
+      "contract_targets": [
+        "Neurobench/.github/workflows/ci.yml"
+      ],
+      "property_targets": [],
+      "acceptance_checks": [
+        "CI runs all property tests via poetry",
+        "Flutter builds are gated on backend contract verification",
+        "Jules receives failure logs with contract context"
+      ],
+      "workflow_updates": [
+        "Add property test step to Neurobench ci.yml",
+        "Gate Flutter frontend on backend contracts-passed job",
+        "Copy shared auto-merge and ci-failure-fix templates"
+      ],
+      "depends_on": ["NB-CDD-002"]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+name: Contract Migration
+description: Add or extend Pydantic contracts / property tests for a module
+title: "[CDD-PBT] "
+labels: ["cdd-pbt-migration", "contracts"]
+body:
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - neurocnl
+        - Neuro-Dream-Hand
+        - Neurosim
+        - Neurosense
+        - Neurochip
+        - Neurobench
+        - Neurohub
+        - neuro_toolkit
+    validations:
+      required: true
+  - type: dropdown
+    id: contract_type
+    attributes:
+      label: Type
+      options:
+        - New contract (Pydantic model)
+        - Extend existing contract
+        - Property test (Hypothesis)
+        - Golden simulation baseline
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What constraint or property does this encode?
+    validations:
+      required: true
+  - type: textarea
+    id: spec_reference
+    attributes:
+      label: Spec Reference
+      description: Which spec section, NeuroML parameter, or paper is this from?
+      placeholder: "e.g., neurosim_spec.md NS-S1, NeuroML iafTauCell, Bi & Poo 1998"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How do we know this is done?
+      value: |
+        - [ ] Contract model created with frozen=True
+        - [ ] At least 3 property tests pass with --hypothesis-seed=0
+        - [ ] mypy --strict passes on the contract file
+        - [ ] GUARDRAILS.md reviewed

@@ -1,0 +1,50 @@
+name: Feature (with contracts)
+description: Request a new feature — contracts must be defined before implementation
+title: "[Feature] "
+labels: ["feature"]
+body:
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options:
+        - neurocnl
+        - Neuro-Dream-Hand
+        - Neurosim
+        - Neurosense
+        - Neurochip
+        - Neurobench
+        - Neurohub
+        - neuro_toolkit
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: What should be built?
+    validations:
+      required: true
+  - type: textarea
+    id: contracts_needed
+    attributes:
+      label: Contracts Required BEFORE Implementation
+      description: |
+        Which Pydantic contracts must exist before the agent starts coding?
+        These define the acceptance criteria in machine-enforceable form.
+      placeholder: |
+        - LIFNeuronContract extended with new parameter X
+        - New ExportContract for hardware target Y
+        - Property: "for all valid X, Y holds"
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: Human-readable acceptance criteria
+      value: |
+        - [ ] Contracts defined and reviewed
+        - [ ] Property tests pass with --hypothesis-seed=0
+        - [ ] Feature implementation passes all contract validations
+        - [ ] AGENTS.md and GUARDRAILS.md consulted

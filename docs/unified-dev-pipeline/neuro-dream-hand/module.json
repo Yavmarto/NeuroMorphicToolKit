@@ -1,0 +1,139 @@
+{
+  "module_name": "Neuro-Dream-Hand",
+  "repo_path": "Neuro-Dream-Hand",
+  "github_repo": null,
+  "python_version": "3.11",
+  "framework": "python-pip",
+  "spec_paths": [
+    "Neuro-Dream-Hand/SPEC.md",
+    "Neuro-Dream-Hand/README.md"
+  ],
+  "contract_kit": {
+    "contracts_dir": "docs/unified-dev-pipeline/neuro-dream-hand/contracts",
+    "properties_dir": "docs/unified-dev-pipeline/neuro-dream-hand/properties",
+    "agents_md": "docs/unified-dev-pipeline/neuro-dream-hand/AGENTS.md",
+    "guardrails_md": "docs/unified-dev-pipeline/neuro-dream-hand/GUARDRAILS.md"
+  },
+  "existing_workflows": [
+    "ci.yml",
+    "integration.yml",
+    "queue-issue-to-jules.yml",
+    "ci-failure-fix.yml",
+    "feature-builder.yml",
+    "bug-fixer.yml",
+    "unblocked-issues.yml",
+    "auto-merge-jules-prs.yml"
+  ],
+  "workflow_gaps": [
+    "No dedicated property-test gate in CI",
+    "mypy is not strict across the package",
+    "Auto-merge and failure-fix templates are the older variants"
+  ],
+  "required_updates": [
+    "Add reusable CDD-PBT CI job",
+    "Tighten type checking around hardware contract modules",
+    "Replace ci-failure-fix.yml and auto-merge-jules-prs.yml"
+  ],
+  "setup_commands": [
+    "python -m pip install --upgrade pip",
+    "python -m pip install -e './Neuro-Dream-Hand[dev]'",
+    "python -m pip install hypothesis pydantic"
+  ],
+  "baseline_commands": [
+    "cd 'Neuro-Dream-Hand' && ruff check .",
+    "cd 'Neuro-Dream-Hand' && mypy .",
+    "cd 'Neuro-Dream-Hand' && pytest --tb=short"
+  ],
+  "migration_commands": [
+    "cd 'Neuro-Dream-Hand' && pytest tests/properties -m property --tb=short"
+  ],
+  "migration_issues": [
+    {
+      "id": "NDH-CDD-001",
+      "title": "Neuro-Dream-Hand: extract HITL and deployment contracts from SPEC.md",
+      "labels": ["feature", "cdd-pbt", "migration", "contracts"],
+      "spec_refs": [
+        "Neuro-Dream-Hand/SPEC.md#4.1 Serial Bridge",
+        "Neuro-Dream-Hand/SPEC.md#4.2 Force/Tactile Sensor Characterization",
+        "Neuro-Dream-Hand/SPEC.md#4.3 EMG Ingestion",
+        "Neuro-Dream-Hand/SPEC.md#5.1 Fault Injection"
+      ],
+      "objective": "Create Pydantic v2 contracts for serial protocol, EMG stream, sensor frames, fault injection, crossbar export, and drop-test validation. Reference implementation in docs/unified-dev-pipeline/neuro-dream-hand/contracts/.",
+      "conversion_steps": [
+        "Copy hardware_contracts.py — SerialBridgeContract, SensorFrameContract, EMGStreamContract, EMGSpikeOutputContract, HITLLatencyContract, FaultInjectionContract, CrossbarExportContract, DropTestContract",
+        "Validate command and sensor payload sizes, checksums, and value ranges before use",
+        "Route experiment output files through typed manifests"
+      ],
+      "contract_targets": [
+        "Neuro-Dream-Hand/neurodreamhand/hardware/contracts.py",
+        "Neuro-Dream-Hand/neurodreamhand/experiments/contracts.py"
+      ],
+      "property_targets": [],
+      "acceptance_checks": [
+        "Out-of-range grip (>1.0, <0.0) raises ValidationError",
+        "ADC values > 4095 raise ValidationError",
+        "Fault fractions > 30% raise ValidationError",
+        "Serial frame contracts enforce packet length, sentinels, and bounds"
+      ],
+      "workflow_updates": [],
+      "depends_on": []
+    },
+    {
+      "id": "NDH-CDD-002",
+      "title": "Neuro-Dream-Hand: add property tests for physical and hardware invariants",
+      "labels": ["feature", "cdd-pbt", "migration", "properties"],
+      "spec_refs": [
+        "Neuro-Dream-Hand/SPEC.md#Context: What the simulation has established",
+        "Neuro-Dream-Hand/SPEC.md#4.1 Serial Bridge"
+      ],
+      "objective": "Add 11 Hypothesis property tests for grip clamping, serial packets, ADC range, EMG output, fault injection bounds, crossbar conductance, and drop-test gap. Reference implementation in docs/unified-dev-pipeline/neuro-dream-hand/properties/.",
+      "conversion_steps": [
+        "Copy test_hitl_properties.py — TestSerialProtocolProperties, TestSensorFrameProperties, TestEMGProperties, TestFaultInjectionProperties, TestCrossbarProperties, TestDropTestProperties",
+        "Configure Hypothesis CI profile"
+      ],
+      "contract_targets": [],
+      "property_targets": [
+        "Neuro-Dream-Hand/tests/properties/test_hitl_properties.py"
+      ],
+      "acceptance_checks": [
+        "Grip commands stay in 0.0 to 1.0 range",
+        "Serial packet parsing is stable under randomized valid/invalid frames",
+        "Physical metric reports never produce negative values"
+      ],
+      "workflow_updates": [],
+      "depends_on": ["NDH-CDD-001"]
+    },
+    {
+      "id": "NDH-CDD-003",
+      "title": "Neuro-Dream-Hand: wire CDD-PBT into CI, issue queueing, and auto-merge",
+      "labels": ["feature", "cdd-pbt", "migration", "ci"],
+      "spec_refs": [
+        "Neuro-Dream-Hand/.github/workflows/ci.yml",
+        "Neuro-Dream-Hand/.github/workflows/integration.yml"
+      ],
+      "objective": "Keep the advanced queueing workflow but add contract/property enforcement and modernize the Jules failure-fix and auto-merge stages.",
+      "conversion_steps": [
+        "Add a property-test stage to CI and integration workflows",
+        "Preserve queue-issue-to-jules.yml but ensure generated migration issues are compatible",
+        "Replace ci-failure-fix.yml and auto-merge-jules-prs.yml with shared templates"
+      ],
+      "contract_targets": [
+        "Neuro-Dream-Hand/.github/workflows/ci.yml",
+        "Neuro-Dream-Hand/.github/workflows/ci-failure-fix.yml",
+        "Neuro-Dream-Hand/.github/workflows/auto-merge-jules-prs.yml"
+      ],
+      "property_targets": [],
+      "acceptance_checks": [
+        "Baseline, integration, and property tests all run before merge",
+        "Jules repair attempts include the workflow log bundle URL",
+        "Auto-merge triggers after PR updates, not only on creation",
+        "PRs touching contracts/ or properties/ require human review"
+      ],
+      "workflow_updates": [
+        "Copy shared auto-merge and ci-failure-fix templates",
+        "Add CDD-PBT validation as a required status check"
+      ],
+      "depends_on": ["NDH-CDD-002"]
+    }
+  ]
+}
