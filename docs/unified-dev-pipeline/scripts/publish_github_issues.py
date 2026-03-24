@@ -101,12 +101,45 @@ def build_body(issue: dict, dependency_numbers: list[int]) -> str:
     return "\n".join(lines)
 
 
+LABEL_DEFS: dict[str, tuple[str, str]] = {
+    "cdd-pbt":    ("CDD+PBT migration", "0E8A16"),
+    "migration":  ("Contract-Driven Development migration", "1D76DB"),
+    "contracts":  ("Pydantic domain contracts", "D93F0B"),
+    "properties": ("Hypothesis property-based tests", "FBCA04"),
+    "ci":         ("CI/CD improvements", "E4E669"),
+    "feature":    ("New feature or request", "A2EEEF"),
+    "jules":      ("Jules agent task", "BFD4F2"),
+    "critical":   ("Critical blocker — must be resolved first", "B60205"),
+}
+
+_labels_ensured: set[str] = set()
+
+
+def ensure_labels(repo: str) -> None:
+    """Create any missing labels in the repo (idempotent)."""
+    if repo in _labels_ensured:
+        return
+    for name, (description, color) in LABEL_DEFS.items():
+        subprocess.run(
+            ["gh", "label", "create", name,
+             "--repo", repo,
+             "--description", description,
+             "--color", color,
+             "--force"],
+            capture_output=True,
+            text=True,
+        )  # --force updates if exists; ignore errors for repos where we lack write access
+    _labels_ensured.add(repo)
+
+
 def create_issue(
     repo: str, title: str, labels: list[str], body: str, execute: bool,
 ) -> int | None:
     if not execute:
         print(f"[dry-run] would create issue in {repo}: {title}")
         return None
+
+    ensure_labels(repo)
 
     with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as handle:
         handle.write(body)
