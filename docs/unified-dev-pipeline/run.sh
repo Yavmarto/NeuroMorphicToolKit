@@ -103,7 +103,9 @@ step_install_ci() {
 
 step_verify() {
   header 5 "Verify — run contracts + property tests locally"
+  cd "$REPO_ROOT"
   bash "$PIPELINE_DIR/scripts/verify-contracts-local.sh" $MODULE_ARG
+  cd "$PIPELINE_DIR"
   ok "Verification complete."
 }
 

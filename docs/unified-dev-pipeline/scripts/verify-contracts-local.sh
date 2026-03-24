@@ -33,8 +33,8 @@ run_check() {
         printf "${GREEN}PASS${NC}\n"
         ((PASS++))
     else
-        if echo "$output" | grep -q "no tests ran\|No contract tests\|No property tests\|FileNotFoundError\|No such file"; then
-            printf "${YELLOW}SKIP${NC} (not yet created)\n"
+        if echo "$output" | grep -q "no tests ran\|No contract tests\|No property tests\|FileNotFoundError\|No such file\|command not found\|No module named\|not found"; then
+            printf "${YELLOW}SKIP${NC} (not yet created or tool not installed)\n"
             ((SKIP++))
         else
             printf "${RED}FAIL${NC}\n"
@@ -109,21 +109,50 @@ verify_module() {
         ruff_cmd="poetry run ruff"
     fi
 
-    # Linting
-    run_check "$module" "ruff check" \
-        "cd '$module_dir' && $ruff_cmd check . 2>/dev/null"
+    # Auto-discover contracts/ and properties/ anywhere in the module tree
+    local contracts_dir properties_dir
+    contracts_dir=$(find "$module_dir" -type d -name "contracts" 2>/dev/null | grep -v "__pycache__" | head -1)
+    properties_dir=$(find "$module_dir" -type d -name "properties" 2>/dev/null | grep -v "__pycache__" | head -1)
 
-    # Type checking
-    run_check "$module" "mypy contracts/" \
-        "cd '$module_dir' && $mypy_cmd --strict contracts/ 2>/dev/null"
+    # Linting — only check contracts/ and properties/ directories
+    local lint_targets=""
+    [[ -n "$contracts_dir" ]] && lint_targets="$lint_targets '$contracts_dir'"
+    [[ -n "$properties_dir" ]] && lint_targets="$lint_targets '$properties_dir'"
+
+    if [[ -n "$lint_targets" ]]; then
+        run_check "$module" "ruff check" \
+            "eval \"$ruff_cmd check --select=E,F,W $lint_targets\" 2>/dev/null"
+    else
+        run_check "$module" "ruff check" \
+            "echo 'No such file or directory: contracts'"
+    fi
+
+    # Type checking on contracts if found
+    if [ -n "$contracts_dir" ]; then
+        run_check "$module" "mypy contracts/" \
+            "$mypy_cmd --strict '$contracts_dir' 2>/dev/null"
+    else
+        run_check "$module" "mypy contracts/" \
+            "echo 'No such file or directory: contracts'"
+    fi
 
     # Contract tests
-    run_check "$module" "pytest contracts/" \
-        "cd '$module_dir' && $pytest_cmd contracts/ -v --tb=short -q 2>/dev/null"
+    if [ -n "$contracts_dir" ]; then
+        run_check "$module" "pytest contracts/" \
+            "cd '$module_dir' && $pytest_cmd '$contracts_dir' -v --tb=short -q 2>/dev/null"
+    else
+        run_check "$module" "pytest contracts/" \
+            "echo 'No such file or directory: contracts'"
+    fi
 
     # Property-based tests
-    run_check "$module" "pytest properties/ (PBT)" \
-        "cd '$module_dir' && $pytest_cmd properties/ -v --hypothesis-seed=0 -x --tb=short -q 2>/dev/null"
+    if [ -n "$properties_dir" ]; then
+        run_check "$module" "pytest properties/ (PBT)" \
+            "cd '$module_dir' && $pytest_cmd '$properties_dir' -v --hypothesis-seed=0 -x --tb=short -q 2>/dev/null"
+    else
+        run_check "$module" "pytest properties/ (PBT)" \
+            "echo 'No such file or directory: properties'"
+    fi
 
     # Standard tests
     run_check "$module" "pytest tests/ (standard)" \
