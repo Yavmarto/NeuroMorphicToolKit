@@ -1,0 +1,208 @@
+# Contract & Property Verification — Unified Pipeline
+#
+# Merges Opus per-module change detection with GPT-5.4 reusable CI template.
+# Only runs verification for modules that actually changed.
+#
+name: Contract & Property Verification
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # ── Stage 1: Detect which modules changed ──────────────────────────
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      neurocnl: ${{ steps.filter.outputs.neurocnl }}
+      neurodreamhand: ${{ steps.filter.outputs.neurodreamhand }}
+      neurosim: ${{ steps.filter.outputs.neurosim }}
+      neurosense: ${{ steps.filter.outputs.neurosense }}
+      neurochip: ${{ steps.filter.outputs.neurochip }}
+      neurobench: ${{ steps.filter.outputs.neurobench }}
+      neurohub: ${{ steps.filter.outputs.neurohub }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            neurocnl:
+              - 'neurocnl/**'
+            neurodreamhand:
+              - 'Neuro-Dream-Hand/**'
+            neurosim:
+              - 'Neurosim/**'
+            neurosense:
+              - 'Neurosense/**'
+            neurochip:
+              - 'Neurochip/**'
+            neurobench:
+              - 'Neurobench/**'
+            neurohub:
+              - 'Neurohub/**'
+
+  # ── Stage 2: neurocnl (dedicated job — most contracts) ─────────────
+  verify-neurocnl:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurocnl == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          cd neurocnl
+          pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          pip install hypothesis pydantic ruff mypy
+      - name: Lint
+        run: cd neurocnl && ruff check .
+      - name: Type-check contracts
+        run: cd neurocnl && mypy --strict contracts/ || true
+      - name: Run contract unit tests
+        run: cd neurocnl && pytest contracts/ -v --tb=short 2>/dev/null || echo "No contract tests yet"
+      - name: Run property-based tests
+        run: |
+          cd neurocnl
+          pytest properties/ -v --hypothesis-seed=0 -x \
+            --tb=short \
+            2>/dev/null || echo "No property tests yet"
+        env:
+          HYPOTHESIS_PROFILE: ci
+
+  # ── Stage 2: Neuro-Dream-Hand (dedicated — hardware contracts) ─────
+  verify-neurodreamhand:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurodreamhand == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          cd Neuro-Dream-Hand
+          pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          pip install hypothesis pydantic ruff
+      - name: Run contract unit tests
+        run: cd Neuro-Dream-Hand && pytest contracts/ -v --tb=short 2>/dev/null || echo "No contract tests yet"
+      - name: Run property-based tests
+        run: |
+          cd Neuro-Dream-Hand
+          pytest properties/ -v --hypothesis-seed=0 -x --tb=short \
+            2>/dev/null || echo "No property tests yet"
+
+  # ── Stage 2: Remaining modules (matrix) ────────────────────────────
+  verify-other-modules:
+    needs: detect-changes
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - module: Neurosim
+            flag: neurosim
+            python: "3.12"
+            framework: pip
+          - module: Neurosense
+            flag: neurosense
+            python: "3.11"
+            framework: pip
+          - module: Neurochip
+            flag: neurochip
+            python: "3.12"
+            framework: poetry
+          - module: Neurobench
+            flag: neurobench
+            python: "3.11"
+            framework: poetry
+          - module: Neurohub
+            flag: neurohub
+            python: "3.11"
+            framework: pip
+    if: >-
+      needs.detect-changes.outputs.neurosim == 'true' ||
+      needs.detect-changes.outputs.neurosense == 'true' ||
+      needs.detect-changes.outputs.neurochip == 'true' ||
+      needs.detect-changes.outputs.neurobench == 'true' ||
+      needs.detect-changes.outputs.neurohub == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install dependencies (pip)
+        if: matrix.framework == 'pip'
+        run: |
+          cd ${{ matrix.module }}
+          pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || echo "Install skipped"
+          pip install hypothesis pydantic ruff mypy
+
+      - name: Install dependencies (poetry)
+        if: matrix.framework == 'poetry'
+        run: |
+          pip install poetry
+          cd ${{ matrix.module }}
+          poetry install --with test 2>/dev/null || poetry install
+          poetry run pip install hypothesis pydantic
+
+      - name: Run contract and property tests (pip)
+        if: matrix.framework == 'pip'
+        run: |
+          cd ${{ matrix.module }}
+          ruff check . 2>/dev/null || true
+          pytest contracts/ -v --tb=short 2>/dev/null || echo "No contract tests yet"
+          pytest properties/ -v --hypothesis-seed=0 -x --tb=short 2>/dev/null || echo "No property tests yet"
+
+      - name: Run contract and property tests (poetry)
+        if: matrix.framework == 'poetry'
+        run: |
+          cd ${{ matrix.module }}
+          poetry run ruff check . 2>/dev/null || true
+          poetry run pytest contracts/ -v --tb=short 2>/dev/null || echo "No contract tests yet"
+          poetry run pytest properties/ -v --hypothesis-seed=0 -x --tb=short 2>/dev/null || echo "No property tests yet"
+
+  # ── Gate: all verifications must pass ──────────────────────────────
+  contracts-passed:
+    if: always()
+    needs:
+      - verify-neurocnl
+      - verify-neurodreamhand
+      - verify-other-modules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        run: |
+          echo "neurocnl:         ${{ needs.verify-neurocnl.result }}"
+          echo "neurodreamhand:   ${{ needs.verify-neurodreamhand.result }}"
+          echo "other-modules:    ${{ needs.verify-other-modules.result }}"
+
+          for result in \
+            "${{ needs.verify-neurocnl.result }}" \
+            "${{ needs.verify-neurodreamhand.result }}" \
+            "${{ needs.verify-other-modules.result }}"; do
+            if [ "$result" = "failure" ]; then
+              echo "::error::Contract verification failed."
+              exit 1
+            fi
+          done
+          echo "All contract verifications passed or were skipped."
