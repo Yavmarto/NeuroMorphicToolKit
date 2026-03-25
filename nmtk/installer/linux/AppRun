@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
-exec "${HERE}/usr/bin/neuro_toolkit" "$@"
+exec "${HERE}/usr/bin/neurocnl_studio" "$@"

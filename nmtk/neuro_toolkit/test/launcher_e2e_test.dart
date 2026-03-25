@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print, unawaited_futures
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,7 +57,7 @@ void main() async {
     print('📦 Installing neurocnl...');
     await manager.installModule(neurocnl, onProgress: (p) {
       // progress printed via subscription
-    });
+    },);
 
     // 3. Start
     print('⚡ Starting neurocnl...');
@@ -100,7 +101,7 @@ void main() async {
     await manager.stopModule('neurocnl');
 
     // Give it a moment to stop
-    await Future.delayed(const Duration(seconds: 2));
+    await Future<void>.delayed(const Duration(seconds: 2));
 
     print('🎉 E2E Launcher Flow Test PASSED!');
     exit(0);
