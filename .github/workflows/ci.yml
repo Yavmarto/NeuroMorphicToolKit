@@ -232,7 +232,7 @@ jobs:
           fi
       - name: Lint with ruff
         run: |
-          if [ -d "neurocnl" ]; then
+          if [ -f "neurocnl/pyproject.toml" ]; then
             cd neurocnl
             ruff check .
             ruff format --check .
@@ -241,7 +241,7 @@ jobs:
           fi
       - name: Type check with mypy
         run: |
-          if [ -d "neurocnl" ]; then
+          if [ -f "neurocnl/pyproject.toml" ]; then
             cd neurocnl
             mypy .
           else
@@ -249,7 +249,7 @@ jobs:
           fi
       - name: Install backend deps
         run: |
-          if [ -d "neurocnl/backend" ]; then
+          if [ -f "neurocnl/backend/requirements.txt" ]; then
             cd neurocnl/backend
             pip install -r requirements.txt
           else
@@ -257,7 +257,7 @@ jobs:
           fi
       - name: Run core tests
         run: |
-          if [ -d "neurocnl" ]; then
+          if [ -f "neurocnl/pyproject.toml" ]; then
             cd neurocnl
             pytest neurocnl/ --tb=short
           else
@@ -265,7 +265,7 @@ jobs:
           fi
       - name: Run backend tests
         run: |
-          if [ -d "neurocnl/backend" ]; then
+          if [ -f "neurocnl/backend/requirements.txt" ]; then
             cd neurocnl/backend
             pytest --tb=short
           else
