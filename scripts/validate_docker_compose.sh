@@ -2,16 +2,20 @@
 set -e
 
 # Validate root docker-compose.yml configuration and profiles
-# Usage: ./scripts/validate_docker_compose.sh [--build]
+# Usage: ./scripts/validate_docker_compose.sh [--build] [--up]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 BUILD_FLAG=""
-if [ "$1" = "--build" ]; then
-  BUILD_FLAG="--build"
-fi
+UP_FLAG=""
+for arg in "$@"; do
+  case $arg in
+    --build) BUILD_FLAG="--build" ;;
+    --up) UP_FLAG="true" ;;
+  esac
+done
 
 PASS=0
 FAIL=0
@@ -27,6 +31,36 @@ check() {
     echo "FAIL"
     FAIL=$((FAIL + 1))
   fi
+}
+
+wait_for_health() {
+  local profile="$1"
+  local timeout=60
+  local start_time=$(date +%s)
+
+  echo "  Waiting for services in profile '$profile' to be healthy..."
+  while true; do
+    local current_time=$(date +%s)
+    if [ $((current_time - start_time)) -gt $timeout ]; then
+      echo "  Timed out waiting for healthchecks"
+      return 1
+    fi
+
+    local status=$(docker compose --profile "$profile" ps --format json)
+    # This is a simplification; a more robust check would parse JSON
+    if ! echo "$status" | grep -q '"Health":"starting"'; then
+        if ! echo "$status" | grep -q '"Health":"unhealthy"'; then
+            if echo "$status" | grep -q '"Health":"healthy"'; then
+                echo "  All services healthy"
+                return 0
+            fi
+        else
+            echo "  Found unhealthy services"
+            return 1
+        fi
+    fi
+    sleep 2
+  done
 }
 
 echo "=== Docker Compose Validation ==="
@@ -53,13 +87,30 @@ for entry in "${SERVICES[@]}"; do
   check "$ctx Dockerfile" test -s "$ctx/$df"
 done
 
-# 4. Optionally build images
+# 4. Build and optionally start services
 if [ -n "$BUILD_FLAG" ]; then
   echo ""
-  echo "[4/4] Building images (this may take a while)"
+  echo "[4/4] Building images"
   for profile in core physics full; do
     check "build profile '$profile'" docker compose --profile "$profile" build
   done
+
+  if [ "$UP_FLAG" = "true" ]; then
+    echo ""
+    echo "[5/4] Testing runtime startup and health"
+    for profile in core physics full; do
+      echo "  Testing profile '$profile'..."
+      docker compose --profile "$profile" up -d
+      if wait_for_health "$profile"; then
+        echo "  Profile '$profile' startup: OK"
+        PASS=$((PASS + 1))
+      else
+        echo "  Profile '$profile' startup: FAIL"
+        FAIL=$((FAIL + 1))
+      fi
+      docker compose --profile "$profile" down
+    done
+  fi
 else
   echo ""
   echo "[4/4] Skipping image build (pass --build to enable)"
