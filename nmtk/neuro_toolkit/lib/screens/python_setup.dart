@@ -94,7 +94,7 @@ class _PythonSetupScreenState extends State<PythonSetupScreen> {
     });
 
     final provider = context.read<ModuleProvider>();
-    await provider.recheckPython();
+    unawaited(provider.recheckPython());
 
     if (mounted) {
       setState(() => _isChecking = false);

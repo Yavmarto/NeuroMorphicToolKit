@@ -135,10 +135,7 @@ class ProcessManager {
     return p.normalize(p.join(module.directory, module.runPath));
   }
 
-  Future<void> installModule(
-    Module module, {
-    void Function(double)? onProgress,
-  }) async {
+  Future<void> installModule(Module module, {void Function(double)? onProgress}) async {
     final installDir = _installDir(module);
     final moduleDir = Directory(installDir);
     debugPrint('[${module.id}] installModule: installDir=$installDir');
@@ -155,9 +152,7 @@ class ProcessManager {
       if (!await venvDir.exists()) {
         onProgress?.call(0.1);
         final pythonBin = await BundleManager().pythonPath;
-        debugPrint(
-          '[${module.id}] Creating venv with: $pythonBin -m venv venv (in $installDir)',
-        );
+        debugPrint('[${module.id}] Creating venv with: $pythonBin -m venv venv (in $installDir)');
 
         var venvResult = await _processRunner.run(
           pythonBin,
@@ -166,9 +161,7 @@ class ProcessManager {
         );
 
         if (venvResult.exitCode != 0) {
-          debugPrint(
-            '[${module.id}] Normal venv failed (exit ${venvResult.exitCode}): ${venvResult.stderr}',
-          );
+          debugPrint('[${module.id}] Normal venv failed (exit ${venvResult.exitCode}): ${venvResult.stderr}');
           debugPrint('[${module.id}] Trying --without-pip fallback...');
           if (await venvDir.exists()) {
             await venvDir.delete(recursive: true);
@@ -189,34 +182,21 @@ class ProcessManager {
               : p.join(venvPath, 'bin', 'python');
 
           var pipBootstrap = await _processRunner.run(
-            venvPython,
-            ['-m', 'ensurepip', '--default-pip'],
+            venvPython, ['-m', 'ensurepip', '--default-pip'],
             workingDirectory: installDir,
           );
 
           if (pipBootstrap.exitCode != 0) {
-            debugPrint(
-              '[${module.id}] ensurepip failed, downloading get-pip.py...',
-            );
+            debugPrint('[${module.id}] ensurepip failed, downloading get-pip.py...');
             final getPipPath = p.join(installDir, 'get-pip.py');
             final curlResult = await _processRunner.run(
-              'curl',
-              [
-                '-sS',
-                'https://bootstrap.pypa.io/get-pip.py',
-                '-o',
-                getPipPath,
-              ],
+              'curl', ['-sS', 'https://bootstrap.pypa.io/get-pip.py', '-o', getPipPath],
             );
             if (curlResult.exitCode == 0) {
               pipBootstrap = await _processRunner.run(
-                venvPython,
-                [getPipPath],
-                workingDirectory: installDir,
+                venvPython, [getPipPath], workingDirectory: installDir,
               );
-              try {
-                await File(getPipPath).delete();
-              } catch (_) {}
+              try { await File(getPipPath).delete(); } catch (_) {}
             }
             if (pipBootstrap.exitCode != 0) {
               throw Exception('Failed to bootstrap pip in venv');
@@ -240,11 +220,7 @@ class ProcessManager {
         for (final dep in module.localDeps) {
           final depDir = p.join(repoRoot, dep);
           debugPrint('[${module.id}] Installing local dep: $pipPath install $depDir');
-          final depResult = await _processRunner.run(
-            pipPath,
-            ['install', depDir],
-            workingDirectory: installDir,
-          );
+          final depResult = await _processRunner.run(pipPath, ['install', depDir], workingDirectory: installDir);
           if (depResult.exitCode != 0) {
             debugPrint('[${module.id}] Local dep $dep FAILED: ${depResult.stderr}');
             // Non-fatal — continue, the main install might still work
@@ -262,9 +238,7 @@ class ProcessManager {
       );
 
       if (pipResult.exitCode != 0) {
-        debugPrint(
-          '[${module.id}] pip install FAILED (exit ${pipResult.exitCode})',
-        );
+        debugPrint('[${module.id}] pip install FAILED (exit ${pipResult.exitCode})');
         debugPrint('[${module.id}] stderr: ${pipResult.stderr}');
         throw Exception('Failed to install dependencies: ${pipResult.stderr}');
       }
@@ -324,9 +298,7 @@ class ProcessManager {
         : p.join(venvPath, 'bin', 'python');
 
     debugPrint('[${module.id}] startModule: installDir=$installDir runDir=$runDir');
-    debugPrint(
-      '[${module.id}] startModule: pythonPath=$pythonPath target=${module.uvicornTarget} port=${module.port}',
-    );
+    debugPrint('[${module.id}] startModule: pythonPath=$pythonPath target=${module.uvicornTarget} port=${module.port}');
 
     // Guard: if venv doesn't exist, the module needs to be (re-)installed first
     if (!await File(pythonPath).exists()) {
@@ -339,9 +311,7 @@ class ProcessManager {
       }
       // Verify the install actually created the venv
       if (!await File(pythonPath).exists()) {
-        throw Exception(
-          'Install completed but venv python still not found at $pythonPath',
-        );
+        throw Exception('Install completed but venv python still not found at $pythonPath');
       }
     }
 
@@ -349,20 +319,12 @@ class ProcessManager {
     _statusController.add(updatedModuleStarting);
 
     try {
-      debugPrint(
-        '[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port ${module.port}',
-      );
+      debugPrint('[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port ${module.port}');
       debugPrint('[${module.id}] Working directory: $runDir');
 
       final process = await _processRunner.start(
         pythonPath,
-        [
-          '-m',
-          'uvicorn',
-          module.uvicornTarget,
-          '--port',
-          (module.port ?? 8000).toString(),
-        ],
+        ['-m', 'uvicorn', module.uvicornTarget, '--port', (module.port ?? 8000).toString()],
         workingDirectory: runDir,
       );
 
@@ -390,11 +352,11 @@ class ProcessManager {
           healthStatus: code == 0 ? null : 'Process exited with code $code',
         );
         _statusController.add(updatedModuleStopped);
-      },),);
+      }));
 
       // Give it some time to start up
       await Future<void>.delayed(const Duration(seconds: 2));
-      await _checkHealth(module);
+      unawaited(_checkHealth(module));
     } catch (e) {
       final updatedModuleError = module.copyWith(
         status: ModuleStatus.error,
@@ -466,9 +428,7 @@ class ProcessManager {
       }
 
       if (module.status != newStatus || module.healthStatus != healthInfo) {
-        debugPrint(
-          '[${module.id}] Health status changed: ${module.status} -> $newStatus',
-        );
+        debugPrint('[${module.id}] Health status changed: ${module.status} -> $newStatus');
         final updatedModule = module.copyWith(
           status: newStatus,
           healthStatus: healthInfo,
@@ -492,10 +452,8 @@ class ProcessManager {
 
   void _startHealthPolling() {
     _healthTimer?.cancel();
-    debugPrint(
-      'Starting health polling every 5 seconds for ${_modules.length} modules',
-    );
-    _healthTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    debugPrint('Starting health polling every 5 seconds for ${_modules.length} modules');
+    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
@@ -528,8 +486,7 @@ class ProcessManager {
       final file = File(p.join(directory.path, 'module_states.json'));
 
       if (await file.exists()) {
-        final states =
-            jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+        final states = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
         for (var i = 0; i < modules.length; i++) {
           if (states.containsKey(modules[i].id)) {
             final saved = states[modules[i].id] as Map<String, dynamic>;
