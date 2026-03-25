@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -57,13 +58,15 @@ class ModuleProvider with ChangeNotifier {
 
       await _processManager.init(_modules);
 
-      _processManager.statusUpdates.listen((updatedModule) {
-        final index = _modules.indexWhere((m) => m.id == updatedModule.id);
-        if (index != -1) {
-          _modules[index] = updatedModule;
-          notifyListeners();
-        }
-      });
+      unawaited(_processManager.statusUpdates.listen(
+        (updatedModule) {
+          final index = _modules.indexWhere((m) => m.id == updatedModule.id);
+          if (index != -1) {
+            _modules[index] = updatedModule;
+            notifyListeners();
+          }
+        },
+      ).asFuture(),);
 
       _isLoading = false;
     } catch (e) {
@@ -105,13 +108,13 @@ class ModuleProvider with ChangeNotifier {
         m.status == ModuleStatus.running ||
         m.status == ModuleStatus.stopping ||
         m.status == ModuleStatus.degraded ||
-        m.status == ModuleStatus.error
+        m.status == ModuleStatus.error,
       ).toList();
 
   List<Module> get availableModules =>
       _modules.where((m) =>
         m.status == ModuleStatus.notInstalled ||
-        m.status == ModuleStatus.installing
+        m.status == ModuleStatus.installing,
       ).toList();
 
   List<String> get activeModuleIds => _activeModuleIds;

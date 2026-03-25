@@ -68,7 +68,11 @@ class CatalogScreen extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            _buildStatusBadge(context, module, isMuJoCoUnavailable),
+                            _buildStatusBadge(
+                              context,
+                              module,
+                              isMuJoCoUnavailable,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -126,7 +130,7 @@ class CatalogScreen extends StatelessWidget {
                               },
                               child: Text(module.status == ModuleStatus.installed
                                   ? 'Installed'
-                                  : 'Running'),
+                                  : 'Running',),
                             ),
                           ),
                       ],
@@ -209,7 +213,7 @@ class CatalogScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color),
       ),
