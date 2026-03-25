@@ -470,7 +470,9 @@ class ProcessManager {
 
       Map<String, dynamic> states = {};
       if (await file.exists()) {
-        states = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+        final content = await file.readAsString();
+        final dynamic decoded = jsonDecode(content);
+        states = decoded as Map<String, dynamic>;
       }
 
       states[module.id] = module.toJson();
@@ -486,7 +488,9 @@ class ProcessManager {
       final file = File(p.join(directory.path, 'module_states.json'));
 
       if (await file.exists()) {
-        final states = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+        final content = await file.readAsString();
+        final dynamic decoded = jsonDecode(content);
+        final states = decoded as Map<String, dynamic>;
         for (var i = 0; i < modules.length; i++) {
           if (states.containsKey(modules[i].id)) {
             final saved = states[modules[i].id] as Map<String, dynamic>;

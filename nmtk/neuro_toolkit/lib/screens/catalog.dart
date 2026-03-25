@@ -126,7 +126,7 @@ class CatalogScreen extends StatelessWidget {
                               },
                               child: Text(module.status == ModuleStatus.installed
                                   ? 'Installed'
-                                  : 'Running'),
+                                  : 'Running',),
                             ),
                           ),
                       ],

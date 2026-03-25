@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
@@ -11,6 +10,11 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<String> installCalls = [];
   final List<String> uninstallCalls = [];
   bool _isMuJoCoAvailable = false;
+
+  void setMuJoCoAvailable(bool value) {
+    _isMuJoCoAvailable = value;
+    notifyListeners();
+  }
 
   @override
   List<Module> get modules => _mockModules;
@@ -40,12 +44,12 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
   List<Module> get installedModules => _mockModules.where((m) =>
       m.status != ModuleStatus.notInstalled &&
-      m.status != ModuleStatus.installing).toList();
+      m.status != ModuleStatus.installing,).toList();
 
   @override
   List<Module> get availableModules => _mockModules.where((m) =>
       m.status == ModuleStatus.notInstalled ||
-      m.status == ModuleStatus.installing).toList();
+      m.status == ModuleStatus.installing,).toList();
 
   @override
   List<String> get activeModuleIds => [];
@@ -53,17 +57,19 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
   List<Module> get activeModules => [];
 
-  @override
-  List<Module> modulesForTesting = [];
 
   @override
-  set modules(List<Module> val) {}
+  bool isMuJoCoAvailable() => _isMuJoCoAvailable;
 
   @override
-  bool isMuJoCoAvailable() => false;
-
-  @override
-  Future<void> installModule(String moduleId) async {}
+  Future<void> installModule(String moduleId) async {
+    installCalls.add(moduleId);
+    final index = _mockModules.indexWhere((m) => m.id == moduleId);
+    if (index != -1) {
+      _mockModules[index] = _mockModules[index].copyWith(status: ModuleStatus.installing);
+      notifyListeners();
+    }
+  }
 
   @override
   Future<void> launchModule(String moduleId) async {}
@@ -90,26 +96,26 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   void loadModules() {
     final List<Map<String, dynamic>> mockData = [
       {
-        "id": "neurocnl",
-        "name": "CNL Studio",
-        "description": "CNL parser",
-        "icon": "code",
-        "port": 8000,
-        "installPath": "neurocnl/",
-        "hasFrontend": true,
-        "frontendStatus": "Yes",
-        "requiresMuJoCo": false
+        'id': 'neurocnl',
+        'name': 'CNL Studio',
+        'description': 'CNL parser',
+        'icon': 'code',
+        'port': 8000,
+        'installPath': 'neurocnl/',
+        'hasFrontend': true,
+        'frontendStatus': 'Yes',
+        'requiresMuJoCo': false,
       },
       {
-        "id": "neuro_dream_hand",
-        "name": "NDH Simulator",
-        "description": "Physics",
-        "icon": "precision_manufacturing",
-        "port": null,
-        "installPath": "Neuro-Dream-Hand/",
-        "hasFrontend": false,
-        "frontendStatus": "No",
-        "requiresMuJoCo": true
+        'id': 'neuro_dream_hand',
+        'name': 'NDH Simulator',
+        'description': 'Physics',
+        'icon': 'precision_manufacturing',
+        'port': null,
+        'installPath': 'Neuro-Dream-Hand/',
+        'hasFrontend': false,
+        'frontendStatus': 'No',
+        'requiresMuJoCo': true,
       }
     ];
 

@@ -27,7 +27,7 @@ class ModuleTabBar extends StatelessWidget {
         return Container(
           height: 48,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
             border: Border(
               bottom: BorderSide(
                 color: Theme.of(context).dividerColor,

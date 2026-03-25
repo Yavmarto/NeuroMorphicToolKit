@@ -35,12 +35,6 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   List<Module> get availableModules => [];
 
   @override
-  List<Module> modulesForTesting = [];
-
-  @override
-  set modules(List<Module> val) {}
-
-  @override
   Future<void> recheckPython() async {}
   @override
   bool isMuJoCoAvailable() => false;
