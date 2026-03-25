@@ -470,7 +470,7 @@ class ProcessManager {
 
       Map<String, dynamic> states = {};
       if (await file.exists()) {
-        states = jsonDecode(await file.readAsString());
+        states = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       }
 
       states[module.id] = module.toJson();

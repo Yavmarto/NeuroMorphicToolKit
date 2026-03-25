@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NeuroMorphic ToolKit
+Comment=Integrated platform for neuromorphic computing
+Exec=neuro_toolkit
+Icon=nmtk
+Categories=Science;Education;Development;
+Terminal=false
