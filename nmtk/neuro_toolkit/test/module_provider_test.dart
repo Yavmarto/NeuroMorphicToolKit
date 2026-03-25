@@ -17,7 +17,7 @@ class MockProcessManager implements ProcessManager {
   Future<void> init(List<Module> modules) async {}
 
   @override
-  Future<void> installModule(Module module, {Function(double)? onProgress}) async {
+  Future<void> installModule(Module module, {void Function(double)? onProgress}) async {
     installCalls.add(module.id);
   }
 

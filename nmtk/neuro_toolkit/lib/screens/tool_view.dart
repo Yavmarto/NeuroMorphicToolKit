@@ -157,13 +157,13 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
               preferredSize: const Size.fromHeight(48),
               child: ModuleTabBar(
                 activeModuleId: _activeModuleId,
-                onTabSelected: (id) {
+                onTabSelected: (String id) {
                   setState(() {
                     _activeModuleId = id;
                   });
                   _startPollingForActiveModules();
                 },
-                onTabClosed: (id) {
+                onTabClosed: (String id) {
                   provider.closeTab(id);
                   _pollTimers[id]?.cancel();
                   _pollTimers.remove(id);
@@ -219,8 +219,10 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
                             const SizedBox(height: 16),
                             Text('Waiting for ${module.name} to start...'),
                             const SizedBox(height: 8),
-                            Text('Checking http://localhost:${module.port}/health',
-                                style: Theme.of(context).textTheme.bodySmall),
+                            Text(
+                              'Checking http://localhost:${module.port}/health',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                             const SizedBox(height: 16),
                             ElevatedButton.icon(
                               onPressed: () => _launchInBrowser(module),
@@ -238,7 +240,7 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
                               children: [
                                 const Icon(Icons.warning, size: 48, color: Colors.orange),
                                 const SizedBox(height: 16),
-                                Text('WebView not supported on this platform.'),
+                                const Text('WebView not supported on this platform.'),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   onPressed: () => _launchInBrowser(module),

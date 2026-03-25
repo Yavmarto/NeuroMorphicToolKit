@@ -290,7 +290,7 @@ class BundleManager {
   }
 
   /// Extract bundled module sources to the application support directory.
-  Future<void> extractModules({Function(double)? onProgress}) async {
+  Future<void> extractModules({void Function(double)? onProgress}) async {
     if (!isBundled) return;
 
     final sourceDir = Directory(bundledModulesPath);

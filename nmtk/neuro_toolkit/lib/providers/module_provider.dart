@@ -57,8 +57,8 @@ class ModuleProvider with ChangeNotifier {
 
       await _processManager.init(_modules);
 
-      _processManager.statusUpdates.listen((updatedModule) {
-        final index = _modules.indexWhere((m) => m.id == updatedModule.id);
+      _processManager.statusUpdates.listen((Module updatedModule) {
+        final index = _modules.indexWhere((Module m) => m.id == updatedModule.id);
         if (index != -1) {
           _modules[index] = updatedModule;
           notifyListeners();
@@ -99,25 +99,25 @@ class ModuleProvider with ChangeNotifier {
   }
 
   List<Module> get installedModules =>
-      _modules.where((m) =>
+      _modules.where((Module m) =>
         m.status == ModuleStatus.installed ||
         m.status == ModuleStatus.starting ||
         m.status == ModuleStatus.running ||
         m.status == ModuleStatus.stopping ||
         m.status == ModuleStatus.degraded ||
-        m.status == ModuleStatus.error
+        m.status == ModuleStatus.error,
       ).toList();
 
   List<Module> get availableModules =>
-      _modules.where((m) =>
+      _modules.where((Module m) =>
         m.status == ModuleStatus.notInstalled ||
-        m.status == ModuleStatus.installing
+        m.status == ModuleStatus.installing,
       ).toList();
 
   List<String> get activeModuleIds => _activeModuleIds;
 
   List<Module> get activeModules => _activeModuleIds
-      .map((id) => _modules.firstWhere((m) => m.id == id))
+      .map((String id) => _modules.firstWhere((Module m) => m.id == id))
       .toList();
 
   bool isMuJoCoAvailable() {
@@ -130,7 +130,7 @@ class ModuleProvider with ChangeNotifier {
   }
 
   Future<void> installModule(String moduleId) async {
-    final index = _modules.indexWhere((m) => m.id == moduleId);
+    final index = _modules.indexWhere((Module m) => m.id == moduleId);
     if (index == -1) return;
 
     _modules[index] = _modules[index].copyWith(
@@ -142,7 +142,7 @@ class ModuleProvider with ChangeNotifier {
     try {
       await _processManager.installModule(
         _modules[index],
-        onProgress: (progress) {
+        onProgress: (double progress) {
           _modules[index] = _modules[index].copyWith(installProgress: progress);
           notifyListeners();
         },
@@ -153,7 +153,7 @@ class ModuleProvider with ChangeNotifier {
   }
 
   Future<void> launchModule(String moduleId) async {
-    final index = _modules.indexWhere((m) => m.id == moduleId);
+    final index = _modules.indexWhere((Module m) => m.id == moduleId);
     if (index == -1) return;
 
     // Add to active tabs for workspace view
@@ -170,7 +170,7 @@ class ModuleProvider with ChangeNotifier {
   }
 
   Future<void> stopModule(String moduleId) async {
-    final index = _modules.indexWhere((m) => m.id == moduleId);
+    final index = _modules.indexWhere((Module m) => m.id == moduleId);
     if (index == -1) return;
 
     _modules[index] = _modules[index].copyWith(status: ModuleStatus.stopping);
@@ -185,7 +185,7 @@ class ModuleProvider with ChangeNotifier {
   }
 
   Future<void> uninstallModule(String moduleId) async {
-    final index = _modules.indexWhere((m) => m.id == moduleId);
+    final index = _modules.indexWhere((Module m) => m.id == moduleId);
     if (index != -1) {
       _modules[index] = _modules[index].copyWith(
         status: ModuleStatus.notInstalled,

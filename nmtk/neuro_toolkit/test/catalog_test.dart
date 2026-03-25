@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
@@ -25,14 +24,14 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> recheckPython() async {}
 
   @override
-  List<Module> get installedModules => _mockModules.where((m) =>
+  List<Module> get installedModules => _mockModules.where((Module m) =>
       m.status != ModuleStatus.notInstalled &&
-      m.status != ModuleStatus.installing).toList();
+      m.status != ModuleStatus.installing,).toList();
 
   @override
-  List<Module> get availableModules => _mockModules.where((m) =>
+  List<Module> get availableModules => _mockModules.where((Module m) =>
       m.status == ModuleStatus.notInstalled ||
-      m.status == ModuleStatus.installing).toList();
+      m.status == ModuleStatus.installing,).toList();
 
   @override
   List<String> get activeModuleIds => [];
@@ -70,86 +69,86 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   void loadModules() {
     final List<Map<String, dynamic>> mockData = [
       {
-        "id": "neurocnl",
-        "name": "CNL Studio",
-        "description": "CNL parser",
-        "icon": "code",
-        "port": 8000,
-        "installPath": "neurocnl/",
-        "hasFrontend": true,
-        "frontendStatus": "Yes",
-        "requiresMuJoCo": false
+        'id': 'neurocnl',
+        'name': 'CNL Studio',
+        'description': 'CNL parser',
+        'icon': 'code',
+        'port': 8000,
+        'installPath': 'neurocnl/',
+        'hasFrontend': true,
+        'frontendStatus': 'Yes',
+        'requiresMuJoCo': false,
       },
       {
-        "id": "Neurosim",
-        "name": "NeuroSim",
-        "description": "Visual design",
-        "icon": "architecture",
-        "port": 8001,
-        "installPath": "Neurosim/",
-        "hasFrontend": true,
-        "frontendStatus": "Minimal",
-        "requiresMuJoCo": false
+        'id': 'Neurosim',
+        'name': 'NeuroSim',
+        'description': 'Visual design',
+        'icon': 'architecture',
+        'port': 8001,
+        'installPath': 'Neurosim/',
+        'hasFrontend': true,
+        'frontendStatus': 'Minimal',
+        'requiresMuJoCo': false,
       },
       {
-        "id": "Neurochip",
-        "name": "NeuroChip",
-        "description": "Hardware",
-        "icon": "memory",
-        "port": 8002,
-        "installPath": "Neurochip/",
-        "hasFrontend": true,
-        "frontendStatus": "Partial",
-        "requiresMuJoCo": false
+        'id': 'Neurochip',
+        'name': 'NeuroChip',
+        'description': 'Hardware',
+        'icon': 'memory',
+        'port': 8002,
+        'installPath': 'Neurochip/',
+        'hasFrontend': true,
+        'frontendStatus': 'Partial',
+        'requiresMuJoCo': false,
       },
       {
-        "id": "Neurobench",
-        "name": "NeuroBench",
-        "description": "Benchmarking",
-        "icon": "speed",
-        "port": 8003,
-        "installPath": "Neurobench/",
-        "hasFrontend": true,
-        "frontendStatus": "Scaffold",
-        "requiresMuJoCo": false
+        'id': 'Neurobench',
+        'name': 'NeuroBench',
+        'description': 'Benchmarking',
+        'icon': 'speed',
+        'port': 8003,
+        'installPath': 'Neurobench/',
+        'hasFrontend': true,
+        'frontendStatus': 'Scaffold',
+        'requiresMuJoCo': false,
       },
       {
-        "id": "Neurosense",
-        "name": "NeuroSense",
-        "description": "Biosignal",
-        "icon": "sensors",
-        "port": 8004,
-        "installPath": "Neurosense/",
-        "hasFrontend": true,
-        "frontendStatus": "Partial",
-        "requiresMuJoCo": false
+        'id': 'Neurosense',
+        'name': 'NeuroSense',
+        'description': 'Biosignal',
+        'icon': 'sensors',
+        'port': 8004,
+        'installPath': 'Neurosense/',
+        'hasFrontend': true,
+        'frontendStatus': 'Partial',
+        'requiresMuJoCo': false,
       },
       {
-        "id": "Neurohub",
-        "name": "NeuroHub",
-        "description": "Dashboard",
-        "icon": "hub",
-        "port": 8005,
-        "installPath": "Neurohub/",
-        "hasFrontend": true,
-        "frontendStatus": "Scaffold",
-        "requiresMuJoCo": false
+        'id': 'Neurohub',
+        'name': 'NeuroHub',
+        'description': 'Dashboard',
+        'icon': 'hub',
+        'port': 8005,
+        'installPath': 'Neurohub/',
+        'hasFrontend': true,
+        'frontendStatus': 'Scaffold',
+        'requiresMuJoCo': false,
       },
       {
-        "id": "neuro_dream_hand",
-        "name": "NDH Simulator",
-        "description": "Physics",
-        "icon": "precision_manufacturing",
-        "port": null,
-        "installPath": "Neuro-Dream-Hand/",
-        "hasFrontend": false,
-        "frontendStatus": "No",
-        "requiresMuJoCo": true
-      }
+        'id': 'neuro_dream_hand',
+        'name': 'NDH Simulator',
+        'description': 'Physics',
+        'icon': 'precision_manufacturing',
+        'port': null,
+        'installPath': 'Neuro-Dream-Hand/',
+        'hasFrontend': false,
+        'frontendStatus': 'No',
+        'requiresMuJoCo': true,
+      },
     ];
 
     _mockModules.clear();
-    _mockModules.addAll(mockData.map((json) => Module.fromJson(json)));
+    _mockModules.addAll(mockData.map((Map<String, dynamic> json) => Module.fromJson(json)));
     notifyListeners();
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -61,7 +62,7 @@ class _PythonSetupScreenState extends State<PythonSetupScreen> {
         setState(() => _isInstalling = false);
         if (exitCode == 0) {
           // Recheck Python availability
-          _retryCheck();
+          unawaited(_retryCheck());
         } else {
           setState(() {
             _errorMessage = 'Homebrew install exited with code $exitCode. '
@@ -93,7 +94,7 @@ class _PythonSetupScreenState extends State<PythonSetupScreen> {
     });
 
     final provider = context.read<ModuleProvider>();
-    await provider.recheckPython();
+    unawaited(provider.recheckPython());
 
     if (mounted) {
       setState(() => _isChecking = false);
