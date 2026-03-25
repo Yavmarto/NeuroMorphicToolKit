@@ -40,8 +40,8 @@ class ModuleProvider with ChangeNotifier {
 
       // Load modules from JSON manifest
       final jsonString = await rootBundle.loadString('assets/modules.json');
-      final List<dynamic> jsonList = jsonDecode(jsonString);
-      _modules = jsonList.map((json) => Module.fromJson(json)).toList();
+      final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
+      _modules = jsonList.map((json) => Module.fromJson(json as Map<String, dynamic>)).toList();
 
       if (bundle.isBundled && await bundle.needsExtraction) {
         debugPrint('First run: extracting bundled modules...');

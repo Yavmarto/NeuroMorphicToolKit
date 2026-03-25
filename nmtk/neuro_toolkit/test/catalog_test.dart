@@ -54,22 +54,16 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   List<Module> get activeModules => [];
 
   @override
-  bool isMuJoCoAvailable() => _isMuJoCoAvailable;
-
-  void setMuJoCoAvailable(bool available) {
-    _isMuJoCoAvailable = available;
-    notifyListeners();
-  }
+  List<Module> modulesForTesting = [];
 
   @override
-  Future<void> installModule(String moduleId) async {
-    installCalls.add(moduleId);
-    final index = _mockModules.indexWhere((m) => m.id == moduleId);
-    if (index != -1) {
-      _mockModules[index] = _mockModules[index].copyWith(status: ModuleStatus.installing, installProgress: 0.5);
-      notifyListeners();
-    }
-  }
+  set modules(List<Module> val) {}
+
+  @override
+  bool isMuJoCoAvailable() => false;
+
+  @override
+  Future<void> installModule(String moduleId) async {}
 
   @override
   Future<void> launchModule(String moduleId) async {}

@@ -11,7 +11,6 @@ import 'package:neuro_toolkit/main.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
-import 'catalog_test.dart';
 
 class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
@@ -34,6 +33,12 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   List<Module> get installedModules => [];
   @override
   List<Module> get availableModules => [];
+
+  @override
+  List<Module> modulesForTesting = [];
+
+  @override
+  set modules(List<Module> val) {}
 
   @override
   Future<void> recheckPython() async {}
