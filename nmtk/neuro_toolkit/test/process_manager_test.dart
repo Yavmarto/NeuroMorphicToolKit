@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
+import 'package:path/path.dart' as p;
 
 class MockProcess implements Process {
   final StreamController<List<int>> _stdoutController = StreamController<List<int>>();
@@ -25,7 +26,7 @@ class MockProcess implements Process {
   @override
   bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
     if (!_exitCodeCompleter.isCompleted) {
-      _exitCodeCompleter.complete(-1);
+      _exitCodeCompleter.complete(signal == ProcessSignal.sigterm ? 0 : -1);
     }
     return true;
   }
@@ -36,13 +37,18 @@ class MockProcess implements Process {
     }
   }
 
+  void simulateStdout(String data) {
+    _stdoutController.add(utf8.encode(data));
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class MockProcessRunner implements ProcessRunner {
-  final Map<String, Process> mockProcesses = {};
+  final Map<String, MockProcess> mockProcesses = {};
   final List<InvocationRecord> calls = [];
+  ProcessResult? runResult;
 
   @override
   Future<Process> start(
@@ -70,7 +76,18 @@ class MockProcessRunner implements ProcessRunner {
     Encoding? stderrEncoding = systemEncoding,
   }) async {
     calls.add(InvocationRecord('run', executable, arguments, workingDirectory));
-    return ProcessResult(0, 0, 'success', '');
+
+    // Simulate venv creation by creating the directory/file on disk
+    if (arguments.contains('venv')) {
+      final venvPath = p.join(workingDirectory!, 'venv');
+      Directory(venvPath).createSync(recursive: true);
+      final pythonBin = Platform.isWindows
+          ? p.join(venvPath, 'Scripts', 'python.exe')
+          : p.join(venvPath, 'bin', 'python');
+      File(pythonBin).createSync(recursive: true);
+    }
+
+    return runResult ?? ProcessResult(0, 0, 'success', '');
   }
 }
 
@@ -84,6 +101,8 @@ class InvocationRecord {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late ProcessManager processManager;
   late MockProcessRunner mockRunner;
 
@@ -99,5 +118,104 @@ void main() {
   test('ProcessManager can be initialized with a mock runner', () {
     final manager = ProcessManager(processRunner: mockRunner);
     expect(manager, isNotNull);
+  });
+
+  test('installModule creates venv and installs dependencies', () async {
+    final tempDir = Directory.systemTemp.createTempSync('nmtk_test_install');
+    final installDir = p.join(tempDir.path, 'src');
+    Directory(installDir).createSync(recursive: true);
+
+    final module = Module(
+      id: 'test_module',
+      name: 'Test Module',
+      description: 'Description',
+      directory: tempDir.path,
+      sourcePath: 'src',
+    );
+
+    await processManager.installModule(module);
+
+    // Check that venv was created
+    expect(mockRunner.calls.any((c) => c.arguments.contains('venv')), isTrue);
+    // Check that pip install . was called
+    expect(mockRunner.calls.any((c) => c.arguments.contains('install') && c.arguments.contains('.')), isTrue);
+
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test('startModule starts uvicorn and updates status', () async {
+    final tempDir = Directory.systemTemp.createTempSync('nmtk_test_start');
+    final runDir = tempDir.path;
+
+    final venvPath = p.join(runDir, 'venv');
+    Directory(venvPath).createSync(recursive: true);
+    final pythonExe = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'python.exe')
+        : p.join(venvPath, 'bin', 'python');
+    File(pythonExe).createSync(recursive: true);
+
+    final module = Module(
+      id: 'test_module_start',
+      name: 'Test Module',
+      description: 'Description',
+      directory: runDir,
+      sourcePath: '.',
+      runPath: '.',
+      port: 8001,
+      uvicornTarget: 'main:app',
+    );
+
+    final mockProcess = MockProcess();
+    mockRunner.mockProcesses[pythonExe] = mockProcess;
+
+    // Use a completer to wait for the status update
+    final completer = Completer<Module>();
+    final subscription = processManager.statusUpdates.listen((m) {
+      if (m.id == 'test_module_start' && m.status == ModuleStatus.starting) {
+        if (!completer.isCompleted) completer.complete(m);
+      }
+    });
+
+    await processManager.startModule(module);
+
+    final updatedModule = await completer.future.timeout(const Duration(seconds: 5));
+    expect(updatedModule.status, ModuleStatus.starting);
+
+    expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
+    expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
+
+    subscription.cancel();
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test('stopModule kills the process', () async {
+    final tempDir = Directory.systemTemp.createTempSync('nmtk_test_stop');
+    final runDir = tempDir.path;
+
+    final venvPath = p.join(runDir, 'venv');
+    Directory(venvPath).createSync(recursive: true);
+    final pythonExe = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'python.exe')
+        : p.join(venvPath, 'bin', 'python');
+    File(pythonExe).createSync(recursive: true);
+
+    final module = Module(
+      id: 'test_module_stop',
+      name: 'Test Module',
+      description: 'Description',
+      directory: runDir,
+      port: 8002,
+    );
+
+    final mockProcess = MockProcess();
+    mockRunner.mockProcesses[pythonExe] = mockProcess;
+
+    await processManager.startModule(module);
+
+    await processManager.stopModule('test_module_stop');
+
+    expect(await mockProcess.exitCode, 0);
+
+    tempDir.deleteSync(recursive: true);
   });
 }

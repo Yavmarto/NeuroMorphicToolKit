@@ -4,15 +4,44 @@ import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:provider/provider.dart';
-import 'catalog_test.dart';
 
-class MockDashboardProvider extends MockModuleProvider {
+class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockInstalledModules = [];
   final List<String> launchCalls = [];
   final List<String> stopCalls = [];
+  final List<String> uninstallCalls = [];
 
   @override
   List<Module> get installedModules => _mockInstalledModules;
+
+  @override
+  List<Module> get modules => [];
+  @override
+  set modules(List<Module> val) {}
+  @override
+  List<Module> modulesForTesting = [];
+  @override
+  bool get isLoading => false;
+  @override
+  bool get pythonAvailable => true;
+  @override
+  String? get error => null;
+  @override
+  List<String> get activeModuleIds => [];
+  @override
+  List<Module> get activeModules => [];
+  @override
+  List<Module> get availableModules => [];
+  @override
+  Future<void> recheckPython() async {}
+  @override
+  bool isMuJoCoAvailable() => false;
+  @override
+  Future<void> installModule(String moduleId) async {}
+  @override
+  void closeTab(String moduleId) {}
+  @override
+  Stream<String>? getModuleOutput(String moduleId) => null;
 
   @override
   Future<void> launchModule(String moduleId) async {
@@ -22,6 +51,11 @@ class MockDashboardProvider extends MockModuleProvider {
   @override
   Future<void> stopModule(String moduleId) async {
     stopCalls.add(moduleId);
+  }
+
+  @override
+  Future<void> uninstallModule(String moduleId) async {
+    uninstallCalls.add(moduleId);
   }
 
   void setInstalledModules(List<Module> modules) {
@@ -94,5 +128,11 @@ void main() {
     await tester.pump();
 
     expect(mockProvider.stopCalls, contains('test_module'));
+
+    // Tap the Uninstall button
+    await tester.tap(find.byIcon(Icons.delete));
+    await tester.pump();
+
+    expect(mockProvider.uninstallCalls, contains('test_module'));
   });
 }

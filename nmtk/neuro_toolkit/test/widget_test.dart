@@ -12,9 +12,13 @@ import 'package:neuro_toolkit/models/module.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 
-class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
+class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
   List<Module> get modules => [];
+  @override
+  set modules(List<Module> val) {}
+  @override
+  List<Module> modulesForTesting = [];
   @override
   bool get isLoading => false;
   @override
@@ -60,7 +64,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<ModuleProvider>(create: (_) => MockModuleProvider()),
+          ChangeNotifierProvider<ModuleProvider>(create: (_) => LocalMockModuleProvider()),
         ],
         child: const NeuroToolkitApp(),
       ),
