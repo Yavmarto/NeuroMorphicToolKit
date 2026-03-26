@@ -1,11 +1,8 @@
 name: Auto-Resolve Merge Conflicts
 
-# Triggers automatically whenever:
-#   1. A PR is opened/updated against dev/main — checks that PR for conflicts
-#   2. Something is pushed to dev/main — scans all open PRs for new conflicts
-#
-# No labels needed. Jules is invoked automatically via a reusable workflow
-# to avoid action resolution issues in the pull_request context.
+# Fires when a PR is opened/updated, or when main/dev changes (which can
+# cause existing PRs to become conflicted). Uses the GitHub API mergeable
+# field — more reliable than simulating merges with git.
 
 on:
   pull_request:
@@ -16,155 +13,160 @@ on:
     branches: [dev, main, master]
 
 jobs:
-  # Step 1: Detect which PRs have conflicts
+  # ── Detect which PRs are conflicted ──────────────────────────────────────────
   detect:
     name: Detect conflicted PRs
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       pull-requests: read
     outputs:
-      conflicted: ${{ steps.scan.outputs.conflicted }}
-      found:      ${{ steps.scan.outputs.found }}
+      found0: ${{ steps.scan.outputs.found0 }}
+      pr0:    ${{ steps.scan.outputs.pr0 }}
+      head0:  ${{ steps.scan.outputs.head0 }}
+      base0:  ${{ steps.scan.outputs.base0 }}
+      found1: ${{ steps.scan.outputs.found1 }}
+      pr1:    ${{ steps.scan.outputs.pr1 }}
+      head1:  ${{ steps.scan.outputs.head1 }}
+      base1:  ${{ steps.scan.outputs.base1 }}
+      found2: ${{ steps.scan.outputs.found2 }}
+      pr2:    ${{ steps.scan.outputs.pr2 }}
+      head2:  ${{ steps.scan.outputs.head2 }}
+      base2:  ${{ steps.scan.outputs.base2 }}
+      found3: ${{ steps.scan.outputs.found3 }}
+      pr3:    ${{ steps.scan.outputs.pr3 }}
+      head3:  ${{ steps.scan.outputs.head3 }}
+      base3:  ${{ steps.scan.outputs.base3 }}
+      found4: ${{ steps.scan.outputs.found4 }}
+      pr4:    ${{ steps.scan.outputs.pr4 }}
+      head4:  ${{ steps.scan.outputs.head4 }}
+      base4:  ${{ steps.scan.outputs.base4 }}
 
     steps:
-      - name: Checkout (full history for merge simulation)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Git
-        run: |
-          git config --global user.name  'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Find conflicted PRs
+      - name: Find conflicted PRs via GitHub API
         id: scan
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # Only check the triggering PR
-            PRS=$(jq -n \
-              --arg num  "${{ github.event.pull_request.number }}" \
-              --arg head "${{ github.event.pull_request.head.ref }}" \
-              --arg base "${{ github.event.pull_request.base.ref }}" \
-              '[{"number": ($num|tonumber), "headRefName": $head, "baseRefName": $base}]')
-          else
-            # On push: check all open PRs targeting the pushed branch
-            PRS=$(gh pr list \
-              --state open \
-              --base "${{ github.ref_name }}" \
-              --json number,headRefName,baseRefName)
-          fi
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
 
-          RESULT="[]"
+            // Build the list of PRs to check
+            let toCheck = [];
 
-          while IFS= read -r PR; do
-            PR_NUMBER=$(echo "$PR" | jq -r '.number')
-            HEAD_REF=$(echo "$PR"  | jq -r '.headRefName')
-            BASE_REF=$(echo "$PR"  | jq -r '.baseRefName')
-
-            echo "Checking PR #$PR_NUMBER ($HEAD_REF → $BASE_REF)..."
-
-            git fetch origin "$HEAD_REF" "$BASE_REF" 2>/dev/null || {
-              echo "  Could not fetch — skipping."
-              continue
+            if (context.eventName === 'pull_request') {
+              // Only check the PR that triggered this workflow
+              toCheck = [{ number: context.payload.pull_request.number }];
+            } else {
+              // push: check all open PRs targeting the branch that was pushed to
+              const branch = context.ref.replace('refs/heads/', '');
+              const prs = await github.paginate(github.rest.pulls.list, {
+                owner, repo, state: 'open', base: branch, per_page: 100
+              });
+              toCheck = prs.map(p => ({ number: p.number }));
             }
 
-            git checkout -B "$HEAD_REF" "origin/$HEAD_REF" 2>/dev/null
-            git merge --no-commit --no-ff "origin/$BASE_REF" 2>/dev/null || true
-            CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ' | xargs)
-            git merge --abort 2>/dev/null || true
-            git checkout - 2>/dev/null || true
+            core.info(`Checking ${toCheck.length} PR(s) for conflicts...`);
 
-            if [ -n "$CONFLICTS" ]; then
-              echo "  ⚠️  PR #$PR_NUMBER has conflicts: $CONFLICTS"
-              ENTRY=$(jq -n \
-                --argjson num "$PR_NUMBER" \
-                --arg head "$HEAD_REF" \
-                --arg base "$BASE_REF" \
-                --arg files "$CONFLICTS" \
-                '{"pr_number": $num, "head_ref": $head, "base_ref": $base, "conflict_files": $files}')
-              RESULT=$(echo "$RESULT" | jq --argjson e "$ENTRY" '. + [$e]')
-            else
-              echo "  ✅ PR #$PR_NUMBER is clean."
-            fi
-          done < <(echo "$PRS" | jq -c '.[]')
+            // For each PR, poll the mergeable field (GitHub computes it async)
+            const conflicted = [];
+            for (const { number } of toCheck) {
+              let pr = null;
+              for (let attempt = 0; attempt < 6; attempt++) {
+                const { data } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+                if (data.mergeable !== null) { pr = data; break; }
+                core.info(`PR #${number}: mergeable is null, waiting 5s (attempt ${attempt + 1}/6)...`);
+                await new Promise(r => setTimeout(r, 5000));
+              }
 
-          COUNT=$(echo "$RESULT" | jq 'length')
-          if [ "$COUNT" -gt 0 ]; then
-            echo "found=true"                          >> "$GITHUB_OUTPUT"
-            echo "conflicted=$(echo $RESULT | jq -c '.')" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-            echo "conflicted=[]" >> "$GITHUB_OUTPUT"
-          fi
+              if (!pr) {
+                core.warning(`PR #${number}: could not determine mergeability, skipping.`);
+                continue;
+              }
 
-  # Step 2: Fix each conflicted PR via the reusable workflow (avoids direct
-  # jules-invoke in pull_request context which has action resolution issues)
-  fix-pr-1:
-    name: Fix PR (slot 1)
+              core.info(`PR #${number}: mergeable=${pr.mergeable}, state=${pr.mergeable_state}`);
+              if (pr.mergeable === false) {
+                conflicted.push({
+                  number: pr.number,
+                  head: pr.head.ref,
+                  base: pr.base.ref
+                });
+              }
+            }
+
+            core.info(`Found ${conflicted.length} conflicted PR(s).`);
+
+            // Emit outputs for up to 5 conflicted PRs
+            for (let i = 0; i < 5; i++) {
+              if (conflicted[i]) {
+                core.setOutput(`found${i}`, 'true');
+                core.setOutput(`pr${i}`,    String(conflicted[i].number));
+                core.setOutput(`head${i}`,  conflicted[i].head);
+                core.setOutput(`base${i}`,  conflicted[i].base);
+              } else {
+                core.setOutput(`found${i}`, 'false');
+                core.setOutput(`pr${i}`,    '0');
+                core.setOutput(`head${i}`,  '');
+                core.setOutput(`base${i}`,  '');
+              }
+            }
+
+  # ── Fix each conflicted PR (up to 5) via the centralized reusable workflow ───
+  fix-pr-0:
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr0 }}
     needs: detect
-    if: needs.detect.outputs.found == 'true' && fromJson(needs.detect.outputs.conflicted)[0] != null
+    if: needs.detect.outputs.found0 == 'true'
     uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
     with:
-      pr_number:      ${{ fromJson(needs.detect.outputs.conflicted)[0].pr_number }}
-      head_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[0].head_ref }}
-      base_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[0].base_ref }}
-      conflict_files: ${{ fromJson(needs.detect.outputs.conflicted)[0].conflict_files }}
+      pr_number: ${{ fromJson(needs.detect.outputs.pr0) }}
+      head_ref:  ${{ needs.detect.outputs.head0 }}
+      base_ref:  ${{ needs.detect.outputs.base0 }}
+    secrets:
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+
+  fix-pr-1:
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr1 }}
+    needs: detect
+    if: needs.detect.outputs.found1 == 'true'
+    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
+    with:
+      pr_number: ${{ fromJson(needs.detect.outputs.pr1) }}
+      head_ref:  ${{ needs.detect.outputs.head1 }}
+      base_ref:  ${{ needs.detect.outputs.base1 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
 
   fix-pr-2:
-    name: Fix PR (slot 2)
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr2 }}
     needs: detect
-    if: needs.detect.outputs.found == 'true' && fromJson(needs.detect.outputs.conflicted)[1] != null
+    if: needs.detect.outputs.found2 == 'true'
     uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
     with:
-      pr_number:      ${{ fromJson(needs.detect.outputs.conflicted)[1].pr_number }}
-      head_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[1].head_ref }}
-      base_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[1].base_ref }}
-      conflict_files: ${{ fromJson(needs.detect.outputs.conflicted)[1].conflict_files }}
+      pr_number: ${{ fromJson(needs.detect.outputs.pr2) }}
+      head_ref:  ${{ needs.detect.outputs.head2 }}
+      base_ref:  ${{ needs.detect.outputs.base2 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
 
   fix-pr-3:
-    name: Fix PR (slot 3)
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr3 }}
     needs: detect
-    if: needs.detect.outputs.found == 'true' && fromJson(needs.detect.outputs.conflicted)[2] != null
+    if: needs.detect.outputs.found3 == 'true'
     uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
     with:
-      pr_number:      ${{ fromJson(needs.detect.outputs.conflicted)[2].pr_number }}
-      head_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[2].head_ref }}
-      base_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[2].base_ref }}
-      conflict_files: ${{ fromJson(needs.detect.outputs.conflicted)[2].conflict_files }}
+      pr_number: ${{ fromJson(needs.detect.outputs.pr3) }}
+      head_ref:  ${{ needs.detect.outputs.head3 }}
+      base_ref:  ${{ needs.detect.outputs.base3 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
 
   fix-pr-4:
-    name: Fix PR (slot 4)
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr4 }}
     needs: detect
-    if: needs.detect.outputs.found == 'true' && fromJson(needs.detect.outputs.conflicted)[3] != null
+    if: needs.detect.outputs.found4 == 'true'
     uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
     with:
-      pr_number:      ${{ fromJson(needs.detect.outputs.conflicted)[3].pr_number }}
-      head_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[3].head_ref }}
-      base_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[3].base_ref }}
-      conflict_files: ${{ fromJson(needs.detect.outputs.conflicted)[3].conflict_files }}
-    secrets:
-      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
-
-  fix-pr-5:
-    name: Fix PR (slot 5)
-    needs: detect
-    if: needs.detect.outputs.found == 'true' && fromJson(needs.detect.outputs.conflicted)[4] != null
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
-    with:
-      pr_number:      ${{ fromJson(needs.detect.outputs.conflicted)[4].pr_number }}
-      head_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[4].head_ref }}
-      base_ref:       ${{ fromJson(needs.detect.outputs.conflicted)[4].base_ref }}
-      conflict_files: ${{ fromJson(needs.detect.outputs.conflicted)[4].conflict_files }}
+      pr_number: ${{ fromJson(needs.detect.outputs.pr4) }}
+      head_ref:  ${{ needs.detect.outputs.head4 }}
+      base_ref:  ${{ needs.detect.outputs.base4 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
