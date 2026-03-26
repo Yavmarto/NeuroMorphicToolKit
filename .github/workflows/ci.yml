@@ -328,8 +328,6 @@ jobs:
         working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
