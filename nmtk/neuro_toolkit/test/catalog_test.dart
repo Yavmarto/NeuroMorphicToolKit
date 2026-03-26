@@ -7,14 +7,26 @@ import 'package:provider/provider.dart';
 
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockModules = [];
+  bool _isMuJoCoAvailableValue = false;
+  final List<String> installCalls = [];
 
   void setMuJoCoAvailable(bool value) {
-    _isMuJoCoAvailable = value;
+    _isMuJoCoAvailableValue = value;
     notifyListeners();
   }
 
   @override
   List<Module> get modules => _mockModules;
+
+  @override
+  set modules(List<Module> val) {
+    _mockModules.clear();
+    _mockModules.addAll(val);
+    notifyListeners();
+  }
+
+  @override
+  List<Module> modulesForTesting = [];
 
   @override
   bool get isLoading => false;
@@ -46,7 +58,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
 
   @override
-  bool isMuJoCoAvailable() => _isMuJoCoAvailable;
+  bool isMuJoCoAvailable() => _isMuJoCoAvailableValue;
 
   @override
   Future<void> installModule(String moduleId) async {
