@@ -3,13 +3,16 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
+import 'package:flutter/foundation.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:path/path.dart' as p;
 
 /// This script tests the ProcessManager's ability to install and launch a module.
 /// It must be run from the nmtk/neuro_toolkit directory.
 void main() async {
+  test('E2E Launcher Flow Test', () async {
   TestWidgetsFlutterBinding.ensureInitialized();
+  debugPrint('Tests need mock ProcessRunner, skipping real dependencies check');
 
   // ignore: avoid_print
   print('🚀 Starting E2E Launcher Flow Test...');
@@ -104,7 +107,7 @@ void main() async {
     });
 
     await neurosimCompleter.future.timeout(const Duration(minutes: 2));
-    nsSub.cancel();
+    await nsSub.cancel();
 
     // 5. Stop modules
     // ignore: avoid_print
@@ -128,7 +131,8 @@ void main() async {
     unawaited(manager.stopModule('neurocnl'));
     exit(1);
   } finally {
-    subscription.cancel();
+    await subscription.cancel();
     manager.dispose();
   }
+  });
 }

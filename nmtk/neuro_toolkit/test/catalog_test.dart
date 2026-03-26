@@ -8,6 +8,11 @@ import 'package:provider/provider.dart';
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockModules = [];
 
+  void setMuJoCoAvailable(bool value) {
+    _isMuJoCoAvailable = value;
+    notifyListeners();
+  }
+
   @override
   List<Module> get modules => _mockModules;
 
@@ -39,17 +44,19 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
   List<Module> get activeModules => [];
 
-  @override
-  List<Module> modulesForTesting = [];
 
   @override
-  set modules(List<Module> val) {}
+  bool isMuJoCoAvailable() => _isMuJoCoAvailable;
 
   @override
-  bool isMuJoCoAvailable() => false;
-
-  @override
-  Future<void> installModule(String moduleId) async {}
+  Future<void> installModule(String moduleId) async {
+    installCalls.add(moduleId);
+    final index = _mockModules.indexWhere((m) => m.id == moduleId);
+    if (index != -1) {
+      _mockModules[index] = _mockModules[index].copyWith(status: ModuleStatus.installing);
+      notifyListeners();
+    }
+  }
 
   @override
   Future<void> launchModule(String moduleId) async {}
