@@ -195,5 +195,5 @@ echo "==> Build complete: $APP_PATH"
 # --- Optionally create DMG ---
 if [ "$CREATE_DMG" = true ]; then
   echo "==> Creating DMG..."
-  bash "$SCRIPT_DIR/create-dmg.sh" "$APP_PATH" "dev"
+  bash "$SCRIPT_DIR/create-dmg.sh" "$APP_PATH" "1.0.0"
 fi

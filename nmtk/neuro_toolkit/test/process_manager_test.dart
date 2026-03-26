@@ -225,10 +225,14 @@ void main() {
     final mockProcess = MockProcess();
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
-    unawaited(processManager.startModule(module));
+    final startFuture = processManager.startModule(module);
+
+    // Briefly wait for the process to be registered
+    await Future<void>.delayed(const Duration(milliseconds: 100));
 
     await processManager.stopModule('test_module_stop');
 
+    await startFuture;
     expect(await mockProcess.exitCode, 0);
 
     tempDir.deleteSync(recursive: true);
