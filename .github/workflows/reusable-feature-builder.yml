@@ -23,12 +23,12 @@ on:
 
 jobs:
   sdd-context:
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/sdd-context-bridge.yml@main
+    uses: ./.github/workflows/sdd-context-bridge.yml
 
   build-feature:
     needs: sdd-context
     if: ${{ contains(fromJSON(inputs.trusted_users), inputs.sender_login) }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     concurrency:
       group: agent-work
       cancel-in-progress: false
@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Invoke Jules to build feature
-        uses: google-labs-code/jules-invoke@v1
+        uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           prompt: |

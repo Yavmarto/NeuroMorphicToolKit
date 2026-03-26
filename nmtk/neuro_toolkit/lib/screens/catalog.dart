@@ -39,7 +39,8 @@ class CatalogScreen extends StatelessWidget {
             itemCount: modules.length,
             itemBuilder: (context, index) {
               final module = modules[index];
-              final isMuJoCoUnavailable = module.requiresMuJoCo && !provider.isMuJoCoAvailable();
+              final isMuJoCoUnavailable =
+                  module.requiresMuJoCo && !provider.isMuJoCoAvailable();
 
               return Opacity(
                 opacity: isMuJoCoUnavailable ? 0.5 : 1.0,
@@ -60,16 +61,22 @@ class CatalogScreen extends StatelessWidget {
                                 children: [
                                   Text(
                                     module.name,
-                                    style: Theme.of(context).textTheme.titleLarge,
+                                    style:
+                                        Theme.of(context).textTheme.titleLarge,
                                   ),
                                   Text(
                                     'ID: ${module.id}',
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
                                   ),
                                 ],
                               ),
                             ),
-                            _buildStatusBadge(context, module, isMuJoCoUnavailable,),
+                            _buildStatusBadge(
+                              context,
+                              module,
+                              isMuJoCoUnavailable,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -82,13 +89,18 @@ class CatalogScreen extends StatelessWidget {
                                 value: module.installProgress,
                               ),
                               const SizedBox(height: 8),
-                              Text('${(module.installProgress * 100).toInt()}%'),
+                              Text(
+                                '${(module.installProgress * 100).toInt()}%',
+                              ),
                             ],
                           )
                         else if (module.status == ModuleStatus.error)
                           Row(
                             children: [
-                              const Icon(Icons.error_outline, color: Colors.red),
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -98,7 +110,7 @@ class CatalogScreen extends StatelessWidget {
                               ),
                               ElevatedButton(
                                 onPressed: () {
-                                unawaited(provider.installModule(module.id));
+                                  unawaited(provider.installModule(module.id));
                                 },
                                 child: const Text('Retry'),
                               ),
@@ -111,23 +123,27 @@ class CatalogScreen extends StatelessWidget {
                               onPressed: isMuJoCoUnavailable
                                   ? null
                                   : () {
-                                      unawaited(provider.installModule(module.id));
+                                      unawaited(
+                                        provider.installModule(module.id),
+                                      );
                                     },
                               child: const Text('Install'),
                             ),
                           )
                         else if (module.status == ModuleStatus.installed ||
-                                 module.status == ModuleStatus.running ||
-                                 module.status == ModuleStatus.degraded)
+                            module.status == ModuleStatus.running ||
+                            module.status == ModuleStatus.degraded)
                           Align(
                             alignment: Alignment.centerRight,
                             child: OutlinedButton(
                               onPressed: () {
                                 unawaited(provider.uninstallModule(module.id));
                               },
-                              child: Text(module.status == ModuleStatus.installed
-                                  ? 'Installed'
-                                  : 'Running',),
+                              child: Text(
+                                module.status == ModuleStatus.installed
+                                    ? 'Installed'
+                                    : 'Running',
+                              ),
                             ),
                           ),
                       ],
@@ -163,7 +179,11 @@ class CatalogScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildStatusBadge(BuildContext context, Module module, bool isMuJoCoUnavailable) {
+  Widget _buildStatusBadge(
+    BuildContext context,
+    Module module,
+    bool isMuJoCoUnavailable,
+  ) {
     String text;
     Color color;
 

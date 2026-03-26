@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/energy_report.dart';
+import 'package:nmtk_ui_core/models/energy_report.dart';
 
 /// Horizontal bar chart showing per-ensemble energy consumption.
 class NmtkEnergyBarChart extends StatelessWidget {
@@ -28,7 +28,9 @@ class NmtkEnergyBarChart extends StatelessWidget {
       );
     }
 
-    final maxValue = entries.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+    final maxValue = entries
+        .map((e) => e.value)
+        .reduce((a, b) => a > b ? a : b);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -174,7 +176,12 @@ class _EnergyBar extends StatelessWidget {
             minHeight: 10,
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation<Color>(
-              Color.lerp(theme.colorScheme.primary, theme.colorScheme.error, fraction) ?? theme.colorScheme.primary,
+              Color.lerp(
+                    theme.colorScheme.primary,
+                    theme.colorScheme.error,
+                    fraction,
+                  ) ??
+                  theme.colorScheme.primary,
             ),
           ),
         ),
