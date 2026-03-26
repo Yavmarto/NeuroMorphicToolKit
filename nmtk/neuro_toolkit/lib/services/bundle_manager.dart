@@ -156,6 +156,7 @@ class BundleManager {
 
   String? _cachedAppSupportPath;
   String? _cachedPythonPath;
+  String? _cachedModulesBasePath;
 
   bool? _isBundledCache;
 
@@ -417,7 +418,7 @@ class BundleManager {
     }
   }
 
-  /// Clear cached Python path. Call when user installs Python and
+  /// Clear cached paths. Call when user installs Python and
   /// hits "Retry" so we re-probe.
   void clearCache() {
     _cachedPythonPath = null;
@@ -454,8 +455,13 @@ class BundleManager {
   /// - Bundled: ~/Library/Application Support/.../modules/
   /// - Dev: two levels up from the Flutter app dir (repo root)
   Future<String> get modulesBasePath async {
+    if (_cachedModulesBasePath != null) return _cachedModulesBasePath!;
+
     if (isBundled) {
-      return await _appSupportModulesDir;
+      _cachedModulesBasePath = await _appSupportModulesDir;
+    } else {
+      // Dev mode: nmtk/neuro_toolkit -> ../../ = repo root
+      _cachedModulesBasePath = p.normalize(p.join(p.current, '..', '..'));
     }
     // Dev mode: nmtk/neuro_toolkit -> ../../ = repo root
     return p.normalize(p.join(_env.currentDirectory, '..', '..'));

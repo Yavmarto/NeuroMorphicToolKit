@@ -528,7 +528,9 @@ class ProcessManager {
       }
 
       states[module.id] = module.toJson();
-      await file.writeAsString(jsonEncode(states));
+      await file.writeAsString(
+        jsonEncode(states),
+      );
     } catch (e) {
       debugPrint('Error saving module state: $e');
     }
