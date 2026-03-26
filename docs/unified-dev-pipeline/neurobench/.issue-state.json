@@ -1,5 +1,5 @@
 {
-  "NB-CDD-001": 35,
-  "NB-CDD-002": 36,
-  "NB-CDD-003": 37
+  "NB-CDD-001": { "number": 35, "status": "completed" },
+  "NB-CDD-002": { "number": 36, "status": "completed" },
+  "NB-CDD-003": { "number": 37, "status": "published" }
 }

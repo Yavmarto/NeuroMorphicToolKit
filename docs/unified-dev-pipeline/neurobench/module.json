@@ -9,25 +9,24 @@
     "Neurobench/README.md"
   ],
   "contract_kit": {
-    "contracts_dir": "docs/unified-dev-pipeline/neurobench/contracts",
-    "properties_dir": "docs/unified-dev-pipeline/neurobench/properties",
+    "contracts_dir": "Neurobench/neurobench/contracts",
+    "properties_dir": "Neurobench/neurobench/tests/properties",
     "agents_md": null,
     "guardrails_md": null
   },
   "existing_workflows": [
-    "ci.yml"
+    "ci.yml",
+    "ci-failure-fix.yml",
+    "feature-builder.yml",
+    "performance-improver.yml",
+    "unblocked-issues.yml",
+    "auto-merge-jules-prs.yml"
   ],
   "workflow_gaps": [
-    "Missing ci-failure-fix.yml",
-    "Missing auto-merge-jules-prs.yml",
-    "CI does not run property tests",
-    "Flutter frontend CI not wired into contract gate"
+    "No CDD-PBT status check gate in CI"
   ],
   "required_updates": [
-    "Add property test step to CI",
-    "Add reusable CDD-PBT CI job",
-    "Add auto-merge and failure-fix workflows",
-    "Wire Flutter frontend CI to contract verification gate"
+    "Add CDD-PBT verification gate to main CI"
   ],
   "setup_commands": [
     "pip install poetry",
@@ -52,7 +51,7 @@
         "Neurobench/neurobench_spec.md#NB-D2",
         "Neurobench/neurobench_spec.md#NB-D3"
       ],
-      "objective": "Create Pydantic contracts for benchmark suite definitions (task name, dataset, metric), run results (score, timestamp, hardware tag), and regression thresholds. Enforce that no benchmark run can silently degrade.",
+      "objective": "Create Pydantic contracts for benchmark suite definitions, run results, and regression thresholds. Implementation in Neurobench/neurobench/contracts/.",
       "conversion_steps": [
         "Create BenchmarkSuite contract: task name non-empty, dataset path exists, metric in allowed set",
         "Create RunResult contract: score >= 0, timestamp ISO-8601, hardware tag non-empty",
@@ -79,7 +78,7 @@
         "Neurobench/neurobench_spec.md#NB-S1",
         "Neurobench/neurobench_spec.md#NB-S2"
       ],
-      "objective": "Add Hypothesis property tests for benchmark result stability, score ordering, and regression detection accuracy.",
+      "objective": "Add Hypothesis property tests for benchmark result stability, score ordering, and regression detection accuracy. Implementation in Neurobench/neurobench/tests/properties/.",
       "conversion_steps": [
         "Add properties for benchmark score reproducibility under seed control",
         "Add properties for regression detection: degradation beyond threshold always flagged",

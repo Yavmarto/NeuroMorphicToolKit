@@ -14,7 +14,8 @@ class ModuleProvider with ChangeNotifier {
   @visibleForTesting
   List<Module> modulesForTesting = [];
 
-  List<Module> get _modules => modulesForTesting.isEmpty ? _internalModules : modulesForTesting;
+  List<Module> get _modules =>
+      modulesForTesting.isEmpty ? _internalModules : modulesForTesting;
   set _modules(List<Module> val) => _internalModules = val;
 
   List<Module> _internalModules = [];
@@ -42,7 +43,9 @@ class ModuleProvider with ChangeNotifier {
       // Load modules from JSON manifest
       final jsonString = await rootBundle.loadString('assets/modules.json');
       final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
-      _modules = jsonList.map((dynamic json) => Module.fromJson(json as Map<String, dynamic>)).toList();
+      _modules = jsonList
+          .map((dynamic json) => Module.fromJson(json as Map<String, dynamic>))
+          .toList();
 
       if (bundle.isBundled && await bundle.needsExtraction) {
         debugPrint('First run: extracting bundled modules...');
@@ -59,7 +62,8 @@ class ModuleProvider with ChangeNotifier {
       await _processManager.init(_modules);
 
       _processManager.statusUpdates.listen((Module updatedModule) {
-        final index = _modules.indexWhere((Module m) => m.id == updatedModule.id);
+        final index =
+            _modules.indexWhere((Module m) => m.id == updatedModule.id);
         if (index != -1) {
           _modules[index] = updatedModule;
           notifyListeners();
@@ -80,6 +84,7 @@ class ModuleProvider with ChangeNotifier {
     _modules = val;
     notifyListeners();
   }
+
   bool get isLoading => _isLoading;
   bool get pythonAvailable => _pythonAvailable;
   String? get error => _error;
@@ -99,21 +104,25 @@ class ModuleProvider with ChangeNotifier {
     }
   }
 
-  List<Module> get installedModules =>
-      _modules.where((Module m) =>
-        m.status == ModuleStatus.installed ||
-        m.status == ModuleStatus.starting ||
-        m.status == ModuleStatus.running ||
-        m.status == ModuleStatus.stopping ||
-        m.status == ModuleStatus.degraded ||
-        m.status == ModuleStatus.error,
-      ).toList();
+  List<Module> get installedModules => _modules
+      .where(
+        (Module m) =>
+            m.status == ModuleStatus.installed ||
+            m.status == ModuleStatus.starting ||
+            m.status == ModuleStatus.running ||
+            m.status == ModuleStatus.stopping ||
+            m.status == ModuleStatus.degraded ||
+            m.status == ModuleStatus.error,
+      )
+      .toList();
 
-  List<Module> get availableModules =>
-      _modules.where((Module m) =>
-        m.status == ModuleStatus.notInstalled ||
-        m.status == ModuleStatus.installing,
-      ).toList();
+  List<Module> get availableModules => _modules
+      .where(
+        (Module m) =>
+            m.status == ModuleStatus.notInstalled ||
+            m.status == ModuleStatus.installing,
+      )
+      .toList();
 
   List<String> get activeModuleIds => _activeModuleIds;
 
