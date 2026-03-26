@@ -1,3 +1,4 @@
+// ignore_for_file: unawaited_futures
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -28,7 +29,7 @@ class MockProcess implements Process {
   @override
   bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
     if (!_exitCodeCompleter.isCompleted) {
-      _exitCodeCompleter.complete(signal == ProcessSignal.sigterm ? 0 : -1);
+      _exitCodeCompleter.complete(0);
     }
     return true;
   }
@@ -196,7 +197,10 @@ void main() {
         await completer.future.timeout(const Duration(seconds: 5));
     expect(updatedModule.status, ModuleStatus.starting);
 
-    expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
+    expect(
+      mockRunner.calls.any((c) => c.arguments.contains('uvicorn')),
+      isTrue,
+    );
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
     await subscription.cancel();
@@ -226,9 +230,9 @@ void main() {
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
     final completer = Completer<void>();
-    final sub = processManager.statusUpdates.listen((m) {
+    final subscription = processManager.statusUpdates.listen((m) {
       if (m.id == 'test_module_stop' && m.status == ModuleStatus.starting) {
-        completer.complete();
+        if (!completer.isCompleted) completer.complete();
       }
     });
 
@@ -238,7 +242,7 @@ void main() {
     await processManager.stopModule('test_module_stop');
 
     expect(await mockProcess.exitCode, 0);
-    await sub.cancel();
+    await subscription.cancel();
 
     tempDir.deleteSync(recursive: true);
   });

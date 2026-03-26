@@ -45,6 +45,19 @@ NMTK orchestrates the following specialized modules, which can be dynamically do
     *   *Purpose:* Applied hardware robotics and edge integration (e.g., controlling a robotic hand via SNNs and Teensy microcontrollers).
     *   *Best for:* Applied robotics, edge AI, and end-to-end physical demonstrations.
 
+### 📊 Current Module Status (March 2026)
+
+| Module | Status | Backend | Frontend | Tests | Docker | CI |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **NeuroCNL** | 97% | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Neurosim** | 80% | ✅ | ⚠️ | ✅ | ✅ | ✅ |
+| **Neurosense** | 85% | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **Neurohub** | 80% | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **Neurochip** | 90% | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Neurobench** | 70% | ⚠️ | ⚠️ | ✅ | ✅ | ✅ |
+| **Neuro-Dream-Hand** | 95% | ✅ | N/A | ✅ | N/A | ✅ |
+| **NMTK Launcher** | 85% | ✅ | ✅ | ✅ | N/A | ❌ |
+
 ---
 
 ## 🚀 Architecture & Deployment Strategy
@@ -75,15 +88,34 @@ Because the sub-apps require heavy Python environments, Docker containers, and c
 
 ---
 
-## 🛠 Getting Started (Maintainers)
+## 🛠 Getting Started
 
-Currently, the toolkit is transitioning to this unified architecture.
+For full installation instructions, see the **[SETUP_GUIDE.md](./SETUP_GUIDE.md)**.
 
-1.  **Top-Level Consolidation**: The `nmtk` CLI and installer scripts will be wrapped into the `neuro_toolkit` Flutter deployment pipeline.
-2.  **Run the core app**:
+### Quick Start (Developers)
+
+1.  **Clone the Repository**:
     ```bash
-    cd neuro_toolkit
-    flutter pub get
-    flutter run
+    git clone --recurse-submodules https://github.com/Completed-Spoon-6/NeuroMorphicToolKit.git
+    cd NeuroMorphicToolKit
     ```
-3.  **Explore the Modules**: Subdirectories like `neurocnl/` or `Neurobench/` contain their own `README.md` files detailing their specific technical stacks (primarily Python/Docker).
+
+2.  **Run the Desktop Launcher**:
+    ```bash
+    cd nmtk/neuro_toolkit
+    flutter pub get
+    flutter run -d macos  # or windows/linux
+    ```
+
+3.  **Start Backends (Docker)**:
+    ```bash
+    docker compose up --build
+    ```
+
+4.  **Verify Services**:
+    ```bash
+    bash scripts/validate_docker_compose.sh
+    bash scripts/demo_smoke_test.sh
+    ```
+
+For detailed module-specific development, explore the subdirectories (e.g., `neurocnl/`, `Neurosim/`) which contain their own `README.md` files.

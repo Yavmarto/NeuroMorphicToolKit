@@ -174,9 +174,10 @@ class BundleManager {
       }
       // Distinguish standalone (has Resources/modules/) from debug (doesn't).
       final bundlePath = p.dirname(p.dirname(p.dirname(exe)));
-      final modulesDir = p.join(bundlePath, 'Contents', 'Resources', 'modules');
-      _isBundledCache = _env.directoryExists(modulesDir);
-    } else if (_env.isWindows) {
+      final modulesDir =
+          Directory(p.join(bundlePath, 'Contents', 'Resources', 'modules'));
+      _isBundledCache = modulesDir.existsSync();
+    } else if (Platform.isWindows) {
       // On Windows, modules are placed next to the executable in the installer.
       final exeDir = p.dirname(exe);
       final modulesDir = p.join(exeDir, 'modules');
@@ -241,8 +242,22 @@ class BundleManager {
       final List<String> bundledPaths = [];
       if (_env.isMacOS) {
         bundledPaths.addAll([
-          p.join(bundleRootPath, 'Contents', 'Frameworks', 'python', 'bin', 'python3'),
-          p.join(bundleRootPath, 'Contents', 'Frameworks', 'python', 'bin', 'python'),
+          p.join(
+            bundleRootPath,
+            'Contents',
+            'Frameworks',
+            'python',
+            'bin',
+            'python3',
+          ),
+          p.join(
+            bundleRootPath,
+            'Contents',
+            'Frameworks',
+            'python',
+            'bin',
+            'python',
+          ),
         ]);
       } else if (_env.isWindows || _env.isLinux) {
         bundledPaths.addAll([
@@ -288,9 +303,9 @@ class BundleManager {
     debugPrint('BundleManager: probing known paths...');
     final List<String> knownPaths = [];
 
-    if (_env.isMacOS) {
-      final envVars = _env.environment;
-      final home = envVars['HOME'] ?? '/Users/${envVars['USER']}';
+    if (Platform.isMacOS) {
+      final home = Platform.environment['HOME'] ??
+          '/Users/${Platform.environment['USER']}';
       knownPaths.addAll([
         '/opt/homebrew/bin/python3',
         '/opt/homebrew/bin/python',
@@ -309,9 +324,33 @@ class BundleManager {
       final localAppData = envVars['LOCALAPPDATA'];
       final programFiles = envVars['ProgramFiles'];
       if (localAppData != null) {
-        knownPaths.add(p.join(localAppData, 'Programs', 'Python', 'Python312', 'python.exe'));
-        knownPaths.add(p.join(localAppData, 'Programs', 'Python', 'Python311', 'python.exe'));
-        knownPaths.add(p.join(localAppData, 'Programs', 'Python', 'Python310', 'python.exe'));
+        knownPaths.add(
+          p.join(
+            localAppData,
+            'Programs',
+            'Python',
+            'Python312',
+            'python.exe',
+          ),
+        );
+        knownPaths.add(
+          p.join(
+            localAppData,
+            'Programs',
+            'Python',
+            'Python311',
+            'python.exe',
+          ),
+        );
+        knownPaths.add(
+          p.join(
+            localAppData,
+            'Programs',
+            'Python',
+            'Python310',
+            'python.exe',
+          ),
+        );
       }
       if (programFiles != null) {
         knownPaths.add(p.join(programFiles, 'Python312', 'python.exe'));
@@ -392,10 +431,14 @@ class BundleManager {
       final result = await _env.runProcess(path, ['--version'])
           .timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) {
-        debugPrint('BundleManager: "$path" -> ${result.stdout.toString().trim()}');
+        debugPrint(
+          'BundleManager: "$path" -> ${result.stdout.toString().trim()}',
+        );
         return true;
       }
-      debugPrint('BundleManager: "$path" exited with ${result.exitCode}: ${result.stderr}');
+      debugPrint(
+        'BundleManager: "$path" exited with ${result.exitCode}: ${result.stderr}',
+      );
       return false;
     } catch (e) {
       debugPrint('BundleManager: "$path" failed: $e');
@@ -444,12 +487,14 @@ class BundleManager {
     }
 
     final targetBase = await _appSupportModulesDir;
-    await _env.createDirectory(targetBase, recursive: true);
+    final targetDir = Directory(targetBase);
 
-    final List<FileSystemEntity> entries = await _env.listDirectory(sourcePath).toList();
-    if (entries.isEmpty) {
-        debugPrint('BundleManager: bundled modules directory is empty');
+    // If version mismatch or missing marker, clean up first to avoid leftovers
+    if (await targetDir.exists()) {
+      debugPrint('BundleManager: Cleaning up old modules in Application Support...');
+      await targetDir.delete(recursive: true);
     }
+    await targetDir.create(recursive: true);
 
     for (var i = 0; i < entries.length; i++) {
       if (entries[i] is Directory) {

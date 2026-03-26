@@ -1,6 +1,6 @@
 # NeuroMorphicToolKit — Complete Setup & Installation Guide
 
-**Last updated:** 2026-03-22
+**Last updated:** 2026-03-26
 **Covers:** Docker setup, manual setup, Web frontend build, developer workflow
 
 ---
@@ -735,34 +735,33 @@ git checkout dev
 ```
 NeuroMorphicToolKit/
 ├── neurocnl/              # Core CNL compiler & SNN engine (submodule)
-│   ├── neurocnl/          # Python library (v0.3.0)
+│   ├── neurocnl/          # Python library
 │   ├── backend/           # FastAPI backend (port 8000)
-│   └── frontend/          # Flutter frontend (53 Dart files)
+│   └── frontend/          # Flutter frontend
 ├── Neuro-Dream-Hand/      # Prosthetic SNN simulator (submodule)
 ├── Neurosim/              # Visual SNN designer (submodule)
 │   ├── neurosim/          # FastAPI backend (port 8001)
-│   └── frontend/          # Flutter frontend (19 Dart files)
+│   └── frontend/          # Flutter frontend
 ├── Neurochip/             # Hardware deployment toolkit (submodule)
 │   ├── neurochip/         # FastAPI backend (port 8002)
-│   └── frontend/          # Flutter frontend (23 Dart files)
+│   └── frontend/          # Flutter frontend
 ├── Neurobench/            # Benchmarking workbench (submodule)
 │   ├── neurobench/        # FastAPI backend (port 8003)
-│   └── frontend/          # Flutter frontend (17 Dart files)
+│   └── frontend/          # Flutter frontend
 ├── Neurosense/            # Biosignal acquisition (submodule)
 │   ├── neurosense/        # FastAPI backend (port 8004)
-│   └── frontend/          # Flutter frontend (24 Dart files)
+│   └── frontend/          # Flutter frontend
 ├── Neurohub/              # Suite orchestrator (submodule)
 │   ├── neurohub/          # FastAPI backend (port 8005)
-│   └── frontend/          # Flutter frontend (20 Dart files)
+│   └── frontend/          # Flutter frontend
 ├── nmtk/                  # Installer, CI, and launcher
-│   ├── neuro_toolkit/     # Flutter desktop launcher (9 Dart files)
+│   ├── neuro_toolkit/     # Flutter desktop launcher
 │   ├── scripts/           # Setup scripts
 │   └── installer/         # Platform installers (macOS, Linux, Windows)
-├── nmtk_ui_core/          # Shared Flutter design system (11 Dart files)
+├── nmtk_ui_core/          # Shared Flutter design system
 ├── docker-compose.yml     # Root orchestration (7 services)
 ├── .env                   # Port configuration
 ├── scripts/               # Demo and validation scripts
 ├── DEMO_WALKTHROUGH.md    # Step-by-step demo guide
-├── SETUP_GUIDE.md         # This file
-└── POC-100-TASKS.md       # Remaining tasks to 100% readiness
+└── SETUP_GUIDE.md         # This file
 ```

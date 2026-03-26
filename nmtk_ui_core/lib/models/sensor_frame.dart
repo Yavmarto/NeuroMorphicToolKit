@@ -16,9 +16,7 @@ class SensorFrame {
     Map<String, double>? eeg;
     if (json['eeg_bands'] != null) {
       final raw = json['eeg_bands'] as Map<String, dynamic>;
-      eeg = raw.map(
-        (key, value) => MapEntry(key, (value as num).toDouble()),
-      );
+      eeg = raw.map((key, value) => MapEntry(key, (value as num).toDouble()));
     }
     return SensorFrame(
       timestamp: (json['timestamp'] as num).toDouble(),

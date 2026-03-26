@@ -32,7 +32,6 @@ dependencies:
   desktop_webview_window: ^0.2.3
   flutter:
     sdk: flutter
-
   go_router: ^14.0.0
   http: ^1.2.0
   nmtk_ui_core:
