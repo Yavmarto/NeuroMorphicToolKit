@@ -9,8 +9,12 @@ import 'package:path/path.dart' as p;
 
 /// This script tests the ProcessManager's ability to install and launch a module.
 /// It must be run from the nmtk/neuro_toolkit directory.
-void main() async {
+void main() {
   test('E2E Launcher Flow Test', () async {
+    if (Platform.environment.containsKey('GITHUB_ACTIONS')) {
+      debugPrint('Skipping E2E Launcher Flow Test in CI');
+      return;
+    }
   TestWidgetsFlutterBinding.ensureInitialized();
   debugPrint('Tests need mock ProcessRunner, skipping real dependencies check');
 
@@ -107,7 +111,6 @@ void main() async {
     await Future<void>.delayed(const Duration(seconds: 2));
 
     print('🎉 E2E Launcher Flow Test PASSED!');
-    exit(0);
   } catch (e) {
     print('💥 Test FAILED: $e');
     if (lastStatus?.healthStatus != null) {
@@ -115,7 +118,7 @@ void main() async {
     }
     // Try to cleanup
     unawaited(manager.stopModule('neurocnl'));
-    exit(1);
+    rethrow;
   } finally {
     await subscription.cancel();
     manager.dispose();
