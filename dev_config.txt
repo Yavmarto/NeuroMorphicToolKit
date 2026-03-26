@@ -1,0 +1,97 @@
+name: app
+services:
+  neurochip:
+    build:
+      context: /app
+      dockerfile: Neurochip/Dockerfile
+    environment:
+      DEBUG: "1"
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    networks:
+      nmtk-network: null
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8002"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /app/Neurochip/neurochip
+        target: /app/neurochip
+        bind: {}
+  neurocnl:
+    build:
+      context: /app
+      dockerfile: neurocnl/backend/Dockerfile
+    environment:
+      DEBUG: "1"
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    networks:
+      nmtk-network: null
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8000"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /app/neurocnl/neurocnl
+        target: /app/neurocnl
+        bind: {}
+      - type: bind
+        source: /app/neurocnl/backend
+        target: /app/backend
+        bind: {}
+  neurosim:
+    build:
+      context: /app
+      dockerfile: Neurosim/Dockerfile
+    environment:
+      DEBUG: "1"
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    networks:
+      nmtk-network: null
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8001"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /app/Neurosim/neurosim
+        target: /app/neurosim
+        bind: {}
+networks:
+  nmtk-network:
+    name: app_nmtk-network
+    driver: bridge

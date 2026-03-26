@@ -1,0 +1,84 @@
+name: app
+services:
+  neurochip:
+    build:
+      context: /app
+      dockerfile: Neurochip/Dockerfile
+    environment:
+      PYTHONOPTIMIZE: "1"
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    networks:
+      nmtk-network: null
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8002"
+        protocol: tcp
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+  neurocnl:
+    build:
+      context: /app
+      dockerfile: neurocnl/backend/Dockerfile
+    environment:
+      PYTHONOPTIMIZE: "1"
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    networks:
+      nmtk-network: null
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8000"
+        protocol: tcp
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+  neurosim:
+    build:
+      context: /app
+      dockerfile: Neurosim/Dockerfile
+    environment:
+      PYTHONOPTIMIZE: "1"
+      PYTHONUNBUFFERED: "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8000/health')
+      timeout: 5s
+      interval: 10s
+      retries: 5
+    networks:
+      nmtk-network: null
+    ports:
+      - mode: ingress
+        target: 8000
+        published: "8001"
+        protocol: tcp
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+networks:
+  nmtk-network:
+    name: app_nmtk-network
+    driver: bridge
