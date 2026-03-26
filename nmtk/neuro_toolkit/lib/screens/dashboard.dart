@@ -48,8 +48,12 @@ class DashboardScreen extends StatelessWidget {
                           'Health: ${module.healthStatus}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: module.status == ModuleStatus.error ? Colors.red : Colors.grey[600],
-                            fontWeight: module.status == ModuleStatus.error ? FontWeight.bold : FontWeight.normal,
+                            color: module.status == ModuleStatus.error
+                                ? Colors.red
+                                : Colors.grey[600],
+                            fontWeight: module.status == ModuleStatus.error
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                           maxLines: 3,
                         ),
