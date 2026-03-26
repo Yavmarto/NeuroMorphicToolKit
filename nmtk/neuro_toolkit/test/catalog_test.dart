@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockModules = [];
+  bool _isMuJoCoAvailable = false;
+  final List<String> installCalls = [];
 
   void setMuJoCoAvailable(bool value) {
     _isMuJoCoAvailable = value;
@@ -15,6 +17,16 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
   @override
   List<Module> get modules => _mockModules;
+
+  @override
+  set modules(List<Module> val) {
+    _mockModules.clear();
+    _mockModules.addAll(val);
+    notifyListeners();
+  }
+
+  @override
+  List<Module> modulesForTesting = [];
 
   @override
   bool get isLoading => false;
@@ -29,21 +41,28 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> recheckPython() async {}
 
   @override
-  List<Module> get installedModules => _mockModules.where((Module m) =>
-      m.status != ModuleStatus.notInstalled &&
-      m.status != ModuleStatus.installing,).toList();
+  List<Module> get installedModules => _mockModules
+      .where(
+        (Module m) =>
+            m.status != ModuleStatus.notInstalled &&
+            m.status != ModuleStatus.installing,
+      )
+      .toList();
 
   @override
-  List<Module> get availableModules => _mockModules.where((Module m) =>
-      m.status == ModuleStatus.notInstalled ||
-      m.status == ModuleStatus.installing,).toList();
+  List<Module> get availableModules => _mockModules
+      .where(
+        (Module m) =>
+            m.status == ModuleStatus.notInstalled ||
+            m.status == ModuleStatus.installing,
+      )
+      .toList();
 
   @override
   List<String> get activeModuleIds => [];
 
   @override
   List<Module> get activeModules => [];
-
 
   @override
   bool isMuJoCoAvailable() => _isMuJoCoAvailable;
@@ -53,7 +72,8 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
     installCalls.add(moduleId);
     final index = _mockModules.indexWhere((m) => m.id == moduleId);
     if (index != -1) {
-      _mockModules[index] = _mockModules[index].copyWith(status: ModuleStatus.installing);
+      _mockModules[index] =
+          _mockModules[index].copyWith(status: ModuleStatus.installing);
       notifyListeners();
     }
   }
