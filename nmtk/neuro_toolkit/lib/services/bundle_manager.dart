@@ -41,7 +41,8 @@ class BundleManager {
       }
       // Distinguish standalone (has Resources/modules/) from debug (doesn't).
       final bundlePath = p.dirname(p.dirname(p.dirname(exe)));
-      final modulesDir = Directory(p.join(bundlePath, 'Contents', 'Resources', 'modules'));
+      final modulesDir =
+          Directory(p.join(bundlePath, 'Contents', 'Resources', 'modules'));
       _isBundledCache = modulesDir.existsSync();
     } else if (Platform.isWindows) {
       // On Windows, modules are placed next to the executable in the installer.
@@ -102,8 +103,22 @@ class BundleManager {
       final List<String> bundledPaths = [];
       if (Platform.isMacOS) {
         bundledPaths.addAll([
-          p.join(bundleRootPath, 'Contents', 'Frameworks', 'python', 'bin', 'python3'),
-          p.join(bundleRootPath, 'Contents', 'Frameworks', 'python', 'bin', 'python'),
+          p.join(
+            bundleRootPath,
+            'Contents',
+            'Frameworks',
+            'python',
+            'bin',
+            'python3',
+          ),
+          p.join(
+            bundleRootPath,
+            'Contents',
+            'Frameworks',
+            'python',
+            'bin',
+            'python',
+          ),
         ]);
       } else if (Platform.isWindows) {
         bundledPaths.addAll([
@@ -148,7 +163,8 @@ class BundleManager {
     final List<String> knownPaths = [];
 
     if (Platform.isMacOS) {
-      final home = Platform.environment['HOME'] ?? '/Users/${Platform.environment['USER']}';
+      final home = Platform.environment['HOME'] ??
+          '/Users/${Platform.environment['USER']}';
       knownPaths.addAll([
         '/opt/homebrew/bin/python3',
         '/opt/homebrew/bin/python',
@@ -166,9 +182,33 @@ class BundleManager {
       final localAppData = Platform.environment['LOCALAPPDATA'];
       final programFiles = Platform.environment['ProgramFiles'];
       if (localAppData != null) {
-        knownPaths.add(p.join(localAppData, 'Programs', 'Python', 'Python312', 'python.exe'));
-        knownPaths.add(p.join(localAppData, 'Programs', 'Python', 'Python311', 'python.exe'));
-        knownPaths.add(p.join(localAppData, 'Programs', 'Python', 'Python310', 'python.exe'));
+        knownPaths.add(
+          p.join(
+            localAppData,
+            'Programs',
+            'Python',
+            'Python312',
+            'python.exe',
+          ),
+        );
+        knownPaths.add(
+          p.join(
+            localAppData,
+            'Programs',
+            'Python',
+            'Python311',
+            'python.exe',
+          ),
+        );
+        knownPaths.add(
+          p.join(
+            localAppData,
+            'Programs',
+            'Python',
+            'Python310',
+            'python.exe',
+          ),
+        );
       }
       if (programFiles != null) {
         knownPaths.add(p.join(programFiles, 'Python312', 'python.exe'));
@@ -248,10 +288,14 @@ class BundleManager {
       final result = await Process.run(path, ['--version'])
           .timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) {
-        debugPrint('BundleManager: "$path" -> ${result.stdout.toString().trim()}');
+        debugPrint(
+          'BundleManager: "$path" -> ${result.stdout.toString().trim()}',
+        );
         return true;
       }
-      debugPrint('BundleManager: "$path" exited with ${result.exitCode}: ${result.stderr}');
+      debugPrint(
+        'BundleManager: "$path" exited with ${result.exitCode}: ${result.stderr}',
+      );
       return false;
     } catch (e) {
       debugPrint('BundleManager: "$path" failed: $e');

@@ -166,7 +166,8 @@ class _PythonSetupScreenState extends State<PythonSetupScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.tonalIcon(
-                    onPressed: (_isInstalling || _isChecking) ? null : _retryCheck,
+                    onPressed:
+                        (_isInstalling || _isChecking) ? null : _retryCheck,
                     icon: _isChecking
                         ? const SizedBox(
                             width: 16,

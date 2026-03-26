@@ -41,7 +41,7 @@ jobs:
 
       - name: Format check
         run: |
-          flutter format --set-exit-if-changed nmtk_ui_core nmtk/neuro_toolkit
+          dart format --set-exit-if-changed nmtk_ui_core nmtk/neuro_toolkit
 
       - name: Analyze (nmtk_ui_core)
         run: |
