@@ -9,7 +9,7 @@ import 'package:path/path.dart' as p;
 
 /// This script tests the ProcessManager's ability to install and launch a module.
 /// It must be run from the nmtk/neuro_toolkit directory.
-void main() async {
+void main() {
   test('E2E Launcher Flow Test', () async {
     // Skip this test in CI or if not specifically requested, as it requires
     // full backend submodules and may fail on headless CI.

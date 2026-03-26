@@ -29,7 +29,7 @@ class MockProcess implements Process {
   @override
   bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
     if (!_exitCodeCompleter.isCompleted) {
-      _exitCodeCompleter.complete(signal == ProcessSignal.sigterm ? 0 : -1);
+      _exitCodeCompleter.complete(0);
     }
     return true;
   }
@@ -203,7 +203,7 @@ void main() {
     );
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
-    subscription.cancel();
+    await subscription.cancel();
     tempDir.deleteSync(recursive: true);
   });
 

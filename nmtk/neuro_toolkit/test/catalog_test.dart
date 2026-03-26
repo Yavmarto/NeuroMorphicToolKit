@@ -10,13 +10,14 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   bool _isMuJoCoAvailable = false;
   final List<String> installCalls = [];
 
-  @override
-  List<Module> modulesForTesting = [];
-
+  
   void setMuJoCoAvailable(bool value) {
     _isMuJoCoAvailable = value;
     notifyListeners();
   }
+
+  @override
+  List<Module> modulesForTesting = [];
 
   @override
   List<Module> get modules => _mockModules;
