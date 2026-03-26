@@ -140,7 +140,6 @@ void main() async {
 
       // ignore: avoid_print
       print('🎉 E2E Launcher Flow Test PASSED!');
-      exit(0);
     } catch (e) {
       // ignore: avoid_print
       print('💥 Test FAILED: $e');
@@ -150,7 +149,7 @@ void main() async {
       }
       // Try to cleanup
       unawaited(manager.stopModule('neurocnl'));
-      exit(1);
+    rethrow;
     } finally {
       await subscription.cancel();
       manager.dispose();

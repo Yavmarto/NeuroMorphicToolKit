@@ -71,7 +71,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev libgcrypt20-dev libsecret-1-dev libsystemd-dev clang cmake ninja-build pkg-config
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev libgcrypt20-dev libsecret-1-dev libsystemd-dev libwebkit2gtk-4.1-dev llvm-18-dev lld-18 clang cmake ninja-build pkg-config
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
