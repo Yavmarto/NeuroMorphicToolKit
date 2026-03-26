@@ -115,6 +115,9 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr0 }}
     needs: detect
     if: needs.detect.outputs.found0 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
     uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr0) }}
@@ -127,6 +130,9 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr1 }}
     needs: detect
     if: needs.detect.outputs.found1 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
     uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr1) }}
@@ -139,6 +145,9 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr2 }}
     needs: detect
     if: needs.detect.outputs.found2 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
     uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr2) }}
@@ -151,6 +160,9 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr3 }}
     needs: detect
     if: needs.detect.outputs.found3 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
     uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr3) }}
@@ -163,6 +175,9 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr4 }}
     needs: detect
     if: needs.detect.outputs.found4 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
     uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr4) }}
