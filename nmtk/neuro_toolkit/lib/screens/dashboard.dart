@@ -48,10 +48,10 @@ class DashboardScreen extends StatelessWidget {
                           'Health: ${module.healthStatus}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: module.status == ModuleStatus.error ? Colors.red : Colors.grey[600],
+                            fontWeight: module.status == ModuleStatus.error ? FontWeight.bold : FontWeight.normal,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: 3,
                         ),
                     ],
                   ),
@@ -86,7 +86,7 @@ class DashboardScreen extends StatelessWidget {
                           ],
                         )
                       else if (module.status == ModuleStatus.stopping)
-                         const CircularProgressIndicator(color: Colors.orange),
+                        const CircularProgressIndicator(color: Colors.orange),
                       const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
