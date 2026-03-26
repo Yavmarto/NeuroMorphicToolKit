@@ -28,7 +28,7 @@ jobs:
   build-feature:
     needs: sdd-context
     if: ${{ contains(fromJSON(inputs.trusted_users), inputs.sender_login) }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     concurrency:
       group: agent-work
       cancel-in-progress: false

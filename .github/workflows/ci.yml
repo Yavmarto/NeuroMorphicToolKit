@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       pull-requests: read
@@ -79,7 +79,7 @@ jobs:
   test-neurosim:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosim == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neurosim
@@ -104,7 +104,7 @@ jobs:
   test-neurochip:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neurochip/neurochip
@@ -130,7 +130,7 @@ jobs:
   test-neurosense:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neurosense/neurosense
@@ -155,7 +155,7 @@ jobs:
   test-neurohub:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neurohub/neurohub
@@ -180,7 +180,7 @@ jobs:
   test-neurodreamhand:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurodreamhand == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neuro-Dream-Hand
@@ -205,7 +205,7 @@ jobs:
   test-neurocnl-backend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - name: Update required submodules
@@ -275,7 +275,7 @@ jobs:
   test-neurobench:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neurobench/neurobench
@@ -302,7 +302,7 @@ jobs:
   test-nmtk-ui-core:
     needs: detect-changes
     if: needs.detect-changes.outputs.nmtk_ui_core == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: nmtk_ui_core
@@ -322,7 +322,7 @@ jobs:
   test-neurotoolkit:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurotoolkit == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: nmtk/neuro_toolkit
@@ -342,7 +342,7 @@ jobs:
   test-neurocnl-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl_frontend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: neurocnl/frontend
@@ -364,7 +364,7 @@ jobs:
   test-neurochip-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip_frontend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neurochip/frontend
@@ -384,7 +384,7 @@ jobs:
   test-neurohub-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub_frontend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neurohub/frontend
@@ -404,7 +404,7 @@ jobs:
   test-neurosense-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense_frontend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neurosense/frontend
@@ -424,7 +424,7 @@ jobs:
   test-neurobench-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench_frontend == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: Neurobench/frontend
@@ -443,7 +443,7 @@ jobs:
 
   # Summary job that branch protection can require
   ci-passed:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs:
       - test-neurosim
       - test-neurochip

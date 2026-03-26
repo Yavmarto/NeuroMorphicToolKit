@@ -16,7 +16,7 @@ jobs:
   # ── Detect which PRs are conflicted ──────────────────────────────────────────
   detect:
     name: Detect conflicted PRs
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       pull-requests: read
     outputs:

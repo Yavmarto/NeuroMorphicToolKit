@@ -23,7 +23,7 @@ on:
 jobs:
   fix:
     name: Fix conflicts in PR #${{ inputs.pr_number }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: write
       pull-requests: write

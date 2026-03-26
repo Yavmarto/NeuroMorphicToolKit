@@ -12,7 +12,7 @@ jobs:
 
   remove-unused:
     needs: sdd-context
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     concurrency:
       group: agent-work
       cancel-in-progress: false
