@@ -451,6 +451,10 @@ jobs:
         working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
+      - name: Update required submodules
+        run: |
+          git submodule update --init ../../neurocnl || true
+          git submodule update --init ../../Neuro-Dream-Hand || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
