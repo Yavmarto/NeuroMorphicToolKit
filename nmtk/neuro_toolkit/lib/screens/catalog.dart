@@ -81,8 +81,15 @@ class CatalogScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(module.description),
+                        const SizedBox(height: 4),
+                        if (module.version != '0.0.0')
+                          Text(
+                            'Version: ${module.version}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
                         const SizedBox(height: 16),
-                        if (module.status == ModuleStatus.installing)
+                        if (module.status == ModuleStatus.installing ||
+                            module.status == ModuleStatus.updating)
                           Column(
                             children: [
                               LinearProgressIndicator(
@@ -90,7 +97,7 @@ class CatalogScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                '${(module.installProgress * 100).toInt()}%',
+                                '${module.status == ModuleStatus.installing ? "Installing" : "Updating"}... ${(module.installProgress * 100).toInt()}%',
                               ),
                             ],
                           )
@@ -134,18 +141,42 @@ class CatalogScreen extends StatelessWidget {
                         else if (module.status == ModuleStatus.installed ||
                             module.status == ModuleStatus.running ||
                             module.status == ModuleStatus.degraded)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: OutlinedButton(
-                              onPressed: () {
-                                unawaited(provider.uninstallModule(module.id));
-                              },
-                              child: Text(
-                                module.status == ModuleStatus.installed
-                                    ? 'Installed'
-                                    : 'Running',
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (module.remoteVersion != '0.0.0' &&
+                                  module.remoteVersion != module.version)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8.0),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      unawaited(
+                                        provider.updateModule(module.id),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.system_update),
+                                    label: Text(
+                                      'Update to ${module.remoteVersion}',
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue.shade100,
+                                      foregroundColor: Colors.blue.shade900,
+                                    ),
+                                  ),
+                                ),
+                              OutlinedButton(
+                                onPressed: () {
+                                  unawaited(
+                                    provider.uninstallModule(module.id),
+                                  );
+                                },
+                                child: Text(
+                                  module.status == ModuleStatus.installed
+                                      ? 'Installed'
+                                      : 'Running',
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                       ],
                     ),
@@ -224,6 +255,10 @@ class CatalogScreen extends StatelessWidget {
         case ModuleStatus.degraded:
           text = 'Degraded';
           color = Colors.yellow.shade700;
+          break;
+        case ModuleStatus.updating:
+          text = 'Updating';
+          color = Colors.blue;
           break;
       }
     }
