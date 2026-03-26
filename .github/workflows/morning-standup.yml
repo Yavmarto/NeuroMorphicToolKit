@@ -71,9 +71,9 @@ jobs:
 
             // ── 3. Any agent workflow currently running? ──────────────────
             const AGENT_WORKFLOWS = [
-              'bug-fixer.yml', 'feature-builder.yml', 'ci-failure-fix.yml',
-              'unblocked-issues.yml', 'performance-improver.yml', 'scaffold-module.yml',
-              'merge-conflict-resolver.yml', 'weekly-cleanup.yml', 'unused-code-remover.yml'
+              'bug-fixer.yml', 'feature-builder.yml', 'ci-failure-fix-agent.yml',
+              'unblocked-issues.yml', 'scaffold-module.yml',
+              'merge-conflict-resolver.yml'
             ];
             const runResp    = await github.rest.actions.listWorkflowRunsForRepo({
               owner, repo, status: 'in_progress', per_page: 50
