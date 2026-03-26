@@ -7,13 +7,17 @@ import 'package:provider/provider.dart';
 
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockModules = [];
-  bool _isMuJoCoAvailableValue = false;
+  bool _isMuJoCoAvailable = false;
   final List<String> installCalls = [];
 
+  
   void setMuJoCoAvailable(bool value) {
     _isMuJoCoAvailableValue = value;
     notifyListeners();
   }
+
+  @override
+  List<Module> modulesForTesting = [];
 
   @override
   List<Module> get modules => _mockModules;
@@ -24,9 +28,6 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
     _mockModules.addAll(val);
     notifyListeners();
   }
-
-  @override
-  List<Module> modulesForTesting = [];
 
   @override
   bool get isLoading => false;
@@ -41,21 +42,28 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> recheckPython() async {}
 
   @override
-  List<Module> get installedModules => _mockModules.where((Module m) =>
-      m.status != ModuleStatus.notInstalled &&
-      m.status != ModuleStatus.installing,).toList();
+  List<Module> get installedModules => _mockModules
+      .where(
+        (Module m) =>
+            m.status != ModuleStatus.notInstalled &&
+            m.status != ModuleStatus.installing,
+      )
+      .toList();
 
   @override
-  List<Module> get availableModules => _mockModules.where((Module m) =>
-      m.status == ModuleStatus.notInstalled ||
-      m.status == ModuleStatus.installing,).toList();
+  List<Module> get availableModules => _mockModules
+      .where(
+        (Module m) =>
+            m.status == ModuleStatus.notInstalled ||
+            m.status == ModuleStatus.installing,
+      )
+      .toList();
 
   @override
   List<String> get activeModuleIds => [];
 
   @override
   List<Module> get activeModules => [];
-
 
   @override
   bool isMuJoCoAvailable() => _isMuJoCoAvailableValue;
@@ -65,7 +73,8 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
     installCalls.add(moduleId);
     final index = _mockModules.indexWhere((m) => m.id == moduleId);
     if (index != -1) {
-      _mockModules[index] = _mockModules[index].copyWith(status: ModuleStatus.installing);
+      _mockModules[index] =
+          _mockModules[index].copyWith(status: ModuleStatus.installing);
       notifyListeners();
     }
   }
@@ -167,7 +176,9 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
     ];
 
     _mockModules.clear();
-    _mockModules.addAll(mockData.map((Map<String, dynamic> json) => Module.fromJson(json)));
+    _mockModules.addAll(
+      mockData.map((Map<String, dynamic> json) => Module.fromJson(json)),
+    );
     notifyListeners();
   }
 }
@@ -200,6 +211,40 @@ void main() {
     expect(find.text('NeuroSense'), findsOneWidget);
     expect(find.text('NeuroHub'), findsOneWidget);
     expect(find.text('NDH Simulator'), findsOneWidget);
+
+    addTearDown(tester.view.resetPhysicalSize);
+  });
+
+  testWidgets('CatalogScreen handles Install button click', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1.0;
+
+    final provider = MockModuleProvider();
+    provider.loadModules();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChangeNotifierProvider<ModuleProvider>.value(
+          value: provider,
+          child: const CatalogScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    // Find the Install button for CNL Studio
+    final installButton = find.descendant(
+      of: find.ancestor(of: find.text('CNL Studio'), matching: find.byType(Card)),
+      matching: find.text('Install'),
+    );
+
+    expect(installButton, findsOneWidget);
+    await tester.tap(installButton);
+    await tester.pump();
+
+    expect(provider.installCalls, contains('neurocnl'));
+    expect(find.text('Installing'), findsOneWidget);
 
     addTearDown(tester.view.resetPhysicalSize);
   });

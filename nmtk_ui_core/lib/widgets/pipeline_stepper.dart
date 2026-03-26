@@ -30,13 +30,13 @@ class NmtkPipelineStepper extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(bottom: BorderSide(color: theme.colorScheme.outlineVariant)),
+        border: Border(
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: _buildSteps(context),
-        ),
+        child: Row(children: _buildSteps(context)),
       ),
     );
   }
@@ -46,7 +46,9 @@ class NmtkPipelineStepper extends StatelessWidget {
     for (int i = 0; i < steps.length; i++) {
       widgets.add(_PipelineStep(data: steps[i]));
       if (i < steps.length - 1) {
-        widgets.add(_StepConnector(active: steps[i].status == NmtkStepStatus.success));
+        widgets.add(
+          _StepConnector(active: steps[i].status == NmtkStepStatus.success),
+        );
       }
     }
     return widgets;
@@ -68,7 +70,9 @@ class _PipelineStep extends StatelessWidget {
       child: GestureDetector(
         onTap: data.onTap,
         child: MouseRegion(
-          cursor: data.onTap != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          cursor: data.onTap != null
+              ? SystemMouseCursors.click
+              : SystemMouseCursors.basic,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -96,7 +100,10 @@ class _PipelineStep extends StatelessWidget {
                     if (data.detail != null)
                       Text(
                         data.detail!,
-                        style: TextStyle(color: _getDetailColor(theme), fontSize: 10),
+                        style: TextStyle(
+                          color: _getDetailColor(theme),
+                          fontSize: 10,
+                        ),
                       ),
                   ],
                 ),
@@ -146,11 +153,11 @@ class _PipelineStep extends StatelessWidget {
       case NmtkStepStatus.idle:
         return theme.colorScheme.surfaceContainerHighest;
       case NmtkStepStatus.running:
-        return theme.colorScheme.primary.withOpacity(0.1);
+        return theme.colorScheme.primary.withValues(alpha: 0.1);
       case NmtkStepStatus.success:
-        return Colors.green.withOpacity(0.1);
+        return Colors.green.withValues(alpha: 0.1);
       case NmtkStepStatus.error:
-        return theme.colorScheme.error.withOpacity(0.1);
+        return theme.colorScheme.error.withValues(alpha: 0.1);
     }
   }
 
@@ -161,9 +168,9 @@ class _PipelineStep extends StatelessWidget {
       case NmtkStepStatus.running:
         return theme.colorScheme.primary;
       case NmtkStepStatus.success:
-        return Colors.green.withOpacity(0.3);
+        return Colors.green.withValues(alpha: 0.3);
       case NmtkStepStatus.error:
-        return theme.colorScheme.error.withOpacity(0.3);
+        return theme.colorScheme.error.withValues(alpha: 0.3);
     }
   }
 
@@ -192,7 +199,9 @@ class _StepConnector extends StatelessWidget {
       child: Icon(
         Icons.arrow_forward_ios,
         size: 12,
-        color: active ? Colors.green : theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+        color: active
+            ? Colors.green
+            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
       ),
     );
   }

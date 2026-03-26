@@ -6,7 +6,7 @@ on:
 
 jobs:
   detect-unblocked:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       issues: read
     outputs:
@@ -23,7 +23,7 @@ jobs:
     strategy:
       matrix:
         issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix) }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       issues: read
 
@@ -46,7 +46,7 @@ jobs:
     strategy:
       matrix:
         issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix) }}
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-unblocked-issues.yml@main
+    uses: ./.github/workflows/reusable-unblocked-issues.yml
     with:
       issue_title: ${{ needs.implement.outputs.issue_title || 'Unblocked Issue' }}
       issue_body: ${{ needs.implement.outputs.issue_body || '' }}

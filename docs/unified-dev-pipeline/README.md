@@ -18,6 +18,17 @@ one self-contained pipeline.
 6. Auto-merge if CI passes (unless protected files changed)
 ```
 
+### The Pipeline Process
+
+The Unified Dev Pipeline is designed to automate the migration of NMTK modules to a Contract-Driven Development (CDD) and Property-Based Testing (PBT) model.
+
+1.  **State Audit**: The `scripts/audit_workflows.py` script scans all modules to identify existing CI/CD workflows and gaps relative to the CDD+PBT requirements.
+2.  **Manifest Definition**: Each module has a `module.json` manifest that defines its migration roadmap, including specific GitHub issues to be created.
+3.  **Issue Generation**: The `scripts/publish_github_issues.py` script reads these manifests and creates GitHub issues with topological sorting, ensuring dependencies are addressed first.
+4.  **State Tracking**: Completion status is tracked in `.issue-state.json` files within each module's directory in `docs/unified-dev-pipeline/`. This prevents duplicate issue creation and provides a clear view of progress.
+5.  **Automated Implementation**: Jules (or another agent) picks up the generated issues and implements the required contracts and property tests.
+6.  **Continuous Verification**: CI workflows (`contract-verification.yml`, etc.) ensure that all new code complies with the defined Pydantic contracts and passes Hypothesis property tests before being merged.
+
 ---
 
 ## What Each Source Pipeline Contributed
@@ -211,13 +222,13 @@ Run `python scripts/audit_workflows.py` for an up-to-date matrix, or see:
 
 | Module | Contracts | Properties | AGENTS.md | CI Status |
 |--------|-----------|------------|-----------|-----------|
-| neurocnl | 3 files (18 invariants) | 12 properties | Yes | Has CI, needs PBT gate |
-| Neuro-Dream-Hand | 1 file (8 contracts) | 11 properties | Yes | Has CI, needs PBT gate |
-| Neurosim | 1 file (skeleton) | — | — | Has CI, minimal |
-| Neurosense | 1 file | 1 file (minimal) | — | Has CI, needs PBT gate |
-| Neurochip | 1 file | 1 file (light) | — | Has CI, needs PBT gate |
-| Neurobench | 1 file | — | — | Has CI, needs PBT gate |
-| Neurohub | 1 file | — | — | **Missing ci.yml** |
+| neurocnl | 4 files (18+ invariants) | 2 properties | Yes | Full CI, needs CDD gate |
+| Neuro-Dream-Hand | 2 files (8+ contracts) | 1 property | Yes | Full CI, needs CDD gate |
+| Neurosim | 1 file | 1 property | No | Full CI, needs CDD gate |
+| Neurosense | 5 files | 2 properties | No | Full CI, needs CDD gate |
+| Neurochip | 5 files | 3 properties | No | Full CI, needs CDD gate |
+| Neurobench | 4 files | 4 properties | No | Full CI, needs CDD gate |
+| Neurohub | 4 files | 4 properties | No | Full CI, needs CDD gate |
 
 ---
 
