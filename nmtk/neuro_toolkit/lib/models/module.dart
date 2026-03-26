@@ -52,15 +52,18 @@ class Module {
       name: json['name'] as String,
       description: json['description'] as String,
       icon: json['icon'] as String? ?? 'extension',
-      directory: json['installPath'] as String? ?? json['directory'] as String? ?? '',
+      directory:
+          json['installPath'] as String? ?? json['directory'] as String? ?? '',
       port: json['port'] as int?,
       hasFrontend: json['hasFrontend'] as bool? ?? false,
       frontendStatus: json['frontendStatus'] as String? ?? 'No',
       requiresMuJoCo: json['requiresMuJoCo'] as bool? ?? false,
       sourcePath: json['sourcePath'] as String? ?? '.',
-      runPath: json['runPath'] as String? ?? json['sourcePath'] as String? ?? '.',
+      runPath:
+          json['runPath'] as String? ?? json['sourcePath'] as String? ?? '.',
       uvicornTarget: json['uvicornTarget'] as String? ?? 'app.main:app',
-      localDeps: (json['localDeps'] as List<dynamic>?)?.cast<String>() ?? const [],
+      localDeps:
+          (json['localDeps'] as List<dynamic>?)?.cast<String>() ?? const [],
       status: json['status'] != null
           ? ModuleStatus.values[json['status'] as int]
           : ModuleStatus.notInstalled,

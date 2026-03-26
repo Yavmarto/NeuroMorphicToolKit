@@ -9,22 +9,24 @@
     "Neurohub/README.md"
   ],
   "contract_kit": {
-    "contracts_dir": "docs/unified-dev-pipeline/neurohub/contracts",
-    "properties_dir": "docs/unified-dev-pipeline/neurohub/properties",
+    "contracts_dir": "Neurohub/neurohub/contracts",
+    "properties_dir": "Neurohub/neurohub/tests/properties",
     "agents_md": null,
     "guardrails_md": null
   },
-  "existing_workflows": [],
+  "existing_workflows": [
+    "neurohub-ci.yml",
+    "ci-failure-fix.yml",
+    "feature-builder.yml",
+    "bug-fixer.yml",
+    "unblocked-issues.yml",
+    "auto-merge-jules-prs.yml"
+  ],
   "workflow_gaps": [
-    "CRITICAL: ci.yml does not exist — must be created from scratch",
-    "Missing ci-failure-fix.yml",
-    "Missing auto-merge-jules-prs.yml",
-    "No CI at all — highest-priority module for CI scaffolding"
+    "No CDD-PBT status check gate in CI"
   ],
   "required_updates": [
-    "Create ci.yml from scratch using reusable CDD-PBT template",
-    "Add lint, type-check, unit test, and property test steps",
-    "Add ci-failure-fix and auto-merge workflows"
+    "Add CDD-PBT verification gate to main CI"
   ],
   "setup_commands": [
     "python -m pip install --upgrade pip",
@@ -49,7 +51,7 @@
         "Neurohub/neurohub_spec.md#NH-D2",
         "Neurohub/neurohub_spec.md#NH-D3"
       ],
-      "objective": "Create Pydantic contracts for project entities (name, owner, module list), workflow definitions (DAG of steps, execution order), and export bundles (format, contents checksum). Enforce referential integrity between projects and their contained modules.",
+      "objective": "Create Pydantic contracts for project entities, workflow definitions, and export bundles. Implementation in Neurohub/neurohub/contracts/.",
       "conversion_steps": [
         "Create ProjectConfig contract: name non-empty, owner valid, module refs exist",
         "Create WorkflowDefinition contract: DAG validity, no cycles, all step refs resolve",
@@ -77,7 +79,7 @@
         "Neurohub/neurohub_spec.md#NH-S1",
         "Neurohub/neurohub_spec.md#NH-S2"
       ],
-      "objective": "Add Hypothesis property tests verifying workflow DAG topological ordering, bundle checksum consistency, and project module reference integrity.",
+      "objective": "Add Hypothesis property tests verifying workflow DAG topological ordering, bundle checksum consistency, and project module reference integrity. Implementation in Neurohub/neurohub/tests/properties/.",
       "conversion_steps": [
         "Add properties for DAG validity: no generated workflow has cycles",
         "Add properties for bundle integrity: checksum matches re-computed hash",
