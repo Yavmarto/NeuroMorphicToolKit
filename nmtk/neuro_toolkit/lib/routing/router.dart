@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
+import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
@@ -32,6 +33,11 @@ final goRouter = GoRouter(
             return ToolViewScreen(initialModuleId: moduleId);
           },
         ),
+        GoRoute(
+          path: '/settings',
+          name: 'settings',
+          builder: (context, state) => const SettingsScreen(),
+        ),
       ],
     ),
   ],
@@ -45,6 +51,7 @@ class MainScreen extends StatelessWidget {
     final location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/catalog')) return 1;
     if (location.startsWith('/tool/')) return 2;
+    if (location.startsWith('/settings')) return 3;
     return 0;
   }
 
@@ -60,6 +67,8 @@ class MainScreen extends StatelessWidget {
       } else {
         context.go('/');
       }
+    } else if (index == 3) {
+      context.go('/settings');
     }
   }
 
@@ -92,6 +101,11 @@ class MainScreen extends StatelessWidget {
             selectedIcon: Icons.laptop,
             label: 'Workspace',
           ),
+        const NavigationDestinationData(
+          icon: Icons.settings_outlined,
+          selectedIcon: Icons.settings,
+          label: 'Settings',
+        ),
       ],
       body: child,
     );

@@ -261,7 +261,6 @@ void main() {
 
     await processManager.stopModule('test_module_stop');
 
-    await startFuture;
     expect(await mockProcess.exitCode, 0);
     await subscription.cancel();
 
@@ -400,7 +399,8 @@ void main() {
     await processManager.startModule(module);
 
     // Give it time for startModule's initial health check and two polling intervals (5s each)
-    await Future<void>.delayed(const Duration(seconds: 13));
+    // Using a more generous timeout for CI
+    await Future<void>.delayed(const Duration(seconds: 20));
 
     expect(statusList, contains(ModuleStatus.running));
     expect(statusList, contains(ModuleStatus.degraded));

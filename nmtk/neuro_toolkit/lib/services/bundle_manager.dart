@@ -487,6 +487,7 @@ class BundleManager {
     if (!isBundled) return;
 
     final sourcePath = bundledModulesPath;
+    final entries = await _env.listDirectory(sourcePath).toList();
     if (!_env.directoryExists(sourcePath)) {
       debugPrint('BundleManager: no bundled modules at $sourcePath');
       throw Exception('Bundled modules not found at $sourcePath');

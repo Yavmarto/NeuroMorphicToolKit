@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -98,6 +99,7 @@ class ProcessManager {
   ProcessManager._internal();
 
   ProcessRunner _processRunner = DefaultProcessRunner();
+  // ignore: unused_field
   http.Client _httpClient = http.Client();
 
   final Map<String, Process> _runningProcesses = {};
@@ -416,6 +418,8 @@ class ProcessManager {
         module.copyWith(status: ModuleStatus.starting);
     _statusController.add(updatedModuleStarting);
 
+    final startTime = DateTime.now();
+
     try {
       debugPrint(
         '[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port ${module.port}',
@@ -451,6 +455,10 @@ class ProcessManager {
       unawaited(
         process.exitCode.then((code) {
           _runningProcesses.remove(module.id);
+          unawaited(AnalyticsService().trackEvent('module_process_exit', properties: {
+            'moduleId': module.id,
+            'exitCode': code,
+          }));
           _outputControllers[module.id]?.close();
           _outputControllers.remove(module.id);
 
@@ -464,9 +472,14 @@ class ProcessManager {
 
       // Give it some time to start up
       await Future<void>.delayed(const Duration(seconds: 2));
-      unawaited(
-        _checkHealth(module),
-      );
+      final success = await _checkHealth(module);
+
+      final duration = DateTime.now().difference(startTime).inMilliseconds;
+      unawaited(AnalyticsService().trackEvent('module_startup_metric', properties: {
+        'moduleId': module.id,
+        'durationMs': duration,
+        'success': success,
+      }));
     } catch (e) {
       final updatedModuleError = module.copyWith(
         status: ModuleStatus.error,
@@ -500,8 +513,8 @@ class ProcessManager {
     await exitFuture;
   }
 
-  Future<void> _checkHealth(Module module) async {
-    if (module.port == null) return;
+  Future<bool> _checkHealth(Module module) async {
+    if (module.port == null) return false;
     try {
       final uri = Uri.parse('http://127.0.0.1:${module.port}/health');
 
@@ -551,12 +564,14 @@ class ProcessManager {
         );
         _updateModuleStatus(updatedModule);
       }
+      return statusCode == 200 || statusCode == 404;
     } catch (e) {
       if (module.status == ModuleStatus.running ||
           module.status == ModuleStatus.degraded) {
         debugPrint('[${module.id}] Health check error: $e');
         await _handleFailure(module, 'Health check error: $e');
       }
+      return false;
     }
   }
 
@@ -565,14 +580,14 @@ class ProcessManager {
     debugPrint(
       'Starting health polling every 5 seconds for ${_modules.length} modules',
     );
-    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
+    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
           await _checkHealth(module);
         } else if (module.status == ModuleStatus.error) {
           final nextRetry = _nextRetryTimes[module.id];
-          if (nextRetry != null && now.isAfter(nextRetry)) {
+          if (nextRetry != null && DateTime.now().isAfter(nextRetry)) {
             debugPrint('Retrying module ${module.id}');
             unawaited(startModule(module, isRetry: true));
           }
