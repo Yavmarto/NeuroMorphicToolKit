@@ -80,39 +80,40 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosim == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurosim
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init . || true
+        run: git submodule update --init Neurosim || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
+            cd Neurosim
             pip install -e . && pip install pytest httpx ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
       - name: Lint with ruff
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
+            cd Neurosim
             ruff check .
             ruff format --check .
           fi
       - name: Type check with mypy
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
+            cd Neurosim
             mypy .
           fi
       - name: Run tests
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
+            cd Neurosim
             pytest --tb=short --hypothesis-show-statistics
           fi
 
@@ -120,40 +121,41 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurochip/neurochip
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init .. || true
+        run: git submodule update --init Neurochip || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install dependencies
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
+            cd Neurochip/neurochip
             pip install poetry && poetry install
           else
             echo "Submodule missing, skipping"
           fi
       - name: Lint with ruff
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
+            cd Neurochip/neurochip
             poetry run ruff check .
             poetry run ruff format --check .
           fi
         continue-on-error: true # Allow for now if not configured
       - name: Type check with mypy
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
+            cd Neurochip/neurochip
             poetry run mypy .
           fi
       - name: Run tests
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
+            cd Neurochip/neurochip
             poetry run pytest --tb=short --hypothesis-show-statistics
           fi
 
@@ -161,39 +163,40 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurosense/neurosense
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init .. || true
+        run: git submodule update --init Neurosense || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
+            cd Neurosense/neurosense
             pip install -e ".[dev]" && pip install ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
       - name: Lint with ruff
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
+            cd Neurosense/neurosense
             ruff check .
             ruff format --check .
           fi
       - name: Type check with mypy
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
+            cd Neurosense/neurosense
             mypy .
           fi
       - name: Run tests
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
+            cd Neurosense/neurosense
             pytest --tb=short --hypothesis-show-statistics
           fi
 
@@ -201,39 +204,40 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurohub/neurohub
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init .. || true
+        run: git submodule update --init Neurohub || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
+            cd Neurohub/neurohub
             pip install -e . && pip install pytest httpx ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
       - name: Lint with ruff
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
+            cd Neurohub/neurohub
             ruff check .
             ruff format --check .
           fi
       - name: Type check with mypy
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
+            cd Neurohub/neurohub
             mypy .
           fi
       - name: Run tests
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
+            cd Neurohub/neurohub
             pytest --tb=short --hypothesis-show-statistics
           fi
 
@@ -241,39 +245,40 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurodreamhand == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neuro-Dream-Hand
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init . || true
+        run: git submodule update --init Neuro-Dream-Hand || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
+            cd Neuro-Dream-Hand
             pip install -e . && pip install pytest ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
       - name: Lint with ruff
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
+            cd Neuro-Dream-Hand
             ruff check .
             ruff format --check .
           fi
       - name: Type check with mypy
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
+            cd Neuro-Dream-Hand
             mypy .
           fi
       - name: Run tests
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
+            cd Neuro-Dream-Hand
             pytest --tb=short --hypothesis-show-statistics
           fi
 
@@ -353,42 +358,43 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurobench/neurobench
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init .. || true
+        run: git submodule update --init Neurobench || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install poetry
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
             pip install poetry
           fi
       - name: Install dependencies
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
+            cd Neurobench/neurobench
             poetry install
           fi
       - name: Lint with ruff
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
+            cd Neurobench/neurobench
             poetry run ruff check .
             poetry run ruff format --check .
           fi
       - name: Type check with mypy
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
+            cd Neurobench/neurobench
             poetry run mypy .
           fi
       - name: Run tests
         run: |
-          if [ -f "pyproject.toml" ]; then
+          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
+            cd Neurobench/neurobench
             poetry run pytest --tb=short --hypothesis-show-statistics
           fi
 
@@ -396,9 +402,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.nmtk_ui_core == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: nmtk_ui_core
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -406,19 +409,22 @@ jobs:
           channel: 'stable'
           cache: true
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          cd nmtk_ui_core
+          flutter pub get
       - name: Analyze
-        run: flutter analyze
+        run: |
+          cd nmtk_ui_core
+          flutter analyze
       - name: Run tests
-        run: flutter test
+        run: |
+          cd nmtk_ui_core
+          flutter test
 
   test-neurotoolkit:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurotoolkit == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -426,42 +432,48 @@ jobs:
           channel: 'stable'
           cache: true
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
       - name: Analyze
-        run: flutter analyze
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter analyze
       - name: Run tests
-        run: flutter test
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test
 
   test-neurocnl-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl_frontend == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: neurocnl/frontend
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init .. || true
+        run: git submodule update --init neurocnl || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
+            cd neurocnl/frontend
             flutter pub get
           fi
       - name: Analyze
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
+            cd neurocnl/frontend
             flutter analyze
           fi
       - name: Run tests
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
+            cd neurocnl/frontend
             flutter test
           fi
 
@@ -469,27 +481,26 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip_frontend == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurochip/frontend
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init .. || true
+        run: git submodule update --init Neurochip || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "Neurochip/frontend" ] && [ -f "Neurochip/frontend/pubspec.yaml" ]; then
+            cd Neurochip/frontend
             flutter pub get
           fi
       - name: Analyze
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "Neurochip/frontend" ] && [ -f "Neurochip/frontend/pubspec.yaml" ]; then
+            cd Neurochip/frontend
             flutter analyze
           fi
 
@@ -497,27 +508,26 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub_frontend == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurohub/frontend
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init .. || true
+        run: git submodule update --init Neurohub || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "Neurohub/frontend" ] && [ -f "Neurohub/frontend/pubspec.yaml" ]; then
+            cd Neurohub/frontend
             flutter pub get
           fi
       - name: Analyze
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "Neurohub/frontend" ] && [ -f "Neurohub/frontend/pubspec.yaml" ]; then
+            cd Neurohub/frontend
             flutter analyze
           fi
 
@@ -525,27 +535,26 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense_frontend == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurosense/frontend
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init .. || true
+        run: git submodule update --init Neurosense || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "Neurosense/frontend" ] && [ -f "Neurosense/frontend/pubspec.yaml" ]; then
+            cd Neurosense/frontend
             flutter pub get
           fi
       - name: Analyze
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "Neurosense/frontend" ] && [ -f "Neurosense/frontend/pubspec.yaml" ]; then
+            cd Neurosense/frontend
             flutter analyze
           fi
 
@@ -553,27 +562,26 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench_frontend == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Neurobench/frontend
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init .. || true
+        run: git submodule update --init Neurobench || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "Neurobench/frontend" ] && [ -f "Neurobench/frontend/pubspec.yaml" ]; then
+            cd Neurobench/frontend
             flutter pub get
           fi
       - name: Analyze
         run: |
-          if [ -f "pubspec.yaml" ]; then
+          if [ -d "Neurobench/frontend" ] && [ -f "Neurobench/frontend/pubspec.yaml" ]; then
+            cd Neurobench/frontend
             flutter analyze
           fi
 
