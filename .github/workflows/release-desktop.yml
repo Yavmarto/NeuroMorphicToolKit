@@ -1,0 +1,110 @@
+name: Release Desktop Apps
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Build Windows Standalone
+        shell: pwsh
+        run: |
+          ./nmtk/installer/windows/build-standalone.ps1
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-windows-installer
+          path: nmtk/dist/*.exe
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Build macOS DMG
+        run: |
+          # The script expects VERSION as arg for DMG creation if called manually
+          # but here we just pass --dmg
+          ./nmtk/installer/macos/build-standalone.sh --dmg
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-macos-dmg
+          path: "*.dmg"
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev libgcrypt20-dev libsecret-1-dev libsystemd-dev libwebkit2gtk-4.1-dev
+
+      - name: Build Flutter Linux
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter build linux --release
+
+      - name: Create AppImage
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          ./nmtk/installer/linux/appimage.sh "$VERSION"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-linux-appimage
+          path: "*.AppImage"
+
+  create-release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            nmtk-windows-installer/*.exe
+            nmtk-macos-dmg/*.dmg
+            nmtk-linux-appimage/*.AppImage
+          generate_release_notes: true
+          draft: false
+          prerelease: contains(github.ref, 'beta') || contains(github.ref, 'rc')

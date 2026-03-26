@@ -261,7 +261,6 @@ void main() {
 
     await processManager.stopModule('test_module_stop');
 
-    await startFuture;
     expect(await mockProcess.exitCode, 0);
     await subscription.cancel();
 

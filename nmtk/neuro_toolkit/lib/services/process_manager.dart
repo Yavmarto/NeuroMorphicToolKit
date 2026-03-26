@@ -565,14 +565,14 @@ class ProcessManager {
     debugPrint(
       'Starting health polling every 5 seconds for ${_modules.length} modules',
     );
-    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
+    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
           await _checkHealth(module);
         } else if (module.status == ModuleStatus.error) {
           final nextRetry = _nextRetryTimes[module.id];
-          if (nextRetry != null && now.isAfter(nextRetry)) {
+          if (nextRetry != null && DateTime.now().isAfter(nextRetry)) {
             debugPrint('Retrying module ${module.id}');
             unawaited(startModule(module, isRetry: true));
           }
