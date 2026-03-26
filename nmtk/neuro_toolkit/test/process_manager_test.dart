@@ -226,7 +226,7 @@ void main() {
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
     await processManager.startModule(module);
-    await Future.delayed(const Duration(milliseconds: 100));
+    await Future<void>.delayed(const Duration(milliseconds: 100));
 
     await processManager.stopModule('test_module_stop');
 
