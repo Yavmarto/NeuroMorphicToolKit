@@ -1,5 +1,5 @@
 {
-  "NH-CDD-001": 47,
-  "NH-CDD-002": 48,
-  "NH-CDD-003": 49
+  "NH-CDD-001": { "number": 47, "status": "completed" },
+  "NH-CDD-002": { "number": 48, "status": "completed" },
+  "NH-CDD-003": { "number": 49, "status": "published" }
 }

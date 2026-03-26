@@ -100,7 +100,8 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
         NavigationDelegate(
           onWebResourceError: (WebResourceError error) {
             debugPrint(
-                'WebView error for ${module.name}: ${error.description}');
+              'WebView error for ${module.name}: ${error.description}',
+            );
           },
         ),
       )
@@ -140,7 +141,8 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
             appBar: AppBar(title: const Text('Workspace')),
             body: const Center(
               child: Text(
-                  'No modules launched. Go to Dashboard to launch a module.'),
+                'No modules launched. Go to Dashboard to launch a module.',
+              ),
             ),
           );
         }
@@ -153,7 +155,8 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
 
         if (_activeModuleId.isEmpty) {
           return const Scaffold(
-              body: Center(child: CircularProgressIndicator()));
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         return Scaffold(
@@ -245,11 +248,15 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.warning,
-                                    size: 48, color: Colors.orange),
+                                const Icon(
+                                  Icons.warning,
+                                  size: 48,
+                                  color: Colors.orange,
+                                ),
                                 const SizedBox(height: 16),
                                 const Text(
-                                    'WebView not supported on this platform.'),
+                                  'WebView not supported on this platform.',
+                                ),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   onPressed: () => _launchInBrowser(module),

@@ -10,10 +10,14 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   bool _isMuJoCoAvailable = false;
   final List<String> installCalls = [];
 
+  
   void setMuJoCoAvailable(bool value) {
-    _isMuJoCoAvailable = value;
+    _isMuJoCoAvailableValue = value;
     notifyListeners();
   }
+
+  @override
+  List<Module> modulesForTesting = [];
 
   @override
   List<Module> get modules => _mockModules;
@@ -21,6 +25,13 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   set modules(List<Module> val) {}
   @override
   List<Module> modulesForTesting = [];
+
+  @override
+  set modules(List<Module> val) {
+    _mockModules.clear();
+    _mockModules.addAll(val);
+    notifyListeners();
+  }
 
   @override
   bool get isLoading => false;
@@ -59,7 +70,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   List<Module> get activeModules => [];
 
   @override
-  bool isMuJoCoAvailable() => _isMuJoCoAvailable;
+  bool isMuJoCoAvailable() => _isMuJoCoAvailableValue;
 
   @override
   Future<void> installModule(String moduleId) async {
@@ -170,7 +181,8 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
     _mockModules.clear();
     _mockModules.addAll(
-        mockData.map((Map<String, dynamic> json) => Module.fromJson(json)));
+      mockData.map((Map<String, dynamic> json) => Module.fromJson(json)),
+    );
     notifyListeners();
   }
 }
@@ -203,6 +215,40 @@ void main() {
     expect(find.text('NeuroSense'), findsOneWidget);
     expect(find.text('NeuroHub'), findsOneWidget);
     expect(find.text('NDH Simulator'), findsOneWidget);
+
+    addTearDown(tester.view.resetPhysicalSize);
+  });
+
+  testWidgets('CatalogScreen handles Install button click', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1.0;
+
+    final provider = MockModuleProvider();
+    provider.loadModules();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChangeNotifierProvider<ModuleProvider>.value(
+          value: provider,
+          child: const CatalogScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    // Find the Install button for CNL Studio
+    final installButton = find.descendant(
+      of: find.ancestor(of: find.text('CNL Studio'), matching: find.byType(Card)),
+      matching: find.text('Install'),
+    );
+
+    expect(installButton, findsOneWidget);
+    await tester.tap(installButton);
+    await tester.pump();
+
+    expect(provider.installCalls, contains('neurocnl'));
+    expect(find.text('Installing'), findsOneWidget);
 
     addTearDown(tester.view.resetPhysicalSize);
   });

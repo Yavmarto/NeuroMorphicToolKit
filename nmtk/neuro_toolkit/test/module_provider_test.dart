@@ -20,8 +20,10 @@ class MockProcessManager implements ProcessManager {
   }
 
   @override
-  Future<void> installModule(Module module,
-      {void Function(double)? onProgress}) async {
+  Future<void> installModule(
+    Module module, {
+    void Function(double)? onProgress,
+  }) async {
     installCalls.add(module.id);
     onProgress?.call(0.5);
     final updated =
@@ -30,14 +32,14 @@ class MockProcessManager implements ProcessManager {
   }
 
   @override
-  Future<void> startModule(Module module) async {
+  Future<void> startModule(Module module, {bool isRetry = false}) async {
     startCalls.add(module.id);
     final updated = module.copyWith(status: ModuleStatus.running);
     _statusController.add(updated);
   }
 
   @override
-  Future<void> stopModule(String moduleId) async {
+  Future<void> stopModule(String moduleId, {bool isFailure = false}) async {
     stopCalls.add(moduleId);
     final index = modules.indexWhere((m) => m.id == moduleId);
     if (index != -1) {
@@ -73,17 +75,19 @@ void main() {
 
     provider.modulesForTesting = [
       Module(
-          id: 'm1',
-          name: 'M1',
-          description: 'D1',
-          directory: 'd1',
-          status: ModuleStatus.notInstalled),
+        id: 'm1',
+        name: 'M1',
+        description: 'D1',
+        directory: 'd1',
+        status: ModuleStatus.notInstalled,
+      ),
       Module(
-          id: 'm2',
-          name: 'M2',
-          description: 'D2',
-          directory: 'd2',
-          status: ModuleStatus.installed),
+        id: 'm2',
+        name: 'M2',
+        description: 'D2',
+        directory: 'd2',
+        status: ModuleStatus.installed,
+      ),
     ];
 
     expect(provider.availableModules.length, 1);
@@ -97,11 +101,12 @@ void main() {
     final provider = ModuleProvider(processManager: mockProcessManager);
 
     final module = Module(
-        id: 'm1',
-        name: 'M1',
-        description: 'D1',
-        directory: 'd1',
-        status: ModuleStatus.notInstalled);
+      id: 'm1',
+      name: 'M1',
+      description: 'D1',
+      directory: 'd1',
+      status: ModuleStatus.notInstalled,
+    );
     provider.modulesForTesting = [module];
 
     // Status is updated via stream from MockProcessManager.
@@ -125,11 +130,12 @@ void main() {
     final provider = ModuleProvider(processManager: mockProcessManager);
 
     final module = Module(
-        id: 'm1',
-        name: 'M1',
-        description: 'D1',
-        directory: 'd1',
-        status: ModuleStatus.installed);
+      id: 'm1',
+      name: 'M1',
+      description: 'D1',
+      directory: 'd1',
+      status: ModuleStatus.installed,
+    );
     provider.modulesForTesting = [module];
     mockProcessManager.modules = [module];
 
@@ -150,5 +156,48 @@ void main() {
     provider.modules[0] =
         provider.modules[0].copyWith(status: ModuleStatus.installed);
     expect(provider.modules.first.status, ModuleStatus.installed);
+  });
+
+  test('ModuleProvider uninstallModule resets state', () async {
+    final mockProcessManager = MockProcessManager();
+    final provider = ModuleProvider(processManager: mockProcessManager);
+
+    final module = Module(
+      id: 'm1',
+      name: 'M1',
+      description: 'D1',
+      directory: 'd1',
+      status: ModuleStatus.installed,
+      healthStatus: 'Running fine',
+    );
+    provider.modules = [module];
+
+    await provider.uninstallModule('m1');
+
+    expect(provider.modules.first.status, ModuleStatus.notInstalled);
+    expect(provider.modules.first.healthStatus, isNull);
+  });
+
+  test('ModuleProvider closeTab removes from active list', () {
+    final mockProcessManager = MockProcessManager();
+    final provider = ModuleProvider(processManager: mockProcessManager);
+
+    final module = Module(id: 'm1', name: 'M1', description: 'D1', directory: 'd1');
+    provider.modules = [module];
+    provider.activeModuleIds.add('m1');
+
+    provider.closeTab('m1');
+
+    expect(provider.activeModuleIds, isNot(contains('m1')));
+  });
+
+  test('ModuleProvider recheckPython toggles loading', () async {
+    final mockProcessManager = MockProcessManager();
+    final provider = ModuleProvider(processManager: mockProcessManager);
+
+    final future = provider.recheckPython();
+    expect(provider.isLoading, isTrue);
+    await future;
+    expect(provider.isLoading, isFalse);
   });
 }

@@ -90,14 +90,18 @@ class CatalogScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                  '${(module.installProgress * 100).toInt()}%'),
+                                '${(module.installProgress * 100).toInt()}%',
+                              ),
                             ],
                           )
                         else if (module.status == ModuleStatus.error)
                           Row(
                             children: [
-                              const Icon(Icons.error_outline,
-                                  color: Colors.red),
+
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -121,7 +125,8 @@ class CatalogScreen extends StatelessWidget {
                                   ? null
                                   : () {
                                       unawaited(
-                                          provider.installModule(module.id));
+                                        provider.installModule(module.id),
+                                      );
                                     },
                               child: const Text('Install'),
                             ),
@@ -176,7 +181,10 @@ class CatalogScreen extends StatelessWidget {
   }
 
   Widget _buildStatusBadge(
-      BuildContext context, Module module, bool isMuJoCoUnavailable) {
+    BuildContext context,
+    Module module,
+    bool isMuJoCoUnavailable,
+  ) {
     String text;
     Color color;
 

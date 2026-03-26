@@ -41,10 +41,7 @@ class NmtkSparklineChart extends StatelessWidget {
           height: height,
           child: CustomPaint(
             size: Size(double.infinity, height),
-            painter: _SparklinePainter(
-              values: values,
-              color: color,
-            ),
+            painter: _SparklinePainter(values: values, color: color),
           ),
         ),
       ],
@@ -75,7 +72,8 @@ class _SparklinePainter extends CustomPainter {
     final path = Path();
     for (int i = 0; i < values.length; i++) {
       final x = (i / (values.length - 1)) * size.width;
-      final y = size.height - ((values[i] - minVal) / effectiveRange) * size.height;
+      final y =
+          size.height - ((values[i] - minVal) / effectiveRange) * size.height;
       if (i == 0) {
         path.moveTo(x, y);
       } else {

@@ -59,7 +59,8 @@ void main() {
       MultiProvider(
         providers: [
           ChangeNotifierProvider<ModuleProvider>(
-              create: (_) => LocalMockModuleProvider()),
+            create: (_) => LocalMockModuleProvider(),
+          ),
         ],
         child: const NeuroToolkitApp(),
       ),

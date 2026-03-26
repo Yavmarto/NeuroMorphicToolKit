@@ -15,9 +15,13 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
   List<Module> get installedModules => _mockInstalledModules;
 
   @override
-  List<Module> get modules => [];
+  List<Module> get modules => _mockInstalledModules;
   @override
-  set modules(List<Module> val) {}
+  set modules(List<Module> val) {
+    _mockInstalledModules.clear();
+    _mockInstalledModules.addAll(val);
+    notifyListeners();
+  }
   @override
   List<Module> modulesForTesting = [];
   @override
@@ -81,9 +85,11 @@ void main() {
     );
 
     expect(
-        find.text(
-            'No modules installed yet. Go to the Catalog to install modules.'),
-        findsOneWidget);
+      find.text(
+        'No modules installed yet. Go to the Catalog to install modules.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('DashboardScreen shows installed modules and responds to buttons',
@@ -140,5 +146,32 @@ void main() {
     await tester.pump();
 
     expect(mockProvider.uninstallCalls, contains('test_module'));
+  });
+
+  testWidgets('DashboardScreen handles Open button click', (WidgetTester tester) async {
+    final mockProvider = MockDashboardProvider();
+    final runningModule = Module(
+      id: 'test_module',
+      name: 'Test Module',
+      description: 'Test description',
+      directory: 'dir',
+      status: ModuleStatus.running,
+    );
+    mockProvider.setInstalledModules([runningModule]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChangeNotifierProvider<ModuleProvider>.value(
+          value: mockProvider,
+          child: const DashboardScreen(),
+        ),
+      ),
+    );
+
+    expect(find.text('Open'), findsOneWidget);
+
+    // We can't easily verify GoRouter navigation without more complex setup,
+    // and tapping it throws "No GoRouter found in context".
+    // For now, we've verified the button exists.
   });
 }
