@@ -178,8 +178,8 @@ class BundleManager {
       final modulesDir =
           Directory(p.join(bundlePath, 'Contents', 'Resources', 'modules'));
       _isBundledCache = modulesDir.existsSync();
-    } else if (Platform.isWindows) {
-      // On Windows, modules are placed next to the executable in the installer.
+    } else if (Platform.isWindows || Platform.isLinux) {
+      // On Windows and Linux, modules are placed next to the executable in the installer.
       final exeDir = p.dirname(exe);
       final modulesDir = p.join(exeDir, 'modules');
       _isBundledCache = _env.directoryExists(modulesDir);

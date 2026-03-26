@@ -12,7 +12,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
   
   void setMuJoCoAvailable(bool value) {
-    _isMuJoCoAvailable = value;
+    _isMuJoCoAvailableValue = value;
     notifyListeners();
   }
 
@@ -66,7 +66,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   List<Module> get activeModules => [];
 
   @override
-  bool isMuJoCoAvailable() => _isMuJoCoAvailable;
+  bool isMuJoCoAvailable() => _isMuJoCoAvailableValue;
 
   @override
   Future<void> installModule(String moduleId) async {
