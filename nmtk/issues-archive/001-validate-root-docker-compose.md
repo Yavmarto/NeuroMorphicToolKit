@@ -1,19 +1,22 @@
-# Validate Root docker-compose Startup
+# Validate Root docker-compose.yml Startup
 
-**Priority:** Tier 1 — Blocks Demo Quality
-**Estimated Effort:** 2–4 hours
-**Source:** v4 Audit Report (2026-03-20)
+**Priority:** High — Blocks full-stack demo
+**Effort:** 2-4 hours
+**Source:** POC-100-TASKS.md T1-5
 
 ## Problem
 
-The root `docker-compose.yml` with 7 services, healthchecks, and profiles has been added but is untested. Build contexts, healthcheck endpoints, inter-service networking, and profile groupings (core/physics/full) need validation.
+The root `docker-compose.yml` has not been tested end-to-end. Build contexts, healthchecks, profiles, and inter-service dependencies are unvalidated.
 
 ## Acceptance Criteria
 
-- [ ] `docker-compose --profile core up` builds and starts core services successfully
-- [ ] `docker-compose --profile physics up` builds and starts physics-related services
-- [ ] `docker-compose --profile full up` builds and starts all 7 services
-- [ ] All healthchecks pass and report healthy status
-- [ ] Services can communicate over the shared Docker network
-- [ ] `.env` port configuration is respected by all services
-- [ ] Document any fixes required during validation
+- [ ] `docker-compose up --build` succeeds for default profile (neurocnl, neurosim, neurochip)
+- [ ] `docker-compose --profile full up --build` starts all 7 services
+- [ ] `docker-compose --profile physics up --build` starts neurocnl-physics variant
+- [ ] All services pass healthchecks
+- [ ] `scripts/validate_docker_compose.sh` passes (if exists)
+
+## Archived Predecessors
+
+- `issues-archive/22mar1_validate_root_docker_compose_yml_startup.md`
+- `issues-archive/001-validate-root-docker-compose.md`
