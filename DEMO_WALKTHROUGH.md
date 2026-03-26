@@ -100,6 +100,8 @@ In the editor, type a simple reflex arc specification. You can use the following
 The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.5
 The motor neuron MUST emit a spike ONLY IF membrane potential exceeds 0.7
 The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 2.0
+The sensory neuron membrane potential MUST decay WITH time constant of 0.01 seconds
+The sensory neuron MUST NOT fire DURING the refractory period of 0.01 seconds
 ```
 
 ### 2.5 Validate the Specification
