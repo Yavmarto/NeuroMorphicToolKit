@@ -55,14 +55,16 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   void _startPollingForActiveModules() {
     final provider = context.read<ModuleProvider>();
     for (final module in provider.activeModules) {
-      if (!(_readyStatus[module.id] ?? false) && !_pollTimers.containsKey(module.id)) {
+      if (!(_readyStatus[module.id] ?? false) &&
+          !_pollTimers.containsKey(module.id)) {
         _pollModuleHealth(module);
       }
     }
   }
 
   void _pollModuleHealth(Module module) {
-    _pollTimers[module.id] = Timer.periodic(const Duration(seconds: 2), (timer) async {
+    _pollTimers[module.id] =
+        Timer.periodic(const Duration(seconds: 2), (timer) async {
       try {
         if (module.port == null) return;
         final response = await http
@@ -97,7 +99,8 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onWebResourceError: (WebResourceError error) {
-            debugPrint('WebView error for ${module.name}: ${error.description}');
+            debugPrint(
+                'WebView error for ${module.name}: ${error.description}');
           },
         ),
       )
@@ -136,18 +139,21 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
           return Scaffold(
             appBar: AppBar(title: const Text('Workspace')),
             body: const Center(
-              child: Text('No modules launched. Go to Dashboard to launch a module.'),
+              child: Text(
+                  'No modules launched. Go to Dashboard to launch a module.'),
             ),
           );
         }
 
         // Ensure _activeModuleId is still valid
         if (!activeModules.any((m) => m.id == _activeModuleId)) {
-          _activeModuleId = activeModules.isNotEmpty ? activeModules.last.id : '';
+          _activeModuleId =
+              activeModules.isNotEmpty ? activeModules.last.id : '';
         }
 
         if (_activeModuleId.isEmpty) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
         }
 
         return Scaffold(
@@ -181,7 +187,8 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
               IconButton(
                 icon: const Icon(Icons.open_in_browser),
                 onPressed: () {
-                  final module = activeModules.firstWhere((m) => m.id == _activeModuleId);
+                  final module =
+                      activeModules.firstWhere((m) => m.id == _activeModuleId);
                   _launchInBrowser(module);
                 },
                 tooltip: 'Open in System Browser',
@@ -238,9 +245,11 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.warning, size: 48, color: Colors.orange),
+                                const Icon(Icons.warning,
+                                    size: 48, color: Colors.orange),
                                 const SizedBox(height: 16),
-                                const Text('WebView not supported on this platform.'),
+                                const Text(
+                                    'WebView not supported on this platform.'),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   onPressed: () => _launchInBrowser(module),

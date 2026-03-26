@@ -58,7 +58,8 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<ModuleProvider>(create: (_) => LocalMockModuleProvider()),
+          ChangeNotifierProvider<ModuleProvider>(
+              create: (_) => LocalMockModuleProvider()),
         ],
         child: const NeuroToolkitApp(),
       ),

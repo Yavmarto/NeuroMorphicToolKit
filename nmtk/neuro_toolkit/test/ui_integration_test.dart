@@ -8,8 +8,24 @@ import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _modules = [
-    Module(id: 'm1', name: 'Module 1', description: 'Desc 1', directory: '/tmp/m1', port: 8001, hasFrontend: true, status: ModuleStatus.running),
-    Module(id: 'm2', name: 'Module 2', description: 'Desc 2', directory: '/tmp/m2', port: 8002, hasFrontend: true, status: ModuleStatus.running),
+    Module(
+      id: 'm1',
+      name: 'Module 1',
+      description: 'Desc 1',
+      directory: '/tmp/m1',
+      port: 8001,
+      hasFrontend: true,
+      status: ModuleStatus.running,
+    ),
+    Module(
+      id: 'm2',
+      name: 'Module 2',
+      description: 'Desc 2',
+      directory: '/tmp/m2',
+      port: 8002,
+      hasFrontend: true,
+      status: ModuleStatus.running,
+    ),
   ];
 
   @override
@@ -74,7 +90,8 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 }
 
 void main() {
-  testWidgets('ToolViewScreen tab management test', (WidgetTester tester) async {
+  testWidgets('ToolViewScreen tab management test',
+      (WidgetTester tester) async {
     final mockProvider = MockModuleProvider();
 
     // Initial launch of m1
@@ -109,7 +126,8 @@ void main() {
 
     // Close m1 tab
     final closeButtonM1 = find.descendant(
-      of: find.ancestor(of: find.text('Module 1').last, matching: find.byType(Row)),
+      of: find.ancestor(
+          of: find.text('Module 1').last, matching: find.byType(Row)),
       matching: find.byIcon(Icons.close),
     );
 

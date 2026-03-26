@@ -27,7 +27,10 @@ class ModuleTabBar extends StatelessWidget {
         return Container(
           height: 48,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            color: Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.5),
             border: Border(
               bottom: BorderSide(
                 color: Theme.of(context).dividerColor,
@@ -74,7 +77,8 @@ class ModuleTabBar extends StatelessWidget {
                       Text(
                         module.name,
                         style: TextStyle(
-                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                          fontWeight:
+                              isActive ? FontWeight.bold : FontWeight.normal,
                           color: isActive
                               ? Theme.of(context).colorScheme.primary
                               : Theme.of(context).colorScheme.onSurfaceVariant,

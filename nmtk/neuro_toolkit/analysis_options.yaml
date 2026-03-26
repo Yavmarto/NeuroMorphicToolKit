@@ -22,5 +22,4 @@ linter:
     - unawaited_futures
     - always_use_package_imports
     - avoid_dynamic_calls
-    - require_trailing_commas
     - depend_on_referenced_packages: false

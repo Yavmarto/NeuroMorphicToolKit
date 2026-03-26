@@ -93,7 +93,8 @@ class MockProcessRunner implements ProcessRunner {
 
     // Special case for lsof to avoid hanging if ProcessManager calls it
     if (executable == 'lsof') {
-      return ProcessResult(0, 1, '', ''); // Return 1 to indicate no process found
+      return ProcessResult(
+          0, 1, '', ''); // Return 1 to indicate no process found
     }
 
     return runResult ?? ProcessResult(0, 0, 'success', '');
@@ -201,10 +202,11 @@ void main() {
         await completer.future.timeout(const Duration(seconds: 10));
     expect(updatedModule.status, ModuleStatus.starting);
 
-    expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
+    expect(
+        mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
-    subscription.cancel();
+    await subscription.cancel();
     tempDir.deleteSync(recursive: true);
   });
 

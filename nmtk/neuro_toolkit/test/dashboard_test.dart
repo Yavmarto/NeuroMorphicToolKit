@@ -66,7 +66,8 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
 }
 
 void main() {
-  testWidgets('DashboardScreen shows empty state when no modules are installed', (WidgetTester tester) async {
+  testWidgets('DashboardScreen shows empty state when no modules are installed',
+      (WidgetTester tester) async {
     final mockProvider = MockDashboardProvider();
     mockProvider.setInstalledModules([]);
 
@@ -79,10 +80,14 @@ void main() {
       ),
     );
 
-    expect(find.text('No modules installed yet. Go to the Catalog to install modules.'), findsOneWidget);
+    expect(
+        find.text(
+            'No modules installed yet. Go to the Catalog to install modules.'),
+        findsOneWidget);
   });
 
-  testWidgets('DashboardScreen shows installed modules and responds to buttons', (WidgetTester tester) async {
+  testWidgets('DashboardScreen shows installed modules and responds to buttons',
+      (WidgetTester tester) async {
     final mockProvider = MockDashboardProvider();
     final installedModule = Module(
       id: 'test_module',
@@ -116,7 +121,8 @@ void main() {
     expect(mockProvider.launchCalls, contains('test_module'));
 
     // Update status to running
-    final runningModule = installedModule.copyWith(status: ModuleStatus.running);
+    final runningModule =
+        installedModule.copyWith(status: ModuleStatus.running);
     mockProvider.setInstalledModules([runningModule]);
     await tester.pump();
 
