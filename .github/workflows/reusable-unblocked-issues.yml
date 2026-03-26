@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Invoke Jules on Unblocked Issue
-        uses: google-labs-code/jules-action@v1
+        uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           prompt: |
