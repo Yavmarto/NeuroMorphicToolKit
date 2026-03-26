@@ -88,7 +88,7 @@ class Module {
     List<String>? localDeps,
     ModuleStatus? status,
     double? installProgress,
-    String? healthStatus,
+    Object? healthStatus = const Object(),
   }) {
     return Module(
       id: id ?? this.id,
@@ -106,7 +106,9 @@ class Module {
       localDeps: localDeps ?? this.localDeps,
       status: status ?? this.status,
       installProgress: installProgress ?? this.installProgress,
-      healthStatus: healthStatus ?? this.healthStatus,
+      healthStatus: healthStatus is String?
+          ? healthStatus
+          : this.healthStatus,
     );
   }
 

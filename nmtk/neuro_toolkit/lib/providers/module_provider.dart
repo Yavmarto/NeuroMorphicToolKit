@@ -195,13 +195,15 @@ class ModuleProvider with ChangeNotifier {
   }
 
   Future<void> uninstallModule(String moduleId) async {
-    final index = _modules.indexWhere((Module m) => m.id == moduleId);
+    final modulesList = _modules;
+    final index = modulesList.indexWhere((Module m) => m.id == moduleId);
     if (index != -1) {
-      _modules[index] = _modules[index].copyWith(
+      final updated = modulesList[index].copyWith(
         status: ModuleStatus.notInstalled,
         installProgress: 0.0,
         healthStatus: null,
       );
+      modulesList[index] = updated;
       _activeModuleIds.remove(moduleId);
       notifyListeners();
     }
