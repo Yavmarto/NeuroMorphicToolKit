@@ -9,8 +9,8 @@
     "Neuro-Dream-Hand/README.md"
   ],
   "contract_kit": {
-    "contracts_dir": "docs/unified-dev-pipeline/neuro-dream-hand/contracts",
-    "properties_dir": "docs/unified-dev-pipeline/neuro-dream-hand/properties",
+    "contracts_dir": "Neuro-Dream-Hand/neurodreamhand/hardware",
+    "properties_dir": "Neuro-Dream-Hand/tests/properties",
     "agents_md": "docs/unified-dev-pipeline/neuro-dream-hand/AGENTS.md",
     "guardrails_md": "docs/unified-dev-pipeline/neuro-dream-hand/GUARDRAILS.md"
   },
@@ -25,14 +25,10 @@
     "auto-merge-jules-prs.yml"
   ],
   "workflow_gaps": [
-    "No dedicated property-test gate in CI",
-    "mypy is not strict across the package",
-    "Auto-merge and failure-fix templates are the older variants"
+    "mypy is not strict across the package"
   ],
   "required_updates": [
-    "Add reusable CDD-PBT CI job",
-    "Tighten type checking around hardware contract modules",
-    "Replace ci-failure-fix.yml and auto-merge-jules-prs.yml"
+    "Tighten type checking around hardware contract modules"
   ],
   "setup_commands": [
     "python -m pip install --upgrade pip",
@@ -58,7 +54,7 @@
         "Neuro-Dream-Hand/SPEC.md#4.3 EMG Ingestion",
         "Neuro-Dream-Hand/SPEC.md#5.1 Fault Injection"
       ],
-      "objective": "Create Pydantic v2 contracts for serial protocol, EMG stream, sensor frames, fault injection, crossbar export, and drop-test validation. Reference implementation in docs/unified-dev-pipeline/neuro-dream-hand/contracts/.",
+      "objective": "Create Pydantic v2 contracts for serial protocol, EMG stream, sensor frames, fault injection, crossbar export, and drop-test validation. Implementation in Neuro-Dream-Hand/neurodreamhand/hardware/ and Neuro-Dream-Hand/neurodreamhand/experiments/.",
       "conversion_steps": [
         "Copy hardware_contracts.py — SerialBridgeContract, SensorFrameContract, EMGStreamContract, EMGSpikeOutputContract, HITLLatencyContract, FaultInjectionContract, CrossbarExportContract, DropTestContract",
         "Validate command and sensor payload sizes, checksums, and value ranges before use",
@@ -86,7 +82,7 @@
         "Neuro-Dream-Hand/SPEC.md#Context: What the simulation has established",
         "Neuro-Dream-Hand/SPEC.md#4.1 Serial Bridge"
       ],
-      "objective": "Add 11 Hypothesis property tests for grip clamping, serial packets, ADC range, EMG output, fault injection bounds, crossbar conductance, and drop-test gap. Reference implementation in docs/unified-dev-pipeline/neuro-dream-hand/properties/.",
+      "objective": "Add 11 Hypothesis property tests for grip clamping, serial packets, ADC range, EMG output, fault injection bounds, crossbar conductance, and drop-test gap. Implementation in Neuro-Dream-Hand/tests/properties/.",
       "conversion_steps": [
         "Copy test_hitl_properties.py — TestSerialProtocolProperties, TestSensorFrameProperties, TestEMGProperties, TestFaultInjectionProperties, TestCrossbarProperties, TestDropTestProperties",
         "Configure Hypothesis CI profile"

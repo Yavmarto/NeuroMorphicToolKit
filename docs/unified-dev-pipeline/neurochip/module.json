@@ -9,23 +9,23 @@
     "Neurochip/README.md"
   ],
   "contract_kit": {
-    "contracts_dir": "docs/unified-dev-pipeline/neurochip/contracts",
-    "properties_dir": "docs/unified-dev-pipeline/neurochip/properties",
+    "contracts_dir": "Neurochip/neurochip/contracts",
+    "properties_dir": "Neurochip/neurochip/tests/properties",
     "agents_md": null,
     "guardrails_md": null
   },
   "existing_workflows": [
-    "ci.yml"
+    "ci.yml",
+    "ci-failure-fix.yml",
+    "feature-builder.yml",
+    "unblocked-issues.yml",
+    "auto-merge-jules-prs.yml"
   ],
   "workflow_gaps": [
-    "Missing ci-failure-fix.yml",
-    "Missing auto-merge-jules-prs.yml",
     "CI does not run property tests"
   ],
   "required_updates": [
-    "Add property test step to CI",
-    "Add reusable CDD-PBT CI job",
-    "Add auto-merge and failure-fix workflows"
+    "Add CDD-PBT verification gate to main CI"
   ],
   "setup_commands": [
     "pip install poetry",
@@ -50,7 +50,7 @@
         "Neurochip/neurochip_spec.md#NC-D2",
         "Neurochip/neurochip_spec.md#NC-D3"
       ],
-      "objective": "Create Pydantic contracts for hardware profiles (core count, memory, clock), deployment manifests (target device, firmware version, checksum), and quantization configs (bit-width, scaling factors). Enforce chip-specific limits at the type boundary.",
+      "objective": "Create Pydantic contracts for hardware profiles, deployment manifests, and quantization configs. Implementation in Neurochip/neurochip/contracts/.",
       "conversion_steps": [
         "Create HardwareProfile contract: core count 1-128, memory 1KB-16MB, clock 1MHz-1GHz",
         "Create DeploymentManifest contract: target device enum, firmware semver, checksum SHA-256",
@@ -78,7 +78,7 @@
         "Neurochip/neurochip_spec.md#NC-S1",
         "Neurochip/neurochip_spec.md#NC-S2"
       ],
-      "objective": "Add Hypothesis property tests verifying deployment integrity and quantization precision loss bounds.",
+      "objective": "Add Hypothesis property tests verifying deployment integrity and quantization precision loss bounds. Implementation in Neurochip/neurochip/tests/properties/.",
       "conversion_steps": [
         "Add properties for deployment manifest completeness and checksum validity",
         "Add properties for quantization: precision loss below threshold for any valid config",
