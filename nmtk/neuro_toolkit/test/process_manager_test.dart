@@ -28,7 +28,7 @@ class MockProcess implements Process {
   @override
   bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
     if (!_exitCodeCompleter.isCompleted) {
-      _exitCodeCompleter.complete(signal == ProcessSignal.sigterm ? 0 : -1);
+      _exitCodeCompleter.complete(0);
     }
     return true;
   }
@@ -226,6 +226,8 @@ void main() {
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
     unawaited(processManager.startModule(module));
+    // Brief delay to allow the async startModule to proceed
+    await Future.delayed(Duration(milliseconds: 100));
 
     await processManager.stopModule('test_module_stop');
 

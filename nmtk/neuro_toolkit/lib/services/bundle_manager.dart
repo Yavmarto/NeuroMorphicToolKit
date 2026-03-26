@@ -301,6 +301,12 @@ class BundleManager {
 
     final targetBase = await _appSupportModulesDir;
     final targetDir = Directory(targetBase);
+
+    // If version mismatch or missing marker, clean up first to avoid leftovers
+    if (await targetDir.exists()) {
+      debugPrint('BundleManager: Cleaning up old modules in Application Support...');
+      await targetDir.delete(recursive: true);
+    }
     await targetDir.create(recursive: true);
 
     final entries = await sourceDir.list().toList();
