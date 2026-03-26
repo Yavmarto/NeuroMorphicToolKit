@@ -142,7 +142,12 @@ class ProcessManager {
 
     if (!await moduleDir.exists()) {
       debugPrint('[${module.id}] ERROR: directory not found: $installDir');
-      throw Exception('Module directory not found: $installDir');
+      final isBundled = BundleManager().isBundled;
+      final mode = isBundled ? 'bundled' : 'development';
+      throw Exception(
+        'Module directory not found in $mode mode: $installDir. '
+        '${isBundled ? "The application bundle might be corrupted." : "Please ensure the repository submodules are initialized."}',
+      );
     }
 
     final venvPath = p.join(installDir, 'venv');
