@@ -23,7 +23,7 @@ on:
 
 jobs:
   sdd-context:
-    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/sdd-context-bridge.yml@main
+    uses: ./.github/workflows/sdd-context-bridge.yml
 
   implement:
     needs: sdd-context
@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Invoke Jules on Unblocked Issue
-        uses: google-labs-code/jules-invoke@v1
+        uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           prompt: |

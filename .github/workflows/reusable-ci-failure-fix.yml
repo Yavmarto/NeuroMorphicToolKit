@@ -24,7 +24,7 @@ on:
 
 jobs:
   sdd-context:
-    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/sdd-context-bridge.yml@main
+    uses: ./.github/workflows/sdd-context-bridge.yml
 
   fix-failure:
     needs: sdd-context
@@ -51,7 +51,7 @@ jobs:
             return logs.url;
 
       - name: Invoke Jules to fix CI failure
-        uses: google-labs-code/jules-invoke@v1
+        uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           prompt: |
