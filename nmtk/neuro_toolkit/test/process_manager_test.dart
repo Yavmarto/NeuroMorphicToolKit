@@ -1,3 +1,4 @@
+// ignore_for_file: unawaited_futures
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -196,7 +197,10 @@ void main() {
         await completer.future.timeout(const Duration(seconds: 5));
     expect(updatedModule.status, ModuleStatus.starting);
 
-    expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
+    expect(
+      mockRunner.calls.any((c) => c.arguments.contains('uvicorn')),
+      isTrue,
+    );
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
     await subscription.cancel();
@@ -225,13 +229,20 @@ void main() {
     final mockProcess = MockProcess();
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
+    final completer = Completer<void>();
+    final subscription = processManager.statusUpdates.listen((m) {
+      if (m.id == 'test_module_stop' && m.status == ModuleStatus.starting) {
+        if (!completer.isCompleted) completer.complete();
+      }
+    });
+
     await processManager.startModule(module);
-    // Brief delay to allow the async startModule to proceed
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await completer.future.timeout(const Duration(seconds: 5));
 
     await processManager.stopModule('test_module_stop');
 
     expect(await mockProcess.exitCode, 0);
+    await subscription.cancel();
 
     tempDir.deleteSync(recursive: true);
   });

@@ -1,157 +1,187 @@
 name: Auto-Resolve Merge Conflicts
 
+# Fires when a PR is opened/updated, or when main/dev changes (which can
+# cause existing PRs to become conflicted). Uses the GitHub API mergeable
+# field — more reliable than simulating merges with git.
+
 on:
   pull_request:
-    types: [labeled]
+    types: [opened, synchronize, reopened]
+    branches: [dev, main, master]
 
   push:
-    branches:
-      - main
-      - master
+    branches: [dev, main, master]
 
 jobs:
-  resolve-labeled-pr:
-    name: Resolve conflict on labeled PR
-    if: >
-      github.event_name == 'pull_request' &&
-      github.event.label.name == 'merge-conflict' &&
-      contains(fromJSON('["your-github-username"]'), github.event.sender.login)
-    runs-on: ubuntu-latest
+  # ── Detect which PRs are conflicted ──────────────────────────────────────────
+  detect:
+    name: Detect conflicted PRs
+    runs-on: self-hosted
     permissions:
-      contents: write
-      pull-requests: write
+      pull-requests: read
+    outputs:
+      found0: ${{ steps.scan.outputs.found0 }}
+      pr0:    ${{ steps.scan.outputs.pr0 }}
+      head0:  ${{ steps.scan.outputs.head0 }}
+      base0:  ${{ steps.scan.outputs.base0 }}
+      found1: ${{ steps.scan.outputs.found1 }}
+      pr1:    ${{ steps.scan.outputs.pr1 }}
+      head1:  ${{ steps.scan.outputs.head1 }}
+      base1:  ${{ steps.scan.outputs.base1 }}
+      found2: ${{ steps.scan.outputs.found2 }}
+      pr2:    ${{ steps.scan.outputs.pr2 }}
+      head2:  ${{ steps.scan.outputs.head2 }}
+      base2:  ${{ steps.scan.outputs.base2 }}
+      found3: ${{ steps.scan.outputs.found3 }}
+      pr3:    ${{ steps.scan.outputs.pr3 }}
+      head3:  ${{ steps.scan.outputs.head3 }}
+      base3:  ${{ steps.scan.outputs.base3 }}
+      found4: ${{ steps.scan.outputs.found4 }}
+      pr4:    ${{ steps.scan.outputs.pr4 }}
+      head4:  ${{ steps.scan.outputs.head4 }}
+      base4:  ${{ steps.scan.outputs.base4 }}
 
     steps:
-      - name: Checkout PR branch (full history)
-        uses: actions/checkout@v4
+      - name: Find conflicted PRs via GitHub API
+        id: scan
+        uses: actions/github-script@v7
         with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
 
-      - name: Fetch base branch
-        run: git fetch origin ${{ github.event.pull_request.base.ref }}
+            // Build the list of PRs to check
+            let toCheck = [];
 
-      - name: Detect conflicted files
-        id: detect
-        run: |
-          git merge --no-commit --no-ff "origin/${{ github.event.pull_request.base.ref }}" || true
-          CONFLICTS=$(git diff --name-only --diff-filter=U)
-          git merge --abort 2>/dev/null || true
-
-          if [ -z "$CONFLICTS" ]; then
-            echo "has_conflicts=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_conflicts=true"  >> "$GITHUB_OUTPUT"
-            echo "conflict_files<<EOF" >> "$GITHUB_OUTPUT"
-            echo "$CONFLICTS"          >> "$GITHUB_OUTPUT"
-            echo "EOF"                 >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Invoke Jules to resolve conflicts
-        if: steps.detect.outputs.has_conflicts == 'true'
-        uses: google-labs-code/jules-invoke@v1
-        with:
-          jules_api_key: ${{ secrets.JULES_API_KEY }}
-          prompt: |
-            This PR has merge conflicts that need to be resolved.
-
-            **PR:** #${{ github.event.pull_request.number }} — ${{ github.event.pull_request.title }}
-            **Head branch:** ${{ github.event.pull_request.head.ref }}
-            **Base branch:** ${{ github.event.pull_request.base.ref }}
-
-            **Conflicted files:**
-            ${{ steps.detect.outputs.conflict_files }}
-
-            Resolution process:
-            1. Run `git merge origin/${{ github.event.pull_request.base.ref }}`
-            2. For every conflict block, understand both sides and merge semantically
-            3. Run the test suite to verify nothing is broken
-            4. Stage, commit, and push to **${{ github.event.pull_request.head.ref }}**
-
-            Constraints:
-            - Do NOT change any logic outside conflict blocks
-            - Do NOT squash or rebase
-            - If conflict is in a lock file, regenerate it
-
-      - name: Remove merge-conflict label on success
-        if: steps.detect.outputs.has_conflicts == 'true'
-        run: |
-          gh pr edit "$PR_NUMBER" --remove-label "merge-conflict" \
-            --repo "${{ github.repository }}" || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-
-      - name: Comment — no conflict found
-        if: steps.detect.outputs.has_conflicts == 'false'
-        run: |
-          gh pr comment "$PR_NUMBER" \
-            --body "🟢 **Merge Conflict Resolver:** No conflict markers detected. The PR appears clean." \
-            --repo "${{ github.repository }}"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-
-  scan-and-resolve-on-push:
-    name: Scan jules/* PRs for new conflicts
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-
-    steps:
-      - name: Checkout default branch (full history)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Git
-        run: |
-          git config --global user.name  'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: Find conflicted jules/* PRs
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEFAULT_BRANCH: ${{ github.ref_name }}
-        run: |
-          PRS=$(gh pr list \
-            --state open \
-            --json number,headRefName,title,baseRefName \
-            --jq '.[] | select(.headRefName | startswith("jules/")) | @json')
-
-          if [ -z "$PRS" ]; then
-            echo "No open jules/* PRs found."
-            exit 0
-          fi
-
-          echo "$PRS" | while IFS= read -r PR_JSON; do
-            PR_NUMBER=$(echo "$PR_JSON"  | jq -r '.number')
-            HEAD_REF=$(echo "$PR_JSON"   | jq -r '.headRefName')
-            BASE_REF=$(echo "$PR_JSON"   | jq -r '.baseRefName')
-            PR_TITLE=$(echo "$PR_JSON"   | jq -r '.title')
-
-            echo "────────────────────────────────────────"
-            echo "Checking PR #$PR_NUMBER ($HEAD_REF → $BASE_REF): $PR_TITLE"
-
-            git fetch origin "$HEAD_REF" "$BASE_REF" 2>/dev/null || {
-              echo "Could not fetch branches for PR #$PR_NUMBER — skipping."
-              continue
+            if (context.eventName === 'pull_request') {
+              // Only check the PR that triggered this workflow
+              toCheck = [{ number: context.payload.pull_request.number }];
+            } else {
+              // push: check all open PRs targeting the branch that was pushed to
+              const branch = context.ref.replace('refs/heads/', '');
+              const prs = await github.paginate(github.rest.pulls.list, {
+                owner, repo, state: 'open', base: branch, per_page: 100
+              });
+              toCheck = prs.map(p => ({ number: p.number }));
             }
-            git checkout -B "$HEAD_REF" "origin/$HEAD_REF"
 
-            git merge --no-commit --no-ff "origin/$BASE_REF" 2>/dev/null || true
-            CONFLICTS=$(git diff --name-only --diff-filter=U)
-            git merge --abort 2>/dev/null || true
+            core.info(`Checking ${toCheck.length} PR(s) for conflicts...`);
 
-            if [ -z "$CONFLICTS" ]; then
-              echo "PR #$PR_NUMBER is clean — no conflicts."
-              continue
-            fi
+            // For each PR, poll the mergeable field (GitHub computes it async)
+            const conflicted = [];
+            for (const { number } of toCheck) {
+              let pr = null;
+              for (let attempt = 0; attempt < 6; attempt++) {
+                const { data } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+                if (data.mergeable !== null) { pr = data; break; }
+                core.info(`PR #${number}: mergeable is null, waiting 5s (attempt ${attempt + 1}/6)...`);
+                await new Promise(r => setTimeout(r, 5000));
+              }
 
-            echo "PR #$PR_NUMBER has conflicts — apply 'merge-conflict' label to trigger resolution."
-            git checkout "$DEFAULT_BRANCH"
-          done
+              if (!pr) {
+                core.warning(`PR #${number}: could not determine mergeability, skipping.`);
+                continue;
+              }
+
+              core.info(`PR #${number}: mergeable=${pr.mergeable}, state=${pr.mergeable_state}`);
+              if (pr.mergeable === false) {
+                conflicted.push({
+                  number: pr.number,
+                  head: pr.head.ref,
+                  base: pr.base.ref
+                });
+              }
+            }
+
+            core.info(`Found ${conflicted.length} conflicted PR(s).`);
+
+            // Emit outputs for up to 5 conflicted PRs
+            for (let i = 0; i < 5; i++) {
+              if (conflicted[i]) {
+                core.setOutput(`found${i}`, 'true');
+                core.setOutput(`pr${i}`,    String(conflicted[i].number));
+                core.setOutput(`head${i}`,  conflicted[i].head);
+                core.setOutput(`base${i}`,  conflicted[i].base);
+              } else {
+                core.setOutput(`found${i}`, 'false');
+                core.setOutput(`pr${i}`,    '0');
+                core.setOutput(`head${i}`,  '');
+                core.setOutput(`base${i}`,  '');
+              }
+            }
+
+  # ── Fix each conflicted PR (up to 5) via the centralized reusable workflow ───
+  fix-pr-0:
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr0 }}
+    needs: detect
+    if: needs.detect.outputs.found0 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
+    with:
+      pr_number: ${{ fromJson(needs.detect.outputs.pr0) }}
+      head_ref:  ${{ needs.detect.outputs.head0 }}
+      base_ref:  ${{ needs.detect.outputs.base0 }}
+    secrets:
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+
+  fix-pr-1:
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr1 }}
+    needs: detect
+    if: needs.detect.outputs.found1 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
+    with:
+      pr_number: ${{ fromJson(needs.detect.outputs.pr1) }}
+      head_ref:  ${{ needs.detect.outputs.head1 }}
+      base_ref:  ${{ needs.detect.outputs.base1 }}
+    secrets:
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+
+  fix-pr-2:
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr2 }}
+    needs: detect
+    if: needs.detect.outputs.found2 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
+    with:
+      pr_number: ${{ fromJson(needs.detect.outputs.pr2) }}
+      head_ref:  ${{ needs.detect.outputs.head2 }}
+      base_ref:  ${{ needs.detect.outputs.base2 }}
+    secrets:
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+
+  fix-pr-3:
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr3 }}
+    needs: detect
+    if: needs.detect.outputs.found3 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
+    with:
+      pr_number: ${{ fromJson(needs.detect.outputs.pr3) }}
+      head_ref:  ${{ needs.detect.outputs.head3 }}
+      base_ref:  ${{ needs.detect.outputs.base3 }}
+    secrets:
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+
+  fix-pr-4:
+    name: Fix conflicts in PR #${{ needs.detect.outputs.pr4 }}
+    needs: detect
+    if: needs.detect.outputs.found4 == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/reusable-merge-conflict-fixer.yml
+    with:
+      pr_number: ${{ fromJson(needs.detect.outputs.pr4) }}
+      head_ref:  ${{ needs.detect.outputs.head4 }}
+      base_ref:  ${{ needs.detect.outputs.base4 }}
+    secrets:
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
