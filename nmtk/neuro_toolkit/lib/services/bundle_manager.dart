@@ -502,6 +502,7 @@ class BundleManager {
     }
     await targetDir.create(recursive: true);
 
+    final entries = await Directory(sourcePath).list().toList();
     for (var i = 0; i < entries.length; i++) {
       if (entries[i] is Directory) {
         final moduleName = p.basename(entries[i].path);

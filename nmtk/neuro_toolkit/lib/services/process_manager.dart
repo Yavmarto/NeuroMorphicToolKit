@@ -351,19 +351,40 @@ class ProcessManager {
   /// Kill any leftover process listening on a port (from a previous crash/session).
   Future<void> _killProcessOnPort(int port) async {
     try {
-      final result = await _processRunner.run('lsof', ['-ti', ':$port']);
-      if (result.exitCode == 0) {
-        final pids = result.stdout.toString().trim().split('\n');
-        for (final pid in pids) {
-          if (pid.isNotEmpty) {
-            debugPrint('Killing leftover process $pid on port $port');
-            Process.killPid(int.parse(pid), ProcessSignal.sigkill);
+      if (Platform.isWindows) {
+        // Windows: netstat -ano | findstr :<port>
+        final result = await _processRunner.run('netstat', ['-ano']);
+        if (result.exitCode == 0) {
+          final lines = result.stdout.toString().split('\n');
+          for (final line in lines) {
+            if (line.contains(':$port') && line.contains('LISTENING')) {
+              final parts = line.trim().split(RegExp(r'\s+'));
+              if (parts.length >= 5) {
+                final pid = parts.last;
+                debugPrint('Killing leftover process $pid on port $port');
+                await _processRunner.run('taskkill', ['/F', '/PID', pid]);
+              }
+            }
           }
         }
-        // Brief wait for port to be released
-        await Future<void>.delayed(const Duration(milliseconds: 500));
+      } else {
+        // macOS/Linux: lsof -ti :<port>
+        final result = await _processRunner.run('lsof', ['-ti', ':$port']);
+        if (result.exitCode == 0) {
+          final pids = result.stdout.toString().trim().split('\n');
+          for (final pid in pids) {
+            if (pid.isNotEmpty) {
+              debugPrint('Killing leftover process $pid on port $port');
+              Process.killPid(int.parse(pid), ProcessSignal.sigkill);
+            }
+          }
+        }
       }
-    } catch (_) {}
+      // Brief wait for port to be released
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    } catch (e) {
+      debugPrint('Error killing process on port $port: $e');
+    }
   }
 
   Future<void> startModule(Module module, {bool isRetry = false}) async {
@@ -565,14 +586,14 @@ class ProcessManager {
     debugPrint(
       'Starting health polling every 5 seconds for ${_modules.length} modules',
     );
-    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
+    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
           await _checkHealth(module);
         } else if (module.status == ModuleStatus.error) {
           final nextRetry = _nextRetryTimes[module.id];
-          if (nextRetry != null && now.isAfter(nextRetry)) {
+          if (nextRetry != null && DateTime.now().isAfter(nextRetry)) {
             debugPrint('Retrying module ${module.id}');
             unawaited(startModule(module, isRetry: true));
           }

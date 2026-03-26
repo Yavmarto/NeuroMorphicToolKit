@@ -63,6 +63,68 @@ jobs:
           cd nmtk/neuro_toolkit
           flutter test
 
+      - name: Run Integration tests (neuro_toolkit)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test integration_test/app_test.dart
+
+      - name: Run E2E Launcher tests (neuro_toolkit)
+        env:
+          FORCE_E2E: true
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test test/launcher_e2e_test.dart
+
+  test-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+      - name: Run tests
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test
+      - name: Run E2E tests
+        env:
+          FORCE_E2E: true
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test test/launcher_e2e_test.dart
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+      - name: Run tests
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test
+      - name: Run E2E tests
+        env:
+          FORCE_E2E: true
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test test/launcher_e2e_test.dart
+
   build-linux:
     needs: test
     runs-on: self-hosted
