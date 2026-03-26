@@ -9,8 +9,8 @@
     "neurocnl/README.md"
   ],
   "contract_kit": {
-    "contracts_dir": "docs/unified-dev-pipeline/neurocnl/contracts",
-    "properties_dir": "docs/unified-dev-pipeline/neurocnl/properties",
+    "contracts_dir": "neurocnl/neurocnl/contracts",
+    "properties_dir": "neurocnl/neurocnl/tests/properties",
     "agents_md": "docs/unified-dev-pipeline/neurocnl/AGENTS.md",
     "guardrails_md": "docs/unified-dev-pipeline/neurocnl/GUARDRAILS.md"
   },
@@ -23,14 +23,10 @@
     "auto-merge-jules-prs.yml"
   ],
   "workflow_gaps": [
-    "mypy is present but not strict in pyproject.toml",
-    "No property-test gate in CI",
-    "Auto-merge and failure-fix templates are the older variants"
+    "No CDD-PBT status check gate in CI"
   ],
   "required_updates": [
-    "Tighten type checking around the contract layer",
-    "Add reusable CDD-PBT CI job",
-    "Replace ci-failure-fix.yml and auto-merge-jules-prs.yml"
+    "Add CDD-PBT verification gate to main CI"
   ],
   "setup_commands": [
     "python -m pip install --upgrade pip",
@@ -55,7 +51,7 @@
         "neurocnl/neuromorphic_spec_plan.md#Layer 2 — Behavioral Spec",
         "neurocnl/neuromorphic_spec_plan.md#Layer 3 — Validation Assertions"
       ],
-      "objective": "Create Pydantic v2 contracts for LIF neurons (18 Layer 1 invariants), hardware exports (Loihi, SpiNNaker, Teensy), and the CNL parse → validate → simulate pipeline. Reference implementation in docs/unified-dev-pipeline/neurocnl/contracts/.",
+      "objective": "Create Pydantic v2 contracts for LIF neurons (18 Layer 1 invariants), hardware exports (Loihi, SpiNNaker, Teensy), and the CNL parse → validate → simulate pipeline. Implementation in neurocnl/neurocnl/contracts/.",
       "conversion_steps": [
         "Copy neuron_params.py — LIFNeuronContract, SynapticContract, STDPContract, PopulationContract",
         "Copy hardware_export.py — LoihiExportContract, SpiNNakerExportContract, TeensyExportContract",
@@ -86,7 +82,7 @@
         "neurocnl/neuromorphic_spec_plan.md#The Honest Risk",
         "neurocnl/neuromorphic_spec_plan.md#Step 4 — Validate Against Nengo Simulation"
       ],
-      "objective": "Add 12+ Hypothesis property tests covering physics invariants, contract rejection, Loihi export, metamorphic relations, and CNL pipeline consistency. Reference implementation in docs/unified-dev-pipeline/neurocnl/properties/.",
+      "objective": "Add 12+ Hypothesis property tests covering physics invariants, contract rejection, Loihi export, metamorphic relations, and CNL pipeline consistency. Implementation in neurocnl/neurocnl/tests/properties/.",
       "conversion_steps": [
         "Copy test_physics_properties.py — TestPhysicsInvariants (500 examples each), TestContractRejection, TestLoihiProperties, TestMetamorphicProperties, TestCNLPipelineProperties",
         "Configure Hypothesis CI profile (200 examples, deterministic seed)"

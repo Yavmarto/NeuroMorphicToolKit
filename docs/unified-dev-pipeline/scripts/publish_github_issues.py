@@ -197,17 +197,28 @@ def main() -> int:
         state = json.loads(state_path.read_text()) if state_path.exists() else {}
 
         for issue in topo_sort_issues(module["migration_issues"]):
-            if issue["id"] in state:
-                continue
-            dependency_numbers = [
-                state[dep] for dep in issue.get("depends_on", []) if dep in state
-            ]
+            entry = state.get(issue["id"])
+            if entry:
+                # Handle both legacy {"ID": 123} and new {"ID": {"number": 123, "status": "..."}}
+                if isinstance(entry, dict) and entry.get("status") in ("completed", "published"):
+                    continue
+                if not isinstance(entry, dict):  # Legacy format, assume published
+                    continue
+
+            # Resolve dependency issue numbers for the body
+            dependency_numbers = []
+            for dep_id in issue.get("depends_on", []):
+                dep_entry = state.get(dep_id)
+                if dep_entry:
+                    dep_num = dep_entry["number"] if isinstance(dep_entry, dict) else dep_entry
+                    dependency_numbers.append(dep_num)
+
             body = build_body(issue, dependency_numbers)
             issue_number = create_issue(
                 repo, issue["title"], issue["labels"], body, args.execute,
             )
             if issue_number is not None:
-                state[issue["id"]] = issue_number
+                state[issue["id"]] = {"number": issue_number, "status": "published"}
                 state_path.write_text(json.dumps(state, indent=2, sort_keys=True))
                 print(f"Created #{issue_number} for {module['module_name']}: {issue['title']}")
 

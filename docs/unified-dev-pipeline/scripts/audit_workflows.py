@@ -28,12 +28,24 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    print("| Module | Framework | Existing Workflows | Missing / Broken | Required Updates |")
+    print("| Module | Framework | Workflows Found | Missing / Broken | Required Updates |")
     print("|---|---|---|---|---|")
     for config_path in sorted(args.root.glob("*/module.json")):
         module = json.loads(config_path.read_text())
         framework = module.get("framework", "unknown")
-        existing = ", ".join(module.get("existing_workflows", [])) or "—"
+
+        # Verify if listed workflows actually exist in the repo
+        repo_path = args.root.parents[1] / module["repo_path"]
+        workflow_dir = repo_path / ".github" / "workflows"
+
+        found = []
+        for wf in module.get("existing_workflows", []):
+            if (workflow_dir / wf).exists():
+                found.append(wf)
+            else:
+                found.append(f"~~{wf}~~")
+
+        existing = ", ".join(found) or "—"
         missing = ", ".join(module.get("workflow_gaps", [])) or "—"
         required = ", ".join(module.get("required_updates", [])) or "—"
         print(f"| {module['module_name']} | {framework} | {existing} | {missing} | {required} |")
