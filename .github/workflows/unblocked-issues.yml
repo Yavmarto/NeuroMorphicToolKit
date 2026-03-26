@@ -46,7 +46,7 @@ jobs:
     strategy:
       matrix:
         issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix) }}
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-unblocked-issues.yml@main
+    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/reusable-unblocked-issues.yml@main
     with:
       issue_title: ${{ needs.implement.outputs.issue_title || 'Unblocked Issue' }}
       issue_body: ${{ needs.implement.outputs.issue_body || '' }}

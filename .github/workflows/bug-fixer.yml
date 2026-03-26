@@ -7,7 +7,7 @@ on:
 jobs:
   fix-bug:
     if: ${{ github.event.label.name == 'bug' }}
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-bug-fixer.yml@main
+    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/reusable-bug-fixer.yml@main
     with:
       issue_title: ${{ github.event.issue.title }}
       issue_body: ${{ github.event.issue.body }}

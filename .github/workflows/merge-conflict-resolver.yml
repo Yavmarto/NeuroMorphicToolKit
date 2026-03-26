@@ -115,7 +115,7 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr0 }}
     needs: detect
     if: needs.detect.outputs.found0 == 'true'
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
+    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr0) }}
       head_ref:  ${{ needs.detect.outputs.head0 }}
@@ -127,7 +127,7 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr1 }}
     needs: detect
     if: needs.detect.outputs.found1 == 'true'
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
+    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr1) }}
       head_ref:  ${{ needs.detect.outputs.head1 }}
@@ -139,7 +139,7 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr2 }}
     needs: detect
     if: needs.detect.outputs.found2 == 'true'
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
+    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr2) }}
       head_ref:  ${{ needs.detect.outputs.head2 }}
@@ -151,7 +151,7 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr3 }}
     needs: detect
     if: needs.detect.outputs.found3 == 'true'
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
+    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr3) }}
       head_ref:  ${{ needs.detect.outputs.head3 }}
@@ -163,7 +163,7 @@ jobs:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr4 }}
     needs: detect
     if: needs.detect.outputs.found4 == 'true'
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
+    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/reusable-merge-conflict-fixer.yml@main
     with:
       pr_number: ${{ fromJson(needs.detect.outputs.pr4) }}
       head_ref:  ${{ needs.detect.outputs.head4 }}

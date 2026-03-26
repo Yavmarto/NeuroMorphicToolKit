@@ -7,7 +7,7 @@ on:
 jobs:
   auto-merge:
     if: ${{ startsWith(github.head_ref, 'jules/') }}
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-auto-merge.yml@main
+    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/reusable-auto-merge.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
       head_ref: ${{ github.head_ref }}

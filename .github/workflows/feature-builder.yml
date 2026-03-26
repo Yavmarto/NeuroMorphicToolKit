@@ -7,7 +7,7 @@ on:
 jobs:
   build-feature:
     if: ${{ github.event.label.name == 'feature' || github.event.label.name == 'agent' }}
-    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-feature-builder.yml@main
+    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/reusable-feature-builder.yml@main
     with:
       issue_title: ${{ github.event.issue.title }}
       issue_body: ${{ github.event.issue.body }}
