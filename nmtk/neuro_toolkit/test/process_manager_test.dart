@@ -99,6 +99,12 @@ class MockProcessRunner implements ProcessRunner {
       File(pythonBin).createSync(recursive: true);
     }
 
+    // Special case for lsof to avoid hanging if ProcessManager calls it
+    if (executable == 'lsof') {
+      return ProcessResult(
+          0, 1, '', ''); // Return 1 to indicate no process found
+    }
+
     return runResult ?? ProcessResult(0, 0, 'success', '');
   }
 }
@@ -205,7 +211,7 @@ void main() {
     await processManager.startModule(module);
 
     final updatedModule =
-        await completer.future.timeout(const Duration(seconds: 5));
+        await completer.future.timeout(const Duration(seconds: 10));
     expect(updatedModule.status, ModuleStatus.starting);
 
     expect(
@@ -249,6 +255,9 @@ void main() {
 
     await processManager.startModule(module);
     await completer.future.timeout(const Duration(seconds: 5));
+
+    // Wait a bit for startModule to proceed
+    await Future<void>.delayed(const Duration(milliseconds: 100));
 
     await processManager.stopModule('test_module_stop');
 

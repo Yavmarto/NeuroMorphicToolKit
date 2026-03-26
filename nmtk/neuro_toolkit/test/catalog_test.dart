@@ -21,6 +21,10 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
   @override
   List<Module> get modules => _mockModules;
+  @override
+  set modules(List<Module> val) {}
+  @override
+  List<Module> modulesForTesting = [];
 
   @override
   set modules(List<Module> val) {
