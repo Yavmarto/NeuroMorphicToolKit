@@ -190,7 +190,7 @@ void main() {
       }
     });
 
-    unawaited(processManager.startModule(module));
+    await processManager.startModule(module);
 
     final updatedModule =
         await completer.future.timeout(const Duration(seconds: 5));
@@ -199,7 +199,7 @@ void main() {
     expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
-    subscription.cancel();
+    await subscription.cancel();
     tempDir.deleteSync(recursive: true);
   });
 
@@ -225,7 +225,7 @@ void main() {
     final mockProcess = MockProcess();
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
-    unawaited(processManager.startModule(module));
+    await processManager.startModule(module);
 
     // Give it a small delay for startModule to reach _runningProcesses[module.id] = process
     await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -262,7 +262,7 @@ void main() {
         : p.join(venvPath, 'bin', 'python');
     File(pythonExe).createSync(recursive: true);
 
-    unawaited(processManager.startModule(module));
+    await processManager.startModule(module);
 
     // Verify lsof was called for the port
     expect(

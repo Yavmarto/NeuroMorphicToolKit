@@ -352,11 +352,11 @@ class ProcessManager {
           healthStatus: code == 0 ? null : 'Process exited with code $code',
         );
         _statusController.add(updatedModuleStopped);
-      }));
+      }),);
 
       // Give it some time to start up
       await Future<void>.delayed(const Duration(seconds: 2));
-      unawaited(_checkHealth(module));
+      unawaited(_checkHealth(module),);
     } catch (e) {
       final updatedModuleError = module.copyWith(
         status: ModuleStatus.error,

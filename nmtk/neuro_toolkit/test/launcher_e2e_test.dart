@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, unawaited_futures
+// ignore_for_file: unawaited_futures
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
