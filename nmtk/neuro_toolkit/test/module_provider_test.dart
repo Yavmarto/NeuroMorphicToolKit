@@ -69,7 +69,7 @@ void main() {
     final mockProcessManager = MockProcessManager();
     final provider = ModuleProvider(processManager: mockProcessManager);
 
-    provider.modulesForTesting = [
+    provider.modules = [
       Module(id: 'm1', name: 'M1', description: 'D1', directory: 'd1', status: ModuleStatus.notInstalled),
       Module(id: 'm2', name: 'M2', description: 'D2', directory: 'd2', status: ModuleStatus.installed),
     ];
@@ -85,12 +85,7 @@ void main() {
     final provider = ModuleProvider(processManager: mockProcessManager);
 
     final module = Module(id: 'm1', name: 'M1', description: 'D1', directory: 'd1', status: ModuleStatus.notInstalled);
-    provider.modulesForTesting = [module];
-
-    // Status is updated via stream from MockProcessManager.
-    // However, ModuleProvider's listener is only set up in _init(),
-    // which happens when it's initialized.
-    // We can simulate the status update directly if needed.
+    provider.modules = [module];
 
     await provider.installModule('m1');
 
@@ -107,7 +102,7 @@ void main() {
     final provider = ModuleProvider(processManager: mockProcessManager);
 
     final module = Module(id: 'm1', name: 'M1', description: 'D1', directory: 'd1', status: ModuleStatus.installed);
-    provider.modulesForTesting = [module];
+    provider.modules = [module];
     mockProcessManager.modules = [module];
 
     await provider.launchModule('m1');
@@ -125,5 +120,48 @@ void main() {
     // Simulate status update
     provider.modules[0] = provider.modules[0].copyWith(status: ModuleStatus.installed);
     expect(provider.modules.first.status, ModuleStatus.installed);
+  });
+
+  test('ModuleProvider uninstallModule resets state', () async {
+    final mockProcessManager = MockProcessManager();
+    final provider = ModuleProvider(processManager: mockProcessManager);
+
+    final module = Module(
+      id: 'm1',
+      name: 'M1',
+      description: 'D1',
+      directory: 'd1',
+      status: ModuleStatus.installed,
+      healthStatus: 'Running fine',
+    );
+    provider.modules = [module];
+
+    await provider.uninstallModule('m1');
+
+    expect(provider.modules.first.status, ModuleStatus.notInstalled);
+    expect(provider.modules.first.healthStatus, isNull);
+  });
+
+  test('ModuleProvider closeTab removes from active list', () {
+    final mockProcessManager = MockProcessManager();
+    final provider = ModuleProvider(processManager: mockProcessManager);
+
+    final module = Module(id: 'm1', name: 'M1', description: 'D1', directory: 'd1');
+    provider.modules = [module];
+    provider.activeModuleIds.add('m1');
+
+    provider.closeTab('m1');
+
+    expect(provider.activeModuleIds, isNot(contains('m1')));
+  });
+
+  test('ModuleProvider recheckPython toggles loading', () async {
+    final mockProcessManager = MockProcessManager();
+    final provider = ModuleProvider(processManager: mockProcessManager);
+
+    final future = provider.recheckPython();
+    expect(provider.isLoading, isTrue);
+    await future;
+    expect(provider.isLoading, isFalse);
   });
 }
