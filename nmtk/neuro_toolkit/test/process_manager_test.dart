@@ -199,7 +199,7 @@ void main() {
     expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
-    subscription.cancel();
+    await subscription.cancel();
     tempDir.deleteSync(recursive: true);
   });
 
@@ -225,7 +225,7 @@ void main() {
     final mockProcess = MockProcess();
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
-    unawaited(processManager.startModule(module));
+    await processManager.startModule(module);
 
     await processManager.stopModule('test_module_stop');
 
