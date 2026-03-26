@@ -433,7 +433,7 @@ class ProcessManager {
           status: newStatus,
           healthStatus: healthInfo,
         );
-        _statusController.add(updatedModule,);
+        _statusController.add(updatedModule);
       }
     } catch (e) {
       if (module.status == ModuleStatus.running) {
