@@ -21,20 +21,15 @@ ArchitecturesInstallIn64BitMode=x64compatible
 
 [Files]
 ; Main Flutter application
-Source: "..\..\neuro_toolkit\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+Source: "..\..\neuro_toolkit\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs; Excludes: "python\*,modules\*"
 
 ; Submodules (Source code)
 ; We exclude development artifacts to keep the installer size manageable.
 ; We specifically exclude non-web frontend builds but keep frontend\build\web.
 #define SubmoduleExcludes ".git venv __pycache__ node_modules .dart_tool frontend\build\windows frontend\build\linux frontend\build\android frontend\build\ios frontend\build\macos frontend\.dart_tool *.egg-info .mypy_cache .ruff_cache .pytest_cache"
 
-Source: "..\..\..\neurocnl\*"; DestDir: "{app}\modules\neurocnl"; Flags: ignoreversion recursesubdirs; Excludes: "{#SubmoduleExcludes}"
-Source: "..\..\..\Neuro-Dream-Hand\*"; DestDir: "{app}\modules\Neuro-Dream-Hand"; Flags: ignoreversion recursesubdirs; Excludes: "{#SubmoduleExcludes}"
-Source: "..\..\..\Neurosim\*"; DestDir: "{app}\modules\Neurosim"; Flags: ignoreversion recursesubdirs; Excludes: "{#SubmoduleExcludes}"
-Source: "..\..\..\Neurobench\*"; DestDir: "{app}\modules\Neurobench"; Flags: ignoreversion recursesubdirs; Excludes: "{#SubmoduleExcludes}"
-Source: "..\..\..\Neurochip\*"; DestDir: "{app}\modules\Neurochip"; Flags: ignoreversion recursesubdirs; Excludes: "{#SubmoduleExcludes}"
-Source: "..\..\..\Neurosense\*"; DestDir: "{app}\modules\Neurosense"; Flags: ignoreversion recursesubdirs; Excludes: "{#SubmoduleExcludes}"
-Source: "..\..\..\Neurohub\*"; DestDir: "{app}\modules\Neurohub"; Flags: ignoreversion recursesubdirs; Excludes: "{#SubmoduleExcludes}"
+; Bundled Submodules
+Source: "..\..\neuro_toolkit\build\windows\x64\runner\Release\modules\*"; DestDir: "{app}\modules"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
