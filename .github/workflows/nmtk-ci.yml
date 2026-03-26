@@ -1,0 +1,108 @@
+name: NMTK Launcher CI
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'nmtk/neuro_toolkit/**'
+      - 'nmtk_ui_core/**'
+      - '.github/workflows/nmtk-ci.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'nmtk/neuro_toolkit/**'
+      - 'nmtk_ui_core/**'
+      - '.github/workflows/nmtk-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        flutter_channel: [stable, beta]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ matrix.flutter_channel }}
+          cache: true
+
+      - name: Install dependencies (nmtk_ui_core)
+        run: |
+          cd nmtk_ui_core
+          flutter pub get
+
+      - name: Install dependencies (neuro_toolkit)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+
+      - name: Format check
+        run: |
+          flutter format --set-exit-if-changed nmtk_ui_core nmtk/neuro_toolkit
+
+      - name: Analyze (nmtk_ui_core)
+        run: |
+          cd nmtk_ui_core
+          flutter analyze
+
+      - name: Analyze (neuro_toolkit)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter analyze
+
+      - name: Run tests (nmtk_ui_core)
+        run: |
+          cd nmtk_ui_core
+          flutter test
+
+      - name: Run tests (neuro_toolkit)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test
+
+  build-linux:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev libgcrypt20-dev libsecret-1-dev libsystemd-dev clang cmake ninja-build pkg-config
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Build Linux
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+          flutter build linux
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-launcher-linux
+          path: nmtk/neuro_toolkit/build/linux/x64/release/bundle/
+
+  build-macos:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Build macOS
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+          flutter build macos
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-launcher-macos
+          path: nmtk/neuro_toolkit/build/macos/Build/Products/Release/

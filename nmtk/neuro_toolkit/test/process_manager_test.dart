@@ -225,11 +225,20 @@ void main() {
     final mockProcess = MockProcess();
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
+    final completer = Completer<void>();
+    final subscription = processManager.statusUpdates.listen((m) {
+      if (m.id == 'test_module_stop' && m.status == ModuleStatus.starting) {
+        if (!completer.isCompleted) completer.complete();
+      }
+    });
+
     unawaited(processManager.startModule(module));
+    await completer.future.timeout(const Duration(seconds: 5));
 
     await processManager.stopModule('test_module_stop');
 
     expect(await mockProcess.exitCode, 0);
+    await subscription.cancel();
 
     tempDir.deleteSync(recursive: true);
   });
