@@ -190,7 +190,7 @@ void main() {
       }
     });
 
-    unawaited(processManager.startModule(module));
+    await processManager.startModule(module);
 
     final updatedModule =
         await completer.future.timeout(const Duration(seconds: 5));
@@ -199,7 +199,7 @@ void main() {
     expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
-    subscription.cancel();
+    await subscription.cancel();
     tempDir.deleteSync(recursive: true);
   });
 
@@ -225,11 +225,20 @@ void main() {
     final mockProcess = MockProcess();
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
-    unawaited(processManager.startModule(module));
+    final completer = Completer<void>();
+    final sub = processManager.statusUpdates.listen((m) {
+      if (m.id == 'test_module_stop' && m.status == ModuleStatus.starting) {
+        completer.complete();
+      }
+    });
+
+    await processManager.startModule(module);
+    await completer.future.timeout(const Duration(seconds: 5));
 
     await processManager.stopModule('test_module_stop');
 
     expect(await mockProcess.exitCode, 0);
+    await sub.cancel();
 
     tempDir.deleteSync(recursive: true);
   });
