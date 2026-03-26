@@ -23,7 +23,7 @@ on:
 
 jobs:
   sdd-context:
-    uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/sdd-context-bridge.yml@main
+    uses: ./.github/workflows/sdd-context-bridge.yml
 
   implement:
     needs: sdd-context
