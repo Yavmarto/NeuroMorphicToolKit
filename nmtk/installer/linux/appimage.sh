@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Create AppImage for NeuroCNL Studio (Linux)
+# Create AppImage for NMTK Launcher (Linux)
 # Usage: ./appimage.sh [version]
 
-VERSION="${1:-dev}"
-BUNDLE_DIR="neurocnl/frontend/build/linux/x64/release/bundle"
-APPDIR="NeuroCNL-Studio.AppDir"
-OUTPUT="NeuroCNL-Studio-${VERSION}-x86_64.AppImage"
+VERSION="${1:-1.0.0}"
+BUNDLE_DIR="nmtk/neuro_toolkit/build/linux/x64/release/bundle"
+APPDIR="NMTK-Launcher.AppDir"
+OUTPUT="NMTK-Launcher-${VERSION}-x86_64.AppImage"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
@@ -19,21 +19,41 @@ fi
 
 # Create AppDir structure
 rm -rf "$APPDIR"
-mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+mkdir -p "$APPDIR/usr/bin/modules" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 
 # Copy Flutter bundle
 cp -r "$REPO_ROOT/${BUNDLE_DIR}"/* "$APPDIR/usr/bin/"
 
+# Bundle all 7 submodules
+echo "📦 Bundling submodules..."
+MODULES=("neurocnl" "Neurosim" "Neurochip" "Neurobench" "Neurosense" "Neurohub" "Neuro-Dream-Hand")
+
+for mod in "${MODULES[@]}"; do
+  if [ -d "$REPO_ROOT/$mod" ]; then
+    echo "  - Bundling $mod"
+    rsync -a --exclude='.git' --exclude='venv' --exclude='build' --exclude='__pycache__' \
+      "$REPO_ROOT/$mod/" "$APPDIR/usr/bin/modules/$mod/"
+  else
+    echo "  ⚠️ Warning: Module $mod not found at $REPO_ROOT/$mod"
+  fi
+done
+
 # Copy desktop file and AppRun
-cp "$SCRIPT_DIR/neurocnl-studio.desktop" "$APPDIR/"
+cp "$SCRIPT_DIR/nmtk.desktop" "$APPDIR/"
 cp "$SCRIPT_DIR/AppRun" "$APPDIR/"
 chmod +x "$APPDIR/AppRun"
 
 # Copy icons
-ICON_SRC="$REPO_ROOT/neurocnl/frontend/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png"
+# Using neuro_toolkit assets if available, or fallback to neurocnl icon for now
+ICON_SRC="$REPO_ROOT/nmtk/neuro_toolkit/linux/runner/resources/app_icon.png"
+if [ ! -f "$ICON_SRC" ]; then
+  # Fallback to the one used in the previous version if it exists
+  ICON_SRC="$REPO_ROOT/neurocnl/frontend/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png"
+fi
+
 if [ -f "$ICON_SRC" ]; then
-  cp "$ICON_SRC" "$APPDIR/neurocnl-studio.png"
-  cp "$ICON_SRC" "$APPDIR/usr/share/icons/hicolor/256x256/apps/neurocnl-studio.png"
+  cp "$ICON_SRC" "$APPDIR/nmtk.png"
+  cp "$ICON_SRC" "$APPDIR/usr/share/icons/hicolor/256x256/apps/nmtk.png"
 fi
 
 # Download appimagetool if not present
@@ -49,4 +69,4 @@ ARCH=x86_64 ./appimagetool-x86_64.AppImage "$APPDIR" "$OUTPUT"
 echo "✅ Created $OUTPUT"
 
 # Cleanup
-rm -rf "$APPDIR"
+# rm -rf "$APPDIR"

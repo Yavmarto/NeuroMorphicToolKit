@@ -17,6 +17,7 @@ else
 fi
 
 VERSION="${2:-dev}"
+SIGNING_IDENTITY="${3:-}"
 OUTPUT_FILE="NeuroMorphicToolKit-${VERSION}-macos.dmg"
 OUTPUT_PATH="$(pwd)/$OUTPUT_FILE"
 
@@ -59,5 +60,11 @@ create-dmg \
 
 # Cleanup staging directory
 rm -rf "$STAGING_DIR"
+
+# Sign DMG if identity provided
+if [ -n "$SIGNING_IDENTITY" ]; then
+  echo "==> Signing DMG with identity: $SIGNING_IDENTITY..."
+  codesign --force --sign "$SIGNING_IDENTITY" "$OUTPUT_PATH"
+fi
 
 echo "Created $OUTPUT_FILE ($(du -sh "$OUTPUT_PATH" | awk '{print $1}'))"

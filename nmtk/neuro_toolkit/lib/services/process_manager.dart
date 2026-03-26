@@ -79,9 +79,12 @@ class DefaultProcessRunner implements ProcessRunner {
 
 class ProcessManager {
   static final ProcessManager _instance = ProcessManager._internal();
-  factory ProcessManager({ProcessRunner? processRunner}) {
+  factory ProcessManager({ProcessRunner? processRunner, http.Client? httpClient}) {
     if (processRunner != null) {
       _instance._processRunner = processRunner;
+    }
+    if (httpClient != null) {
+      _instance._httpClient = httpClient;
     }
     return _instance;
   }
@@ -89,12 +92,19 @@ class ProcessManager {
   @visibleForTesting
   set processRunner(ProcessRunner runner) => _processRunner = runner;
 
+  @visibleForTesting
+  set httpClient(http.Client client) => _httpClient = client;
+
   ProcessManager._internal();
 
   ProcessRunner _processRunner = DefaultProcessRunner();
+  http.Client _httpClient = http.Client();
 
   final Map<String, Process> _runningProcesses = {};
   final Map<String, StreamController<String>> _outputControllers = {};
+  final Map<String, int> _retryCounts = {};
+  final Map<String, DateTime> _nextRetryTimes = {};
+  final Set<String> _intentionallyStopping = {};
   Timer? _healthTimer;
   bool _initialized = false;
   List<Module> _modules = [];
@@ -102,6 +112,54 @@ class ProcessManager {
   // Stream for status updates
   final _statusController = StreamController<Module>.broadcast();
   Stream<Module> get statusUpdates => _statusController.stream;
+
+  void _updateModuleStatus(Module module) {
+    final index = _modules.indexWhere((m) => m.id == module.id);
+    if (index != -1) {
+      _modules[index] = module;
+    }
+    _statusController.add(module);
+  }
+
+  void _scheduleRetry(Module module) {
+    final count = (_retryCounts[module.id] ?? 0) + 1;
+    _retryCounts[module.id] = count;
+
+    // Backoff: 5, 10, 20, 40, 60, 60...
+    int seconds = (5 * (1 << (count - 1)));
+    if (seconds > 60) seconds = 60;
+
+    final nextRetry = DateTime.now().add(Duration(seconds: seconds));
+    _nextRetryTimes[module.id] = nextRetry;
+
+    debugPrint('[${module.id}] Scheduled retry #$count in ${seconds}s at $nextRetry');
+
+    final updatedModule = module.copyWith(
+      status: ModuleStatus.error,
+      healthStatus: '${module.healthStatus ?? "Unhealthy"}. Retrying in ${seconds}s...',
+    );
+    _updateModuleStatus(updatedModule);
+  }
+
+  Future<void> _handleFailure(Module module, String? error) async {
+    if (module.status == ModuleStatus.stopping || _intentionallyStopping.contains(module.id)) {
+      return;
+    }
+
+    debugPrint('[${module.id}] Handling failure: $error');
+
+    final updatedModule = module.copyWith(
+      status: ModuleStatus.error,
+      healthStatus: error,
+    );
+    _updateModuleStatus(updatedModule);
+
+    if (_runningProcesses.containsKey(module.id)) {
+      await stopModule(module.id, isFailure: true);
+    }
+
+    _scheduleRetry(updatedModule);
+  }
 
   Future<void> init(List<Module> modules) async {
     if (_initialized) {
@@ -135,14 +193,22 @@ class ProcessManager {
     return p.normalize(p.join(module.directory, module.runPath));
   }
 
-  Future<void> installModule(Module module, {void Function(double)? onProgress}) async {
+  Future<void> installModule(
+    Module module, {
+    void Function(double)? onProgress,
+  }) async {
     final installDir = _installDir(module);
     final moduleDir = Directory(installDir);
     debugPrint('[${module.id}] installModule: installDir=$installDir');
 
     if (!await moduleDir.exists()) {
       debugPrint('[${module.id}] ERROR: directory not found: $installDir');
-      throw Exception('Module directory not found: $installDir');
+      final isBundled = BundleManager().isBundled;
+      final mode = isBundled ? 'bundled' : 'development';
+      throw Exception(
+        'Module directory not found in $mode mode: $installDir. '
+        '${isBundled ? "The application bundle might be corrupted." : "Please ensure the repository submodules are initialized."}',
+      );
     }
 
     final venvPath = p.join(installDir, 'venv');
@@ -152,7 +218,9 @@ class ProcessManager {
       if (!await venvDir.exists()) {
         onProgress?.call(0.1);
         final pythonBin = await BundleManager().pythonPath;
-        debugPrint('[${module.id}] Creating venv with: $pythonBin -m venv venv (in $installDir)');
+        debugPrint(
+          '[${module.id}] Creating venv with: $pythonBin -m venv venv (in $installDir)',
+        );
 
         var venvResult = await _processRunner.run(
           pythonBin,
@@ -161,7 +229,9 @@ class ProcessManager {
         );
 
         if (venvResult.exitCode != 0) {
-          debugPrint('[${module.id}] Normal venv failed (exit ${venvResult.exitCode}): ${venvResult.stderr}');
+          debugPrint(
+            '[${module.id}] Normal venv failed (exit ${venvResult.exitCode}): ${venvResult.stderr}',
+          );
           debugPrint('[${module.id}] Trying --without-pip fallback...');
           if (await venvDir.exists()) {
             await venvDir.delete(recursive: true);
@@ -182,21 +252,29 @@ class ProcessManager {
               : p.join(venvPath, 'bin', 'python');
 
           var pipBootstrap = await _processRunner.run(
-            venvPython, ['-m', 'ensurepip', '--default-pip'],
+            venvPython,
+            ['-m', 'ensurepip', '--default-pip'],
             workingDirectory: installDir,
           );
 
           if (pipBootstrap.exitCode != 0) {
-            debugPrint('[${module.id}] ensurepip failed, downloading get-pip.py...');
+            debugPrint(
+              '[${module.id}] ensurepip failed, downloading get-pip.py...',
+            );
             final getPipPath = p.join(installDir, 'get-pip.py');
             final curlResult = await _processRunner.run(
-              'curl', ['-sS', 'https://bootstrap.pypa.io/get-pip.py', '-o', getPipPath],
+              'curl',
+              ['-sS', 'https://bootstrap.pypa.io/get-pip.py', '-o', getPipPath],
             );
             if (curlResult.exitCode == 0) {
               pipBootstrap = await _processRunner.run(
-                venvPython, [getPipPath], workingDirectory: installDir,
+                venvPython,
+                [getPipPath],
+                workingDirectory: installDir,
               );
-              try { await File(getPipPath).delete(); } catch (_) {}
+              try {
+                await File(getPipPath).delete();
+              } catch (_) {}
             }
             if (pipBootstrap.exitCode != 0) {
               throw Exception('Failed to bootstrap pip in venv');
@@ -219,10 +297,15 @@ class ProcessManager {
         final repoRoot = p.normalize(p.join(module.directory, '..'));
         for (final dep in module.localDeps) {
           final depDir = p.join(repoRoot, dep);
-          debugPrint('[${module.id}] Installing local dep: $pipPath install $depDir');
-          final depResult = await _processRunner.run(pipPath, ['install', depDir], workingDirectory: installDir);
+          debugPrint(
+            '[${module.id}] Installing local dep: $pipPath install $depDir',
+          );
+          final depResult = await _processRunner
+              .run(pipPath, ['install', depDir], workingDirectory: installDir);
           if (depResult.exitCode != 0) {
-            debugPrint('[${module.id}] Local dep $dep FAILED: ${depResult.stderr}');
+            debugPrint(
+              '[${module.id}] Local dep $dep FAILED: ${depResult.stderr}',
+            );
             // Non-fatal — continue, the main install might still work
           } else {
             debugPrint('[${module.id}] Local dep $dep installed');
@@ -238,7 +321,9 @@ class ProcessManager {
       );
 
       if (pipResult.exitCode != 0) {
-        debugPrint('[${module.id}] pip install FAILED (exit ${pipResult.exitCode})');
+        debugPrint(
+          '[${module.id}] pip install FAILED (exit ${pipResult.exitCode})',
+        );
         debugPrint('[${module.id}] stderr: ${pipResult.stderr}');
         throw Exception('Failed to install dependencies: ${pipResult.stderr}');
       }
@@ -281,11 +366,17 @@ class ProcessManager {
     } catch (_) {}
   }
 
-  Future<void> startModule(Module module) async {
+  Future<void> startModule(Module module, {bool isRetry = false}) async {
     if (_runningProcesses.containsKey(module.id)) return;
     if (module.port == null) {
       throw Exception('Cannot start module ${module.id}: no port configured');
     }
+
+    if (!isRetry) {
+      _retryCounts.remove(module.id);
+      _nextRetryTimes.remove(module.id);
+    }
+    _intentionallyStopping.remove(module.id);
 
     // Kill any zombie process from a previous session occupying our port
     await _killProcessOnPort(module.port!);
@@ -297,8 +388,12 @@ class ProcessManager {
         ? p.join(venvPath, 'Scripts', 'python.exe')
         : p.join(venvPath, 'bin', 'python');
 
-    debugPrint('[${module.id}] startModule: installDir=$installDir runDir=$runDir');
-    debugPrint('[${module.id}] startModule: pythonPath=$pythonPath target=${module.uvicornTarget} port=${module.port}');
+    debugPrint(
+      '[${module.id}] startModule: installDir=$installDir runDir=$runDir',
+    );
+    debugPrint(
+      '[${module.id}] startModule: pythonPath=$pythonPath target=${module.uvicornTarget} port=${module.port}',
+    );
 
     // Guard: if venv doesn't exist, the module needs to be (re-)installed first
     if (!await File(pythonPath).exists()) {
@@ -311,20 +406,31 @@ class ProcessManager {
       }
       // Verify the install actually created the venv
       if (!await File(pythonPath).exists()) {
-        throw Exception('Install completed but venv python still not found at $pythonPath');
+        throw Exception(
+          'Install completed but venv python still not found at $pythonPath',
+        );
       }
     }
 
-    final updatedModuleStarting = module.copyWith(status: ModuleStatus.starting);
+    final updatedModuleStarting =
+        module.copyWith(status: ModuleStatus.starting);
     _statusController.add(updatedModuleStarting);
 
     try {
-      debugPrint('[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port ${module.port}');
+      debugPrint(
+        '[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port ${module.port}',
+      );
       debugPrint('[${module.id}] Working directory: $runDir');
 
       final process = await _processRunner.start(
         pythonPath,
-        ['-m', 'uvicorn', module.uvicornTarget, '--port', (module.port ?? 8000).toString()],
+        [
+          '-m',
+          'uvicorn',
+          module.uvicornTarget,
+          '--port',
+          (module.port ?? 8000).toString(),
+        ],
         workingDirectory: runDir,
       );
 
@@ -358,7 +464,9 @@ class ProcessManager {
 
       // Give it some time to start up
       await Future<void>.delayed(const Duration(seconds: 2));
-      unawaited(_checkHealth(module));
+      unawaited(
+        _checkHealth(module),
+      );
     } catch (e) {
       final updatedModuleError = module.copyWith(
         status: ModuleStatus.error,
@@ -369,7 +477,13 @@ class ProcessManager {
     }
   }
 
-  Future<void> stopModule(String moduleId) async {
+  Future<void> stopModule(String moduleId, {bool isFailure = false}) async {
+    if (!isFailure) {
+      _intentionallyStopping.add(moduleId);
+      _retryCounts.remove(moduleId);
+      _nextRetryTimes.remove(moduleId);
+    }
+
     final process = _runningProcesses[moduleId];
     if (process == null) return;
 
@@ -389,22 +503,20 @@ class ProcessManager {
   Future<void> _checkHealth(Module module) async {
     if (module.port == null) return;
     try {
-      if (Platform.environment.containsKey('FLUTTER_TEST')) {
-        // Skip real health check in Flutter test environment to avoid 'no current invoker' errors
-        return;
-      }
       final uri = Uri.parse('http://127.0.0.1:${module.port}/health');
 
       String body;
       int statusCode;
 
       if (kIsWeb) {
-        final response = await http.get(uri).timeout(const Duration(seconds: 2));
+        final response =
+            await http.get(uri).timeout(const Duration(seconds: 2));
         body = response.body;
         statusCode = response.statusCode;
       } else {
         final client = HttpClient();
-        final request = await client.getUrl(uri).timeout(const Duration(seconds: 2));
+        final request =
+            await client.getUrl(uri).timeout(const Duration(seconds: 2));
         final response = await request.close();
         body = await response.transform(utf8.decoder).join();
         statusCode = response.statusCode;
@@ -430,36 +542,40 @@ class ProcessManager {
       }
 
       if (module.status != newStatus || module.healthStatus != healthInfo) {
-        debugPrint('[${module.id}] Health status changed: ${module.status} -> $newStatus');
+        debugPrint(
+          '[${module.id}] Health status changed: ${module.status} -> $newStatus',
+        );
         final updatedModule = module.copyWith(
           status: newStatus,
           healthStatus: healthInfo,
         );
-        _statusController.add(updatedModule);
+        _updateModuleStatus(updatedModule);
       }
     } catch (e) {
-      if (module.status == ModuleStatus.running) {
-        debugPrint('[${module.id}] Health check error (running): $e');
-        final updatedModule = module.copyWith(
-          status: ModuleStatus.error,
-          healthStatus: 'Health check error: $e',
-        );
-        _statusController.add(updatedModule);
-      } else {
-        // In some test environments, HttpClient can throw if not in a test zone.
-        // We ignore these as the server might still be starting.
+      if (module.status == ModuleStatus.running ||
+          module.status == ModuleStatus.degraded) {
+        debugPrint('[${module.id}] Health check error: $e');
+        await _handleFailure(module, 'Health check error: $e');
       }
     }
   }
 
   void _startHealthPolling() {
     _healthTimer?.cancel();
-    debugPrint('Starting health polling every 5 seconds for ${_modules.length} modules');
+    debugPrint(
+      'Starting health polling every 5 seconds for ${_modules.length} modules',
+    );
     _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
-          _checkHealth(module);
+          await _checkHealth(module);
+        } else if (module.status == ModuleStatus.error) {
+          final nextRetry = _nextRetryTimes[module.id];
+          if (nextRetry != null && now.isAfter(nextRetry)) {
+            debugPrint('Retrying module ${module.id}');
+            unawaited(startModule(module, isRetry: true));
+          }
         }
       }
     });
@@ -478,7 +594,9 @@ class ProcessManager {
       }
 
       states[module.id] = module.toJson();
-      await file.writeAsString(jsonEncode(states));
+      await file.writeAsString(
+        jsonEncode(states),
+      );
     } catch (e) {
       debugPrint('Error saving module state: $e');
     }

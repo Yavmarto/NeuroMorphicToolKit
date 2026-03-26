@@ -12,7 +12,7 @@ concurrency:
 jobs:
   eod-report:
     name: Post EOD report
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       issues: write
       pull-requests: read

@@ -9,25 +9,24 @@
     "Neurosim/README.md"
   ],
   "contract_kit": {
-    "contracts_dir": "docs/unified-dev-pipeline/neurosim/contracts",
-    "properties_dir": null,
+    "contracts_dir": "Neurosim/neurosim/contracts",
+    "properties_dir": "Neurosim/neurosim/tests/properties",
     "agents_md": null,
     "guardrails_md": null
   },
   "existing_workflows": [
-    "ci.yml"
+    "ci.yml",
+    "ci-failure-fix.yml",
+    "feature-builder.yml",
+    "bug-fixer.yml",
+    "unblocked-issues.yml",
+    "auto-merge-jules-prs.yml"
   ],
   "workflow_gaps": [
-    "Missing ci-failure-fix.yml",
-    "Missing feature-builder.yml, bug-fixer.yml",
-    "Missing unblocked-issues.yml, auto-merge-jules-prs.yml",
-    "Current CI does not run lint, mypy, or property tests"
+    "No CDD-PBT status check gate in CI"
   ],
   "required_updates": [
-    "Expand ci.yml to full validation",
-    "Add the missing Jules issue workflows",
-    "Add reusable CDD-PBT CI job",
-    "Add safe auto-merge template"
+    "Add CDD-PBT verification gate to main CI"
   ],
   "setup_commands": [
     "python -m pip install --upgrade pip",
@@ -53,7 +52,7 @@
         "Neurosim/neurosim_spec.md#NS-S3",
         "Neurosim/neurosim_spec.md#NS-C1"
       ],
-      "objective": "Convert canvas nodes, edges, projects, sweep configs, and CNL synchronization payloads into explicit Pydantic contracts. Reference: docs/unified-dev-pipeline/neurosim/contracts/design_contracts.py.",
+      "objective": "Convert canvas nodes, edges, projects, sweep configs, and CNL synchronization payloads into explicit Pydantic contracts. Implementation in Neurosim/neurosim/contracts/.",
       "conversion_steps": [
         "Create contract models for node types, connections, parameter panels, project files, and sync payloads",
         "Enforce preview <=500ms simulation time, sweep max 20 steps, canvas graph validity",
@@ -79,7 +78,7 @@
         "Neurosim/neurosim_spec.md#NS-S1",
         "Neurosim/neurosim_spec.md#NS-S2"
       ],
-      "objective": "Add Hypothesis property tests for canvas validity, sweep monotonicity, and preview time constraints.",
+      "objective": "Add Hypothesis property tests for canvas validity, sweep monotonicity, and preview time constraints. Implementation in Neurosim/neurosim/tests/properties/.",
       "conversion_steps": [
         "Add properties for valid canvas graph construction and serialization round-trips",
         "Add properties ensuring sweep start < stop and step count bounds",

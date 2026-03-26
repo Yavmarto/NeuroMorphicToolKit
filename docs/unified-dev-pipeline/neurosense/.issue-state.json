@@ -1,5 +1,5 @@
 {
-  "NSE-CDD-001": 31,
-  "NSE-CDD-002": 32,
-  "NSE-CDD-003": 33
+  "NSE-CDD-001": { "number": 31, "status": "completed" },
+  "NSE-CDD-002": { "number": 32, "status": "completed" },
+  "NSE-CDD-003": { "number": 33, "status": "published" }
 }
