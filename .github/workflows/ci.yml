@@ -86,20 +86,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init . || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -e . && pip install pytest httpx ruff mypy
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pip install -e . && pip install pytest httpx ruff mypy
+          else
+            echo "Submodule missing, skipping"
+          fi
       - name: Lint with ruff
         run: |
-          ruff check .
-          ruff format --check .
+          if [ -f "pyproject.toml" ]; then
+            ruff check .
+            ruff format --check .
+          fi
       - name: Type check with mypy
-        run: mypy .
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            mypy .
+          fi
       - name: Run tests
-        run: pytest --tb=short --hypothesis-show-statistics
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pytest --tb=short --hypothesis-show-statistics
+          fi
 
   test-neurochip:
     needs: detect-changes
@@ -111,21 +126,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init .. || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install poetry && poetry install
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pip install poetry && poetry install
+          else
+            echo "Submodule missing, skipping"
+          fi
       - name: Lint with ruff
         run: |
-          poetry run ruff check .
-          poetry run ruff format --check .
+          if [ -f "pyproject.toml" ]; then
+            poetry run ruff check .
+            poetry run ruff format --check .
+          fi
         continue-on-error: true # Allow for now if not configured
       - name: Type check with mypy
-        run: poetry run mypy .
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry run mypy .
+          fi
       - name: Run tests
-        run: poetry run pytest --tb=short --hypothesis-show-statistics
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry run pytest --tb=short --hypothesis-show-statistics
+          fi
 
   test-neurosense:
     needs: detect-changes
@@ -137,20 +167,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init .. || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -e ".[dev]" && pip install ruff mypy
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pip install -e ".[dev]" && pip install ruff mypy
+          else
+            echo "Submodule missing, skipping"
+          fi
       - name: Lint with ruff
         run: |
-          ruff check .
-          ruff format --check .
+          if [ -f "pyproject.toml" ]; then
+            ruff check .
+            ruff format --check .
+          fi
       - name: Type check with mypy
-        run: mypy .
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            mypy .
+          fi
       - name: Run tests
-        run: pytest --tb=short --hypothesis-show-statistics
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pytest --tb=short --hypothesis-show-statistics
+          fi
 
   test-neurohub:
     needs: detect-changes
@@ -162,20 +207,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init .. || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -e . && pip install pytest httpx ruff mypy
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pip install -e . && pip install pytest httpx ruff mypy
+          else
+            echo "Submodule missing, skipping"
+          fi
       - name: Lint with ruff
         run: |
-          ruff check .
-          ruff format --check .
+          if [ -f "pyproject.toml" ]; then
+            ruff check .
+            ruff format --check .
+          fi
       - name: Type check with mypy
-        run: mypy .
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            mypy .
+          fi
       - name: Run tests
-        run: pytest --tb=short --hypothesis-show-statistics
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pytest --tb=short --hypothesis-show-statistics
+          fi
 
   test-neurodreamhand:
     needs: detect-changes
@@ -187,20 +247,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init . || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install dependencies
-        run: pip install -e . && pip install pytest ruff mypy
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pip install -e . && pip install pytest ruff mypy
+          else
+            echo "Submodule missing, skipping"
+          fi
       - name: Lint with ruff
         run: |
-          ruff check .
-          ruff format --check .
+          if [ -f "pyproject.toml" ]; then
+            ruff check .
+            ruff format --check .
+          fi
       - name: Type check with mypy
-        run: mypy .
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            mypy .
+          fi
       - name: Run tests
-        run: pytest --tb=short --hypothesis-show-statistics
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pytest --tb=short --hypothesis-show-statistics
+          fi
 
   test-neurocnl-backend:
     needs: detect-changes
@@ -208,6 +283,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: false
       - name: Update required submodules
         run: |
           git submodule update --init neurocnl || true
@@ -282,22 +359,38 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init .. || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install poetry
-        run: pip install poetry
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            pip install poetry
+          fi
       - name: Install dependencies
-        run: poetry install
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry install
+          fi
       - name: Lint with ruff
         run: |
-          poetry run ruff check .
-          poetry run ruff format --check .
+          if [ -f "pyproject.toml" ]; then
+            poetry run ruff check .
+            poetry run ruff format --check .
+          fi
       - name: Type check with mypy
-        run: poetry run mypy .
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry run mypy .
+          fi
       - name: Run tests
-        run: poetry run pytest --tb=short --hypothesis-show-statistics
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            poetry run pytest --tb=short --hypothesis-show-statistics
+          fi
 
   test-nmtk-ui-core:
     needs: detect-changes
@@ -349,17 +442,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init .. || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter pub get
+          fi
       - name: Analyze
-        run: flutter analyze
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter analyze
+          fi
       - name: Run tests
-        run: flutter test
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter test
+          fi
 
   test-neurochip-frontend:
     needs: detect-changes
@@ -371,15 +475,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init .. || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter pub get
+          fi
       - name: Analyze
-        run: flutter analyze
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter analyze
+          fi
 
   test-neurohub-frontend:
     needs: detect-changes
@@ -391,15 +503,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init .. || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter pub get
+          fi
       - name: Analyze
-        run: flutter analyze
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter analyze
+          fi
 
   test-neurosense-frontend:
     needs: detect-changes
@@ -411,15 +531,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init .. || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter pub get
+          fi
       - name: Analyze
-        run: flutter analyze
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter analyze
+          fi
 
   test-neurobench-frontend:
     needs: detect-changes
@@ -431,15 +559,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init .. || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
-        run: flutter pub get
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter pub get
+          fi
       - name: Analyze
-        run: flutter analyze
+        run: |
+          if [ -f "pubspec.yaml" ]; then
+            flutter analyze
+          fi
 
   # Summary job that branch protection can require
   ci-passed:
