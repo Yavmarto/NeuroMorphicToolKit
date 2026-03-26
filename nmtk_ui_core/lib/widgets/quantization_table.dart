@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/quantization_report.dart';
+import 'package:nmtk_ui_core/models/quantization_report.dart';
 
 /// Table/visual showing bit-width vs accuracy drop and sparsity.
 class NmtkQuantizationTable extends StatelessWidget {
@@ -20,34 +20,60 @@ class NmtkQuantizationTable extends StatelessWidget {
     }
 
     return DataTable(
-      headingRowColor: WidgetStatePropertyAll(theme.colorScheme.surfaceContainerHighest),
+      headingRowColor: WidgetStatePropertyAll(
+        theme.colorScheme.surfaceContainerHighest,
+      ),
       dataRowColor: WidgetStatePropertyAll(theme.colorScheme.surface),
-      border: TableBorder.all(color: theme.colorScheme.outlineVariant, width: 1),
+      border: TableBorder.all(
+        color: theme.colorScheme.outlineVariant,
+        width: 1,
+      ),
       columnSpacing: 24,
       columns: const [
-        DataColumn(label: Text('Bit Width', style: TextStyle(fontWeight: FontWeight.w600))),
-        DataColumn(label: Text('Accuracy Drop', style: TextStyle(fontWeight: FontWeight.w600))),
-        DataColumn(label: Text('Sparsity', style: TextStyle(fontWeight: FontWeight.w600))),
+        DataColumn(
+          label: Text(
+            'Bit Width',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Accuracy Drop',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+        DataColumn(
+          label: Text(
+            'Sparsity',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
       ],
       rows: List.generate(report.bitWidths.length, (i) {
         final bits = report.bitWidths[i];
         final drop = report.accuracyDrops[i];
         final sparsity = report.sparsity[i];
 
-        return DataRow(cells: [
-          DataCell(Text(
-            '$bits-bit',
-            style: TextStyle(
-              color: theme.colorScheme.onSurface,
-              fontWeight: FontWeight.w500,
+        return DataRow(
+          cells: [
+            DataCell(
+              Text(
+                '$bits-bit',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-          )),
-          DataCell(_AccuracyDropIndicator(drop: drop)),
-          DataCell(Text(
-            '${(sparsity * 100).toStringAsFixed(1)}%',
-            style: TextStyle(color: theme.colorScheme.onSurface),
-          )),
-        ]);
+            DataCell(_AccuracyDropIndicator(drop: drop)),
+            DataCell(
+              Text(
+                '${(sparsity * 100).toStringAsFixed(1)}%',
+                style: TextStyle(color: theme.colorScheme.onSurface),
+              ),
+            ),
+          ],
+        );
       }),
     );
   }
@@ -78,10 +104,7 @@ class _AccuracyDropIndicator extends StatelessWidget {
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
         Text(

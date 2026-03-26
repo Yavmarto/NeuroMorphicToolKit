@@ -86,7 +86,7 @@ class DashboardScreen extends StatelessWidget {
                           ],
                         )
                       else if (module.status == ModuleStatus.stopping)
-                         const CircularProgressIndicator(color: Colors.orange),
+                        const CircularProgressIndicator(color: Colors.orange),
                       const SizedBox(width: 8),
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),

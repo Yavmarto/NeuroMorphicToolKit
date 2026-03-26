@@ -2,3 +2,7 @@
 neuro_toolkit/build/
 neuro_toolkit/.dart_tool/
 .cache
+.hypothesis/
+**/venv/
+__pycache__/
+*.pyc

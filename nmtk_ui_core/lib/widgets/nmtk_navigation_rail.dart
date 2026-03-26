@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../app_theme.dart';
+import 'package:nmtk_ui_core/app_theme.dart';
 
 /// A customized NavigationRail matching NMTK design patterns.
 ///

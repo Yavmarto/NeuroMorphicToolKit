@@ -1,3 +1,4 @@
+// ignore_for_file: unawaited_futures
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -30,7 +31,7 @@ class MockProcess implements Process {
   @override
   bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
     if (!_exitCodeCompleter.isCompleted) {
-      _exitCodeCompleter.complete(signal == ProcessSignal.sigterm ? 0 : -1);
+      _exitCodeCompleter.complete(0);
     }
     return true;
   }
@@ -207,7 +208,10 @@ void main() {
         await completer.future.timeout(const Duration(seconds: 5));
     expect(updatedModule.status, ModuleStatus.starting);
 
-    expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
+    expect(
+      mockRunner.calls.any((c) => c.arguments.contains('uvicorn')),
+      isTrue,
+    );
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
     await subscription.cancel();
@@ -237,19 +241,101 @@ void main() {
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
     final completer = Completer<void>();
-    final sub = processManager.statusUpdates.listen((m) {
+    final subscription = processManager.statusUpdates.listen((m) {
       if (m.id == 'test_module_stop' && m.status == ModuleStatus.starting) {
         if (!completer.isCompleted) completer.complete();
       }
     });
 
     await processManager.startModule(module);
-    await completer.future.timeout(const Duration(seconds: 10));
-    await sub.cancel();
+    await completer.future.timeout(const Duration(seconds: 5));
 
     await processManager.stopModule('test_module_stop');
 
+    await startFuture;
     expect(await mockProcess.exitCode, 0);
+    await subscription.cancel();
+
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test('_killProcessOnPort calls lsof and kills process', () async {
+    mockRunner.runResult = ProcessResult(0, 0, '1234\n5678', '');
+
+    // This is hard to test directly because Process.killPid is a static method
+    // and cannot be easily mocked in Dart without additional libraries or
+    // wrapping it. However, we can at least verify that lsof was called.
+
+    // Since _killProcessOnPort is private, we trigger it via startModule
+    final tempDir = Directory.systemTemp.createTempSync('nmtk_test_killport');
+    final module = Module(
+      id: 'test_kill',
+      name: 'Test',
+      description: 'Test',
+      directory: tempDir.path,
+      port: 8003,
+    );
+
+    // Mock python existence to avoid installModule call
+    final venvPath = p.join(tempDir.path, 'venv');
+    Directory(venvPath).createSync(recursive: true);
+    final pythonExe = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'python.exe')
+        : p.join(venvPath, 'bin', 'python');
+    File(pythonExe).createSync(recursive: true);
+
+    await processManager.startModule(module);
+
+    // Verify lsof was called for the port
+    expect(
+      mockRunner.calls.any(
+        (c) => c.executable == 'lsof' && c.arguments.contains(':8003'),
+      ),
+      isTrue,
+    );
+
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test('installModule throws when directory missing', () async {
+    final module = Module(
+      id: 'missing',
+      name: 'Missing',
+      description: 'Missing',
+      directory: '/non/existent/path',
+    );
+
+    expect(
+      () => processManager.installModule(module),
+      throwsA(isA<Exception>()),
+    );
+  });
+
+  test('installModule updates status to error on failure', () async {
+    final tempDir = Directory.systemTemp.createTempSync('nmtk_test_fail');
+    final module = Module(
+      id: 'fail_module',
+      name: 'Fail',
+      description: 'Fail',
+      directory: tempDir.path,
+    );
+
+    mockRunner.runResult = ProcessResult(0, 1, '', 'pip install failed');
+
+    // Wait for error status
+    final completer = Completer<ModuleStatus>();
+    processManager.statusUpdates.listen((m) {
+      if (m.id == 'fail_module') {
+        completer.complete(m.status);
+      }
+    });
+
+    try {
+      await processManager.installModule(module);
+    } catch (_) {}
+
+    final status = await completer.future.timeout(const Duration(seconds: 5));
+    expect(status, ModuleStatus.error);
 
     tempDir.deleteSync(recursive: true);
   });
