@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/energy_report.dart';
+import 'package:nmtk_ui_core/models/energy_report.dart';
 
 /// Horizontal bar chart showing per-ensemble energy consumption.
 class NmtkEnergyBarChart extends StatelessWidget {

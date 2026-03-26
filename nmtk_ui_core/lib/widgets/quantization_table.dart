@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/quantization_report.dart';
+import 'package:nmtk_ui_core/models/quantization_report.dart';
 
 /// Table/visual showing bit-width vs accuracy drop and sparsity.
 class NmtkQuantizationTable extends StatelessWidget {
