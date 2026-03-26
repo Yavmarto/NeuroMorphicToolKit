@@ -9,6 +9,126 @@ class PythonNotFoundException implements Exception {
   String toString() => 'Python not found. Install Python 3.10+ to continue.';
 }
 
+/// Abstraction for environment-dependent operations to enable unit testing.
+abstract class BundleEnvironment {
+  bool get isMacOS;
+  bool get isWindows;
+  bool get isLinux;
+  String get resolvedExecutable;
+  Map<String, String> get environment;
+  String get currentDirectory;
+
+  Future<String> getApplicationSupportPath();
+
+  bool directoryExists(String path);
+  Future<bool> fileExists(String path);
+  DateTime getFileModificationTime(String path);
+  Future<String> readFileAsString(String path);
+  Future<void> writeFileAsString(String path, String contents);
+  Future<void> createDirectory(String path, {bool recursive = false});
+  Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false});
+  Future<void> copyFile(String source, String destination);
+
+  Future<ProcessResult> runProcess(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool runInShell = false,
+  });
+
+  Future<Process> startProcess(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool runInShell = false,
+  });
+}
+
+class DefaultBundleEnvironment implements BundleEnvironment {
+  @override
+  bool get isMacOS => Platform.isMacOS;
+  @override
+  bool get isWindows => Platform.isWindows;
+  @override
+  bool get isLinux => Platform.isLinux;
+  @override
+  String get resolvedExecutable => Platform.resolvedExecutable;
+  @override
+  Map<String, String> get environment => Platform.environment;
+  @override
+  String get currentDirectory => Directory.current.path;
+
+  @override
+  Future<String> getApplicationSupportPath() async {
+    final dir = await getApplicationSupportDirectory();
+    return dir.path;
+  }
+
+  @override
+  bool directoryExists(String path) => Directory(path).existsSync();
+
+  @override
+  Future<bool> fileExists(String path) => File(path).exists();
+
+  @override
+  DateTime getFileModificationTime(String path) => File(path).statSync().modified;
+
+  @override
+  Future<String> readFileAsString(String path) => File(path).readAsString();
+
+  @override
+  Future<void> writeFileAsString(String path, String contents) =>
+      File(path).writeAsString(contents);
+
+  @override
+  Future<void> createDirectory(String path, {bool recursive = false}) =>
+      Directory(path).create(recursive: recursive);
+
+  @override
+  Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false}) =>
+      Directory(path).list(recursive: recursive);
+
+  @override
+  Future<void> copyFile(String source, String destination) =>
+      File(source).copy(destination);
+
+  @override
+  Future<ProcessResult> runProcess(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool runInShell = false,
+  }) {
+    return Process.run(
+      executable,
+      arguments,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      runInShell: runInShell,
+    );
+  }
+
+  @override
+  Future<Process> startProcess(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool runInShell = false,
+  }) {
+    return Process.start(
+      executable,
+      arguments,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      runInShell: runInShell,
+    );
+  }
+}
+
 /// Manages path resolution for both development (repo checkout) and
 /// release (self-contained .app bundle) modes.
 ///
@@ -18,8 +138,21 @@ class PythonNotFoundException implements Exception {
 /// interpreter is used instead of system python3.
 class BundleManager {
   static final BundleManager _instance = BundleManager._internal();
-  factory BundleManager() => _instance;
+  factory BundleManager({BundleEnvironment? env}) {
+    if (env != null) {
+      _instance._env = env;
+    }
+    return _instance;
+  }
   BundleManager._internal();
+
+  BundleEnvironment _env = DefaultBundleEnvironment();
+
+  @visibleForTesting
+  set env(BundleEnvironment value) {
+    _env = value;
+    clearCache();
+  }
 
   String? _cachedAppSupportPath;
   String? _cachedPythonPath;
@@ -32,9 +165,9 @@ class BundleManager {
   /// Returns false for debug builds and for command-line runs.
   bool get isBundled {
     if (_isBundledCache != null) return _isBundledCache!;
-    final exe = Platform.resolvedExecutable;
+    final exe = _env.resolvedExecutable;
 
-    if (Platform.isMacOS) {
+    if (_env.isMacOS) {
       if (!exe.contains('.app/Contents/MacOS/')) {
         _isBundledCache = false;
         return false;
@@ -47,8 +180,14 @@ class BundleManager {
     } else if (Platform.isWindows) {
       // On Windows, modules are placed next to the executable in the installer.
       final exeDir = p.dirname(exe);
-      final modulesDir = Directory(p.join(exeDir, 'modules'));
-      _isBundledCache = modulesDir.existsSync();
+      final modulesDir = p.join(exeDir, 'modules');
+      _isBundledCache = _env.directoryExists(modulesDir);
+    } else if (_env.isLinux) {
+      // On Linux (AppImage), modules are usually in usr/bin/modules relative to AppRun,
+      // but Platform.resolvedExecutable points to the actual binary in the mounted squashfs.
+      final exeDir = p.dirname(exe);
+      final modulesDir = p.join(exeDir, 'modules');
+      _isBundledCache = _env.directoryExists(modulesDir);
     } else {
       _isBundledCache = false;
     }
@@ -65,8 +204,8 @@ class BundleManager {
   /// Only valid when [isBundled] is true.
   String get bundleRootPath {
     assert(isBundled, 'bundleRootPath called outside of a bundled app');
-    final exe = Platform.resolvedExecutable;
-    if (Platform.isMacOS) {
+    final exe = _env.resolvedExecutable;
+    if (_env.isMacOS) {
       return p.dirname(p.dirname(p.dirname(exe)));
     } else {
       return p.dirname(exe);
@@ -75,7 +214,7 @@ class BundleManager {
 
   /// The path to the bundled modules directory.
   String get bundledModulesPath {
-    if (Platform.isMacOS) {
+    if (_env.isMacOS) {
       return p.join(bundleRootPath, 'Contents', 'Resources', 'modules');
     } else {
       return p.join(bundleRootPath, 'modules');
@@ -101,7 +240,7 @@ class BundleManager {
     // 1. If running from a bundle, check bundled Python first
     if (isBundled) {
       final List<String> bundledPaths = [];
-      if (Platform.isMacOS) {
+      if (_env.isMacOS) {
         bundledPaths.addAll([
           p.join(
             bundleRootPath,
@@ -120,9 +259,11 @@ class BundleManager {
             'python',
           ),
         ]);
-      } else if (Platform.isWindows) {
+      } else if (_env.isWindows || _env.isLinux) {
         bundledPaths.addAll([
           p.join(bundleRootPath, 'python', 'python.exe'),
+          p.join(bundleRootPath, 'python', 'bin', 'python3'),
+          p.join(bundleRootPath, 'python', 'bin', 'python'),
         ]);
       }
 
@@ -146,7 +287,7 @@ class BundleManager {
     }
 
     // 3. On macOS/Linux, try resolving via login shell if simple names fail
-    if (!Platform.isWindows) {
+    if (!_env.isWindows) {
       debugPrint('BundleManager: simple names failed, trying login shell...');
       for (final name in ['python3', 'python']) {
         final resolved = await _resolveViaLoginShell(name);
@@ -178,9 +319,10 @@ class BundleManager {
         '$home/.pyenv/shims/python',
         '/usr/bin/python3',
       ]);
-    } else if (Platform.isWindows) {
-      final localAppData = Platform.environment['LOCALAPPDATA'];
-      final programFiles = Platform.environment['ProgramFiles'];
+    } else if (_env.isWindows) {
+      final envVars = _env.environment;
+      final localAppData = envVars['LOCALAPPDATA'];
+      final programFiles = envVars['ProgramFiles'];
       if (localAppData != null) {
         knownPaths.add(
           p.join(
@@ -218,7 +360,7 @@ class BundleManager {
     }
 
     for (final absPath in knownPaths) {
-      if (await File(absPath).exists() && await _isPythonWorking(absPath)) {
+      if (await _env.fileExists(absPath) && await _isPythonWorking(absPath)) {
         debugPrint('BundleManager: found at known path: $absPath');
         _cachedPythonPath = absPath;
         return absPath;
@@ -234,8 +376,8 @@ class BundleManager {
   Future<String?> _resolveViaLoginShell(String command) async {
     try {
       // Use zsh (macOS default) or bash with login flag to source profile
-      final shell = Platform.environment['SHELL'] ?? '/bin/zsh';
-      final result = await Process.run(
+      final shell = _env.environment['SHELL'] ?? '/bin/zsh';
+      final result = await _env.runProcess(
         shell,
         ['-lc', 'which $command'],
       ).timeout(const Duration(seconds: 5));
@@ -267,7 +409,7 @@ class BundleManager {
     final path = await findPython();
     if (path == null) return null;
     try {
-      final result = await Process.run(path, ['--version']);
+      final result = await _env.runProcess(path, ['--version']);
       // stdout: "Python 3.12.7\n"
       return result.stdout.toString().trim().replaceFirst('Python ', '');
     } catch (_) {
@@ -280,12 +422,13 @@ class BundleManager {
   void clearCache() {
     _cachedPythonPath = null;
     _isBundledCache = null;
+    _cachedAppSupportPath = null;
   }
 
   /// Checks whether a given binary is a working Python (exits 0 on --version).
   Future<bool> _isPythonWorking(String path) async {
     try {
-      final result = await Process.run(path, ['--version'])
+      final result = await _env.runProcess(path, ['--version'])
           .timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) {
         debugPrint(
@@ -315,21 +458,21 @@ class BundleManager {
       return await _appSupportModulesDir;
     }
     // Dev mode: nmtk/neuro_toolkit -> ../../ = repo root
-    return p.normalize(p.join(p.current, '..', '..'));
+    return p.normalize(p.join(_env.currentDirectory, '..', '..'));
   }
 
   /// Whether first-run extraction is needed.
   Future<bool> get needsExtraction async {
     if (!isBundled) return false;
 
-    final targetDir = Directory(await _appSupportModulesDir);
-    if (!await targetDir.exists()) return true;
+    final targetPath = await _appSupportModulesDir;
+    if (!_env.directoryExists(targetPath)) return true;
 
     // Check version marker
-    final markerFile = File(p.join(targetDir.path, '.bundle_version'));
-    if (!await markerFile.exists()) return true;
+    final markerPath = p.join(targetPath, '.bundle_version');
+    if (!await _env.fileExists(markerPath)) return true;
 
-    final installedVersion = await markerFile.readAsString();
+    final installedVersion = await _env.readFileAsString(markerPath);
     return installedVersion.trim() != _appVersion;
   }
 
@@ -337,10 +480,10 @@ class BundleManager {
   Future<void> extractModules({void Function(double)? onProgress}) async {
     if (!isBundled) return;
 
-    final sourceDir = Directory(bundledModulesPath);
-    if (!await sourceDir.exists()) {
-      debugPrint('BundleManager: no bundled modules at ${sourceDir.path}');
-      return;
+    final sourcePath = bundledModulesPath;
+    if (!_env.directoryExists(sourcePath)) {
+      debugPrint('BundleManager: no bundled modules at $sourcePath');
+      throw Exception('Bundled modules not found at $sourcePath');
     }
 
     final targetBase = await _appSupportModulesDir;
@@ -353,23 +496,48 @@ class BundleManager {
     }
     await targetDir.create(recursive: true);
 
-    final entries = await sourceDir.list().toList();
     for (var i = 0; i < entries.length; i++) {
       if (entries[i] is Directory) {
         final moduleName = p.basename(entries[i].path);
-        final dest = Directory(p.join(targetBase, moduleName));
+        final destPath = p.join(targetBase, moduleName);
 
         debugPrint('BundleManager: extracting $moduleName...');
-        await _copyDirectory(entries[i] as Directory, dest);
+        await _copyDirectory(entries[i] as Directory, destPath);
       }
       onProgress?.call((i + 1) / entries.length);
     }
 
     // Write version marker
-    final markerFile = File(p.join(targetBase, '.bundle_version'));
-    await markerFile.writeAsString(_appVersion);
+    final markerPath = p.join(targetBase, '.bundle_version');
+    await _env.writeFileAsString(markerPath, _appVersion);
 
     debugPrint('BundleManager: extraction complete');
+  }
+
+  /// Validates that the bundle is intact.
+  Future<bool> validateBundle() async {
+    if (!isBundled) return true;
+
+    if (!_env.directoryExists(bundledModulesPath)) {
+      debugPrint('Bundle validation failed: modules directory missing at $bundledModulesPath');
+      return false;
+    }
+
+    // Check for at least one module (e.g., Neurohub) or just that it's not empty
+    final entries = await _env.listDirectory(bundledModulesPath).toList();
+    if (entries.isEmpty) {
+      debugPrint('Bundle validation failed: modules directory is empty');
+      return false;
+    }
+
+    // Check for bundled python
+    final python = await findPython();
+    if (python == null || !python.contains(bundleRootPath)) {
+      debugPrint('Bundle validation failed: bundled Python not found');
+      return false;
+    }
+
+    return true;
   }
 
   // ---------------------------------------------------------------------------
@@ -379,8 +547,8 @@ class BundleManager {
   /// The app version string for tracking extraction state.
   String get _appVersion {
     try {
-      final stat = File(Platform.resolvedExecutable).statSync();
-      return stat.modified.toIso8601String();
+      final mtime = _env.getFileModificationTime(_env.resolvedExecutable);
+      return mtime.toIso8601String();
     } catch (_) {
       return 'unknown';
     }
@@ -388,20 +556,20 @@ class BundleManager {
 
   Future<String> get _appSupportModulesDir async {
     if (_cachedAppSupportPath != null) return _cachedAppSupportPath!;
-    final appSupportDir = await getApplicationSupportDirectory();
-    _cachedAppSupportPath = p.join(appSupportDir.path, 'modules');
+    final appSupportPath = await _env.getApplicationSupportPath();
+    _cachedAppSupportPath = p.join(appSupportPath, 'modules');
     return _cachedAppSupportPath!;
   }
 
   /// Recursively copy a directory tree.
-  Future<void> _copyDirectory(Directory source, Directory destination) async {
-    await destination.create(recursive: true);
-    await for (final entity in source.list(recursive: false)) {
-      final newPath = p.join(destination.path, p.basename(entity.path));
+  Future<void> _copyDirectory(Directory source, String destinationPath) async {
+    await _env.createDirectory(destinationPath, recursive: true);
+    await for (final entity in _env.listDirectory(source.path, recursive: false)) {
+      final newPath = p.join(destinationPath, p.basename(entity.path));
       if (entity is File) {
-        await entity.copy(newPath);
+        await _env.copyFile(entity.path, newPath);
       } else if (entity is Directory) {
-        await _copyDirectory(entity, Directory(newPath));
+        await _copyDirectory(entity, newPath);
       }
     }
   }
