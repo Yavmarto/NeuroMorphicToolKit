@@ -342,17 +342,19 @@ class ProcessManager {
         debugPrint('[${module.id}] stderr: ${data.trim()}');
       });
 
-      unawaited(process.exitCode.then((code) {
-        _runningProcesses.remove(module.id);
-        _outputControllers[module.id]?.close();
-        _outputControllers.remove(module.id);
+      unawaited(
+        process.exitCode.then((code) {
+          _runningProcesses.remove(module.id);
+          _outputControllers[module.id]?.close();
+          _outputControllers.remove(module.id);
 
-        final updatedModuleStopped = module.copyWith(
-          status: code == 0 ? ModuleStatus.installed : ModuleStatus.error,
-          healthStatus: code == 0 ? null : 'Process exited with code $code',
-        );
-        _statusController.add(updatedModuleStopped);
-      }));
+          final updatedModuleStopped = module.copyWith(
+            status: code == 0 ? ModuleStatus.installed : ModuleStatus.error,
+            healthStatus: code == 0 ? null : 'Process exited with code $code',
+          );
+          _statusController.add(updatedModuleStopped);
+        }),
+      );
 
       // Give it some time to start up
       await Future<void>.delayed(const Duration(seconds: 2));
