@@ -79,9 +79,12 @@ class DefaultProcessRunner implements ProcessRunner {
 
 class ProcessManager {
   static final ProcessManager _instance = ProcessManager._internal();
-  factory ProcessManager({ProcessRunner? processRunner}) {
+  factory ProcessManager({ProcessRunner? processRunner, http.Client? httpClient}) {
     if (processRunner != null) {
       _instance._processRunner = processRunner;
+    }
+    if (httpClient != null) {
+      _instance._httpClient = httpClient;
     }
     return _instance;
   }
@@ -89,12 +92,19 @@ class ProcessManager {
   @visibleForTesting
   set processRunner(ProcessRunner runner) => _processRunner = runner;
 
+  @visibleForTesting
+  set httpClient(http.Client client) => _httpClient = client;
+
   ProcessManager._internal();
 
   ProcessRunner _processRunner = DefaultProcessRunner();
+  http.Client _httpClient = http.Client();
 
   final Map<String, Process> _runningProcesses = {};
   final Map<String, StreamController<String>> _outputControllers = {};
+  final Map<String, int> _retryCounts = {};
+  final Map<String, DateTime> _nextRetryTimes = {};
+  final Set<String> _intentionallyStopping = {};
   Timer? _healthTimer;
   bool _initialized = false;
   List<Module> _modules = [];
@@ -102,6 +112,54 @@ class ProcessManager {
   // Stream for status updates
   final _statusController = StreamController<Module>.broadcast();
   Stream<Module> get statusUpdates => _statusController.stream;
+
+  void _updateModuleStatus(Module module) {
+    final index = _modules.indexWhere((m) => m.id == module.id);
+    if (index != -1) {
+      _modules[index] = module;
+    }
+    _statusController.add(module);
+  }
+
+  void _scheduleRetry(Module module) {
+    final count = (_retryCounts[module.id] ?? 0) + 1;
+    _retryCounts[module.id] = count;
+
+    // Backoff: 5, 10, 20, 40, 60, 60...
+    int seconds = (5 * (1 << (count - 1)));
+    if (seconds > 60) seconds = 60;
+
+    final nextRetry = DateTime.now().add(Duration(seconds: seconds));
+    _nextRetryTimes[module.id] = nextRetry;
+
+    debugPrint('[${module.id}] Scheduled retry #$count in ${seconds}s at $nextRetry');
+
+    final updatedModule = module.copyWith(
+      status: ModuleStatus.error,
+      healthStatus: '${module.healthStatus ?? "Unhealthy"}. Retrying in ${seconds}s...',
+    );
+    _updateModuleStatus(updatedModule);
+  }
+
+  Future<void> _handleFailure(Module module, String? error) async {
+    if (module.status == ModuleStatus.stopping || _intentionallyStopping.contains(module.id)) {
+      return;
+    }
+
+    debugPrint('[${module.id}] Handling failure: $error');
+
+    final updatedModule = module.copyWith(
+      status: ModuleStatus.error,
+      healthStatus: error,
+    );
+    _updateModuleStatus(updatedModule);
+
+    if (_runningProcesses.containsKey(module.id)) {
+      await stopModule(module.id, isFailure: true);
+    }
+
+    _scheduleRetry(updatedModule);
+  }
 
   Future<void> init(List<Module> modules) async {
     if (_initialized) {
@@ -281,11 +339,17 @@ class ProcessManager {
     } catch (_) {}
   }
 
-  Future<void> startModule(Module module) async {
+  Future<void> startModule(Module module, {bool isRetry = false}) async {
     if (_runningProcesses.containsKey(module.id)) return;
     if (module.port == null) {
       throw Exception('Cannot start module ${module.id}: no port configured');
     }
+
+    if (!isRetry) {
+      _retryCounts.remove(module.id);
+      _nextRetryTimes.remove(module.id);
+    }
+    _intentionallyStopping.remove(module.id);
 
     // Kill any zombie process from a previous session occupying our port
     await _killProcessOnPort(module.port!);
@@ -351,7 +415,11 @@ class ProcessManager {
           status: code == 0 ? ModuleStatus.installed : ModuleStatus.error,
           healthStatus: code == 0 ? null : 'Process exited with code $code',
         );
-        _statusController.add(updatedModuleStopped);
+        _updateModuleStatus(updatedModuleStopped);
+
+        if (code != 0 && !_intentionallyStopping.contains(module.id)) {
+          _handleFailure(updatedModuleStopped, 'Process exited with code $code');
+        }
       }));
 
       // Give it some time to start up
@@ -367,7 +435,13 @@ class ProcessManager {
     }
   }
 
-  Future<void> stopModule(String moduleId) async {
+  Future<void> stopModule(String moduleId, {bool isFailure = false}) async {
+    if (!isFailure) {
+      _intentionallyStopping.add(moduleId);
+      _retryCounts.remove(moduleId);
+      _nextRetryTimes.remove(moduleId);
+    }
+
     final process = _runningProcesses[moduleId];
     if (process == null) return;
 
@@ -387,27 +461,11 @@ class ProcessManager {
   Future<void> _checkHealth(Module module) async {
     if (module.port == null) return;
     try {
-      if (Platform.environment.containsKey('FLUTTER_TEST')) {
-        // Skip real health check in Flutter test environment to avoid 'no current invoker' errors
-        return;
-      }
       final uri = Uri.parse('http://127.0.0.1:${module.port}/health');
 
-      String body;
-      int statusCode;
-
-      if (kIsWeb) {
-        final response = await http.get(uri).timeout(const Duration(seconds: 2));
-        body = response.body;
-        statusCode = response.statusCode;
-      } else {
-        final client = HttpClient();
-        final request = await client.getUrl(uri).timeout(const Duration(seconds: 2));
-        final response = await request.close();
-        body = await response.transform(utf8.decoder).join();
-        statusCode = response.statusCode;
-        client.close();
-      }
+      final response = await _httpClient.get(uri).timeout(const Duration(seconds: 2));
+      final body = response.body;
+      final statusCode = response.statusCode;
 
       ModuleStatus newStatus;
       String? healthInfo;
@@ -427,25 +485,20 @@ class ProcessManager {
         healthInfo = 'Health check failed: $statusCode';
       }
 
-      if (module.status != newStatus || module.healthStatus != healthInfo) {
+      if (newStatus == ModuleStatus.error) {
+        _handleFailure(module, healthInfo);
+      } else if (module.status != newStatus || module.healthStatus != healthInfo) {
         debugPrint('[${module.id}] Health status changed: ${module.status} -> $newStatus');
         final updatedModule = module.copyWith(
           status: newStatus,
           healthStatus: healthInfo,
         );
-        _statusController.add(updatedModule);
+        _updateModuleStatus(updatedModule);
       }
     } catch (e) {
-      if (module.status == ModuleStatus.running) {
-        debugPrint('[${module.id}] Health check error (running): $e');
-        final updatedModule = module.copyWith(
-          status: ModuleStatus.error,
-          healthStatus: 'Health check error: $e',
-        );
-        _statusController.add(updatedModule);
-      } else {
-        // In some test environments, HttpClient can throw if not in a test zone.
-        // We ignore these as the server might still be starting.
+      if (module.status == ModuleStatus.running || module.status == ModuleStatus.degraded) {
+        debugPrint('[${module.id}] Health check error: $e');
+        _handleFailure(module, 'Health check error: $e');
       }
     }
   }
@@ -453,11 +506,18 @@ class ProcessManager {
   void _startHealthPolling() {
     _healthTimer?.cancel();
     debugPrint('Starting health polling every 5 seconds for ${_modules.length} modules');
-    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
+    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
+      final now = DateTime.now();
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
-          _checkHealth(module);
+          await _checkHealth(module);
+        } else if (module.status == ModuleStatus.error) {
+          final nextRetry = _nextRetryTimes[module.id];
+          if (nextRetry != null && now.isAfter(nextRetry)) {
+            debugPrint('Retrying module ${module.id}');
+            unawaited(startModule(module, isRetry: true));
+          }
         }
       }
     });

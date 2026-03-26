@@ -28,14 +28,14 @@ class MockProcessManager implements ProcessManager {
   }
 
   @override
-  Future<void> startModule(Module module) async {
+  Future<void> startModule(Module module, {bool isRetry = false}) async {
     startCalls.add(module.id);
     final updated = module.copyWith(status: ModuleStatus.running);
     _statusController.add(updated);
   }
 
   @override
-  Future<void> stopModule(String moduleId) async {
+  Future<void> stopModule(String moduleId, {bool isFailure = false}) async {
     stopCalls.add(moduleId);
     final index = modules.indexWhere((m) => m.id == moduleId);
     if (index != -1) {
