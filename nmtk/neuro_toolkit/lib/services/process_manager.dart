@@ -352,7 +352,7 @@ class ProcessManager {
           healthStatus: code == 0 ? null : 'Process exited with code $code',
         );
         _statusController.add(updatedModuleStopped);
-      }));
+      }),);
 
       // Give it some time to start up
       await Future<void>.delayed(const Duration(seconds: 2));
@@ -433,7 +433,7 @@ class ProcessManager {
           status: newStatus,
           healthStatus: healthInfo,
         );
-        _statusController.add(updatedModule);
+        _statusController.add(updatedModule,);
       }
     } catch (e) {
       if (module.status == ModuleStatus.running) {

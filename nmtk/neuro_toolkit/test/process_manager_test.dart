@@ -190,7 +190,7 @@ void main() {
       }
     });
 
-    unawaited(processManager.startModule(module));
+    await processManager.startModule(module);
 
     final updatedModule =
         await completer.future.timeout(const Duration(seconds: 5));
@@ -199,7 +199,7 @@ void main() {
     expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
-    subscription.cancel();
+    await subscription.cancel();
     tempDir.deleteSync(recursive: true);
   });
 
