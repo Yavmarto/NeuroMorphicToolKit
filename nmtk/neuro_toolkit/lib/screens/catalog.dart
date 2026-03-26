@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/models/module.dart';
@@ -68,7 +69,7 @@ class CatalogScreen extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            _buildStatusBadge(context, module, isMuJoCoUnavailable),
+                            _buildStatusBadge(context, module, isMuJoCoUnavailable,),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -91,13 +92,13 @@ class CatalogScreen extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Installation failed: ${module.healthStatus ?? "Unknown error"}',
+                                  'Installation failed: ${module.healthStatus ?? 'Unknown error'}',
                                   style: const TextStyle(color: Colors.red),
                                 ),
                               ),
                               ElevatedButton(
                                 onPressed: () {
-                                  provider.installModule(module.id);
+                                unawaited(provider.installModule(module.id));
                                 },
                                 child: const Text('Retry'),
                               ),
@@ -110,7 +111,7 @@ class CatalogScreen extends StatelessWidget {
                               onPressed: isMuJoCoUnavailable
                                   ? null
                                   : () {
-                                      provider.installModule(module.id);
+                                      unawaited(provider.installModule(module.id));
                                     },
                               child: const Text('Install'),
                             ),
@@ -122,7 +123,7 @@ class CatalogScreen extends StatelessWidget {
                             alignment: Alignment.centerRight,
                             child: OutlinedButton(
                               onPressed: () {
-                                provider.uninstallModule(module.id);
+                                unawaited(provider.uninstallModule(module.id));
                               },
                               child: Text(module.status == ModuleStatus.installed
                                   ? 'Installed'
@@ -209,7 +210,7 @@ class CatalogScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color),
       ),

@@ -20,7 +20,7 @@ class MockProcessManager implements ProcessManager {
   }
 
   @override
-  Future<void> installModule(Module module, {Function(double)? onProgress}) async {
+  Future<void> installModule(Module module, {void Function(double)? onProgress}) async {
     installCalls.add(module.id);
     onProgress?.call(0.5);
     final updated = module.copyWith(status: ModuleStatus.installed, installProgress: 1.0);

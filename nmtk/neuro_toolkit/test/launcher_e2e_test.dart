@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print, unawaited_futures
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,15 +14,13 @@ void main() async {
   TestWidgetsFlutterBinding.ensureInitialized();
   debugPrint('Tests need mock ProcessRunner, skipping real dependencies check');
 
-  if (Platform.environment.containsKey('FLUTTER_TEST')) {
-    return;
-  }
-
-  debugPrint('🚀 Starting E2E Launcher Flow Test...');
+  // ignore: avoid_print
+  print('🚀 Starting E2E Launcher Flow Test...');
 
   // 1. Setup paths
   final repoRoot = p.normalize(p.join(Directory.current.path, '..', '..'));
-  debugPrint('📍 Repo root: $repoRoot');
+  // ignore: avoid_print
+  print('📍 Repo root: $repoRoot');
 
   // Define neurocnl module for testing
   final neurocnl = Module(
@@ -42,16 +41,19 @@ void main() async {
   final completer = Completer<void>();
   Module? lastStatus;
 
-  final subscription = manager.statusUpdates.listen((updated) {
-    debugPrint('🔄 [${updated.id}] Status: ${updated.status} Progress: ${updated.installProgress}');
+  final subscription = manager.statusUpdates.listen((Module updated) {
+    // ignore: avoid_print
+    print('🔄 [${updated.id}] Status: ${updated.status} Progress: ${updated.installProgress}');
     if (updated.id == 'neurocnl') {
       lastStatus = updated;
       if (!completer.isCompleted) {
         if (updated.status == ModuleStatus.starting || updated.status == ModuleStatus.running) {
-          debugPrint('✅ neurocnl is STARTING/RUNNING!');
+          // ignore: avoid_print
+          print('✅ neurocnl is STARTING/RUNNING!');
           completer.complete();
         } else if (updated.status == ModuleStatus.error) {
-          debugPrint('❌ neurocnl entered ERROR state: ${updated.healthStatus}');
+          // ignore: avoid_print
+          print('❌ neurocnl entered ERROR state: ${updated.healthStatus}');
           completer.completeError(Exception('Module error: ${updated.healthStatus}'));
         }
       }
@@ -60,20 +62,23 @@ void main() async {
 
   try {
     // 2. Install
-    debugPrint('📦 Installing neurocnl...');
-    await manager.installModule(neurocnl, onProgress: (p) {
+    // ignore: avoid_print
+    print('📦 Installing neurocnl...');
+    await manager.installModule(neurocnl, onProgress: (double p) {
       // progress printed via subscription
     },);
 
     // 3. Start
-    debugPrint('⚡ Starting neurocnl...');
-    await manager.startModule(neurocnl);
+    // ignore: avoid_print
+    print('⚡ Starting neurocnl...');
+    unawaited(manager.startModule(neurocnl));
 
     // Wait for running state or timeout
     await completer.future.timeout(const Duration(minutes: 2));
 
     // 4. Multi-module test: Start Neurosim
-    debugPrint('📦 Installing Neurosim...');
+    // ignore: avoid_print
+    print('📦 Installing Neurosim...');
     final neurosim = Module(
       id: 'Neurosim',
       name: 'NeuroSim',
@@ -87,17 +92,17 @@ void main() async {
     await manager.init([neurocnl, neurosim]);
     await manager.installModule(neurosim);
 
-    debugPrint('⚡ Starting Neurosim...');
-    await manager.startModule(neurosim);
+    // ignore: avoid_print
+    print('⚡ Starting Neurosim...');
+    unawaited(manager.startModule(neurosim));
 
     // Wait for Neurosim to be running
     final neurosimCompleter = Completer<void>();
-    final nsSub = manager.statusUpdates.listen((updated) {
+    final nsSub = manager.statusUpdates.listen((Module updated) {
       if (updated.id == 'Neurosim' && (updated.status == ModuleStatus.running || updated.status == ModuleStatus.starting)) {
-        debugPrint('✅ Neurosim is STARTING/RUNNING!');
-        if (!neurosimCompleter.isCompleted) {
-            neurosimCompleter.complete();
-        }
+        // ignore: avoid_print
+        print('✅ Neurosim is STARTING/RUNNING!');
+        neurosimCompleter.complete();
       }
     });
 
@@ -105,21 +110,26 @@ void main() async {
     await nsSub.cancel();
 
     // 5. Stop modules
-    debugPrint('🛑 Stopping neurocnl...');
-    await manager.stopModule('neurocnl');
+    // ignore: avoid_print
+    print('🛑 Stopping neurocnl...');
+    unawaited(manager.stopModule('neurocnl'));
 
     // Give it a moment to stop
     await Future<void>.delayed(const Duration(seconds: 2));
 
-    debugPrint('🎉 E2E Launcher Flow Test PASSED!');
+    // ignore: avoid_print
+    print('🎉 E2E Launcher Flow Test PASSED!');
+    exit(0);
   } catch (e) {
-    debugPrint('💥 Test FAILED: $e');
+    // ignore: avoid_print
+    print('💥 Test FAILED: $e');
     if (lastStatus?.healthStatus != null) {
-      debugPrint('Last health status: ${lastStatus?.healthStatus}');
+      // ignore: avoid_print
+      print('Last health status: ${lastStatus?.healthStatus}');
     }
     // Try to cleanup
-    await manager.stopModule('neurocnl');
-    rethrow;
+    unawaited(manager.stopModule('neurocnl'));
+    exit(1);
   } finally {
     await subscription.cancel();
     manager.dispose();

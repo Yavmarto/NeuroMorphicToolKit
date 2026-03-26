@@ -7,8 +7,10 @@ import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:path/path.dart' as p;
 
 class MockProcess implements Process {
-  final StreamController<List<int>> _stdoutController = StreamController<List<int>>();
-  final StreamController<List<int>> _stderrController = StreamController<List<int>>();
+  final StreamController<List<int>> _stdoutController =
+      StreamController<List<int>>();
+  final StreamController<List<int>> _stderrController =
+      StreamController<List<int>>();
   final Completer<int> _exitCodeCompleter = Completer<int>();
 
   @override
@@ -60,7 +62,9 @@ class MockProcessRunner implements ProcessRunner {
     bool runInShell = false,
     ProcessStartMode mode = ProcessStartMode.normal,
   }) async {
-    calls.add(InvocationRecord('start', executable, arguments, workingDirectory));
+    calls.add(
+      InvocationRecord('start', executable, arguments, workingDirectory),
+    );
     return mockProcesses[executable] ?? MockProcess();
   }
 
@@ -97,7 +101,12 @@ class InvocationRecord {
   final List<String> arguments;
   final String? workingDirectory;
 
-  InvocationRecord(this.method, this.executable, this.arguments, this.workingDirectory);
+  InvocationRecord(
+    this.method,
+    this.executable,
+    this.arguments,
+    this.workingDirectory,
+  );
 }
 
 void main() {
@@ -138,7 +147,12 @@ void main() {
     // Check that venv was created
     expect(mockRunner.calls.any((c) => c.arguments.contains('venv')), isTrue);
     // Check that pip install . was called
-    expect(mockRunner.calls.any((c) => c.arguments.contains('install') && c.arguments.contains('.')), isTrue);
+    expect(
+      mockRunner.calls.any(
+        (c) => c.arguments.contains('install') && c.arguments.contains('.'),
+      ),
+      isTrue,
+    );
 
     tempDir.deleteSync(recursive: true);
   });
@@ -176,9 +190,10 @@ void main() {
       }
     });
 
-    await processManager.startModule(module);
+    unawaited(processManager.startModule(module));
 
-    final updatedModule = await completer.future.timeout(const Duration(seconds: 5));
+    final updatedModule =
+        await completer.future.timeout(const Duration(seconds: 5));
     expect(updatedModule.status, ModuleStatus.starting);
 
     expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
@@ -210,7 +225,7 @@ void main() {
     final mockProcess = MockProcess();
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
-    await processManager.startModule(module);
+    unawaited(processManager.startModule(module));
 
     await processManager.stopModule('test_module_stop');
 

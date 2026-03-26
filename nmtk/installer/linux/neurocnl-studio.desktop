@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NeuroCNL Studio
+Comment=Neuromorphic Computing IDE
+Exec=neurocnl_studio
+Icon=neurocnl-studio
+Categories=Science;Education;Development;
+Terminal=false

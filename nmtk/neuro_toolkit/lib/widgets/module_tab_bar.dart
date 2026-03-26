@@ -4,8 +4,8 @@ import 'package:neuro_toolkit/providers/module_provider.dart';
 
 class ModuleTabBar extends StatelessWidget {
   final String activeModuleId;
-  final Function(String) onTabSelected;
-  final Function(String) onTabClosed;
+  final void Function(String) onTabSelected;
+  final void Function(String) onTabClosed;
 
   const ModuleTabBar({
     super.key,
@@ -27,7 +27,7 @@ class ModuleTabBar extends StatelessWidget {
         return Container(
           height: 48,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             border: Border(
               bottom: BorderSide(
                 color: Theme.of(context).dividerColor,

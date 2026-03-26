@@ -135,7 +135,7 @@ class ProcessManager {
     return p.normalize(p.join(module.directory, module.runPath));
   }
 
-  Future<void> installModule(Module module, {Function(double)? onProgress}) async {
+  Future<void> installModule(Module module, {void Function(double)? onProgress}) async {
     final installDir = _installDir(module);
     final moduleDir = Directory(installDir);
     debugPrint('[${module.id}] installModule: installDir=$installDir');
@@ -276,7 +276,7 @@ class ProcessManager {
           }
         }
         // Brief wait for port to be released
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future<void>.delayed(const Duration(milliseconds: 500));
       }
     } catch (_) {}
   }
@@ -342,7 +342,7 @@ class ProcessManager {
         debugPrint('[${module.id}] stderr: ${data.trim()}');
       });
 
-      process.exitCode.then((code) {
+      unawaited(process.exitCode.then((code) {
         _runningProcesses.remove(module.id);
         _outputControllers[module.id]?.close();
         _outputControllers.remove(module.id);
@@ -352,11 +352,11 @@ class ProcessManager {
           healthStatus: code == 0 ? null : 'Process exited with code $code',
         );
         _statusController.add(updatedModuleStopped);
-      });
+      }));
 
       // Give it some time to start up
-      await Future.delayed(const Duration(seconds: 2));
-      await _checkHealth(module);
+      await Future<void>.delayed(const Duration(seconds: 2));
+      unawaited(_checkHealth(module));
     } catch (e) {
       final updatedModuleError = module.copyWith(
         status: ModuleStatus.error,
@@ -453,7 +453,7 @@ class ProcessManager {
   void _startHealthPolling() {
     _healthTimer?.cancel();
     debugPrint('Starting health polling every 5 seconds for ${_modules.length} modules');
-    _healthTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
