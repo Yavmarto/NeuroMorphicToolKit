@@ -21,10 +21,7 @@ class NmtkPrimaryButton extends StatelessWidget {
         label: Text(label),
       );
     }
-    return ElevatedButton(
-      onPressed: onPressed,
-      child: Text(label),
-    );
+    return ElevatedButton(onPressed: onPressed, child: Text(label));
   }
 }
 
@@ -49,9 +46,6 @@ class NmtkOutlinedButton extends StatelessWidget {
         label: Text(label),
       );
     }
-    return OutlinedButton(
-      onPressed: onPressed,
-      child: Text(label),
-    );
+    return OutlinedButton(onPressed: onPressed, child: Text(label));
   }
 }

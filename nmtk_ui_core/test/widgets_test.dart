@@ -4,14 +4,13 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 void main() {
   group('NMTK UI Core Widgets Smoke Tests', () {
-    testWidgets('NmtkPrimaryButton renders correctly', (WidgetTester tester) async {
+    testWidgets('NmtkPrimaryButton renders correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: NmtkPrimaryButton(
-              label: 'Test Button',
-              onPressed: () {},
-            ),
+            body: NmtkPrimaryButton(label: 'Test Button', onPressed: () {}),
           ),
         ),
       );
@@ -20,7 +19,9 @@ void main() {
       expect(find.byType(ElevatedButton), findsOneWidget);
     });
 
-    testWidgets('NmtkEnergyBarChart renders correctly', (WidgetTester tester) async {
+    testWidgets('NmtkEnergyBarChart renders correctly', (
+      WidgetTester tester,
+    ) async {
       const report = EnergyReport(
         perEnsemblePj: {'E1': 10.0, 'E2': 20.0},
         totalPj: 30.0,
@@ -28,10 +29,8 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: NmtkEnergyBarChart(report: report),
-          ),
+        const MaterialApp(
+          home: Scaffold(body: NmtkEnergyBarChart(report: report)),
         ),
       );
 
@@ -41,7 +40,9 @@ void main() {
       expect(find.text('E2'), findsOneWidget);
     });
 
-    testWidgets('NmtkQuantizationTable renders correctly', (WidgetTester tester) async {
+    testWidgets('NmtkQuantizationTable renders correctly', (
+      WidgetTester tester,
+    ) async {
       const report = QuantizationReport(
         bitWidths: [8, 4],
         accuracyDrops: [0.01, 0.06],
@@ -49,10 +50,8 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: NmtkQuantizationTable(report: report),
-          ),
+        const MaterialApp(
+          home: Scaffold(body: NmtkQuantizationTable(report: report)),
         ),
       );
 
@@ -62,7 +61,9 @@ void main() {
       expect(find.text('6.00%'), findsOneWidget);
     });
 
-    testWidgets('NmtkSparklineChart renders correctly', (WidgetTester tester) async {
+    testWidgets('NmtkSparklineChart renders correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -81,7 +82,9 @@ void main() {
       expect(find.byType(CustomPaint), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('NmtkPipelineStepper renders correctly', (WidgetTester tester) async {
+    testWidgets('NmtkPipelineStepper renders correctly', (
+      WidgetTester tester,
+    ) async {
       final steps = [
         const NmtkPipelineStepData(
           label: 'Step 1',
@@ -97,9 +100,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: NmtkPipelineStepper(steps: steps),
-          ),
+          home: Scaffold(body: NmtkPipelineStepper(steps: steps)),
         ),
       );
 
@@ -111,7 +112,9 @@ void main() {
     });
 
     group('Buttons', () {
-      testWidgets('NmtkOutlinedButton renders correctly', (WidgetTester tester) async {
+      testWidgets('NmtkOutlinedButton renders correctly', (
+        WidgetTester tester,
+      ) async {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
