@@ -1,4 +1,4 @@
-name: Build Feature (Jules)
+name: Build Feature
 
 on:
   issues:
@@ -6,41 +6,11 @@ on:
 
 jobs:
   build-feature:
-    # Triggers on 'feature' or 'jules' label — use 'feature' for planned work,
-    # 'jules' for direct implementation requests
-    if: ${{ github.event.label.name == 'feature' || github.event.label.name == 'jules' }}
-    runs-on: self-hosted
-    permissions:
-      contents: write
-      issues: read
-      pull-requests: write
-
-    steps:
-      - name: Invoke Jules
-        # SECURITY: Only allow trusted maintainers to trigger Jules via label
-        # (checks who added the label, not who filed the issue)
-        if: ${{ contains(fromJSON('["Completed-Spoon-6"]'), github.event.sender.login) }}
-        uses: google-labs-code/jules-invoke@v1
-        with:
-          prompt: |
-            Implement the following feature:
-
-            ## ${{ github.event.issue.title }}
-
-            ${{ github.event.issue.body }}
-
-            Implementation Guidelines:
-            1. **Understand** - Read the issue carefully, identify scope and acceptance criteria
-            2. **Plan** - Identify which files need to change and why
-            3. **Implement** - Write clean, idiomatic code following existing conventions
-            4. **Test** - Add or update tests to cover the new functionality
-            5. **PR** - Open a pull request with a clear description of what changed and why
-
-            Constraints:
-            - Follow existing code style and architecture patterns
-            - Do not break existing tests
-            - Keep changes focused — only change what is needed for this feature
-            - If the issue is ambiguous, make the most reasonable interpretation
-              and document your assumption in the PR body
-          jules_api_key: ${{ secrets.JULES_API_KEY }}
-          starting_branch: ${{ github.event.repository.default_branch }}
+    if: ${{ github.event.label.name == 'feature' || github.event.label.name == 'agent' }}
+    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-feature-builder.yml@main
+    with:
+      issue_title: ${{ github.event.issue.title }}
+      issue_body: ${{ github.event.issue.body }}
+      sender_login: ${{ github.event.sender.login }}
+    secrets:
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}

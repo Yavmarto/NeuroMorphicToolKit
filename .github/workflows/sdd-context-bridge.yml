@@ -1,0 +1,79 @@
+name: SDD Context Bridge
+
+# Reusable workflow — reads SDD documents and exposes them as a combined
+# context string for injection into Jules agent prompts.
+#
+# Documents read (all optional — gracefully skips missing files):
+#   SPEC.md       — project specification
+#   AGENTS.md     — agent behavioral rules
+#   GUARDRAILS.md — known failure patterns
+#   RULES.md      — non-negotiable business rules
+#   CODING_STYLE_GUIDE.md — code style conventions
+
+on:
+  workflow_call:
+    outputs:
+      context:
+        description: "Combined SDD context block"
+        value: ${{ jobs.read-context.outputs.context }}
+      spec_exists:
+        description: "'true' if SPEC.md was found"
+        value: ${{ jobs.read-context.outputs.spec_exists }}
+      guardrails_count:
+        description: "Number of guardrail Signs found"
+        value: ${{ jobs.read-context.outputs.guardrails_count }}
+
+jobs:
+  read-context:
+    name: Read SDD documents
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      context:          ${{ steps.build.outputs.context }}
+      spec_exists:      ${{ steps.build.outputs.spec_exists }}
+      guardrails_count: ${{ steps.build.outputs.guardrails_count }}
+
+    steps:
+      - name: Checkout repo (shallow)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Read and combine SDD documents
+        id: build
+        run: |
+          SPEC_EXISTS="false"
+          GUARDRAILS_COUNT=0
+          CONTEXT_FILE=$(mktemp)
+
+          for DOC in SPEC.md AGENTS.md GUARDRAILS.md RULES.md CODING_STYLE_GUIDE.md; do
+            if [ -f "$DOC" ]; then
+              LABEL=$(echo "$DOC" | sed 's/\.md$//' | tr '[:lower:]' '[:upper:]')
+              {
+                echo "════════════════════════════════════════════════════════"
+                echo "## ${LABEL} — Read before writing any code."
+                echo "════════════════════════════════════════════════════════"
+                cat "$DOC"
+                echo ""
+              } >> "$CONTEXT_FILE"
+
+              [ "$DOC" = "SPEC.md" ] && SPEC_EXISTS="true"
+              [ "$DOC" = "GUARDRAILS.md" ] && GUARDRAILS_COUNT=$(grep -c "^## Sign" "$DOC" 2>/dev/null || echo "0")
+            fi
+          done
+
+          if [ ! -s "$CONTEXT_FILE" ]; then
+            echo "# No SDD documents found" >> "$CONTEXT_FILE"
+            echo "Proceed using general best practices." >> "$CONTEXT_FILE"
+          fi
+
+          {
+            echo "context<<__SDD_EOF__"
+            cat "$CONTEXT_FILE"
+            echo "__SDD_EOF__"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "spec_exists=${SPEC_EXISTS}"           >> "$GITHUB_OUTPUT"
+          echo "guardrails_count=${GUARDRAILS_COUNT}" >> "$GITHUB_OUTPUT"
+          rm -f "$CONTEXT_FILE"

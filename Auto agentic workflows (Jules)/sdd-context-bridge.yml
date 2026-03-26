@@ -1,0 +1,145 @@
+name: SDD Context Bridge
+
+# Reusable workflow — bridges the Research-Spec-driven-development framework
+# into every agent prompt. Call this from any other workflow to inject the
+# project's SDD documents as context before the agent starts working.
+#
+# Documents read (all optional — workflow gracefully skips missing files):
+#   SPEC.md       — project specification (source of truth)
+#   AGENTS.md     — agent behavioral rules for this specific repo
+#   GUARDRAILS.md — known failure patterns the agent must NOT repeat
+#   RULES.md      — non-negotiable business rules
+#
+# ── How to use in a calling workflow ────────────────────────────────────────
+#
+#   jobs:
+#     sdd-context:
+#       uses: ./.github/workflows/sdd-context-bridge.yml
+#
+#     my-agent-job:
+#       needs: sdd-context
+#       steps:
+#         - uses: google-labs-code/jules-invoke@v1
+#           with:
+#             jules_api_key: ${{ secrets.JULES_API_KEY }}
+#             prompt: |
+#               ${{ needs.sdd-context.outputs.context }}
+#
+#               ════════════════════════════════════════
+#               ## YOUR ACTUAL TASK
+#               ════════════════════════════════════════
+#               [Your task-specific prompt here...]
+#
+# ── Outputs ──────────────────────────────────────────────────────────────────
+#   context          — combined SDD document block, ready to prepend to any prompt
+#   spec_exists      — "true" if SPEC.md was found in the repo root
+#   guardrails_count — number of guardrail Signs found in GUARDRAILS.md
+
+on:
+  workflow_call:
+    outputs:
+      context:
+        description: "Combined SDD context block (SPEC + AGENTS + GUARDRAILS + RULES)"
+        value: ${{ jobs.read-context.outputs.context }}
+      spec_exists:
+        description: "'true' if SPEC.md was found"
+        value: ${{ jobs.read-context.outputs.spec_exists }}
+      guardrails_count:
+        description: "Number of guardrail Signs found in GUARDRAILS.md"
+        value: ${{ jobs.read-context.outputs.guardrails_count }}
+
+jobs:
+  read-context:
+    name: Read SDD documents
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      context:          ${{ steps.build.outputs.context }}
+      spec_exists:      ${{ steps.build.outputs.spec_exists }}
+      guardrails_count: ${{ steps.build.outputs.guardrails_count }}
+
+    steps:
+      - name: Checkout repo (shallow)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Read and combine SDD documents
+        id: build
+        run: |
+          SPEC_EXISTS="false"
+          GUARDRAILS_COUNT=0
+          CONTEXT_FILE=$(mktemp)
+
+          # ── SPEC.md ───────────────────────────────────────────────────
+          if [ -f "SPEC.md" ]; then
+            SPEC_EXISTS="true"
+            {
+              echo "════════════════════════════════════════════════════════"
+              echo "## PROJECT SPECIFICATION (SPEC.md)"
+              echo "## This is the source of truth. Read it before writing any code."
+              echo "════════════════════════════════════════════════════════"
+              cat SPEC.md
+              echo ""
+            } >> "$CONTEXT_FILE"
+          fi
+
+          # ── AGENTS.md ─────────────────────────────────────────────────
+          if [ -f "AGENTS.md" ]; then
+            {
+              echo "════════════════════════════════════════════════════════"
+              echo "## AGENT BEHAVIORAL RULES (AGENTS.md)"
+              echo "## These rules apply to YOU. Follow them exactly."
+              echo "════════════════════════════════════════════════════════"
+              cat AGENTS.md
+              echo ""
+            } >> "$CONTEXT_FILE"
+          fi
+
+          # ── GUARDRAILS.md ─────────────────────────────────────────────
+          if [ -f "GUARDRAILS.md" ]; then
+            GUARDRAILS_COUNT=$(grep -c "^## Sign" GUARDRAILS.md 2>/dev/null || echo "0")
+            {
+              echo "════════════════════════════════════════════════════════"
+              echo "## KNOWN FAILURE PATTERNS — GUARDRAILS (GUARDRAILS.md)"
+              echo "## These are mistakes a previous agent made in this repo."
+              echo "## DO NOT repeat any of these patterns."
+              echo "════════════════════════════════════════════════════════"
+              cat GUARDRAILS.md
+              echo ""
+            } >> "$CONTEXT_FILE"
+          fi
+
+          # ── RULES.md ──────────────────────────────────────────────────
+          if [ -f "RULES.md" ]; then
+            {
+              echo "════════════════════════════════════════════════════════"
+              echo "## BUSINESS RULES (RULES.md)"
+              echo "## These constraints are non-negotiable and must never be violated."
+              echo "════════════════════════════════════════════════════════"
+              cat RULES.md
+              echo ""
+            } >> "$CONTEXT_FILE"
+          fi
+
+          # Fallback if no SDD documents were found
+          if [ ! -s "$CONTEXT_FILE" ]; then
+            echo "# No SDD documents found" >> "$CONTEXT_FILE"
+            echo "No SPEC.md, AGENTS.md, GUARDRAILS.md, or RULES.md was found in the" >> "$CONTEXT_FILE"
+            echo "repository root. Proceed using general best practices." >> "$CONTEXT_FILE"
+            echo "Consider adding these files — see: Research-Spec-driven-development" >> "$CONTEXT_FILE"
+          fi
+
+          # Write multiline output safely using heredoc delimiter
+          {
+            echo "context<<__SDD_EOF__"
+            cat "$CONTEXT_FILE"
+            echo "__SDD_EOF__"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "spec_exists=${SPEC_EXISTS}"             >> "$GITHUB_OUTPUT"
+          echo "guardrails_count=${GUARDRAILS_COUNT}"   >> "$GITHUB_OUTPUT"
+
+          echo "SDD context ready. SPEC.md: ${SPEC_EXISTS} | Guardrails: ${GUARDRAILS_COUNT}"
+          rm -f "$CONTEXT_FILE"

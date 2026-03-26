@@ -1,0 +1,60 @@
+name: Reusable Unblocked Issues Worker
+
+on:
+  workflow_call:
+    inputs:
+      issue_title:
+        required: true
+        type: string
+      issue_body:
+        required: true
+        type: string
+      issue_author:
+        required: true
+        type: string
+      trusted_users:
+        description: 'JSON array of trusted GitHub usernames'
+        required: false
+        type: string
+        default: '["your-github-username"]'
+    secrets:
+      JULES_API_KEY:
+        required: true
+
+jobs:
+  sdd-context:
+    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/sdd-context-bridge.yml@main
+
+  implement:
+    needs: sdd-context
+    if: ${{ contains(fromJSON(inputs.trusted_users), inputs.issue_author) }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: agent-work
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: write
+
+    steps:
+      - name: Invoke Jules on Unblocked Issue
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            ════════════════════════════════════════
+            ## YOUR TASK: Implement unblocked issue
+            ════════════════════════════════════════
+
+            A previously blocked issue is now unblocked and ready for implementation:
+
+            ## ${{ inputs.issue_title }}
+
+            ${{ inputs.issue_body }}
+
+            This issue was waiting on a dependency that has just been resolved.
+            Please implement it now, following the project's coding standards.
+            Add tests and open a pull request.

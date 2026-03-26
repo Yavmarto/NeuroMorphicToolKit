@@ -1,0 +1,200 @@
+name: Morning Agent Standup
+
+# Sends a daily briefing at the start of the day:
+#   - Which issues are queued for the agent (sorted by type + priority)
+#   - Which jules/* PRs are awaiting review
+#   - Whether any agent is currently running
+#
+# Report is posted as a comment on a pinned 'standup-log' issue in this repo.
+# The issue is created automatically on the first run.
+#
+# Optional: set the STANDUP_WEBHOOK_URL secret (Slack or Discord incoming
+# webhook URL) to also receive the report in a chat channel.
+
+on:
+  schedule:
+    - cron: '0 8 * * 1-5'   # Weekdays at 8 AM UTC — adjust to your timezone
+  workflow_dispatch:         # Run manually at any time
+
+concurrency:
+  group: standup-report
+  cancel-in-progress: true   # If triggered twice, keep only the latest
+
+jobs:
+  standup:
+    name: Post morning standup
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+      actions: read
+
+    steps:
+      - name: Build and post standup report
+        id: report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner   = context.repo.owner;
+            const repo    = context.repo.repo;
+            const now     = new Date();
+            const today   = now.toISOString().split('T')[0];
+            const dayName = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+            const dateStr = now.toLocaleDateString('en-US', {
+              month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+            });
+
+            // ── 1. Fetch all open non-PR issues ──────────────────────────
+            const allIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const issues = allIssues.filter(i => !i.pull_request);
+
+            const AGENT_LABELS  = new Set(['bug', 'feature', 'agent']);
+            const PRIORITY_RANK = { p0: 0, urgent: 0, p1: 1, p2: 2 };
+            const TYPE_RANK     = { bug: 0, feature: 1, agent: 2 };
+
+            const tagged = issues
+              .filter(i => i.labels.some(l => AGENT_LABELS.has(l.name)))
+              .map(i => {
+                const labelNames = i.labels.map(l => l.name);
+                const isBlocked  = /blocked[- ]by\s*:/i.test(i.body || '');
+                const type       = labelNames.includes('bug')     ? 'bug'
+                                 : labelNames.includes('feature') ? 'feature'
+                                 : 'agent';
+                const urgency    = labelNames.find(l => PRIORITY_RANK[l] !== undefined) ?? 'p2';
+                return { number: i.number, title: i.title, url: i.html_url, type, urgency, isBlocked };
+              })
+              .sort((a, b) => {
+                const typeDiff = (TYPE_RANK[a.type] ?? 9) - (TYPE_RANK[b.type] ?? 9);
+                if (typeDiff !== 0) return typeDiff;
+                return (PRIORITY_RANK[a.urgency] ?? 2) - (PRIORITY_RANK[b.urgency] ?? 2);
+              });
+
+            const actionable = tagged.filter(i => !i.isBlocked);
+            const blocked    = tagged.filter(i =>  i.isBlocked);
+
+            // ── 2. Open jules/* PRs (work in flight) ─────────────────────
+            const allPRs   = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const agentPRs = allPRs.filter(pr => pr.head.ref.startsWith('jules/'));
+
+            // ── 3. Any agent workflow currently running? ──────────────────
+            const AGENT_WORKFLOWS = [
+              'bug-fixer.yml', 'feature-builder.yml', 'ci-failure-fix.yml',
+              'unblocked-issues.yml', 'performance-improver.yml', 'scaffold-module.yml',
+              'merge-conflict-resolver.yml', 'weekly-cleanup.yml', 'unused-code-remover.yml'
+            ];
+            const runResp    = await github.rest.actions.listWorkflowRunsForRepo({
+              owner, repo, status: 'in_progress', per_page: 50
+            });
+            const activeRuns = runResp.data.workflow_runs.filter(r =>
+              AGENT_WORKFLOWS.some(wf => r.path.includes(wf))
+            );
+
+            // ── 4. Format the report ──────────────────────────────────────
+            const E = { bug: '🐛', feature: '✨', agent: '🤖', p0: '🔴', urgent: '🔴', p1: '🟡', p2: '🟢' };
+
+            let body = `## 🌅 Agent Standup — ${dayName}, ${dateStr}\n\n`;
+
+            // Active runs banner
+            if (activeRuns.length > 0) {
+              body += `### ⚙️ Currently Running\n`;
+              for (const r of activeRuns) body += `- [${r.name}](${r.html_url})\n`;
+              body += '\n';
+            }
+
+            // PRs in review
+            if (agentPRs.length > 0) {
+              body += `### 🔍 Awaiting Review — ${agentPRs.length} open PR${agentPRs.length !== 1 ? 's' : ''}\n`;
+              for (const pr of agentPRs) {
+                const age = Math.floor((Date.now() - new Date(pr.created_at)) / 86400000);
+                const ageStr = age === 0 ? 'today' : `${age}d old`;
+                body += `- #${pr.number} [${pr.title}](${pr.html_url}) · ${ageStr}\n`;
+              }
+              body += '\n';
+            }
+
+            // Task queue — ordered work list
+            body += `### 📋 Task Queue\n`;
+            if (actionable.length === 0) {
+              body += `_Queue is empty. Apply \`bug\`, \`feature\`, or \`agent\` labels to issues to queue work._\n`;
+            } else {
+              body += `The agent will work through these in order:\n\n`;
+              actionable.forEach((i, idx) => {
+                body += `${idx + 1}. ${E[i.urgency] || '🟢'} \`${i.type}\` — #${i.number} [${i.title}](${i.url})\n`;
+              });
+            }
+            body += '\n';
+
+            // Blocked issues
+            if (blocked.length > 0) {
+              body += `### 🚧 Blocked (${blocked.length})\n`;
+              for (const i of blocked) {
+                body += `- #${i.number} [${i.title}](${i.url}) — waiting on dependency\n`;
+              }
+              body += '\n';
+            }
+
+            // Footer stats
+            body += `---\n`;
+            body += `📊 **${tagged.length} issue${tagged.length !== 1 ? 's' : ''} queued** · `;
+            body += `${actionable.length} actionable · ${blocked.length} blocked · `;
+            body += `${agentPRs.length} PR${agentPRs.length !== 1 ? 's' : ''} in review\n\n`;
+            body += `_EOD summary will follow at ~5 PM UTC · `;
+            body += `Generated by the [Morning Standup workflow](${context.serverUrl}/${owner}/${repo}/actions)_`;
+
+            // ── 5. Find or create the standup-log issue ───────────────────
+            let logNum;
+            const logList = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', labels: 'standup-log', per_page: 1
+            });
+
+            if (logList.data.length > 0) {
+              logNum = logList.data[0].number;
+            } else {
+              // First run — create the label and the log issue
+              try {
+                await github.rest.issues.createLabel({
+                  owner, repo, name: 'standup-log',
+                  color: '0075ca', description: 'Agent standup log thread — do not close'
+                });
+              } catch (_) { /* label already exists */ }
+
+              const created = await github.rest.issues.create({
+                owner, repo,
+                title: '📋 Agent Daily Standup Log',
+                body: [
+                  'This issue is the running log for all daily agent standup reports and EOD summaries.',
+                  '',
+                  '**Do not close this issue.** New reports are posted as comments.',
+                  '',
+                  '| Report | Time | Workflow |',
+                  '|--------|------|----------|',
+                  '| Morning Standup | 8 AM UTC weekdays | `morning-standup.yml` |',
+                  '| EOD Report | 5 PM UTC weekdays | `eod-report.yml` |',
+                ].join('\n'),
+                labels: ['standup-log']
+              });
+              logNum = created.data.number;
+              core.info(`Created standup log issue #${logNum}`);
+            }
+
+            await github.rest.issues.createComment({ owner, repo, issue_number: logNum, body });
+            core.info(`Standup posted to issue #${logNum}`);
+            core.setOutput('body', body);
+            core.setOutput('log_issue', String(logNum));
+
+      # ── Optional: send to Slack or Discord ─────────────────────────────────
+      # Set STANDUP_WEBHOOK_URL in repo → Settings → Secrets → Actions
+      - name: Send to Slack / Discord (optional)
+        if: ${{ env.WEBHOOK_URL != '' }}
+        env:
+          WEBHOOK_URL: ${{ secrets.STANDUP_WEBHOOK_URL }}
+          BODY: ${{ steps.report.outputs.body }}
+        run: |
+          curl -s -o /dev/null -w "Webhook response: %{http_code}\n" \
+            -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg text "$BODY" '{"text": $text}')"

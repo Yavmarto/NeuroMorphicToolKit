@@ -1,0 +1,154 @@
+name: Idle Capacity Triage
+
+on:
+  schedule:
+    - cron: '30 * * * *'   # Runs at :30 past every hour
+  workflow_dispatch:
+
+concurrency:
+  group: agent-work
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    name: Triage unlabeled issues
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      actions: read
+
+    steps:
+      - name: Check capacity and collect unlabeled issues
+        id: gate
+        uses: actions/github-script@v7
+        env:
+          AGENT_DAILY_RUN_LIMIT: ${{ vars.AGENT_DAILY_RUN_LIMIT }}
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const today = new Date().toISOString().split('T')[0];
+            const DAILY_LIMIT = parseInt(process.env.AGENT_DAILY_RUN_LIMIT || '20', 10);
+
+            if (DAILY_LIMIT === 0) {
+              core.info('AGENT_DAILY_RUN_LIMIT=0 — idle triage disabled.');
+              core.setOutput('should_run', 'false');
+              core.setOutput('skip_reason', 'Triage disabled (AGENT_DAILY_RUN_LIMIT=0)');
+              return;
+            }
+
+            const AGENT_WORKFLOWS = [
+              'bug-fixer.yml', 'feature-builder.yml', 'ci-failure-fix.yml',
+              'unblocked-issues.yml', 'performance-improver.yml', 'weekly-cleanup.yml',
+              'unused-code-remover.yml', 'scaffold-module.yml', 'merge-conflict-resolver.yml',
+              'guardrails-updater.yml'
+            ];
+            const inProgress = await github.rest.actions.listWorkflowRunsForRepo({
+              owner, repo, status: 'in_progress', per_page: 50
+            });
+            const busyRun = inProgress.data.workflow_runs.find(r =>
+              AGENT_WORKFLOWS.some(wf => r.path.includes(wf))
+            );
+            if (busyRun) {
+              core.info(`Agent busy: ${busyRun.name} — skipping triage.`);
+              core.setOutput('should_run', 'false');
+              core.setOutput('skip_reason', `Agent busy: ${busyRun.name}`);
+              return;
+            }
+
+            const completed = await github.rest.actions.listWorkflowRunsForRepo({
+              owner, repo, status: 'completed',
+              created: `>=${today}T00:00:00Z`, per_page: 100
+            });
+            const runsToday = completed.data.workflow_runs.filter(r =>
+              AGENT_WORKFLOWS.some(wf => r.path.includes(wf))
+            ).length;
+            if (runsToday >= DAILY_LIMIT) {
+              core.info(`Daily limit reached: ${runsToday}/${DAILY_LIMIT} — skipping triage.`);
+              core.setOutput('should_run', 'false');
+              core.setOutput('skip_reason', `Daily limit reached (${runsToday}/${DAILY_LIMIT} runs)`);
+              return;
+            }
+
+            const SKIP_LABELS = new Set([
+              'bug', 'feature', 'agent', 'p0', 'p1', 'p2', 'urgent',
+              'standup-log', 'wontfix', 'duplicate', 'invalid', 'question',
+              'merge-conflict'
+            ]);
+            const allIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const unlabeled = allIssues
+              .filter(i => !i.pull_request)
+              .filter(i => !i.labels.some(l => SKIP_LABELS.has(l.name)))
+              .slice(0, 10);
+
+            if (unlabeled.length === 0) {
+              core.info('No unlabeled issues — nothing to triage.');
+              core.setOutput('should_run', 'false');
+              core.setOutput('skip_reason', 'No unlabeled issues found');
+              return;
+            }
+
+            const issueList = unlabeled.map(i =>
+              `- #${i.number}: ${i.title}\n  Body preview: ${(i.body || '(empty)').substring(0, 300)}`
+            ).join('\n\n');
+
+            core.info(`Found ${unlabeled.length} unlabeled issues. Budget: ${runsToday}/${DAILY_LIMIT}.`);
+            core.setOutput('should_run',  'true');
+            core.setOutput('issue_list',  issueList);
+            core.setOutput('issue_count', String(unlabeled.length));
+            core.setOutput('budget_used', `${runsToday}/${DAILY_LIMIT}`);
+
+      - name: Checkout repo
+        if: steps.gate.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Invoke Jules to classify issues
+        if: steps.gate.outputs.should_run == 'true'
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            You are a triage agent. The agent pipeline has idle capacity (${{ steps.gate.outputs.budget_used }} runs used today).
+            Classify unlabeled GitHub issues so they are queued correctly.
+
+            ## Issues to Classify
+
+            ${{ steps.gate.outputs.issue_list }}
+
+            ## Classification Instructions
+
+            For each issue, determine:
+
+            **1. Type label** — pick the single best fit:
+            - `bug`     — something broken, regression, crash, wrong output
+            - `feature` — new capability, enhancement, improvement
+            - `question`— support request (do NOT queue for agent)
+            - `invalid` — spam, off-topic (do NOT queue for agent)
+
+            **2. Priority label** — for bugs and features only:
+            - `p0` — critical: system broken, data loss, security issue
+            - `p1` — important: noticeable user impact
+            - `p2` — low urgency: nice to have
+
+            For each bug/feature issue, apply labels and post a classification comment using `gh` CLI.
+            For question/invalid issues, apply only that label and explain why.
+
+            Constraints:
+            - Do NOT open any PRs or modify any code
+            - Process at most 10 issues per run
+            - When in doubt, err toward p1 over p0
+
+      - name: Log result
+        if: always()
+        run: |
+          if [ "${{ steps.gate.outputs.should_run }}" = "false" ]; then
+            echo "Triage skipped: ${{ steps.gate.outputs.skip_reason }}"
+          else
+            echo "Triage completed for ${{ steps.gate.outputs.issue_count }} issues."
+          fi

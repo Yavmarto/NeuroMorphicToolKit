@@ -1,0 +1,74 @@
+name: Reusable CI Failure Fix
+
+on:
+  workflow_call:
+    inputs:
+      workflow_name:
+        required: true
+        type: string
+      workflow_url:
+        required: true
+        type: string
+      head_branch:
+        required: true
+        type: string
+      head_sha:
+        required: true
+        type: string
+      run_id:
+        required: true
+        type: string
+    secrets:
+      JULES_API_KEY:
+        required: true
+
+jobs:
+  sdd-context:
+    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/sdd-context-bridge.yml@main
+
+  fix-failure:
+    needs: sdd-context
+    runs-on: ubuntu-latest
+    concurrency:
+      group: agent-work
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: write
+
+    steps:
+      - name: Download workflow logs
+        uses: actions/github-script@v7
+        id: get-logs
+        with:
+          script: |
+            const logs = await github.rest.actions.downloadWorkflowRunLogs({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ inputs.run_id }}
+            });
+            return logs.url;
+
+      - name: Invoke Jules to fix CI failure
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            ════════════════════════════════════════
+            ## YOUR TASK: Fix CI Failure
+            ════════════════════════════════════════
+
+            The CI workflow "${{ inputs.workflow_name }}" has failed.
+
+            **Failed Run:** ${{ inputs.workflow_url }}
+            **Branch:** ${{ inputs.head_branch }}
+            **Commit:** ${{ inputs.head_sha }}
+
+            Please:
+            1. Analyze the failure by reading the workflow run linked above
+            2. Identify the root cause (broken test, missing dependency, type error, etc.)
+            3. Implement a focused fix — do not refactor unrelated code
+            4. Ensure the fix will pass CI before opening a PR

@@ -1,0 +1,193 @@
+name: EOD Agent Report
+
+# Sends an end-of-day summary covering:
+#   - PRs the agent merged today (shipped work)
+#   - PRs still open and awaiting review
+#   - Agent workflow runs that failed today
+#   - Issues newly triaged today by the idle-capacity-triage workflow
+#
+# Report is posted to the same 'standup-log' issue used by morning-standup.yml,
+# keeping morning + EOD in a single threaded conversation per day.
+#
+# Optional: set STANDUP_WEBHOOK_URL secret for Slack/Discord delivery.
+
+on:
+  schedule:
+    - cron: '0 17 * * 1-5'  # Weekdays at 5 PM UTC — adjust to your end of day
+  workflow_dispatch:
+
+concurrency:
+  group: eod-report
+  cancel-in-progress: true
+
+jobs:
+  eod-report:
+    name: Post EOD report
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: read
+      actions: read
+
+    steps:
+      - name: Build and post EOD report
+        id: report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const now   = new Date();
+            const today = now.toISOString().split('T')[0];
+            const dayName = now.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+            const dateStr = now.toLocaleDateString('en-US', {
+              month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+            });
+
+            // ── 1. PRs merged today from jules/* branches ─────────────────
+            const closedPRs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'closed', per_page: 100,
+              sort: 'updated', direction: 'desc'
+            });
+            const mergedToday = closedPRs.filter(pr => {
+              if (!pr.merged_at)                          return false;
+              if (!pr.head.ref.startsWith('jules/'))      return false;
+              return pr.merged_at.startsWith(today);
+            });
+
+            // ── 2. Open jules/* PRs still awaiting review ─────────────────
+            const openPRs    = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: 'open', per_page: 100
+            });
+            const pendingPRs = openPRs.filter(pr => pr.head.ref.startsWith('jules/'));
+
+            // ── 3. Agent workflow run outcomes today ──────────────────────
+            const AGENT_WORKFLOWS = [
+              'bug-fixer.yml', 'feature-builder.yml', 'ci-failure-fix.yml',
+              'unblocked-issues.yml', 'performance-improver.yml', 'weekly-cleanup.yml',
+              'unused-code-remover.yml', 'scaffold-module.yml',
+              'merge-conflict-resolver.yml', 'idle-capacity-triage.yml'
+            ];
+
+            const allRuns = await github.rest.actions.listWorkflowRunsForRepo({
+              owner, repo, created: `>=${today}T00:00:00Z`, per_page: 100
+            });
+
+            let successCount = 0, skippedCount = 0;
+            const failedRuns = [];
+
+            for (const r of allRuns.data.workflow_runs) {
+              if (!AGENT_WORKFLOWS.some(wf => r.path.includes(wf))) continue;
+              if (r.status !== 'completed') continue;
+              if (r.conclusion === 'success')        successCount++;
+              else if (r.conclusion === 'skipped')   skippedCount++;
+              else failedRuns.push({ name: r.name, url: r.html_url, conclusion: r.conclusion });
+            }
+
+            // ── 4. Issues triaged or newly tagged today ───────────────────
+            const recentIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: 'open', since: `${today}T00:00:00Z`, per_page: 100
+            });
+            const triagedToday = recentIssues.filter(i =>
+              !i.pull_request &&
+              i.created_at.startsWith(today) &&
+              i.labels.some(l => ['bug','feature','agent','p0','p1','p2'].includes(l.name))
+            );
+
+            // ── 5. Format the report ──────────────────────────────────────
+            let body = `## 🌇 EOD Agent Report — ${dayName}, ${dateStr}\n\n`;
+
+            // Shipped
+            body += `### ✅ Shipped Today — ${mergedToday.length} merged PR${mergedToday.length !== 1 ? 's' : ''}\n`;
+            if (mergedToday.length === 0) {
+              body += `_Nothing merged today._\n`;
+            } else {
+              for (const pr of mergedToday) {
+                const refs  = [...(pr.body || '').matchAll(/#(\d+)/g)].map(m => `#${m[1]}`);
+                const closes = refs.length > 0 ? ` · closes ${refs.join(', ')}` : '';
+                body += `- ✅ #${pr.number} [${pr.title}](${pr.html_url})${closes}\n`;
+              }
+            }
+            body += '\n';
+
+            // In review
+            if (pendingPRs.length > 0) {
+              body += `### 🔍 Still In Review — ${pendingPRs.length} PR${pendingPRs.length !== 1 ? 's' : ''}\n`;
+              for (const pr of pendingPRs) {
+                const age    = Math.floor((Date.now() - new Date(pr.created_at)) / 86400000);
+                const ageStr = age === 0 ? 'opened today' : `${age}d old`;
+                body += `- #${pr.number} [${pr.title}](${pr.html_url}) · ${ageStr}\n`;
+              }
+              body += '\n';
+            }
+
+            // Failures
+            if (failedRuns.length > 0) {
+              body += `### ❌ Failed Workflow Runs — ${failedRuns.length}\n`;
+              for (const r of failedRuns) {
+                body += `- [${r.name}](${r.url}) — \`${r.conclusion}\`\n`;
+              }
+              body += '\n';
+            }
+
+            // Newly triaged
+            if (triagedToday.length > 0) {
+              body += `### 🏷️ Newly Triaged Today — ${triagedToday.length}\n`;
+              for (const i of triagedToday) {
+                const labels = i.labels.map(l => `\`${l.name}\``).join(' ');
+                body += `- #${i.number} [${i.title}](${i.html_url}) — ${labels}\n`;
+              }
+              body += '\n';
+            }
+
+            // Summary footer
+            const totalIssuesOpen = recentIssues.filter(i =>
+              !i.pull_request && i.labels.some(l => ['bug','feature','agent'].includes(l.name))
+            ).length;
+            body += `---\n`;
+            body += `📊 **Day summary:** `;
+            body += `${mergedToday.length} shipped · `;
+            body += `${pendingPRs.length} in review · `;
+            body += `${failedRuns.length} failed · `;
+            body += `${successCount} workflow runs completed\n\n`;
+            body += `_Generated by the [EOD Report workflow](${context.serverUrl}/${owner}/${repo}/actions)_`;
+
+            // ── 6. Post to standup-log issue ──────────────────────────────
+            let logNum;
+            const logList = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', labels: 'standup-log', per_page: 1
+            });
+
+            if (logList.data.length > 0) {
+              logNum = logList.data[0].number;
+            } else {
+              try {
+                await github.rest.issues.createLabel({
+                  owner, repo, name: 'standup-log',
+                  color: '0075ca', description: 'Agent standup log thread — do not close'
+                });
+              } catch (_) {}
+              const created = await github.rest.issues.create({
+                owner, repo,
+                title: '📋 Agent Daily Standup Log',
+                body: 'Running log for agent standup and EOD reports. **Do not close.**',
+                labels: ['standup-log']
+              });
+              logNum = created.data.number;
+            }
+
+            await github.rest.issues.createComment({ owner, repo, issue_number: logNum, body });
+            core.info(`EOD report posted to issue #${logNum}`);
+            core.setOutput('body', body);
+
+      # ── Optional: send to Slack or Discord ─────────────────────────────────
+      - name: Send to Slack / Discord (optional)
+        if: ${{ env.WEBHOOK_URL != '' }}
+        env:
+          WEBHOOK_URL: ${{ secrets.STANDUP_WEBHOOK_URL }}
+          BODY: ${{ steps.report.outputs.body }}
+        run: |
+          curl -s -o /dev/null -w "Webhook response: %{http_code}\n" \
+            -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg text "$BODY" '{"text": $text}')"

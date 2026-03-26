@@ -1,0 +1,66 @@
+name: Reusable Bug Fixer
+
+on:
+  workflow_call:
+    inputs:
+      issue_title:
+        required: true
+        type: string
+      issue_body:
+        required: true
+        type: string
+      sender_login:
+        required: true
+        type: string
+      trusted_users:
+        description: 'JSON array of trusted GitHub usernames'
+        required: false
+        type: string
+        default: '["your-github-username"]'
+    secrets:
+      JULES_API_KEY:
+        required: true
+
+jobs:
+  sdd-context:
+    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/sdd-context-bridge.yml@main
+
+  fix-bug:
+    needs: sdd-context
+    if: ${{ contains(fromJSON(inputs.trusted_users), inputs.sender_login) }}
+    runs-on: ubuntu-latest
+    concurrency:
+      group: agent-work
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: write
+
+    steps:
+      - name: Invoke Jules to fix bug
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            ════════════════════════════════════════
+            ## YOUR TASK: Fix the following bug
+            ════════════════════════════════════════
+
+            ## ${{ inputs.issue_title }}
+
+            ${{ inputs.issue_body }}
+
+            Debugging Process:
+            1. **Analysis** - Review the bug report and identify the root cause
+            2. **Diagnosis** - Trace the issue through the codebase
+            3. **Fix** - Implement a minimal, targeted fix
+            4. **Testing** - Add a regression test that would have caught this bug
+            5. **Documentation** - Add comments explaining the fix
+
+            Please provide:
+            - Clear explanation of the root cause
+            - The complete fix with all necessary changes
+            - Test cases to prevent regression
