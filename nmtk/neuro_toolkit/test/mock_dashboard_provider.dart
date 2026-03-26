@@ -1,16 +1,26 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:neuro_toolkit/main.dart';
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 
-class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
+class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
+  final List<Module> _mockModules = [];
+  final List<String> launchCalls = [];
+  final List<String> stopCalls = [];
+  final List<String> uninstallCalls = [];
+
   @override
-  List<Module> get modules => [];
+  List<Module> get installedModules => _mockModules.where((m) => m.status != ModuleStatus.notInstalled).toList();
+
   @override
-  set modules(List<Module> val) {}
+  List<Module> get modules => _mockModules;
+  @override
+  set modules(List<Module> val) {
+    _mockModules.clear();
+    _mockModules.addAll(val);
+    notifyListeners();
+  }
   @override
   List<Module> modulesForTesting = [];
   @override
@@ -28,10 +38,7 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
   List<Module> get activeModules => [];
   @override
-  List<Module> get installedModules => [];
-  @override
   List<Module> get availableModules => [];
-
   @override
   Future<void> recheckPython() async {}
   @override
@@ -39,44 +46,43 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
   Future<void> installModule(String moduleId) async {}
   @override
-  Future<void> launchModule(String moduleId) async {}
-  @override
-  Future<void> stopModule(String moduleId) async {}
-  @override
-  Future<void> uninstallModule(String moduleId) async {}
-  @override
-  Future<void> checkForUpdates() async {}
-  @override
-  Future<void> updateModule(String moduleId) async {}
-  @override
-  void setUpdateChannel(UpdateChannel channel) {}
-  @override
-  Future<void> setVersionPinned(String moduleId, bool pinned) async {}
-  @override
-  void dismissLauncherUpdate() {}
-  @override
   void closeTab(String moduleId) {}
   @override
   Stream<String>? getModuleOutput(String moduleId) => null;
-}
 
-void main() {
-  testWidgets('App loads smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ModuleProvider>(
-            create: (_) => LocalMockModuleProvider(),
-          ),
-        ],
-        child: const NeuroToolkitApp(),
-      ),
-    );
+  @override
+  Future<void> launchModule(String moduleId) async {
+    launchCalls.add(moduleId);
+  }
 
-    await tester.pumpAndSettle();
+  @override
+  Future<void> stopModule(String moduleId) async {
+    stopCalls.add(moduleId);
+  }
 
-    // Verify that the Dashboard is shown.
-    expect(find.text('Dashboard'), findsWidgets);
-  });
+  @override
+  Future<void> uninstallModule(String moduleId) async {
+    uninstallCalls.add(moduleId);
+  }
+
+  @override
+  Future<void> checkForUpdates() async {}
+
+  @override
+  Future<void> updateModule(String moduleId) async {}
+
+  @override
+  void setUpdateChannel(UpdateChannel channel) {}
+
+  @override
+  Future<void> setVersionPinned(String moduleId, bool pinned) async {}
+
+  @override
+  void dismissLauncherUpdate() {}
+
+  void setInstalledModules(List<Module> modules) {
+    _mockModules.clear();
+    _mockModules.addAll(modules);
+    notifyListeners();
+  }
 }

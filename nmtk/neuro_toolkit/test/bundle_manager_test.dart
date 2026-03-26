@@ -35,6 +35,14 @@ class MockBundleEnvironment implements BundleEnvironment {
   }
 
   @override
+  Future<void> deleteDirectory(String path, {bool recursive = false}) async {
+    final normalizedPath = p.normalize(path);
+    _existingDirectories.remove(normalizedPath);
+    _existingDirectories.removeWhere((dir) => dir.startsWith('$normalizedPath/'));
+    _files.removeWhere((file, _) => file.startsWith('$normalizedPath/'));
+  }
+
+  @override
   Future<String> getApplicationSupportPath() async => '/mock/user/app_support';
 
   @override

@@ -4,70 +4,7 @@ import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:provider/provider.dart';
-
-class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
-  final List<Module> _mockInstalledModules = [];
-  final List<String> launchCalls = [];
-  final List<String> stopCalls = [];
-  final List<String> uninstallCalls = [];
-
-  @override
-  List<Module> get installedModules => _mockInstalledModules;
-
-  @override
-  List<Module> get modules => _mockInstalledModules;
-  @override
-  set modules(List<Module> val) {
-    _mockInstalledModules.clear();
-    _mockInstalledModules.addAll(val);
-    notifyListeners();
-  }
-  @override
-  List<Module> modulesForTesting = [];
-  @override
-  bool get isLoading => false;
-  @override
-  bool get pythonAvailable => true;
-  @override
-  String? get error => null;
-  @override
-  List<String> get activeModuleIds => [];
-  @override
-  List<Module> get activeModules => [];
-  @override
-  List<Module> get availableModules => [];
-  @override
-  Future<void> recheckPython() async {}
-  @override
-  bool isMuJoCoAvailable() => false;
-  @override
-  Future<void> installModule(String moduleId) async {}
-  @override
-  void closeTab(String moduleId) {}
-  @override
-  Stream<String>? getModuleOutput(String moduleId) => null;
-
-  @override
-  Future<void> launchModule(String moduleId) async {
-    launchCalls.add(moduleId);
-  }
-
-  @override
-  Future<void> stopModule(String moduleId) async {
-    stopCalls.add(moduleId);
-  }
-
-  @override
-  Future<void> uninstallModule(String moduleId) async {
-    uninstallCalls.add(moduleId);
-  }
-
-  void setInstalledModules(List<Module> modules) {
-    _mockInstalledModules.clear();
-    _mockInstalledModules.addAll(modules);
-    notifyListeners();
-  }
-}
+import 'mock_dashboard_provider.dart';
 
 void main() {
   testWidgets('DashboardScreen shows empty state when no modules are installed',
@@ -169,9 +106,5 @@ void main() {
     );
 
     expect(find.text('Open'), findsOneWidget);
-
-    // We can't easily verify GoRouter navigation without more complex setup,
-    // and tapping it throws "No GoRouter found in context".
-    // For now, we've verified the button exists.
   });
 }

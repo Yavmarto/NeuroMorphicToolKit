@@ -225,6 +225,10 @@ class CatalogScreen extends StatelessWidget {
           text = 'Degraded';
           color = Colors.yellow.shade700;
           break;
+        case ModuleStatus.updating:
+          text = 'Updating';
+          color = Colors.purple;
+          break;
       }
     }
 

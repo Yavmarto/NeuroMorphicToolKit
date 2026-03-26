@@ -6,10 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:path/path.dart' as p;
 
 class ModuleProvider with ChangeNotifier {
   late final ProcessManager _processManager;
+  late final UpdateService _updateService;
+  LauncherUpdate? _pendingLauncherUpdate;
 
   @visibleForTesting
   List<Module> modulesForTesting = [];
@@ -24,8 +27,9 @@ class ModuleProvider with ChangeNotifier {
   String? _error;
   final List<String> _activeModuleIds = [];
 
-  ModuleProvider({ProcessManager? processManager}) {
+  ModuleProvider({ProcessManager? processManager, UpdateService? updateService}) {
     _processManager = processManager ?? ProcessManager();
+    _updateService = updateService ?? UpdateService();
     _init();
   }
 
@@ -61,6 +65,9 @@ class ModuleProvider with ChangeNotifier {
 
       await _processManager.init(_modules);
 
+      // Check for updates on startup
+      unawaited(checkForUpdates());
+
       _processManager.statusUpdates.listen((Module updatedModule) {
         final index =
             _modules.indexWhere((Module m) => m.id == updatedModule.id);
@@ -88,6 +95,8 @@ class ModuleProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get pythonAvailable => _pythonAvailable;
   String? get error => _error;
+  LauncherUpdate? get pendingLauncherUpdate => _pendingLauncherUpdate;
+  UpdateChannel get currentChannel => _updateService.channel;
 
   /// Re-check Python availability (e.g. after user installs Python).
   /// If found, continues with normal module initialization.
@@ -192,6 +201,111 @@ class ModuleProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('Stop failed for $moduleId: $e');
     }
+  }
+
+  Future<void> checkForUpdates() async {
+    // Check for launcher update
+    _pendingLauncherUpdate = await _updateService.checkForLauncherUpdate();
+    notifyListeners();
+
+    // Check for module updates
+    for (var i = 0; i < _modules.length; i++) {
+      if (_modules[i].status == ModuleStatus.installed ||
+          _modules[i].status == ModuleStatus.running ||
+          _modules[i].status == ModuleStatus.degraded ||
+          _modules[i].status == ModuleStatus.error) {
+        final newVersion = await _updateService.checkForModuleUpdate(_modules[i]);
+        if (newVersion != null) {
+          _modules[i] = _modules[i].copyWith(availableUpdate: newVersion);
+          notifyListeners();
+        }
+      }
+    }
+  }
+
+  Future<void> updateModule(String moduleId) async {
+    final index = _modules.indexWhere((Module m) => m.id == moduleId);
+    if (index == -1 || _modules[index].availableUpdate == null) return;
+
+    final targetVersion = _modules[index].availableUpdate!;
+
+    // If running, stop first
+    if (_modules[index].status == ModuleStatus.running ||
+        _modules[index].status == ModuleStatus.degraded) {
+      await stopModule(moduleId);
+    }
+
+    _modules[index] = _modules[index].copyWith(
+      status: ModuleStatus.updating,
+      installProgress: 0.0,
+    );
+    notifyListeners();
+
+    try {
+      await _updateService.performDifferentialUpdate(
+        _modules[index],
+        targetVersion,
+        onProgress: (progress) {
+          _modules[index] = _modules[index].copyWith(installProgress: progress);
+          notifyListeners();
+        },
+      );
+
+      // After downloading files, we need to reinstall to ensure deps are correct
+      await _processManager.installModule(
+        _modules[index],
+        onProgress: (progress) {
+          // Keep it at 1.0 or update with install progress
+          _modules[index] = _modules[index].copyWith(installProgress: progress);
+          notifyListeners();
+        },
+      );
+
+      _modules[index] = _modules[index].copyWith(
+        status: ModuleStatus.installed,
+        version: targetVersion,
+        availableUpdate: null,
+      );
+      await _processManager.saveModuleState(_modules[index]);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Update failed for $moduleId: $e');
+      _modules[index] = _modules[index].copyWith(status: ModuleStatus.error);
+      notifyListeners();
+    }
+  }
+
+  void setUpdateChannel(UpdateChannel channel) {
+    _updateService.channel = channel;
+    notifyListeners();
+    // Re-check updates for the new channel
+    checkForUpdates();
+  }
+
+  Future<void> setVersionPinned(String moduleId, bool pinned) async {
+    final index = _modules.indexWhere((Module m) => m.id == moduleId);
+    if (index == -1) return;
+
+    _modules[index] = _modules[index].copyWith(
+      versionPinned: pinned,
+      availableUpdate: pinned ? null : _modules[index].availableUpdate,
+    );
+    await _processManager.saveModuleState(_modules[index]);
+    notifyListeners();
+
+    if (!pinned) {
+      // Re-check if we unpinned
+      final newVersion = await _updateService.checkForModuleUpdate(_modules[index]);
+      if (newVersion != null) {
+        _modules[index] = _modules[index].copyWith(availableUpdate: newVersion);
+        notifyListeners();
+      }
+    }
+  }
+
+  void dismissLauncherUpdate() {
+    _pendingLauncherUpdate = null;
+    notifyListeners();
   }
 
   Future<void> uninstallModule(String moduleId) async {

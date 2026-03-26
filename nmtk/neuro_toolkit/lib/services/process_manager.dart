@@ -173,6 +173,15 @@ class ProcessManager {
     _initialized = true;
   }
 
+  @visibleForTesting
+  void resetForTesting() {
+    dispose();
+    _retryCounts.clear();
+    _nextRetryTimes.clear();
+    _intentionallyStopping.clear();
+    _modules.clear();
+  }
+
   void dispose() {
     _healthTimer?.cancel();
     _initialized = false;
@@ -415,6 +424,7 @@ class ProcessManager {
     final updatedModuleStarting =
         module.copyWith(status: ModuleStatus.starting);
     _statusController.add(updatedModuleStarting);
+    _updateModuleStatus(updatedModuleStarting);
 
     try {
       debugPrint(
@@ -465,7 +475,7 @@ class ProcessManager {
       // Give it some time to start up
       await Future<void>.delayed(const Duration(seconds: 2));
       unawaited(
-        _checkHealth(module),
+        _checkHealth(updatedModuleStarting),
       );
     } catch (e) {
       final updatedModuleError = module.copyWith(
@@ -505,23 +515,9 @@ class ProcessManager {
     try {
       final uri = Uri.parse('http://127.0.0.1:${module.port}/health');
 
-      String body;
-      int statusCode;
-
-      if (kIsWeb) {
-        final response =
-            await http.get(uri).timeout(const Duration(seconds: 2));
-        body = response.body;
-        statusCode = response.statusCode;
-      } else {
-        final client = HttpClient();
-        final request =
-            await client.getUrl(uri).timeout(const Duration(seconds: 2));
-        final response = await request.close();
-        body = await response.transform(utf8.decoder).join();
-        statusCode = response.statusCode;
-        client.close();
-      }
+      final response = await _httpClient.get(uri).timeout(const Duration(seconds: 2));
+      final body = response.body;
+      final statusCode = response.statusCode;
 
       ModuleStatus newStatus;
       String? healthInfo;
@@ -565,14 +561,14 @@ class ProcessManager {
     debugPrint(
       'Starting health polling every 5 seconds for ${_modules.length} modules',
     );
-    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
+    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
           await _checkHealth(module);
         } else if (module.status == ModuleStatus.error) {
           final nextRetry = _nextRetryTimes[module.id];
-          if (nextRetry != null && now.isAfter(nextRetry)) {
+          if (nextRetry != null && DateTime.now().isAfter(nextRetry)) {
             debugPrint('Retrying module ${module.id}');
             unawaited(startModule(module, isRetry: true));
           }
@@ -615,6 +611,10 @@ class ProcessManager {
           if (states.containsKey(modules[i].id)) {
             final saved = states[modules[i].id] as Map<String, dynamic>;
             final savedStatus = saved['status'] as int?;
+            // Restore version and pinning info
+            final savedVersion = saved['version'] as String?;
+            final savedPinned = saved['versionPinned'] as bool?;
+
             // Only restore installation status, not runtime status or paths.
             // Paths are always freshly resolved from BundleManager + modules.json.
             if (savedStatus != null) {
@@ -622,9 +622,19 @@ class ProcessManager {
               if (status == ModuleStatus.installed ||
                   status == ModuleStatus.running ||
                   status == ModuleStatus.degraded ||
-                  status == ModuleStatus.error) {
-                modules[i].status = ModuleStatus.installed;
-                modules[i].installProgress = 1.0;
+                  status == ModuleStatus.error ||
+                  status == ModuleStatus.updating) {
+                modules[i] = modules[i].copyWith(
+                  status: ModuleStatus.installed,
+                  installProgress: 1.0,
+                  version: savedVersion,
+                  versionPinned: savedPinned,
+                );
+              } else {
+                modules[i] = modules[i].copyWith(
+                  version: savedVersion,
+                  versionPinned: savedPinned,
+                );
               }
             }
           }

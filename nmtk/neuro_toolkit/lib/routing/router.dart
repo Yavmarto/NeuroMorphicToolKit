@@ -6,6 +6,7 @@ import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 
 final goRouter = GoRouter(
@@ -31,6 +32,11 @@ final goRouter = GoRouter(
             final moduleId = state.pathParameters['moduleId']!;
             return ToolViewScreen(initialModuleId: moduleId);
           },
+        ),
+        GoRoute(
+          path: '/settings',
+          name: 'settings',
+          builder: (context, state) => const SettingsScreen(),
         ),
       ],
     ),
