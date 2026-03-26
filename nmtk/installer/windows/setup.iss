@@ -23,8 +23,10 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ; Main Flutter application
 Source: "..\..\neuro_toolkit\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs; Excludes: "python\*,modules\*"
 
-; Bundled Python
-Source: "..\..\neuro_toolkit\build\windows\x64\runner\Release\python\*"; DestDir: "{app}\python"; Flags: ignoreversion recursesubdirs
+; Submodules (Source code)
+; We exclude development artifacts to keep the installer size manageable.
+; We specifically exclude non-web frontend builds but keep frontend\build\web.
+#define SubmoduleExcludes ".git venv __pycache__ node_modules .dart_tool frontend\build\windows frontend\build\linux frontend\build\android frontend\build\ios frontend\build\macos frontend\.dart_tool *.egg-info .mypy_cache .ruff_cache .pytest_cache"
 
 ; Bundled Submodules
 Source: "..\..\neuro_toolkit\build\windows\x64\runner\Release\modules\*"; DestDir: "{app}\modules"; Flags: ignoreversion recursesubdirs

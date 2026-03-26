@@ -1,7 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'widgets/nmtk_navigation_rail.dart';
+import 'package:nmtk_ui_core/widgets/nmtk_navigation_rail.dart';
 
 /// ----------------------------------------------------------------------------
 /// NMTK BRAND TOKENS & EXPRESSIVE SHAPES
