@@ -10,9 +10,9 @@ import 'package:path/path.dart' as p;
 
 class MockProcess implements Process {
   final StreamController<List<int>> _stdoutController =
-      StreamController<List<int>>();
+      StreamController<List<int>>.broadcast();
   final StreamController<List<int>> _stderrController =
-      StreamController<List<int>>();
+      StreamController<List<int>>.broadcast();
   final Completer<int> _exitCodeCompleter = Completer<int>();
 
   @override
@@ -67,7 +67,12 @@ class MockProcessRunner implements ProcessRunner {
     calls.add(
       InvocationRecord('start', executable, arguments, workingDirectory),
     );
-    return mockProcesses[executable] ?? MockProcess();
+    final process = mockProcesses[executable] ?? MockProcess();
+    // Remove if it was a one-off mock to ensure next call gets a fresh one or a different mock
+    if (mockProcesses.containsKey(executable)) {
+      mockProcesses.remove(executable);
+    }
+    return process;
   }
 
   @override
@@ -196,7 +201,7 @@ void main() {
       }
     });
 
-    unawaited(processManager.startModule(module));
+    await processManager.startModule(module);
 
     final updatedModule =
         await completer.future.timeout(const Duration(seconds: 5));
@@ -205,7 +210,7 @@ void main() {
     expect(mockRunner.calls.any((c) => c.arguments.contains('uvicorn')), isTrue);
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
-    subscription.cancel();
+    await subscription.cancel();
     tempDir.deleteSync(recursive: true);
   });
 
@@ -231,7 +236,16 @@ void main() {
     final mockProcess = MockProcess();
     mockRunner.mockProcesses[pythonExe] = mockProcess;
 
+    final completer = Completer<void>();
+    final sub = processManager.statusUpdates.listen((m) {
+      if (m.id == 'test_module_stop' && m.status == ModuleStatus.starting) {
+        if (!completer.isCompleted) completer.complete();
+      }
+    });
+
     await processManager.startModule(module);
+    await completer.future.timeout(const Duration(seconds: 10));
+    await sub.cancel();
 
     await processManager.stopModule('test_module_stop');
 
@@ -276,8 +290,9 @@ void main() {
     });
 
     processManager.httpClient = mockClient;
-    final mockProcess = MockProcess();
-    mockRunner.mockProcesses[pythonExe] = mockProcess;
+    mockRunner.mockProcesses[pythonExe] = MockProcess();
+    // For retry
+    mockRunner.mockProcesses[pythonExe] = MockProcess();
 
     // Capture status updates
     final statusList = <ModuleStatus>[];
@@ -290,13 +305,13 @@ void main() {
     await processManager.startModule(module);
 
     // Give it time for startModule's initial health check and two polling intervals (5s each)
-    await Future.delayed(const Duration(seconds: 13));
+    await Future<void>.delayed(const Duration(seconds: 13));
 
     expect(statusList, contains(ModuleStatus.running));
     expect(statusList, contains(ModuleStatus.degraded));
     expect(statusList, contains(ModuleStatus.error));
 
-    subscription.cancel();
+    await subscription.cancel();
     tempDir.deleteSync(recursive: true);
   });
 
@@ -310,7 +325,7 @@ void main() {
         directory: Directory.systemTemp.createTempSync('sim_module_${count}_$i').path,
         port: 8100 + (count * 10) + i,
         status: ModuleStatus.installed,
-      ));
+      ),);
 
       for (var m in modules) {
         final pythonExe = Platform.isWindows

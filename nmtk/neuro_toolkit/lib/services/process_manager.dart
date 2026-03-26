@@ -406,9 +406,9 @@ class ProcessManager {
         debugPrint('[${module.id}] stderr: ${data.trim()}');
       });
 
-      unawaited(process.exitCode.then((code) {
+      unawaited(process.exitCode.then((code) async {
         _runningProcesses.remove(module.id);
-        _outputControllers[module.id]?.close();
+        unawaited(_outputControllers[module.id]?.close() ?? Future.value());
         _outputControllers.remove(module.id);
 
         final updatedModuleStopped = module.copyWith(
@@ -418,9 +418,12 @@ class ProcessManager {
         _updateModuleStatus(updatedModuleStopped);
 
         if (code != 0 && !_intentionallyStopping.contains(module.id)) {
-          _handleFailure(updatedModuleStopped, 'Process exited with code $code');
+          await _handleFailure(
+            updatedModuleStopped,
+            'Process exited with code $code',
+          );
         }
-      }));
+      },),);
 
       // Give it some time to start up
       await Future<void>.delayed(const Duration(seconds: 2));
@@ -486,7 +489,7 @@ class ProcessManager {
       }
 
       if (newStatus == ModuleStatus.error) {
-        _handleFailure(module, healthInfo);
+        await _handleFailure(module, healthInfo);
       } else if (module.status != newStatus || module.healthStatus != healthInfo) {
         debugPrint('[${module.id}] Health status changed: ${module.status} -> $newStatus');
         final updatedModule = module.copyWith(
@@ -496,9 +499,10 @@ class ProcessManager {
         _updateModuleStatus(updatedModule);
       }
     } catch (e) {
-      if (module.status == ModuleStatus.running || module.status == ModuleStatus.degraded) {
+      if (module.status == ModuleStatus.running ||
+          module.status == ModuleStatus.degraded) {
         debugPrint('[${module.id}] Health check error: $e');
-        _handleFailure(module, 'Health check error: $e');
+        await _handleFailure(module, 'Health check error: $e');
       }
     }
   }
