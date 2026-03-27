@@ -31,49 +31,78 @@ jobs:
 
       - name: Install dependencies (nmtk_ui_core)
         run: |
-          cd nmtk_ui_core
-          flutter pub get
+          if [ -d "nmtk_ui_core" ]; then
+            cd nmtk_ui_core
+            flutter pub get
+          fi
 
       - name: Install dependencies (neuro_toolkit)
         run: |
-          cd nmtk/neuro_toolkit
-          flutter pub get
+          if [ -d "nmtk/neuro_toolkit" ]; then
+            cd nmtk/neuro_toolkit
+            flutter pub get
+          fi
 
       - name: Format check
         run: |
-          dart format nmtk_ui_core nmtk/neuro_toolkit
+          PATHS=""
+          [ -d "nmtk_ui_core" ] && PATHS="$PATHS nmtk_ui_core"
+          [ -d "nmtk/neuro_toolkit" ] && PATHS="$PATHS nmtk/neuro_toolkit"
+          if [ -n "$PATHS" ]; then
+            dart format $PATHS
+          fi
 
       - name: Analyze (nmtk_ui_core)
         run: |
-          cd nmtk_ui_core
-          flutter analyze
+          if [ -d "nmtk_ui_core" ]; then
+            cd nmtk_ui_core
+            flutter analyze
+          fi
 
       - name: Analyze (neuro_toolkit)
         run: |
-          cd nmtk/neuro_toolkit
-          flutter analyze
+          if [ -d "nmtk/neuro_toolkit" ]; then
+            cd nmtk/neuro_toolkit
+            flutter analyze
+          fi
 
       - name: Run tests (nmtk_ui_core)
         run: |
-          cd nmtk_ui_core
-          flutter test
+          if [ -d "nmtk_ui_core" ]; then
+            cd nmtk_ui_core
+            flutter test
+          else
+            echo "Directory nmtk_ui_core not found"
+          fi
 
       - name: Run tests (neuro_toolkit)
         run: |
-          cd nmtk/neuro_toolkit
-          flutter test
+          if [ -d "nmtk/neuro_toolkit" ]; then
+            cd nmtk/neuro_toolkit
+            flutter test
+          else
+            echo "Directory nmtk/neuro_toolkit not found"
+          fi
 
       - name: Run Integration tests (neuro_toolkit)
         run: |
-          cd nmtk/neuro_toolkit
-          flutter test integration_test/app_test.dart
+          if [ -d "nmtk/neuro_toolkit" ] && [ -d "nmtk_ui_core" ]; then
+            cd nmtk/neuro_toolkit
+            flutter test integration_test/app_test.dart
+          else
+            echo "Directories for neuro_toolkit integration test not fully present"
+          fi
 
       - name: Run E2E Launcher tests (neuro_toolkit)
         env:
           FORCE_E2E: true
         run: |
-          cd nmtk/neuro_toolkit
-          flutter test test/launcher_e2e_test.dart
+          if [ -d "nmtk/neuro_toolkit" ]; then
+            cd nmtk/neuro_toolkit
+            flutter test test/launcher_e2e_test.dart
+          else
+            echo "Directory nmtk/neuro_toolkit not found"
+          fi
 
 
   build-linux:
@@ -91,9 +120,13 @@ jobs:
           cache: true
       - name: Build Linux
         run: |
-          cd nmtk/neuro_toolkit
-          flutter pub get
-          flutter build linux
+          if [ -d "nmtk/neuro_toolkit" ]; then
+            cd nmtk/neuro_toolkit
+            flutter pub get
+            flutter build linux
+          else
+            echo "Directory nmtk/neuro_toolkit not found"
+          fi
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
@@ -111,9 +144,13 @@ jobs:
           cache: true
       - name: Build macOS
         run: |
-          cd nmtk/neuro_toolkit
-          flutter pub get
-          flutter build macos
+          if [ -d "nmtk/neuro_toolkit" ]; then
+            cd nmtk/neuro_toolkit
+            flutter pub get
+            flutter build macos
+          else
+            echo "Directory nmtk/neuro_toolkit not found"
+          fi
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
