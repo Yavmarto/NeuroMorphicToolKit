@@ -88,10 +88,14 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurosim || true
+        run: |
+          git submodule sync Neurosim
+          git submodule update --init Neurosim
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
@@ -132,10 +136,14 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurochip || true
+        run: |
+          git submodule sync Neurochip
+          git submodule update --init Neurochip
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
@@ -177,10 +185,14 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurosense || true
+        run: |
+          git submodule sync Neurosense
+          git submodule update --init Neurosense
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
@@ -221,10 +233,14 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurohub || true
+        run: |
+          git submodule sync Neurohub
+          git submodule update --init Neurohub
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
@@ -265,10 +281,14 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neuro-Dream-Hand || true
+        run: |
+          git submodule sync Neuro-Dream-Hand
+          git submodule update --init Neuro-Dream-Hand
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
@@ -304,14 +324,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
       - name: Update required submodules
         run: |
-          git submodule update --init neurocnl || true
-          git submodule update --init Neuro-Dream-Hand || true
+          git submodule sync neurocnl
+          git submodule sync Neuro-Dream-Hand
+          git submodule update --init neurocnl
+          git submodule update --init Neuro-Dream-Hand
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install core package
         run: |
           if [ -d "neurocnl" ] && [ -f "neurocnl/pyproject.toml" ]; then
@@ -381,10 +405,14 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurobench || true
+        run: |
+          git submodule sync Neurobench
+          git submodule update --init Neurobench
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install poetry
         run: |
           if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
@@ -453,8 +481,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Update required submodules
         run: |
-          git submodule update --init ../../neurocnl || true
-          git submodule update --init ../../Neuro-Dream-Hand || true
+          git submodule sync ../../neurocnl
+          git submodule sync ../../Neuro-Dream-Hand
+          git submodule update --init ../../neurocnl
+          git submodule update --init ../../Neuro-Dream-Hand
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -484,7 +514,9 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init neurocnl || true
+        run: |
+          git submodule sync neurocnl
+          git submodule update --init neurocnl
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -520,7 +552,9 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurochip || true
+        run: |
+          git submodule sync Neurochip
+          git submodule update --init Neurochip
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -550,7 +584,9 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurohub || true
+        run: |
+          git submodule sync Neurohub
+          git submodule update --init Neurohub
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -580,7 +616,9 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurosense || true
+        run: |
+          git submodule sync Neurosense
+          git submodule update --init Neurosense
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -610,7 +648,9 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurobench || true
+        run: |
+          git submodule sync Neurobench
+          git submodule update --init Neurobench
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
