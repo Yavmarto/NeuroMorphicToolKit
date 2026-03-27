@@ -85,22 +85,25 @@ class CatalogScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(module.description),
+                        const SizedBox(height: 4),
+                        if (module.version != '0.0.0')
+                          Text(
+                            'Version: ${module.version}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
                         const SizedBox(height: 16),
-                        if (module.status == ModuleStatus.installing)
-                          Semantics(
-                            label: 'Installing ${module.name}',
-                            value: '${(module.installProgress * 100).toInt()}%',
-                            child: Column(
-                              children: [
-                                LinearProgressIndicator(
-                                  value: module.installProgress,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${(module.installProgress * 100).toInt()}%',
-                                ),
-                              ],
-                            ),
+                        if (module.status == ModuleStatus.installing ||
+                            module.status == ModuleStatus.updating)
+                          Column(
+                            children: [
+                              LinearProgressIndicator(
+                                value: module.installProgress,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${module.status == ModuleStatus.installing ? "Installing" : "Updating"}... ${(module.installProgress * 100).toInt()}%',
+                              ),
+                            ],
                           )
                         else if (module.status == ModuleStatus.error)
                           Row(
@@ -151,12 +154,30 @@ class CatalogScreen extends StatelessWidget {
                         else if (module.status == ModuleStatus.installed ||
                             module.status == ModuleStatus.running ||
                             module.status == ModuleStatus.degraded)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: Semantics(
-                              label: 'Uninstall ${module.name}',
-                              button: true,
-                              child: OutlinedButton(
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (module.remoteVersion != '0.0.0' &&
+                                  module.remoteVersion != module.version)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8.0),
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      unawaited(
+                                        provider.updateModule(module.id),
+                                      );
+                                    },
+                                    icon: const Icon(Icons.system_update),
+                                    label: Text(
+                                      'Update to ${module.remoteVersion}',
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue.shade100,
+                                      foregroundColor: Colors.blue.shade900,
+                                    ),
+                                  ),
+                                ),
+                              OutlinedButton(
                                 onPressed: () {
                                   unawaited(
                                     provider.uninstallModule(module.id),
@@ -168,7 +189,7 @@ class CatalogScreen extends StatelessWidget {
                                       : 'Running',
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                       ],
                     ),
@@ -247,6 +268,10 @@ class CatalogScreen extends StatelessWidget {
         case ModuleStatus.degraded:
           text = 'Degraded';
           color = Colors.yellow.shade700;
+          break;
+        case ModuleStatus.updating:
+          text = 'Updating';
+          color = Colors.blue;
           break;
       }
     }

@@ -125,6 +125,7 @@ jobs:
       base_ref:  ${{ needs.detect.outputs.base0 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}
 
   fix-pr-1:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr1 }}
@@ -140,6 +141,7 @@ jobs:
       base_ref:  ${{ needs.detect.outputs.base1 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}
 
   fix-pr-2:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr2 }}
@@ -155,6 +157,7 @@ jobs:
       base_ref:  ${{ needs.detect.outputs.base2 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}
 
   fix-pr-3:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr3 }}
@@ -170,6 +173,7 @@ jobs:
       base_ref:  ${{ needs.detect.outputs.base3 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}
 
   fix-pr-4:
     name: Fix conflicts in PR #${{ needs.detect.outputs.pr4 }}
@@ -185,3 +189,4 @@ jobs:
       base_ref:  ${{ needs.detect.outputs.base4 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}

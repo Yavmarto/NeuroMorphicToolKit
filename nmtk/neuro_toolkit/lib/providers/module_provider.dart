@@ -6,10 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:path/path.dart' as p;
 
 class ModuleProvider with ChangeNotifier {
   late final ProcessManager _processManager;
+  late final UpdateService _updateService;
+  LauncherUpdate? _pendingLauncherUpdate;
 
   @visibleForTesting
   List<Module> modulesForTesting = [];
@@ -24,8 +27,10 @@ class ModuleProvider with ChangeNotifier {
   String? _error;
   final List<String> _activeModuleIds = [];
 
-  ModuleProvider({ProcessManager? processManager}) {
+  ModuleProvider(
+      {ProcessManager? processManager, UpdateService? updateService}) {
     _processManager = processManager ?? ProcessManager();
+    _updateService = updateService ?? UpdateService();
     _init();
   }
 
@@ -60,6 +65,10 @@ class ModuleProvider with ChangeNotifier {
       }
 
       await _processManager.init(_modules);
+      await checkForUpdates();
+
+      // Check for updates on startup
+      unawaited(checkForUpdates());
 
       _processManager.statusUpdates.listen((Module updatedModule) {
         final index =
@@ -88,6 +97,8 @@ class ModuleProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get pythonAvailable => _pythonAvailable;
   String? get error => _error;
+  LauncherUpdate? get pendingLauncherUpdate => _pendingLauncherUpdate;
+  UpdateChannel get currentChannel => _updateService.channel;
 
   /// Re-check Python availability (e.g. after user installs Python).
   /// If found, continues with normal module initialization.
@@ -194,6 +205,29 @@ class ModuleProvider with ChangeNotifier {
     }
   }
 
+  Future<void> updateModule(String moduleId) async {
+    final index = _modules.indexWhere((Module m) => m.id == moduleId);
+    if (index == -1) return;
+
+    _modules[index] = _modules[index].copyWith(
+      status: ModuleStatus.updating,
+      installProgress: 0.0,
+    );
+    notifyListeners();
+
+    try {
+      await _processManager.updateModule(
+        _modules[index],
+        onProgress: (double progress) {
+          _modules[index] = _modules[index].copyWith(installProgress: progress);
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      debugPrint('Update failed for $moduleId: $e');
+    }
+  }
+
   Future<void> uninstallModule(String moduleId) async {
     final modulesList = _modules;
     final index = modulesList.indexWhere((Module m) => m.id == moduleId);
@@ -218,6 +252,29 @@ class ModuleProvider with ChangeNotifier {
   void closeTab(String moduleId) {
     _activeModuleIds.remove(moduleId);
     notifyListeners();
+  }
+
+  Future<void> checkForUpdates() async {
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/remote_modules.json');
+      final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
+      final Map<String, String> remoteVersions = {
+        for (var item in jsonList)
+          (item as Map<String, dynamic>)['id'] as String:
+              item['version'] as String
+      };
+
+      for (var i = 0; i < _modules.length; i++) {
+        final remoteVersion = remoteVersions[_modules[i].id];
+        if (remoteVersion != null) {
+          _modules[i] = _modules[i].copyWith(remoteVersion: remoteVersion);
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Update check failed: $e');
+    }
   }
 
   Stream<String>? getModuleOutput(String moduleId) {

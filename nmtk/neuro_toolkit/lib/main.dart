@@ -1,16 +1,20 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
-import 'package:neuro_toolkit/providers/settings_provider.dart';
+import 'package:neuro_toolkit/providers/app_provider.dart';
 import 'package:neuro_toolkit/routing/router.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AppProvider()),
         ChangeNotifierProvider(create: (_) => ModuleProvider()),
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider.value(value: settings),
+        Provider.value(value: analytics),
       ],
       child: const NeuroToolkitApp(),
     ),

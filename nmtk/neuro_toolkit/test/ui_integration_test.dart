@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
@@ -78,6 +77,12 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
   @override
   Future<void> uninstallModule(String moduleId) async {}
+
+  @override
+  Future<void> updateModule(String moduleId) async {}
+
+  @override
+  Future<void> checkForUpdates() async {}
 
   @override
   void closeTab(String moduleId) {

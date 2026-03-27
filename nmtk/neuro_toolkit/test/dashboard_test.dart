@@ -63,6 +63,12 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
     uninstallCalls.add(moduleId);
   }
 
+  @override
+  Future<void> updateModule(String moduleId) async {}
+
+  @override
+  Future<void> checkForUpdates() async {}
+
   void setInstalledModules(List<Module> modules) {
     _mockInstalledModules.clear();
     _mockInstalledModules.addAll(modules);
@@ -171,9 +177,5 @@ void main() {
     );
 
     expect(find.text('Open'), findsOneWidget);
-
-    // We can't easily verify GoRouter navigation without more complex setup,
-    // and tapping it throws "No GoRouter found in context".
-    // For now, we've verified the button exists.
   });
 }

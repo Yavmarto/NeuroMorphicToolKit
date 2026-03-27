@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/screens/catalog.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/screens/catalog.dart';
 import 'package:provider/provider.dart';
 
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockModules = [];
-  bool _isMuJoCoAvailable = false;
+  bool _isMuJoCoAvailableValue = false;
   final List<String> installCalls = [];
 
   void setMuJoCoAvailable(bool value) {
@@ -86,6 +85,12 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
   @override
   Future<void> uninstallModule(String moduleId) async {}
+
+  @override
+  Future<void> updateModule(String moduleId) async {}
+
+  @override
+  Future<void> checkForUpdates() async {}
 
   @override
   void closeTab(String moduleId) {}

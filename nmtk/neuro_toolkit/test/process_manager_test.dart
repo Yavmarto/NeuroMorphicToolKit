@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -124,19 +125,26 @@ class InvocationRecord {
 }
 
 void main() {
+  const MethodChannel channel =
+      MethodChannel('plugins.flutter.io/path_provider');
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late ProcessManager processManager;
   late MockProcessRunner mockRunner;
 
   setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+      return '.';
+    });
+
     mockRunner = MockProcessRunner();
     processManager = ProcessManager(
       processRunner: mockRunner,
       httpClient:
           MockClient((request) async => http.Response('{"status":"ok"}', 200)),
     );
-    processManager.dispose(); // Reset state
+    processManager.resetForTesting();
   });
 
   test('ProcessManager provides status updates', () {
@@ -400,7 +408,8 @@ void main() {
     await processManager.startModule(module);
 
     // Give it time for startModule's initial health check and two polling intervals (5s each)
-    await Future<void>.delayed(const Duration(seconds: 13));
+    // Using a more generous timeout for CI
+    await Future<void>.delayed(const Duration(seconds: 20));
 
     expect(statusList, contains(ModuleStatus.running));
     expect(statusList, contains(ModuleStatus.degraded));

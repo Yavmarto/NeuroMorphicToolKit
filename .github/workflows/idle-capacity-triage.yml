@@ -40,9 +40,8 @@ jobs:
             }
 
             const AGENT_WORKFLOWS = [
-              'bug-fixer.yml', 'feature-builder.yml', 'ci-failure-fix.yml',
-              'unblocked-issues.yml', 'performance-improver.yml', 'weekly-cleanup.yml',
-              'unused-code-remover.yml', 'scaffold-module.yml', 'merge-conflict-resolver.yml',
+              'bug-fixer.yml', 'feature-builder.yml', 'ci-failure-fix-agent.yml',
+              'unblocked-issues.yml', 'scaffold-module.yml', 'merge-conflict-resolver.yml',
               'guardrails-updater.yml'
             ];
             const inProgress = await github.rest.actions.listWorkflowRunsForRepo({
@@ -108,11 +107,49 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Invoke Jules to classify issues
+      - name: Invoke Jules to classify issues (primary key)
         if: steps.gate.outputs.should_run == 'true'
+        id: jules-primary
+        continue-on-error: true
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            You are a triage agent. The agent pipeline has idle capacity (${{ steps.gate.outputs.budget_used }} runs used today).
+            Classify unlabeled GitHub issues so they are queued correctly.
+
+            ## Issues to Classify
+
+            ${{ steps.gate.outputs.issue_list }}
+
+            ## Classification Instructions
+
+            For each issue, determine:
+
+            **1. Type label** — pick the single best fit:
+            - `bug`     — something broken, regression, crash, wrong output
+            - `feature` — new capability, enhancement, improvement
+            - `question`— support request (do NOT queue for agent)
+            - `invalid` — spam, off-topic (do NOT queue for agent)
+
+            **2. Priority label** — for bugs and features only:
+            - `p0` — critical: system broken, data loss, security issue
+            - `p1` — important: noticeable user impact
+            - `p2` — low urgency: nice to have
+
+            For each bug/feature issue, apply labels and post a classification comment using `gh` CLI.
+            For question/invalid issues, apply only that label and explain why.
+
+            Constraints:
+            - Do NOT open any PRs or modify any code
+            - Process at most 10 issues per run
+            - When in doubt, err toward p1 over p0
+
+      - name: Invoke Jules to classify issues (fallback key)
+        if: steps.gate.outputs.should_run == 'true' && steps.jules-primary.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           prompt: |
             You are a triage agent. The agent pipeline has idle capacity (${{ steps.gate.outputs.budget_used }} runs used today).
             Classify unlabeled GitHub issues so they are queued correctly.

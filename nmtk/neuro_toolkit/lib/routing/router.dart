@@ -4,14 +4,32 @@ import 'package:provider/provider.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
+import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/screens/onboarding.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/app_provider.dart';
 
+// ignore: avoid_dynamic_calls
 final goRouter = GoRouter(
   initialLocation: '/',
+  refreshListenable: AppProvider(),
+  redirect: (context, state) {
+    final appProvider = AppProvider();
+    if (!appProvider.isInitialized) return null; // Wait for init
+    if (!appProvider.hasSeenOnboarding && state.uri.path != '/onboarding') {
+      return '/onboarding';
+    }
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/onboarding',
+      name: 'onboarding',
+      builder: (context, state) => const OnboardingScreen(),
+    ),
     ShellRoute(
       builder: (context, state, child) => MainScreen(child: child),
       routes: [
@@ -77,9 +95,7 @@ class MainScreen extends StatelessWidget {
     final location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/catalog')) return 1;
     if (location.startsWith('/tool/')) return 2;
-    if (location.startsWith('/settings')) {
-      return provider.activeModuleIds.isNotEmpty ? 3 : 2;
-    }
+    if (location.startsWith('/settings')) return 3;
     return 0;
   }
 
@@ -113,10 +129,31 @@ class MainScreen extends StatelessWidget {
     }
 
     return ResponsiveScaffold(
-      currentIndex: _selectedIndex(context, provider),
-      onNavigationTargetSelected: (index) =>
-          _onItemTapped(context, index, provider),
-      destinations: _getDestinations(provider),
+      currentIndex: _selectedIndex(context),
+      onNavigationTargetSelected: (index) => _onItemTapped(context, index),
+      destinations: [
+        const NavigationDestinationData(
+          icon: Icons.dashboard_outlined,
+          selectedIcon: Icons.dashboard,
+          label: 'Dashboard',
+        ),
+        const NavigationDestinationData(
+          icon: Icons.store_outlined,
+          selectedIcon: Icons.store,
+          label: 'Catalog',
+        ),
+        if (provider.activeModuleIds.isNotEmpty)
+          const NavigationDestinationData(
+            icon: Icons.laptop_outlined,
+            selectedIcon: Icons.laptop,
+            label: 'Workspace',
+          ),
+        const NavigationDestinationData(
+          icon: Icons.settings_outlined,
+          selectedIcon: Icons.settings,
+          label: 'Settings',
+        ),
+      ],
       body: child,
     );
   }

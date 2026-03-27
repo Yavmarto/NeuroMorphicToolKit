@@ -41,7 +41,7 @@ class MockBundleEnvironment implements BundleEnvironment {
     final normalized = p.normalize(path);
     _existingDirectories.remove(normalized);
     _existingDirectories.removeWhere((dir) => dir.startsWith('$normalized/'));
-    _files.removeWhere((file, _) => file.startsWith('$normalized/'));
+    _files.removeWhere((file, contents) => file.startsWith('$normalized/'));
   }
 
   @override

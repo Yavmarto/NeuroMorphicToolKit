@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - 'alertmanager:9093'
+
+scrape_configs:
+  - job_name: 'nmtk-services'
+    static_configs:
+      - targets:
+          - 'neurocnl:8000'
+          - 'neurocnl-physics:8000'
+          - 'neurosim:8000'
+          - 'neurochip:8000'
+          - 'neurobench:8000'
+          - 'neurosense:8000'
+          - 'neurohub:8000'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: '([^:]+):.*'
+        replacement: '${1}'
