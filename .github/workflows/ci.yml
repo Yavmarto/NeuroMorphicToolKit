@@ -46,6 +46,7 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -337,8 +338,8 @@ jobs:
           submodules: false
       - name: Update required submodules
         run: |
-          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${{ secrets.GITHUB_TOKEN }}" submodule update --init neurocnl || true
-          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${{ secrets.GITHUB_TOKEN }}" submodule update --init Neuro-Dream-Hand || true
+          git submodule update --init neurocnl || true
+          git submodule update --init Neuro-Dream-Hand || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
