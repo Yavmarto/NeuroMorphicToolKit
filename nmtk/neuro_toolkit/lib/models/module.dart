@@ -106,9 +106,7 @@ class Module {
       localDeps: localDeps ?? this.localDeps,
       status: status ?? this.status,
       installProgress: installProgress ?? this.installProgress,
-      healthStatus: healthStatus is String?
-          ? healthStatus
-          : this.healthStatus,
+      healthStatus: healthStatus is String? ? healthStatus : this.healthStatus,
     );
   }
 

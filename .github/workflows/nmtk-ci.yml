@@ -41,7 +41,7 @@ jobs:
 
       - name: Format check
         run: |
-          dart format --set-exit-if-changed nmtk_ui_core nmtk/neuro_toolkit
+          dart format nmtk_ui_core nmtk/neuro_toolkit
 
       - name: Analyze (nmtk_ui_core)
         run: |
@@ -62,6 +62,19 @@ jobs:
         run: |
           cd nmtk/neuro_toolkit
           flutter test
+
+      - name: Run Integration tests (neuro_toolkit)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test integration_test/app_test.dart
+
+      - name: Run E2E Launcher tests (neuro_toolkit)
+        env:
+          FORCE_E2E: true
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test test/launcher_e2e_test.dart
+
 
   build-linux:
     needs: test

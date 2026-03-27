@@ -86,9 +86,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosim == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurosim
     steps:
       - uses: actions/checkout@v4
         with:
@@ -130,9 +127,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurochip/neurochip
     steps:
       - uses: actions/checkout@v4
         with:
@@ -175,9 +169,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurosense/neurosense
     steps:
       - uses: actions/checkout@v4
         with:
@@ -219,9 +210,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurohub/neurohub
     steps:
       - uses: actions/checkout@v4
         with:
@@ -263,9 +251,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurodreamhand == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neuro-Dream-Hand
     steps:
       - uses: actions/checkout@v4
         with:
@@ -379,9 +364,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurobench/neurobench
     steps:
       - uses: actions/checkout@v4
         with:
@@ -426,9 +408,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.nmtk_ui_core == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: nmtk_ui_core
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -452,9 +431,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurotoolkit == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
       - name: Update required submodules
@@ -482,9 +458,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: neurocnl/frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -518,9 +491,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurochip/frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -548,9 +518,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurohub/frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -578,9 +545,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurosense/frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -608,9 +572,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurobench/frontend
     steps:
       - uses: actions/checkout@v4
         with:

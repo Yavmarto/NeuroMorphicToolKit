@@ -73,7 +73,8 @@ class DefaultBundleEnvironment implements BundleEnvironment {
   Future<bool> fileExists(String path) => File(path).exists();
 
   @override
-  DateTime getFileModificationTime(String path) => File(path).statSync().modified;
+  DateTime getFileModificationTime(String path) =>
+      File(path).statSync().modified;
 
   @override
   Future<String> readFileAsString(String path) => File(path).readAsString();
@@ -87,7 +88,8 @@ class DefaultBundleEnvironment implements BundleEnvironment {
       Directory(path).create(recursive: recursive);
 
   @override
-  Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false}) =>
+  Stream<FileSystemEntity> listDirectory(String path,
+          {bool recursive = false}) =>
       Directory(path).list(recursive: recursive);
 
   @override
@@ -429,8 +431,8 @@ class BundleManager {
   /// Checks whether a given binary is a working Python (exits 0 on --version).
   Future<bool> _isPythonWorking(String path) async {
     try {
-      final result = await _env.runProcess(path, ['--version'])
-          .timeout(const Duration(seconds: 5));
+      final result = await _env
+          .runProcess(path, ['--version']).timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) {
         debugPrint(
           'BundleManager: "$path" -> ${result.stdout.toString().trim()}',
@@ -497,11 +499,13 @@ class BundleManager {
 
     // If version mismatch or missing marker, clean up first to avoid leftovers
     if (await targetDir.exists()) {
-      debugPrint('BundleManager: Cleaning up old modules in Application Support...');
+      debugPrint(
+          'BundleManager: Cleaning up old modules in Application Support...');
       await targetDir.delete(recursive: true);
     }
     await targetDir.create(recursive: true);
 
+    final entries = await Directory(sourcePath).list().toList();
     for (var i = 0; i < entries.length; i++) {
       if (entries[i] is Directory) {
         final moduleName = p.basename(entries[i].path);
@@ -525,7 +529,8 @@ class BundleManager {
     if (!isBundled) return true;
 
     if (!_env.directoryExists(bundledModulesPath)) {
-      debugPrint('Bundle validation failed: modules directory missing at $bundledModulesPath');
+      debugPrint(
+          'Bundle validation failed: modules directory missing at $bundledModulesPath');
       return false;
     }
 
@@ -570,7 +575,8 @@ class BundleManager {
   /// Recursively copy a directory tree.
   Future<void> _copyDirectory(Directory source, String destinationPath) async {
     await _env.createDirectory(destinationPath, recursive: true);
-    await for (final entity in _env.listDirectory(source.path, recursive: false)) {
+    await for (final entity
+        in _env.listDirectory(source.path, recursive: false)) {
       final newPath = p.join(destinationPath, p.basename(entity.path));
       if (entity is File) {
         await _env.copyFile(entity.path, newPath);
