@@ -150,7 +150,7 @@ void main() {
       }
       // Try to cleanup
       unawaited(manager.stopModule('neurocnl'));
-    rethrow;
+      rethrow;
     } finally {
       await subscription.cancel();
       manager.dispose();

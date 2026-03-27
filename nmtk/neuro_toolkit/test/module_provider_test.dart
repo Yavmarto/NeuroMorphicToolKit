@@ -182,7 +182,8 @@ void main() {
     final mockProcessManager = MockProcessManager();
     final provider = ModuleProvider(processManager: mockProcessManager);
 
-    final module = Module(id: 'm1', name: 'M1', description: 'D1', directory: 'd1');
+    final module =
+        Module(id: 'm1', name: 'M1', description: 'D1', directory: 'd1');
     provider.modules = [module];
     provider.activeModuleIds.add('m1');
 

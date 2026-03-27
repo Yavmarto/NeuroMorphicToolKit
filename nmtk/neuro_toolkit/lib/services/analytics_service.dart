@@ -42,23 +42,26 @@ class AnalyticsService {
     // Optional remote reporting
     if (_remoteEndpoint != null && _remoteEndpoint!.isNotEmpty) {
       try {
-        await http.post(
-          Uri.parse(_remoteEndpoint!),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'timestamp': timestamp,
-            'type': 'crash',
-            'error': error.toString(),
-            'stackTrace': stackTrace.toString(),
-          }),
-        ).timeout(const Duration(seconds: 5));
+        await http
+            .post(
+              Uri.parse(_remoteEndpoint!),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'timestamp': timestamp,
+                'type': 'crash',
+                'error': error.toString(),
+                'stackTrace': stackTrace.toString(),
+              }),
+            )
+            .timeout(const Duration(seconds: 5));
       } catch (e) {
         debugPrint('Failed to send remote crash report: $e');
       }
     }
   }
 
-  Future<void> trackEvent(String name, {Map<String, dynamic>? properties}) async {
+  Future<void> trackEvent(String name,
+      {Map<String, dynamic>? properties}) async {
     if (!_telemetryEnabled) return;
 
     final timestamp = DateTime.now().toIso8601String();
@@ -66,16 +69,18 @@ class AnalyticsService {
 
     if (_remoteEndpoint != null && _remoteEndpoint!.isNotEmpty) {
       try {
-        await http.post(
-          Uri.parse(_remoteEndpoint!),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'timestamp': timestamp,
-            'type': 'event',
-            'name': name,
-            'properties': properties ?? {},
-          }),
-        ).timeout(const Duration(seconds: 5));
+        await http
+            .post(
+              Uri.parse(_remoteEndpoint!),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({
+                'timestamp': timestamp,
+                'type': 'event',
+                'name': name,
+                'properties': properties ?? {},
+              }),
+            )
+            .timeout(const Duration(seconds: 5));
       } catch (e) {
         debugPrint('Failed to send remote telemetry: $e');
       }

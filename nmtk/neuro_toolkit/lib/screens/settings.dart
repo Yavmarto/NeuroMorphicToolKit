@@ -56,7 +56,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         SwitchListTile(
           title: const Text('Opt-in Telemetry'),
-          subtitle: const Text('Share anonymous usage data and performance metrics'),
+          subtitle:
+              const Text('Share anonymous usage data and performance metrics'),
           value: settings.telemetryEnabled,
           onChanged: (value) => settings.setTelemetryEnabled(value),
         ),

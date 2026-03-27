@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:path/path.dart' as p;
@@ -158,13 +157,8 @@ class ModuleProvider with ChangeNotifier {
           notifyListeners();
         },
       );
-      unawaited(AnalyticsService().trackEvent('module_install_success', properties: {'moduleId': moduleId}));
     } catch (e) {
       debugPrint('Installation failed for $moduleId: $e');
-      unawaited(AnalyticsService().trackEvent('module_install_failed', properties: {
-        'moduleId': moduleId,
-        'error': e.toString(),
-      }));
     }
   }
 
@@ -180,13 +174,8 @@ class ModuleProvider with ChangeNotifier {
 
     try {
       await _processManager.startModule(_modules[index]);
-      unawaited(AnalyticsService().trackEvent('module_launch_success', properties: {'moduleId': moduleId}));
     } catch (e) {
       debugPrint('Launch failed for $moduleId: $e');
-      unawaited(AnalyticsService().trackEvent('module_launch_failed', properties: {
-        'moduleId': moduleId,
-        'error': e.toString(),
-      }));
     }
   }
 
@@ -200,13 +189,8 @@ class ModuleProvider with ChangeNotifier {
 
     try {
       await _processManager.stopModule(moduleId);
-      unawaited(AnalyticsService().trackEvent('module_stop_success', properties: {'moduleId': moduleId}));
     } catch (e) {
       debugPrint('Stop failed for $moduleId: $e');
-      unawaited(AnalyticsService().trackEvent('module_stop_failed', properties: {
-        'moduleId': moduleId,
-        'error': e.toString(),
-      }));
     }
   }
 
