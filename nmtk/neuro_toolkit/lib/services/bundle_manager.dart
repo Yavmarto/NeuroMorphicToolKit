@@ -469,10 +469,6 @@ class BundleManager {
     return _cachedModulesBasePath!;
   }
 
-  void _resetModulesBasePath() {
-    _cachedModulesBasePath = null;
-  }
-
   /// Whether first-run extraction is needed.
   Future<bool> get needsExtraction async {
     if (!isBundled) return false;
