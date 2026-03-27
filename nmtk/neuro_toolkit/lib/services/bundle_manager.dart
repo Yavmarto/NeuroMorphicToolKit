@@ -26,6 +26,8 @@ abstract class BundleEnvironment {
   Future<String> readFileAsString(String path);
   Future<void> writeFileAsString(String path, String contents);
   Future<void> createDirectory(String path, {bool recursive = false});
+  Future<void> deleteDirectory(String path, {bool recursive = false});
+  Future<void> renameDirectory(String source, String destination);
   Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false});
   Future<void> copyFile(String source, String destination);
   Future<void> deleteDirectory(String path, {bool recursive = false});
@@ -160,6 +162,8 @@ class BundleManager {
     _env = value;
     clearCache();
   }
+
+  BundleEnvironment get env => _env;
 
   String? _cachedAppSupportPath;
   String? _cachedPythonPath;

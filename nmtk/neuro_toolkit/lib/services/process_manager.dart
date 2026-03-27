@@ -339,7 +339,7 @@ class ProcessManager {
         status: ModuleStatus.installed,
         installProgress: 1.0,
       );
-      _statusController.add(updatedModule);
+      _updateModuleStatus(updatedModule);
       await saveModuleState(updatedModule);
     } catch (e) {
       debugPrint('[${module.id}] installModule EXCEPTION: $e');
@@ -347,7 +347,7 @@ class ProcessManager {
         status: ModuleStatus.error,
         healthStatus: e.toString(),
       );
-      _statusController.add(updatedModule);
+      _updateModuleStatus(updatedModule);
       rethrow;
     }
   }
@@ -439,7 +439,7 @@ class ProcessManager {
 
     final updatedModuleStarting =
         module.copyWith(status: ModuleStatus.starting);
-    _statusController.add(updatedModuleStarting);
+    _updateModuleStatus(updatedModuleStarting);
 
     try {
       debugPrint(
@@ -483,7 +483,7 @@ class ProcessManager {
             status: code == 0 ? ModuleStatus.installed : ModuleStatus.error,
             healthStatus: code == 0 ? null : 'Process exited with code $code',
           );
-          _statusController.add(updatedModuleStopped);
+          _updateModuleStatus(updatedModuleStopped);
         }),
       );
 
@@ -497,7 +497,7 @@ class ProcessManager {
         status: ModuleStatus.error,
         healthStatus: e.toString(),
       );
-      _statusController.add(updatedModuleError);
+      _updateModuleStatus(updatedModuleError);
       rethrow;
     }
   }
@@ -592,7 +592,7 @@ class ProcessManager {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
-          await _checkHealth(module);
+          unawaited(_checkHealth(module));
         } else if (module.status == ModuleStatus.error) {
           final nextRetry = _nextRetryTimes[module.id];
           if (nextRetry != null && DateTime.now().isAfter(nextRetry)) {
@@ -655,6 +655,113 @@ class ProcessManager {
       }
     } catch (e) {
       debugPrint('Error loading module state: $e');
+    }
+  }
+
+  Future<void> updateModule(
+    Module module, {
+    void Function(double)? onProgress,
+  }) async {
+    final moduleId = module.id;
+    debugPrint('[$moduleId] Updating module...');
+
+    // 1. Stop if running
+    if (_runningProcesses.containsKey(moduleId)) {
+      await stopModule(moduleId);
+    }
+
+    final moduleDir = _installDir(module);
+    final backupDir = '$moduleDir.bak';
+    final env = BundleManager().env;
+
+    try {
+      // 2. Backup current directory
+      onProgress?.call(0.1);
+      if (env.directoryExists(moduleDir)) {
+        if (env.directoryExists(backupDir)) {
+          await env.deleteDirectory(backupDir, recursive: true);
+        }
+        // Simple rename for backup
+        await env.renameDirectory(moduleDir, backupDir);
+      }
+
+      // 3. Re-create directory and "download" (simulate by copying back or just re-installing)
+      // In a real app, this would be a git pull or download.
+      // Here we'll recreate the dir and run install.
+      await env.createDirectory(moduleDir, recursive: true);
+
+      // Restore some files from backup for simulation if needed, but here we just re-install
+      // To simulate "remote" update, we can just copy backup back but pretend it's new
+      // (Actually, installModule expects the source to be there).
+      // Let's copy the backup back to moduleDir to simulate "downloaded" source.
+      await _copyDirectoryEnv(backupDir, moduleDir, env);
+
+      onProgress?.call(0.3);
+
+      // 4. Install new version
+      // We pass a modified module with the new version
+      final updatedModule = module.copyWith(
+        version: module.remoteVersion,
+        status: ModuleStatus.updating,
+      );
+      _updateModuleStatus(updatedModule);
+
+      await installModule(updatedModule,
+          onProgress: (p) => onProgress?.call(0.3 + p * 0.5));
+
+      // 5. Verify with health check
+      onProgress?.call(0.9);
+      await startModule(updatedModule);
+
+      // Wait for health check to stabilize
+      await Future<void>.delayed(const Duration(seconds: 5));
+
+      final index = _modules.indexWhere((m) => m.id == moduleId);
+      if (index != -1 && _modules[index].status == ModuleStatus.running) {
+        // Success! Clean up backup
+        if (env.directoryExists(backupDir)) {
+          await env.deleteDirectory(backupDir, recursive: true);
+        }
+        onProgress?.call(1.0);
+        debugPrint('[$moduleId] Update successful and verified.');
+      } else {
+        throw Exception('Health check failed after update');
+      }
+    } catch (e) {
+      debugPrint('[$moduleId] Update failed: $e. Rolling back...');
+      // 6. Rollback
+      if (_runningProcesses.containsKey(moduleId)) {
+        await stopModule(moduleId);
+      }
+
+      if (env.directoryExists(moduleDir)) {
+        await env.deleteDirectory(moduleDir, recursive: true);
+      }
+
+      if (env.directoryExists(backupDir)) {
+        await env.renameDirectory(backupDir, moduleDir);
+      }
+
+      final rolledBackModule = module.copyWith(
+        status: ModuleStatus.installed,
+        healthStatus: 'Update failed: $e. Rolled back to ${module.version}',
+      );
+      _updateModuleStatus(rolledBackModule);
+      await saveModuleState(rolledBackModule);
+      rethrow;
+    }
+  }
+
+  Future<void> _copyDirectoryEnv(
+      String source, String destination, BundleEnvironment env) async {
+    await env.createDirectory(destination, recursive: true);
+    await for (final entity in env.listDirectory(source, recursive: false)) {
+      final newPath = p.join(destination, p.basename(entity.path));
+      if (entity is File) {
+        await env.copyFile(entity.path, newPath);
+      } else if (entity is Directory) {
+        await _copyDirectoryEnv(entity.path, newPath, env);
+      }
     }
   }
 
