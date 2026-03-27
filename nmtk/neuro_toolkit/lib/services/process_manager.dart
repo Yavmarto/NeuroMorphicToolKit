@@ -134,7 +134,8 @@ class ProcessManager {
     _nextRetryTimes[module.id] = nextRetry;
 
     debugPrint(
-        '[${module.id}] Scheduled retry #$count in ${seconds}s at $nextRetry');
+      '[${module.id}] Scheduled retry #$count in ${seconds}s at $nextRetry',
+    );
 
     final updatedModule = module.copyWith(
       status: ModuleStatus.error,
@@ -534,18 +535,14 @@ class ProcessManager {
       int statusCode;
 
       if (kIsWeb) {
-        final response =
-            await http.get(uri).timeout(const Duration(seconds: 2));
+        final response = await http.get(uri).timeout(const Duration(seconds: 2));
         body = response.body;
         statusCode = response.statusCode;
       } else {
-        final client = HttpClient();
-        final request =
-            await client.getUrl(uri).timeout(const Duration(seconds: 2));
-        final response = await request.close();
-        body = await response.transform(utf8.decoder).join();
+        final response =
+            await _httpClient.get(uri).timeout(const Duration(seconds: 2));
+        body = response.body;
         statusCode = response.statusCode;
-        client.close();
       }
 
       ModuleStatus newStatus;

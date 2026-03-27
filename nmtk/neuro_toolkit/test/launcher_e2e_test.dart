@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
@@ -55,18 +54,18 @@ void main() {
         return;
       }
 
-      print('🚀 Starting E2E Full Workflow Test...');
+      debugPrint('🚀 Starting E2E Full Workflow Test...');
 
       final httpModules = allModules.where((m) => m.port != null).toList();
 
       for (final module in httpModules) {
-        print('📦 Installing ${module.name} (${module.id})...');
+        debugPrint('📦 Installing ${module.name} (${module.id})...');
         try {
           await manager
               .installModule(module)
               .timeout(const Duration(minutes: 5));
 
-          print('⚡ Starting ${module.name}...');
+          debugPrint('⚡ Starting ${module.name}...');
           unawaited(manager.startModule(module));
 
           // Wait for running state
@@ -78,22 +77,26 @@ void main() {
               if (!completer.isCompleted) completer.complete();
             } else if (updated.id == module.id &&
                 updated.status == ModuleStatus.error) {
-              if (!completer.isCompleted)
-                completer.completeError(Exception(
-                    'Module ${module.id} failed to start: ${updated.healthStatus}'));
+              if (!completer.isCompleted) {
+                completer.completeError(
+                  Exception(
+                    'Module ${module.id} failed to start: ${updated.healthStatus}',
+                  ),
+                );
+              }
             }
           });
 
           await completer.future.timeout(const Duration(minutes: 2));
           await sub.cancel();
-          print('✅ ${module.name} is UP!');
+          debugPrint('✅ ${module.name} is UP!');
         } catch (e) {
-          print('❌ Failed to bring up ${module.name}: $e');
+          debugPrint('❌ Failed to bring up ${module.name}: $e');
           rethrow;
         }
       }
 
-      print('🎉 All HTTP modules started successfully!');
+      debugPrint('🎉 All HTTP modules started successfully!');
 
       // Cleanup: stop all
       for (final module in httpModules) {
@@ -107,15 +110,15 @@ void main() {
         return;
       }
 
-      print('🛠️ Starting Failure Recovery Test...');
+      debugPrint('🛠️ Starting Failure Recovery Test...');
 
       // Use neurocnl for this test
       final module = allModules.firstWhere((m) => m.id == 'neurocnl');
 
-      print('📦 Ensuring ${module.id} is installed...');
+      debugPrint('📦 Ensuring ${module.id} is installed...');
       await manager.installModule(module).timeout(const Duration(minutes: 5));
 
-      print('⚡ Starting ${module.id}...');
+      debugPrint('⚡ Starting ${module.id}...');
       unawaited(manager.startModule(module));
 
       // Wait for it to be running
@@ -125,7 +128,8 @@ void main() {
       // Note: we can't easily check the status synchronously without keeping track,
       // but we can listen for the next health check or just assume it's up if we waited enough.
 
-      print('💀 Simulating crash (killing process on port ${module.port})...');
+      debugPrint(
+          '💀 Simulating crash (killing process on port ${module.port})...');
       bool killed = false;
       if (Platform.isWindows) {
         final result = await Process.run('netstat', ['-ano']);
@@ -137,7 +141,7 @@ void main() {
               final parts = line.trim().split(RegExp(r'\s+'));
               if (parts.length >= 5) {
                 final pid = parts.last;
-                print('Killing process $pid');
+                debugPrint('Killing process $pid');
                 await Process.run('taskkill', ['/F', '/PID', pid]);
                 killed = true;
                 break;
@@ -151,7 +155,7 @@ void main() {
         if (result.exitCode == 0 &&
             result.stdout.toString().trim().isNotEmpty) {
           final pid = result.stdout.toString().trim().split('\n').first;
-          print('Killing process $pid');
+          debugPrint('Killing process $pid');
           Process.killPid(int.parse(pid), ProcessSignal.sigkill);
           killed = true;
         }
@@ -161,33 +165,33 @@ void main() {
         fail('Could not find process running on port ${module.port}');
       }
 
-      print('⏳ Waiting for failure detection...');
+      debugPrint('⏳ Waiting for failure detection...');
       final failureCompleter = Completer<void>();
       final recoveryCompleter = Completer<void>();
 
       final sub = manager.statusUpdates.listen((updated) {
         if (updated.id == module.id) {
-          print('🔄 Status change: ${updated.status}');
+          debugPrint('🔄 Status change: ${updated.status}');
           if (updated.status == ModuleStatus.error &&
               !failureCompleter.isCompleted) {
-            print('✅ Failure detected!');
+            debugPrint('✅ Failure detected!');
             failureCompleter.complete();
           } else if ((updated.status == ModuleStatus.running ||
                   updated.status == ModuleStatus.starting) &&
               failureCompleter.isCompleted &&
               !recoveryCompleter.isCompleted) {
-            print('✅ Recovery started!');
+            debugPrint('✅ Recovery started!');
             recoveryCompleter.complete();
           }
         }
       });
 
       await failureCompleter.future.timeout(const Duration(seconds: 30));
-      print('⏳ Waiting for auto-restart (backoff is 5s)...');
+      debugPrint('⏳ Waiting for auto-restart (backoff is 5s)...');
       await recoveryCompleter.future.timeout(const Duration(seconds: 60));
 
       await sub.cancel();
-      print('🎉 Failure Recovery Test PASSED!');
+      debugPrint('🎉 Failure Recovery Test PASSED!');
 
       await manager.stopModule(module.id);
     }, timeout: const Timeout(Duration(minutes: 5)));
