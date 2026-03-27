@@ -214,7 +214,8 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
   });
 
-  testWidgets('CatalogScreen handles Install button click', (WidgetTester tester) async {
+  testWidgets('CatalogScreen handles Install button click',
+      (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1920, 1080);
     tester.view.devicePixelRatio = 1.0;
 
@@ -234,7 +235,8 @@ void main() {
 
     // Find the Install button for CNL Studio
     final installButton = find.descendant(
-      of: find.ancestor(of: find.text('CNL Studio'), matching: find.byType(Card)),
+      of: find.ancestor(
+          of: find.text('CNL Studio'), matching: find.byType(Card)),
       matching: find.text('Install'),
     );
 

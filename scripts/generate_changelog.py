@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import subprocess
 import sys
+import os
 from datetime import date
 
 def get_commits(since_tag=None):
