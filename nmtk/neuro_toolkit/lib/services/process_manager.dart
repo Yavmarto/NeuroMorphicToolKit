@@ -134,8 +134,7 @@ class ProcessManager {
     _nextRetryTimes[module.id] = nextRetry;
 
     debugPrint(
-      '[${module.id}] Scheduled retry #$count in ${seconds}s at $nextRetry',
-    );
+        '[${module.id}] Scheduled retry #$count in ${seconds}s at $nextRetry');
 
     final updatedModule = module.copyWith(
       status: ModuleStatus.error,

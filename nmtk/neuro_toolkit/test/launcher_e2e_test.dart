@@ -78,11 +78,8 @@ void main() {
             } else if (updated.id == module.id &&
                 updated.status == ModuleStatus.error) {
               if (!completer.isCompleted) {
-                completer.completeError(
-                  Exception(
-                    'Module ${module.id} failed to start: ${updated.healthStatus}',
-                  ),
-                );
+                completer.completeError(Exception(
+                    'Module ${module.id} failed to start: ${updated.healthStatus}'));
               }
             }
           });
