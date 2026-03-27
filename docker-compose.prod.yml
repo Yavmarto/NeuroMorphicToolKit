@@ -6,15 +6,8 @@ services:
       - PYTHONUNBUFFERED=1
     security_opt:
       - no-new-privileges:true
-    read_only: false # Set to false because FastAPI/Uvicorn might need to write temporary files or logs
-
-  neurocnl-physics:
-    restart: always
-    environment:
-      - PYTHONOPTIMIZE=1
-      - PYTHONUNBUFFERED=1
-    security_opt:
-      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   neurosim:
     restart: always
@@ -23,6 +16,8 @@ services:
       - PYTHONUNBUFFERED=1
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   neurochip:
     restart: always
@@ -31,6 +26,8 @@ services:
       - PYTHONUNBUFFERED=1
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   neurobench:
     restart: always
@@ -39,6 +36,8 @@ services:
       - PYTHONUNBUFFERED=1
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   neurosense:
     restart: always
@@ -47,6 +46,8 @@ services:
       - PYTHONUNBUFFERED=1
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   neurohub:
     restart: always
@@ -55,3 +56,15 @@ services:
       - PYTHONUNBUFFERED=1
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurocnl-physics:
+    restart: always
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

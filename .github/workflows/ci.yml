@@ -10,6 +10,9 @@ permissions:
   contents: read
   pull-requests: read
 
+env:
+  RUNNER_TOOL_CACHE: ${{ github.workspace }}/.toolcache
+
 jobs:
   detect-changes:
     runs-on: self-hosted
@@ -34,7 +37,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
@@ -86,7 +90,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neurosim || true
       - uses: actions/setup-python@v5
@@ -130,7 +135,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neurochip || true
       - uses: actions/setup-python@v5
@@ -175,7 +181,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neurosense || true
       - uses: actions/setup-python@v5
@@ -219,7 +226,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neurohub || true
       - uses: actions/setup-python@v5
@@ -263,7 +271,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neuro-Dream-Hand || true
       - uses: actions/setup-python@v5
@@ -304,11 +313,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update required submodules
-        run: |
-          git submodule update --init neurocnl || true
-          git submodule update --init Neuro-Dream-Hand || true
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -379,7 +385,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neurobench || true
       - uses: actions/setup-python@v5
@@ -425,6 +432,9 @@ jobs:
         working-directory: nmtk_ui_core
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -451,10 +461,9 @@ jobs:
         working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
-      - name: Update required submodules
-        run: |
-          git submodule update --init ../../neurocnl || true
-          git submodule update --init ../../Neuro-Dream-Hand || true
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -482,7 +491,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init neurocnl || true
       - uses: subosito/flutter-action@v2
@@ -518,7 +528,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neurochip || true
       - uses: subosito/flutter-action@v2
@@ -548,7 +559,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neurohub || true
       - uses: subosito/flutter-action@v2
@@ -578,7 +590,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neurosense || true
       - uses: subosito/flutter-action@v2
@@ -608,7 +621,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update submodule
         run: git submodule update --init Neurobench || true
       - uses: subosito/flutter-action@v2
