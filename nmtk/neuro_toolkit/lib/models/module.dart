@@ -26,6 +26,8 @@ class Module {
   final List<String> localDeps;
   final String version;
   final String remoteVersion;
+  final bool versionPinned;
+  final String? remoteUrl;
   ModuleStatus status;
   double installProgress;
   String? healthStatus;
@@ -46,6 +48,8 @@ class Module {
     this.localDeps = const [],
     this.version = '0.0.0',
     this.remoteVersion = '0.0.0',
+    this.versionPinned = false,
+    this.remoteUrl,
     this.status = ModuleStatus.notInstalled,
     this.installProgress = 0.0,
     this.healthStatus,
@@ -71,6 +75,8 @@ class Module {
           (json['localDeps'] as List<dynamic>?)?.cast<String>() ?? const [],
       version: json['version'] as String? ?? '0.0.0',
       remoteVersion: json['remoteVersion'] as String? ?? '0.0.0',
+      versionPinned: json['versionPinned'] as bool? ?? false,
+      remoteUrl: json['remoteUrl'] as String?,
       status: json['status'] != null
           ? ModuleStatus.values[json['status'] as int]
           : ModuleStatus.notInstalled,
@@ -95,6 +101,8 @@ class Module {
     List<String>? localDeps,
     String? version,
     String? remoteVersion,
+    bool? versionPinned,
+    Object? remoteUrl = const Object(),
     ModuleStatus? status,
     double? installProgress,
     Object? healthStatus = const Object(),
@@ -115,6 +123,8 @@ class Module {
       localDeps: localDeps ?? this.localDeps,
       version: version ?? this.version,
       remoteVersion: remoteVersion ?? this.remoteVersion,
+      versionPinned: versionPinned ?? this.versionPinned,
+      remoteUrl: remoteUrl is String? ? remoteUrl : this.remoteUrl,
       status: status ?? this.status,
       installProgress: installProgress ?? this.installProgress,
       healthStatus: healthStatus is String? ? healthStatus : this.healthStatus,
@@ -136,6 +146,8 @@ class Module {
         'uvicornTarget': uvicornTarget,
         'version': version,
         'remoteVersion': remoteVersion,
+        'versionPinned': versionPinned,
+        'remoteUrl': remoteUrl,
         'status': status.index,
         'installProgress': installProgress,
         'healthStatus': healthStatus,

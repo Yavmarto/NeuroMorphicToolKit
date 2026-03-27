@@ -51,7 +51,7 @@ on:
 jobs:
   read-context:
     name: Read SDD documents
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
     outputs:

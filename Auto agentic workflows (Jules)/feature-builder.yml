@@ -9,7 +9,7 @@ jobs:
     # Triggers on 'feature' or 'agent' label — use 'feature' for planned work,
     # 'agent' for direct implementation requests
     if: ${{ github.event.label.name == 'feature' || github.event.label.name == 'agent' }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     concurrency:
       group: agent-work
       cancel-in-progress: false

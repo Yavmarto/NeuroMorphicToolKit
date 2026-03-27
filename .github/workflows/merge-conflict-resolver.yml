@@ -1,8 +1,8 @@
 name: Auto-Resolve Merge Conflicts
 
-# Fires when a PR is opened/updated, or when main/dev changes (which can
-# cause existing PRs to become conflicted). Uses the GitHub API mergeable
-# field — more reliable than simulating merges with git.
+# Fires when a PR is opened/updated, when main/dev changes (which can
+# cause existing PRs to become conflicted), or on a schedule to catch
+# conflicts caused by other merged PRs.
 
 on:
   pull_request:
@@ -12,34 +12,44 @@ on:
   push:
     branches: [dev, main, master]
 
+  schedule:
+    - cron: '*/30 * * * *'       # every 30 minutes
+
+  workflow_dispatch: {}           # manual trigger
+
 jobs:
   # ── Detect which PRs are conflicted ──────────────────────────────────────────
   detect:
     name: Detect conflicted PRs
     runs-on: self-hosted
     permissions:
-      pull-requests: read
+      pull-requests: write        # read PRs + add/remove labels
     outputs:
       found0: ${{ steps.scan.outputs.found0 }}
       pr0:    ${{ steps.scan.outputs.pr0 }}
       head0:  ${{ steps.scan.outputs.head0 }}
       base0:  ${{ steps.scan.outputs.base0 }}
+      files0: ${{ steps.scan.outputs.files0 }}
       found1: ${{ steps.scan.outputs.found1 }}
       pr1:    ${{ steps.scan.outputs.pr1 }}
       head1:  ${{ steps.scan.outputs.head1 }}
       base1:  ${{ steps.scan.outputs.base1 }}
+      files1: ${{ steps.scan.outputs.files1 }}
       found2: ${{ steps.scan.outputs.found2 }}
       pr2:    ${{ steps.scan.outputs.pr2 }}
       head2:  ${{ steps.scan.outputs.head2 }}
       base2:  ${{ steps.scan.outputs.base2 }}
+      files2: ${{ steps.scan.outputs.files2 }}
       found3: ${{ steps.scan.outputs.found3 }}
       pr3:    ${{ steps.scan.outputs.pr3 }}
       head3:  ${{ steps.scan.outputs.head3 }}
       base3:  ${{ steps.scan.outputs.base3 }}
+      files3: ${{ steps.scan.outputs.files3 }}
       found4: ${{ steps.scan.outputs.found4 }}
       pr4:    ${{ steps.scan.outputs.pr4 }}
       head4:  ${{ steps.scan.outputs.head4 }}
       base4:  ${{ steps.scan.outputs.base4 }}
+      files4: ${{ steps.scan.outputs.files4 }}
 
     steps:
       - name: Find conflicted PRs via GitHub API
@@ -49,27 +59,54 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo  = context.repo.repo;
+            const LABEL = 'jules-conflict-fix';
 
-            // Build the list of PRs to check
+            // ── 1. Ensure the label exists ──────────────────────────────────
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: LABEL });
+            } catch {
+              await github.rest.issues.createLabel({
+                owner, repo, name: LABEL,
+                color: 'fbca04',
+                description: 'Jules is actively resolving merge conflicts on this PR'
+              });
+              core.info(`Created label "${LABEL}".`);
+            }
+
+            // ── 2. Build the list of PRs to check ──────────────────────────
             let toCheck = [];
 
             if (context.eventName === 'pull_request') {
-              // Only check the PR that triggered this workflow
               toCheck = [{ number: context.payload.pull_request.number }];
-            } else {
-              // push: check all open PRs targeting the branch that was pushed to
+            } else if (context.eventName === 'push') {
               const branch = context.ref.replace('refs/heads/', '');
               const prs = await github.paginate(github.rest.pulls.list, {
                 owner, repo, state: 'open', base: branch, per_page: 100
+              });
+              toCheck = prs.map(p => ({ number: p.number }));
+            } else {
+              // schedule or workflow_dispatch: check ALL open PRs
+              const prs = await github.paginate(github.rest.pulls.list, {
+                owner, repo, state: 'open', per_page: 100
               });
               toCheck = prs.map(p => ({ number: p.number }));
             }
 
             core.info(`Checking ${toCheck.length} PR(s) for conflicts...`);
 
-            // For each PR, poll the mergeable field (GitHub computes it async)
+            // ── 3. Find conflicted PRs, skip those already labelled ────────
             const conflicted = [];
             for (const { number } of toCheck) {
+              // Skip PRs that already have the label (Jules is working on them)
+              const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                owner, repo, issue_number: number
+              });
+              if (labels.some(l => l.name === LABEL)) {
+                core.info(`PR #${number}: skipped — "${LABEL}" label present.`);
+                continue;
+              }
+
+              // Poll the mergeable field (GitHub computes it async)
               let pr = null;
               for (let attempt = 0; attempt < 6; attempt++) {
                 const { data } = await github.rest.pulls.get({ owner, repo, pull_number: number });
@@ -85,28 +122,45 @@ jobs:
 
               core.info(`PR #${number}: mergeable=${pr.mergeable}, state=${pr.mergeable_state}`);
               if (pr.mergeable === false) {
+                // Fetch the list of files in this PR so Jules knows what's conflicted
+                const { data: prFiles } = await github.rest.pulls.listFiles({
+                  owner, repo, pull_number: pr.number, per_page: 100
+                });
+                const fileList = prFiles.map(f => f.filename).join(', ');
+
                 conflicted.push({
                   number: pr.number,
                   head: pr.head.ref,
-                  base: pr.base.ref
+                  base: pr.base.ref,
+                  files: fileList
                 });
               }
             }
 
-            core.info(`Found ${conflicted.length} conflicted PR(s).`);
+            core.info(`Found ${conflicted.length} conflicted PR(s) (excluding already-labelled).`);
 
-            // Emit outputs for up to 5 conflicted PRs
+            // ── 4. Apply label + emit outputs for up to 5 PRs ──────────────
             for (let i = 0; i < 5; i++) {
               if (conflicted[i]) {
+                // Apply label so this PR is skipped on the next run
+                await github.rest.issues.addLabels({
+                  owner, repo,
+                  issue_number: conflicted[i].number,
+                  labels: [LABEL]
+                });
+                core.info(`Applied "${LABEL}" label to PR #${conflicted[i].number}.`);
+
                 core.setOutput(`found${i}`, 'true');
                 core.setOutput(`pr${i}`,    String(conflicted[i].number));
                 core.setOutput(`head${i}`,  conflicted[i].head);
                 core.setOutput(`base${i}`,  conflicted[i].base);
+                core.setOutput(`files${i}`, conflicted[i].files);
               } else {
                 core.setOutput(`found${i}`, 'false');
                 core.setOutput(`pr${i}`,    '0');
                 core.setOutput(`head${i}`,  '');
                 core.setOutput(`base${i}`,  '');
+                core.setOutput(`files${i}`, '');
               }
             }
 
@@ -123,6 +177,7 @@ jobs:
       pr_number: ${{ fromJson(needs.detect.outputs.pr0) }}
       head_ref:  ${{ needs.detect.outputs.head0 }}
       base_ref:  ${{ needs.detect.outputs.base0 }}
+      conflict_files: ${{ needs.detect.outputs.files0 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
       JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}
@@ -139,6 +194,7 @@ jobs:
       pr_number: ${{ fromJson(needs.detect.outputs.pr1) }}
       head_ref:  ${{ needs.detect.outputs.head1 }}
       base_ref:  ${{ needs.detect.outputs.base1 }}
+      conflict_files: ${{ needs.detect.outputs.files1 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
       JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}
@@ -155,6 +211,7 @@ jobs:
       pr_number: ${{ fromJson(needs.detect.outputs.pr2) }}
       head_ref:  ${{ needs.detect.outputs.head2 }}
       base_ref:  ${{ needs.detect.outputs.base2 }}
+      conflict_files: ${{ needs.detect.outputs.files2 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
       JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}
@@ -171,6 +228,7 @@ jobs:
       pr_number: ${{ fromJson(needs.detect.outputs.pr3) }}
       head_ref:  ${{ needs.detect.outputs.head3 }}
       base_ref:  ${{ needs.detect.outputs.base3 }}
+      conflict_files: ${{ needs.detect.outputs.files3 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
       JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}
@@ -187,6 +245,7 @@ jobs:
       pr_number: ${{ fromJson(needs.detect.outputs.pr4) }}
       head_ref:  ${{ needs.detect.outputs.head4 }}
       base_ref:  ${{ needs.detect.outputs.base4 }}
+      conflict_files: ${{ needs.detect.outputs.files4 }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
       JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}

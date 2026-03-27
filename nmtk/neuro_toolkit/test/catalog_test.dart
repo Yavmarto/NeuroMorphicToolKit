@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
 import 'package:provider/provider.dart';
 
@@ -10,7 +12,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<String> installCalls = [];
 
   void setMuJoCoAvailable(bool value) {
-    _isMuJoCoAvailable = value;
+    _isMuJoCoAvailableValue = value;
     notifyListeners();
   }
 
@@ -64,7 +66,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   List<Module> get activeModules => [];
 
   @override
-  bool isMuJoCoAvailable() => _isMuJoCoAvailable;
+  bool isMuJoCoAvailable() => _isMuJoCoAvailableValue;
 
   @override
   Future<void> installModule(String moduleId) async {
@@ -97,6 +99,12 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
   @override
   Stream<String>? getModuleOutput(String moduleId) => null;
+
+  @override
+  LauncherUpdate? get pendingLauncherUpdate => null;
+
+  @override
+  UpdateChannel get currentChannel => UpdateChannel.stable;
 
   void loadModules() {
     final List<Map<String, dynamic>> mockData = [

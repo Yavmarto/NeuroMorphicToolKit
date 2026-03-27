@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [main, dev]
 
-env:
-  AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
-  RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
-
 defaults:
   run:
     shell: bash
@@ -20,12 +16,10 @@ permissions:
 
 jobs:
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     permissions:
       contents: read
       pull-requests: read
-    env:
-      RUNNER_TOOL_CACHE: /tmp/tool_cache
     outputs:
       neurosim: ${{ steps.filter.outputs.neurosim }}
       neurochip: ${{ steps.filter.outputs.neurochip }}
@@ -90,13 +84,27 @@ jobs:
   test-neurosim:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosim == 'true'
-    runs-on: self-hosted
-    env:
-      AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
-      RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Create tool cache directory
-        run: mkdir -p "${{ github.workspace }}/_tool_cache"
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           submodules: false
@@ -106,7 +114,7 @@ jobs:
         with:
           python-version: '3.11'
         env:
-          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
@@ -137,13 +145,27 @@ jobs:
   test-neurochip:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip == 'true'
-    runs-on: self-hosted
-    env:
-      AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
-      RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Create tool cache directory
-        run: mkdir -p "${{ github.workspace }}/_tool_cache"
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           submodules: false
@@ -153,7 +175,7 @@ jobs:
         with:
           python-version: '3.12'
         env:
-          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
@@ -185,13 +207,27 @@ jobs:
   test-neurosense:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense == 'true'
-    runs-on: self-hosted
-    env:
-      AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
-      RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Create tool cache directory
-        run: mkdir -p "${{ github.workspace }}/_tool_cache"
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           submodules: false
@@ -201,7 +237,7 @@ jobs:
         with:
           python-version: '3.11'
         env:
-          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
@@ -232,13 +268,27 @@ jobs:
   test-neurohub:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub == 'true'
-    runs-on: self-hosted
-    env:
-      AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
-      RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Create tool cache directory
-        run: mkdir -p "${{ github.workspace }}/_tool_cache"
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           submodules: false
@@ -248,7 +298,7 @@ jobs:
         with:
           python-version: '3.11'
         env:
-          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
@@ -279,13 +329,27 @@ jobs:
   test-neurodreamhand:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurodreamhand == 'true'
-    runs-on: self-hosted
-    env:
-      AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
-      RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Create tool cache directory
-        run: mkdir -p "${{ github.workspace }}/_tool_cache"
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           submodules: false
@@ -295,7 +359,7 @@ jobs:
         with:
           python-version: '3.11'
         env:
-          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
@@ -326,13 +390,27 @@ jobs:
   test-neurocnl-backend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl == 'true'
-    runs-on: self-hosted
-    env:
-      AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
-      RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Create tool cache directory
-        run: mkdir -p "${{ github.workspace }}/_tool_cache"
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           submodules: false
@@ -344,7 +422,7 @@ jobs:
         with:
           python-version: '3.11'
         env:
-          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install core package
         run: |
           if [ -d "neurocnl" ] && [ -f "neurocnl/pyproject.toml" ]; then
@@ -404,13 +482,27 @@ jobs:
   test-neurobench:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench == 'true'
-    runs-on: self-hosted
-    env:
-      AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
-      RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Create tool cache directory
-        run: mkdir -p "${{ github.workspace }}/_tool_cache"
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           submodules: false
@@ -420,7 +512,7 @@ jobs:
         with:
           python-version: '3.11'
         env:
-          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install poetry
         run: |
           if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
@@ -454,15 +546,27 @@ jobs:
   test-nmtk-ui-core:
     needs: detect-changes
     if: needs.detect-changes.outputs.nmtk_ui_core == 'true'
-    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: false
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
+          cache: false
       - name: Install dependencies
         run: |
           flutter pub get --directory nmtk_ui_core
@@ -476,15 +580,27 @@ jobs:
   test-neurotoolkit:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurotoolkit == 'true'
-    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: false
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
+          cache: false
       - name: Install dependencies
         run: |
           flutter pub get --directory nmtk/neuro_toolkit
@@ -498,15 +614,27 @@ jobs:
   test-neurocnl-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl_frontend == 'true'
-    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
+          cache: false
       - name: Install dependencies
         run: |
           if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
@@ -526,15 +654,27 @@ jobs:
   test-neurochip-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip_frontend == 'true'
-    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
+          cache: false
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/frontend" ] && [ -f "Neurochip/frontend/pubspec.yaml" ]; then
@@ -549,15 +689,27 @@ jobs:
   test-neurohub-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub_frontend == 'true'
-    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
+          cache: false
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/frontend" ] && [ -f "Neurohub/frontend/pubspec.yaml" ]; then
@@ -572,15 +724,27 @@ jobs:
   test-neurosense-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense_frontend == 'true'
-    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
+          cache: false
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/frontend" ] && [ -f "Neurosense/frontend/pubspec.yaml" ]; then
@@ -595,15 +759,27 @@ jobs:
   test-neurobench-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench_frontend == 'true'
-    runs-on: self-hosted
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
     steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: true
+          cache: false
       - name: Install dependencies
         run: |
           if [ -d "Neurobench/frontend" ] && [ -f "Neurobench/frontend/pubspec.yaml" ]; then
@@ -617,7 +793,7 @@ jobs:
 
   # Summary job that branch protection can require
   ci-passed:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs:
       - test-neurosim
       - test-neurochip

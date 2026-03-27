@@ -6,13 +6,16 @@ on:
   pull_request:
     branches: [main, dev]
 
+env:
+  AGENT_TOOLSDIRECTORY: ${{ github.workspace }}/_tool_cache
+
 permissions:
   contents: read
   pull-requests: read
 
 jobs:
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       neurocnl: ${{ steps.filter.outputs.neurocnl }}
       neurodreamhand: ${{ steps.filter.outputs.neurodreamhand }}
@@ -45,7 +48,7 @@ jobs:
   verify-neurocnl:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +57,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           cd neurocnl
@@ -76,7 +81,7 @@ jobs:
   verify-neurodreamhand:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurodreamhand == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -85,6 +90,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           cd Neuro-Dream-Hand
@@ -122,7 +129,7 @@ jobs:
       needs.detect-changes.outputs.neurochip == 'true' ||
       needs.detect-changes.outputs.neurobench == 'true' ||
       needs.detect-changes.outputs.neurohub == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -131,6 +138,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           cd ${{ matrix.module }}
@@ -151,7 +160,7 @@ jobs:
       - verify-neurocnl
       - verify-neurodreamhand
       - verify-other-modules
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Check results
         run: |

@@ -6,7 +6,6 @@ import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
-import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/onboarding.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
@@ -93,9 +92,10 @@ class MainScreen extends StatelessWidget {
 
   int _selectedIndex(BuildContext context, ModuleProvider provider) {
     final location = GoRouterState.of(context).uri.toString();
+    final hasWorkspace = provider.activeModuleIds.isNotEmpty;
     if (location.startsWith('/catalog')) return 1;
-    if (location.startsWith('/tool/')) return 2;
-    if (location.startsWith('/settings')) return 3;
+    if (location.startsWith('/tool/')) return hasWorkspace ? 2 : 1;
+    if (location.startsWith('/settings')) return hasWorkspace ? 3 : 2;
     return 0;
   }
 
@@ -112,9 +112,11 @@ class MainScreen extends StatelessWidget {
       if (provider.activeModuleIds.isNotEmpty) {
         context.go('/tool/${provider.activeModuleIds.last}');
       } else {
+        // No workspace tab, index 2 = settings
         context.go('/settings');
       }
     } else if (index == 3) {
+      // Only reachable when workspace tab is present
       context.go('/settings');
     }
   }
@@ -129,31 +131,9 @@ class MainScreen extends StatelessWidget {
     }
 
     return ResponsiveScaffold(
-      currentIndex: _selectedIndex(context),
-      onNavigationTargetSelected: (index) => _onItemTapped(context, index),
-      destinations: [
-        const NavigationDestinationData(
-          icon: Icons.dashboard_outlined,
-          selectedIcon: Icons.dashboard,
-          label: 'Dashboard',
-        ),
-        const NavigationDestinationData(
-          icon: Icons.store_outlined,
-          selectedIcon: Icons.store,
-          label: 'Catalog',
-        ),
-        if (provider.activeModuleIds.isNotEmpty)
-          const NavigationDestinationData(
-            icon: Icons.laptop_outlined,
-            selectedIcon: Icons.laptop,
-            label: 'Workspace',
-          ),
-        const NavigationDestinationData(
-          icon: Icons.settings_outlined,
-          selectedIcon: Icons.settings,
-          label: 'Settings',
-        ),
-      ],
+      currentIndex: _selectedIndex(context, provider),
+      onNavigationTargetSelected: (index) => _onItemTapped(context, index, provider),
+      destinations: _getDestinations(provider),
       body: child,
     );
   }

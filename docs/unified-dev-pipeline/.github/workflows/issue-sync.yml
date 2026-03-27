@@ -13,13 +13,16 @@ on:
         required: false
         type: string
 
+env:
+  AGENT_TOOLSDIRECTORY: ${{ github.workspace }}/_tool_cache
+
 permissions:
   contents: read
   issues: write
 
 jobs:
   sync-issues:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +30,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
 
       - name: Generate previews
         run: |

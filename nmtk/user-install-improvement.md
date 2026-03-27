@@ -20,7 +20,7 @@ Both the neurocnl (backend + frontend) and Neuro-Dream-Hand (NDH) projects curre
 - ✅ Nuitka standalone build target in NDH Makefile (`make build-nuitka`)
 - ✅ Flutter supports iOS/Android/macOS/Windows/Linux/Web from single codebase
 - ✅ CLI entry points defined in both pyproject.toml files
-- ✅ CI runs on ubuntu-latest (but no macOS/Windows runners)
+- ✅ CI runs on self-hosted (but no macOS/Windows runners)
 
 ### What's Missing
 - ❌ No GitHub Releases workflow — no downloadable artifacts exist
@@ -101,7 +101,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: self-hosted
             target: linux-x86_64
             nuitka_args: ""
           - os: ubuntu-24.04-arm
@@ -153,7 +153,7 @@ jobs:
             platform: windows
             build_cmd: "flutter build windows --release"
             artifact: "build/windows/x64/runner/Release/"
-          - os: ubuntu-latest
+          - os: self-hosted
             platform: linux
             build_cmd: "flutter build linux --release"
             artifact: "build/linux/x64/release/bundle/"
@@ -174,7 +174,7 @@ jobs:
           path: neurocnl/frontend/${{ matrix.artifact }}
 
   build-frontend-web:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: neurocnl/frontend
@@ -192,7 +192,7 @@ jobs:
 
   create-release:
     needs: [build-backend, build-frontend-desktop, build-frontend-web]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -215,7 +215,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: self-hosted
             target: linux-x86_64
           - os: macos-latest
             target: macos-arm64
@@ -251,7 +251,7 @@ Add to the release workflow or as a separate workflow:
 
 ```yaml
   publish-docker:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       packages: write
     steps:
@@ -295,7 +295,7 @@ Use `docker buildx` with `platforms: linux/amd64,linux/arm64` to support both In
 
 ```yaml
   publish-pypi:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment: pypi
     permissions:
       id-token: write  # trusted publishing

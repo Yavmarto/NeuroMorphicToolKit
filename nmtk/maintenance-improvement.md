@@ -124,7 +124,7 @@ Add to existing `python_ci.yml`:
 
 ```yaml
   security:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -166,7 +166,7 @@ on:
     - cron: '0 6 * * 1'  # Weekly Monday 6am
 jobs:
   analyze:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       security-events: write
     strategy:
@@ -335,7 +335,7 @@ name: Lint Commits
 on: [pull_request]
 jobs:
   commitlint:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
         with:
@@ -377,7 +377,7 @@ Use `python-semantic-release` for automated version bumping:
 ```yaml
 # .github/workflows/release.yml (addition)
   version-bump:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
         with:
@@ -445,7 +445,7 @@ on:
     paths: ['docs/**', 'neurocnl/**/*.py', 'Neuro-Dream-Hand/**/*.py']
 jobs:
   build-docs:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -473,7 +473,7 @@ Add Docker build verification to CI (catches broken Dockerfiles before release):
 ```yaml
 # Add to python_ci.yml or create .github/workflows/docker-ci.yml
   verify-docker:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - name: Build backend image
@@ -506,7 +506,7 @@ on:
     paths: ['servo_control/**']
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: arduino/compile-sketches@v1

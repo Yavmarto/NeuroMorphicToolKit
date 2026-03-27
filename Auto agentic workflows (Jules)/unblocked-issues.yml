@@ -13,7 +13,7 @@ on:
 
 jobs:
   detect-unblocked:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       issues: read
     outputs:
@@ -27,7 +27,7 @@ jobs:
   implement:
     needs: detect-unblocked
     if: needs.detect-unblocked.outputs.found == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     concurrency:
       group: agent-work
       cancel-in-progress: false
