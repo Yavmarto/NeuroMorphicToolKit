@@ -27,8 +27,9 @@ class SettingsProvider with ChangeNotifier {
           (e) => e.toString() == jsonMap['themeMode'],
           orElse: () => ThemeMode.system,
         );
-        _isHighContrast = jsonMap['isHighContrast'] ?? false;
-        _fontSizeFactor = (jsonMap['fontSizeFactor'] ?? 1.0).toDouble();
+        _isHighContrast = (jsonMap['isHighContrast'] as bool?) ?? false;
+        _fontSizeFactor =
+            (jsonMap['fontSizeFactor'] as num?)?.toDouble() ?? 1.0;
 
         notifyListeners();
       }
