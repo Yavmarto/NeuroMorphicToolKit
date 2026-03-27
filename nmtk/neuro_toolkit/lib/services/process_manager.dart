@@ -509,23 +509,10 @@ class ProcessManager {
     try {
       final uri = Uri.parse('http://127.0.0.1:${module.port}/health');
 
-      String body;
-      int statusCode;
-
-      if (kIsWeb) {
-        final response =
-            await http.get(uri).timeout(const Duration(seconds: 2));
-        body = response.body;
-        statusCode = response.statusCode;
-      } else {
-        final client = HttpClient();
-        final request =
-            await client.getUrl(uri).timeout(const Duration(seconds: 2));
-        final response = await request.close();
-        body = await response.transform(utf8.decoder).join();
-        statusCode = response.statusCode;
-        client.close();
-      }
+      final response =
+          await _httpClient.get(uri).timeout(const Duration(seconds: 2));
+      final body = response.body;
+      final statusCode = response.statusCode;
 
       ModuleStatus newStatus;
       String? healthInfo;
