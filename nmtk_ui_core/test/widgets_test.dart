@@ -4,8 +4,9 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 void main() {
   group('NMTK UI Core Widgets Smoke Tests', () {
-    testWidgets('NmtkPrimaryButton renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkPrimaryButton renders correctly', (
+      WidgetTester tester,
+    ) async {
       bool pressed = false;
       await tester.pumpWidget(
         MaterialApp(
@@ -75,7 +76,8 @@ void main() {
       expect(find.text('Test Sparkline'), findsOneWidget);
     });
 
-    testWidgets('renders table with accuracy indicators', (tester) async {
+    testWidgets('renders table with accuracy indicators',
+        (WidgetTester tester) async {
       const report = QuantizationReport(
         bitWidths: [8, 4, 2],
         accuracyDrops: [0.01, 0.04, 0.08], // Green, Orange, Red
