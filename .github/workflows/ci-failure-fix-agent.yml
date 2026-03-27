@@ -41,6 +41,20 @@ jobs:
             });
             core.setOutput("logs_url", response.url);
 
+      - name: Select API key (round-robin)
+        id: select-key
+        run: |
+          if [ $(( ${{ github.run_number }} % 2 )) -eq 0 ]; then
+            echo "::add-mask::${KEY_A}"
+            echo "selected_key=${KEY_A}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::add-mask::${KEY_B}"
+            echo "selected_key=${KEY_B}" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          KEY_A: ${{ secrets.JULES_API_KEY }}
+          KEY_B: ${{ secrets.JULES_API_KEY_F || secrets.JULES_API_KEY }}
+
       - name: Invoke Jules to fix failure
         uses: google-labs-code/jules-invoke@v1
         with:
@@ -61,6 +75,6 @@ jobs:
             3. Do not weaken tests, contracts, or property checks.
             4. Read the relevant AGENTS.md and GUARDRAILS.md before making changes.
             5. Open a PR from a jules/* branch so auto-merge can attach once checks pass.
-          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          jules_api_key: ${{ steps.select-key.outputs.selected_key }}
           starting_branch: ${{ github.event.workflow_run.head_branch }}
           include_last_commit: true

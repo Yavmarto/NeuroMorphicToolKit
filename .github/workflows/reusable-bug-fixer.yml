@@ -20,6 +20,8 @@ on:
     secrets:
       JULES_API_KEY:
         required: true
+      JULES_API_KEY_F:
+        required: false
 
 jobs:
   sdd-context:
@@ -38,10 +40,24 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Select API key (round-robin)
+        id: select-key
+        run: |
+          if [ $(( ${{ github.run_number }} % 2 )) -eq 0 ]; then
+            echo "::add-mask::${KEY_A}"
+            echo "selected_key=${KEY_A}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::add-mask::${KEY_B}"
+            echo "selected_key=${KEY_B}" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          KEY_A: ${{ secrets.JULES_API_KEY }}
+          KEY_B: ${{ secrets.JULES_API_KEY_F || secrets.JULES_API_KEY }}
+
       - name: Invoke Jules to fix bug
         uses: google-labs-code/jules-action@v1.0.0
         with:
-          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          jules_api_key: ${{ steps.select-key.outputs.selected_key }}
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
 
