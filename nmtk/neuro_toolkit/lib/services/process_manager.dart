@@ -535,7 +535,8 @@ class ProcessManager {
       int statusCode;
 
       if (kIsWeb) {
-        final response = await http.get(uri).timeout(const Duration(seconds: 2));
+        final response =
+            await http.get(uri).timeout(const Duration(seconds: 2));
         body = response.body;
         statusCode = response.statusCode;
       } else {
