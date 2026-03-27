@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+env:
+  AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+  RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+
 permissions:
   contents: read
   pull-requests: read
@@ -16,6 +20,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    env:
+      RUNNER_TOOL_CACHE: /tmp/tool_cache
     outputs:
       neurosim: ${{ steps.filter.outputs.neurosim }}
       neurochip: ${{ steps.filter.outputs.neurochip }}
@@ -84,6 +90,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurosim || true
       - uses: actions/setup-python@v5
@@ -125,6 +135,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurochip || true
       - uses: actions/setup-python@v5
@@ -167,6 +181,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurosense || true
       - uses: actions/setup-python@v5
@@ -208,6 +226,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurohub || true
       - uses: actions/setup-python@v5
@@ -249,6 +271,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neuro-Dream-Hand || true
       - uses: actions/setup-python@v5
@@ -290,6 +316,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update required submodules
         run: |
           git submodule update --init neurocnl || true
@@ -362,6 +392,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurobench || true
       - uses: actions/setup-python@v5
@@ -404,6 +438,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: false
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -427,10 +463,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - name: Update required submodules
-        run: |
-          git submodule update --init neurocnl || true
-          git submodule update --init Neuro-Dream-Hand || true
+        with:
+          submodules: false
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'

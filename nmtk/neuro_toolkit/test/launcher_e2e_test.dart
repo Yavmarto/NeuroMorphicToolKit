@@ -1,160 +1,196 @@
 // ignore_for_file: unawaited_futures
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:path/path.dart' as p;
 
-/// This script tests the ProcessManager's ability to install and launch a module.
+/// This script tests the ProcessManager's ability to install and launch modules.
+/// It also tests the failure recovery mechanism.
 /// It must be run from the nmtk/neuro_toolkit directory.
 void main() {
-  test('E2E Launcher Flow Test', () async {
-    // Skip this test in CI or if not specifically requested, as it requires
-    // full backend submodules and may fail on headless CI.
-    final isCI = Platform.environment.containsKey('GITHUB_ACTIONS') ||
-        Platform.environment.containsKey('FLUTTER_TEST');
-    if (isCI) {
-      // ignore: avoid_print
-      print('⏩ Skipping E2E test in CI environment.');
-      return;
-    }
+  final forceE2E = Platform.environment['FORCE_E2E'] == 'true';
+  final isCI = Platform.environment.containsKey('GITHUB_ACTIONS') ||
+      Platform.environment.containsKey('FLUTTER_TEST');
 
-    TestWidgetsFlutterBinding.ensureInitialized();
-    // ignore: avoid_print
-    print(
-      'Tests need mock ProcessRunner, skipping real dependencies check',
-    );
+  group('E2E Launcher Integration', () {
+    late ProcessManager manager;
+    late String repoRoot;
+    late List<Module> allModules;
 
-    // ignore: avoid_print
-    print('🚀 Starting E2E Launcher Flow Test...');
+    setUpAll(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      repoRoot = p.normalize(p.join(Directory.current.path, '..', '..'));
 
-    // 1. Setup paths
-    final repoRoot = p.normalize(p.join(Directory.current.path, '..', '..'));
-    // ignore: avoid_print
-    print('📍 Repo root: $repoRoot');
+      // Load modules from assets/modules.json
+      final jsonFile =
+          File(p.join(Directory.current.path, 'assets', 'modules.json'));
+      final jsonString = await jsonFile.readAsString();
+      final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
 
-    // Define neurocnl module for testing
-    final neurocnl = Module(
-      id: 'neurocnl',
-      name: 'CNL Studio',
-      description: 'CNL parser',
-      directory: p.join(repoRoot, 'neurocnl'),
-      port: 8000,
-      sourcePath: '.',
-      runPath: '.',
-      uvicornTarget: 'backend.app.main:app',
-      localDeps: ['Neuro-Dream-Hand'],
-    );
+      allModules = jsonList.map((dynamic json) {
+        final m = Module.fromJson(json as Map<String, dynamic>);
+        return m.copyWith(
+          directory: p.normalize(p.join(repoRoot, m.directory)),
+        );
+      }).toList();
 
-    final manager = ProcessManager();
-    await manager.init([neurocnl]);
-
-    final completer = Completer<void>();
-    Module? lastStatus;
-
-    final subscription = manager.statusUpdates.listen((Module updated) {
-      // ignore: avoid_print
-      print(
-        '🔄 [${updated.id}] Status: ${updated.status} Progress: ${updated.installProgress}',
-      );
-      if (updated.id == 'neurocnl') {
-        lastStatus = updated;
-        if (!completer.isCompleted) {
-          if (updated.status == ModuleStatus.starting ||
-              updated.status == ModuleStatus.running) {
-            // ignore: avoid_print
-            print('✅ neurocnl is STARTING/RUNNING!');
-            completer.complete();
-          } else if (updated.status == ModuleStatus.error) {
-            // ignore: avoid_print
-            print('❌ neurocnl entered ERROR state: ${updated.healthStatus}');
-            completer.completeError(
-              Exception('Module error: ${updated.healthStatus}'),
-            );
-          }
-        }
-      }
+      manager = ProcessManager();
+      await manager.init(allModules);
     });
 
-    try {
-      // 2. Install
-      // ignore: avoid_print
-      print('📦 Installing neurocnl...');
-      await manager.installModule(
-        neurocnl,
-        onProgress: (double p) {
-          // progress printed via subscription
-        },
-      );
+    tearDownAll(() {
+      manager.dispose();
+    });
 
-      // 3. Start
-      // ignore: avoid_print
-      print('⚡ Starting neurocnl...');
-      unawaited(manager.startModule(neurocnl));
+    test('Full Workflow: Start All HTTP Modules', () async {
+      if (isCI && !forceE2E) {
+        debugPrint(
+            '⏩ Skipping E2E test in CI environment (FORCE_E2E not set).');
+        return;
+      }
 
-      // Wait for running state or timeout
-      await completer.future.timeout(const Duration(minutes: 2));
+      debugPrint('🚀 Starting E2E Full Workflow Test...');
 
-      // 4. Multi-module test: Start Neurosim
-      // ignore: avoid_print
-      print('📦 Installing Neurosim...');
-      final neurosim = Module(
-        id: 'Neurosim',
-        name: 'NeuroSim',
-        description: 'Visual design',
-        directory: p.join(repoRoot, 'Neurosim'),
-        port: 8001,
-        sourcePath: '.',
-        runPath: 'neurosim',
-        uvicornTarget: 'app.main:app',
-      );
-      await manager.init([neurocnl, neurosim]);
-      await manager.installModule(neurosim);
+      final httpModules = allModules.where((m) => m.port != null).toList();
 
-      // ignore: avoid_print
-      print('⚡ Starting Neurosim...');
-      unawaited(manager.startModule(neurosim));
+      for (final module in httpModules) {
+        debugPrint('📦 Installing ${module.name} (${module.id})...');
+        try {
+          await manager
+              .installModule(module)
+              .timeout(const Duration(minutes: 5));
 
-      // Wait for Neurosim to be running
-      final neurosimCompleter = Completer<void>();
-      final nsSub = manager.statusUpdates.listen((Module updated) {
-        if (updated.id == 'Neurosim' &&
-            (updated.status == ModuleStatus.running ||
-                updated.status == ModuleStatus.starting)) {
-          // ignore: avoid_print
-          print('✅ Neurosim is STARTING/RUNNING!');
-          neurosimCompleter.complete();
+          debugPrint('⚡ Starting ${module.name}...');
+          unawaited(manager.startModule(module));
+
+          // Wait for running state
+          final completer = Completer<void>();
+          final sub = manager.statusUpdates.listen((updated) {
+            if (updated.id == module.id &&
+                (updated.status == ModuleStatus.running ||
+                    updated.status == ModuleStatus.degraded)) {
+              if (!completer.isCompleted) completer.complete();
+            } else if (updated.id == module.id &&
+                updated.status == ModuleStatus.error) {
+              if (!completer.isCompleted) {
+                completer.completeError(Exception(
+                    'Module ${module.id} failed to start: ${updated.healthStatus}'));
+              }
+            }
+          });
+
+          await completer.future.timeout(const Duration(minutes: 2));
+          await sub.cancel();
+          debugPrint('✅ ${module.name} is UP!');
+        } catch (e) {
+          debugPrint('❌ Failed to bring up ${module.name}: $e');
+          rethrow;
+        }
+      }
+
+      debugPrint('🎉 All HTTP modules started successfully!');
+
+      // Cleanup: stop all
+      for (final module in httpModules) {
+        await manager.stopModule(module.id);
+      }
+    }, timeout: const Timeout(Duration(minutes: 20)));
+
+    test('Module Failure Recovery Test', () async {
+      if (isCI && !forceE2E) {
+        debugPrint('⏩ Skipping Failure Recovery test in CI environment.');
+        return;
+      }
+
+      debugPrint('🛠️ Starting Failure Recovery Test...');
+
+      // Use neurocnl for this test
+      final module = allModules.firstWhere((m) => m.id == 'neurocnl');
+
+      debugPrint('📦 Ensuring ${module.id} is installed...');
+      await manager.installModule(module).timeout(const Duration(minutes: 5));
+
+      debugPrint('⚡ Starting ${module.id}...');
+      unawaited(manager.startModule(module));
+
+      // Wait for it to be running
+      await Future<void>.delayed(const Duration(seconds: 10));
+
+      // Verify it's running (or starting)
+      // Note: we can't easily check the status synchronously without keeping track,
+      // but we can listen for the next health check or just assume it's up if we waited enough.
+
+      debugPrint(
+          '💀 Simulating crash (killing process on port ${module.port})...');
+      bool killed = false;
+      if (Platform.isWindows) {
+        final result = await Process.run('netstat', ['-ano']);
+        if (result.exitCode == 0) {
+          final lines = result.stdout.toString().split('\n');
+          for (final line in lines) {
+            if (line.contains(':${module.port}') &&
+                line.contains('LISTENING')) {
+              final parts = line.trim().split(RegExp(r'\s+'));
+              if (parts.length >= 5) {
+                final pid = parts.last;
+                debugPrint('Killing process $pid');
+                await Process.run('taskkill', ['/F', '/PID', pid]);
+                killed = true;
+                break;
+              }
+            }
+          }
+        }
+      } else {
+        // macOS/Linux
+        final result = await Process.run('lsof', ['-ti', ':${module.port}']);
+        if (result.exitCode == 0 &&
+            result.stdout.toString().trim().isNotEmpty) {
+          final pid = result.stdout.toString().trim().split('\n').first;
+          debugPrint('Killing process $pid');
+          Process.killPid(int.parse(pid), ProcessSignal.sigkill);
+          killed = true;
+        }
+      }
+
+      if (!killed) {
+        fail('Could not find process running on port ${module.port}');
+      }
+
+      debugPrint('⏳ Waiting for failure detection...');
+      final failureCompleter = Completer<void>();
+      final recoveryCompleter = Completer<void>();
+
+      final sub = manager.statusUpdates.listen((updated) {
+        if (updated.id == module.id) {
+          debugPrint('🔄 Status change: ${updated.status}');
+          if (updated.status == ModuleStatus.error &&
+              !failureCompleter.isCompleted) {
+            debugPrint('✅ Failure detected!');
+            failureCompleter.complete();
+          } else if ((updated.status == ModuleStatus.running ||
+                  updated.status == ModuleStatus.starting) &&
+              failureCompleter.isCompleted &&
+              !recoveryCompleter.isCompleted) {
+            debugPrint('✅ Recovery started!');
+            recoveryCompleter.complete();
+          }
         }
       });
 
-      await neurosimCompleter.future.timeout(const Duration(minutes: 2));
-      await nsSub.cancel();
+      await failureCompleter.future.timeout(const Duration(seconds: 30));
+      debugPrint('⏳ Waiting for auto-restart (backoff is 5s)...');
+      await recoveryCompleter.future.timeout(const Duration(seconds: 60));
 
-      // 5. Stop modules
-      // ignore: avoid_print
-      print('🛑 Stopping neurocnl...');
-      unawaited(manager.stopModule('neurocnl'));
+      await sub.cancel();
+      debugPrint('🎉 Failure Recovery Test PASSED!');
 
-      // Give it a moment to stop
-      await Future<void>.delayed(const Duration(seconds: 2));
-
-      // ignore: avoid_print
-      print('🎉 E2E Launcher Flow Test PASSED!');
-    } catch (e) {
-      // ignore: avoid_print
-      print('💥 Test FAILED: $e');
-      if (lastStatus?.healthStatus != null) {
-        // ignore: avoid_print
-        print('Last health status: ${lastStatus?.healthStatus}');
-      }
-      // Try to cleanup
-      unawaited(manager.stopModule('neurocnl'));
-      rethrow;
-    } finally {
-      await subscription.cancel();
-      manager.dispose();
-    }
+      await manager.stopModule(module.id);
+    }, timeout: const Timeout(Duration(minutes: 5)));
   });
 }
