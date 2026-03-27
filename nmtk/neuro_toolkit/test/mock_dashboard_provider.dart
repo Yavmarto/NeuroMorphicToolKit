@@ -11,7 +11,8 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
   final List<String> uninstallCalls = [];
 
   @override
-  List<Module> get installedModules => _mockModules.where((m) => m.status != ModuleStatus.notInstalled).toList();
+  List<Module> get installedModules =>
+      _mockModules.where((m) => m.status != ModuleStatus.notInstalled).toList();
 
   @override
   List<Module> get modules => _mockModules;
@@ -21,6 +22,7 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
     _mockModules.addAll(val);
     notifyListeners();
   }
+
   @override
   List<Module> modulesForTesting = [];
   @override

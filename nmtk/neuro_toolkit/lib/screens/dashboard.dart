@@ -61,12 +61,14 @@ class DashboardScreen extends StatelessWidget {
                       _buildStatusIndicator(module.status),
                       if (module.versionPinned) ...[
                         const SizedBox(width: 8),
-                        const Icon(Icons.push_pin, size: 14, color: Colors.blue),
+                        const Icon(Icons.push_pin,
+                            size: 14, color: Colors.blue),
                       ],
                       const Spacer(),
                       Text(
                         'v${module.version}',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -79,8 +81,12 @@ class DashboardScreen extends StatelessWidget {
                           'Health: ${module.healthStatus}',
                           style: TextStyle(
                             fontSize: 12,
-                            color: module.status == ModuleStatus.error ? Colors.red : Colors.grey[600],
-                            fontWeight: module.status == ModuleStatus.error ? FontWeight.bold : FontWeight.normal,
+                            color: module.status == ModuleStatus.error
+                                ? Colors.red
+                                : Colors.grey[600],
+                            fontWeight: module.status == ModuleStatus.error
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                           maxLines: 3,
                         ),
@@ -109,9 +115,11 @@ class DashboardScreen extends StatelessWidget {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              LinearProgressIndicator(value: module.installProgress),
+                              LinearProgressIndicator(
+                                  value: module.installProgress),
                               const SizedBox(height: 4),
-                              const Text('Updating...', style: TextStyle(fontSize: 10)),
+                              const Text('Updating...',
+                                  style: TextStyle(fontSize: 10)),
                             ],
                           ),
                         )
@@ -213,7 +221,9 @@ class DashboardScreen extends StatelessWidget {
       ),
     );
   }
-  void _showLauncherUpdateDialog(BuildContext context, ModuleProvider provider) {
+
+  void _showLauncherUpdateDialog(
+      BuildContext context, ModuleProvider provider) {
     final update = provider.pendingLauncherUpdate!;
     showDialog(
       context: context,
@@ -224,9 +234,11 @@ class DashboardScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('A new version of NeuroToolkit (${update.version}) is available.'),
+            Text(
+                'A new version of NeuroToolkit (${update.version}) is available.'),
             const SizedBox(height: 16),
-            const Text('Release Notes:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Release Notes:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             Text(update.releaseNotes),
           ],
         ),

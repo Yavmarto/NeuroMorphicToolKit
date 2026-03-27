@@ -4,8 +4,9 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 void main() {
   group('NMTK UI Core Widgets Smoke Tests', () {
-    testWidgets('NmtkPrimaryButton renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkPrimaryButton renders correctly', (
+      WidgetTester tester,
+    ) async {
       bool pressed = false;
       await tester.pumpWidget(
         MaterialApp(
@@ -23,8 +24,9 @@ void main() {
       expect(pressed, isTrue);
     });
 
-    testWidgets('NmtkEnergyBarChart renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkEnergyBarChart renders correctly', (
+      WidgetTester tester,
+    ) async {
       const report = EnergyReport(
         perEnsemblePj: {'E1': 10.0, 'E2': 20.0},
         totalPj: 30.0,
@@ -41,8 +43,9 @@ void main() {
       expect(find.text('E2'), findsOneWidget);
     });
 
-    testWidgets('NmtkQuantizationTable renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkQuantizationTable renders correctly', (
+      WidgetTester tester,
+    ) async {
       const report = QuantizationReport(
         bitWidths: [8, 4],
         accuracyDrops: [0.01, 0.06],
@@ -59,8 +62,9 @@ void main() {
       expect(find.text('4-bit'), findsOneWidget);
     });
 
-    testWidgets('NmtkSparklineChart renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkSparklineChart renders correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -86,7 +90,8 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: SingleChildScrollView(
-                child: NmtkQuantizationTable(report: report)),
+              child: NmtkQuantizationTable(report: report),
+            ),
           ),
         ),
       );
@@ -116,8 +121,9 @@ void main() {
       expect(indicators.length, 3);
     });
 
-    testWidgets('NmtkPipelineStepper renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkPipelineStepper renders correctly', (
+      WidgetTester tester,
+    ) async {
       final steps = [
         const NmtkPipelineStepData(
           label: 'Step 1',
@@ -145,8 +151,9 @@ void main() {
     });
 
     group('Buttons', () {
-      testWidgets('NmtkOutlinedButton renders correctly',
-          (WidgetTester tester) async {
+      testWidgets('NmtkOutlinedButton renders correctly', (
+        WidgetTester tester,
+      ) async {
         bool tapped = false;
         await tester.pumpWidget(
           MaterialApp(

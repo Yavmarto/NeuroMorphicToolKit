@@ -97,7 +97,6 @@ class CatalogScreen extends StatelessWidget {
                         else if (module.status == ModuleStatus.error)
                           Row(
                             children: [
-
                               const Icon(
                                 Icons.error_outline,
                                 color: Colors.red,

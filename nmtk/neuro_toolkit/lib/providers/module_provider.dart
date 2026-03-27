@@ -27,7 +27,8 @@ class ModuleProvider with ChangeNotifier {
   String? _error;
   final List<String> _activeModuleIds = [];
 
-  ModuleProvider({ProcessManager? processManager, UpdateService? updateService}) {
+  ModuleProvider(
+      {ProcessManager? processManager, UpdateService? updateService}) {
     _processManager = processManager ?? ProcessManager();
     _updateService = updateService ?? UpdateService();
     _init();
@@ -214,7 +215,8 @@ class ModuleProvider with ChangeNotifier {
           _modules[i].status == ModuleStatus.running ||
           _modules[i].status == ModuleStatus.degraded ||
           _modules[i].status == ModuleStatus.error) {
-        final newVersion = await _updateService.checkForModuleUpdate(_modules[i]);
+        final newVersion =
+            await _updateService.checkForModuleUpdate(_modules[i]);
         if (newVersion != null) {
           _modules[i] = _modules[i].copyWith(availableUpdate: newVersion);
           notifyListeners();
@@ -295,7 +297,8 @@ class ModuleProvider with ChangeNotifier {
 
     if (!pinned) {
       // Re-check if we unpinned
-      final newVersion = await _updateService.checkForModuleUpdate(_modules[index]);
+      final newVersion =
+          await _updateService.checkForModuleUpdate(_modules[index]);
       if (newVersion != null) {
         _modules[index] = _modules[index].copyWith(availableUpdate: newVersion);
         notifyListeners();

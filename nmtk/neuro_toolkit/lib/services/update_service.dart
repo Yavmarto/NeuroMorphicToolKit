@@ -44,7 +44,8 @@ class UpdateService {
       if (_isNewerVersion(currentVersion, remoteVersion)) {
         return LauncherUpdate(
           version: remoteVersion,
-          url: 'https://github.com/Completed-Spoon-6/NeuroMorphicToolkit/releases/latest',
+          url:
+              'https://github.com/Completed-Spoon-6/NeuroMorphicToolkit/releases/latest',
           releaseNotes: 'Performance improvements and bug fixes.',
         );
       }
@@ -93,7 +94,8 @@ class UpdateService {
     // This is where we would implement differential updates (rsync-like logic or patch application)
     // For this task, we simulate the process
 
-    debugPrint('Starting differential update for ${module.id} to $targetVersion');
+    debugPrint(
+        'Starting differential update for ${module.id} to $targetVersion');
 
     // Simulate steps:
     // 1. Fetch manifest of changed files
@@ -127,7 +129,6 @@ class UpdateService {
 
       // Handle beta/nightly tags (simpler version: any tag means different)
       if (remote.contains('-') && !current.contains('-')) return true;
-
     } catch (e) {
       return remote != current;
     }

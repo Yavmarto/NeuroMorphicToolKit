@@ -125,7 +125,8 @@ class InvocationRecord {
 }
 
 void main() {
-  const MethodChannel channel = MethodChannel('plugins.flutter.io/path_provider');
+  const MethodChannel channel =
+      MethodChannel('plugins.flutter.io/path_provider');
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late ProcessManager processManager;
@@ -140,7 +141,8 @@ void main() {
     mockRunner = MockProcessRunner();
     processManager = ProcessManager(
       processRunner: mockRunner,
-      httpClient: MockClient((request) async => http.Response('{"status":"ok"}', 200)),
+      httpClient:
+          MockClient((request) async => http.Response('{"status":"ok"}', 200)),
     );
     processManager.resetForTesting();
   });
@@ -419,14 +421,19 @@ void main() {
   test('Simultaneous management of 1, 3, and 7 modules', () async {
     for (int count in [1, 3, 7]) {
       mockRunner.calls.clear();
-      final modules = List.generate(count, (i) => Module(
-        id: 'module_${count}_$i',
-        name: 'Module $i',
-        description: 'Description $i',
-        directory: Directory.systemTemp.createTempSync('sim_module_${count}_$i').path,
-        port: 8100 + (count * 10) + i,
-        status: ModuleStatus.installed,
-      ),);
+      final modules = List.generate(
+        count,
+        (i) => Module(
+          id: 'module_${count}_$i',
+          name: 'Module $i',
+          description: 'Description $i',
+          directory: Directory.systemTemp
+              .createTempSync('sim_module_${count}_$i')
+              .path,
+          port: 8100 + (count * 10) + i,
+          status: ModuleStatus.installed,
+        ),
+      );
 
       for (var m in modules) {
         final pythonExe = Platform.isWindows
@@ -440,11 +447,13 @@ void main() {
       await processManager.init(modules);
 
       // Start all
-      final futures = modules.map((m) => processManager.startModule(m)).toList();
+      final futures =
+          modules.map((m) => processManager.startModule(m)).toList();
       await Future.wait(futures);
 
       // Stop all
-      final stopFutures = modules.map((m) => processManager.stopModule(m.id)).toList();
+      final stopFutures =
+          modules.map((m) => processManager.stopModule(m.id)).toList();
       await Future.wait(stopFutures);
 
       // Verify all started

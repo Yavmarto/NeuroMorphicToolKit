@@ -26,7 +26,8 @@ class SettingsScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              ...provider.installedModules.map((module) => _buildModulePinningTile(provider, module)),
+              ...provider.installedModules
+                  .map((module) => _buildModulePinningTile(provider, module)),
               if (provider.installedModules.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(8.0),
@@ -42,7 +43,8 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildUpdateChannelTile(ModuleProvider provider) {
     return ListTile(
       title: const Text('Update Channel'),
-      subtitle: const Text('Select which version of updates you want to receive'),
+      subtitle:
+          const Text('Select which version of updates you want to receive'),
       trailing: DropdownButton<UpdateChannel>(
         value: provider.currentChannel,
         onChanged: (UpdateChannel? newValue) {
@@ -50,7 +52,8 @@ class SettingsScreen extends StatelessWidget {
             provider.setUpdateChannel(newValue);
           }
         },
-        items: UpdateChannel.values.map<DropdownMenuItem<UpdateChannel>>((UpdateChannel value) {
+        items: UpdateChannel.values
+            .map<DropdownMenuItem<UpdateChannel>>((UpdateChannel value) {
           return DropdownMenuItem<UpdateChannel>(
             value: value,
             child: Text(value.name.toUpperCase()),
