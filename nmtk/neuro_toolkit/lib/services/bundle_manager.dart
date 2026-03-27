@@ -504,12 +504,9 @@ class BundleManager {
     if (_env.directoryExists(targetBase)) {
       debugPrint(
           'BundleManager: Cleaning up old modules in Application Support...');
-      // Note: We'd ideally want _env.deleteDirectory, but we'll use createDirectory with recursive:true
-      // if it handles cleanup or just overwrite. For the mock to work, we must use _env.
-      await _env.createDirectory(targetBase, recursive: true);
-    } else {
-      await _env.createDirectory(targetBase, recursive: true);
+      await _env.deleteDirectory(targetBase, recursive: true);
     }
+    await _env.createDirectory(targetBase, recursive: true);
 
     final entries = await _env.listDirectory(sourcePath).toList();
     for (var i = 0; i < entries.length; i++) {
