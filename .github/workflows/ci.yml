@@ -10,9 +10,6 @@ permissions:
   contents: read
   pull-requests: read
 
-env:
-  RUNNER_TOOL_CACHE: ${{ github.workspace }}/.toolcache
-
 jobs:
   detect-changes:
     runs-on: self-hosted
@@ -90,6 +87,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurosim || true
       - uses: actions/setup-python@v5
@@ -134,6 +135,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurochip || true
       - uses: actions/setup-python@v5
@@ -179,6 +184,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurosense || true
       - uses: actions/setup-python@v5
@@ -223,6 +232,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurohub || true
       - uses: actions/setup-python@v5
@@ -267,6 +280,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neuro-Dream-Hand || true
       - uses: actions/setup-python@v5
@@ -308,6 +325,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
+      - name: Update required submodules
+        run: |
+          git submodule update --init neurocnl || true
+          git submodule update --init Neuro-Dream-Hand || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -379,6 +404,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurobench || true
       - uses: actions/setup-python@v5
