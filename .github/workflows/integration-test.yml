@@ -22,6 +22,14 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $gitPath = "C:\Program Files\Git\cmd"
+          if (Test-Path $gitPath) {
+            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -30,6 +38,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
 
       - name: Install test dependencies
         run: pip install httpx pytest

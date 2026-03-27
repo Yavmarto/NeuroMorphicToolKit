@@ -57,6 +57,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           cd neurocnl
@@ -88,6 +90,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           cd Neuro-Dream-Hand
@@ -134,6 +138,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           cd ${{ matrix.module }}

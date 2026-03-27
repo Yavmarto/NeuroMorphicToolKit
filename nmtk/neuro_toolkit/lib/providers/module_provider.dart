@@ -65,7 +65,6 @@ class ModuleProvider with ChangeNotifier {
       }
 
       await _processManager.init(_modules);
-      await checkForUpdates();
 
       // Check for updates on startup
       unawaited(checkForUpdates());

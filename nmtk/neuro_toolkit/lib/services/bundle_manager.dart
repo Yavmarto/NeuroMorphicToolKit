@@ -30,7 +30,6 @@ abstract class BundleEnvironment {
   Future<void> renameDirectory(String source, String destination);
   Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false});
   Future<void> copyFile(String source, String destination);
-  Future<void> deleteDirectory(String path, {bool recursive = false});
 
   Future<ProcessResult> runProcess(
     String executable,
@@ -98,6 +97,10 @@ class DefaultBundleEnvironment implements BundleEnvironment {
   @override
   Future<void> copyFile(String source, String destination) =>
       File(source).copy(destination);
+
+  @override
+  Future<void> renameDirectory(String source, String destination) =>
+      Directory(source).rename(destination);
 
   @override
   Future<void> deleteDirectory(String path, {bool recursive = false}) =>
@@ -493,7 +496,6 @@ class BundleManager {
     if (!isBundled) return;
 
     final sourcePath = bundledModulesPath;
-    final entries = await _env.listDirectory(sourcePath).toList();
     if (!_env.directoryExists(sourcePath)) {
       debugPrint('BundleManager: no bundled modules at $sourcePath');
       throw Exception('Bundled modules not found at $sourcePath');
@@ -517,7 +519,7 @@ class BundleManager {
         final destPath = p.join(targetBase, moduleName);
 
         debugPrint('BundleManager: extracting $moduleName...');
-        await _copyDirectory(Directory(entry.path), destPath);
+        await _copyDirectory(entry.path, destPath);
       }
       onProgress?.call((i + 1) / entries.length);
     }
