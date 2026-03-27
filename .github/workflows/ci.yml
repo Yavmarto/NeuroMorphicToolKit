@@ -10,6 +10,10 @@ env:
   AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
   RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
 
+defaults:
+  run:
+    shell: bash
+
 permissions:
   contents: read
   pull-requests: read
@@ -624,6 +628,7 @@ jobs:
     if: always()
     steps:
       - name: Check results
+        shell: bash
         run: |
           echo "Results:"
           echo "  neurosim:       ${{ needs.test-neurosim.result }}"

@@ -54,3 +54,12 @@ To maintain the security of your NMTK installation:
 - Denial-of-service (DoS) attacks against development/staging environments.
 - Issues in third-party dependencies that are already publicly disclosed (please check CVE databases first).
 - Social engineering attacks against project maintainers or users.
+
+## Secrets Management
+
+NMTK handles sensitive information such as API keys and database credentials. Follow these best practices:
+
+- **Environment Variables**: Use environment variables to pass secrets to containers in production.
+- **Docker Secrets**: For Swarm or Kubernetes, use native secret management.
+- **No Plaintext**: Never store plaintext secrets in `.env` files that are checked into version control. Use `.env.example` as a template.
+- **Encryption at Rest**: Ensure that any persistent storage containing sensitive data (e.g., SQLite databases) is protected by appropriate filesystem-level encryption.

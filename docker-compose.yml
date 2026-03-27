@@ -14,8 +14,9 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - nmtk-network
-    # No profiles = starts by default (Core)
+      - frontend-net
+      - backend-net
+      - monitoring-net
 
   neurocnl-physics:
     build:
@@ -34,7 +35,8 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - nmtk-network
+      - backend-net
+      - monitoring-net
     profiles:
       - physics
 
@@ -53,8 +55,8 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - nmtk-network
-    # No profiles = starts by default (Core)
+      - backend-net
+      - monitoring-net
 
   neurochip:
     build:
@@ -71,8 +73,8 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - nmtk-network
-    # No profiles = starts by default (Core)
+      - backend-net
+      - monitoring-net
 
   neurobench:
     build:
@@ -89,7 +91,8 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - nmtk-network
+      - backend-net
+      - monitoring-net
     profiles:
       - full
 
@@ -108,7 +111,8 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - nmtk-network
+      - backend-net
+      - monitoring-net
     profiles:
       - full
 
@@ -132,7 +136,9 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - nmtk-network
+      - frontend-net
+      - backend-net
+      - monitoring-net
     profiles:
       - full
     depends_on:
@@ -162,7 +168,7 @@ services:
     ports:
       - "9090:9090"
     networks:
-      - nmtk-network
+      - monitoring-net
     profiles:
       - monitoring
 
@@ -175,7 +181,7 @@ services:
     ports:
       - "3100:3100"
     networks:
-      - nmtk-network
+      - monitoring-net
     profiles:
       - monitoring
 
@@ -187,7 +193,7 @@ services:
       - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
     command: -config.file=/etc/promtail/config.yml
     networks:
-      - nmtk-network
+      - monitoring-net
     profiles:
       - monitoring
 
@@ -205,7 +211,7 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - nmtk-network
+      - monitoring-net
     profiles:
       - monitoring
     depends_on:
@@ -223,12 +229,16 @@ services:
     ports:
       - "9093:9093"
     networks:
-      - nmtk-network
+      - monitoring-net
     profiles:
       - monitoring
 
 networks:
-  nmtk-network:
+  frontend-net:
+    driver: bridge
+  backend-net:
+    driver: bridge
+  monitoring-net:
     driver: bridge
 
 volumes:

@@ -1,0 +1,44 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  schedule:
+    - cron: '0 0 * * 1'
+
+jobs:
+  python-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run pip-audit
+        run: |
+          pip install pip-audit
+          # Audit root and submodules
+          pip-audit || true
+          find . -name "requirements.txt" -exec pip-audit -r {} \; || true
+
+  owasp-dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependency Check
+        uses: dependency-check/DependencyCheck_Action@main
+        with:
+          project: 'NMTK'
+          path: '.'
+          format: 'HTML'
+          out: 'reports'
+          args: >
+            --enableRetired
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports
