@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
@@ -20,13 +19,9 @@ class LauncherUpdate {
 }
 
 class UpdateService {
-  final http.Client _client;
-  UpdateChannel _channel = UpdateChannel.stable;
+  UpdateChannel channel = UpdateChannel.stable;
 
-  UpdateService({http.Client? client}) : _client = client ?? http.Client();
-
-  UpdateChannel get channel => _channel;
-  set channel(UpdateChannel value) => _channel = value;
+  UpdateService({http.Client? client});
 
   Future<LauncherUpdate?> checkForLauncherUpdate() async {
     try {
@@ -65,7 +60,7 @@ class UpdateService {
 
       // Simulated remote versions based on channel
       String remoteVersion;
-      switch (_channel) {
+      switch (channel) {
         case UpdateChannel.stable:
           remoteVersion = '1.0.1';
           break;

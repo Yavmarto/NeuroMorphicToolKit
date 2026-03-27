@@ -225,7 +225,7 @@ class DashboardScreen extends StatelessWidget {
   void _showLauncherUpdateDialog(
       BuildContext context, ModuleProvider provider) {
     final update = provider.pendingLauncherUpdate!;
-    showDialog(
+    showDialog<void>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(

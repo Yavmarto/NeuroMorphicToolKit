@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 
@@ -63,7 +64,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildModulePinningTile(ModuleProvider provider, dynamic module) {
+  Widget _buildModulePinningTile(ModuleProvider provider, Module module) {
     return SwitchListTile(
       title: Text(module.name),
       subtitle: Text('Current version: v${module.version}'),
