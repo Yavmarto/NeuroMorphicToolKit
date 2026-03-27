@@ -88,9 +88,17 @@ Because the sub-apps require heavy Python environments, Docker containers, and c
 
 ---
 
-## 🛠 Getting Started
+## 📚 Documentation
 
-For full installation instructions, see the **[SETUP_GUIDE.md](./SETUP_GUIDE.md)**.
+For users and developers:
+-   **[User Guide: Installation](./docs/user/installation.md)** — Getting started with NMTK.
+-   **[User Guide: Troubleshooting](./docs/user/troubleshooting.md)** — Solutions for common startup issues.
+-   **[Developer Setup Guide](./SETUP_GUIDE.md)** — Running the full suite from source.
+-   **[Production Playbook](./docs/PRODUCTION_PLAYBOOK.md)** — Deployment and operational guide.
+
+---
+
+## 🛠 Getting Started
 
 ### Quick Start (Developers)
 

@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockModules = [];
-  bool _isMuJoCoAvailable = false;
+  bool _isMuJoCoAvailableValue = false;
   final List<String> installCalls = [];
 
   void setMuJoCoAvailable(bool value) {
@@ -86,6 +86,12 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
   @override
   Future<void> uninstallModule(String moduleId) async {}
+
+  @override
+  Future<void> updateModule(String moduleId) async {}
+
+  @override
+  Future<void> checkForUpdates() async {}
 
   @override
   void closeTab(String moduleId) {}

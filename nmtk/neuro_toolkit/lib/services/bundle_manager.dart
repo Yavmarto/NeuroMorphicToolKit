@@ -27,8 +27,10 @@ abstract class BundleEnvironment {
   Future<void> writeFileAsString(String path, String contents);
   Future<void> createDirectory(String path, {bool recursive = false});
   Future<void> deleteDirectory(String path, {bool recursive = false});
+  Future<void> renameDirectory(String source, String destination);
   Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false});
   Future<void> copyFile(String source, String destination);
+  Future<void> deleteDirectory(String path, {bool recursive = false});
 
   Future<ProcessResult> runProcess(
     String executable,
@@ -89,10 +91,6 @@ class DefaultBundleEnvironment implements BundleEnvironment {
       Directory(path).create(recursive: recursive);
 
   @override
-  Future<void> deleteDirectory(String path, {bool recursive = false}) =>
-      Directory(path).delete(recursive: recursive);
-
-  @override
   Stream<FileSystemEntity> listDirectory(String path,
           {bool recursive = false}) =>
       Directory(path).list(recursive: recursive);
@@ -100,6 +98,10 @@ class DefaultBundleEnvironment implements BundleEnvironment {
   @override
   Future<void> copyFile(String source, String destination) =>
       File(source).copy(destination);
+
+  @override
+  Future<void> deleteDirectory(String path, {bool recursive = false}) =>
+      Directory(path).delete(recursive: recursive);
 
   @override
   Future<ProcessResult> runProcess(
@@ -161,6 +163,8 @@ class BundleManager {
     clearCache();
   }
 
+  BundleEnvironment get env => _env;
+
   String? _cachedAppSupportPath;
   String? _cachedPythonPath;
   String? _cachedModulesBasePath;
@@ -182,8 +186,9 @@ class BundleManager {
       }
       // Distinguish standalone (has Resources/modules/) from debug (doesn't).
       final bundlePath = p.dirname(p.dirname(p.dirname(exe)));
-      final modulesDir = p.join(bundlePath, 'Contents', 'Resources', 'modules');
-      _isBundledCache = _env.directoryExists(modulesDir);
+      final modulesDirPath =
+          p.join(bundlePath, 'Contents', 'Resources', 'modules');
+      _isBundledCache = _env.directoryExists(modulesDirPath);
     } else if (_env.isWindows || _env.isLinux) {
       // On Windows and Linux, modules are placed next to the executable in the installer.
       final exeDir = p.dirname(exe);
@@ -305,8 +310,8 @@ class BundleManager {
     final List<String> knownPaths = [];
 
     if (_env.isMacOS) {
-      final home =
-          _env.environment['HOME'] ?? '/Users/${_env.environment['USER']}';
+      final home = _env.environment['HOME'] ??
+          '/Users/${_env.environment['USER']}';
       knownPaths.addAll([
         '/opt/homebrew/bin/python3',
         '/opt/homebrew/bin/python',
@@ -424,6 +429,7 @@ class BundleManager {
     _cachedPythonPath = null;
     _isBundledCache = null;
     _cachedAppSupportPath = null;
+    _cachedModulesBasePath = null;
   }
 
   /// Checks whether a given binary is a working Python (exits 0 on --version).
@@ -487,6 +493,7 @@ class BundleManager {
     if (!isBundled) return;
 
     final sourcePath = bundledModulesPath;
+    final entries = await _env.listDirectory(sourcePath).toList();
     if (!_env.directoryExists(sourcePath)) {
       debugPrint('BundleManager: no bundled modules at $sourcePath');
       throw Exception('Bundled modules not found at $sourcePath');
@@ -503,14 +510,14 @@ class BundleManager {
     await _env.createDirectory(targetBase, recursive: true);
 
     final entries = await _env.listDirectory(sourcePath).toList();
-
     for (var i = 0; i < entries.length; i++) {
-      if (entries[i] is Directory) {
-        final moduleName = p.basename(entries[i].path);
+      final entry = entries[i];
+      if (_env.directoryExists(entry.path)) {
+        final moduleName = p.basename(entry.path);
         final destPath = p.join(targetBase, moduleName);
 
         debugPrint('BundleManager: extracting $moduleName...');
-        await _copyDirectory(entries[i] as Directory, destPath);
+        await _copyDirectory(Directory(entry.path), destPath);
       }
       onProgress?.call((i + 1) / entries.length);
     }
