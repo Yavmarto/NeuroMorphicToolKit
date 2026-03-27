@@ -59,10 +59,14 @@ class CatalogScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    module.name,
-                                    style:
-                                        Theme.of(context).textTheme.titleLarge,
+                                  Semantics(
+                                    label: 'Module Name',
+                                    child: Text(
+                                      module.name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge,
+                                    ),
                                   ),
                                   Text(
                                     'ID: ${module.id}',
@@ -83,16 +87,20 @@ class CatalogScreen extends StatelessWidget {
                         Text(module.description),
                         const SizedBox(height: 16),
                         if (module.status == ModuleStatus.installing)
-                          Column(
-                            children: [
-                              LinearProgressIndicator(
-                                value: module.installProgress,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${(module.installProgress * 100).toInt()}%',
-                              ),
-                            ],
+                          Semantics(
+                            label: 'Installing ${module.name}',
+                            value: '${(module.installProgress * 100).toInt()}%',
+                            child: Column(
+                              children: [
+                                LinearProgressIndicator(
+                                  value: module.installProgress,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${(module.installProgress * 100).toInt()}%',
+                                ),
+                              ],
+                            ),
                           )
                         else if (module.status == ModuleStatus.error)
                           Row(
@@ -108,26 +116,36 @@ class CatalogScreen extends StatelessWidget {
                                   style: const TextStyle(color: Colors.red),
                                 ),
                               ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  unawaited(provider.installModule(module.id));
-                                },
-                                child: const Text('Retry'),
+                              Semantics(
+                                label: 'Retry installation of ${module.name}',
+                                button: true,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    unawaited(
+                                      provider.installModule(module.id),
+                                    );
+                                  },
+                                  child: const Text('Retry'),
+                                ),
                               ),
                             ],
                           )
                         else if (module.status == ModuleStatus.notInstalled)
                           Align(
                             alignment: Alignment.centerRight,
-                            child: ElevatedButton(
-                              onPressed: isMuJoCoUnavailable
-                                  ? null
-                                  : () {
-                                      unawaited(
-                                        provider.installModule(module.id),
-                                      );
-                                    },
-                              child: const Text('Install'),
+                            child: Semantics(
+                              label: 'Install ${module.name}',
+                              button: true,
+                              child: ElevatedButton(
+                                onPressed: isMuJoCoUnavailable
+                                    ? null
+                                    : () {
+                                        unawaited(
+                                          provider.installModule(module.id),
+                                        );
+                                      },
+                                child: const Text('Install'),
+                              ),
                             ),
                           )
                         else if (module.status == ModuleStatus.installed ||
@@ -135,14 +153,20 @@ class CatalogScreen extends StatelessWidget {
                             module.status == ModuleStatus.degraded)
                           Align(
                             alignment: Alignment.centerRight,
-                            child: OutlinedButton(
-                              onPressed: () {
-                                unawaited(provider.uninstallModule(module.id));
-                              },
-                              child: Text(
-                                module.status == ModuleStatus.installed
-                                    ? 'Installed'
-                                    : 'Running',
+                            child: Semantics(
+                              label: 'Uninstall ${module.name}',
+                              button: true,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  unawaited(
+                                    provider.uninstallModule(module.id),
+                                  );
+                                },
+                                child: Text(
+                                  module.status == ModuleStatus.installed
+                                      ? 'Installed'
+                                      : 'Running',
+                                ),
                               ),
                             ),
                           ),

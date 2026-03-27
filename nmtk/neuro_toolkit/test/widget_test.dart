@@ -11,6 +11,24 @@ import 'package:neuro_toolkit/main.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/settings_provider.dart';
+
+class LocalMockSettingsProvider extends ChangeNotifier
+    implements SettingsProvider {
+  @override
+  ThemeMode get themeMode => ThemeMode.system;
+  @override
+  bool get isHighContrast => false;
+  @override
+  double get fontSizeFactor => 1.0;
+
+  @override
+  void setThemeMode(ThemeMode mode) {}
+  @override
+  void setHighContrast(bool value) {}
+  @override
+  void setFontSizeFactor(double factor) {}
+}
 
 class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
@@ -60,6 +78,9 @@ void main() {
         providers: [
           ChangeNotifierProvider<ModuleProvider>(
             create: (_) => LocalMockModuleProvider(),
+          ),
+          ChangeNotifierProvider<SettingsProvider>(
+            create: (_) => LocalMockSettingsProvider(),
           ),
         ],
         child: const NeuroToolkitApp(),

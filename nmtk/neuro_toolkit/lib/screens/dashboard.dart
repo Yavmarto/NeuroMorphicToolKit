@@ -34,7 +34,10 @@ class DashboardScreen extends StatelessWidget {
                 child: ListTile(
                   title: Row(
                     children: [
-                      Text(module.name),
+                      Semantics(
+                        label: 'Module Name',
+                        child: Text(module.name),
+                      ),
                       const SizedBox(width: 8),
                       _buildStatusIndicator(module.status),
                     ],
@@ -64,9 +67,13 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       if (module.status == ModuleStatus.installed ||
                           module.status == ModuleStatus.error)
-                        ElevatedButton(
-                          onPressed: () => provider.launchModule(module.id),
-                          child: const Text('Start'),
+                        Semantics(
+                          label: 'Start ${module.name}',
+                          button: true,
+                          child: ElevatedButton(
+                            onPressed: () => provider.launchModule(module.id),
+                            child: const Text('Start'),
+                          ),
                         )
                       else if (module.status == ModuleStatus.starting)
                         const CircularProgressIndicator()
@@ -74,30 +81,43 @@ class DashboardScreen extends StatelessWidget {
                           module.status == ModuleStatus.degraded)
                         Row(
                           children: [
-                            ElevatedButton(
-                              onPressed: () => context.go('/tool/${module.id}'),
-                              child: const Text('Open'),
+                            Semantics(
+                              label: 'Open ${module.name} in Workspace',
+                              button: true,
+                              child: ElevatedButton(
+                                onPressed: () =>
+                                    context.go('/tool/${module.id}'),
+                                child: const Text('Open'),
+                              ),
                             ),
                             const SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () => provider.stopModule(module.id),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.orange,
-                                foregroundColor: Colors.white,
+                            Semantics(
+                              label: 'Stop ${module.name}',
+                              button: true,
+                              child: ElevatedButton(
+                                onPressed: () => provider.stopModule(module.id),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Stop'),
                               ),
-                              child: const Text('Stop'),
                             ),
                           ],
                         )
                       else if (module.status == ModuleStatus.stopping)
                         const CircularProgressIndicator(color: Colors.orange),
                       const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          provider.uninstallModule(module.id);
-                        },
-                        tooltip: 'Uninstall',
+                      Semantics(
+                        label: 'Uninstall ${module.name}',
+                        button: true,
+                        child: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            provider.uninstallModule(module.id);
+                          },
+                          tooltip: 'Uninstall',
+                        ),
                       ),
                     ],
                   ),
@@ -139,19 +159,22 @@ class DashboardScreen extends StatelessWidget {
         label = 'Stopped';
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
+    return Semantics(
+      label: 'Status: $label',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: color),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

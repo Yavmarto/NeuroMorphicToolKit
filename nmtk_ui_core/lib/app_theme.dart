@@ -197,6 +197,36 @@ class AppTheme {
       ),
     );
   }
+
+  // High Contrast Light Theme
+  static ThemeData get highContrastLightTheme {
+    final base = lightTheme;
+    return base.copyWith(
+      colorScheme: base.colorScheme.copyWith(
+        primary: Colors.blue.shade900,
+        secondary: Colors.blue.shade900,
+        surface: Colors.white,
+        onSurface: Colors.black,
+        outline: Colors.black,
+      ),
+      visualDensity: VisualDensity.comfortable,
+    );
+  }
+
+  // High Contrast Dark Theme
+  static ThemeData get highContrastDarkTheme {
+    final base = darkTheme;
+    return base.copyWith(
+      colorScheme: base.colorScheme.copyWith(
+        primary: Colors.yellowAccent,
+        secondary: Colors.yellowAccent,
+        surface: Colors.black,
+        onSurface: Colors.white,
+        outline: Colors.white,
+      ),
+      visualDensity: VisualDensity.comfortable,
+    );
+  }
 }
 
 /// ----------------------------------------------------------------------------
