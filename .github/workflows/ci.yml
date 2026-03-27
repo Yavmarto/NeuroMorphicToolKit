@@ -99,6 +99,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
@@ -143,6 +145,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
@@ -188,6 +192,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
@@ -232,6 +238,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
@@ -276,6 +284,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
@@ -322,6 +332,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install core package
         run: |
           if [ -d "neurocnl" ] && [ -f "neurocnl/pyproject.toml" ]; then
@@ -373,7 +385,7 @@ jobs:
         run: |
           if [ -f "neurocnl/backend/requirements.txt" ]; then
             cd neurocnl/backend
-            pytest --tb=short
+            PYTHONPATH=. pytest backend/tests --tb=short
           else
             echo "neurocnl/backend missing, skipping backend tests"
           fi
@@ -395,6 +407,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install poetry
         run: |
           if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
