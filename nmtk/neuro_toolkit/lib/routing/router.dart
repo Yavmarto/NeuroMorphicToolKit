@@ -6,6 +6,7 @@ import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
+import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/onboarding.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
@@ -64,7 +65,33 @@ class MainScreen extends StatelessWidget {
   final Widget child;
   const MainScreen({super.key, required this.child});
 
-  int _selectedIndex(BuildContext context) {
+  List<NavigationDestinationData> _getDestinations(ModuleProvider provider) {
+    return [
+      const NavigationDestinationData(
+        icon: Icons.dashboard_outlined,
+        selectedIcon: Icons.dashboard,
+        label: 'Dashboard',
+      ),
+      const NavigationDestinationData(
+        icon: Icons.store_outlined,
+        selectedIcon: Icons.store,
+        label: 'Catalog',
+      ),
+      if (provider.activeModuleIds.isNotEmpty)
+        const NavigationDestinationData(
+          icon: Icons.laptop_outlined,
+          selectedIcon: Icons.laptop,
+          label: 'Workspace',
+        ),
+      const NavigationDestinationData(
+        icon: Icons.settings_outlined,
+        selectedIcon: Icons.settings,
+        label: 'Settings',
+      ),
+    ];
+  }
+
+  int _selectedIndex(BuildContext context, ModuleProvider provider) {
     final location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/catalog')) return 1;
     if (location.startsWith('/tool/')) return 2;
@@ -72,17 +99,20 @@ class MainScreen extends StatelessWidget {
     return 0;
   }
 
-  void _onItemTapped(BuildContext context, int index) {
+  void _onItemTapped(
+    BuildContext context,
+    int index,
+    ModuleProvider provider,
+  ) {
     if (index == 0) {
       context.go('/');
     } else if (index == 1) {
       context.go('/catalog');
     } else if (index == 2) {
-      final provider = context.read<ModuleProvider>();
       if (provider.activeModuleIds.isNotEmpty) {
         context.go('/tool/${provider.activeModuleIds.last}');
       } else {
-        context.go('/');
+        context.go('/settings');
       }
     } else if (index == 3) {
       context.go('/settings');

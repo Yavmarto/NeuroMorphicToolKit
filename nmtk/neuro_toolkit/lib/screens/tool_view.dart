@@ -187,27 +187,36 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
               ),
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.open_in_browser),
-                onPressed: () {
-                  final module =
-                      activeModules.firstWhere((m) => m.id == _activeModuleId);
-                  _launchInBrowser(module);
-                },
-                tooltip: 'Open in System Browser',
+              Semantics(
+                label: 'Open module in system browser',
+                button: true,
+                child: IconButton(
+                  icon: const Icon(Icons.open_in_browser),
+                  onPressed: () {
+                    final module = activeModules.firstWhere(
+                      (m) => m.id == _activeModuleId,
+                    );
+                    _launchInBrowser(module);
+                  },
+                  tooltip: 'Open in System Browser',
+                ),
               ),
-              IconButton(
-                icon: const Icon(Icons.stop_circle, color: Colors.red),
-                onPressed: () {
-                  final idToStop = _activeModuleId;
-                  provider.stopModule(idToStop);
-                  _pollTimers[idToStop]?.cancel();
-                  _pollTimers.remove(idToStop);
-                  if (provider.activeModuleIds.isEmpty) {
-                    context.go('/');
-                  }
-                },
-                tooltip: 'Stop Module',
+              Semantics(
+                label: 'Stop currently active module',
+                button: true,
+                child: IconButton(
+                  icon: const Icon(Icons.stop_circle, color: Colors.red),
+                  onPressed: () {
+                    final idToStop = _activeModuleId;
+                    provider.stopModule(idToStop);
+                    _pollTimers[idToStop]?.cancel();
+                    _pollTimers.remove(idToStop);
+                    if (provider.activeModuleIds.isEmpty) {
+                      context.go('/');
+                    }
+                  },
+                  tooltip: 'Stop Module',
+                ),
               ),
             ],
           ),

@@ -63,6 +63,9 @@ void main() {
           ChangeNotifierProvider<ModuleProvider>(
             create: (_) => LocalMockModuleProvider(),
           ),
+          ChangeNotifierProvider<SettingsProvider>(
+            create: (_) => LocalMockSettingsProvider(),
+          ),
         ],
         child: const NeuroToolkitApp(),
       ),

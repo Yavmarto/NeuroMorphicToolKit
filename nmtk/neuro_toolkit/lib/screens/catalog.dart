@@ -59,10 +59,14 @@ class CatalogScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    module.name,
-                                    style:
-                                        Theme.of(context).textTheme.titleLarge,
+                                  Semantics(
+                                    label: 'Module Name',
+                                    child: Text(
+                                      module.name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge,
+                                    ),
                                   ),
                                   Text(
                                     'ID: ${module.id}',
@@ -115,26 +119,36 @@ class CatalogScreen extends StatelessWidget {
                                   style: const TextStyle(color: Colors.red),
                                 ),
                               ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  unawaited(provider.installModule(module.id));
-                                },
-                                child: const Text('Retry'),
+                              Semantics(
+                                label: 'Retry installation of ${module.name}',
+                                button: true,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    unawaited(
+                                      provider.installModule(module.id),
+                                    );
+                                  },
+                                  child: const Text('Retry'),
+                                ),
                               ),
                             ],
                           )
                         else if (module.status == ModuleStatus.notInstalled)
                           Align(
                             alignment: Alignment.centerRight,
-                            child: ElevatedButton(
-                              onPressed: isMuJoCoUnavailable
-                                  ? null
-                                  : () {
-                                      unawaited(
-                                        provider.installModule(module.id),
-                                      );
-                                    },
-                              child: const Text('Install'),
+                            child: Semantics(
+                              label: 'Install ${module.name}',
+                              button: true,
+                              child: ElevatedButton(
+                                onPressed: isMuJoCoUnavailable
+                                    ? null
+                                    : () {
+                                        unawaited(
+                                          provider.installModule(module.id),
+                                        );
+                                      },
+                                child: const Text('Install'),
+                              ),
                             ),
                           )
                         else if (module.status == ModuleStatus.installed ||

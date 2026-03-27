@@ -139,23 +139,31 @@ class _PythonSetupScreenState extends State<PythonSetupScreen> {
 
                 // --- macOS-specific install options ---
                 if (Platform.isMacOS) ...[
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: _isInstalling ? null : _installWithHomebrew,
-                      icon: const Icon(Icons.download),
-                      label: _isInstalling
-                          ? const Text('Installing...')
-                          : const Text('Install with Homebrew'),
+                  Semantics(
+                    label: 'Install Python using Homebrew',
+                    button: true,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _isInstalling ? null : _installWithHomebrew,
+                        icon: const Icon(Icons.download),
+                        label: _isInstalling
+                            ? const Text('Installing...')
+                            : const Text('Install with Homebrew'),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: _openPythonOrg,
-                      icon: const Icon(Icons.open_in_new),
-                      label: const Text('Download from python.org'),
+                  Semantics(
+                    label: 'Download Python from python.org website',
+                    button: true,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _openPythonOrg,
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text('Download from python.org'),
+                      ),
                     ),
                   ),
                 ],
@@ -163,19 +171,23 @@ class _PythonSetupScreenState extends State<PythonSetupScreen> {
                 const SizedBox(height: 16),
 
                 // --- Retry button ---
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.tonalIcon(
-                    onPressed:
-                        (_isInstalling || _isChecking) ? null : _retryCheck,
-                    icon: _isChecking
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.refresh),
-                    label: const Text('Retry Detection'),
+                Semantics(
+                  label: 'Retry detecting installed Python',
+                  button: true,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.tonalIcon(
+                      onPressed:
+                          (_isInstalling || _isChecking) ? null : _retryCheck,
+                      icon: _isChecking
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh),
+                      label: const Text('Retry Detection'),
+                    ),
                   ),
                 ),
 

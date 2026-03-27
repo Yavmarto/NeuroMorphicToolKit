@@ -578,15 +578,15 @@ class BundleManager {
   }
 
   /// Recursively copy a directory tree.
-  Future<void> _copyDirectory(Directory source, String destinationPath) async {
+  Future<void> _copyDirectory(String sourcePath, String destinationPath) async {
     await _env.createDirectory(destinationPath, recursive: true);
     await for (final entity
-        in _env.listDirectory(source.path, recursive: false)) {
+        in _env.listDirectory(sourcePath, recursive: false)) {
       final newPath = p.join(destinationPath, p.basename(entity.path));
       if (entity is File) {
         await _env.copyFile(entity.path, newPath);
       } else if (entity is Directory) {
-        await _copyDirectory(entity, newPath);
+        await _copyDirectory(entity.path, newPath);
       }
     }
   }

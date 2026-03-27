@@ -26,11 +26,26 @@ class NeuroToolkitApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+
     return MaterialApp.router(
       title: 'NeuroToolkit',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      themeMode: settings.themeMode,
+      theme: settings.isHighContrast
+          ? AppTheme.highContrastLightTheme
+          : AppTheme.lightTheme,
+      darkTheme: settings.isHighContrast
+          ? AppTheme.highContrastDarkTheme
+          : AppTheme.darkTheme,
       routerConfig: goRouter,
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(settings.fontSizeFactor),
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }
