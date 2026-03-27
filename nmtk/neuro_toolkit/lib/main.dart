@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
@@ -12,6 +13,8 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => AppProvider()),
         ChangeNotifierProvider(create: (_) => ModuleProvider()),
+        ChangeNotifierProvider.value(value: settings),
+        Provider.value(value: analytics),
       ],
       child: const NeuroToolkitApp(),
     ),

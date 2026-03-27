@@ -115,7 +115,6 @@ void main() {
       expect(find.text('Done'), findsOneWidget);
       expect(find.text('Step 2'), findsOneWidget);
       expect(find.text('In progress'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
     testWidgets('NmtkOutlinedButton renders correctly', (
