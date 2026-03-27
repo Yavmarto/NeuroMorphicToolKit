@@ -509,7 +509,7 @@ class BundleManager {
     final targetBase = await _appSupportModulesDir;
 
     // If version mismatch or missing marker, clean up first to avoid leftovers
-    if (await _env.directoryExists(targetBase)) {
+    if (_env.directoryExists(targetBase)) {
       debugPrint(
           'BundleManager: Cleaning up old modules in Application Support...');
       await _env.deleteDirectory(targetBase, recursive: true);
