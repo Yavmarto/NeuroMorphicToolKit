@@ -2,8 +2,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
-// ignore: unused_import
-import 'package:path_provider/path_provider.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 class MockPathProvider extends PathProviderPlatform {
