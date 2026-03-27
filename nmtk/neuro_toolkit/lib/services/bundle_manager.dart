@@ -189,12 +189,6 @@ class BundleManager {
       final exeDir = p.dirname(exe);
       final modulesDir = p.join(exeDir, 'modules');
       _isBundledCache = _env.directoryExists(modulesDir);
-    } else if (_env.isLinux) {
-      // On Linux (AppImage), modules are usually in usr/bin/modules relative to AppRun,
-      // but Platform.resolvedExecutable points to the actual binary in the mounted squashfs.
-      final exeDir = p.dirname(exe);
-      final modulesDir = p.join(exeDir, 'modules');
-      _isBundledCache = _env.directoryExists(modulesDir);
     } else {
       _isBundledCache = false;
     }
