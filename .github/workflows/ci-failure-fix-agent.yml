@@ -41,21 +41,9 @@ jobs:
             });
             core.setOutput("logs_url", response.url);
 
-      - name: Select API key (round-robin)
-        id: select-key
-        run: |
-          if [ $(( ${{ github.run_number }} % 2 )) -eq 0 ]; then
-            echo "::add-mask::${KEY_A}"
-            echo "selected_key=${KEY_A}" >> "$GITHUB_OUTPUT"
-          else
-            echo "::add-mask::${KEY_B}"
-            echo "selected_key=${KEY_B}" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          KEY_A: ${{ secrets.JULES_API_KEY }}
-          KEY_B: ${{ secrets.JULES_API_KEY_F || secrets.JULES_API_KEY }}
-
-      - name: Invoke Jules to fix failure
+      - name: Invoke Jules to fix failure (primary key)
+        id: jules-primary
+        continue-on-error: true
         uses: google-labs-code/jules-invoke@v1
         with:
           prompt: |
@@ -75,6 +63,31 @@ jobs:
             3. Do not weaken tests, contracts, or property checks.
             4. Read the relevant AGENTS.md and GUARDRAILS.md before making changes.
             5. Open a PR from a jules/* branch so auto-merge can attach once checks pass.
-          jules_api_key: ${{ steps.select-key.outputs.selected_key }}
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ github.event.workflow_run.head_branch }}
+          include_last_commit: true
+
+      - name: Invoke Jules to fix failure (fallback key)
+        if: steps.jules-primary.outcome == 'failure'
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          prompt: |
+            ${{ steps.sdd.outputs.context }}
+
+            The workflow run failed and needs a focused fix.
+
+            Workflow: ${{ github.event.workflow_run.name }}
+            Run URL: ${{ github.event.workflow_run.html_url }}
+            Logs URL: ${{ steps.logs.outputs.logs_url }}
+            Branch: ${{ github.event.workflow_run.head_branch }}
+            Commit: ${{ github.event.workflow_run.head_sha }}
+
+            Requirements:
+            1. Read the failed jobs and logs.
+            2. Fix only the root cause.
+            3. Do not weaken tests, contracts, or property checks.
+            4. Read the relevant AGENTS.md and GUARDRAILS.md before making changes.
+            5. Open a PR from a jules/* branch so auto-merge can attach once checks pass.
+          jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           starting_branch: ${{ github.event.workflow_run.head_branch }}
           include_last_commit: true

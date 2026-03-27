@@ -97,24 +97,46 @@ jobs:
             core.setOutput('pr_branch', prBranch);
             core.setOutput('closed_at', closedAt);
 
-      - name: Select API key (round-robin)
-        id: select-key
-        run: |
-          if [ $(( ${{ github.run_number }} % 2 )) -eq 0 ]; then
-            echo "::add-mask::${KEY_A}"
-            echo "selected_key=${KEY_A}" >> "$GITHUB_OUTPUT"
-          else
-            echo "::add-mask::${KEY_B}"
-            echo "selected_key=${KEY_B}" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          KEY_A: ${{ secrets.JULES_API_KEY }}
-          KEY_B: ${{ secrets.JULES_API_KEY_F || secrets.JULES_API_KEY }}
-
-      - name: Invoke Jules to distil guardrail
+      - name: Invoke Jules to distil guardrail (primary key)
+        id: jules-primary
+        continue-on-error: true
         uses: google-labs-code/jules-action@v1.0.0
         with:
-          jules_api_key: ${{ steps.select-key.outputs.selected_key }}
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            An agent-generated PR was rejected. Extract the lesson and add it
+            as a new guardrail to GUARDRAILS.md.
+
+            ## Rejection Context
+
+            ${{ steps.context.outputs.failure_context }}
+
+            ## Instructions
+
+            1. Read the review comments. Identify the root cause.
+            2. Open GUARDRAILS.md, find the highest Sign #N heading.
+            3. Append a new Sign block:
+               ```
+               ## Sign #<N>: <Short imperative title>
+               **What happened:** <1-2 sentences>
+               **Root cause:** <1 sentence>
+               **Rule:** <imperative: "DO NOT...", "ALWAYS USE...", "NEVER...">
+               **Source:** PR #${{ steps.context.outputs.pr_number }}, closed ${{ steps.context.outputs.closed_at }}
+               ---
+               ```
+            4. Check for duplicates — if similar exists, amend it instead.
+            5. Open a PR on branch `jules/guardrails-sign-<N>`.
+
+            Constraints:
+            - Only modify GUARDRAILS.md
+            - Keep guardrails precise and actionable
+            - Maximum 1 new Sign per rejected PR
+
+      - name: Invoke Jules to distil guardrail (fallback key)
+        if: steps.jules-primary.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           prompt: |
             An agent-generated PR was rejected. Extract the lesson and add it
             as a new guardrail to GUARDRAILS.md.

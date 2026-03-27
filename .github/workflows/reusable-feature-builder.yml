@@ -40,24 +40,42 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Select API key (round-robin)
-        id: select-key
-        run: |
-          if [ $(( ${{ github.run_number }} % 2 )) -eq 0 ]; then
-            echo "::add-mask::${KEY_A}"
-            echo "selected_key=${KEY_A}" >> "$GITHUB_OUTPUT"
-          else
-            echo "::add-mask::${KEY_B}"
-            echo "selected_key=${KEY_B}" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          KEY_A: ${{ secrets.JULES_API_KEY }}
-          KEY_B: ${{ secrets.JULES_API_KEY_F || secrets.JULES_API_KEY }}
-
-      - name: Invoke Jules to build feature
+      - name: Invoke Jules to build feature (primary key)
+        id: jules-primary
+        continue-on-error: true
         uses: google-labs-code/jules-action@v1.0.0
         with:
-          jules_api_key: ${{ steps.select-key.outputs.selected_key }}
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            ════════════════════════════════════════
+            ## YOUR TASK: Implement the following feature
+            ════════════════════════════════════════
+
+            ## ${{ inputs.issue_title }}
+
+            ${{ inputs.issue_body }}
+
+            Implementation Guidelines:
+            1. **Understand** - Read the issue carefully, identify scope and acceptance criteria
+            2. **Plan** - Identify which files need to change and why
+            3. **Implement** - Write clean, idiomatic code following existing conventions
+            4. **Test** - Add or update tests to cover the new functionality
+            5. **PR** - Open a pull request with a clear description of what changed and why
+
+            Constraints:
+            - Follow existing code style and architecture patterns
+            - Do not break existing tests
+            - Keep changes focused — only change what is needed for this feature
+            - If the issue is ambiguous, make the most reasonable interpretation
+              and document your assumption in the PR body
+
+      - name: Invoke Jules to build feature (fallback key)
+        if: steps.jules-primary.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
 

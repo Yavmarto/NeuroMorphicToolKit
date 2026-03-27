@@ -40,24 +40,40 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Select API key (round-robin)
-        id: select-key
-        run: |
-          if [ $(( ${{ github.run_number }} % 2 )) -eq 0 ]; then
-            echo "::add-mask::${KEY_A}"
-            echo "selected_key=${KEY_A}" >> "$GITHUB_OUTPUT"
-          else
-            echo "::add-mask::${KEY_B}"
-            echo "selected_key=${KEY_B}" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          KEY_A: ${{ secrets.JULES_API_KEY }}
-          KEY_B: ${{ secrets.JULES_API_KEY_F || secrets.JULES_API_KEY }}
-
-      - name: Invoke Jules to fix bug
+      - name: Invoke Jules to fix bug (primary key)
+        id: jules-primary
+        continue-on-error: true
         uses: google-labs-code/jules-action@v1.0.0
         with:
-          jules_api_key: ${{ steps.select-key.outputs.selected_key }}
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            ════════════════════════════════════════
+            ## YOUR TASK: Fix the following bug
+            ════════════════════════════════════════
+
+            ## ${{ inputs.issue_title }}
+
+            ${{ inputs.issue_body }}
+
+            Debugging Process:
+            1. **Analysis** - Review the bug report and identify the root cause
+            2. **Diagnosis** - Trace the issue through the codebase
+            3. **Fix** - Implement a minimal, targeted fix
+            4. **Testing** - Add a regression test that would have caught this bug
+            5. **Documentation** - Add comments explaining the fix
+
+            Please provide:
+            - Clear explanation of the root cause
+            - The complete fix with all necessary changes
+            - Test cases to prevent regression
+
+      - name: Invoke Jules to fix bug (fallback key)
+        if: steps.jules-primary.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
 
