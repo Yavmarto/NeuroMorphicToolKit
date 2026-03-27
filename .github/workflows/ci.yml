@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+env:
+  AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+  RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+
 permissions:
   contents: read
   pull-requests: read
@@ -16,6 +20,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    env:
+      RUNNER_TOOL_CACHE: /tmp/tool_cache
     outputs:
       neurosim: ${{ steps.filter.outputs.neurosim }}
       neurochip: ${{ steps.filter.outputs.neurochip }}
