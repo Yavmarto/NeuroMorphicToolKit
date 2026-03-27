@@ -94,13 +94,11 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -114,6 +112,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
@@ -155,13 +155,11 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -175,6 +173,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
@@ -217,13 +217,11 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -237,6 +235,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
@@ -278,13 +278,11 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -298,6 +296,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
@@ -339,13 +339,11 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -359,6 +357,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
@@ -400,13 +400,11 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -422,6 +420,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install core package
         run: |
           if [ -d "neurocnl" ] && [ -f "neurocnl/pyproject.toml" ]; then
@@ -492,13 +492,11 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -512,6 +510,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install poetry
         run: |
           if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
@@ -556,12 +556,9 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: false
@@ -593,12 +590,9 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: false
@@ -630,12 +624,9 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -673,12 +664,9 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -711,12 +699,9 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -749,12 +734,9 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -787,12 +769,9 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive

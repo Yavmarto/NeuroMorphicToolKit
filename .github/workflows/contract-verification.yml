@@ -30,12 +30,9 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
@@ -72,16 +69,14 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -90,6 +85,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           cd neurocnl
@@ -126,16 +123,14 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -144,6 +139,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
       - name: Install dependencies
         run: |
           cd Neuro-Dream-Hand
@@ -199,16 +196,14 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-        shell: powershell
+        shell: cmd
         run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Configure tool cache
+        shell: bash
         run: |
           TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
           mkdir -p "$TOOL_CACHE"
@@ -217,6 +212,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
 
       - name: Install dependencies (pip)
         if: matrix.framework == 'pip'
