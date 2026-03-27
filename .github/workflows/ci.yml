@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
           fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
@@ -80,20 +80,14 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosim == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurosim
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
+          submodules: recursive
+      - name: Setup Python
         run: |
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          git submodule update --init Neurosim || true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+          python3 -m pip install --upgrade pip
+          python3 --version
       - name: Install dependencies
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
@@ -126,20 +120,12 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurochip/neurochip
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          git submodule update --init Neurochip || true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+          submodules: recursive
+      - name: Setup Python
+        run: python3 --version
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
@@ -173,20 +159,12 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurosense/neurosense
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          git submodule update --init Neurosense || true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+          submodules: recursive
+      - name: Setup Python
+        run: python3 --version
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
@@ -219,20 +197,12 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurohub/neurohub
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          git submodule update --init Neurohub || true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+          submodules: recursive
+      - name: Setup Python
+        run: python3 --version
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
@@ -265,20 +235,12 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurodreamhand == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neuro-Dream-Hand
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          git submodule update --init Neuro-Dream-Hand || true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+          submodules: recursive
+      - name: Setup Python
+        run: python3 --version
       - name: Install dependencies
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
@@ -315,9 +277,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Setup Python
+        run: python3 --version
       - name: Install core package
         run: |
           if [ -d "neurocnl" ] && [ -f "neurocnl/pyproject.toml" ]; then
@@ -379,20 +340,12 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurobench/neurobench
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git config --global url."https://github.com/".insteadOf "git@github.com:"
-          git submodule update --init Neurobench || true
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+          submodules: recursive
+      - name: Setup Python
+        run: python3 --version
       - name: Install poetry
         run: |
           if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
@@ -428,11 +381,10 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.nmtk_ui_core == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: nmtk_ui_core
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -454,9 +406,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurotoolkit == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
         with:
@@ -482,9 +431,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: neurocnl/frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -516,9 +462,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurochip/frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -544,9 +487,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurohub/frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -572,9 +512,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurosense/frontend
     steps:
       - uses: actions/checkout@v4
         with:
@@ -600,9 +537,6 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurobench/frontend
     steps:
       - uses: actions/checkout@v4
         with:
