@@ -60,6 +60,7 @@ class ModuleProvider with ChangeNotifier {
       }
 
       await _processManager.init(_modules);
+      await checkForUpdates();
 
       _processManager.statusUpdates.listen((Module updatedModule) {
         final index =
@@ -194,6 +195,29 @@ class ModuleProvider with ChangeNotifier {
     }
   }
 
+  Future<void> updateModule(String moduleId) async {
+    final index = _modules.indexWhere((Module m) => m.id == moduleId);
+    if (index == -1) return;
+
+    _modules[index] = _modules[index].copyWith(
+      status: ModuleStatus.updating,
+      installProgress: 0.0,
+    );
+    notifyListeners();
+
+    try {
+      await _processManager.updateModule(
+        _modules[index],
+        onProgress: (double progress) {
+          _modules[index] = _modules[index].copyWith(installProgress: progress);
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      debugPrint('Update failed for $moduleId: $e');
+    }
+  }
+
   Future<void> uninstallModule(String moduleId) async {
     final modulesList = _modules;
     final index = modulesList.indexWhere((Module m) => m.id == moduleId);
@@ -218,6 +242,29 @@ class ModuleProvider with ChangeNotifier {
   void closeTab(String moduleId) {
     _activeModuleIds.remove(moduleId);
     notifyListeners();
+  }
+
+  Future<void> checkForUpdates() async {
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/remote_modules.json');
+      final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
+      final Map<String, String> remoteVersions = {
+        for (var item in jsonList)
+          (item as Map<String, dynamic>)['id'] as String:
+              item['version'] as String
+      };
+
+      for (var i = 0; i < _modules.length; i++) {
+        final remoteVersion = remoteVersions[_modules[i].id];
+        if (remoteVersion != null) {
+          _modules[i] = _modules[i].copyWith(remoteVersion: remoteVersion);
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Update check failed: $e');
+    }
   }
 
   Stream<String>? getModuleOutput(String moduleId) {

@@ -34,7 +34,9 @@ void main() {
     );
 
     test('copyWith works correctly', () {
-      final updated = extension.copyWith(terminalBackground: Colors.red) as NmtkThemeExtension;
+      final updated =
+          extension.copyWith(terminalBackground: Colors.red)
+              as NmtkThemeExtension;
       expect(updated.terminalBackground, Colors.red);
       expect(updated.syntaxHighlightColor, Colors.blue);
     });
@@ -43,13 +45,21 @@ void main() {
       final other = NmtkThemeExtension(
         terminalBackground: Colors.white,
         syntaxHighlightColor: Colors.green,
-        brandGradient: const LinearGradient(colors: [Colors.green, Colors.yellow]),
+        brandGradient: const LinearGradient(
+          colors: [Colors.green, Colors.yellow],
+        ),
         glassmorphismColor: Colors.black.withValues(alpha: 0.1),
       );
 
       final lerped = extension.lerp(other, 0.5) as NmtkThemeExtension;
-      expect(lerped.terminalBackground, Color.lerp(Colors.black, Colors.white, 0.5));
-      expect(lerped.syntaxHighlightColor, Color.lerp(Colors.blue, Colors.green, 0.5));
+      expect(
+        lerped.terminalBackground,
+        Color.lerp(Colors.black, Colors.white, 0.5),
+      );
+      expect(
+        lerped.syntaxHighlightColor,
+        Color.lerp(Colors.blue, Colors.green, 0.5),
+      );
     });
 
     test('lerp with wrong type returns this', () {

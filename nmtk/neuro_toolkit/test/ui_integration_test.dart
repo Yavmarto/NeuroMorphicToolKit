@@ -80,6 +80,12 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> uninstallModule(String moduleId) async {}
 
   @override
+  Future<void> updateModule(String moduleId) async {}
+
+  @override
+  Future<void> checkForUpdates() async {}
+
+  @override
   void closeTab(String moduleId) {
     _activeModuleIds.remove(moduleId);
     notifyListeners();

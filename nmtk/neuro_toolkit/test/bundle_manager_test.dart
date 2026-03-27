@@ -23,40 +23,57 @@ class MockBundleEnvironment implements BundleEnvironment {
   final Map<String, DateTime> _fileMtimes = {};
   final Map<String, ProcessResult> _processResults = {};
 
-  void setupDirectory(String path) => _existingDirectories.add(p.normalize(path));
+  void setupDirectory(String path) =>
+      _existingDirectories.add(p.normalize(path));
   void setupFile(String path, String contents, {DateTime? mtime}) {
     final normalized = p.normalize(path);
     _files[normalized] = contents;
     _fileMtimes[normalized] = mtime ?? DateTime.now();
   }
 
-  void setupProcess(String executable, List<String> arguments, ProcessResult result) {
+  void setupProcess(
+      String executable, List<String> arguments, ProcessResult result) {
     _processResults['$executable ${arguments.join(' ')}'] = result;
+  }
+
+  @override
+  Future<void> deleteDirectory(String path, {bool recursive = false}) async {
+    final normalized = p.normalize(path);
+    _existingDirectories.remove(normalized);
+    _existingDirectories.removeWhere((dir) => dir.startsWith('$normalized/'));
+    _files.removeWhere((file, contents) => file.startsWith('$normalized/'));
   }
 
   @override
   Future<String> getApplicationSupportPath() async => '/mock/user/app_support';
 
   @override
-  bool directoryExists(String path) => _existingDirectories.contains(p.normalize(path));
+  bool directoryExists(String path) =>
+      _existingDirectories.contains(p.normalize(path));
 
   @override
-  Future<bool> fileExists(String path) async => _files.containsKey(p.normalize(path));
+  Future<bool> fileExists(String path) async =>
+      _files.containsKey(p.normalize(path));
 
   @override
-  DateTime getFileModificationTime(String path) => _fileMtimes[p.normalize(path)] ?? DateTime.now();
+  DateTime getFileModificationTime(String path) =>
+      _fileMtimes[p.normalize(path)] ?? DateTime.now();
 
   @override
-  Future<String> readFileAsString(String path) async => _files[p.normalize(path)] ?? '';
+  Future<String> readFileAsString(String path) async =>
+      _files[p.normalize(path)] ?? '';
 
   @override
-  Future<void> writeFileAsString(String path, String contents) async => _files[p.normalize(path)] = contents;
+  Future<void> writeFileAsString(String path, String contents) async =>
+      _files[p.normalize(path)] = contents;
 
   @override
-  Future<void> createDirectory(String path, {bool recursive = false}) async => _existingDirectories.add(p.normalize(path));
+  Future<void> createDirectory(String path, {bool recursive = false}) async =>
+      _existingDirectories.add(p.normalize(path));
 
   @override
-  Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false}) {
+  Stream<FileSystemEntity> listDirectory(String path,
+      {bool recursive = false}) {
     final normalizedPath = p.normalize(path);
     final entities = <FileSystemEntity>[];
 
@@ -115,8 +132,10 @@ void main() {
   group('isBundled detection', () {
     test('detects macOS bundle', () {
       mockEnv.isMacOS = true;
-      mockEnv.resolvedExecutable = '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
-      mockEnv.setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
+      mockEnv.resolvedExecutable =
+          '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
+      mockEnv
+          .setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
 
       expect(bundleManager.isBundled, isTrue);
     });
@@ -140,7 +159,8 @@ void main() {
 
     test('detects DEV mode when modules dir is missing', () {
       mockEnv.isMacOS = true;
-      mockEnv.resolvedExecutable = '/Users/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
+      mockEnv.resolvedExecutable =
+          '/Users/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
       // No modules dir setup
 
       expect(bundleManager.isBundled, isFalse);
@@ -158,8 +178,10 @@ void main() {
 
     test('resolves modulesBasePath in Bundled mode', () async {
       mockEnv.isMacOS = true;
-      mockEnv.resolvedExecutable = '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
-      mockEnv.setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
+      mockEnv.resolvedExecutable =
+          '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
+      mockEnv
+          .setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
 
       final path = await bundleManager.modulesBasePath;
       expect(path, equals('/mock/user/app_support/modules'));
@@ -169,11 +191,15 @@ void main() {
   group('Python detection', () {
     test('finds bundled Python first', () async {
       mockEnv.isMacOS = true;
-      mockEnv.resolvedExecutable = '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
-      mockEnv.setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
+      mockEnv.resolvedExecutable =
+          '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
+      mockEnv
+          .setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
 
-      final bundledPython = '/Applications/NMTK.app/Contents/Frameworks/python/bin/python3';
-      mockEnv.setupProcess(bundledPython, ['--version'], ProcessResult(0, 0, 'Python 3.12.7', ''));
+      final bundledPython =
+          '/Applications/NMTK.app/Contents/Frameworks/python/bin/python3';
+      mockEnv.setupProcess(bundledPython, ['--version'],
+          ProcessResult(0, 0, 'Python 3.12.7', ''));
 
       final path = await bundleManager.findPython();
       expect(path, equals(bundledPython));
@@ -181,9 +207,11 @@ void main() {
 
     test('falls back to system Python', () async {
       mockEnv.isMacOS = true;
-      mockEnv.resolvedExecutable = '/Users/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
+      mockEnv.resolvedExecutable =
+          '/Users/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
 
-      mockEnv.setupProcess('python3', ['--version'], ProcessResult(0, 0, 'Python 3.10.0', ''));
+      mockEnv.setupProcess(
+          'python3', ['--version'], ProcessResult(0, 0, 'Python 3.10.0', ''));
 
       final path = await bundleManager.findPython();
       expect(path, equals('python3'));
@@ -192,11 +220,16 @@ void main() {
     test('resolves via login shell on Unix', () async {
       mockEnv.isMacOS = true;
       mockEnv.environment['SHELL'] = '/bin/zsh';
-      mockEnv.setupProcess('python3', ['--version'], ProcessResult(1, 1, '', 'not found'));
-      mockEnv.setupProcess('python', ['--version'], ProcessResult(1, 1, '', 'not found'));
-      mockEnv.setupProcess('python.exe', ['--version'], ProcessResult(1, 1, '', 'not found'));
-      mockEnv.setupProcess('/bin/zsh', ['-lc', 'which python3'], ProcessResult(0, 0, '/usr/local/bin/python3', ''));
-      mockEnv.setupProcess('/usr/local/bin/python3', ['--version'], ProcessResult(0, 0, 'Python 3.11.0', ''));
+      mockEnv.setupProcess(
+          'python3', ['--version'], ProcessResult(1, 1, '', 'not found'));
+      mockEnv.setupProcess(
+          'python', ['--version'], ProcessResult(1, 1, '', 'not found'));
+      mockEnv.setupProcess(
+          'python.exe', ['--version'], ProcessResult(1, 1, '', 'not found'));
+      mockEnv.setupProcess('/bin/zsh', ['-lc', 'which python3'],
+          ProcessResult(0, 0, '/usr/local/bin/python3', ''));
+      mockEnv.setupProcess('/usr/local/bin/python3', ['--version'],
+          ProcessResult(0, 0, 'Python 3.11.0', ''));
 
       final path = await bundleManager.findPython();
       expect(path, equals('/usr/local/bin/python3'));
@@ -206,8 +239,10 @@ void main() {
   group('Module extraction', () {
     test('needsExtraction is true on first run', () async {
       mockEnv.isMacOS = true;
-      mockEnv.resolvedExecutable = '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
-      mockEnv.setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
+      mockEnv.resolvedExecutable =
+          '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
+      mockEnv
+          .setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
 
       expect(await bundleManager.needsExtraction, isTrue);
     });
@@ -219,10 +254,12 @@ void main() {
       final now = DateTime.now();
       mockEnv.setupFile(exe, 'dummy', mtime: now);
 
-      mockEnv.setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
+      mockEnv
+          .setupDirectory('/Applications/NMTK.app/Contents/Resources/modules');
       final appSupportModules = '/mock/user/app_support/modules';
       mockEnv.setupDirectory(appSupportModules);
-      mockEnv.setupFile(p.join(appSupportModules, '.bundle_version'), now.toIso8601String());
+      mockEnv.setupFile(
+          p.join(appSupportModules, '.bundle_version'), now.toIso8601String());
 
       expect(await bundleManager.needsExtraction, isFalse);
     });
@@ -234,7 +271,8 @@ void main() {
       final now = DateTime.now();
       mockEnv.setupFile(exe, 'dummy', mtime: now);
 
-      final bundledModules = '/Applications/NMTK.app/Contents/Resources/modules';
+      final bundledModules =
+          '/Applications/NMTK.app/Contents/Resources/modules';
       mockEnv.setupDirectory(bundledModules);
       mockEnv.setupDirectory(p.join(bundledModules, 'neurocnl'));
       mockEnv.setupFile(p.join(bundledModules, 'neurocnl', 'README.md'), 'CNL');
@@ -242,9 +280,16 @@ void main() {
       await bundleManager.extractModules();
 
       final appSupportModules = '/mock/user/app_support/modules';
-      expect(mockEnv.directoryExists(p.join(appSupportModules, 'neurocnl')), isTrue);
-      expect(await mockEnv.fileExists(p.join(appSupportModules, 'neurocnl', 'README.md')), isTrue);
-      expect(await mockEnv.readFileAsString(p.join(appSupportModules, '.bundle_version')), equals(now.toIso8601String()));
+      expect(mockEnv.directoryExists(p.join(appSupportModules, 'neurocnl')),
+          isTrue);
+      expect(
+          await mockEnv
+              .fileExists(p.join(appSupportModules, 'neurocnl', 'README.md')),
+          isTrue);
+      expect(
+          await mockEnv
+              .readFileAsString(p.join(appSupportModules, '.bundle_version')),
+          equals(now.toIso8601String()));
     });
   });
 
@@ -253,20 +298,25 @@ void main() {
       mockEnv.isMacOS = true;
       final exe = '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
       mockEnv.resolvedExecutable = exe;
-      final bundledModules = '/Applications/NMTK.app/Contents/Resources/modules';
+      final bundledModules =
+          '/Applications/NMTK.app/Contents/Resources/modules';
       mockEnv.setupDirectory(bundledModules);
       mockEnv.setupDirectory(p.join(bundledModules, 'neurocnl'));
 
-      final bundledPython = '/Applications/NMTK.app/Contents/Frameworks/python/bin/python3';
-      mockEnv.setupProcess(bundledPython, ['--version'], ProcessResult(0, 0, 'Python 3.12.7', ''));
+      final bundledPython =
+          '/Applications/NMTK.app/Contents/Frameworks/python/bin/python3';
+      mockEnv.setupProcess(bundledPython, ['--version'],
+          ProcessResult(0, 0, 'Python 3.12.7', ''));
 
       expect(await bundleManager.validateBundle(), isTrue);
     });
 
     test('validateBundle returns false when modules missing', () async {
       mockEnv.isMacOS = true;
-      mockEnv.resolvedExecutable = '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
-      mockEnv.setupDirectory('/Applications/NMTK.app/Contents/MacOS'); // Setup parent to force isBundled false or something
+      mockEnv.resolvedExecutable =
+          '/Applications/NMTK.app/Contents/MacOS/neuro_toolkit';
+      mockEnv.setupDirectory(
+          '/Applications/NMTK.app/Contents/MacOS'); // Setup parent to force isBundled false or something
       // Actually isBundled depends on modules dir existence for macOS
 
       expect(bundleManager.isBundled, isFalse);

@@ -26,8 +26,11 @@ abstract class BundleEnvironment {
   Future<String> readFileAsString(String path);
   Future<void> writeFileAsString(String path, String contents);
   Future<void> createDirectory(String path, {bool recursive = false});
+  Future<void> deleteDirectory(String path, {bool recursive = false});
+  Future<void> renameDirectory(String source, String destination);
   Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false});
   Future<void> copyFile(String source, String destination);
+  Future<void> deleteDirectory(String path, {bool recursive = false});
 
   Future<ProcessResult> runProcess(
     String executable,
@@ -73,7 +76,8 @@ class DefaultBundleEnvironment implements BundleEnvironment {
   Future<bool> fileExists(String path) => File(path).exists();
 
   @override
-  DateTime getFileModificationTime(String path) => File(path).statSync().modified;
+  DateTime getFileModificationTime(String path) =>
+      File(path).statSync().modified;
 
   @override
   Future<String> readFileAsString(String path) => File(path).readAsString();
@@ -87,12 +91,17 @@ class DefaultBundleEnvironment implements BundleEnvironment {
       Directory(path).create(recursive: recursive);
 
   @override
-  Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false}) =>
+  Stream<FileSystemEntity> listDirectory(String path,
+          {bool recursive = false}) =>
       Directory(path).list(recursive: recursive);
 
   @override
   Future<void> copyFile(String source, String destination) =>
       File(source).copy(destination);
+
+  @override
+  Future<void> deleteDirectory(String path, {bool recursive = false}) =>
+      Directory(path).delete(recursive: recursive);
 
   @override
   Future<ProcessResult> runProcess(
@@ -154,6 +163,8 @@ class BundleManager {
     clearCache();
   }
 
+  BundleEnvironment get env => _env;
+
   String? _cachedAppSupportPath;
   String? _cachedPythonPath;
   String? _cachedModulesBasePath;
@@ -175,17 +186,11 @@ class BundleManager {
       }
       // Distinguish standalone (has Resources/modules/) from debug (doesn't).
       final bundlePath = p.dirname(p.dirname(p.dirname(exe)));
-      final modulesDir =
-          Directory(p.join(bundlePath, 'Contents', 'Resources', 'modules'));
-      _isBundledCache = modulesDir.existsSync();
-    } else if (Platform.isWindows || Platform.isLinux) {
+      final modulesDirPath =
+          p.join(bundlePath, 'Contents', 'Resources', 'modules');
+      _isBundledCache = _env.directoryExists(modulesDirPath);
+    } else if (_env.isWindows || _env.isLinux) {
       // On Windows and Linux, modules are placed next to the executable in the installer.
-      final exeDir = p.dirname(exe);
-      final modulesDir = p.join(exeDir, 'modules');
-      _isBundledCache = _env.directoryExists(modulesDir);
-    } else if (_env.isLinux) {
-      // On Linux (AppImage), modules are usually in usr/bin/modules relative to AppRun,
-      // but Platform.resolvedExecutable points to the actual binary in the mounted squashfs.
       final exeDir = p.dirname(exe);
       final modulesDir = p.join(exeDir, 'modules');
       _isBundledCache = _env.directoryExists(modulesDir);
@@ -304,9 +309,9 @@ class BundleManager {
     debugPrint('BundleManager: probing known paths...');
     final List<String> knownPaths = [];
 
-    if (Platform.isMacOS) {
-      final home = Platform.environment['HOME'] ??
-          '/Users/${Platform.environment['USER']}';
+    if (_env.isMacOS) {
+      final home = _env.environment['HOME'] ??
+          '/Users/${_env.environment['USER']}';
       knownPaths.addAll([
         '/opt/homebrew/bin/python3',
         '/opt/homebrew/bin/python',
@@ -424,13 +429,14 @@ class BundleManager {
     _cachedPythonPath = null;
     _isBundledCache = null;
     _cachedAppSupportPath = null;
+    _cachedModulesBasePath = null;
   }
 
   /// Checks whether a given binary is a working Python (exits 0 on --version).
   Future<bool> _isPythonWorking(String path) async {
     try {
-      final result = await _env.runProcess(path, ['--version'])
-          .timeout(const Duration(seconds: 5));
+      final result = await _env
+          .runProcess(path, ['--version']).timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) {
         debugPrint(
           'BundleManager: "$path" -> ${result.stdout.toString().trim()}',
@@ -461,10 +467,10 @@ class BundleManager {
       _cachedModulesBasePath = await _appSupportModulesDir;
     } else {
       // Dev mode: nmtk/neuro_toolkit -> ../../ = repo root
-      _cachedModulesBasePath = p.normalize(p.join(p.current, '..', '..'));
+      _cachedModulesBasePath =
+          p.normalize(p.join(_env.currentDirectory, '..', '..'));
     }
-    // Dev mode: nmtk/neuro_toolkit -> ../../ = repo root
-    return p.normalize(p.join(_env.currentDirectory, '..', '..'));
+    return _cachedModulesBasePath!;
   }
 
   /// Whether first-run extraction is needed.
@@ -487,28 +493,31 @@ class BundleManager {
     if (!isBundled) return;
 
     final sourcePath = bundledModulesPath;
+    final entries = await _env.listDirectory(sourcePath).toList();
     if (!_env.directoryExists(sourcePath)) {
       debugPrint('BundleManager: no bundled modules at $sourcePath');
       throw Exception('Bundled modules not found at $sourcePath');
     }
 
     final targetBase = await _appSupportModulesDir;
-    final targetDir = Directory(targetBase);
 
     // If version mismatch or missing marker, clean up first to avoid leftovers
-    if (await targetDir.exists()) {
-      debugPrint('BundleManager: Cleaning up old modules in Application Support...');
-      await targetDir.delete(recursive: true);
+    if (_env.directoryExists(targetBase)) {
+      debugPrint(
+          'BundleManager: Cleaning up old modules in Application Support...');
+      await _env.deleteDirectory(targetBase, recursive: true);
     }
-    await targetDir.create(recursive: true);
+    await _env.createDirectory(targetBase, recursive: true);
 
+    final entries = await _env.listDirectory(sourcePath).toList();
     for (var i = 0; i < entries.length; i++) {
-      if (entries[i] is Directory) {
-        final moduleName = p.basename(entries[i].path);
+      final entry = entries[i];
+      if (_env.directoryExists(entry.path)) {
+        final moduleName = p.basename(entry.path);
         final destPath = p.join(targetBase, moduleName);
 
         debugPrint('BundleManager: extracting $moduleName...');
-        await _copyDirectory(entries[i] as Directory, destPath);
+        await _copyDirectory(Directory(entry.path), destPath);
       }
       onProgress?.call((i + 1) / entries.length);
     }
@@ -525,7 +534,8 @@ class BundleManager {
     if (!isBundled) return true;
 
     if (!_env.directoryExists(bundledModulesPath)) {
-      debugPrint('Bundle validation failed: modules directory missing at $bundledModulesPath');
+      debugPrint(
+          'Bundle validation failed: modules directory missing at $bundledModulesPath');
       return false;
     }
 
@@ -570,7 +580,8 @@ class BundleManager {
   /// Recursively copy a directory tree.
   Future<void> _copyDirectory(Directory source, String destinationPath) async {
     await _env.createDirectory(destinationPath, recursive: true);
-    await for (final entity in _env.listDirectory(source.path, recursive: false)) {
+    await for (final entity
+        in _env.listDirectory(source.path, recursive: false)) {
       final newPath = p.join(destinationPath, p.basename(entity.path));
       if (entity is File) {
         await _env.copyFile(entity.path, newPath);

@@ -22,6 +22,7 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
     _mockInstalledModules.addAll(val);
     notifyListeners();
   }
+
   @override
   List<Module> modulesForTesting = [];
   @override
@@ -61,6 +62,12 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> uninstallModule(String moduleId) async {
     uninstallCalls.add(moduleId);
   }
+
+  @override
+  Future<void> updateModule(String moduleId) async {}
+
+  @override
+  Future<void> checkForUpdates() async {}
 
   void setInstalledModules(List<Module> modules) {
     _mockInstalledModules.clear();
@@ -148,7 +155,8 @@ void main() {
     expect(mockProvider.uninstallCalls, contains('test_module'));
   });
 
-  testWidgets('DashboardScreen handles Open button click', (WidgetTester tester) async {
+  testWidgets('DashboardScreen handles Open button click',
+      (WidgetTester tester) async {
     final mockProvider = MockDashboardProvider();
     final runningModule = Module(
       id: 'test_module',

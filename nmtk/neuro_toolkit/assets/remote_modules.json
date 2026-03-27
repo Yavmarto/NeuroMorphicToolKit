@@ -1,0 +1,30 @@
+[
+  {
+    "id": "neurocnl",
+    "version": "1.1.0"
+  },
+  {
+    "id": "Neurosim",
+    "version": "1.0.1"
+  },
+  {
+    "id": "Neurochip",
+    "version": "1.0.0"
+  },
+  {
+    "id": "Neurobench",
+    "version": "1.0.0"
+  },
+  {
+    "id": "Neurosense",
+    "version": "1.0.0"
+  },
+  {
+    "id": "Neurohub",
+    "version": "1.0.0"
+  },
+  {
+    "id": "neuro_dream_hand",
+    "version": "1.1.0"
+  }
+]
