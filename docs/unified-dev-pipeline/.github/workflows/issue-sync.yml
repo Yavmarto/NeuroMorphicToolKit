@@ -13,6 +13,9 @@ on:
         required: false
         type: string
 
+env:
+  AGENT_TOOLSDIRECTORY: ${{ github.workspace }}/_tool_cache
+
 permissions:
   contents: read
   issues: write

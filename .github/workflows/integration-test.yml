@@ -10,6 +10,9 @@ on:
     types: [completed]
   workflow_dispatch:
 
+env:
+  AGENT_TOOLSDIRECTORY: ${{ github.workspace }}/_tool_cache
+
 permissions:
   contents: read
 

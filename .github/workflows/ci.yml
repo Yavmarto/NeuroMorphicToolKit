@@ -7,6 +7,7 @@ on:
     branches: [main, dev]
 
 env:
+  AGENT_TOOLSDIRECTORY: ${{ github.workspace }}/_tool_cache
   AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
   RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
 
