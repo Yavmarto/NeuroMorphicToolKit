@@ -6,3 +6,6 @@ neuro_toolkit/.dart_tool/
 **/venv/
 __pycache__/
 *.pyc
+.coverage
+*.sqlite
+*.db

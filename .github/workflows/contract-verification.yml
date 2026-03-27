@@ -18,7 +18,7 @@ permissions:
 jobs:
   # ── Stage 1: Detect which modules changed ──────────────────────────
   detect-changes:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       neurocnl: ${{ steps.filter.outputs.neurocnl }}
       neurodreamhand: ${{ steps.filter.outputs.neurodreamhand }}
@@ -188,7 +188,7 @@ jobs:
       - verify-neurocnl
       - verify-neurodreamhand
       - verify-other-modules
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Check results
         run: |

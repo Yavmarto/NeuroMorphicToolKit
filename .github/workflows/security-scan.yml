@@ -25,7 +25,7 @@ jobs:
           find . -name "requirements.txt" -exec pip-audit -r {} \; || true
 
   owasp-dependency-check:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Dependency Check
