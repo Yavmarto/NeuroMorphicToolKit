@@ -11,8 +11,16 @@ permissions:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: [self-hosted, Windows, X64]
     steps:
+      - name: Add Git to PATH (Windows)
+        shell: powershell
+        run: |
+          $gitPath = "C:\Program Files\Git\cmd"
+          if (Test-Path $gitPath) {
+            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -23,9 +31,10 @@ jobs:
           cache: true
 
       - name: Build Windows Standalone
-        shell: pwsh
+        shell: powershell
         run: |
-          ./nmtk/installer/windows/build-standalone.ps1
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          & ./nmtk/installer/windows/build-standalone.ps1
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -34,7 +43,7 @@ jobs:
           path: nmtk/dist/*.exe
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -58,7 +67,7 @@ jobs:
           path: "*.dmg"
 
   build-linux:
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -92,7 +101,7 @@ jobs:
 
   create-release:
     needs: [build-windows, build-macos, build-linux]
-    runs-on: self-hosted
+    runs-on: [self-hosted, Linux, X64]
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
       - name: Download all artifacts
