@@ -6,10 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:path/path.dart' as p;
 
 class ModuleProvider with ChangeNotifier {
   late final ProcessManager _processManager;
+  late final UpdateService _updateService;
+  LauncherUpdate? _pendingLauncherUpdate;
 
   @visibleForTesting
   List<Module> modulesForTesting = [];
@@ -24,8 +27,10 @@ class ModuleProvider with ChangeNotifier {
   String? _error;
   final List<String> _activeModuleIds = [];
 
-  ModuleProvider({ProcessManager? processManager}) {
+  ModuleProvider(
+      {ProcessManager? processManager, UpdateService? updateService}) {
     _processManager = processManager ?? ProcessManager();
+    _updateService = updateService ?? UpdateService();
     _init();
   }
 
@@ -62,6 +67,9 @@ class ModuleProvider with ChangeNotifier {
       await _processManager.init(_modules);
       await checkForUpdates();
 
+      // Check for updates on startup
+      unawaited(checkForUpdates());
+
       _processManager.statusUpdates.listen((Module updatedModule) {
         final index =
             _modules.indexWhere((Module m) => m.id == updatedModule.id);
@@ -89,6 +97,8 @@ class ModuleProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get pythonAvailable => _pythonAvailable;
   String? get error => _error;
+  LauncherUpdate? get pendingLauncherUpdate => _pendingLauncherUpdate;
+  UpdateChannel get currentChannel => _updateService.channel;
 
   /// Re-check Python availability (e.g. after user installs Python).
   /// If found, continues with normal module initialization.

@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -124,19 +125,26 @@ class InvocationRecord {
 }
 
 void main() {
+  const MethodChannel channel =
+      MethodChannel('plugins.flutter.io/path_provider');
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late ProcessManager processManager;
   late MockProcessRunner mockRunner;
 
   setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+      return '.';
+    });
+
     mockRunner = MockProcessRunner();
     processManager = ProcessManager(
       processRunner: mockRunner,
       httpClient:
           MockClient((request) async => http.Response('{"status":"ok"}', 200)),
     );
-    processManager.dispose(); // Reset state
+    processManager.resetForTesting();
   });
 
   test('ProcessManager provides status updates', () {

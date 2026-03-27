@@ -13,7 +13,9 @@
     "localDeps": ["Neuro-Dream-Hand/"],
     "hasFrontend": true,
     "frontendStatus": "Yes",
-    "requiresMuJoCo": false
+    "requiresMuJoCo": false,
+    "version": "1.0.0",
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/neurocnl"
   },
   {
     "id": "Neurosim",
@@ -28,7 +30,9 @@
     "uvicornTarget": "app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Yes",
-    "requiresMuJoCo": false
+    "requiresMuJoCo": false,
+    "version": "1.0.0",
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurosim"
   },
   {
     "id": "Neurochip",
@@ -43,7 +47,9 @@
     "uvicornTarget": "app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Yes",
-    "requiresMuJoCo": false
+    "requiresMuJoCo": false,
+    "version": "1.0.0",
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurochip"
   },
   {
     "id": "Neurobench",
@@ -58,7 +64,9 @@
     "uvicornTarget": "app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Yes",
-    "requiresMuJoCo": false
+    "requiresMuJoCo": false,
+    "version": "1.0.0",
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurobench"
   },
   {
     "id": "Neurosense",
@@ -73,7 +81,9 @@
     "uvicornTarget": "app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Yes",
-    "requiresMuJoCo": false
+    "requiresMuJoCo": false,
+    "version": "1.0.0",
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurosense"
   },
   {
     "id": "Neurohub",
@@ -88,7 +98,9 @@
     "uvicornTarget": "app.main:app",
     "hasFrontend": true,
     "frontendStatus": "Yes",
-    "requiresMuJoCo": false
+    "requiresMuJoCo": false,
+    "version": "1.0.0",
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurohub"
   },
   {
     "id": "neuro_dream_hand",
@@ -103,6 +115,8 @@
     "uvicornTarget": "",
     "hasFrontend": false,
     "frontendStatus": "No",
-    "requiresMuJoCo": true
+    "requiresMuJoCo": true,
+    "version": "1.0.0",
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neuro-Dream-Hand"
   }
 ]

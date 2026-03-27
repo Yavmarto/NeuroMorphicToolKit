@@ -3,15 +3,37 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<ModuleProvider>(context, listen: false);
+
+    // Show launcher update dialog if available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (provider.pendingLauncherUpdate != null) {
+        _showLauncherUpdateDialog(context, provider);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => provider.checkForUpdates(),
+            tooltip: 'Check for Updates',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.go('/settings'),
+            tooltip: 'Settings',
+          ),
+        ],
       ),
       body: Consumer<ModuleProvider>(
         builder: (context, provider, child) {
@@ -37,6 +59,17 @@ class DashboardScreen extends StatelessWidget {
                       Text(module.name),
                       const SizedBox(width: 8),
                       _buildStatusIndicator(module.status),
+                      if (module.versionPinned) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.push_pin,
+                            size: 14, color: Colors.blue),
+                      ],
+                      const Spacer(),
+                      Text(
+                        'v${module.version}',
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ],
                   ),
                   subtitle: Column(
@@ -62,7 +95,35 @@ class DashboardScreen extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (module.status == ModuleStatus.installed ||
+                      if (module.availableUpdate != null &&
+                          module.status != ModuleStatus.updating)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ElevatedButton.icon(
+                            onPressed: () => provider.updateModule(module.id),
+                            icon: const Icon(Icons.system_update),
+                            label: Text('Update to ${module.availableUpdate}'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                      if (module.status == ModuleStatus.updating)
+                        SizedBox(
+                          width: 100,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              LinearProgressIndicator(
+                                  value: module.installProgress),
+                              const SizedBox(height: 4),
+                              const Text('Updating...',
+                                  style: TextStyle(fontSize: 10)),
+                            ],
+                          ),
+                        )
+                      else if (module.status == ModuleStatus.installed ||
                           module.status == ModuleStatus.error)
                         ElevatedButton(
                           onPressed: () => provider.launchModule(module.id),
@@ -134,6 +195,10 @@ class DashboardScreen extends StatelessWidget {
         color = Colors.orange;
         label = 'Stopping';
         break;
+      case ModuleStatus.updating:
+        color = Colors.purple;
+        label = 'Updating';
+        break;
       default:
         color = Colors.grey;
         label = 'Stopped';
@@ -153,6 +218,48 @@ class DashboardScreen extends StatelessWidget {
           fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  void _showLauncherUpdateDialog(
+      BuildContext context, ModuleProvider provider) {
+    final update = provider.pendingLauncherUpdate!;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Launcher Update Available'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                'A new version of NeuroToolkit (${update.version}) is available.'),
+            const SizedBox(height: 16),
+            const Text('Release Notes:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(update.releaseNotes),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              provider.dismissLauncherUpdate();
+              Navigator.of(context).pop();
+            },
+            child: const Text('Later'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final url = Uri.parse(update.url);
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url);
+              }
+            },
+            child: const Text('Download Now'),
+          ),
+        ],
       ),
     );
   }

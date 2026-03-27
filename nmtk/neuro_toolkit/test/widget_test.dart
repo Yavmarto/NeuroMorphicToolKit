@@ -1,16 +1,10 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/main.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
 
 class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
@@ -25,6 +19,10 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   bool get pythonAvailable => true;
   @override
   String? get error => null;
+  @override
+  LauncherUpdate? get pendingLauncherUpdate => null;
+  @override
+  UpdateChannel get currentChannel => UpdateChannel.stable;
   @override
   List<String> get activeModuleIds => [];
   @override

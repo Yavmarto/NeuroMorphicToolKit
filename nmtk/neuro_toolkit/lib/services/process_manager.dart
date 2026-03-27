@@ -179,6 +179,15 @@ class ProcessManager {
     _initialized = true;
   }
 
+  @visibleForTesting
+  void resetForTesting() {
+    dispose();
+    _retryCounts.clear();
+    _nextRetryTimes.clear();
+    _intentionallyStopping.clear();
+    _modules.clear();
+  }
+
   void dispose() {
     _healthTimer?.cancel();
     _initialized = false;
@@ -655,6 +664,10 @@ class ProcessManager {
           if (states.containsKey(modules[i].id)) {
             final saved = states[modules[i].id] as Map<String, dynamic>;
             final savedStatus = saved['status'] as int?;
+            // Restore version and pinning info
+            final savedVersion = saved['version'] as String?;
+            final savedPinned = saved['versionPinned'] as bool?;
+
             // Only restore installation status, not runtime status or paths.
             // Paths are always freshly resolved from BundleManager + modules.json.
             if (savedStatus != null) {
@@ -662,9 +675,19 @@ class ProcessManager {
               if (status == ModuleStatus.installed ||
                   status == ModuleStatus.running ||
                   status == ModuleStatus.degraded ||
-                  status == ModuleStatus.error) {
-                modules[i].status = ModuleStatus.installed;
-                modules[i].installProgress = 1.0;
+                  status == ModuleStatus.error ||
+                  status == ModuleStatus.updating) {
+                modules[i] = modules[i].copyWith(
+                  status: ModuleStatus.installed,
+                  installProgress: 1.0,
+                  version: savedVersion,
+                  versionPinned: savedPinned,
+                );
+              } else {
+                modules[i] = modules[i].copyWith(
+                  version: savedVersion,
+                  versionPinned: savedPinned,
+                );
               }
             }
           }
