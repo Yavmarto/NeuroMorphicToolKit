@@ -251,7 +251,8 @@ class ModuleProvider with ChangeNotifier {
       final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
       final Map<String, String> remoteVersions = {
         for (var item in jsonList)
-          (item as Map<String, dynamic>)['id'] as String: item['version'] as String
+          (item as Map<String, dynamic>)['id'] as String:
+              item['version'] as String
       };
 
       for (var i = 0; i < _modules.length; i++) {

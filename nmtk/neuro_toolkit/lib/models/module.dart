@@ -117,9 +117,7 @@ class Module {
       remoteVersion: remoteVersion ?? this.remoteVersion,
       status: status ?? this.status,
       installProgress: installProgress ?? this.installProgress,
-      healthStatus: healthStatus is String?
-          ? healthStatus
-          : this.healthStatus,
+      healthStatus: healthStatus is String? ? healthStatus : this.healthStatus,
     );
   }
 

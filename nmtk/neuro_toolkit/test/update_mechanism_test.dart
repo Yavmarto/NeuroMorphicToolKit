@@ -85,7 +85,8 @@ class MockProcessManager implements ProcessManager {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('ModuleProvider updateModule calls ProcessManager.updateModule', () async {
+  test('ModuleProvider updateModule calls ProcessManager.updateModule',
+      () async {
     final mockProcessManager = MockProcessManager();
     final provider = ModuleProvider(processManager: mockProcessManager);
 

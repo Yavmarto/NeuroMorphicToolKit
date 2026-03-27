@@ -79,7 +79,8 @@ class DefaultProcessRunner implements ProcessRunner {
 
 class ProcessManager {
   static final ProcessManager _instance = ProcessManager._internal();
-  factory ProcessManager({ProcessRunner? processRunner, http.Client? httpClient}) {
+  factory ProcessManager(
+      {ProcessRunner? processRunner, http.Client? httpClient}) {
     if (processRunner != null) {
       _instance._processRunner = processRunner;
     }
@@ -132,17 +133,20 @@ class ProcessManager {
     final nextRetry = DateTime.now().add(Duration(seconds: seconds));
     _nextRetryTimes[module.id] = nextRetry;
 
-    debugPrint('[${module.id}] Scheduled retry #$count in ${seconds}s at $nextRetry');
+    debugPrint(
+        '[${module.id}] Scheduled retry #$count in ${seconds}s at $nextRetry');
 
     final updatedModule = module.copyWith(
       status: ModuleStatus.error,
-      healthStatus: '${module.healthStatus ?? "Unhealthy"}. Retrying in ${seconds}s...',
+      healthStatus:
+          '${module.healthStatus ?? "Unhealthy"}. Retrying in ${seconds}s...',
     );
     _updateModuleStatus(updatedModule);
   }
 
   Future<void> _handleFailure(Module module, String? error) async {
-    if (module.status == ModuleStatus.stopping || _intentionallyStopping.contains(module.id)) {
+    if (module.status == ModuleStatus.stopping ||
+        _intentionallyStopping.contains(module.id)) {
       return;
     }
 
@@ -505,23 +509,10 @@ class ProcessManager {
     try {
       final uri = Uri.parse('http://127.0.0.1:${module.port}/health');
 
-      String body;
-      int statusCode;
-
-      if (kIsWeb) {
-        final response =
-            await http.get(uri).timeout(const Duration(seconds: 2));
-        body = response.body;
-        statusCode = response.statusCode;
-      } else {
-        final client = HttpClient();
-        final request =
-            await client.getUrl(uri).timeout(const Duration(seconds: 2));
-        final response = await request.close();
-        body = await response.transform(utf8.decoder).join();
-        statusCode = response.statusCode;
-        client.close();
-      }
+      final response =
+          await _httpClient.get(uri).timeout(const Duration(seconds: 2));
+      final body = response.body;
+      final statusCode = response.statusCode;
 
       ModuleStatus newStatus;
       String? healthInfo;
@@ -565,7 +556,8 @@ class ProcessManager {
     debugPrint(
       'Starting health polling every 5 seconds for ${_modules.length} modules',
     );
-    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
+    _healthTimer =
+        Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
@@ -684,7 +676,8 @@ class ProcessManager {
       );
       _updateModuleStatus(updatedModule);
 
-      await installModule(updatedModule, onProgress: (p) => onProgress?.call(0.3 + p * 0.5));
+      await installModule(updatedModule,
+          onProgress: (p) => onProgress?.call(0.3 + p * 0.5));
 
       // 5. Verify with health check
       onProgress?.call(0.9);

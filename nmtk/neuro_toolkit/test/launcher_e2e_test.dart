@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
@@ -150,7 +151,7 @@ void main() {
       }
       // Try to cleanup
       unawaited(manager.stopModule('neurocnl'));
-    rethrow;
+      rethrow;
     } finally {
       await subscription.cancel();
       manager.dispose();

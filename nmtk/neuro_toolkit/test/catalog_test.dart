@@ -7,10 +7,9 @@ import 'package:provider/provider.dart';
 
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockModules = [];
-  bool _isMuJoCoAvailable = false;
+  bool _isMuJoCoAvailableValue = false;
   final List<String> installCalls = [];
 
-  
   void setMuJoCoAvailable(bool value) {
     _isMuJoCoAvailableValue = value;
     notifyListeners();
@@ -21,10 +20,6 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
   @override
   List<Module> get modules => _mockModules;
-  @override
-  set modules(List<Module> val) {}
-  @override
-  List<Module> modulesForTesting = [];
 
   @override
   set modules(List<Module> val) {
@@ -91,6 +86,12 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
   @override
   Future<void> uninstallModule(String moduleId) async {}
+
+  @override
+  Future<void> updateModule(String moduleId) async {}
+
+  @override
+  Future<void> checkForUpdates() async {}
 
   @override
   void closeTab(String moduleId) {}
@@ -219,7 +220,8 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
   });
 
-  testWidgets('CatalogScreen handles Install button click', (WidgetTester tester) async {
+  testWidgets('CatalogScreen handles Install button click',
+      (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1920, 1080);
     tester.view.devicePixelRatio = 1.0;
 
@@ -239,7 +241,8 @@ void main() {
 
     // Find the Install button for CNL Studio
     final installButton = find.descendant(
-      of: find.ancestor(of: find.text('CNL Studio'), matching: find.byType(Card)),
+      of: find.ancestor(
+          of: find.text('CNL Studio'), matching: find.byType(Card)),
       matching: find.text('Install'),
     );
 
