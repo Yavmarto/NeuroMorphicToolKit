@@ -12,17 +12,17 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: NmtkPrimaryButton(
-              label: 'Action',
-              icon: Icons.add,
+              label: 'Test Button',
               onPressed: () {
                 pressed = true;
               },
+              icon: Icons.add,
             ),
           ),
         ),
       );
 
-      expect(find.text('Action'), findsOneWidget);
+      expect(find.text('Test Button'), findsOneWidget);
       expect(find.byIcon(Icons.add), findsOneWidget);
       await tester.tap(find.byType(ElevatedButton));
       expect(pressed, isTrue);
@@ -45,10 +45,9 @@ void main() {
 
       expect(find.text('Total Energy'), findsOneWidget);
       expect(find.text('30.00 pJ'), findsOneWidget);
-      expect(find.text('Operations'), findsOneWidget);
       expect(find.text('100'), findsOneWidget);
       expect(find.text('E1'), findsOneWidget);
-      expect(find.text('E2'), findsOneWidget);
+      expect(find.text('10.00 pJ'), findsOneWidget);
     });
 
     testWidgets('NmtkQuantizationTable renders correctly', (
@@ -66,9 +65,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Bit Width'), findsOneWidget);
       expect(find.text('8-bit'), findsOneWidget);
       expect(find.text('4-bit'), findsOneWidget);
+      expect(find.text('1.00%'), findsOneWidget);
+      expect(find.text('6.00%'), findsOneWidget);
     });
 
     testWidgets('NmtkSparklineChart renders correctly', (
@@ -86,6 +86,7 @@ void main() {
         ),
       );
       expect(find.text('Test Sparkline'), findsOneWidget);
+      expect(find.byType(CustomPaint), findsWidgets);
     });
 
     testWidgets('NmtkPipelineStepper renders correctly', (
@@ -124,17 +125,17 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: NmtkOutlinedButton(
-              label: 'Cancel',
-              icon: Icons.close,
+              label: 'Outline',
               onPressed: () {
                 pressed = true;
               },
+              icon: Icons.close,
             ),
           ),
         ),
       );
 
-      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('Outline'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget);
       await tester.tap(find.byType(OutlinedButton));
       expect(pressed, isTrue);

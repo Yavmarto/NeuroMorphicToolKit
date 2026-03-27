@@ -7,11 +7,28 @@ import 'package:neuro_toolkit/screens/catalog.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/screens/onboarding.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/app_provider.dart';
 
+// ignore: avoid_dynamic_calls
 final goRouter = GoRouter(
   initialLocation: '/',
+  refreshListenable: AppProvider(),
+  redirect: (context, state) {
+    final appProvider = AppProvider();
+    if (!appProvider.isInitialized) return null; // Wait for init
+    if (!appProvider.hasSeenOnboarding && state.uri.path != '/onboarding') {
+      return '/onboarding';
+    }
+    return null;
+  },
   routes: [
+    GoRoute(
+      path: '/onboarding',
+      name: 'onboarding',
+      builder: (context, state) => const OnboardingScreen(),
+    ),
     ShellRoute(
       builder: (context, state, child) => MainScreen(child: child),
       routes: [

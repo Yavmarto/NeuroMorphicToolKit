@@ -47,6 +47,10 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
   Future<void> uninstallModule(String moduleId) async {}
   @override
+  Future<void> updateModule(String moduleId) async {}
+  @override
+  Future<void> checkForUpdates() async {}
+  @override
   void closeTab(String moduleId) {}
   @override
   Stream<String>? getModuleOutput(String moduleId) => null;
