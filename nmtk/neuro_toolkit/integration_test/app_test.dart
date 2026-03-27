@@ -14,8 +14,10 @@ import 'package:provider/provider.dart';
 import 'package:path/path.dart' as p;
 
 class MockProcess implements Process {
-  final StreamController<List<int>> _stdoutController = StreamController<List<int>>.broadcast();
-  final StreamController<List<int>> _stderrController = StreamController<List<int>>.broadcast();
+  final StreamController<List<int>> _stdoutController =
+      StreamController<List<int>>.broadcast();
+  final StreamController<List<int>> _stderrController =
+      StreamController<List<int>>.broadcast();
   final Completer<int> _exitCodeCompleter = Completer<int>();
 
   @override
@@ -86,7 +88,8 @@ void main() {
     },
   );
 
-  testWidgets('End-to-end integration test (Dashboard to ToolView)', (WidgetTester tester) async {
+  testWidgets('End-to-end integration test (Dashboard to ToolView)',
+      (WidgetTester tester) async {
     // Use real ModuleProvider but mocked ProcessRunner for speed/reliability in CI
     final mockRunner = FastMockProcessRunner();
     final processManager = ProcessManager(processRunner: mockRunner);
@@ -109,7 +112,8 @@ void main() {
 
     // 2. Install a module (neurocnl)
     final installButton = find.descendant(
-      of: find.ancestor(of: find.text('CNL Studio'), matching: find.byType(Card)),
+      of: find.ancestor(
+          of: find.text('CNL Studio'), matching: find.byType(Card)),
       matching: find.text('INSTALL'),
     );
     expect(installButton, findsOneWidget);
@@ -118,7 +122,8 @@ void main() {
 
     // 3. Start module
     final startButton = find.descendant(
-      of: find.ancestor(of: find.text('CNL Studio'), matching: find.byType(Card)),
+      of: find.ancestor(
+          of: find.text('CNL Studio'), matching: find.byType(Card)),
       matching: find.text('START'),
     );
     expect(startButton, findsOneWidget);

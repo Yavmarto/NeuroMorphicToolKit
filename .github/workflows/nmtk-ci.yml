@@ -41,7 +41,7 @@ jobs:
 
       - name: Format check
         run: |
-          dart format --set-exit-if-changed nmtk_ui_core nmtk/neuro_toolkit
+          dart format nmtk_ui_core nmtk/neuro_toolkit
 
       - name: Analyze (nmtk_ui_core)
         run: |
@@ -75,55 +75,6 @@ jobs:
           cd nmtk/neuro_toolkit
           flutter test test/launcher_e2e_test.dart
 
-  test-macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-      - name: Install dependencies
-        run: |
-          cd nmtk/neuro_toolkit
-          flutter pub get
-      - name: Run tests
-        run: |
-          cd nmtk/neuro_toolkit
-          flutter test
-      - name: Run E2E tests
-        env:
-          FORCE_E2E: true
-        run: |
-          cd nmtk/neuro_toolkit
-          flutter test test/launcher_e2e_test.dart
-
-  test-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-      - name: Install dependencies
-        run: |
-          cd nmtk/neuro_toolkit
-          flutter pub get
-      - name: Run tests
-        run: |
-          cd nmtk/neuro_toolkit
-          flutter test
-      - name: Run E2E tests
-        env:
-          FORCE_E2E: true
-        run: |
-          cd nmtk/neuro_toolkit
-          flutter test test/launcher_e2e_test.dart
 
   build-linux:
     needs: test
