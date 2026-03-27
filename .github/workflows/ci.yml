@@ -86,11 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neurosim
-          git submodule update --init Neurosim
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -134,11 +130,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neurochip
-          git submodule update --init Neurochip
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -183,11 +175,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neurosense
-          git submodule update --init Neurosense
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -231,11 +219,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neurohub
-          git submodule update --init Neurohub
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -279,11 +263,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neuro-Dream-Hand
-          git submodule update --init Neuro-Dream-Hand
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -325,12 +305,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: Update required submodules
-        run: |
-          git submodule sync neurocnl
-          git submodule sync Neuro-Dream-Hand
-          git submodule update --init neurocnl
-          git submodule update --init Neuro-Dream-Hand
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -403,11 +377,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neurobench
-          git submodule update --init Neurobench
+          submodules: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -479,12 +449,8 @@ jobs:
         working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
-      - name: Update required submodules
-        run: |
-          git submodule sync ../../neurocnl
-          git submodule sync ../../Neuro-Dream-Hand
-          git submodule update --init ../../neurocnl
-          git submodule update --init ../../Neuro-Dream-Hand
+        with:
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -512,11 +478,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync neurocnl
-          git submodule update --init neurocnl
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -550,11 +512,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neurochip
-          git submodule update --init Neurochip
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -582,11 +540,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neurohub
-          git submodule update --init Neurohub
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -614,11 +568,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neurosense
-          git submodule update --init Neurosense
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -646,11 +596,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: |
-          git submodule sync Neurobench
-          git submodule update --init Neurobench
+          submodules: true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
