@@ -675,7 +675,7 @@ Add to existing `.github/workflows/ci.yml`:
 ```yaml
   # New job: Contract + Property verification
   verify-contracts:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl == 'true'
     steps:

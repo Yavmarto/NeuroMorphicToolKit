@@ -18,7 +18,7 @@ permissions:
 jobs:
   # ── Stage 1: Detect which modules changed ──────────────────────────
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       neurocnl: ${{ steps.filter.outputs.neurocnl }}
       neurodreamhand: ${{ steps.filter.outputs.neurodreamhand }}
@@ -52,7 +52,7 @@ jobs:
   verify-neurocnl:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -85,7 +85,7 @@ jobs:
   verify-neurodreamhand:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurodreamhand == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -140,7 +140,7 @@ jobs:
       needs.detect-changes.outputs.neurochip == 'true' ||
       needs.detect-changes.outputs.neurobench == 'true' ||
       needs.detect-changes.outputs.neurohub == 'true'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -188,7 +188,7 @@ jobs:
       - verify-neurocnl
       - verify-neurodreamhand
       - verify-other-modules
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Check results
         run: |

@@ -9,7 +9,7 @@ jobs:
   fix-failure:
     # Only run when CI fails
     if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     concurrency:
       group: agent-work
       cancel-in-progress: false

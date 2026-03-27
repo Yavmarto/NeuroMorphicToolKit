@@ -23,7 +23,7 @@ jobs:
       github.event_name == 'pull_request' &&
       github.event.label.name == 'merge-conflict' &&
       contains(fromJSON('["your-github-username"]'), github.event.sender.login)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: write
       pull-requests: write
@@ -119,7 +119,7 @@ jobs:
   scan-and-resolve-on-push:
     name: Scan jules/* PRs for new conflicts
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: write
       pull-requests: write
