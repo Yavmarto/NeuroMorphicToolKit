@@ -116,6 +116,7 @@ void main() {
       expect(find.text('Step 2'), findsOneWidget);
       expect(find.text('In progress'), findsOneWidget);
     });
+  });
 
     testWidgets('NmtkOutlinedButton renders correctly', (
       WidgetTester tester,

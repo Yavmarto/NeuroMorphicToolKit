@@ -40,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
           fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
@@ -490,9 +490,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init neurocnl || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -520,9 +518,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init Neurochip || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -545,9 +541,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init Neurohub || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -570,9 +564,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init Neurosense || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -595,9 +587,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init Neurobench || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'

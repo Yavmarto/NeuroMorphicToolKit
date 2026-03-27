@@ -1,0 +1,52 @@
+name: Release Docker Images
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  push-docker:
+    runs-on: self-hosted
+    strategy:
+      matrix:
+        module: [neurocnl, neurosim, neurochip, neurobench, neurosense, neurohub]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Log in to Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.module }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.module == 'neurocnl' && 'neurocnl/backend/Dockerfile' || format('{0}/Dockerfile', matrix.module == 'neurosim' && 'Neurosim' || matrix.module == 'neurochip' && 'Neurochip' || matrix.module == 'neurobench' && 'Neurobench' || matrix.module == 'neurosense' && 'Neurosense' || matrix.module == 'neurohub' && 'Neurohub') }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+             ${{ matrix.module == 'neurocnl-physics' && 'INSTALL_PHYSICS=1' || '' }}
