@@ -339,7 +339,7 @@ class ProcessManager {
         status: ModuleStatus.installed,
         installProgress: 1.0,
       );
-      _statusController.add(updatedModule);
+      _updateModuleStatus(updatedModule);
       await saveModuleState(updatedModule);
     } catch (e) {
       debugPrint('[${module.id}] installModule EXCEPTION: $e');
@@ -347,7 +347,7 @@ class ProcessManager {
         status: ModuleStatus.error,
         healthStatus: e.toString(),
       );
-      _statusController.add(updatedModule);
+      _updateModuleStatus(updatedModule);
       rethrow;
     }
   }
@@ -418,7 +418,7 @@ class ProcessManager {
 
     final updatedModuleStarting =
         module.copyWith(status: ModuleStatus.starting);
-    _statusController.add(updatedModuleStarting);
+    _updateModuleStatus(updatedModuleStarting);
 
     try {
       debugPrint(
@@ -462,7 +462,7 @@ class ProcessManager {
             status: code == 0 ? ModuleStatus.installed : ModuleStatus.error,
             healthStatus: code == 0 ? null : 'Process exited with code $code',
           );
-          _statusController.add(updatedModuleStopped);
+          _updateModuleStatus(updatedModuleStopped);
         }),
       );
 
@@ -476,7 +476,7 @@ class ProcessManager {
         status: ModuleStatus.error,
         healthStatus: e.toString(),
       );
-      _statusController.add(updatedModuleError);
+      _updateModuleStatus(updatedModuleError);
       rethrow;
     }
   }
@@ -556,12 +556,11 @@ class ProcessManager {
     debugPrint(
       'Starting health polling every 5 seconds for ${_modules.length} modules',
     );
-    _healthTimer =
-        Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
+    _healthTimer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
-          await _checkHealth(module);
+          unawaited(_checkHealth(module));
         } else if (module.status == ModuleStatus.error) {
           final nextRetry = _nextRetryTimes[module.id];
           if (nextRetry != null && DateTime.now().isAfter(nextRetry)) {
@@ -641,30 +640,29 @@ class ProcessManager {
 
     final moduleDir = _installDir(module);
     final backupDir = '$moduleDir.bak';
+    final env = BundleManager().env;
 
     try {
       // 2. Backup current directory
       onProgress?.call(0.1);
-      final dir = Directory(moduleDir);
-      if (await dir.exists()) {
-        final backup = Directory(backupDir);
-        if (await backup.exists()) {
-          await backup.delete(recursive: true);
+      if (env.directoryExists(moduleDir)) {
+        if (env.directoryExists(backupDir)) {
+          await env.deleteDirectory(backupDir, recursive: true);
         }
         // Simple rename for backup
-        await dir.rename(backupDir);
+        await env.renameDirectory(moduleDir, backupDir);
       }
 
       // 3. Re-create directory and "download" (simulate by copying back or just re-installing)
       // In a real app, this would be a git pull or download.
       // Here we'll recreate the dir and run install.
-      await Directory(moduleDir).create(recursive: true);
+      await env.createDirectory(moduleDir, recursive: true);
 
       // Restore some files from backup for simulation if needed, but here we just re-install
       // To simulate "remote" update, we can just copy backup back but pretend it's new
       // (Actually, installModule expects the source to be there).
       // Let's copy the backup back to moduleDir to simulate "downloaded" source.
-      await _copyDirectory(Directory(backupDir), moduleDir);
+      await _copyDirectoryEnv(backupDir, moduleDir, env);
 
       onProgress?.call(0.3);
 
@@ -689,8 +687,8 @@ class ProcessManager {
       final index = _modules.indexWhere((m) => m.id == moduleId);
       if (index != -1 && _modules[index].status == ModuleStatus.running) {
         // Success! Clean up backup
-        if (await Directory(backupDir).exists()) {
-          await Directory(backupDir).delete(recursive: true);
+        if (env.directoryExists(backupDir)) {
+          await env.deleteDirectory(backupDir, recursive: true);
         }
         onProgress?.call(1.0);
         debugPrint('[$moduleId] Update successful and verified.');
@@ -704,14 +702,12 @@ class ProcessManager {
         await stopModule(moduleId);
       }
 
-      final dir = Directory(moduleDir);
-      if (await dir.exists()) {
-        await dir.delete(recursive: true);
+      if (env.directoryExists(moduleDir)) {
+        await env.deleteDirectory(moduleDir, recursive: true);
       }
 
-      final backup = Directory(backupDir);
-      if (await backup.exists()) {
-        await backup.rename(moduleDir);
+      if (env.directoryExists(backupDir)) {
+        await env.renameDirectory(backupDir, moduleDir);
       }
 
       final rolledBackModule = module.copyWith(
@@ -724,14 +720,15 @@ class ProcessManager {
     }
   }
 
-  Future<void> _copyDirectory(Directory source, String destinationPath) async {
-    await Directory(destinationPath).create(recursive: true);
-    await for (final entity in source.list(recursive: false)) {
-      final newPath = p.join(destinationPath, p.basename(entity.path));
+  Future<void> _copyDirectoryEnv(
+      String source, String destination, BundleEnvironment env) async {
+    await env.createDirectory(destination, recursive: true);
+    await for (final entity in env.listDirectory(source, recursive: false)) {
+      final newPath = p.join(destination, p.basename(entity.path));
       if (entity is File) {
-        await entity.copy(newPath);
+        await env.copyFile(entity.path, newPath);
       } else if (entity is Directory) {
-        await _copyDirectory(entity, newPath);
+        await _copyDirectoryEnv(entity.path, newPath, env);
       }
     }
   }

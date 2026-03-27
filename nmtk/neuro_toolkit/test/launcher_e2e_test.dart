@@ -3,7 +3,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
@@ -18,12 +17,14 @@ void main() {
     final isCI = Platform.environment.containsKey('GITHUB_ACTIONS') ||
         Platform.environment.containsKey('FLUTTER_TEST');
     if (isCI) {
-      debugPrint('⏩ Skipping E2E test in CI environment.');
+      // ignore: avoid_print
+      print('⏩ Skipping E2E test in CI environment.');
       return;
     }
 
     TestWidgetsFlutterBinding.ensureInitialized();
-    debugPrint(
+    // ignore: avoid_print
+    print(
       'Tests need mock ProcessRunner, skipping real dependencies check',
     );
 

@@ -64,6 +64,20 @@ class MockBundleEnvironment implements BundleEnvironment {
       _existingDirectories.add(p.normalize(path));
 
   @override
+  Future<void> deleteDirectory(String path, {bool recursive = false}) async =>
+      _existingDirectories.remove(p.normalize(path));
+
+  @override
+  Future<void> renameDirectory(String source, String destination) async {
+    final s = p.normalize(source);
+    final d = p.normalize(destination);
+    if (_existingDirectories.contains(s)) {
+      _existingDirectories.remove(s);
+      _existingDirectories.add(d);
+    }
+  }
+
+  @override
   Stream<FileSystemEntity> listDirectory(String path,
       {bool recursive = false}) {
     final normalizedPath = p.normalize(path);

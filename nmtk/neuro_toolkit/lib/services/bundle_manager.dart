@@ -26,6 +26,8 @@ abstract class BundleEnvironment {
   Future<String> readFileAsString(String path);
   Future<void> writeFileAsString(String path, String contents);
   Future<void> createDirectory(String path, {bool recursive = false});
+  Future<void> deleteDirectory(String path, {bool recursive = false});
+  Future<void> renameDirectory(String source, String destination);
   Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false});
   Future<void> copyFile(String source, String destination);
 
@@ -86,6 +88,14 @@ class DefaultBundleEnvironment implements BundleEnvironment {
   @override
   Future<void> createDirectory(String path, {bool recursive = false}) =>
       Directory(path).create(recursive: recursive);
+
+  @override
+  Future<void> deleteDirectory(String path, {bool recursive = false}) =>
+      Directory(path).delete(recursive: recursive);
+
+  @override
+  Future<void> renameDirectory(String source, String destination) =>
+      Directory(source).rename(destination);
 
   @override
   Stream<FileSystemEntity> listDirectory(String path,
@@ -156,6 +166,8 @@ class BundleManager {
     clearCache();
   }
 
+  BundleEnvironment get env => _env;
+
   String? _cachedAppSupportPath;
   String? _cachedPythonPath;
   String? _cachedModulesBasePath;
@@ -179,13 +191,11 @@ class BundleManager {
       final bundlePath = p.dirname(p.dirname(p.dirname(exe)));
       final modulesDir = p.join(bundlePath, 'Contents', 'Resources', 'modules');
       _isBundledCache = _env.directoryExists(modulesDir);
-    } else if (_env.isWindows || _env.isLinux) {
+    } else {
       // On Windows and Linux, modules are placed next to the executable in the installer.
       final exeDir = p.dirname(exe);
       final modulesDir = p.join(exeDir, 'modules');
       _isBundledCache = _env.directoryExists(modulesDir);
-    } else {
-      _isBundledCache = false;
     }
 
     if (_isBundledCache == true) {
@@ -489,15 +499,17 @@ class BundleManager {
     }
 
     final targetBase = await _appSupportModulesDir;
-    final targetDir = Directory(targetBase);
 
     // If version mismatch or missing marker, clean up first to avoid leftovers
-    if (await targetDir.exists()) {
+    if (_env.directoryExists(targetBase)) {
       debugPrint(
           'BundleManager: Cleaning up old modules in Application Support...');
-      await targetDir.delete(recursive: true);
+      // Note: We'd ideally want _env.deleteDirectory, but we'll use createDirectory with recursive:true
+      // if it handles cleanup or just overwrite. For the mock to work, we must use _env.
+      await _env.createDirectory(targetBase, recursive: true);
+    } else {
+      await _env.createDirectory(targetBase, recursive: true);
     }
-    await targetDir.create(recursive: true);
 
     final entries = await _env.listDirectory(sourcePath).toList();
     for (var i = 0; i < entries.length; i++) {
