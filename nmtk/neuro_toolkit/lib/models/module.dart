@@ -25,9 +25,7 @@ class Module {
   final String uvicornTarget;
   final List<String> localDeps;
   final String version;
-  final String? remoteUrl;
-  final bool versionPinned;
-  final String? availableUpdate;
+  final String remoteVersion;
   ModuleStatus status;
   double installProgress;
   String? healthStatus;
@@ -46,10 +44,8 @@ class Module {
     this.runPath = '.',
     this.uvicornTarget = 'app.main:app',
     this.localDeps = const [],
-    this.version = '1.0.0',
-    this.remoteUrl,
-    this.versionPinned = false,
-    this.availableUpdate,
+    this.version = '0.0.0',
+    this.remoteVersion = '0.0.0',
     this.status = ModuleStatus.notInstalled,
     this.installProgress = 0.0,
     this.healthStatus,
@@ -73,10 +69,8 @@ class Module {
       uvicornTarget: json['uvicornTarget'] as String? ?? 'app.main:app',
       localDeps:
           (json['localDeps'] as List<dynamic>?)?.cast<String>() ?? const [],
-      version: json['version'] as String? ?? '1.0.0',
-      remoteUrl: json['remoteUrl'] as String?,
-      versionPinned: json['versionPinned'] as bool? ?? false,
-      availableUpdate: json['availableUpdate'] as String?,
+      version: json['version'] as String? ?? '0.0.0',
+      remoteVersion: json['remoteVersion'] as String? ?? '0.0.0',
       status: json['status'] != null
           ? ModuleStatus.values[json['status'] as int]
           : ModuleStatus.notInstalled,
@@ -100,9 +94,7 @@ class Module {
     String? uvicornTarget,
     List<String>? localDeps,
     String? version,
-    String? remoteUrl,
-    bool? versionPinned,
-    String? availableUpdate,
+    String? remoteVersion,
     ModuleStatus? status,
     double? installProgress,
     Object? healthStatus = const Object(),
@@ -122,9 +114,7 @@ class Module {
       uvicornTarget: uvicornTarget ?? this.uvicornTarget,
       localDeps: localDeps ?? this.localDeps,
       version: version ?? this.version,
-      remoteUrl: remoteUrl ?? this.remoteUrl,
-      versionPinned: versionPinned ?? this.versionPinned,
-      availableUpdate: availableUpdate ?? this.availableUpdate,
+      remoteVersion: remoteVersion ?? this.remoteVersion,
       status: status ?? this.status,
       installProgress: installProgress ?? this.installProgress,
       healthStatus: healthStatus is String? ? healthStatus : this.healthStatus,
@@ -145,9 +135,7 @@ class Module {
         'runPath': runPath,
         'uvicornTarget': uvicornTarget,
         'version': version,
-        'remoteUrl': remoteUrl,
-        'versionPinned': versionPinned,
-        'availableUpdate': availableUpdate,
+        'remoteVersion': remoteVersion,
         'status': status.index,
         'installProgress': installProgress,
         'healthStatus': healthStatus,

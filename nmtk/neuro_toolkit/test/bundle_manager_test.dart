@@ -38,11 +38,10 @@ class MockBundleEnvironment implements BundleEnvironment {
 
   @override
   Future<void> deleteDirectory(String path, {bool recursive = false}) async {
-    final normalizedPath = p.normalize(path);
-    _existingDirectories.remove(normalizedPath);
-    _existingDirectories
-        .removeWhere((dir) => dir.startsWith('$normalizedPath/'));
-    _files.removeWhere((file, _) => file.startsWith('$normalizedPath/'));
+    final normalized = p.normalize(path);
+    _existingDirectories.remove(normalized);
+    _existingDirectories.removeWhere((dir) => dir.startsWith('$normalized/'));
+    _files.removeWhere((file, contents) => file.startsWith('$normalized/'));
   }
 
   @override

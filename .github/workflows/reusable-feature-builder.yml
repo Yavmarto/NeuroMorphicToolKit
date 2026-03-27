@@ -20,6 +20,8 @@ on:
     secrets:
       JULES_API_KEY:
         required: true
+      JULES_API_KEY_F:
+        required: false
 
 jobs:
   sdd-context:
@@ -38,10 +40,42 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Invoke Jules to build feature
+      - name: Invoke Jules to build feature (primary key)
+        id: jules-primary
+        continue-on-error: true
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            ════════════════════════════════════════
+            ## YOUR TASK: Implement the following feature
+            ════════════════════════════════════════
+
+            ## ${{ inputs.issue_title }}
+
+            ${{ inputs.issue_body }}
+
+            Implementation Guidelines:
+            1. **Understand** - Read the issue carefully, identify scope and acceptance criteria
+            2. **Plan** - Identify which files need to change and why
+            3. **Implement** - Write clean, idiomatic code following existing conventions
+            4. **Test** - Add or update tests to cover the new functionality
+            5. **PR** - Open a pull request with a clear description of what changed and why
+
+            Constraints:
+            - Follow existing code style and architecture patterns
+            - Do not break existing tests
+            - Keep changes focused — only change what is needed for this feature
+            - If the issue is ambiguous, make the most reasonable interpretation
+              and document your assumption in the PR body
+
+      - name: Invoke Jules to build feature (fallback key)
+        if: steps.jules-primary.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
 

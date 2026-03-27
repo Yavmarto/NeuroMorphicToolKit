@@ -14,3 +14,4 @@ jobs:
       sender_login: ${{ github.event.sender.login }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}

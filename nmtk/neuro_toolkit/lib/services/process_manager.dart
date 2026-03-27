@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -99,6 +100,7 @@ class ProcessManager {
   ProcessManager._internal();
 
   ProcessRunner _processRunner = DefaultProcessRunner();
+  // ignore: unused_field
   http.Client _httpClient = http.Client();
 
   final Map<String, Process> _runningProcesses = {};
@@ -348,7 +350,7 @@ class ProcessManager {
         status: ModuleStatus.installed,
         installProgress: 1.0,
       );
-      _statusController.add(updatedModule);
+      _updateModuleStatus(updatedModule);
       await saveModuleState(updatedModule);
     } catch (e) {
       debugPrint('[${module.id}] installModule EXCEPTION: $e');
@@ -356,7 +358,7 @@ class ProcessManager {
         status: ModuleStatus.error,
         healthStatus: e.toString(),
       );
-      _statusController.add(updatedModule);
+      _updateModuleStatus(updatedModule);
       rethrow;
     }
   }
@@ -364,19 +366,40 @@ class ProcessManager {
   /// Kill any leftover process listening on a port (from a previous crash/session).
   Future<void> _killProcessOnPort(int port) async {
     try {
-      final result = await _processRunner.run('lsof', ['-ti', ':$port']);
-      if (result.exitCode == 0) {
-        final pids = result.stdout.toString().trim().split('\n');
-        for (final pid in pids) {
-          if (pid.isNotEmpty) {
-            debugPrint('Killing leftover process $pid on port $port');
-            Process.killPid(int.parse(pid), ProcessSignal.sigkill);
+      if (Platform.isWindows) {
+        // Windows: netstat -ano | findstr :<port>
+        final result = await _processRunner.run('netstat', ['-ano']);
+        if (result.exitCode == 0) {
+          final lines = result.stdout.toString().split('\n');
+          for (final line in lines) {
+            if (line.contains(':$port') && line.contains('LISTENING')) {
+              final parts = line.trim().split(RegExp(r'\s+'));
+              if (parts.length >= 5) {
+                final pid = parts.last;
+                debugPrint('Killing leftover process $pid on port $port');
+                await _processRunner.run('taskkill', ['/F', '/PID', pid]);
+              }
+            }
           }
         }
-        // Brief wait for port to be released
-        await Future<void>.delayed(const Duration(milliseconds: 500));
+      } else {
+        // macOS/Linux: lsof -ti :<port>
+        final result = await _processRunner.run('lsof', ['-ti', ':$port']);
+        if (result.exitCode == 0) {
+          final pids = result.stdout.toString().trim().split('\n');
+          for (final pid in pids) {
+            if (pid.isNotEmpty) {
+              debugPrint('Killing leftover process $pid on port $port');
+              Process.killPid(int.parse(pid), ProcessSignal.sigkill);
+            }
+          }
+        }
       }
-    } catch (_) {}
+      // Brief wait for port to be released
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    } catch (e) {
+      debugPrint('Error killing process on port $port: $e');
+    }
   }
 
   Future<void> startModule(Module module, {bool isRetry = false}) async {
@@ -427,8 +450,9 @@ class ProcessManager {
 
     final updatedModuleStarting =
         module.copyWith(status: ModuleStatus.starting);
-    _statusController.add(updatedModuleStarting);
     _updateModuleStatus(updatedModuleStarting);
+
+    final startTime = DateTime.now();
 
     try {
       debugPrint(
@@ -465,6 +489,11 @@ class ProcessManager {
       unawaited(
         process.exitCode.then((code) {
           _runningProcesses.remove(module.id);
+          unawaited(
+              AnalyticsService().trackEvent('module_process_exit', properties: {
+            'moduleId': module.id,
+            'exitCode': code,
+          }));
           _outputControllers[module.id]?.close();
           _outputControllers.remove(module.id);
 
@@ -472,21 +501,27 @@ class ProcessManager {
             status: code == 0 ? ModuleStatus.installed : ModuleStatus.error,
             healthStatus: code == 0 ? null : 'Process exited with code $code',
           );
-          _statusController.add(updatedModuleStopped);
+          _updateModuleStatus(updatedModuleStopped);
         }),
       );
 
       // Give it some time to start up
       await Future<void>.delayed(const Duration(seconds: 2));
+      final success = await _checkHealth(module);
+
+      final duration = DateTime.now().difference(startTime).inMilliseconds;
       unawaited(
-        _checkHealth(updatedModuleStarting),
-      );
+          AnalyticsService().trackEvent('module_startup_metric', properties: {
+        'moduleId': module.id,
+        'durationMs': duration,
+        'success': success,
+      }));
     } catch (e) {
       final updatedModuleError = module.copyWith(
         status: ModuleStatus.error,
         healthStatus: e.toString(),
       );
-      _statusController.add(updatedModuleError);
+      _updateModuleStatus(updatedModuleError);
       rethrow;
     }
   }
@@ -514,15 +549,25 @@ class ProcessManager {
     await exitFuture;
   }
 
-  Future<void> _checkHealth(Module module) async {
-    if (module.port == null) return;
+  Future<bool> _checkHealth(Module module) async {
+    if (module.port == null) return false;
     try {
       final uri = Uri.parse('http://127.0.0.1:${module.port}/health');
 
-      final response =
-          await _httpClient.get(uri).timeout(const Duration(seconds: 2));
-      final body = response.body;
-      final statusCode = response.statusCode;
+      String body;
+      int statusCode;
+
+      if (kIsWeb) {
+        final response =
+            await http.get(uri).timeout(const Duration(seconds: 2));
+        body = response.body;
+        statusCode = response.statusCode;
+      } else {
+        final response =
+            await _httpClient.get(uri).timeout(const Duration(seconds: 2));
+        body = response.body;
+        statusCode = response.statusCode;
+      }
 
       ModuleStatus newStatus;
       String? healthInfo;
@@ -552,12 +597,14 @@ class ProcessManager {
         );
         _updateModuleStatus(updatedModule);
       }
+      return statusCode == 200 || statusCode == 404;
     } catch (e) {
       if (module.status == ModuleStatus.running ||
           module.status == ModuleStatus.degraded) {
         debugPrint('[${module.id}] Health check error: $e');
         await _handleFailure(module, 'Health check error: $e');
       }
+      return false;
     }
   }
 
@@ -571,7 +618,7 @@ class ProcessManager {
       for (var module in _modules) {
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
-          await _checkHealth(module);
+          unawaited(_checkHealth(module));
         } else if (module.status == ModuleStatus.error) {
           final nextRetry = _nextRetryTimes[module.id];
           if (nextRetry != null && DateTime.now().isAfter(nextRetry)) {
@@ -648,6 +695,113 @@ class ProcessManager {
       }
     } catch (e) {
       debugPrint('Error loading module state: $e');
+    }
+  }
+
+  Future<void> updateModule(
+    Module module, {
+    void Function(double)? onProgress,
+  }) async {
+    final moduleId = module.id;
+    debugPrint('[$moduleId] Updating module...');
+
+    // 1. Stop if running
+    if (_runningProcesses.containsKey(moduleId)) {
+      await stopModule(moduleId);
+    }
+
+    final moduleDir = _installDir(module);
+    final backupDir = '$moduleDir.bak';
+    final env = BundleManager().env;
+
+    try {
+      // 2. Backup current directory
+      onProgress?.call(0.1);
+      if (env.directoryExists(moduleDir)) {
+        if (env.directoryExists(backupDir)) {
+          await env.deleteDirectory(backupDir, recursive: true);
+        }
+        // Simple rename for backup
+        await env.renameDirectory(moduleDir, backupDir);
+      }
+
+      // 3. Re-create directory and "download" (simulate by copying back or just re-installing)
+      // In a real app, this would be a git pull or download.
+      // Here we'll recreate the dir and run install.
+      await env.createDirectory(moduleDir, recursive: true);
+
+      // Restore some files from backup for simulation if needed, but here we just re-install
+      // To simulate "remote" update, we can just copy backup back but pretend it's new
+      // (Actually, installModule expects the source to be there).
+      // Let's copy the backup back to moduleDir to simulate "downloaded" source.
+      await _copyDirectoryEnv(backupDir, moduleDir, env);
+
+      onProgress?.call(0.3);
+
+      // 4. Install new version
+      // We pass a modified module with the new version
+      final updatedModule = module.copyWith(
+        version: module.remoteVersion,
+        status: ModuleStatus.updating,
+      );
+      _updateModuleStatus(updatedModule);
+
+      await installModule(updatedModule,
+          onProgress: (p) => onProgress?.call(0.3 + p * 0.5));
+
+      // 5. Verify with health check
+      onProgress?.call(0.9);
+      await startModule(updatedModule);
+
+      // Wait for health check to stabilize
+      await Future<void>.delayed(const Duration(seconds: 5));
+
+      final index = _modules.indexWhere((m) => m.id == moduleId);
+      if (index != -1 && _modules[index].status == ModuleStatus.running) {
+        // Success! Clean up backup
+        if (env.directoryExists(backupDir)) {
+          await env.deleteDirectory(backupDir, recursive: true);
+        }
+        onProgress?.call(1.0);
+        debugPrint('[$moduleId] Update successful and verified.');
+      } else {
+        throw Exception('Health check failed after update');
+      }
+    } catch (e) {
+      debugPrint('[$moduleId] Update failed: $e. Rolling back...');
+      // 6. Rollback
+      if (_runningProcesses.containsKey(moduleId)) {
+        await stopModule(moduleId);
+      }
+
+      if (env.directoryExists(moduleDir)) {
+        await env.deleteDirectory(moduleDir, recursive: true);
+      }
+
+      if (env.directoryExists(backupDir)) {
+        await env.renameDirectory(backupDir, moduleDir);
+      }
+
+      final rolledBackModule = module.copyWith(
+        status: ModuleStatus.installed,
+        healthStatus: 'Update failed: $e. Rolled back to ${module.version}',
+      );
+      _updateModuleStatus(rolledBackModule);
+      await saveModuleState(rolledBackModule);
+      rethrow;
+    }
+  }
+
+  Future<void> _copyDirectoryEnv(
+      String source, String destination, BundleEnvironment env) async {
+    await env.createDirectory(destination, recursive: true);
+    await for (final entity in env.listDirectory(source, recursive: false)) {
+      final newPath = p.join(destination, p.basename(entity.path));
+      if (entity is File) {
+        await env.copyFile(entity.path, newPath);
+      } else if (entity is Directory) {
+        await _copyDirectoryEnv(entity.path, newPath, env);
+      }
     }
   }
 

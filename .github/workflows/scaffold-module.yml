@@ -37,7 +37,9 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Invoke Jules to scaffold module
+      - name: Invoke Jules to scaffold module (primary key)
+        id: jules-primary
+        continue-on-error: true
         uses: google-labs-code/jules-action@v1.0.0
         with:
           prompt: |
@@ -94,4 +96,64 @@ jobs:
             - No `pass` bodies or `raise NotImplementedError` — use minimal working implementations
             - Tests must pass on first run
           jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ github.event.repository.default_branch }}
+
+      - name: Invoke Jules to scaffold module (fallback key)
+        if: steps.jules-primary.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          prompt: |
+            Scaffold a new NMTK module called "${{ github.event.inputs.module_name }}".
+
+            **Purpose:** ${{ github.event.inputs.module_purpose }}
+            **Stack:** ${{ github.event.inputs.module_type }}
+            **HTTP port (if applicable):** ${{ github.event.inputs.exposed_port }}
+
+            ---
+
+            ## Files to create for ALL module types
+
+            - `README.md` — Module overview, purpose, architecture, how to run locally, API surface
+            - `CHANGELOG.md` — Empty changelog with `## [Unreleased]` heading
+            - `.github/workflows/ci.yml` — CI that installs dependencies and runs the test suite
+
+            ---
+
+            ## Additional files by stack
+
+            ### `python-fastapi-docker` and `mixed-python-flutter` (Python backend)
+            - `pyproject.toml` — Modern Python packaging config using `hatchling` as build backend, `pytest` + `httpx` as dev deps
+            - `src/${{ github.event.inputs.module_name }}/main.py` — FastAPI app with a `/health` endpoint returning `{"status": "ok", "module": "${{ github.event.inputs.module_name }}"}`
+            - `src/${{ github.event.inputs.module_name }}/__init__.py` — Version string only
+            - `tests/__init__.py`
+            - `tests/test_health.py` — Test the `/health` endpoint using `pytest` + `httpx.AsyncClient`
+            - `Dockerfile` — Multi-stage build (builder + slim runtime), runs as non-root user
+            - `docker-compose.yml` — Exposes service on port ${{ github.event.inputs.exposed_port }}, mounts source for hot reload in dev
+            - `.env.example` — Document every required environment variable with a comment
+            - `Makefile` — Targets: `dev` (docker compose up), `test` (pytest), `build` (docker build), `lint` (ruff)
+
+            ### `python-cli` modules
+            - Same Python layout as above but use `typer` as the CLI framework instead of FastAPI
+            - Entrypoint command should be named after the module in lowercase
+
+            ### `flutter-dart` and `mixed-python-flutter` (Flutter frontend)
+            - Standard Flutter project structure
+            - `lib/main.dart` — Minimal `MaterialApp` shell with a placeholder home screen
+            - `test/widget_test.dart` — Basic widget smoke test
+            - `pubspec.yaml` — With `provider` and `http` as dependencies
+
+            ---
+
+            ## NMTK Integration rules
+            - The NMTK Flutter desktop app communicates with Python backends over **localhost REST**
+            - Docker containers are managed by the NMTK daemon — do NOT hard-code external URLs
+            - Every HTTP module MUST expose `GET /health` returning `{"status": "ok"}`
+            - Directory names use lowercase-with-hyphens convention
+            - Module names in code use PascalCase matching the input module name
+
+            ## Quality bar
+            - All scaffolded code must run immediately after `make dev` or `flutter run` — no stubs that crash
+            - No `pass` bodies or `raise NotImplementedError` — use minimal working implementations
+            - Tests must pass on first run
+          jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           starting_branch: ${{ github.event.repository.default_branch }}

@@ -120,11 +120,11 @@ services:
       - "${NEUROHUB_PORT:-8005}:8000"
     environment:
       - PYTHONUNBUFFERED=1
-      - NEUROSIM_URL=http://neurosim:8000
-      - NEUROCHIP_URL=http://neurochip:8000
-      - NEUROBENCH_URL=http://neurobench:8000
-      - NEUROSENSE_URL=http://neurosense:8000
-      - NEUROCNL_URL=http://neurocnl:8000
+      - NEUROSIM_URL=${NEUROSIM_URL:-http://neurosim:8000}
+      - NEUROCHIP_URL=${NEUROCHIP_URL:-http://neurochip:8000}
+      - NEUROBENCH_URL=${NEUROBENCH_URL:-http://neurobench:8000}
+      - NEUROSENSE_URL=${NEUROSENSE_URL:-http://neurosense:8000}
+      - NEUROCNL_URL=${NEUROCNL_URL:-http://neurocnl:8000}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -147,6 +147,90 @@ services:
       neurosense:
         condition: service_healthy
 
+  prometheus:
+    image: prom/prometheus:v2.44.0
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - nmtk-network
+    profiles:
+      - monitoring
+
+  loki:
+    image: grafana/loki:2.8.2
+    container_name: loki
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    networks:
+      - nmtk-network
+    profiles:
+      - monitoring
+
+  promtail:
+    image: grafana/promtail:2.8.2
+    container_name: promtail
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - nmtk-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:9.5.2
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - nmtk-network
+    profiles:
+      - monitoring
+    depends_on:
+      - prometheus
+      - loki
+
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    container_name: alertmanager
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    networks:
+      - nmtk-network
+    profiles:
+      - monitoring
+
 networks:
   nmtk-network:
     driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:

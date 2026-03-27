@@ -53,3 +53,4 @@ jobs:
       issue_author: ${{ needs.implement.outputs.issue_author || '' }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}

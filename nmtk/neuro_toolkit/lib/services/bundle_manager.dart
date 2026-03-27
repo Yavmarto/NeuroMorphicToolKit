@@ -26,6 +26,8 @@ abstract class BundleEnvironment {
   Future<String> readFileAsString(String path);
   Future<void> writeFileAsString(String path, String contents);
   Future<void> createDirectory(String path, {bool recursive = false});
+  Future<void> deleteDirectory(String path, {bool recursive = false});
+  Future<void> renameDirectory(String source, String destination);
   Stream<FileSystemEntity> listDirectory(String path, {bool recursive = false});
   Future<void> copyFile(String source, String destination);
   Future<void> deleteDirectory(String path, {bool recursive = false});
@@ -161,6 +163,8 @@ class BundleManager {
     clearCache();
   }
 
+  BundleEnvironment get env => _env;
+
   String? _cachedAppSupportPath;
   String? _cachedPythonPath;
   String? _cachedModulesBasePath;
@@ -182,16 +186,11 @@ class BundleManager {
       }
       // Distinguish standalone (has Resources/modules/) from debug (doesn't).
       final bundlePath = p.dirname(p.dirname(p.dirname(exe)));
-      final modulesDir = p.join(bundlePath, 'Contents', 'Resources', 'modules');
-      _isBundledCache = _env.directoryExists(modulesDir);
+      final modulesDirPath =
+          p.join(bundlePath, 'Contents', 'Resources', 'modules');
+      _isBundledCache = _env.directoryExists(modulesDirPath);
     } else if (_env.isWindows || _env.isLinux) {
       // On Windows and Linux, modules are placed next to the executable in the installer.
-      final exeDir = p.dirname(exe);
-      final modulesDir = p.join(exeDir, 'modules');
-      _isBundledCache = _env.directoryExists(modulesDir);
-    } else if (_env.isLinux) {
-      // On Linux (AppImage), modules are usually in usr/bin/modules relative to AppRun,
-      // but Platform.resolvedExecutable points to the actual binary in the mounted squashfs.
       final exeDir = p.dirname(exe);
       final modulesDir = p.join(exeDir, 'modules');
       _isBundledCache = _env.directoryExists(modulesDir);
@@ -310,9 +309,9 @@ class BundleManager {
     debugPrint('BundleManager: probing known paths...');
     final List<String> knownPaths = [];
 
-    if (Platform.isMacOS) {
-      final home = Platform.environment['HOME'] ??
-          '/Users/${Platform.environment['USER']}';
+    if (_env.isMacOS) {
+      final home = _env.environment['HOME'] ??
+          '/Users/${_env.environment['USER']}';
       knownPaths.addAll([
         '/opt/homebrew/bin/python3',
         '/opt/homebrew/bin/python',
@@ -494,6 +493,7 @@ class BundleManager {
     if (!isBundled) return;
 
     final sourcePath = bundledModulesPath;
+    final entries = await _env.listDirectory(sourcePath).toList();
     if (!_env.directoryExists(sourcePath)) {
       debugPrint('BundleManager: no bundled modules at $sourcePath');
       throw Exception('Bundled modules not found at $sourcePath');
@@ -511,12 +511,13 @@ class BundleManager {
 
     final entries = await _env.listDirectory(sourcePath).toList();
     for (var i = 0; i < entries.length; i++) {
-      if (entries[i] is Directory) {
-        final moduleName = p.basename(entries[i].path);
+      final entry = entries[i];
+      if (_env.directoryExists(entry.path)) {
+        final moduleName = p.basename(entry.path);
         final destPath = p.join(targetBase, moduleName);
 
         debugPrint('BundleManager: extracting $moduleName...');
-        await _copyDirectory(entries[i] as Directory, destPath);
+        await _copyDirectory(Directory(entry.path), destPath);
       }
       onProgress?.call((i + 1) / entries.length);
     }

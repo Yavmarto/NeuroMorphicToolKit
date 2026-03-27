@@ -65,6 +65,7 @@ class ModuleProvider with ChangeNotifier {
       }
 
       await _processManager.init(_modules);
+      await checkForUpdates();
 
       // Check for updates on startup
       unawaited(checkForUpdates());
@@ -204,38 +205,9 @@ class ModuleProvider with ChangeNotifier {
     }
   }
 
-  Future<void> checkForUpdates() async {
-    // Check for launcher update
-    _pendingLauncherUpdate = await _updateService.checkForLauncherUpdate();
-    notifyListeners();
-
-    // Check for module updates
-    for (var i = 0; i < _modules.length; i++) {
-      if (_modules[i].status == ModuleStatus.installed ||
-          _modules[i].status == ModuleStatus.running ||
-          _modules[i].status == ModuleStatus.degraded ||
-          _modules[i].status == ModuleStatus.error) {
-        final newVersion =
-            await _updateService.checkForModuleUpdate(_modules[i]);
-        if (newVersion != null) {
-          _modules[i] = _modules[i].copyWith(availableUpdate: newVersion);
-          notifyListeners();
-        }
-      }
-    }
-  }
-
   Future<void> updateModule(String moduleId) async {
     final index = _modules.indexWhere((Module m) => m.id == moduleId);
-    if (index == -1 || _modules[index].availableUpdate == null) return;
-
-    final targetVersion = _modules[index].availableUpdate!;
-
-    // If running, stop first
-    if (_modules[index].status == ModuleStatus.running ||
-        _modules[index].status == ModuleStatus.degraded) {
-      await stopModule(moduleId);
-    }
+    if (index == -1) return;
 
     _modules[index] = _modules[index].copyWith(
       status: ModuleStatus.updating,
@@ -244,71 +216,16 @@ class ModuleProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _updateService.performDifferentialUpdate(
+      await _processManager.updateModule(
         _modules[index],
-        targetVersion,
-        onProgress: (progress) {
+        onProgress: (double progress) {
           _modules[index] = _modules[index].copyWith(installProgress: progress);
           notifyListeners();
         },
       );
-
-      // After downloading files, we need to reinstall to ensure deps are correct
-      await _processManager.installModule(
-        _modules[index],
-        onProgress: (progress) {
-          // Keep it at 1.0 or update with install progress
-          _modules[index] = _modules[index].copyWith(installProgress: progress);
-          notifyListeners();
-        },
-      );
-
-      _modules[index] = _modules[index].copyWith(
-        status: ModuleStatus.installed,
-        version: targetVersion,
-        availableUpdate: null,
-      );
-      await _processManager.saveModuleState(_modules[index]);
-      notifyListeners();
     } catch (e) {
       debugPrint('Update failed for $moduleId: $e');
-      _modules[index] = _modules[index].copyWith(status: ModuleStatus.error);
-      notifyListeners();
     }
-  }
-
-  void setUpdateChannel(UpdateChannel channel) {
-    _updateService.channel = channel;
-    notifyListeners();
-    // Re-check updates for the new channel
-    checkForUpdates();
-  }
-
-  Future<void> setVersionPinned(String moduleId, bool pinned) async {
-    final index = _modules.indexWhere((Module m) => m.id == moduleId);
-    if (index == -1) return;
-
-    _modules[index] = _modules[index].copyWith(
-      versionPinned: pinned,
-      availableUpdate: pinned ? null : _modules[index].availableUpdate,
-    );
-    await _processManager.saveModuleState(_modules[index]);
-    notifyListeners();
-
-    if (!pinned) {
-      // Re-check if we unpinned
-      final newVersion =
-          await _updateService.checkForModuleUpdate(_modules[index]);
-      if (newVersion != null) {
-        _modules[index] = _modules[index].copyWith(availableUpdate: newVersion);
-        notifyListeners();
-      }
-    }
-  }
-
-  void dismissLauncherUpdate() {
-    _pendingLauncherUpdate = null;
-    notifyListeners();
   }
 
   Future<void> uninstallModule(String moduleId) async {
@@ -335,6 +252,29 @@ class ModuleProvider with ChangeNotifier {
   void closeTab(String moduleId) {
     _activeModuleIds.remove(moduleId);
     notifyListeners();
+  }
+
+  Future<void> checkForUpdates() async {
+    try {
+      final jsonString =
+          await rootBundle.loadString('assets/remote_modules.json');
+      final List<dynamic> jsonList = jsonDecode(jsonString) as List<dynamic>;
+      final Map<String, String> remoteVersions = {
+        for (var item in jsonList)
+          (item as Map<String, dynamic>)['id'] as String:
+              item['version'] as String
+      };
+
+      for (var i = 0; i < _modules.length; i++) {
+        final remoteVersion = remoteVersions[_modules[i].id];
+        if (remoteVersion != null) {
+          _modules[i] = _modules[i].copyWith(remoteVersion: remoteVersion);
+        }
+      }
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Update check failed: $e');
+    }
   }
 
   Stream<String>? getModuleOutput(String moduleId) {

@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+env:
+  AGENT_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+  RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+
 permissions:
   contents: read
   pull-requests: read
@@ -16,6 +20,8 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+    env:
+      RUNNER_TOOL_CACHE: /tmp/tool_cache
     outputs:
       neurosim: ${{ steps.filter.outputs.neurosim }}
       neurochip: ${{ steps.filter.outputs.neurochip }}
@@ -34,7 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
           fetch-depth: 0
       - uses: dorny/paths-filter@v3
         id: filter
@@ -80,23 +86,25 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosim == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurosim
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurosim || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
-            cd Neurosim
-            pip install -e . && pip install pytest httpx ruff mypy
+            pip install -e ./Neurosim && pip install pytest httpx ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
@@ -124,23 +132,25 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurochip/neurochip
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurochip || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
-            cd Neurochip/neurochip
-            pip install poetry && poetry install
+            pip install poetry && cd Neurochip/neurochip && poetry install
           else
             echo "Submodule missing, skipping"
           fi
@@ -169,23 +179,25 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurosense/neurosense
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurosense || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
-            cd Neurosense/neurosense
-            pip install -e ".[dev]" && pip install ruff mypy
+            pip install -e "./Neurosense/neurosense[dev]" && pip install ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
@@ -213,23 +225,25 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurohub/neurohub
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurohub || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
-            cd Neurohub/neurohub
-            pip install -e . && pip install pytest httpx ruff mypy
+            pip install -e ./Neurohub/neurohub && pip install pytest httpx ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
@@ -257,23 +271,25 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurodreamhand == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neuro-Dream-Hand
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neuro-Dream-Hand || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install dependencies
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
-            cd Neuro-Dream-Hand
-            pip install -e . && pip install pytest ruff mypy
+            pip install -e ./Neuro-Dream-Hand && pip install pytest ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
@@ -305,6 +321,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update required submodules
         run: |
           git submodule update --init neurocnl || true
@@ -312,11 +332,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install core package
         run: |
           if [ -d "neurocnl" ] && [ -f "neurocnl/pyproject.toml" ]; then
-            cd neurocnl
-            pip install -e . && pip install pytest httpx ruff mypy
+            pip install -e ./neurocnl && pip install pytest httpx ruff mypy
           else
             echo "neurocnl missing, skipping install"
           fi
@@ -364,7 +385,7 @@ jobs:
         run: |
           if [ -f "neurocnl/backend/requirements.txt" ]; then
             cd neurocnl/backend
-            pytest --tb=short
+            PYTHONPATH=. pytest backend/tests --tb=short
           else
             echo "neurocnl/backend missing, skipping backend tests"
           fi
@@ -373,18 +394,21 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurobench/neurobench
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Set up toolcache
+        run: |
+          mkdir -p "${{ github.workspace }}/.toolcache"
+          echo "RUNNER_TOOL_CACHE=${{ github.workspace }}/.toolcache" >> $GITHUB_ENV
       - name: Update submodule
         run: git submodule update --init Neurobench || true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_python_tool_cache
       - name: Install poetry
         run: |
           if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
@@ -393,8 +417,7 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
-            cd Neurobench/neurobench
-            poetry install
+            cd Neurobench/neurobench && poetry install
           fi
       - name: Lint with ruff
         run: |
@@ -420,71 +443,54 @@ jobs:
     needs: detect-changes
     if: needs.detect-changes.outputs.nmtk_ui_core == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: nmtk_ui_core
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: false
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
         run: |
-          cd nmtk_ui_core
-          flutter pub get
+          flutter pub get --directory nmtk_ui_core
       - name: Analyze
         run: |
-          cd nmtk_ui_core
-          flutter analyze
+          flutter analyze --directory nmtk_ui_core
       - name: Run tests
         run: |
-          cd nmtk_ui_core
-          flutter test
+          cd nmtk_ui_core && flutter test
 
   test-neurotoolkit:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurotoolkit == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: nmtk/neuro_toolkit
     steps:
       - uses: actions/checkout@v4
-      - name: Update required submodules
-        run: |
-          git submodule update --init ../../neurocnl || true
-          git submodule update --init ../../Neuro-Dream-Hand || true
+        with:
+          submodules: false
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
       - name: Install dependencies
         run: |
-          cd nmtk/neuro_toolkit
-          flutter pub get
+          flutter pub get --directory nmtk/neuro_toolkit
       - name: Analyze
         run: |
-          cd nmtk/neuro_toolkit
-          flutter analyze
+          flutter analyze --directory nmtk/neuro_toolkit
       - name: Run tests
         run: |
-          cd nmtk/neuro_toolkit
-          flutter test
+          cd nmtk/neuro_toolkit && flutter test
 
   test-neurocnl-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: neurocnl/frontend
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init neurocnl || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -492,35 +498,27 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
-            cd neurocnl/frontend
-            flutter pub get
+            flutter pub get --directory neurocnl/frontend
           fi
       - name: Analyze
         run: |
           if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
-            cd neurocnl/frontend
-            flutter analyze
+            flutter analyze --directory neurocnl/frontend
           fi
       - name: Run tests
         run: |
           if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
-            cd neurocnl/frontend
-            flutter test
+            cd neurocnl/frontend && flutter test
           fi
 
   test-neurochip-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurochip/frontend
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init Neurochip || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -528,29 +526,22 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/frontend" ] && [ -f "Neurochip/frontend/pubspec.yaml" ]; then
-            cd Neurochip/frontend
-            flutter pub get
+            flutter pub get --directory Neurochip/frontend
           fi
       - name: Analyze
         run: |
           if [ -d "Neurochip/frontend" ] && [ -f "Neurochip/frontend/pubspec.yaml" ]; then
-            cd Neurochip/frontend
-            flutter analyze
+            flutter analyze --directory Neurochip/frontend
           fi
 
   test-neurohub-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurohub/frontend
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init Neurohub || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -558,29 +549,22 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/frontend" ] && [ -f "Neurohub/frontend/pubspec.yaml" ]; then
-            cd Neurohub/frontend
-            flutter pub get
+            flutter pub get --directory Neurohub/frontend
           fi
       - name: Analyze
         run: |
           if [ -d "Neurohub/frontend" ] && [ -f "Neurohub/frontend/pubspec.yaml" ]; then
-            cd Neurohub/frontend
-            flutter analyze
+            flutter analyze --directory Neurohub/frontend
           fi
 
   test-neurosense-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurosense/frontend
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init Neurosense || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -588,29 +572,22 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/frontend" ] && [ -f "Neurosense/frontend/pubspec.yaml" ]; then
-            cd Neurosense/frontend
-            flutter pub get
+            flutter pub get --directory Neurosense/frontend
           fi
       - name: Analyze
         run: |
           if [ -d "Neurosense/frontend" ] && [ -f "Neurosense/frontend/pubspec.yaml" ]; then
-            cd Neurosense/frontend
-            flutter analyze
+            flutter analyze --directory Neurosense/frontend
           fi
 
   test-neurobench-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench_frontend == 'true'
     runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: Neurobench/frontend
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init Neurobench || true
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -618,14 +595,12 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -d "Neurobench/frontend" ] && [ -f "Neurobench/frontend/pubspec.yaml" ]; then
-            cd Neurobench/frontend
-            flutter pub get
+            flutter pub get --directory Neurobench/frontend
           fi
       - name: Analyze
         run: |
           if [ -d "Neurobench/frontend" ] && [ -f "Neurobench/frontend/pubspec.yaml" ]; then
-            cd Neurobench/frontend
-            flutter analyze
+            flutter analyze --directory Neurobench/frontend
           fi
 
   # Summary job that branch protection can require

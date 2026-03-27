@@ -20,6 +20,8 @@ on:
     secrets:
       JULES_API_KEY:
         required: true
+      JULES_API_KEY_F:
+        required: false
 
 jobs:
   sdd-context:
@@ -38,10 +40,34 @@ jobs:
       pull-requests: write
 
     steps:
-      - name: Invoke Jules on Unblocked Issue
+      - name: Invoke Jules on Unblocked Issue (primary key)
+        id: jules-primary
+        continue-on-error: true
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            ════════════════════════════════════════
+            ## YOUR TASK: Implement unblocked issue
+            ════════════════════════════════════════
+
+            A previously blocked issue is now unblocked and ready for implementation:
+
+            ## ${{ inputs.issue_title }}
+
+            ${{ inputs.issue_body }}
+
+            This issue was waiting on a dependency that has just been resolved.
+            Please implement it now, following the project's coding standards.
+            Add tests and open a pull request.
+
+      - name: Invoke Jules on Unblocked Issue (fallback key)
+        if: steps.jules-primary.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
 

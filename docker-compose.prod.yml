@@ -1,0 +1,70 @@
+services:
+  neurocnl:
+    restart: always
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurosim:
+    restart: always
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurochip:
+    restart: always
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurobench:
+    restart: always
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurosense:
+    restart: always
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurohub:
+    restart: always
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurocnl-physics:
+    restart: always
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
