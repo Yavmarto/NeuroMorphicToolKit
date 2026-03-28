@@ -21,7 +21,8 @@ on:
         description: 'Label that triggered this workflow'
         required: false
         type: string
-        default: ' + (bug if wtype == bug else (unblocked if wtype == unblocked else feature)) +       issue_number:
+        default: 'unblocked'
+      issue_number:
         description: 'GitHub Issue Number'
         required: false
         type: string
