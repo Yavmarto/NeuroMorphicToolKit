@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-feature:
-    if: ${{ github.event.label.name == 'feature' || github.event.label.name == 'agent' }}
+    if: ${{ github.event.label.name == 'feature' || github.event.label.name == 'agent' || github.event.label.name == 'jules' }}
     uses: ./.github/workflows/reusable-feature-builder.yml
     with:
       issue_title: ${{ github.event.issue.title }}
