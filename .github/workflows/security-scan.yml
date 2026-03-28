@@ -38,7 +38,9 @@ jobs:
         run: |
           brew install python@3.12 || true
           brew link --force --overwrite python@3.12 || true
-          echo "$(brew --prefix python@3.12)/libexec/bin" >> "${GITHUB_PATH}"
+          PYTHON="$(brew --prefix python@3.12)/libexec/bin/python3"
+          "$PYTHON" -m venv "$RUNNER_TEMP/pip-audit-venv"
+          echo "$RUNNER_TEMP/pip-audit-venv/bin" >> "${GITHUB_PATH}"
       - name: Set up Python (Linux and Windows)
         if: runner.os != 'macOS'
         uses: actions/setup-python@v5
