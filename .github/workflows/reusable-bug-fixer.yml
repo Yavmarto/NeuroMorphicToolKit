@@ -48,13 +48,11 @@ jobs:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           starting_branch: ${{ inputs.starting_branch }}
           prompt: |
+            # ${{ inputs.issue_title }}
+
+            --- YOUR TASK: Fix the following bug ---
+
             ${{ needs.sdd-context.outputs.context }}
-
-            ════════════════════════════════════════
-            ## YOUR TASK: Fix the following bug
-            ════════════════════════════════════════
-
-            ## ${{ inputs.issue_title }}
 
             ${{ inputs.issue_body }}
 
@@ -79,13 +77,11 @@ jobs:
           jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           starting_branch: ${{ inputs.starting_branch }}
           prompt: |
+            # ${{ inputs.issue_title }}
+
+            --- YOUR TASK: Fix the following bug ---
+
             ${{ needs.sdd-context.outputs.context }}
-
-            ════════════════════════════════════════
-            ## YOUR TASK: Fix the following bug
-            ════════════════════════════════════════
-
-            ## ${{ inputs.issue_title }}
 
             ${{ inputs.issue_body }}
 
@@ -108,13 +104,11 @@ jobs:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           starting_branch: ${{ inputs.starting_branch }}
           prompt: |
+            # ${{ inputs.issue_title }}
+
+            --- YOUR TASK: Fix the following bug ---
+
             ${{ needs.sdd-context.outputs.context }}
-
-            ════════════════════════════════════════
-            ## YOUR TASK: Fix the following bug
-            ════════════════════════════════════════
-
-            ## ${{ inputs.issue_title }}
 
             ${{ inputs.issue_body }}
 

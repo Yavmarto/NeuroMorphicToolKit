@@ -42,15 +42,13 @@ jobs:
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           prompt: |
+            # ${{ inputs.issue_title }}
+
+            --- YOUR TASK: Implement unblocked issue ---
+
             ${{ needs.sdd-context.outputs.context }}
 
-            ════════════════════════════════════════
-            ## YOUR TASK: Implement unblocked issue
-            ════════════════════════════════════════
-
             A previously blocked issue is now unblocked and ready for implementation:
-
-            ## ${{ inputs.issue_title }}
 
             ${{ inputs.issue_body }}
 
@@ -66,15 +64,13 @@ jobs:
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           prompt: |
+            # ${{ inputs.issue_title }}
+
+            --- YOUR TASK: Implement unblocked issue ---
+
             ${{ needs.sdd-context.outputs.context }}
 
-            ════════════════════════════════════════
-            ## YOUR TASK: Implement unblocked issue
-            ════════════════════════════════════════
-
             A previously blocked issue is now unblocked and ready for implementation:
-
-            ## ${{ inputs.issue_title }}
 
             ${{ inputs.issue_body }}
 
@@ -88,15 +84,13 @@ jobs:
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           prompt: |
+            # ${{ inputs.issue_title }}
+
+            --- YOUR TASK: Implement unblocked issue ---
+
             ${{ needs.sdd-context.outputs.context }}
 
-            ════════════════════════════════════════
-            ## YOUR TASK: Implement unblocked issue
-            ════════════════════════════════════════
-
             A previously blocked issue is now unblocked and ready for implementation:
-
-            ## ${{ inputs.issue_title }}
 
             ${{ inputs.issue_body }}
 

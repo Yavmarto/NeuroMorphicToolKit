@@ -51,9 +51,7 @@ jobs:
             if [ -f "$DOC" ]; then
               LABEL=$(echo "$DOC" | sed 's/\.md$//' | tr '[:lower:]' '[:upper:]')
               {
-                echo "════════════════════════════════════════════════════════"
-                echo "## ${LABEL} — Read before writing any code."
-                echo "════════════════════════════════════════════════════════"
+                echo "--- ${LABEL} ---"
                 cat "$DOC"
                 echo ""
               } >> "$CONTEXT_FILE"

@@ -48,13 +48,11 @@ jobs:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           starting_branch: ${{ inputs.starting_branch }}
           prompt: |
+            # ${{ inputs.issue_title }}
+
+            --- YOUR TASK: Implement the following feature ---
+
             ${{ needs.sdd-context.outputs.context }}
-
-            ════════════════════════════════════════
-            ## YOUR TASK: Implement the following feature
-            ════════════════════════════════════════
-
-            ## ${{ inputs.issue_title }}
 
             ${{ inputs.issue_body }}
 
@@ -81,13 +79,11 @@ jobs:
           jules_api_key: ${{ secrets.JULES_API_KEY_F }}
           starting_branch: ${{ inputs.starting_branch }}
           prompt: |
+            # ${{ inputs.issue_title }}
+
+            --- YOUR TASK: Implement the following feature ---
+
             ${{ needs.sdd-context.outputs.context }}
-
-            ════════════════════════════════════════
-            ## YOUR TASK: Implement the following feature
-            ════════════════════════════════════════
-
-            ## ${{ inputs.issue_title }}
 
             ${{ inputs.issue_body }}
 
@@ -112,13 +108,11 @@ jobs:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
           starting_branch: ${{ inputs.starting_branch }}
           prompt: |
+            # ${{ inputs.issue_title }}
+
+            --- YOUR TASK: Implement the following feature ---
+
             ${{ needs.sdd-context.outputs.context }}
-
-            ════════════════════════════════════════
-            ## YOUR TASK: Implement the following feature
-            ════════════════════════════════════════
-
-            ## ${{ inputs.issue_title }}
 
             ${{ inputs.issue_body }}
 
