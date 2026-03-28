@@ -6,12 +6,14 @@ on:
 
 jobs:
   build-feature:
-    if: ${{ github.event.label.name == 'feature' || github.event.label.name == 'agent' }}
+    if: ${{ github.event.label.name == 'feature' || github.event.label.name == 'feature1' || github.event.label.name == 'feature2' || github.event.label.name == 'agent' }}
     uses: ./.github/workflows/reusable-feature-builder.yml
     with:
       issue_title: ${{ github.event.issue.title }}
+      issue_number: ${{ github.event.issue.number }}
       issue_body: ${{ github.event.issue.body }}
       sender_login: ${{ github.event.sender.login }}
+      trigger_label: ${{ github.event.label.name }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
       JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}

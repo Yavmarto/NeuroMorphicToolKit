@@ -22,6 +22,14 @@ on:
         required: false
         type: string
         default: 'dev'
+      trigger_label:
+        description: 'Label that triggered this workflow'
+        required: false
+        type: string
+        default: ' + (bug if wtype == bug else (unblocked if wtype == unblocked else feature)) +       issue_number:
+        description: 'GitHub Issue Number'
+        required: false
+        type: string
     secrets:
       JULES_API_KEY:
         required: true
@@ -42,6 +50,7 @@ jobs:
     steps:
       - name: Invoke Jules to fix bug (primary key)
         id: jules-primary
+        if: inputs.trigger_label == 'bug' || inputs.trigger_label == 'bug1' || inputs.trigger_label == 'agent'
         continue-on-error: true
         uses: google-labs-code/jules-action@v1.0.0
         with:
@@ -67,6 +76,9 @@ jobs:
             - Clear explanation of the root cause
             - The complete fix with all necessary changes
             - Test cases to prevent regression
+
+            PR Linking:
+            - Ensure the PR description includes 'Fixes #${{ inputs.issue_number }}' to organically link it to this issue.
 
       - name: Invoke Jules to fix bug (fallback key)
         id: jules-fallback
@@ -97,6 +109,9 @@ jobs:
             - The complete fix with all necessary changes
             - Test cases to prevent regression
 
+            PR Linking:
+            - Ensure the PR description includes 'Fixes #${{ inputs.issue_number }}' to organically link it to this issue.
+
       - name: Invoke Jules to fix bug (retry primary key)
         if: steps.jules-primary.outcome == 'failure' && steps.jules-fallback.outcome == 'failure'
         uses: google-labs-code/jules-action@v1.0.0
@@ -123,3 +138,6 @@ jobs:
             - Clear explanation of the root cause
             - The complete fix with all necessary changes
             - Test cases to prevent regression
+
+            PR Linking:
+            - Ensure the PR description includes 'Fixes #${{ inputs.issue_number }}' to organically link it to this issue.
