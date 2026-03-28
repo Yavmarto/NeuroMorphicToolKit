@@ -16,7 +16,7 @@ on:
         description: 'JSON array of trusted GitHub usernames'
         required: false
         type: string
-        default: '["your-github-username"]'
+        default: '["Yavmarto"]'
     secrets:
       JULES_API_KEY:
         required: true

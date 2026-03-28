@@ -16,7 +16,7 @@ on:
         description: 'JSON array of trusted GitHub usernames'
         required: false
         type: string
-        default: '["your-github-username"]'
+        default: '["Yavmarto"]'
       starting_branch:
         description: 'Branch Jules should base its work on'
         required: false
