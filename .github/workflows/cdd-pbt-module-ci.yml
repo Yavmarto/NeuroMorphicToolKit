@@ -47,7 +47,16 @@ jobs:
           mkdir -p "$TOOL_CACHE"
           echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
           echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
-      - name: Set up Python
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          PYMM="$(echo '${{ inputs.python_version }}' | grep -oE '^[0-9]+\.[0-9]+')"
+          brew install "python@${PYMM}" || true
+          brew link --force --overwrite "python@${PYMM}" || true
+          echo "$(brew --prefix "python@${PYMM}")/libexec/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python_version }}

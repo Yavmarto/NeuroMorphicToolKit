@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: '["your-github-username"]'
+      starting_branch:
+        description: 'Branch Jules should base its work on'
+        required: false
+        type: string
+        default: 'dev'
     secrets:
       JULES_API_KEY:
         required: true
@@ -46,6 +51,7 @@ jobs:
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ inputs.starting_branch }}
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
 
@@ -72,10 +78,43 @@ jobs:
               and document your assumption in the PR body
 
       - name: Invoke Jules to build feature (fallback key)
+        id: jules-fallback
         if: steps.jules-primary.outcome == 'failure'
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY_F }}
+          starting_branch: ${{ inputs.starting_branch }}
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            ════════════════════════════════════════
+            ## YOUR TASK: Implement the following feature
+            ════════════════════════════════════════
+
+            ## ${{ inputs.issue_title }}
+
+            ${{ inputs.issue_body }}
+
+            Implementation Guidelines:
+            1. **Understand** - Read the issue carefully, identify scope and acceptance criteria
+            2. **Plan** - Identify which files need to change and why
+            3. **Implement** - Write clean, idiomatic code following existing conventions
+            4. **Test** - Add or update tests to cover the new functionality
+            5. **PR** - Open a pull request with a clear description of what changed and why
+
+            Constraints:
+            - Follow existing code style and architecture patterns
+            - Do not break existing tests
+            - Keep changes focused — only change what is needed for this feature
+            - If the issue is ambiguous, make the most reasonable interpretation
+              and document your assumption in the PR body
+
+      - name: Invoke Jules to build feature (retry primary key)
+        if: steps.jules-primary.outcome == 'failure' && steps.jules-fallback.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ inputs.starting_branch }}
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
 

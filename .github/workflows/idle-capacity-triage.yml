@@ -146,10 +146,47 @@ jobs:
             - When in doubt, err toward p1 over p0
 
       - name: Invoke Jules to classify issues (fallback key)
+        id: jules-fallback
         if: steps.gate.outputs.should_run == 'true' && steps.jules-primary.outcome == 'failure'
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY_F }}
+          prompt: |
+            You are a triage agent. The agent pipeline has idle capacity (${{ steps.gate.outputs.budget_used }} runs used today).
+            Classify unlabeled GitHub issues so they are queued correctly.
+
+            ## Issues to Classify
+
+            ${{ steps.gate.outputs.issue_list }}
+
+            ## Classification Instructions
+
+            For each issue, determine:
+
+            **1. Type label** — pick the single best fit:
+            - `bug`     — something broken, regression, crash, wrong output
+            - `feature` — new capability, enhancement, improvement
+            - `question`— support request (do NOT queue for agent)
+            - `invalid` — spam, off-topic (do NOT queue for agent)
+
+            **2. Priority label** — for bugs and features only:
+            - `p0` — critical: system broken, data loss, security issue
+            - `p1` — important: noticeable user impact
+            - `p2` — low urgency: nice to have
+
+            For each bug/feature issue, apply labels and post a classification comment using `gh` CLI.
+            For question/invalid issues, apply only that label and explain why.
+
+            Constraints:
+            - Do NOT open any PRs or modify any code
+            - Process at most 10 issues per run
+            - When in doubt, err toward p1 over p0
+
+      - name: Invoke Jules to classify issues (retry primary key)
+        if: steps.gate.outputs.should_run == 'true' && steps.jules-primary.outcome == 'failure' && steps.jules-fallback.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
           prompt: |
             You are a triage agent. The agent pipeline has idle capacity (${{ steps.gate.outputs.budget_used }} runs used today).
             Classify unlabeled GitHub issues so they are queued correctly.

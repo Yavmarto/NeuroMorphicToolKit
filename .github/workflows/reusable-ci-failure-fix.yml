@@ -82,6 +82,7 @@ jobs:
           include_last_commit: true
 
       - name: Invoke Jules to fix failure (fallback key)
+        id: jules-fallback
         if: steps.jules-primary.outcome == 'failure'
         uses: google-labs-code/jules-invoke@v1
         with:
@@ -103,5 +104,30 @@ jobs:
             4. Read the relevant AGENTS.md and GUARDRAILS.md before making changes.
             5. Open a PR from a jules/* branch so auto-merge can attach once checks pass.
           jules_api_key: ${{ secrets.JULES_API_KEY_F }}
+          starting_branch: ${{ inputs.head_branch }}
+          include_last_commit: true
+
+      - name: Invoke Jules to fix failure (retry primary key)
+        if: steps.jules-primary.outcome == 'failure' && steps.jules-fallback.outcome == 'failure'
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            The workflow run failed and needs a focused fix.
+
+            Workflow: ${{ inputs.workflow_name }}
+            Run URL: ${{ inputs.workflow_url }}
+            Logs URL: ${{ steps.logs.outputs.logs_url }}
+            Branch: ${{ inputs.head_branch }}
+            Commit: ${{ inputs.head_sha }}
+
+            Requirements:
+            1. Read the failed jobs and logs.
+            2. Fix only the root cause.
+            3. Do not weaken tests, contracts, or property checks.
+            4. Read the relevant AGENTS.md and GUARDRAILS.md before making changes.
+            5. Open a PR from a jules/* branch so auto-merge can attach once checks pass.
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
           starting_branch: ${{ inputs.head_branch }}
           include_last_commit: true

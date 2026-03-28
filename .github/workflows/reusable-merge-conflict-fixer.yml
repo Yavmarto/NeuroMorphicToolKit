@@ -66,10 +66,44 @@ jobs:
             - If a conflict cannot be confidently resolved, leave a TODO comment and note it
 
       - name: Invoke Jules to resolve conflicts (fallback key)
+        id: jules-fallback
         if: steps.jules-primary.outcome == 'failure'
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY_F }}
+          prompt: |
+            PR #${{ inputs.pr_number }} has merge conflicts that need to be resolved.
+
+            **Head branch (this PR):** ${{ inputs.head_ref }}
+            **Base branch (merge target):** ${{ inputs.base_ref }}
+            **Conflicted files:** ${{ inputs.conflict_files }}
+
+            Resolution steps:
+            1. Check out branch `${{ inputs.head_ref }}`
+            2. Run `git merge origin/${{ inputs.base_ref }}` to surface conflict markers
+            3. For every conflict block (`<<<<<<< HEAD` … `=======` … `>>>>>>>`):
+               - Understand the intent of BOTH sides
+               - Prefer the head branch logic for changes this PR introduced
+               - Preserve base branch changes unrelated to this PR's scope
+               - If both sides changed the same logic, merge them semantically
+            4. Run the test suite to verify nothing is broken
+            5. Stage all resolved files with `git add`
+            6. Commit: `fix: resolve merge conflicts with ${{ inputs.base_ref }}`
+            7. Push to `${{ inputs.head_ref }}` (do NOT create a new branch)
+            8. Add a PR comment listing which files were resolved and how
+
+            Constraints:
+            - Do NOT change any logic outside of conflict blocks
+            - Do NOT squash or rebase — only resolve and commit
+            - If a conflict is in a lock file (pubspec.lock, poetry.lock, etc.),
+              regenerate it with the appropriate package manager
+            - If a conflict cannot be confidently resolved, leave a TODO comment and note it
+
+      - name: Invoke Jules to resolve conflicts (retry primary key)
+        if: steps.jules-primary.outcome == 'failure' && steps.jules-fallback.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
           prompt: |
             PR #${{ inputs.pr_number }} has merge conflicts that need to be resolved.
 
