@@ -84,6 +84,7 @@ jobs:
       - name: Invoke Jules to fix failure (fallback key)
         id: jules-fallback
         if: steps.jules-primary.outcome == 'failure'
+        continue-on-error: true
         uses: google-labs-code/jules-invoke@v1
         with:
           prompt: |
