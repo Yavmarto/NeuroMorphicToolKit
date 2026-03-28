@@ -26,10 +26,6 @@ jobs:
   fix:
     name: Fix conflicts in PR #${{ inputs.pr_number }}
     runs-on: self-hosted
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
       - name: Invoke Jules to resolve conflicts (primary key)
         id: jules-primary

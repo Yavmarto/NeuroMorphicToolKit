@@ -15,10 +15,6 @@ jobs:
     if: >-
       startsWith(inputs.head_ref, 'jules/') || startsWith(inputs.head_ref, 'auto/')
     runs-on: self-hosted
-    permissions:
-      contents: write
-      pull-requests: write
-
     steps:
       - uses: actions/checkout@v4
         with:

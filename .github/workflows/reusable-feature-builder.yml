@@ -39,11 +39,6 @@ jobs:
     concurrency:
       group: agent-work
       cancel-in-progress: false
-    permissions:
-      contents: write
-      issues: read
-      pull-requests: write
-
     steps:
       - name: Invoke Jules to build feature (primary key)
         id: jules-primary

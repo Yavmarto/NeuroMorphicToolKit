@@ -34,11 +34,6 @@ jobs:
     concurrency:
       group: agent-work
       cancel-in-progress: false
-    permissions:
-      contents: write
-      actions: read
-      pull-requests: write
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4

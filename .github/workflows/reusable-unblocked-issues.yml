@@ -34,11 +34,6 @@ jobs:
     concurrency:
       group: agent-work
       cancel-in-progress: false
-    permissions:
-      contents: write
-      issues: read
-      pull-requests: write
-
     steps:
       - name: Invoke Jules on Unblocked Issue (primary key)
         id: jules-primary
