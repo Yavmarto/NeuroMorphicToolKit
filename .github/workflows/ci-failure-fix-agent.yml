@@ -27,7 +27,7 @@ jobs:
 
       - name: SDD context
         id: sdd
-        uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/sdd-context-bridge.yml@main
+        uses: Completed-Spoon-6/NeuroMorphicToolKit/.github/workflows/sdd-context-bridge.yml@main
 
       - name: Download logs URL
         id: logs
