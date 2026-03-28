@@ -21,11 +21,7 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
@@ -60,17 +56,6 @@ jobs:
   owasp-dependency-check:
     runs-on: [self-hosted, Linux, X64]
     steps:
-<<<<<<< Updated upstream
-=======
-      - name: Add Git to PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
->>>>>>> Stashed changes
       - uses: actions/checkout@v4
       - name: Dependency Check
         uses: dependency-check/DependencyCheck_Action@v3

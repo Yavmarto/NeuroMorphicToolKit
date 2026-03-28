@@ -36,17 +36,6 @@ jobs:
       neurotoolkit: ${{ steps.filter.outputs.neurotoolkit }}
       nmtk_ui_core: ${{ steps.filter.outputs.nmtk_ui_core }}
     steps:
-<<<<<<< Updated upstream
-=======
-      - name: Add Git to PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: powershell
-        run: |
-          $gitPath = "C:\Program Files\Git\cmd"
-          if (Test-Path $gitPath) {
-            "$gitPath" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          }
->>>>>>> Stashed changes
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -94,7 +83,6 @@ jobs:
   test-neurosim:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosim == 'true'
-<<<<<<< Updated upstream
     strategy:
       fail-fast: false
       matrix:
@@ -103,17 +91,10 @@ jobs:
           - [self-hosted, Windows, X64]
           - [self-hosted, Linux, X64]
     runs-on: ${{ matrix.os }}
-=======
-    runs-on: self-hosted
->>>>>>> Stashed changes
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
@@ -140,12 +121,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-<<<<<<< Updated upstream
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
-=======
-
->>>>>>> Stashed changes
       - name: Install dependencies
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
@@ -176,7 +153,6 @@ jobs:
   test-neurochip:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip == 'true'
-<<<<<<< Updated upstream
     strategy:
       fail-fast: false
       matrix:
@@ -185,17 +161,10 @@ jobs:
           - [self-hosted, Windows, X64]
           - [self-hosted, Linux, X64]
     runs-on: ${{ matrix.os }}
-=======
-    runs-on: self-hosted
->>>>>>> Stashed changes
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
@@ -222,12 +191,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-<<<<<<< Updated upstream
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
-=======
-
->>>>>>> Stashed changes
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
@@ -259,7 +224,6 @@ jobs:
   test-neurosense:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosense == 'true'
-<<<<<<< Updated upstream
     strategy:
       fail-fast: false
       matrix:
@@ -268,17 +232,10 @@ jobs:
           - [self-hosted, Windows, X64]
           - [self-hosted, Linux, X64]
     runs-on: ${{ matrix.os }}
-=======
-    runs-on: self-hosted
->>>>>>> Stashed changes
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
@@ -305,12 +262,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-<<<<<<< Updated upstream
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
-=======
-
->>>>>>> Stashed changes
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
@@ -341,7 +294,6 @@ jobs:
   test-neurohub:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurohub == 'true'
-<<<<<<< Updated upstream
     strategy:
       fail-fast: false
       matrix:
@@ -350,17 +302,10 @@ jobs:
           - [self-hosted, Windows, X64]
           - [self-hosted, Linux, X64]
     runs-on: ${{ matrix.os }}
-=======
-    runs-on: self-hosted
->>>>>>> Stashed changes
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
@@ -387,12 +332,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-<<<<<<< Updated upstream
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
-=======
-
->>>>>>> Stashed changes
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
@@ -423,7 +364,6 @@ jobs:
   test-neurodreamhand:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurodreamhand == 'true'
-<<<<<<< Updated upstream
     strategy:
       fail-fast: false
       matrix:
@@ -432,17 +372,10 @@ jobs:
           - [self-hosted, Windows, X64]
           - [self-hosted, Linux, X64]
     runs-on: ${{ matrix.os }}
-=======
-    runs-on: self-hosted
->>>>>>> Stashed changes
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
@@ -469,12 +402,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-<<<<<<< Updated upstream
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
-=======
-
->>>>>>> Stashed changes
       - name: Install dependencies
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
@@ -505,7 +434,6 @@ jobs:
   test-neurocnl-backend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl == 'true'
-<<<<<<< Updated upstream
     strategy:
       fail-fast: false
       matrix:
@@ -514,17 +442,10 @@ jobs:
           - [self-hosted, Windows, X64]
           - [self-hosted, Linux, X64]
     runs-on: ${{ matrix.os }}
-=======
-    runs-on: self-hosted
->>>>>>> Stashed changes
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
@@ -553,12 +474,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-<<<<<<< Updated upstream
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
-=======
-
->>>>>>> Stashed changes
       - name: Install core package
         run: |
           if [ -d "neurocnl" ] && [ -f "neurocnl/pyproject.toml" ]; then
@@ -618,7 +535,6 @@ jobs:
   test-neurobench:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurobench == 'true'
-<<<<<<< Updated upstream
     strategy:
       fail-fast: false
       matrix:
@@ -627,17 +543,10 @@ jobs:
           - [self-hosted, Windows, X64]
           - [self-hosted, Linux, X64]
     runs-on: ${{ matrix.os }}
-=======
-    runs-on: self-hosted
->>>>>>> Stashed changes
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - name: Configure tool cache
@@ -664,12 +573,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-<<<<<<< Updated upstream
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
-=======
-
->>>>>>> Stashed changes
       - name: Install poetry
         run: |
           if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
@@ -714,11 +619,7 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
@@ -752,11 +653,7 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
@@ -790,11 +687,7 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
@@ -834,11 +727,7 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
@@ -873,11 +762,7 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
@@ -912,11 +797,7 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
@@ -951,11 +832,7 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4

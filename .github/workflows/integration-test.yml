@@ -28,11 +28,7 @@ jobs:
     steps:
       - name: Add Git to PATH (Windows)
         if: runner.os == 'Windows'
-<<<<<<< Updated upstream
         shell: cmd
-=======
-        shell: powershell
->>>>>>> Stashed changes
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
