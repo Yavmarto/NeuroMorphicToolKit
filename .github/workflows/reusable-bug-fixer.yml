@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: '["your-github-username"]'
+      starting_branch:
+        description: 'Branch Jules should base its work on'
+        required: false
+        type: string
+        default: 'dev'
     secrets:
       JULES_API_KEY:
         required: true
@@ -46,6 +51,7 @@ jobs:
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ inputs.starting_branch }}
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
 
@@ -70,10 +76,41 @@ jobs:
             - Test cases to prevent regression
 
       - name: Invoke Jules to fix bug (fallback key)
+        id: jules-fallback
         if: steps.jules-primary.outcome == 'failure'
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY_F }}
+          starting_branch: ${{ inputs.starting_branch }}
+          prompt: |
+            ${{ needs.sdd-context.outputs.context }}
+
+            ════════════════════════════════════════
+            ## YOUR TASK: Fix the following bug
+            ════════════════════════════════════════
+
+            ## ${{ inputs.issue_title }}
+
+            ${{ inputs.issue_body }}
+
+            Debugging Process:
+            1. **Analysis** - Review the bug report and identify the root cause
+            2. **Diagnosis** - Trace the issue through the codebase
+            3. **Fix** - Implement a minimal, targeted fix
+            4. **Testing** - Add a regression test that would have caught this bug
+            5. **Documentation** - Add comments explaining the fix
+
+            Please provide:
+            - Clear explanation of the root cause
+            - The complete fix with all necessary changes
+            - Test cases to prevent regression
+
+      - name: Invoke Jules to fix bug (retry primary key)
+        if: steps.jules-primary.outcome == 'failure' && steps.jules-fallback.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          starting_branch: ${{ inputs.starting_branch }}
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
 

@@ -32,7 +32,15 @@ jobs:
           mkdir -p "$TOOL_CACHE"
           echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
           echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
-      - name: Set up Python
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install python@3.12 || true
+          brew link --force --overwrite python@3.12 || true
+          echo "$(brew --prefix python@3.12)/libexec/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -46,23 +54,11 @@ jobs:
           find . -name "requirements.txt" -exec pip-audit -r {} \; || true
 
   owasp-dependency-check:
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - [self-hosted, macOS, ARM64]
-          - [self-hosted, Windows, X64]
-          - [self-hosted, Linux, X64]
-    runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Linux, X64]
     steps:
-      - name: Add Git to PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
       - name: Dependency Check
-        uses: dependency-check/DependencyCheck_Action@main
+        uses: dependency-check/DependencyCheck_Action@v3
         with:
           project: 'NMTK'
           path: '.'
@@ -72,6 +68,7 @@ jobs:
             --enableRetired
       - name: Upload Report
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: dependency-check-report
           path: reports

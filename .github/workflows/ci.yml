@@ -109,7 +109,16 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurosim || true
-      - uses: actions/setup-python@v5
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install python@3.11 || true
+          brew link --force --overwrite python@3.11 || true
+          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
@@ -170,7 +179,16 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurochip || true
-      - uses: actions/setup-python@v5
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install python@3.12 || true
+          brew link --force --overwrite python@3.12 || true
+          echo "$(brew --prefix python@3.12)/libexec/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
         env:
@@ -232,7 +250,16 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurosense || true
-      - uses: actions/setup-python@v5
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install python@3.11 || true
+          brew link --force --overwrite python@3.11 || true
+          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
@@ -293,7 +320,16 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurohub || true
-      - uses: actions/setup-python@v5
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install python@3.11 || true
+          brew link --force --overwrite python@3.11 || true
+          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
@@ -354,7 +390,16 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neuro-Dream-Hand || true
-      - uses: actions/setup-python@v5
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install python@3.11 || true
+          brew link --force --overwrite python@3.11 || true
+          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
@@ -417,7 +462,16 @@ jobs:
         run: |
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${{ secrets.GITHUB_TOKEN }}" submodule update --init neurocnl || true
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${{ secrets.GITHUB_TOKEN }}" submodule update --init Neuro-Dream-Hand || true
-      - uses: actions/setup-python@v5
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install python@3.11 || true
+          brew link --force --overwrite python@3.11 || true
+          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
@@ -507,7 +561,16 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurobench || true
-      - uses: actions/setup-python@v5
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install python@3.11 || true
+          brew link --force --overwrite python@3.11 || true
+          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
