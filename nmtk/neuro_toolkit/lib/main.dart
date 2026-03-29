@@ -31,8 +31,13 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AppProvider()),
-        ChangeNotifierProvider(create: (_) => ModuleProvider()),
         ChangeNotifierProvider.value(value: settings),
+        ChangeNotifierProxyProvider<SettingsProvider, ModuleProvider>(
+          create: (_) => ModuleProvider()..updateSettingsProvider(settings),
+          update: (_, settings, moduleProvider) {
+            return moduleProvider!..updateSettingsProvider(settings);
+          },
+        ),
         Provider.value(value: analytics),
       ],
       child: const NeuroToolkitApp(),

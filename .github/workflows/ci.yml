@@ -38,8 +38,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
           fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init || true
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -692,7 +694,10 @@ jobs:
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -732,7 +737,10 @@ jobs:
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -767,7 +775,10 @@ jobs:
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -802,7 +813,10 @@ jobs:
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
@@ -837,7 +851,10 @@ jobs:
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init || true
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'

@@ -132,7 +132,8 @@ class MainScreen extends StatelessWidget {
 
     return ResponsiveScaffold(
       currentIndex: _selectedIndex(context, provider),
-      onNavigationTargetSelected: (index) => _onItemTapped(context, index, provider),
+      onNavigationTargetSelected: (index) =>
+          _onItemTapped(context, index, provider),
       destinations: _getDestinations(provider),
       body: child,
     );

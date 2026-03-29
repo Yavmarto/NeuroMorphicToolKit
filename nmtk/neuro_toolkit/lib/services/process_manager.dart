@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/bundle_manager.dart';
+import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -111,6 +112,7 @@ class ProcessManager {
   Timer? _healthTimer;
   bool _initialized = false;
   List<Module> _modules = [];
+  LogLevel _currentLogLevel = LogLevel.info;
 
   // Stream for status updates
   final _statusController = StreamController<Module>.broadcast();
@@ -167,7 +169,9 @@ class ProcessManager {
     _scheduleRetry(updatedModule);
   }
 
-  Future<void> init(List<Module> modules) async {
+  Future<void> init(List<Module> modules,
+      [LogLevel logLevel = LogLevel.info]) async {
+    _currentLogLevel = logLevel;
     if (_initialized) {
       // Update modules list if it changed
       _modules = modules;
@@ -403,8 +407,10 @@ class ProcessManager {
   }
 
   Future<void> startModule(Module module, {bool isRetry = false}) async {
+    if (!module.isEnabled) return;
     if (_runningProcesses.containsKey(module.id)) return;
-    if (module.port == null) {
+    final int? effectivePort = module.customPort ?? module.port;
+    if (effectivePort == null) {
       throw Exception('Cannot start module ${module.id}: no port configured');
     }
 
@@ -415,7 +421,7 @@ class ProcessManager {
     _intentionallyStopping.remove(module.id);
 
     // Kill any zombie process from a previous session occupying our port
-    await _killProcessOnPort(module.port!);
+    await _killProcessOnPort(effectivePort);
 
     final installDir = _installDir(module);
     final runDir = _runDir(module);
@@ -428,7 +434,7 @@ class ProcessManager {
       '[${module.id}] startModule: installDir=$installDir runDir=$runDir',
     );
     debugPrint(
-      '[${module.id}] startModule: pythonPath=$pythonPath target=${module.uvicornTarget} port=${module.port}',
+      '[${module.id}] startModule: pythonPath=$pythonPath target=${module.uvicornTarget} port=$effectivePort',
     );
 
     // Guard: if venv doesn't exist, the module needs to be (re-)installed first
@@ -456,7 +462,7 @@ class ProcessManager {
 
     try {
       debugPrint(
-        '[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port ${module.port}',
+        '[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port $effectivePort --log-level ${_currentLogLevel.name}',
       );
       debugPrint('[${module.id}] Working directory: $runDir');
 
@@ -467,7 +473,9 @@ class ProcessManager {
           'uvicorn',
           module.uvicornTarget,
           '--port',
-          (module.port ?? 8000).toString(),
+          effectivePort.toString(),
+          '--log-level',
+          _currentLogLevel.name,
         ],
         workingDirectory: runDir,
       );
@@ -550,9 +558,10 @@ class ProcessManager {
   }
 
   Future<bool> _checkHealth(Module module) async {
-    if (module.port == null) return false;
+    final effectivePort = module.customPort ?? module.port;
+    if (effectivePort == null) return false;
     try {
-      final uri = Uri.parse('http://127.0.0.1:${module.port}/health');
+      final uri = Uri.parse('http://127.0.0.1:$effectivePort/health');
 
       String body;
       int statusCode;
@@ -616,6 +625,7 @@ class ProcessManager {
     _healthTimer =
         Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
       for (var module in _modules) {
+        if (!module.isEnabled) continue;
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
           unawaited(_checkHealth(module));

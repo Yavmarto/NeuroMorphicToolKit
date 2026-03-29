@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
@@ -26,12 +27,56 @@ class ModuleProvider with ChangeNotifier {
   bool _pythonAvailable = true; // assume true until checked
   String? _error;
   final List<String> _activeModuleIds = [];
+  SettingsProvider? _settingsProvider;
 
   ModuleProvider(
       {ProcessManager? processManager, UpdateService? updateService}) {
     _processManager = processManager ?? ProcessManager();
     _updateService = updateService ?? UpdateService();
     _init();
+  }
+
+  void updateSettingsProvider(SettingsProvider settingsProvider) {
+    _settingsProvider = settingsProvider;
+    _applySettingsToModules();
+  }
+
+  void _applySettingsToModules() {
+    if (_settingsProvider == null) return;
+    for (int i = 0; i < _modules.length; i++) {
+      final moduleSettings =
+          _settingsProvider!.getModuleSettings(_modules[i].id);
+      final isEnabled = moduleSettings['isEnabled'] as bool? ?? true;
+      final customPort = moduleSettings['customPort'] as int?;
+      _modules[i] = _modules[i].copyWith(
+        isEnabled: isEnabled,
+        customPort: customPort,
+      );
+    }
+    notifyListeners();
+  }
+
+  Future<void> updateModuleSettings(String moduleId,
+      {bool? isEnabled, int? customPort}) async {
+    final index = _modules.indexWhere((m) => m.id == moduleId);
+    if (index != -1) {
+      final updatedModule = _modules[index].copyWith(
+        isEnabled: isEnabled,
+        customPort: customPort,
+      );
+      _modules[index] = updatedModule;
+      if (isEnabled == false) {
+        await stopModule(moduleId);
+      }
+
+      if (_settingsProvider != null) {
+        final settingsToSave = <String, dynamic>{};
+        if (isEnabled != null) settingsToSave['isEnabled'] = isEnabled;
+        if (customPort != null) settingsToSave['customPort'] = customPort;
+        await _settingsProvider!.updateModuleSettings(moduleId, settingsToSave);
+      }
+      notifyListeners();
+    }
   }
 
   Future<void> _init() async {
@@ -64,7 +109,11 @@ class ModuleProvider with ChangeNotifier {
         );
       }
 
-      await _processManager.init(_modules);
+      if (_settingsProvider != null) {
+        _applySettingsToModules();
+      }
+      await _processManager.init(
+          _modules, _settingsProvider?.logLevel ?? LogLevel.info);
 
       // Check for updates on startup
       unawaited(checkForUpdates());
@@ -251,6 +300,24 @@ class ModuleProvider with ChangeNotifier {
   void closeTab(String moduleId) {
     _activeModuleIds.remove(moduleId);
     notifyListeners();
+  }
+
+  void dismissLauncherUpdate() {
+    _pendingLauncherUpdate = null;
+    notifyListeners();
+  }
+
+  void setUpdateChannel(UpdateChannel channel) {
+    _updateService.channel = channel;
+    notifyListeners();
+  }
+
+  Future<void> setVersionPinned(String moduleId, bool pinned) async {
+    final index = _modules.indexWhere((m) => m.id == moduleId);
+    if (index != -1) {
+      _modules[index] = _modules[index].copyWith(versionPinned: pinned);
+      notifyListeners();
+    }
   }
 
   Future<void> checkForUpdates() async {
