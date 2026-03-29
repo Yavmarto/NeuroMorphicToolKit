@@ -6,6 +6,9 @@ on:
       issue_title:
         required: true
         type: string
+      issue_number:
+        required: true
+        type: number
       issue_body:
         required: true
         type: string
@@ -27,6 +30,10 @@ on:
         required: false
         type: string
         default: 'feature'
+      issue_number:
+        description: 'GitHub Issue Number'
+        required: false
+        type: string
     secrets:
       JULES_API_KEY:
         required: true

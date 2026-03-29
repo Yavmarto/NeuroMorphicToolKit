@@ -37,7 +37,7 @@ jobs:
             ".github/workflows/**"
           )
 
-          CHANGED_FILES=$(gh pr diff ${{ github.event.pull_request.number }} --name-only)
+          CHANGED_FILES=$(gh pr diff "$PR_NUMBER" --name-only)
           NEEDS_REVIEW=false
 
           for pattern in "${PROTECTED_PATTERNS[@]}"; do
@@ -54,31 +54,35 @@ jobs:
           echo "needs_review=$NEEDS_REVIEW" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Wait for CI checks
         if: steps.protected.outputs.needs_review != 'true'
         run: |
           echo "Waiting for CI checks to complete..."
           sleep 30
-          gh pr checks ${{ github.event.pull_request.number }} --watch --fail-fast
+          gh pr checks "$PR_NUMBER" --watch --fail-fast
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Auto-approve and merge
         if: steps.protected.outputs.needs_review != 'true'
         run: |
           echo "All CI checks passed. Auto-merging..."
-          gh pr review ${{ github.event.pull_request.number }} --approve \
+          gh pr review "$PR_NUMBER" --approve \
             --body "Auto-approved: all CI checks passed, no protected files changed."
-          gh pr merge ${{ github.event.pull_request.number }} --squash --auto
+          gh pr merge "$PR_NUMBER" --squash --auto
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Request human review for protected changes
         if: steps.protected.outputs.needs_review == 'true'
         run: |
-          gh pr comment ${{ github.event.pull_request.number }} \
+          gh pr comment "$PR_NUMBER" \
             --body "This PR modifies protected files (contracts, invariants, AGENTS.md, GUARDRAILS.md, or workflows). **Human review required** before merge."
-          gh pr edit ${{ github.event.pull_request.number }} --add-label "needs-human-review"
+          gh pr edit "$PR_NUMBER" --add-label "needs-human-review"
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}

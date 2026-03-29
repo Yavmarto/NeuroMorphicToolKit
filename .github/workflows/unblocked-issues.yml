@@ -22,7 +22,7 @@ jobs:
     if: needs.detect-unblocked.outputs.found == 'true'
     strategy:
       matrix:
-        issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix) }}
+        issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix || '[]') }}
     runs-on: self-hosted
     permissions:
       issues: read
@@ -37,22 +37,21 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issue = await github.rest.issues.get({
+            const { data: issue } = await github.rest.issues.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: ${{ matrix.issue-number }}
             });
-            core.setOutput('issue_title', issue.data.title);
-            core.setOutput('issue_body', issue.data.body);
-            core.setOutput('issue_author', issue.data.user.login);
-            return issue.data;
+            core.setOutput('issue_title', issue.title);
+            core.setOutput('issue_body', issue.body);
+            core.setOutput('issue_author', issue.user.login);
 
   call-reusable:
     needs: [detect-unblocked, implement]
     if: needs.detect-unblocked.outputs.found == 'true'
     strategy:
       matrix:
-        issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix) }}
+        issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix || '[]') }}
     uses: ./.github/workflows/reusable-unblocked-issues.yml
     with:
       issue_title: ${{ needs.implement.outputs.issue_title || 'Unblocked Issue' }}

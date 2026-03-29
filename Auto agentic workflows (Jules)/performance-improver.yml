@@ -3,6 +3,10 @@ name: Performance Improver Agent
 # Recommended for: Backend services, Frontend applications
 # Enable once the module has meaningful code — too noisy during scaffolding phase
 
+# NOTE: When testing locally with 'act', you must specify the event explicitly:
+# 'act workflow_dispatch' or 'act schedule'
+# By default, 'act' uses the 'push' event, which will find no stages to run.
+
 on:
   schedule:
     - cron: '0 4 * * *'  # Every day at 4 AM UTC
