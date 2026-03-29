@@ -1,8 +1,8 @@
 services:
   neurocnl:
     build:
-      context: .
-      dockerfile: neurocnl/backend/Dockerfile
+      context: ./neurocnl
+      dockerfile: backend/Dockerfile
     ports:
       - "${NEUROCNL_PORT:-8000}:8000"
     environment:
@@ -20,8 +20,8 @@ services:
 
   neurocnl-physics:
     build:
-      context: .
-      dockerfile: neurocnl/backend/Dockerfile
+      context: ./neurocnl
+      dockerfile: backend/Dockerfile
       args:
         INSTALL_PHYSICS: 1
     ports:
@@ -42,8 +42,8 @@ services:
 
   neurosim:
     build:
-      context: .
-      dockerfile: Neurosim/Dockerfile
+      context: ./Neurosim
+      dockerfile: Dockerfile
     ports:
       - "${NEUROSIM_PORT:-8001}:8000"
     environment:
@@ -60,8 +60,8 @@ services:
 
   neurochip:
     build:
-      context: .
-      dockerfile: Neurochip/Dockerfile
+      context: ./Neurochip
+      dockerfile: Dockerfile
     ports:
       - "${NEUROCHIP_PORT:-8002}:8000"
     environment:
@@ -78,8 +78,8 @@ services:
 
   neurobench:
     build:
-      context: .
-      dockerfile: Neurobench/Dockerfile
+      context: ./Neurobench
+      dockerfile: Dockerfile
     ports:
       - "${NEUROBENCH_PORT:-8003}:8000"
     environment:
@@ -98,8 +98,8 @@ services:
 
   neurosense:
     build:
-      context: .
-      dockerfile: Neurosense/Dockerfile
+      context: ./Neurosense
+      dockerfile: Dockerfile
     ports:
       - "${NEUROSENSE_PORT:-8004}:8000"
     environment:
@@ -118,8 +118,8 @@ services:
 
   neurohub:
     build:
-      context: .
-      dockerfile: Neurohub/Dockerfile
+      context: ./Neurohub
+      dockerfile: Dockerfile
     ports:
       - "${NEUROHUB_PORT:-8005}:8000"
     environment:
@@ -130,7 +130,7 @@ services:
       - NEUROSENSE_URL=${NEUROSENSE_URL:-http://neurosense:8000}
       - NEUROCNL_URL=${NEUROCNL_URL:-http://neurocnl:8000}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/neurohub/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
