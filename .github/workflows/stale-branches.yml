@@ -3,6 +3,11 @@ name: Stale Branch Cleanup
 # Deletes remote branches that have been merged and are older than 7 days.
 # Only targets jules/* and auto/* branches. Runs weekly.
 
+# NOTE: When testing locally with 'act', it defaults to the 'push' event.
+# Since this workflow only triggers on 'schedule' or 'workflow_dispatch',
+# 'act' may fail with "Could not find any stages to run".
+# Workaround: Run 'act workflow_dispatch' or 'act schedule'.
+
 on:
   schedule:
     - cron: '0 3 * * 1' # Every Monday at 3 AM
