@@ -27,10 +27,6 @@ on:
         required: false
         type: string
         default: 'feature'
-      issue_number:
-        description: 'GitHub Issue Number'
-        required: false
-        type: string
     secrets:
       JULES_API_KEY:
         required: true
@@ -45,9 +41,6 @@ jobs:
     needs: sdd-context
     if: ${{ contains(fromJSON(inputs.trusted_users), inputs.sender_login) }}
     runs-on: self-hosted
-    concurrency:
-      group: agent-work
-      cancel-in-progress: false
     steps:
       - name: Invoke Jules to build feature (primary key)
         id: jules-primary
@@ -85,7 +78,7 @@ jobs:
 
       - name: Invoke Jules to build feature (fallback key)
         id: jules-fallback
-        if: steps.jules-primary.outcome == 'failure'
+        if: inputs.trigger_label == 'feature2' || ((inputs.trigger_label == 'feature' || inputs.trigger_label == 'agent') && steps.jules-primary.outcome == 'failure')
         continue-on-error: true
         uses: google-labs-code/jules-action@v1.0.0
         with:
@@ -118,7 +111,7 @@ jobs:
             - Ensure the PR description includes 'Fixes #${{ inputs.issue_number }}' to organically link it to this issue.
 
       - name: Invoke Jules to build feature (retry primary key)
-        if: steps.jules-primary.outcome == 'failure' && steps.jules-fallback.outcome == 'failure'
+        if: (inputs.trigger_label == 'feature' || inputs.trigger_label == 'agent') && steps.jules-primary.outcome == 'failure' && steps.jules-fallback.outcome == 'failure'
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
