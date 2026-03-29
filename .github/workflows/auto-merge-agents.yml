@@ -42,6 +42,7 @@ jobs:
 
           for pattern in "${PROTECTED_PATTERNS[@]}"; do
             while IFS= read -r file; do
+              # shellcheck disable=SC2254
               case "$file" in
                 $pattern)
                   echo "::warning::Protected file changed: $file"
