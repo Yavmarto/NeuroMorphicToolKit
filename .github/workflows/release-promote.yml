@@ -53,16 +53,18 @@ jobs:
             git merge origin/dev --no-edit
             git tag "$VERSION" || echo "  ⚠ Tag already exists in $name"
 
-            if [ "$DRY_RUN" = "false" ]; then
-              git push origin main --tags
+            if [ "${{ inputs.dry_run }}" = "false" ]; then
+              git push origin main --tags || exit 1
               echo "  ✓ $name: pushed main + tag"
             else
               echo "  [DRY RUN] Would push main + tag for $name"
             fi
-          '
-        env:
-          VERSION: ${{ inputs.version }}
-          DRY_RUN: ${{ inputs.dry_run }}
+          ' || FAILED="true"
+
+          if [ "$FAILED" = "true" ]; then
+            echo "$FAILED"
+            exit 1
+          fi
 
       - name: Promote parent repo (dev → main)
         run: |

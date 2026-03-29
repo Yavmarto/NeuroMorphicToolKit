@@ -27,8 +27,8 @@ jobs:
           # Get merged branches (excluding main, dev, HEAD)
           for branch in $(git branch -r --merged origin/dev | grep -E 'origin/(jules/|auto/)' | sed 's|origin/||' | xargs); do
             # Check if branch is older than 7 days
-            LAST_COMMIT_DATE=$(git log -1 --format="%ci" "origin/$branch" 2>/dev/null || continue)
-            LAST_COMMIT_TS=$(date -d "$LAST_COMMIT_DATE" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M:%S %z" "$LAST_COMMIT_DATE" +%s 2>/dev/null || continue)
+            LAST_COMMIT_DATE=$(git log -1 --format="%ci" "origin/$branch" 2>/dev/null) || continue
+            LAST_COMMIT_TS=$(date -d "$LAST_COMMIT_DATE" +%s 2>/dev/null || date -j -f "%Y-%m-%d %H:%M:%S %z" "$LAST_COMMIT_DATE" +%s 2>/dev/null) || continue
             CUTOFF_TS=$(date -d "7 days ago" +%s 2>/dev/null || date -v-7d +%s 2>/dev/null)
 
             if [ "$LAST_COMMIT_TS" -lt "$CUTOFF_TS" ]; then
