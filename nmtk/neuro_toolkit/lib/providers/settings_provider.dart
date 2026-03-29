@@ -50,8 +50,10 @@ class SettingsProvider with ChangeNotifier {
     final String? moduleSettingsJson = _prefs.getString(_moduleSettingsKey);
     if (moduleSettingsJson != null) {
       try {
-        final Map<String, dynamic> decoded = jsonDecode(moduleSettingsJson) as Map<String, dynamic>;
-        _moduleSettings = decoded.map((key, value) => MapEntry(key, value as Map<String, dynamic>));
+        final Map<String, dynamic> decoded =
+            jsonDecode(moduleSettingsJson) as Map<String, dynamic>;
+        _moduleSettings = decoded
+            .map((key, value) => MapEntry(key, value as Map<String, dynamic>));
       } catch (e) {
         debugPrint('Error decoding module settings: $e');
       }
@@ -108,9 +110,11 @@ class SettingsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateModuleSettings(String moduleId, Map<String, dynamic> settings) async {
+  Future<void> updateModuleSettings(
+      String moduleId, Map<String, dynamic> settings) async {
     final currentSettings = _moduleSettings[moduleId] ?? {};
-    final newSettings = Map<String, dynamic>.from(currentSettings)..addAll(settings);
+    final newSettings = Map<String, dynamic>.from(currentSettings)
+      ..addAll(settings);
     _moduleSettings[moduleId] = newSettings;
     await _prefs.setString(_moduleSettingsKey, jsonEncode(_moduleSettings));
     notifyListeners();

@@ -5,7 +5,6 @@ import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/models/module.dart';
 
-
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -122,7 +121,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildModulesSection(ModuleProvider moduleProvider, SettingsProvider settings) {
+  Widget _buildModulesSection(
+      ModuleProvider moduleProvider, SettingsProvider settings) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -244,7 +244,9 @@ class _ModuleSettingsTileState extends State<ModuleSettingsTile> {
   void initState() {
     super.initState();
     _portController = TextEditingController(
-      text: widget.module.customPort?.toString() ?? widget.module.port?.toString() ?? '',
+      text: widget.module.customPort?.toString() ??
+          widget.module.port?.toString() ??
+          '',
     );
   }
 
@@ -253,7 +255,9 @@ class _ModuleSettingsTileState extends State<ModuleSettingsTile> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.module.customPort != widget.module.customPort ||
         oldWidget.module.port != widget.module.port) {
-      _portController.text = widget.module.customPort?.toString() ?? widget.module.port?.toString() ?? '';
+      _portController.text = widget.module.customPort?.toString() ??
+          widget.module.port?.toString() ??
+          '';
     }
   }
 
@@ -269,7 +273,8 @@ class _ModuleSettingsTileState extends State<ModuleSettingsTile> {
 
     return ExpansionTile(
       title: Text(widget.module.name),
-      subtitle: Text('Port: ${widget.module.customPort ?? widget.module.port ?? 'None'}'),
+      subtitle: Text(
+          'Port: ${widget.module.customPort ?? widget.module.port ?? 'None'}'),
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),

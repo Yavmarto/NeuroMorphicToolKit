@@ -313,8 +313,8 @@ class BundleManager {
     final List<String> knownPaths = [];
 
     if (_env.isMacOS) {
-      final home = _env.environment['HOME'] ??
-          '/Users/${_env.environment['USER']}';
+      final home =
+          _env.environment['HOME'] ?? '/Users/${_env.environment['USER']}';
       knownPaths.addAll([
         '/opt/homebrew/bin/python3',
         '/opt/homebrew/bin/python',

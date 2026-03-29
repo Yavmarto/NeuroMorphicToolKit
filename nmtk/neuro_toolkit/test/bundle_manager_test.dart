@@ -8,7 +8,6 @@ class MockBundleEnvironment implements BundleEnvironment {
   @override
   Future<void> renameDirectory(String source, String destination) async {}
 
-
   @override
   bool isMacOS = false;
   @override

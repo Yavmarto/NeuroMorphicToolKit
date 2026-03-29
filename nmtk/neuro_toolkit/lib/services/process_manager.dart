@@ -169,7 +169,8 @@ class ProcessManager {
     _scheduleRetry(updatedModule);
   }
 
-  Future<void> init(List<Module> modules, [LogLevel logLevel = LogLevel.info]) async {
+  Future<void> init(List<Module> modules,
+      [LogLevel logLevel = LogLevel.info]) async {
     _currentLogLevel = logLevel;
     if (_initialized) {
       // Update modules list if it changed

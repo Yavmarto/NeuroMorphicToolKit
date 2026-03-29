@@ -28,8 +28,9 @@ void main() {
       expect(pressed, isTrue);
     });
 
-    testWidgets('NmtkEnergyBarChart renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkEnergyBarChart renders correctly', (
+      WidgetTester tester,
+    ) async {
       const report = EnergyReport(
         perEnsemblePj: {'E1': 10.0, 'E2': 20.0},
         totalPj: 30.0,
@@ -49,8 +50,9 @@ void main() {
       expect(find.text('10.00 pJ'), findsOneWidget);
     });
 
-    testWidgets('NmtkQuantizationTable renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkQuantizationTable renders correctly', (
+      WidgetTester tester,
+    ) async {
       const report = QuantizationReport(
         bitWidths: [8, 4],
         accuracyDrops: [0.01, 0.06],
@@ -69,8 +71,9 @@ void main() {
       expect(find.text('6.00%'), findsOneWidget);
     });
 
-    testWidgets('NmtkSparklineChart renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkSparklineChart renders correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -86,8 +89,9 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('NmtkPipelineStepper renders correctly',
-        (WidgetTester tester) async {
+    testWidgets('NmtkPipelineStepper renders correctly', (
+      WidgetTester tester,
+    ) async {
       final steps = [
         const NmtkPipelineStepData(
           label: 'Step 1',
@@ -112,7 +116,6 @@ void main() {
       expect(find.text('Step 2'), findsOneWidget);
       expect(find.text('In progress'), findsOneWidget);
     });
-  });
 
     testWidgets('NmtkOutlinedButton renders correctly', (
       WidgetTester tester,

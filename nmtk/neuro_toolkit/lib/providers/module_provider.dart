@@ -44,7 +44,8 @@ class ModuleProvider with ChangeNotifier {
   void _applySettingsToModules() {
     if (_settingsProvider == null) return;
     for (int i = 0; i < _modules.length; i++) {
-      final moduleSettings = _settingsProvider!.getModuleSettings(_modules[i].id);
+      final moduleSettings =
+          _settingsProvider!.getModuleSettings(_modules[i].id);
       final isEnabled = moduleSettings['isEnabled'] as bool? ?? true;
       final customPort = moduleSettings['customPort'] as int?;
       _modules[i] = _modules[i].copyWith(
@@ -55,7 +56,8 @@ class ModuleProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateModuleSettings(String moduleId, {bool? isEnabled, int? customPort}) async {
+  Future<void> updateModuleSettings(String moduleId,
+      {bool? isEnabled, int? customPort}) async {
     final index = _modules.indexWhere((m) => m.id == moduleId);
     if (index != -1) {
       final updatedModule = _modules[index].copyWith(
@@ -110,7 +112,8 @@ class ModuleProvider with ChangeNotifier {
       if (_settingsProvider != null) {
         _applySettingsToModules();
       }
-      await _processManager.init(_modules, _settingsProvider?.logLevel ?? LogLevel.info);
+      await _processManager.init(
+          _modules, _settingsProvider?.logLevel ?? LogLevel.info);
 
       // Check for updates on startup
       unawaited(checkForUpdates());

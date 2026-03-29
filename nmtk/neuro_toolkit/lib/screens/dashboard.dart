@@ -60,7 +60,8 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       Semantics(
                         label: 'Module Name',
-                        child: Text(module.name, overflow: TextOverflow.ellipsis),
+                        child:
+                            Text(module.name, overflow: TextOverflow.ellipsis),
                       ),
                       _buildStatusIndicator(module.status),
                       if (module.versionPinned) ...[

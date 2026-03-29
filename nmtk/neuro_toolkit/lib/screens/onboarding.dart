@@ -17,22 +17,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<OnboardingStep> _steps = [
     OnboardingStep(
       title: 'Welcome to NMTK',
-      description: 'The NeuroMorphic ToolKit is your gateway to SNN engineering and simulation.',
+      description:
+          'The NeuroMorphic ToolKit is your gateway to SNN engineering and simulation.',
       icon: Icons.hub,
     ),
     OnboardingStep(
       title: 'Modular Ecosystem',
-      description: 'Browse the Catalog to install specialized modules for simulation, hardware deployment, and more.',
+      description:
+          'Browse the Catalog to install specialized modules for simulation, hardware deployment, and more.',
       icon: Icons.extension,
     ),
     OnboardingStep(
       title: 'Python Powered',
-      description: 'NMTK uses isolated Python environments to run heavy-duty backends without dependency hell.',
+      description:
+          'NMTK uses isolated Python environments to run heavy-duty backends without dependency hell.',
       icon: Icons.terminal,
     ),
     OnboardingStep(
       title: 'Ready to Explore?',
-      description: 'Start by installing a module from the Catalog or check your Dashboard for status.',
+      description:
+          'Start by installing a module from the Catalog or check your Dashboard for status.',
       icon: Icons.rocket_launch,
     ),
   ];
