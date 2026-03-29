@@ -4,6 +4,9 @@ name: Sync Submodule Pointers
 # parent repo's submodule pointer is behind and opens a PR to update it.
 # Runs on a schedule and can be triggered manually.
 
+# NOTE: When testing locally with `act`, you must specify the event (e.g., `act workflow_dispatch`
+# or `act schedule`), otherwise it defaults to `push` and fails with "Could not find any stages to run".
+# This is a local testing configuration issue; the workflow works correctly on GitHub Actions.
 on:
   schedule:
     - cron: '0 */6 * * *' # Every 6 hours
