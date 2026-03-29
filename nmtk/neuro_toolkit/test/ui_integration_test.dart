@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/models/module.dart';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';

@@ -33,7 +33,8 @@ def parse_commits(commits):
     }
 
     for msg in commits:
-        if not msg: continue
+        if not msg:
+            continue
 
         if msg.startswith('feat'):
             categories["Added"].append(msg)
@@ -99,7 +100,6 @@ def update_changelog_file(filepath, new_section):
     with open(filepath, 'w') as f:
         f.write(updated_content)
 
-import os
 
 def main():
     if len(sys.argv) < 2:

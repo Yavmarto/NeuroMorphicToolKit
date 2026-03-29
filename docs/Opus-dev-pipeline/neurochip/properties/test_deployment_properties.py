@@ -10,13 +10,13 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-import sys, os
+import sys
+import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "contracts"))
 
 from deployment_contracts import (
     QuantizationContract,
     LatencyEstimateContract,
-    PowerEstimateContract,
     FaultSweepContract,
 )
 
