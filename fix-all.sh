@@ -1,6 +1,7 @@
 #!/usr/bin/env zsh
-# fix-all.sh — Run `dart fix --apply` in every Dart/Flutter project
-# found in the root repo and all submodules.
+# fix-all.sh — Run `dart fix --apply` in every Dart/Flutter project and
+#              `ruff check --fix` in every Python project found in the root
+#              repo and all submodules.
 #
 # Usage: ./fix-all.sh [--dry-run]
 #   --dry-run  Show what would be fixed without applying changes.
@@ -13,6 +14,9 @@ APPLY_FLAG="--apply"
 FIXED=0
 SKIPPED=0
 FAILED=0
+PY_FIXED=0
+PY_SKIPPED=0
+PY_FAILED=0
 
 if [[ "${1:-}" == "--dry-run" ]]; then
   DRY_RUN=true
@@ -73,8 +77,45 @@ fix_project() {
   cd "$ROOT_DIR"
 }
 
+fix_python_project() {
+  local dir="$1"
+  local label="$2"
+
+  echo ""
+  echo "──────────────────────────────────────────"
+  echo "  [Python] $label"
+  echo "  ($dir)"
+  echo "──────────────────────────────────────────"
+
+  cd "$dir"
+
+  if ! command -v ruff &>/dev/null; then
+    echo "  [SKIP] ruff not found in PATH."
+    PY_SKIPPED=$((PY_SKIPPED + 1))
+    cd "$ROOT_DIR"
+    return 0
+  fi
+
+  if $DRY_RUN; then
+    echo "  Running: ruff check . (dry run)"
+    ruff check . 2>&1 || true
+    PY_SKIPPED=$((PY_SKIPPED + 1))
+  else
+    echo "  Running: ruff check --fix ."
+    if ruff check --fix . 2>&1; then
+      echo "  [OK]"
+      PY_FIXED=$((PY_FIXED + 1))
+    else
+      echo "  [FAIL] ruff exited with errors (unfixable issues remain)."
+      PY_FAILED=$((PY_FAILED + 1))
+    fi
+  fi
+
+  cd "$ROOT_DIR"
+}
+
 echo "======================================================"
-echo "  fix-all.sh — Apply Dart/Flutter fixes across repo"
+echo "  fix-all.sh — Apply Dart/Flutter + Python fixes"
 echo "======================================================"
 
 # Find all pubspec.yaml files, excluding build dirs and .dart_tool
@@ -97,10 +138,39 @@ for pubspec in "${PROJECTS[@]}"; do
   fix_project "$project_dir" "$label"
 done
 
+# ── Python / ruff ──────────────────────────────────────────────────────────
+
+# Find all pyproject.toml files, excluding venvs and build dirs
+PY_PROJECTS=("${(@f)$(
+  find "$ROOT_DIR" \
+    -name "pyproject.toml" \
+    -not -path "*/venv/*" \
+    -not -path "*/.venv/*" \
+    -not -path "*/build/*" \
+    -not -path "*/dist/*" \
+    -not -path "*/.dart_tool/*" \
+    -not -path "*/node_modules/*" \
+    2>/dev/null | sort
+)}")
+
+echo ""
+echo "Found ${#PY_PROJECTS[@]} Python project(s)."
+
+for pyproject in "${PY_PROJECTS[@]}"; do
+  project_dir="$(dirname "$pyproject")"
+  label="${project_dir#"$ROOT_DIR/"}"
+  fix_python_project "$project_dir" "$label"
+done
+
 echo ""
 echo "======================================================"
 echo "  Summary"
+echo "  Dart/Flutter:"
 echo "    Fixed:   $FIXED"
 echo "    Skipped: $SKIPPED"
 echo "    Failed:  $FAILED"
+echo "  Python (ruff):"
+echo "    Fixed:   $PY_FIXED"
+echo "    Skipped: $PY_SKIPPED"
+echo "    Failed:  $PY_FAILED"
 echo "======================================================"
