@@ -82,6 +82,20 @@ jobs:
             nmtk_ui_core:
               - 'nmtk_ui_core/**'
 
+  pre-commit:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pre-commit
+        run: pip install pre-commit
+      - name: Run pre-commit
+        run: pre-commit run --all-files
+
   test-neurosim:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurosim == 'true'
@@ -874,6 +888,7 @@ jobs:
   ci-passed:
     runs-on: [self-hosted, Linux, X64]
     needs:
+      - pre-commit
       - test-neurosim
       - test-neurochip
       - test-neurochip-frontend
@@ -906,6 +921,7 @@ jobs:
 
           # Fail if any job failed (skipped is OK — means no changes in that module)
           for result in \
+            "${{ needs.pre-commit.result }}" \
             "${{ needs.test-neurosim.result }}" \
             "${{ needs.test-neurochip.result }}" \
             "${{ needs.test-neurochip-frontend.result }}" \
