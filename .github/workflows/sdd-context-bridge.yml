@@ -62,16 +62,17 @@ jobs:
           done
 
           if [ ! -s "$CONTEXT_FILE" ]; then
-            echo "# No SDD documents found" >> "$CONTEXT_FILE"
-            echo "Proceed using general best practices." >> "$CONTEXT_FILE"
+            {
+              echo "# No SDD documents found"
+              echo "Proceed using general best practices."
+            } >> "$CONTEXT_FILE"
           fi
 
           {
             echo "context<<__SDD_EOF__"
             cat "$CONTEXT_FILE"
             echo "__SDD_EOF__"
+            echo "spec_exists=${SPEC_EXISTS}"
+            echo "guardrails_count=${GUARDRAILS_COUNT}"
           } >> "$GITHUB_OUTPUT"
-
-          echo "spec_exists=${SPEC_EXISTS}"           >> "$GITHUB_OUTPUT"
-          echo "guardrails_count=${GUARDRAILS_COUNT}" >> "$GITHUB_OUTPUT"
           rm -f "$CONTEXT_FILE"
