@@ -102,11 +102,16 @@ fix_python_project() {
     PY_SKIPPED=$((PY_SKIPPED + 1))
   else
     echo "  Running: ruff check --fix ."
-    if ruff check --fix . 2>&1; then
-      echo "  [OK]"
+    ruff check --fix . 2>&1
+    ruff_exit=$?
+    if (( ruff_exit == 0 )); then
+      echo "  [OK] No issues remaining."
+      PY_FIXED=$((PY_FIXED + 1))
+    elif (( ruff_exit == 1 )); then
+      echo "  [WARN] Fixes applied; unfixable issues remain (manual attention needed)."
       PY_FIXED=$((PY_FIXED + 1))
     else
-      echo "  [FAIL] ruff exited with errors (unfixable issues remain)."
+      echo "  [FAIL] ruff encountered an internal error (exit $ruff_exit)."
       PY_FAILED=$((PY_FAILED + 1))
     fi
   fi
