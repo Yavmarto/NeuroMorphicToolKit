@@ -54,20 +54,19 @@ class DashboardScreen extends StatelessWidget {
               return Card(
                 margin: const EdgeInsets.all(8.0),
                 child: ListTile(
-                  title: Row(
+                  title: Wrap(
+                    spacing: 8.0,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Semantics(
                         label: 'Module Name',
-                        child: Text(module.name),
+                        child: Text(module.name, overflow: TextOverflow.ellipsis),
                       ),
-                      const SizedBox(width: 8),
                       _buildStatusIndicator(module.status),
                       if (module.versionPinned) ...[
-                        const SizedBox(width: 8),
                         const Icon(Icons.push_pin,
                             size: 14, color: Colors.blue),
                       ],
-                      const Spacer(),
                       Text(
                         'v${module.version}',
                         style:
@@ -98,14 +97,14 @@ class DashboardScreen extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (module.availableUpdate != null &&
+                      if (module.remoteVersion != null &&
                           module.status != ModuleStatus.updating)
                         Padding(
                           padding: const EdgeInsets.only(right: 8.0),
                           child: ElevatedButton.icon(
                             onPressed: () => provider.updateModule(module.id),
                             icon: const Icon(Icons.system_update),
-                            label: Text('Update to ${module.availableUpdate}'),
+                            label: Text('Update to ${module.remoteVersion}'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.green,
                               foregroundColor: Colors.white,

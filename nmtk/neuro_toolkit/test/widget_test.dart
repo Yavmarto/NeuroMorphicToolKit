@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/main.dart';
 import 'package:neuro_toolkit/models/module.dart';
@@ -46,10 +47,25 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> uninstallModule(String moduleId) async {}
   @override
   Future<void> updateModule(String moduleId) async {}
+
+  @override
+  Future<void> updateModuleSettings(String moduleId, {bool? isEnabled, int? customPort}) async {}
+
+  @override
+  void updateSettingsProvider(settingsProvider) {}
   @override
   Future<void> checkForUpdates() async {}
   @override
   void closeTab(String moduleId) {}
+
+  @override
+  void dismissLauncherUpdate() {}
+
+  @override
+  void setUpdateChannel(UpdateChannel channel) {}
+
+  @override
+  Future<void> setVersionPinned(String moduleId, bool pinned) async {}
   @override
   Stream<String>? getModuleOutput(String moduleId) => null;
 }
@@ -64,7 +80,7 @@ void main() {
             create: (_) => LocalMockModuleProvider(),
           ),
           ChangeNotifierProvider<SettingsProvider>(
-            create: (_) => LocalMockSettingsProvider(),
+            create: (_) => SettingsProvider(),
           ),
         ],
         child: const NeuroToolkitApp(),

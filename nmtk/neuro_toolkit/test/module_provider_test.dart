@@ -15,7 +15,7 @@ class MockProcessManager implements ProcessManager {
   Stream<Module> get statusUpdates => _statusController.stream;
 
   @override
-  Future<void> init(List<Module> modules) async {
+  Future<void> init(List<Module> modules, [dynamic logLevel]) async {
     this.modules = modules;
   }
 

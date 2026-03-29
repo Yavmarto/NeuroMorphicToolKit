@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
+import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
@@ -45,6 +47,21 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> installModule(String moduleId) async {}
   @override
   void closeTab(String moduleId) {}
+
+  @override
+  void setUpdateChannel(UpdateChannel channel) {}
+
+  @override
+  Future<void> setVersionPinned(String moduleId, bool pinned) async {}
+
+  @override
+  void dismissLauncherUpdate() {}
+
+  @override
+  LauncherUpdate? get pendingLauncherUpdate => null;
+
+  @override
+  UpdateChannel get currentChannel => UpdateChannel.stable;
   @override
   Stream<String>? getModuleOutput(String moduleId) => null;
 
@@ -65,6 +82,12 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
 
   @override
   Future<void> updateModule(String moduleId) async {}
+
+  @override
+  Future<void> updateModuleSettings(String moduleId, {bool? isEnabled, int? customPort}) async {}
+
+  @override
+  void updateSettingsProvider(SettingsProvider settingsProvider) {}
 
   @override
   Future<void> checkForUpdates() async {}
