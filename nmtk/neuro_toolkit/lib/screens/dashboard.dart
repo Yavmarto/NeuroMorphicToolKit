@@ -98,7 +98,7 @@ class DashboardScreen extends StatelessWidget {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (module.remoteVersion != null &&
+                      if (module.remoteVersion != '0.0.0' &&
                           module.status != ModuleStatus.updating)
                         Padding(
                           padding: const EdgeInsets.only(right: 8.0),
