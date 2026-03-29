@@ -30,10 +30,6 @@ on:
         required: false
         type: string
         default: 'feature'
-      issue_number:
-        description: 'GitHub Issue Number'
-        required: false
-        type: string
     secrets:
       JULES_API_KEY:
         required: true
