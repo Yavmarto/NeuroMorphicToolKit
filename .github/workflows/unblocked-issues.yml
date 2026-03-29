@@ -26,6 +26,10 @@ jobs:
     runs-on: self-hosted
     permissions:
       issues: read
+    outputs:
+      issue_title: ${{ steps.get_issue.outputs.issue_title }}
+      issue_body: ${{ steps.get_issue.outputs.issue_body }}
+      issue_author: ${{ steps.get_issue.outputs.issue_author }}
 
     steps:
       - name: Get issue details
@@ -33,12 +37,14 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issue = await github.rest.issues.get({
+            const { data: issue } = await github.rest.issues.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: ${{ matrix.issue-number }}
             });
-            return issue.data;
+            core.setOutput('issue_title', issue.title);
+            core.setOutput('issue_body', issue.body);
+            core.setOutput('issue_author', issue.user.login);
 
   call-reusable:
     needs: [detect-unblocked, implement]
@@ -51,6 +57,7 @@ jobs:
       issue_title: ${{ needs.implement.outputs.issue_title || 'Unblocked Issue' }}
       issue_body: ${{ needs.implement.outputs.issue_body || '' }}
       issue_author: ${{ needs.implement.outputs.issue_author || '' }}
+      issue_number: ${{ matrix.issue-number }}
     secrets:
       JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
       JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}
