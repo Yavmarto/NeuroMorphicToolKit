@@ -54,12 +54,17 @@ jobs:
             git tag "${{ inputs.version }}" || echo "  ⚠ Tag already exists in $name"
 
             if [ "${{ inputs.dry_run }}" = "false" ]; then
-              git push origin main --tags
+              git push origin main --tags || exit 1
               echo "  ✓ $name: pushed main + tag"
             else
               echo "  [DRY RUN] Would push main + tag for $name"
             fi
-          '
+          ' || FAILED="true"
+
+          if [ "$FAILED" = "true" ]; then
+            echo "$FAILED"
+            exit 1
+          fi
 
       - name: Promote parent repo (dev → main)
         run: |
