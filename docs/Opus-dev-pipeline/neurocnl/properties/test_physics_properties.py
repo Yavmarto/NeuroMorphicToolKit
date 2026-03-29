@@ -10,7 +10,7 @@ To run:
 from __future__ import annotations
 
 import pytest
-from hypothesis import HealthCheck, given, settings, assume
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 # Import contracts from the pipeline package
@@ -20,9 +20,8 @@ import sys
 import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "contracts"))
 
-from neuron_params import LIFNeuronContract, SynapticContract, STDPContract, PopulationContract
-from hardware_export import LoihiExportContract, SpiNNakerExportContract, TeensyExportContract
-from pipeline_contracts import CNLParseResultContract
+from neuron_params import LIFNeuronContract, SynapticContract, PopulationContract
+from hardware_export import LoihiExportContract
 
 
 # ═══════════════════════════════════════════════════════════════
