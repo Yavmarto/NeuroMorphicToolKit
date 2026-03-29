@@ -57,7 +57,7 @@ jobs:
             PROMPT=$(cat "$PROMPT_FILE")
           else
             # Fetch from the root repository directly via raw github API (falling back to main/dev branch)
-            PROMPT=$(curl -sL https://raw.githubusercontent.com/${{ github.repository_owner }}/NeuroMorphicToolKit/main/$PROMPT_FILE || curl -sL https://raw.githubusercontent.com/${{ github.repository_owner }}/NeuroMorphicToolKit/dev/$PROMPT_FILE)
+            PROMPT=$(curl -sL "https://raw.githubusercontent.com/${{ github.repository_owner }}/NeuroMorphicToolKit/main/$PROMPT_FILE" || curl -sL "https://raw.githubusercontent.com/${{ github.repository_owner }}/NeuroMorphicToolKit/dev/$PROMPT_FILE")
           fi
 
           # Prepare injected variables for the agent prompt
@@ -65,21 +65,19 @@ jobs:
           AGENT_NAME="${{ inputs.agent_name }}"
           TARGET_DIR="${{ inputs.target_directory }}"
 
-          PROMPT="${PROMPT//\{AUDIT_DATE\}/$CURRENT_DATE}"
-          PROMPT="${PROMPT//\{AGENT_NAME\}/$AGENT_NAME}"
+          PROMPT="${PROMPT//\{AUDIT_DATE\}/"$CURRENT_DATE"}"
+          PROMPT="${PROMPT//\{AGENT_NAME\}/"$AGENT_NAME"}"
 
           PROMPT="${PROMPT}
 
           --- EXECUTION CONTEXT ---
-          TARGET DIRECTORY FOR THIS AUDIT: $TARGET_DIR
+          TARGET DIRECTORY FOR THIS AUDIT: '$TARGET_DIR'
           Please constrain your analysis and issue-checking ONLY to the scope of '$TARGET_DIR'."
 
           # Pass to the next step
-          {
-            echo "prompt<<EOF"
-            echo "$PROMPT"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          echo "prompt<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$PROMPT" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Invoke Agent for Status Audit (Primary Key)
         id: agent-primary
