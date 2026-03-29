@@ -22,7 +22,7 @@ jobs:
     if: needs.detect-unblocked.outputs.found == 'true'
     strategy:
       matrix:
-        issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix) }}
+        issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix || '[]') }}
     runs-on: self-hosted
     permissions:
       issues: read
@@ -51,7 +51,7 @@ jobs:
     if: needs.detect-unblocked.outputs.found == 'true'
     strategy:
       matrix:
-        issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix) }}
+        issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix || '[]') }}
     uses: ./.github/workflows/reusable-unblocked-issues.yml
     with:
       issue_title: ${{ needs.implement.outputs.issue_title || 'Unblocked Issue' }}
