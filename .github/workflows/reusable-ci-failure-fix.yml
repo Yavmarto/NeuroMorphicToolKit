@@ -31,6 +31,9 @@ jobs:
   fix-failure:
     needs: sdd-context
     runs-on: self-hosted
+    concurrency:
+      group: agent-work
+      cancel-in-progress: false
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4

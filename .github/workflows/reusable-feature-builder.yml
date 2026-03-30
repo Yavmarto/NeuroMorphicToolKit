@@ -44,6 +44,9 @@ jobs:
     needs: sdd-context
     if: ${{ contains(fromJSON(inputs.trusted_users), inputs.sender_login) }}
     runs-on: self-hosted
+    concurrency:
+      group: agent-work
+      cancel-in-progress: false
     steps:
       - name: Invoke Jules to build feature (primary key)
         id: jules-primary
