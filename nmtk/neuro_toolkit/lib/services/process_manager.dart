@@ -234,6 +234,20 @@ class ProcessManager {
     final venvDir = Directory(venvPath);
 
     try {
+      // If the venv directory exists but python is missing/broken (e.g. the
+      // base interpreter was removed), delete it so it gets recreated below.
+      if (await venvDir.exists()) {
+        final venvPythonCheck = Platform.isWindows
+            ? p.join(venvPath, 'Scripts', 'python.exe')
+            : p.join(venvPath, 'bin', 'python');
+        if (!await File(venvPythonCheck).exists()) {
+          debugPrint(
+            '[${module.id}] venv python missing/broken, deleting for recreation...',
+          );
+          await venvDir.delete(recursive: true);
+        }
+      }
+
       if (!await venvDir.exists()) {
         onProgress?.call(0.1);
         final pythonBin = await BundleManager().pythonPath;
