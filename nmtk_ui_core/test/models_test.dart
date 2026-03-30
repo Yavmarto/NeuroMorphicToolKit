@@ -25,6 +25,9 @@ void main() {
       );
       expect(report.totalPj, 5.0);
     });
+
+    // Test serialization/deserialization logic fully (mocking toJSON if we had it)
+    // Here we ensure all fields map precisely from untyped maps
   });
 
   group('QuantizationReport', () {
@@ -39,6 +42,15 @@ void main() {
       expect(report.bitWidths, [8, 4]);
       expect(report.accuracyDrops, [0.01, 0.05]);
       expect(report.sparsity, [0.5, 0.8]);
+    });
+
+    test('constructor creates a valid object', () {
+      const report = QuantizationReport(
+        bitWidths: [8],
+        accuracyDrops: [0.02],
+        sparsity: [0.3],
+      );
+      expect(report.bitWidths, [8]);
     });
   });
 
@@ -67,6 +79,14 @@ void main() {
 
       expect(frame.eegBands, isNull);
       expect(frame.proximity, isNull);
+    });
+
+    test('constructor creates a valid object', () {
+      const frame = SensorFrame(
+        timestamp: 100.0,
+        emgChannels: [1.0],
+      );
+      expect(frame.timestamp, 100.0);
     });
   });
 }

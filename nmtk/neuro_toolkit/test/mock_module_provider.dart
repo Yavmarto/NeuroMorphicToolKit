@@ -102,7 +102,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
       {bool? isEnabled, int? customPort}) async {}
 
   @override
-  void updateSettingsProvider(SettingsProvider settingsProvider) {}
+  void updateSettingsProvider(dynamic settingsProvider) {}
 
   @override
   void setUpdateChannel(UpdateChannel channel) {}

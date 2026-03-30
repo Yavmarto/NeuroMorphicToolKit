@@ -22,6 +22,9 @@ void main() {
     test('design tokens are correctly defined', () {
       expect(NmtkDesignTokens.primarySeed, const Color(0xFF1337EC));
       expect(NmtkDesignTokens.buttonShape, BorderRadius.circular(16.0));
+      expect(NmtkDesignTokens.cardShape, BorderRadius.circular(24.0));
+      expect(NmtkDesignTokens.backgroundLight, const Color(0xFFF6F6F8));
+      expect(NmtkDesignTokens.backgroundDark, const Color(0xFF101322));
     });
   });
 
@@ -65,6 +68,19 @@ void main() {
     test('lerp with wrong type returns this', () {
       final result = extension.lerp(null, 0.5);
       expect(result, extension);
+    });
+  });
+
+  group('AppTheme TextStyles', () {
+    test('TextTheme is defined for both light and dark themes', () {
+      final lightTheme = AppTheme.lightTheme;
+      final darkTheme = AppTheme.darkTheme;
+
+      expect(lightTheme.textTheme.displayLarge, isNotNull);
+      expect(lightTheme.textTheme.bodyMedium, isNotNull);
+
+      expect(darkTheme.textTheme.displayLarge, isNotNull);
+      expect(darkTheme.textTheme.bodyMedium, isNotNull);
     });
   });
 }
