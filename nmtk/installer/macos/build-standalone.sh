@@ -177,7 +177,6 @@ for mod in "${MODULES[@]}"; do
     --exclude='.mypy_cache' \
     --exclude='.ruff_cache' \
     --exclude='.pytest_cache' \
-    --exclude='frontend/build' \
     --exclude='frontend/.dart_tool' \
     "$SRC/" "$DEST/"
 done
