@@ -84,8 +84,143 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
 }
 
 /// ----------------------------------------------------------------------------
+/// MODULE THEME VARIANTS
+/// ----------------------------------------------------------------------------
+
+/// Identifies which NMTK sub-module is requesting a themed [ThemeData].
+///
+/// Each variant maps to a distinct seed colour while sharing the same
+/// Material 3 design-system structure, giving the suite a unified look
+/// (similar to how Microsoft Office or Apple's app suite feels cohesive yet
+/// each app has its own accent identity).
+enum NmtkThemeVariant {
+  /// Default NMTK navy/blue identity (same as the root [AppTheme]).
+  nmtk,
+
+  /// neurocnl Studio — purple / lavender identity.
+  neurocnl,
+
+  /// Neurohub — teal / cyan identity.
+  neurohub,
+
+  /// Neurochip — amber / gold identity.
+  neurochip,
+
+  /// Neurobench — green / emerald identity.
+  neurobench,
+
+  /// Neurosim — indigo / deep-blue identity.
+  neurosim,
+
+  /// Neurosense — rose / coral identity.
+  neurosense,
+}
+
+/// ----------------------------------------------------------------------------
+/// NEUROCNL COLOR TOKENS
+/// ----------------------------------------------------------------------------
+
+/// Design tokens for the **neurocnl Studio** module.
+///
+/// Uses a dark-mode-first purple / lavender palette.  All values are
+/// `const` so they can be used in `static const` fields of other classes.
+class NmtkNeurocnlTokens {
+  NmtkNeurocnlTokens._();
+
+  // ── Surface / Background ───────────────────────────────────────
+  /// Deep purple-black page background.
+  static const Color background = Color(0xFF0F0D1A);
+
+  /// Dark purple card / panel surface.
+  static const Color surface = Color(0xFF1A1625);
+
+  /// Slightly elevated surface (e.g. input fields, hover states).
+  static const Color surfaceVariant = Color(0xFF231E35);
+
+  // ── Brand / Accent ─────────────────────────────────────────────
+  /// Primary lavender accent.
+  static const Color primary = Color(0xFF9B7FFF);
+
+  /// Dimmed / secondary lavender (used for hover, disabled states).
+  static const Color primaryDim = Color(0xFF7B5FDF);
+
+  // ── Semantic ───────────────────────────────────────────────────
+  /// Success green.
+  static const Color success = Color(0xFF4ADE80);
+
+  /// Error red-pink.
+  static const Color error = Color(0xFFFF5C7A);
+
+  /// Warning amber.
+  static const Color warning = Color(0xFFFFB347);
+
+  /// Info blue.
+  static const Color info = Color(0xFF60A5FA);
+
+  // ── Text ───────────────────────────────────────────────────────
+  /// Primary text — near-white with a subtle purple tint.
+  static const Color textPrimary = Color(0xFFF1EEF9);
+
+  /// Secondary / muted text — soft lavender-grey.
+  static const Color textSecondary = Color(0xFFB0A8CC);
+
+  // ── Border ─────────────────────────────────────────────────────
+  /// Subtle dark-purple border / divider.
+  static const Color border = Color(0xFF3D3560);
+
+  // ── Syntax Highlighting (CNL editor) ───────────────────────────
+  /// Keywords (`connect`, `ensemble`, `input`, …).
+  static const Color synKeyword = Color(0xFFBD93F9);
+
+  /// Subject / identifier tokens.
+  static const Color synSubject = Color(0xFF8BE9FD);
+
+  /// Numeric literals.
+  static const Color synNumber = Color(0xFFFFB86C);
+
+  /// Comments.
+  static const Color synComment = Color(0xFF6272A4);
+
+  /// String literals.
+  static const Color synString = Color(0xFFF1FA8C);
+
+  // ── Graph Node / Edge colours ──────────────────────────────────
+  /// Ensemble node fill.
+  static const Color nodeEnsemble = Color(0xFF9B7FFF);
+
+  /// Input node fill.
+  static const Color nodeInput = Color(0xFF50FA7B);
+
+  /// Excitatory synapse / edge stroke.
+  static const Color edgeExcitatory = Color(0xFF8BE9FD);
+
+  /// Inhibitory synapse / edge stroke.
+  static const Color edgeInhibitory = Color(0xFFFF5555);
+}
+
+/// ----------------------------------------------------------------------------
 /// APP THEME CONFIGURATION
 /// ----------------------------------------------------------------------------
+
+/// Returns the seed colour associated with each [NmtkThemeVariant].
+Color _seedForVariant(NmtkThemeVariant variant) {
+  switch (variant) {
+    case NmtkThemeVariant.nmtk:
+      return NmtkDesignTokens.primarySeed; // navy/blue
+    case NmtkThemeVariant.neurocnl:
+      return const Color(0xFF7C5CBF); // purple
+    case NmtkThemeVariant.neurohub:
+      return const Color(0xFF0D9488); // teal
+    case NmtkThemeVariant.neurochip:
+      return const Color(0xFFD97706); // amber
+    case NmtkThemeVariant.neurobench:
+      return const Color(0xFF16A34A); // green
+    case NmtkThemeVariant.neurosim:
+      return const Color(0xFF4338CA); // indigo
+    case NmtkThemeVariant.neurosense:
+      return const Color(0xFFE11D48); // rose
+  }
+}
 
 class AppTheme {
   // Shared M3 typography focusing on a modern grotesque/sans font
@@ -191,6 +326,132 @@ class AppTheme {
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: NmtkDesignTokens.surfaceDark,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  /// Returns a light [ThemeData] tuned for the given [NmtkThemeVariant].
+  ///
+  /// The variant's seed colour is used to generate the Material 3
+  /// [ColorScheme], while all other design decisions (typography, shapes,
+  /// component themes) remain consistent across the suite.
+  static ThemeData lightThemeForVariant(NmtkThemeVariant variant) {
+    final seed = _seedForVariant(variant);
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: Brightness.light,
+      surface: NmtkDesignTokens.backgroundLight,
+    );
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      textTheme: _buildTextTheme(ThemeData.light().textTheme),
+      extensions: [
+        NmtkThemeExtension(
+          terminalBackground: const Color(0xFFE2E8F0),
+          syntaxHighlightColor: seed,
+          brandGradient: LinearGradient(
+            colors: [colorScheme.primary, colorScheme.tertiary],
+          ),
+          glassmorphismColor: Colors.white.withValues(alpha: 0.7),
+        ),
+      ],
+      cardTheme: CardThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: NmtkDesignTokens.cardShape,
+        ),
+        elevation: 0,
+        clipBehavior: Clip.antiAlias,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: NmtkDesignTokens.buttonShape,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          minimumSize: const Size(48, 48),
+        ),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  /// Returns a dark [ThemeData] tuned for the given [NmtkThemeVariant].
+  ///
+  /// For [NmtkThemeVariant.neurocnl] the scaffold background is set to the
+  /// deep purple-black from [NmtkNeurocnlTokens.background] so the editor
+  /// feels immersive.  All other variants fall back to the standard NMTK
+  /// dark background.
+  static ThemeData darkThemeForVariant(NmtkThemeVariant variant) {
+    final seed = _seedForVariant(variant);
+
+    // Per-variant dark surface overrides.
+    final Color darkSurface = variant == NmtkThemeVariant.neurocnl
+        ? NmtkNeurocnlTokens.background
+        : NmtkDesignTokens.backgroundDark;
+
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: Brightness.dark,
+      surface: darkSurface,
+      onSurface: const Color(0xFFF1F5F9),
+      surfaceContainerHighest: variant == NmtkThemeVariant.neurocnl
+          ? NmtkNeurocnlTokens.surface
+          : NmtkDesignTokens.surfaceDark,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: darkSurface,
+      textTheme: _buildTextTheme(ThemeData.dark().textTheme),
+      extensions: [
+        NmtkThemeExtension(
+          terminalBackground: variant == NmtkThemeVariant.neurocnl
+              ? NmtkNeurocnlTokens.surfaceVariant
+              : const Color(0xFF0A0C16),
+          syntaxHighlightColor: variant == NmtkThemeVariant.neurocnl
+              ? NmtkNeurocnlTokens.synKeyword
+              : const Color(0xFF60A5FA),
+          brandGradient: LinearGradient(
+            colors: [colorScheme.primary, colorScheme.secondaryContainer],
+          ),
+          glassmorphismColor: darkSurface.withValues(alpha: 0.8),
+        ),
+      ],
+      cardTheme: CardThemeData(
+        color: colorScheme.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(
+          borderRadius: NmtkDesignTokens.cardShape,
+          side: BorderSide(
+            color: variant == NmtkThemeVariant.neurocnl
+                ? NmtkNeurocnlTokens.border
+                : const Color(0xFF1E293B),
+            width: 1,
+          ),
+        ),
+        elevation: 0,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: NmtkDesignTokens.buttonShape,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          minimumSize: const Size(48, 48),
+        ),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: variant == NmtkThemeVariant.neurocnl
+            ? NmtkNeurocnlTokens.surface
+            : NmtkDesignTokens.surfaceDark,
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
