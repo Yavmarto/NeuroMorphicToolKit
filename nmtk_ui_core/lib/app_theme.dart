@@ -185,17 +185,32 @@ class NmtkNeurocnlTokens {
   static const Color synString = Color(0xFFF1FA8C);
 
   // ── Graph Node / Edge colours ──────────────────────────────────
-  /// Ensemble node fill.
+  /// Sensory ensemble node fill (default / fallback ensemble colour).
   static const Color nodeEnsemble = Color(0xFF9B7FFF);
 
-  /// Input node fill.
+  /// Motor ensemble node fill — warm amber.
+  static const Color nodeMotor = Color(0xFFFFB86C);
+
+  /// Interneuron ensemble node fill — teal.
+  static const Color nodeInterneuron = Color(0xFF50D0B0);
+
+  /// Generic / unknown ensemble node fill.
+  static const Color nodeGenericEnsemble = Color(0xFFBD93F9);
+
+  /// Input / stimulus node fill.
   static const Color nodeInput = Color(0xFF50FA7B);
+
+  /// Error-signal input node fill — muted red-orange.
+  static const Color nodeErrorInput = Color(0xFFFF6E6E);
 
   /// Excitatory synapse / edge stroke.
   static const Color edgeExcitatory = Color(0xFF8BE9FD);
 
   /// Inhibitory synapse / edge stroke.
   static const Color edgeInhibitory = Color(0xFFFF5555);
+
+  /// Plastic (learning-rule) synapse / edge stroke — gold.
+  static const Color edgePlastic = Color(0xFFFFD700);
 }
 
 /// ----------------------------------------------------------------------------
