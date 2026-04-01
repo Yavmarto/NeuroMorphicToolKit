@@ -91,8 +91,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          which python || true
+          which pytest || true
       - name: Install pre-commit
-        run: pip install pre-commit
+        run: python -m pip install pre-commit
       - name: Run pre-commit
         run: pre-commit run --all-files
 
@@ -125,24 +131,28 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurosim || true
-      - name: Set up Python (macOS via Homebrew)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          brew install python@3.11 || true
-          brew link --force --overwrite python@3.11 || true
-          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
-      - name: Set up Python (Linux and Windows)
-        if: runner.os != 'macOS'
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
       - name: Install dependencies
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
-            pip install -e ./Neurosim && pip install pytest httpx ruff mypy
+            python -m pip install -e ./Neurosim
+            python -m pip install pytest httpx ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
@@ -150,20 +160,20 @@ jobs:
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
             cd Neurosim
-            ruff check .
-            ruff format --check .
+            python -m ruff check .
+            python -m ruff format --check .
           fi
       - name: Type check with mypy
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
             cd Neurosim
-            mypy .
+            python -m mypy .
           fi
       - name: Run tests
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
             cd Neurosim
-            pytest --tb=short --hypothesis-show-statistics
+            python -m pytest --tb=short --hypothesis-show-statistics
           fi
 
   test-neurochip:
@@ -195,24 +205,29 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurochip || true
-      - name: Set up Python (macOS via Homebrew)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          brew install python@3.12 || true
-          brew link --force --overwrite python@3.12 || true
-          echo "$(brew --prefix python@3.12)/libexec/bin" >> "${GITHUB_PATH}"
-      - name: Set up Python (Linux and Windows)
-        if: runner.os != 'macOS'
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
       - name: Install dependencies
         run: |
           if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
-            pip install poetry && cd Neurochip/neurochip && poetry install
+            python -m pip install poetry
+            cd Neurochip/neurochip
+            poetry install
           else
             echo "Submodule missing, skipping"
           fi
@@ -266,24 +281,28 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurosense || true
-      - name: Set up Python (macOS via Homebrew)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          brew install python@3.11 || true
-          brew link --force --overwrite python@3.11 || true
-          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
-      - name: Set up Python (Linux and Windows)
-        if: runner.os != 'macOS'
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
       - name: Install dependencies
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
-            pip install -e "./Neurosense/neurosense[dev]" && pip install ruff mypy
+            python -m pip install -e "./Neurosense/neurosense[dev]"
+            python -m pip install ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
@@ -291,20 +310,20 @@ jobs:
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
             cd Neurosense/neurosense
-            ruff check .
-            ruff format --check .
+            python -m ruff check .
+            python -m ruff format --check .
           fi
       - name: Type check with mypy
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
             cd Neurosense/neurosense
-            mypy .
+            python -m mypy .
           fi
       - name: Run tests
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
             cd Neurosense/neurosense
-            pytest --tb=short --hypothesis-show-statistics
+            python -m pytest --tb=short --hypothesis-show-statistics
           fi
 
   test-neurohub:
@@ -336,24 +355,28 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurohub || true
-      - name: Set up Python (macOS via Homebrew)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          brew install python@3.11 || true
-          brew link --force --overwrite python@3.11 || true
-          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
-      - name: Set up Python (Linux and Windows)
-        if: runner.os != 'macOS'
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
-            pip install -e ./Neurohub/neurohub && pip install pytest httpx ruff mypy
+            python -m pip install -e ./Neurohub/neurohub
+            python -m pip install pytest httpx ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
@@ -361,20 +384,20 @@ jobs:
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
             cd Neurohub/neurohub
-            ruff check .
-            ruff format --check .
+            python -m ruff check .
+            python -m ruff format --check .
           fi
       - name: Type check with mypy
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
             cd Neurohub/neurohub
-            mypy .
+            python -m mypy .
           fi
       - name: Run tests
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
             cd Neurohub/neurohub
-            pytest --tb=short --hypothesis-show-statistics
+            python -m pytest --tb=short --hypothesis-show-statistics
           fi
 
   test-neurodreamhand:
@@ -406,24 +429,28 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neuro-Dream-Hand || true
-      - name: Set up Python (macOS via Homebrew)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          brew install python@3.11 || true
-          brew link --force --overwrite python@3.11 || true
-          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
-      - name: Set up Python (Linux and Windows)
-        if: runner.os != 'macOS'
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
       - name: Install dependencies
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
-            pip install -e ./Neuro-Dream-Hand && pip install pytest ruff mypy
+            python -m pip install -e ./Neuro-Dream-Hand
+            python -m pip install pytest ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
@@ -431,20 +458,20 @@ jobs:
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
             cd Neuro-Dream-Hand
-            ruff check .
-            ruff format --check .
+            python -m ruff check .
+            python -m ruff format --check .
           fi
       - name: Type check with mypy
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
             cd Neuro-Dream-Hand
-            mypy .
+            python -m mypy .
           fi
       - name: Run tests
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
             cd Neuro-Dream-Hand
-            pytest --tb=short --hypothesis-show-statistics
+            python -m pytest --tb=short --hypothesis-show-statistics
           fi
 
   test-neurocnl-backend:
@@ -478,31 +505,35 @@ jobs:
         run: |
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${{ secrets.GITHUB_TOKEN }}" submodule update --init neurocnl || true
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${{ secrets.GITHUB_TOKEN }}" submodule update --init Neuro-Dream-Hand || true
-      - name: Set up Python (macOS via Homebrew)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          brew install python@3.11 || true
-          brew link --force --overwrite python@3.11 || true
-          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
-      - name: Set up Python (Linux and Windows)
-        if: runner.os != 'macOS'
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
       - name: Install core package
         run: |
           if [ -d "neurocnl" ] && [ -f "neurocnl/pyproject.toml" ]; then
-            pip install -e ./neurocnl && pip install pytest httpx ruff mypy
+            python -m pip install -e ./neurocnl
+            python -m pip install pytest httpx ruff mypy
           else
             echo "neurocnl missing, skipping install"
           fi
       - name: Install Neuro-Dream-Hand
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
-            pip install -e ./Neuro-Dream-Hand
+            python -m pip install -e ./Neuro-Dream-Hand
           else
             echo "Neuro-Dream-Hand missing, skipping install"
           fi
@@ -510,8 +541,8 @@ jobs:
         run: |
           if [ -f "neurocnl/pyproject.toml" ]; then
             cd neurocnl
-            ruff check .
-            ruff format --check .
+            python -m ruff check .
+            python -m ruff format --check .
           else
             echo "neurocnl missing, skipping lint"
           fi
@@ -519,7 +550,7 @@ jobs:
         run: |
           if [ -f "neurocnl/pyproject.toml" ]; then
             cd neurocnl
-            mypy .
+            python -m mypy .
           else
             echo "neurocnl missing, skipping type check"
           fi
@@ -527,7 +558,7 @@ jobs:
         run: |
           if [ -f "neurocnl/backend/requirements.txt" ]; then
             cd neurocnl/backend
-            pip install -r requirements.txt
+            python -m pip install -r requirements.txt
           else
             echo "neurocnl/backend missing, skipping backend deps"
           fi
@@ -535,7 +566,7 @@ jobs:
         run: |
           if [ -f "neurocnl/pyproject.toml" ]; then
             cd neurocnl
-            pytest neurocnl/ --tb=short
+            python -m pytest neurocnl/ -v --tb=short
           else
             echo "neurocnl missing, skipping core tests"
           fi
@@ -543,7 +574,7 @@ jobs:
         run: |
           if [ -f "neurocnl/backend/requirements.txt" ]; then
             cd neurocnl/backend
-            PYTHONPATH=. pytest backend/tests --tb=short
+            PYTHONPATH=. python -m pytest backend/tests --tb=short
           else
             echo "neurocnl/backend missing, skipping backend tests"
           fi
@@ -577,24 +608,27 @@ jobs:
           submodules: false
       - name: Update submodule
         run: git submodule update --init Neurobench || true
-      - name: Set up Python (macOS via Homebrew)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          brew install python@3.11 || true
-          brew link --force --overwrite python@3.11 || true
-          echo "$(brew --prefix python@3.11)/libexec/bin" >> "${GITHUB_PATH}"
-      - name: Set up Python (Linux and Windows)
-        if: runner.os != 'macOS'
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
         env:
           AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
       - name: Install poetry
         run: |
           if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
-            pip install poetry
+            python -m pip install poetry
           fi
       - name: Install dependencies
         run: |
