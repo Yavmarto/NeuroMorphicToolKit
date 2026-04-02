@@ -6,6 +6,7 @@ workflows, known gaps, and required updates.
 Usage:
     python scripts/audit_workflows.py
 """
+
 from __future__ import annotations
 
 import argparse
@@ -28,7 +29,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    print("| Module | Framework | Workflows Found | Missing / Broken | Required Updates |")
+    print(
+        "| Module | Framework | Workflows Found | Missing / Broken | Required Updates |"
+    )
     print("|---|---|---|---|---|")
     for config_path in sorted(args.root.glob("*/module.json")):
         module = json.loads(config_path.read_text())
@@ -48,7 +51,9 @@ def main() -> int:
         existing = ", ".join(found) or "—"
         missing = ", ".join(module.get("workflow_gaps", [])) or "—"
         required = ", ".join(module.get("required_updates", [])) or "—"
-        print(f"| {module['module_name']} | {framework} | {existing} | {missing} | {required} |")
+        print(
+            f"| {module['module_name']} | {framework} | {existing} | {missing} | {required} |"
+        )
     return 0
 
 

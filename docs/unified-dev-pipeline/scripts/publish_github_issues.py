@@ -9,6 +9,7 @@ Usage:
     python scripts/publish_github_issues.py --module neurocnl  # one module
     python scripts/publish_github_issues.py                    # dry-run
 """
+
 from __future__ import annotations
 
 import argparse
@@ -60,7 +61,9 @@ def resolve_repo(root_dir: Path, module: dict, override_repo: str | None) -> str
         repo = parsed.path.lstrip("/")
     repo = repo.removesuffix(".git")
     if repo.count("/") != 1:
-        raise RuntimeError(f"Unsupported remote URL for {module['module_name']}: {remote}")
+        raise RuntimeError(
+            f"Unsupported remote URL for {module['module_name']}: {remote}"
+        )
     return repo
 
 
@@ -102,14 +105,14 @@ def build_body(issue: dict, dependency_numbers: list[int]) -> str:
 
 
 LABEL_DEFS: dict[str, tuple[str, str]] = {
-    "cdd-pbt":    ("CDD+PBT migration", "0E8A16"),
-    "migration":  ("Contract-Driven Development migration", "1D76DB"),
-    "contracts":  ("Pydantic domain contracts", "D93F0B"),
+    "cdd-pbt": ("CDD+PBT migration", "0E8A16"),
+    "migration": ("Contract-Driven Development migration", "1D76DB"),
+    "contracts": ("Pydantic domain contracts", "D93F0B"),
     "properties": ("Hypothesis property-based tests", "FBCA04"),
-    "ci":         ("CI/CD improvements", "E4E669"),
-    "feature":    ("New feature or request", "A2EEEF"),
-    "jules":      ("Jules agent task", "BFD4F2"),
-    "critical":   ("Critical blocker — must be resolved first", "B60205"),
+    "ci": ("CI/CD improvements", "E4E669"),
+    "feature": ("New feature or request", "A2EEEF"),
+    "jules": ("Jules agent task", "BFD4F2"),
+    "critical": ("Critical blocker — must be resolved first", "B60205"),
 }
 
 _labels_ensured: set[str] = set()
@@ -121,11 +124,19 @@ def ensure_labels(repo: str) -> None:
         return
     for name, (description, color) in LABEL_DEFS.items():
         subprocess.run(
-            ["gh", "label", "create", name,
-             "--repo", repo,
-             "--description", description,
-             "--color", color,
-             "--force"],
+            [
+                "gh",
+                "label",
+                "create",
+                name,
+                "--repo",
+                repo,
+                "--description",
+                description,
+                "--color",
+                color,
+                "--force",
+            ],
             capture_output=True,
             text=True,
         )  # --force updates if exists; ignore errors for repos where we lack write access
@@ -133,7 +144,11 @@ def ensure_labels(repo: str) -> None:
 
 
 def create_issue(
-    repo: str, title: str, labels: list[str], body: str, execute: bool,
+    repo: str,
+    title: str,
+    labels: list[str],
+    body: str,
+    execute: bool,
 ) -> int | None:
     if not execute:
         print(f"[dry-run] would create issue in {repo}: {title}")
@@ -146,10 +161,15 @@ def create_issue(
         body_path = handle.name
 
     command = [
-        "gh", "issue", "create",
-        "--repo", repo,
-        "--title", title,
-        "--body-file", body_path,
+        "gh",
+        "issue",
+        "create",
+        "--repo",
+        repo,
+        "--title",
+        title,
+        "--body-file",
+        body_path,
     ]
     for label in labels:
         command.extend(["--label", label])
@@ -157,7 +177,9 @@ def create_issue(
     result = subprocess.run(command, capture_output=True, text=True, check=True)
     match = re.search(r"/(\d+)\s*$", result.stdout.strip())
     if not match:
-        raise RuntimeError(f"Could not parse issue number from gh output: {result.stdout}")
+        raise RuntimeError(
+            f"Could not parse issue number from gh output: {result.stdout}"
+        )
     return int(match.group(1))
 
 
@@ -179,7 +201,9 @@ def topo_sort_issues(issues: list[dict]) -> list[dict]:
         if not progressed:
             indexed = {i["id"] for i in issues}
             unresolved = [iid for iid in indexed if iid not in seen]
-            raise RuntimeError(f"Cycle or missing dependency in issue graph: {unresolved}")
+            raise RuntimeError(
+                f"Cycle or missing dependency in issue graph: {unresolved}"
+            )
     return resolved
 
 
@@ -200,7 +224,10 @@ def main() -> int:
             entry = state.get(issue["id"])
             if entry:
                 # Handle both legacy {"ID": 123} and new {"ID": {"number": 123, "status": "..."}}
-                if isinstance(entry, dict) and entry.get("status") in ("completed", "published"):
+                if isinstance(entry, dict) and entry.get("status") in (
+                    "completed",
+                    "published",
+                ):
                     continue
                 if not isinstance(entry, dict):  # Legacy format, assume published
                     continue
@@ -210,17 +237,27 @@ def main() -> int:
             for dep_id in issue.get("depends_on", []):
                 dep_entry = state.get(dep_id)
                 if dep_entry:
-                    dep_num = dep_entry["number"] if isinstance(dep_entry, dict) else dep_entry
+                    dep_num = (
+                        dep_entry["number"]
+                        if isinstance(dep_entry, dict)
+                        else dep_entry
+                    )
                     dependency_numbers.append(dep_num)
 
             body = build_body(issue, dependency_numbers)
             issue_number = create_issue(
-                repo, issue["title"], issue["labels"], body, args.execute,
+                repo,
+                issue["title"],
+                issue["labels"],
+                body,
+                args.execute,
             )
             if issue_number is not None:
                 state[issue["id"]] = {"number": issue_number, "status": "published"}
                 state_path.write_text(json.dumps(state, indent=2, sort_keys=True))
-                print(f"Created #{issue_number} for {module['module_name']}: {issue['title']}")
+                print(
+                    f"Created #{issue_number} for {module['module_name']}: {issue['title']}"
+                )
 
     return 0
 

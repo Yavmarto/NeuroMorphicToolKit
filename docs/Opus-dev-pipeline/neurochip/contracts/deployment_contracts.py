@@ -17,9 +17,7 @@ class HardwareTargetContract(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    target_id: Literal[
-        "teensy41", "loihi2", "akida", "spinnaker", "brainscales"
-    ]
+    target_id: Literal["teensy41", "loihi2", "akida", "spinnaker", "brainscales"]
     neuron_capacity: int
     supported_models: list[str]
     weight_bit_widths: list[int]

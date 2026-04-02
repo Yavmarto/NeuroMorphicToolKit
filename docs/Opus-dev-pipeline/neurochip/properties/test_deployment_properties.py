@@ -12,6 +12,7 @@ from hypothesis import strategies as st
 
 import sys
 import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "contracts"))
 
 from deployment_contracts import (
@@ -22,7 +23,6 @@ from deployment_contracts import (
 
 
 class TestQuantizationProperties:
-
     @given(bit_width=st.sampled_from([2, 4, 6, 8, 16, 32]))
     def test_supported_bit_widths_accepted(self, bit_width: int):
         """PROPERTY: All spec'd bit widths are valid."""
@@ -58,13 +58,14 @@ class TestQuantizationProperties:
 
 
 class TestLatencyProperties:
-
     @given(
         best=st.floats(min_value=0.1, max_value=100.0),
         typical_add=st.floats(min_value=0.0, max_value=100.0),
         worst_add=st.floats(min_value=0.0, max_value=100.0),
     )
-    def test_ordered_latency_accepted(self, best: float, typical_add: float, worst_add: float):
+    def test_ordered_latency_accepted(
+        self, best: float, typical_add: float, worst_add: float
+    ):
         """PROPERTY: best <= typical <= worst is always valid."""
         typical = best + typical_add
         worst = typical + worst_add
@@ -93,7 +94,6 @@ class TestLatencyProperties:
 
 
 class TestFaultSweepProperties:
-
     @given(rate=st.floats(min_value=0.0, max_value=0.30))
     def test_valid_fault_rate_accepted(self, rate: float):
         """PROPERTY: Fault rate in [0, 0.30] is valid."""

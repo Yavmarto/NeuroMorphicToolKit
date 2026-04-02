@@ -12,6 +12,7 @@ from hypothesis import strategies as st
 
 import sys
 import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "contracts"))
 
 from signal_contracts import (
@@ -25,7 +26,6 @@ from signal_contracts import (
 
 
 class TestEncodingProperties:
-
     @given(method=st.sampled_from(["rate", "temporal", "delta"]))
     def test_all_encoding_methods_accepted(self, method: str):
         """PROPERTY: All three encoding methods are valid."""
@@ -39,7 +39,6 @@ class TestEncodingProperties:
 
 
 class TestDeviceProperties:
-
     @given(n_ch=st.integers(min_value=1, max_value=8))
     def test_valid_channel_count_accepted(self, n_ch: int):
         """PROPERTY: 1-8 channels is valid for all devices."""
@@ -61,7 +60,6 @@ class TestDeviceProperties:
 
 
 class TestLatencyProperties:
-
     @given(lat=st.floats(min_value=0.0, max_value=50.0))
     def test_display_under_50ms_accepted(self, lat: float):
         """PROPERTY: Display latency <= 50ms is accepted."""
@@ -80,7 +78,6 @@ class TestLatencyProperties:
 
 
 class TestPresetProperties:
-
     @given(
         low=st.floats(min_value=0.1, max_value=50.0),
         high=st.floats(min_value=51.0, max_value=500.0),
@@ -109,7 +106,6 @@ class TestPresetProperties:
 
 
 class TestSignalQualityProperties:
-
     @given(
         snr=st.floats(min_value=21.0, max_value=60.0),
         noise=st.floats(min_value=0.1, max_value=4.9),

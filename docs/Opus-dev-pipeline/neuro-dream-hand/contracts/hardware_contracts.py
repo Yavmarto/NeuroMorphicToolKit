@@ -74,9 +74,7 @@ class SensorFrameContract(BaseModel):
     @classmethod
     def adc_12bit_range(cls, v: int) -> int:
         if v < 0 or v > 4095:
-            raise ValueError(
-                f"force_raw={v} outside 12-bit ADC range [0, 4095]."
-            )
+            raise ValueError(f"force_raw={v} outside 12-bit ADC range [0, 4095].")
         return v
 
 
@@ -100,9 +98,7 @@ class EMGStreamContract(BaseModel):
     @classmethod
     def ganglion_channels(cls, v: int) -> int:
         if v < 1 or v > 4:
-            raise ValueError(
-                f"Ganglion supports 1-4 channels, got {v}."
-            )
+            raise ValueError(f"Ganglion supports 1-4 channels, got {v}.")
         return v
 
     @field_validator("bandpass_high_hz")
@@ -110,9 +106,7 @@ class EMGStreamContract(BaseModel):
     def within_nyquist(cls, v: float) -> float:
         # Ganglion at 200 Hz → Nyquist = 100 Hz
         if v > 100.0:
-            raise ValueError(
-                f"High cutoff {v} Hz exceeds Ganglion Nyquist (100 Hz)."
-            )
+            raise ValueError(f"High cutoff {v} Hz exceeds Ganglion Nyquist (100 Hz).")
         return v
 
 
@@ -156,9 +150,7 @@ class HITLLatencyContract(BaseModel):
     @classmethod
     def under_2ms_p95(cls, v: float) -> float:
         if v > 2.0:
-            raise ValueError(
-                f"p95 latency {v}ms exceeds SPEC requirement of <2ms."
-            )
+            raise ValueError(f"p95 latency {v}ms exceeds SPEC requirement of <2ms.")
         return v
 
 
@@ -191,9 +183,7 @@ class FaultInjectionContract(BaseModel):
     @classmethod
     def reasonable_noise(cls, v: float) -> float:
         if v < 0.0 or v > 0.30:
-            raise ValueError(
-                f"Weight noise sigma {v} outside range [0.0, 0.30]."
-            )
+            raise ValueError(f"Weight noise sigma {v} outside range [0.0, 0.30].")
         return v
 
 
@@ -206,15 +196,13 @@ class CrossbarExportContract(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    g_min: float = 1e-9   # 1 nS minimum conductance
-    g_max: float = 1e-6   # 1 uS maximum conductance
+    g_min: float = 1e-9  # 1 nS minimum conductance
+    g_max: float = 1e-6  # 1 uS maximum conductance
 
     @model_validator(mode="after")
     def valid_conductance_range(self) -> CrossbarExportContract:
         if self.g_min >= self.g_max:
-            raise ValueError(
-                f"g_min ({self.g_min}) must be < g_max ({self.g_max})."
-            )
+            raise ValueError(f"g_min ({self.g_min}) must be < g_max ({self.g_max}).")
         if self.g_min <= 0:
             raise ValueError(
                 f"g_min ({self.g_min}) must be > 0 (physical conductance)."

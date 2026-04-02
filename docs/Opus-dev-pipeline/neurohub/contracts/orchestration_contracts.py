@@ -27,8 +27,12 @@ class SuitePortContract(BaseModel):
     @model_validator(mode="after")
     def no_port_conflicts(self) -> SuitePortContract:
         ports = [
-            self.neurocnl, self.neurosim, self.neurochip,
-            self.neurobench, self.neurosense, self.neurohub,
+            self.neurocnl,
+            self.neurosim,
+            self.neurochip,
+            self.neurobench,
+            self.neurosense,
+            self.neurohub,
         ]
         if len(set(ports)) != len(ports):
             raise ValueError(f"Port conflict detected: {ports}")

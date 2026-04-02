@@ -90,9 +90,7 @@ class SpiNNakerExportContract(BaseModel):
     @classmethod
     def fits_in_core(cls, v: int) -> int:
         if v < 1 or v > 255:
-            raise ValueError(
-                f"Neuron count {v} outside SpiNNaker range [1, 255]."
-            )
+            raise ValueError(f"Neuron count {v} outside SpiNNaker range [1, 255].")
         return v
 
 

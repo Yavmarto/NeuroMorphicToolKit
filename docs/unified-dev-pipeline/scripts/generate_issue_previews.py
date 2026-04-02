@@ -7,6 +7,7 @@ Usage:
     python scripts/generate_issue_previews.py
     python scripts/generate_issue_previews.py --module neurocnl
 """
+
 from __future__ import annotations
 
 import argparse

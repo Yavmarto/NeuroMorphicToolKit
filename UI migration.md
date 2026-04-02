@@ -36,7 +36,7 @@ All submodules will be updated to depend on the root core.
 - Update all `frontend/pubspec.yaml` files to point to the root `nmtk_ui_core`:
   ```yaml
   nmtk_ui_core:
-    path: ../../nmtk_ui_core
+    path: ../../nmtk_ui_core # path: ../../nmtk_ui_core # DO NOT CHANGE AND DON'T REMOVE THIS COMMENT Local path to the nmtk_ui_core package
   ```
 
 #### [MODIFY] [Submodule Theme Files](file:///Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/frontend/lib/theme/app_theme.dart)

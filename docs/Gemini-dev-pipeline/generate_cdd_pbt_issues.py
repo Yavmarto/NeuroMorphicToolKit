@@ -3,8 +3,13 @@ import subprocess
 import argparse
 
 MODULES = [
-    "NeuroCNL", "Neurosim", "Neurosense", "Neurochip", 
-    "Neurobench", "Neurohub", "Neuro-Dream-Hand"
+    "NeuroCNL",
+    "Neurosim",
+    "Neurosense",
+    "Neurochip",
+    "Neurobench",
+    "Neurohub",
+    "Neuro-Dream-Hand",
 ]
 
 ISSUE_TEMPLATE = """
@@ -22,19 +27,28 @@ You are tasked with migrating this module into the **Contract-Driven and Propert
 This is a CDD-PBT governance issue. Focus exclusively on adding strict invariants and ensuring the mathematical stability of the component.
 """
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Generate CDD-PBT GitHub Issues for NMTK Modules")
-    parser.add_argument("--dry-run", action="store_true", help="Print issue contents without creating them on GitHub")
+    parser = argparse.ArgumentParser(
+        description="Generate CDD-PBT GitHub Issues for NMTK Modules"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print issue contents without creating them on GitHub",
+    )
     args = parser.parse_args()
 
     for module in MODULES:
         if not os.path.exists(module):
             print(f"Skipping module '{module}', directory not found.")
             continue
-            
-        title = f"CDD-PBT Migration: Implement strict Contracts and Properties for {module}"
+
+        title = (
+            f"CDD-PBT Migration: Implement strict Contracts and Properties for {module}"
+        )
         body = ISSUE_TEMPLATE.format(module=module)
-        
+
         if args.dry_run:
             print(f"--- FAKE ISSUE COMMAND FOR {module} ---")
             print(f"Title: {title}")
@@ -42,18 +56,27 @@ def main():
         else:
             print(f"Submitting issue for {module}...")
             try:
-                subprocess.run([
-                    "gh", "issue", "create", 
-                    "--title", title, 
-                    "--body", body,
-                    "--label", "CDD-PBT,enhancement" # Ensure labels are comma-separated and pre-exist in the repo, or omit
-                ], check=True)
+                subprocess.run(
+                    [
+                        "gh",
+                        "issue",
+                        "create",
+                        "--title",
+                        title,
+                        "--body",
+                        body,
+                        "--label",
+                        "CDD-PBT,enhancement",  # Ensure labels are comma-separated and pre-exist in the repo, or omit
+                    ],
+                    check=True,
+                )
                 print(f"✅ Successfully created issue for {module}.")
             except subprocess.CalledProcessError as e:
                 print(f"❌ Failed to create issue for {module}: {e}")
             except FileNotFoundError:
                 print("❌ GitHub CLI (gh) is not installed or not in PATH.")
                 break
+
 
 if __name__ == "__main__":
     main()

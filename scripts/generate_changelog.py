@@ -4,6 +4,7 @@ import sys
 import os
 from datetime import date
 
+
 def get_commits(since_tag=None):
     if since_tag:
         cmd = ["git", "log", f"{since_tag}..HEAD", "--oneline", "--format=%s"]
@@ -12,16 +13,23 @@ def get_commits(since_tag=None):
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        return result.stdout.strip().split('\n')
+        return result.stdout.strip().split("\n")
     except subprocess.CalledProcessError:
         return []
 
+
 def get_latest_tag():
     try:
-        result = subprocess.run(["git", "describe", "--tags", "--abbrev=0"], capture_output=True, text=True, check=True)
+        result = subprocess.run(
+            ["git", "describe", "--tags", "--abbrev=0"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
         return result.stdout.strip()
     except subprocess.CalledProcessError:
         return None
+
 
 def parse_commits(commits):
     categories = {
@@ -36,19 +44,24 @@ def parse_commits(commits):
         if not msg:
             continue
 
-        if msg.startswith('feat'):
+        if msg.startswith("feat"):
             categories["Added"].append(msg)
-        elif msg.startswith('fix'):
+        elif msg.startswith("fix"):
             categories["Fixed"].append(msg)
-        elif msg.startswith('chore') or msg.startswith('refactor') or msg.startswith('style'):
+        elif (
+            msg.startswith("chore")
+            or msg.startswith("refactor")
+            or msg.startswith("style")
+        ):
             categories["Changed"].append(msg)
-        elif msg.startswith('docs'):
+        elif msg.startswith("docs"):
             categories["Changed"].append(msg)
         else:
             # Default category
             categories["Changed"].append(msg)
 
     return categories
+
 
 def format_changelog(version, categories):
     today = date.today().isoformat()
@@ -71,33 +84,36 @@ def format_changelog(version, categories):
 
     return "\n".join(lines)
 
+
 def update_changelog_file(filepath, new_section):
     if not os.path.exists(filepath):
         # Create new if doesn't exist
-        with open(filepath, 'w') as f:
-            f.write("# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n")
+        with open(filepath, "w") as f:
+            f.write(
+                "# Changelog\n\nAll notable changes to this project will be documented in this file.\n\n"
+            )
             f.write(new_section)
             f.write("\n")
         return
 
-    with open(filepath, 'r') as f:
+    with open(filepath, "r") as f:
         content = f.read()
 
     # Insert after the header
-    header_end = content.find('\n\n')
+    header_end = content.find("\n\n")
     if header_end == -1:
-         header_end = 0
+        header_end = 0
     else:
-         header_end += 2
+        header_end += 2
 
     # Check if version already exists to avoid duplicates
-    version_header = new_section.split('\n')[0]
+    version_header = new_section.split("\n")[0]
     if version_header in content:
         print(f"Version {version_header} already in {filepath}, skipping update.")
         return
 
     updated_content = content[:header_end] + new_section + "\n" + content[header_end:]
-    with open(filepath, 'w') as f:
+    with open(filepath, "w") as f:
         f.write(updated_content)
 
 
@@ -118,6 +134,7 @@ def main():
 
     update_changelog_file("CHANGELOG.md", new_section)
     print(f"Updated CHANGELOG.md in {repo_path}")
+
 
 if __name__ == "__main__":
     main()

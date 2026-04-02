@@ -15,7 +15,7 @@ dependencies:
   go_router: ^14.0.0
   http: ^1.2.0
   nmtk_ui_core:
-    path: ../../nmtk_ui_core
+    path: ../../nmtk_ui_core # path: ../../nmtk_ui_core # DO NOT CHANGE AND DON'T REMOVE THIS COMMENT Local path to the nmtk_ui_core package
   package_info_plus: ^5.0.1
   path: ^1.9.0
   path_provider: ^2.1.2

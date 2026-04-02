@@ -14,6 +14,7 @@ from hypothesis import strategies as st
 
 import sys
 import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "contracts"))
 
 from hardware_contracts import (
@@ -30,8 +31,8 @@ from hardware_contracts import (
 # SERIAL PROTOCOL PROPERTIES
 # ═══════════════════════════════════════════════════════════════
 
-class TestSerialProtocolProperties:
 
+class TestSerialProtocolProperties:
     @given(grip=st.floats(min_value=0.0, max_value=1.0))
     def test_valid_grip_always_accepted(self, grip: float):
         """PROPERTY: Any grip in [0.0, 1.0] is valid."""
@@ -59,7 +60,6 @@ class TestSerialProtocolProperties:
 
 
 class TestSensorFrameProperties:
-
     @given(force_raw=st.integers(min_value=0, max_value=4095))
     def test_valid_adc_always_accepted(self, force_raw: int):
         """PROPERTY: Any 12-bit ADC value is valid."""
@@ -80,8 +80,8 @@ class TestSensorFrameProperties:
 # EMG ENCODING PROPERTIES
 # ═══════════════════════════════════════════════════════════════
 
-class TestEMGProperties:
 
+class TestEMGProperties:
     @given(output=st.floats(min_value=0.0, max_value=1.0))
     def test_valid_emg_output_accepted(self, output: float):
         """PROPERTY: EMG spike output in [0, 1] is valid."""
@@ -98,8 +98,8 @@ class TestEMGProperties:
 # FAULT INJECTION PROPERTIES
 # ═══════════════════════════════════════════════════════════════
 
-class TestFaultInjectionProperties:
 
+class TestFaultInjectionProperties:
     @given(
         dead=st.floats(min_value=0.0, max_value=0.30),
         stuck=st.floats(min_value=0.0, max_value=0.30),
@@ -124,8 +124,8 @@ class TestFaultInjectionProperties:
 # CROSSBAR PROPERTIES
 # ═══════════════════════════════════════════════════════════════
 
-class TestCrossbarProperties:
 
+class TestCrossbarProperties:
     @given(
         g_min=st.floats(min_value=1e-12, max_value=1e-7),
         g_max=st.floats(min_value=1e-6, max_value=1e-3),
@@ -145,8 +145,8 @@ class TestCrossbarProperties:
 # DROP TEST PROPERTIES
 # ═══════════════════════════════════════════════════════════════
 
-class TestDropTestProperties:
 
+class TestDropTestProperties:
     @given(
         sim_rate=st.floats(min_value=0.0, max_value=100.0),
         real_rate=st.floats(min_value=0.0, max_value=100.0),
@@ -158,4 +158,6 @@ class TestDropTestProperties:
             DropTestContract(sim_survival_rate=sim_rate, real_survival_rate=real_rate)
         else:
             with pytest.raises(Exception):
-                DropTestContract(sim_survival_rate=sim_rate, real_survival_rate=real_rate)
+                DropTestContract(
+                    sim_survival_rate=sim_rate, real_survival_rate=real_rate
+                )

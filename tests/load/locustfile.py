@@ -1,34 +1,48 @@
 from locust import HttpUser, task, between
 
+
 class NMTKUser(HttpUser):
     wait_time = between(1, 5)
 
     # NeuroCNL tasks
     @task(3)
     def neurocnl_parse(self):
-        self.client.post("/api/parse", json={
-            "spec": "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.5"
-        }, name="NeuroCNL Parse")
+        self.client.post(
+            "/api/parse",
+            json={
+                "spec": "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.5"
+            },
+            name="NeuroCNL Parse",
+        )
 
     @task(1)
     def neurocnl_generate(self):
-        self.client.post("/api/generate", json={
-            "spec": "The sensory neuron MUST fire",
-            "backend": "nengo"
-        }, name="NeuroCNL Generate")
+        self.client.post(
+            "/api/generate",
+            json={"spec": "The sensory neuron MUST fire", "backend": "nengo"},
+            name="NeuroCNL Generate",
+        )
 
     # Neurosim tasks
     @task(2)
     def neurosim_preview(self):
         graph = {
-            "nodes": [{"id": "n1", "component_id": "lif", "parameters": {}, "position": [0, 0]}],
+            "nodes": [
+                {
+                    "id": "n1",
+                    "component_id": "lif",
+                    "parameters": {},
+                    "position": [0, 0],
+                }
+            ],
             "edges": [],
-            "metadata": {}
+            "metadata": {},
         }
-        self.client.post("/api/neurosim/preview", json={
-            "graph": graph,
-            "duration_ms": 100
-        }, name="Neurosim Preview")
+        self.client.post(
+            "/api/neurosim/preview",
+            json={"graph": graph, "duration_ms": 100},
+            name="Neurosim Preview",
+        )
 
     # Neurohub tasks
     @task(4)

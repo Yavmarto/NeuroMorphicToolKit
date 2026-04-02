@@ -7,6 +7,7 @@ Usage:
     python scripts/run_contract_ci.py --config neurocnl/module.json --phase all
     python scripts/run_contract_ci.py --config neurocnl/module.json --phase baseline
 """
+
 from __future__ import annotations
 
 import argparse

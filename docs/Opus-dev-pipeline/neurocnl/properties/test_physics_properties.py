@@ -18,6 +18,7 @@ from hypothesis import strategies as st
 # For now, use path-relative import or conftest fixture
 import sys
 import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "contracts"))
 
 from neuron_params import LIFNeuronContract, SynapticContract, PopulationContract
@@ -36,7 +37,9 @@ valid_lif_params = st.builds(
     reset_potential=st.floats(min_value=-80.0, max_value=50.0),
     refractory_period=st.floats(min_value=0.0001, max_value=0.1),
     tau=st.floats(min_value=0.001, max_value=1.0),
-).filter(lambda p: p.threshold > p.resting_potential and p.reset_potential <= p.threshold)
+).filter(
+    lambda p: p.threshold > p.resting_potential and p.reset_potential <= p.threshold
+)
 
 valid_populations = st.builds(
     PopulationContract,
@@ -49,6 +52,7 @@ valid_populations = st.builds(
 # ═══════════════════════════════════════════════════════════════
 # PHYSICS PROPERTIES
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestPhysicsInvariants:
     """Properties that must hold for ALL valid neuron parameters."""
@@ -100,6 +104,7 @@ class TestPhysicsInvariants:
 # CONTRACT REJECTION PROPERTIES
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestContractRejection:
     """Properties verifying that invalid parameters are ALWAYS rejected."""
 
@@ -148,6 +153,7 @@ class TestContractRejection:
 # SYNAPTIC PROPERTIES
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestSynapticProperties:
     """Properties for synaptic connections."""
 
@@ -167,6 +173,7 @@ class TestSynapticProperties:
 # ═══════════════════════════════════════════════════════════════
 # HARDWARE EXPORT PROPERTIES
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestLoihiProperties:
     """Properties for Loihi hardware export."""
@@ -210,6 +217,7 @@ class TestLoihiProperties:
 # METAMORPHIC PROPERTIES (relational, not absolute)
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestMetamorphicProperties:
     """Properties that test RELATIONSHIPS between inputs and outputs.
     These catch bugs that absolute value tests miss.
@@ -244,6 +252,7 @@ class TestMetamorphicProperties:
 # CNL PIPELINE PROPERTIES (requires neurocnl installed)
 # ═══════════════════════════════════════════════════════════════
 
+
 class TestCNLPipelineProperties:
     """Properties for the CNL parse → validate → generate pipeline.
     These require neurocnl to be installed. Skip if not available.
@@ -258,7 +267,9 @@ class TestCNLPipelineProperties:
         refractory=st.floats(min_value=0.001, max_value=0.05),
         tau=st.floats(min_value=0.005, max_value=0.1),
     )
-    @settings(max_examples=100, deadline=30_000, suppress_health_check=[HealthCheck.too_slow])
+    @settings(
+        max_examples=100, deadline=30_000, suppress_health_check=[HealthCheck.too_slow]
+    )
     def test_valid_cnl_spec_always_passes_validation(
         self, threshold: float, refractory: float, tau: float
     ):
@@ -277,7 +288,9 @@ class TestCNLPipelineProperties:
         )
 
     @given(threshold=st.floats(min_value=-5.0, max_value=-0.1))
-    @settings(max_examples=50, deadline=30_000, suppress_health_check=[HealthCheck.too_slow])
+    @settings(
+        max_examples=50, deadline=30_000, suppress_health_check=[HealthCheck.too_slow]
+    )
     def test_negative_threshold_spec_fails_or_parses_differently(
         self, threshold: float
     ):

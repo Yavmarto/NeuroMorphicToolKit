@@ -96,18 +96,14 @@ class PreviewContract(BaseModel):
     @classmethod
     def under_500ms(cls, v: float) -> float:
         if v > 500:
-            raise ValueError(
-                f"Preview duration {v}ms exceeds 500ms limit (NS-S1)."
-            )
+            raise ValueError(f"Preview duration {v}ms exceeds 500ms limit (NS-S1).")
         return v
 
     @field_validator("wall_time_ms")
     @classmethod
     def under_2s_wall(cls, v: float) -> float:
         if v > 2000:
-            raise ValueError(
-                f"Preview wall time {v}ms exceeds 2000ms target (NS-S1)."
-            )
+            raise ValueError(f"Preview wall time {v}ms exceeds 2000ms target (NS-S1).")
         return v
 
 
@@ -125,9 +121,7 @@ class ParameterSweepContract(BaseModel):
     @classmethod
     def max_20_steps(cls, v: int) -> int:
         if v < 1 or v > 20:
-            raise ValueError(
-                f"Sweep steps {v} outside range [1, 20] (NS-S2 limit)."
-            )
+            raise ValueError(f"Sweep steps {v} outside range [1, 20] (NS-S2 limit).")
         return v
 
     @model_validator(mode="after")
