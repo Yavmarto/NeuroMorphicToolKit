@@ -1,6 +1,7 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:nmtk_ui_core/widgets/nmtk_navigation_rail.dart';
 
 /// ----------------------------------------------------------------------------
@@ -8,20 +9,74 @@ import 'package:nmtk_ui_core/widgets/nmtk_navigation_rail.dart';
 /// ----------------------------------------------------------------------------
 
 class NmtkDesignTokens {
-  // Brand Colors mapped from your HTML snippets
-  static const Color primarySeed = Color(0xFF1337EC); // NMTK Primary
+  static const Color primarySeed = Color(0xFF1337EC);
   static const Color backgroundLight = Color(0xFFF6F6F8);
-  static const Color backgroundDark = Color(0xFF101322); // Deep navy space
-  static const Color surfaceDark = Color(0xFF0D101D); // Editor pane background
+  static const Color backgroundDark = Color(0xFF101322);
+  static const Color surfaceDark = Color(0xFF0D101D);
 
-  // Expressive Shape Morphing Tokens (2026 M3 Guidelines)
   static final BorderRadius buttonShape = BorderRadius.circular(16.0);
   static final BorderRadius cardShape = BorderRadius.circular(24.0);
   static final BorderRadius dialogShape = BorderRadius.circular(28.0);
+  static final BorderRadius inputShape = BorderRadius.circular(12.0);
 }
 
 /// ----------------------------------------------------------------------------
-/// CUSTOM THEME EXTENSION (Brand-specific gradients & glassmorphism)
+/// NEUROCNL MODULE TOKENS
+/// ----------------------------------------------------------------------------
+
+class NmtkNeurocnlTokens {
+  NmtkNeurocnlTokens._();
+
+  static const Color background = Color(0xFF0F0D1A);
+  static const Color surface = Color(0xFF1A1625);
+  static const Color surfaceVariant = Color(0xFF231E35);
+
+  static const Color primary = Color(0xFF9B7FFF);
+  static const Color primaryDim = Color(0xFF7B5FDF);
+
+  static const Color success = Color(0xFF4ADE80);
+  static const Color error = Color(0xFFFF5C7A);
+  static const Color warning = Color(0xFFFFB347);
+  static const Color info = Color(0xFF60A5FA);
+
+  static const Color textPrimary = Color(0xFFF1EEF9);
+  static const Color textSecondary = Color(0xFFB0A8CC);
+  static const Color border = Color(0xFF3D3560);
+
+  static const Color synKeyword = Color(0xFFBD93F9);
+  static const Color synSubject = Color(0xFF8BE9FD);
+  static const Color synNumber = Color(0xFFFFB86C);
+  static const Color synComment = Color(0xFF6272A4);
+  static const Color synString = Color(0xFFF1FA8C);
+
+  static const Color nodeEnsemble = Color(0xFF9B7FFF);
+  static const Color nodeMotor = Color(0xFFFFB86C);
+  static const Color nodeInterneuron = Color(0xFF50D0B0);
+  static const Color nodeGenericEnsemble = Color(0xFFBD93F9);
+  static const Color nodeInput = Color(0xFF50FA7B);
+  static const Color nodeErrorInput = Color(0xFFFF6E6E);
+
+  static const Color edgeExcitatory = Color(0xFF8BE9FD);
+  static const Color edgeInhibitory = Color(0xFFFF5555);
+  static const Color edgePlastic = Color(0xFFFFD700);
+}
+
+/// ----------------------------------------------------------------------------
+/// THEME VARIANTS
+/// ----------------------------------------------------------------------------
+
+enum NmtkThemeVariant {
+  defaultNavy,
+  neurocnl,
+  neurohub,
+  neurochip,
+  neurobench,
+  neurosim,
+  neurosense,
+}
+
+/// ----------------------------------------------------------------------------
+/// CUSTOM THEME EXTENSION
 /// ----------------------------------------------------------------------------
 
 class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
@@ -30,11 +85,44 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
   final LinearGradient brandGradient;
   final Color glassmorphismColor;
 
+  final Color synKeyword;
+  final Color synSubject;
+  final Color synNumber;
+  final Color synComment;
+  final Color synString;
+
+  final Color nodeEnsemble;
+  final Color nodeMotor;
+  final Color nodeInterneuron;
+  final Color nodeGenericEnsemble;
+  final Color nodeInput;
+  final Color nodeErrorInput;
+  final Color edgeExcitatory;
+  final Color edgeInhibitory;
+  final Color edgePlastic;
+
+  final NmtkThemeVariant variant;
+
   const NmtkThemeExtension({
     required this.terminalBackground,
     required this.syntaxHighlightColor,
     required this.brandGradient,
     required this.glassmorphismColor,
+    this.synKeyword = const Color(0xFF60A5FA),
+    this.synSubject = const Color(0xFF38BDF8),
+    this.synNumber = const Color(0xFFFBBF24),
+    this.synComment = const Color(0xFF6B7280),
+    this.synString = const Color(0xFF34D399),
+    this.nodeEnsemble = const Color(0xFF3B82F6),
+    this.nodeMotor = const Color(0xFFF59E0B),
+    this.nodeInterneuron = const Color(0xFF14B8A6),
+    this.nodeGenericEnsemble = const Color(0xFF60A5FA),
+    this.nodeInput = const Color(0xFF22C55E),
+    this.nodeErrorInput = const Color(0xFFEF4444),
+    this.edgeExcitatory = const Color(0xFF3B82F6),
+    this.edgeInhibitory = const Color(0xFFEF4444),
+    this.edgePlastic = const Color(0xFFF59E0B),
+    this.variant = NmtkThemeVariant.defaultNavy,
   });
 
   @override
@@ -43,21 +131,54 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
     Color? syntaxHighlightColor,
     LinearGradient? brandGradient,
     Color? glassmorphismColor,
+    Color? synKeyword,
+    Color? synSubject,
+    Color? synNumber,
+    Color? synComment,
+    Color? synString,
+    Color? nodeEnsemble,
+    Color? nodeMotor,
+    Color? nodeInterneuron,
+    Color? nodeGenericEnsemble,
+    Color? nodeInput,
+    Color? nodeErrorInput,
+    Color? edgeExcitatory,
+    Color? edgeInhibitory,
+    Color? edgePlastic,
+    NmtkThemeVariant? variant,
   }) {
     return NmtkThemeExtension(
       terminalBackground: terminalBackground ?? this.terminalBackground,
       syntaxHighlightColor: syntaxHighlightColor ?? this.syntaxHighlightColor,
       brandGradient: brandGradient ?? this.brandGradient,
       glassmorphismColor: glassmorphismColor ?? this.glassmorphismColor,
+      synKeyword: synKeyword ?? this.synKeyword,
+      synSubject: synSubject ?? this.synSubject,
+      synNumber: synNumber ?? this.synNumber,
+      synComment: synComment ?? this.synComment,
+      synString: synString ?? this.synString,
+      nodeEnsemble: nodeEnsemble ?? this.nodeEnsemble,
+      nodeMotor: nodeMotor ?? this.nodeMotor,
+      nodeInterneuron: nodeInterneuron ?? this.nodeInterneuron,
+      nodeGenericEnsemble: nodeGenericEnsemble ?? this.nodeGenericEnsemble,
+      nodeInput: nodeInput ?? this.nodeInput,
+      nodeErrorInput: nodeErrorInput ?? this.nodeErrorInput,
+      edgeExcitatory: edgeExcitatory ?? this.edgeExcitatory,
+      edgeInhibitory: edgeInhibitory ?? this.edgeInhibitory,
+      edgePlastic: edgePlastic ?? this.edgePlastic,
+      variant: variant ?? this.variant,
     );
   }
 
   @override
   ThemeExtension<NmtkThemeExtension> lerp(
-    ThemeExtension<NmtkThemeExtension>? other,
+    covariant ThemeExtension<NmtkThemeExtension>? other,
     double t,
   ) {
-    if (other is! NmtkThemeExtension) return this;
+    if (other is! NmtkThemeExtension) {
+      return this;
+    }
+
     return NmtkThemeExtension(
       terminalBackground: Color.lerp(
         terminalBackground,
@@ -79,178 +200,91 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
         other.glassmorphismColor,
         t,
       )!,
+      synKeyword: Color.lerp(synKeyword, other.synKeyword, t)!,
+      synSubject: Color.lerp(synSubject, other.synSubject, t)!,
+      synNumber: Color.lerp(synNumber, other.synNumber, t)!,
+      synComment: Color.lerp(synComment, other.synComment, t)!,
+      synString: Color.lerp(synString, other.synString, t)!,
+      nodeEnsemble: Color.lerp(nodeEnsemble, other.nodeEnsemble, t)!,
+      nodeMotor: Color.lerp(nodeMotor, other.nodeMotor, t)!,
+      nodeInterneuron: Color.lerp(nodeInterneuron, other.nodeInterneuron, t)!,
+      nodeGenericEnsemble: Color.lerp(
+        nodeGenericEnsemble,
+        other.nodeGenericEnsemble,
+        t,
+      )!,
+      nodeInput: Color.lerp(nodeInput, other.nodeInput, t)!,
+      nodeErrorInput: Color.lerp(nodeErrorInput, other.nodeErrorInput, t)!,
+      edgeExcitatory: Color.lerp(edgeExcitatory, other.edgeExcitatory, t)!,
+      edgeInhibitory: Color.lerp(edgeInhibitory, other.edgeInhibitory, t)!,
+      edgePlastic: Color.lerp(edgePlastic, other.edgePlastic, t)!,
+      variant: t < 0.5 ? variant : other.variant,
     );
   }
 }
 
-/// ----------------------------------------------------------------------------
-/// MODULE THEME VARIANTS
-/// ----------------------------------------------------------------------------
-
-/// Identifies which NMTK sub-module is requesting a themed [ThemeData].
-///
-/// Each variant maps to a distinct seed colour while sharing the same
-/// Material 3 design-system structure, giving the suite a unified look
-/// (similar to how Microsoft Office or Apple's app suite feels cohesive yet
-/// each app has its own accent identity).
-enum NmtkThemeVariant {
-  /// Default NMTK navy/blue identity (same as the root [AppTheme]).
-  nmtk,
-
-  /// neurocnl Studio — purple / lavender identity.
-  neurocnl,
-
-  /// Neurohub — teal / cyan identity.
-  neurohub,
-
-  /// Neurochip — amber / gold identity.
-  neurochip,
-
-  /// Neurobench — green / emerald identity.
-  neurobench,
-
-  /// Neurosim — indigo / deep-blue identity.
-  neurosim,
-
-  /// Neurosense — rose / coral identity.
-  neurosense,
-}
-
-/// ----------------------------------------------------------------------------
-/// NEUROCNL COLOR TOKENS
-/// ----------------------------------------------------------------------------
-
-/// Design tokens for the **neurocnl Studio** module.
-///
-/// Uses a dark-mode-first purple / lavender palette.  All values are
-/// `const` so they can be used in `static const` fields of other classes.
-class NmtkNeurocnlTokens {
-  NmtkNeurocnlTokens._();
-
-  // ── Surface / Background ───────────────────────────────────────
-  /// Deep purple-black page background.
-  static const Color background = Color(0xFF0F0D1A);
-
-  /// Dark purple card / panel surface.
-  static const Color surface = Color(0xFF1A1625);
-
-  /// Slightly elevated surface (e.g. input fields, hover states).
-  static const Color surfaceVariant = Color(0xFF231E35);
-
-  // ── Brand / Accent ─────────────────────────────────────────────
-  /// Primary lavender accent.
-  static const Color primary = Color(0xFF9B7FFF);
-
-  /// Dimmed / secondary lavender (used for hover, disabled states).
-  static const Color primaryDim = Color(0xFF7B5FDF);
-
-  // ── Semantic ───────────────────────────────────────────────────
-  /// Success green.
-  static const Color success = Color(0xFF4ADE80);
-
-  /// Error red-pink.
-  static const Color error = Color(0xFFFF5C7A);
-
-  /// Warning amber.
-  static const Color warning = Color(0xFFFFB347);
-
-  /// Info blue.
-  static const Color info = Color(0xFF60A5FA);
-
-  // ── Text ───────────────────────────────────────────────────────
-  /// Primary text — near-white with a subtle purple tint.
-  static const Color textPrimary = Color(0xFFF1EEF9);
-
-  /// Secondary / muted text — soft lavender-grey.
-  static const Color textSecondary = Color(0xFFB0A8CC);
-
-  // ── Border ─────────────────────────────────────────────────────
-  /// Subtle dark-purple border / divider.
-  static const Color border = Color(0xFF3D3560);
-
-  // ── Syntax Highlighting (CNL editor) ───────────────────────────
-  /// Keywords (`connect`, `ensemble`, `input`, …).
-  static const Color synKeyword = Color(0xFFBD93F9);
-
-  /// Subject / identifier tokens.
-  static const Color synSubject = Color(0xFF8BE9FD);
-
-  /// Numeric literals.
-  static const Color synNumber = Color(0xFFFFB86C);
-
-  /// Comments.
-  static const Color synComment = Color(0xFF6272A4);
-
-  /// String literals.
-  static const Color synString = Color(0xFFF1FA8C);
-
-  // ── Graph Node / Edge colours ──────────────────────────────────
-  /// Sensory ensemble node fill (default / fallback ensemble colour).
-  static const Color nodeEnsemble = Color(0xFF9B7FFF);
-
-  /// Motor ensemble node fill — warm amber.
-  static const Color nodeMotor = Color(0xFFFFB86C);
-
-  /// Interneuron ensemble node fill — teal.
-  static const Color nodeInterneuron = Color(0xFF50D0B0);
-
-  /// Generic / unknown ensemble node fill.
-  static const Color nodeGenericEnsemble = Color(0xFFBD93F9);
-
-  /// Input / stimulus node fill.
-  static const Color nodeInput = Color(0xFF50FA7B);
-
-  /// Error-signal input node fill — muted red-orange.
-  static const Color nodeErrorInput = Color(0xFFFF6E6E);
-
-  /// Excitatory synapse / edge stroke.
-  static const Color edgeExcitatory = Color(0xFF8BE9FD);
-
-  /// Inhibitory synapse / edge stroke.
-  static const Color edgeInhibitory = Color(0xFFFF5555);
-
-  /// Plastic (learning-rule) synapse / edge stroke — gold.
-  static const Color edgePlastic = Color(0xFFFFD700);
+Color _seedForVariant(NmtkThemeVariant variant) {
+  switch (variant) {
+    case NmtkThemeVariant.defaultNavy:
+      return NmtkDesignTokens.primarySeed;
+    case NmtkThemeVariant.neurocnl:
+      return NmtkNeurocnlTokens.primary;
+    case NmtkThemeVariant.neurohub:
+      return const Color(0xFF0D9488);
+    case NmtkThemeVariant.neurochip:
+      return const Color(0xFFD97706);
+    case NmtkThemeVariant.neurobench:
+      return const Color(0xFF16A34A);
+    case NmtkThemeVariant.neurosim:
+      return const Color(0xFF4338CA);
+    case NmtkThemeVariant.neurosense:
+      return const Color(0xFFE11D48);
+  }
 }
 
 /// ----------------------------------------------------------------------------
 /// APP THEME CONFIGURATION
 /// ----------------------------------------------------------------------------
 
-/// Returns the seed colour associated with each [NmtkThemeVariant].
-Color _seedForVariant(NmtkThemeVariant variant) {
-  switch (variant) {
-    case NmtkThemeVariant.nmtk:
-      return NmtkDesignTokens.primarySeed; // navy/blue
-    case NmtkThemeVariant.neurocnl:
-      return const Color(0xFF7C5CBF); // purple
-    case NmtkThemeVariant.neurohub:
-      return const Color(0xFF0D9488); // teal
-    case NmtkThemeVariant.neurochip:
-      return const Color(0xFFD97706); // amber
-    case NmtkThemeVariant.neurobench:
-      return const Color(0xFF16A34A); // green
-    case NmtkThemeVariant.neurosim:
-      return const Color(0xFF4338CA); // indigo
-    case NmtkThemeVariant.neurosense:
-      return const Color(0xFFE11D48); // rose
-  }
-}
-
 class AppTheme {
-  // Shared M3 typography focusing on a modern grotesque/sans font
+  AppTheme._();
+
   static TextTheme _buildTextTheme(TextTheme base) {
     return base.apply(
-      fontFamily: 'Space Grotesk', // Or 'Plus Jakarta Sans' / 'Inter'
+      fontFamily: 'Space Grotesk',
       displayColor: base.titleLarge?.color,
       bodyColor: base.bodyLarge?.color,
     );
   }
 
-  // Light Theme Configuration
-  static ThemeData get lightTheme {
+  static TextTheme _buildInterTextTheme(TextTheme base) {
+    return GoogleFonts.interTextTheme(base);
+  }
+
+  static ThemeData get lightTheme =>
+      lightThemeForVariant(NmtkThemeVariant.defaultNavy);
+
+  static ThemeData get darkTheme =>
+      darkThemeForVariant(NmtkThemeVariant.defaultNavy);
+
+  static ThemeData lightThemeForVariant(NmtkThemeVariant variant) {
+    if (variant == NmtkThemeVariant.neurocnl) {
+      return _neurocnlLightTheme();
+    }
+    return _suiteLightTheme(variant);
+  }
+
+  static ThemeData darkThemeForVariant(NmtkThemeVariant variant) {
+    if (variant == NmtkThemeVariant.neurocnl) {
+      return _neurocnlDarkTheme();
+    }
+    return _suiteDarkTheme(variant);
+  }
+
+  static ThemeData _suiteLightTheme(NmtkThemeVariant variant) {
+    final seed = _seedForVariant(variant);
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: NmtkDesignTokens.primarySeed,
+      seedColor: seed,
       brightness: Brightness.light,
       surface: NmtkDesignTokens.backgroundLight,
     );
@@ -258,17 +292,9 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
+      scaffoldBackgroundColor: NmtkDesignTokens.backgroundLight,
       textTheme: _buildTextTheme(ThemeData.light().textTheme),
-      extensions: [
-        NmtkThemeExtension(
-          terminalBackground: const Color(0xFFE2E8F0),
-          syntaxHighlightColor: NmtkDesignTokens.primarySeed,
-          brandGradient: LinearGradient(
-            colors: [colorScheme.primary, colorScheme.tertiary],
-          ),
-          glassmorphismColor: Colors.white.withValues(alpha: 0.7),
-        ),
-      ],
+      extensions: [_suiteExtension(colorScheme, Brightness.light, variant)],
       cardTheme: CardThemeData(
         shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.cardShape),
         elevation: 0,
@@ -280,7 +306,7 @@ class AppTheme {
             borderRadius: NmtkDesignTokens.buttonShape,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          minimumSize: const Size(48, 48), // Ensures 48dp modern touch targets
+          minimumSize: const Size(48, 48),
         ),
       ),
       navigationRailTheme: NavigationRailThemeData(
@@ -291,14 +317,17 @@ class AppTheme {
     );
   }
 
-  // Dark Theme Configuration
-  static ThemeData get darkTheme {
+  static ThemeData _suiteDarkTheme(NmtkThemeVariant variant) {
+    final seed = _seedForVariant(variant);
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: NmtkDesignTokens.primarySeed,
+      seedColor: seed,
       brightness: Brightness.dark,
       surface: NmtkDesignTokens.backgroundDark,
-      // Expressive Color Roles overriden for NMTK dark mode identity
-      onSurface: const Color(0xFFF1F5F9), // Slate 100
+      onSurface: const Color(0xFFF1F5F9),
+      surfaceContainerLowest: const Color(0xFF0A0D1A),
+      surfaceContainerLow: const Color(0xFF0F1220),
+      surfaceContainer: const Color(0xFF141728),
+      surfaceContainerHigh: const Color(0xFF1A1E30),
       surfaceContainerHighest: NmtkDesignTokens.surfaceDark,
     );
 
@@ -307,26 +336,12 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundDark,
       textTheme: _buildTextTheme(ThemeData.dark().textTheme),
-      extensions: [
-        NmtkThemeExtension(
-          terminalBackground: const Color(0xFF0A0C16),
-          syntaxHighlightColor: const Color(0xFF60A5FA), // Blue 400
-          brandGradient: LinearGradient(
-            colors: [colorScheme.primary, colorScheme.secondaryContainer],
-          ),
-          glassmorphismColor: NmtkDesignTokens.backgroundDark.withValues(
-            alpha: 0.8,
-          ),
-        ),
-      ],
+      extensions: [_suiteExtension(colorScheme, Brightness.dark, variant)],
       cardTheme: CardThemeData(
         color: colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(
           borderRadius: NmtkDesignTokens.cardShape,
-          side: const BorderSide(
-            color: Color(0xFF1E293B),
-            width: 1,
-          ), // Slate 800
+          side: const BorderSide(color: Color(0xFF1E293B), width: 1),
         ),
         elevation: 0,
       ),
@@ -348,114 +363,67 @@ class AppTheme {
     );
   }
 
-  /// Returns a light [ThemeData] tuned for the given [NmtkThemeVariant].
-  ///
-  /// The variant's seed colour is used to generate the Material 3
-  /// [ColorScheme], while all other design decisions (typography, shapes,
-  /// component themes) remain consistent across the suite.
-  static ThemeData lightThemeForVariant(NmtkThemeVariant variant) {
-    final seed = _seedForVariant(variant);
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: Brightness.light,
-      surface: NmtkDesignTokens.backgroundLight,
-    );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: colorScheme,
-      textTheme: _buildTextTheme(ThemeData.light().textTheme),
-      extensions: [
-        NmtkThemeExtension(
-          terminalBackground: const Color(0xFFE2E8F0),
-          syntaxHighlightColor: seed,
-          brandGradient: LinearGradient(
-            colors: [colorScheme.primary, colorScheme.tertiary],
-          ),
-          glassmorphismColor: Colors.white.withValues(alpha: 0.7),
-        ),
-      ],
-      cardTheme: CardThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: NmtkDesignTokens.cardShape,
-        ),
-        elevation: 0,
-        clipBehavior: Clip.antiAlias,
+  static NmtkThemeExtension _suiteExtension(
+    ColorScheme colorScheme,
+    Brightness brightness,
+    NmtkThemeVariant variant,
+  ) {
+    final isDark = brightness == Brightness.dark;
+    return NmtkThemeExtension(
+      terminalBackground: isDark
+          ? const Color(0xFF0A0C16)
+          : const Color(0xFFE2E8F0),
+      syntaxHighlightColor: colorScheme.primary,
+      brandGradient: LinearGradient(
+        colors: isDark
+            ? [colorScheme.primary, colorScheme.secondaryContainer]
+            : [colorScheme.primary, colorScheme.tertiary],
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: NmtkDesignTokens.buttonShape,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          minimumSize: const Size(48, 48),
-        ),
-      ),
-      navigationRailTheme: NavigationRailThemeData(
-        indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
+      glassmorphismColor: isDark
+          ? NmtkDesignTokens.backgroundDark.withValues(alpha: 0.8)
+          : Colors.white.withValues(alpha: 0.7),
+      variant: variant,
     );
   }
 
-  /// Returns a dark [ThemeData] tuned for the given [NmtkThemeVariant].
-  ///
-  /// For [NmtkThemeVariant.neurocnl] the scaffold background is set to the
-  /// deep purple-black from [NmtkNeurocnlTokens.background] so the editor
-  /// feels immersive.  All other variants fall back to the standard NMTK
-  /// dark background.
-  static ThemeData darkThemeForVariant(NmtkThemeVariant variant) {
-    final seed = _seedForVariant(variant);
-
-    // Per-variant dark surface overrides.
-    final Color darkSurface = variant == NmtkThemeVariant.neurocnl
-        ? NmtkNeurocnlTokens.background
-        : NmtkDesignTokens.backgroundDark;
-
+  static ThemeData _neurocnlDarkTheme() {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: seed,
+      seedColor: NmtkNeurocnlTokens.primary,
       brightness: Brightness.dark,
-      surface: darkSurface,
-      onSurface: const Color(0xFFF1F5F9),
-      surfaceContainerHighest: variant == NmtkThemeVariant.neurocnl
-          ? NmtkNeurocnlTokens.surface
-          : NmtkDesignTokens.surfaceDark,
+      surface: NmtkNeurocnlTokens.surface,
+      onSurface: NmtkNeurocnlTokens.textPrimary,
+      surfaceContainerHighest: NmtkNeurocnlTokens.surfaceVariant,
+      error: NmtkNeurocnlTokens.error,
     );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: darkSurface,
-      textTheme: _buildTextTheme(ThemeData.dark().textTheme),
-      extensions: [
-        NmtkThemeExtension(
-          terminalBackground: variant == NmtkThemeVariant.neurocnl
-              ? NmtkNeurocnlTokens.surfaceVariant
-              : const Color(0xFF0A0C16),
-          syntaxHighlightColor: variant == NmtkThemeVariant.neurocnl
-              ? NmtkNeurocnlTokens.synKeyword
-              : const Color(0xFF60A5FA),
-          brandGradient: LinearGradient(
-            colors: [colorScheme.primary, colorScheme.secondaryContainer],
-          ),
-          glassmorphismColor: darkSurface.withValues(alpha: 0.8),
-        ),
-      ],
+      scaffoldBackgroundColor: NmtkNeurocnlTokens.background,
+      textTheme: _buildInterTextTheme(ThemeData.dark().textTheme),
+      extensions: [_neurocnlExtension(Brightness.dark, colorScheme)],
       cardTheme: CardThemeData(
-        color: colorScheme.surfaceContainerHighest,
+        color: NmtkNeurocnlTokens.surface,
         shape: RoundedRectangleBorder(
           borderRadius: NmtkDesignTokens.cardShape,
-          side: BorderSide(
-            color: variant == NmtkThemeVariant.neurocnl
-                ? NmtkNeurocnlTokens.border
-                : const Color(0xFF1E293B),
-            width: 1,
-          ),
+          side: const BorderSide(color: NmtkNeurocnlTokens.border),
         ),
         elevation: 0,
       ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: NmtkNeurocnlTokens.surface,
+        foregroundColor: NmtkNeurocnlTokens.textPrimary,
+        elevation: 0,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: NmtkNeurocnlTokens.textPrimary,
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: NmtkNeurocnlTokens.primary,
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: NmtkDesignTokens.buttonShape,
           ),
@@ -463,10 +431,57 @@ class AppTheme {
           minimumSize: const Size(48, 48),
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: NmtkNeurocnlTokens.primary,
+          side: const BorderSide(color: NmtkNeurocnlTokens.primary),
+          shape: RoundedRectangleBorder(
+            borderRadius: NmtkDesignTokens.buttonShape,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: NmtkNeurocnlTokens.surfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: NmtkDesignTokens.inputShape,
+          borderSide: const BorderSide(color: NmtkNeurocnlTokens.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: NmtkDesignTokens.inputShape,
+          borderSide: const BorderSide(color: NmtkNeurocnlTokens.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: NmtkDesignTokens.inputShape,
+          borderSide: const BorderSide(
+            color: NmtkNeurocnlTokens.primary,
+            width: 2,
+          ),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: NmtkNeurocnlTokens.border,
+        thickness: 1,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: NmtkNeurocnlTokens.surfaceVariant,
+        labelStyle: GoogleFonts.inter(
+          fontSize: 12,
+          color: NmtkNeurocnlTokens.textSecondary,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: NmtkNeurocnlTokens.border),
+        ),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: NmtkNeurocnlTokens.primary,
+        unselectedLabelColor: NmtkNeurocnlTokens.textSecondary,
+        indicatorColor: NmtkNeurocnlTokens.primary,
+        dividerColor: NmtkNeurocnlTokens.border,
+      ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: variant == NmtkThemeVariant.neurocnl
-            ? NmtkNeurocnlTokens.surface
-            : NmtkDesignTokens.surfaceDark,
+        backgroundColor: NmtkNeurocnlTokens.surface,
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
@@ -474,9 +489,146 @@ class AppTheme {
     );
   }
 
-  // High Contrast Light Theme
+  static ThemeData _neurocnlLightTheme() {
+    const background = Color(0xFFF8F6FF);
+    const surface = Color(0xFFFFFFFF);
+    const surfaceVariant = Color(0xFFEAE3FF);
+    const border = Color(0xFFD8CCFF);
+    const textPrimary = Color(0xFF261F39);
+    const textSecondary = Color(0xFF5D557A);
+
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: NmtkNeurocnlTokens.primary,
+      brightness: Brightness.light,
+      surface: surface,
+      onSurface: textPrimary,
+      surfaceContainerHighest: surfaceVariant,
+      error: NmtkNeurocnlTokens.error,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: background,
+      textTheme: _buildInterTextTheme(ThemeData.light().textTheme),
+      extensions: [_neurocnlExtension(Brightness.light, colorScheme)],
+      cardTheme: CardThemeData(
+        color: surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: NmtkDesignTokens.cardShape,
+          side: const BorderSide(color: border),
+        ),
+        elevation: 0,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: surface,
+        foregroundColor: textPrimary,
+        elevation: 0,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: textPrimary,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: NmtkNeurocnlTokens.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: NmtkDesignTokens.buttonShape,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          minimumSize: const Size(48, 48),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: NmtkNeurocnlTokens.primaryDim,
+          side: const BorderSide(color: border),
+          shape: RoundedRectangleBorder(
+            borderRadius: NmtkDesignTokens.buttonShape,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: NmtkDesignTokens.inputShape,
+          borderSide: const BorderSide(color: border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: NmtkDesignTokens.inputShape,
+          borderSide: const BorderSide(color: border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: NmtkDesignTokens.inputShape,
+          borderSide: const BorderSide(
+            color: NmtkNeurocnlTokens.primary,
+            width: 2,
+          ),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(color: border, thickness: 1),
+      chipTheme: ChipThemeData(
+        backgroundColor: surfaceVariant,
+        labelStyle: GoogleFonts.inter(fontSize: 12, color: textSecondary),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: border),
+        ),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: NmtkNeurocnlTokens.primaryDim,
+        unselectedLabelColor: textSecondary,
+        indicatorColor: NmtkNeurocnlTokens.primary,
+        dividerColor: border,
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: surface,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  static NmtkThemeExtension _neurocnlExtension(
+    Brightness brightness,
+    ColorScheme colorScheme,
+  ) {
+    final isDark = brightness == Brightness.dark;
+    return NmtkThemeExtension(
+      terminalBackground: isDark
+          ? NmtkNeurocnlTokens.background
+          : const Color(0xFFF5F1FF),
+      syntaxHighlightColor: NmtkNeurocnlTokens.synKeyword,
+      brandGradient: LinearGradient(
+        colors: [colorScheme.primary, colorScheme.secondary],
+      ),
+      glassmorphismColor: isDark
+          ? const Color(0xCC1A1625)
+          : const Color(0xCCFFFFFF),
+      synKeyword: NmtkNeurocnlTokens.synKeyword,
+      synSubject: NmtkNeurocnlTokens.synSubject,
+      synNumber: NmtkNeurocnlTokens.synNumber,
+      synComment: NmtkNeurocnlTokens.synComment,
+      synString: NmtkNeurocnlTokens.synString,
+      nodeEnsemble: NmtkNeurocnlTokens.nodeEnsemble,
+      nodeMotor: NmtkNeurocnlTokens.nodeMotor,
+      nodeInterneuron: NmtkNeurocnlTokens.nodeInterneuron,
+      nodeGenericEnsemble: NmtkNeurocnlTokens.nodeGenericEnsemble,
+      nodeInput: NmtkNeurocnlTokens.nodeInput,
+      nodeErrorInput: NmtkNeurocnlTokens.nodeErrorInput,
+      edgeExcitatory: NmtkNeurocnlTokens.edgeExcitatory,
+      edgeInhibitory: NmtkNeurocnlTokens.edgeInhibitory,
+      edgePlastic: NmtkNeurocnlTokens.edgePlastic,
+      variant: NmtkThemeVariant.neurocnl,
+    );
+  }
+
   static ThemeData get highContrastLightTheme {
-    final base = lightTheme;
+    final base = _suiteLightTheme(NmtkThemeVariant.defaultNavy);
     return base.copyWith(
       colorScheme: base.colorScheme.copyWith(
         primary: Colors.blue.shade900,
@@ -489,9 +641,8 @@ class AppTheme {
     );
   }
 
-  // High Contrast Dark Theme
   static ThemeData get highContrastDarkTheme {
-    final base = darkTheme;
+    final base = _suiteDarkTheme(NmtkThemeVariant.defaultNavy);
     return base.copyWith(
       colorScheme: base.colorScheme.copyWith(
         primary: Colors.yellowAccent,
@@ -506,7 +657,7 @@ class AppTheme {
 }
 
 /// ----------------------------------------------------------------------------
-/// ADAPTIVE LAYOUT (MOBILE / TABLET / DESKTOP / WEB)
+/// ADAPTIVE LAYOUT
 /// ----------------------------------------------------------------------------
 
 class ResponsiveScaffold extends StatefulWidget {
@@ -530,19 +681,25 @@ class ResponsiveScaffold extends StatefulWidget {
 }
 
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
-  // Native context-menu check (Optional: if we want to change behavior based on OS)
   bool get _isDesktopContext {
-    if (kIsWeb) return true;
-    return Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+    if (kIsWeb) {
+      return true;
+    }
+
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.macOS ||
+      TargetPlatform.windows ||
+      TargetPlatform.linux => true,
+      _ => false,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double screenWidth = constraints.maxWidth;
+        final screenWidth = constraints.maxWidth;
 
-        // Mobile Layout (< 600px)
         if (screenWidth < 600) {
           return Scaffold(
             body: widget.body,
@@ -550,18 +707,19 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
             bottomNavigationBar: NavigationBar(
               selectedIndex: widget.currentIndex,
               onDestinationSelected: widget.onNavigationTargetSelected,
-              destinations: widget.destinations.map((d) {
+              destinations: widget.destinations.map((destination) {
                 return NavigationDestination(
-                  icon: Icon(d.icon),
-                  selectedIcon: Icon(d.selectedIcon ?? d.icon),
-                  label: d.label,
+                  icon: Icon(destination.icon),
+                  selectedIcon: Icon(
+                    destination.selectedIcon ?? destination.icon,
+                  ),
+                  label: destination.label,
                 );
               }).toList(),
             ),
           );
         }
 
-        // Tablet/Desktop App-Rail Layout (600px - 1240px)
         if (screenWidth < 1240) {
           return Scaffold(
             floatingActionButton: widget.floatingActionButton,
@@ -593,14 +751,12 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           );
         }
 
-        // Full Desktop / Web Layout (>= 1240px)
         return Scaffold(
           floatingActionButton: widget.floatingActionButton,
           body: Row(
             children: [
-              // Custom expressive drawer imitating the HTML specs provided
               Container(
-                width: 256, // Modern drawer width
+                width: 256,
                 color: Theme.of(context).colorScheme.surface,
                 child: Column(
                   children: [
@@ -612,9 +768,9 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                           vertical: 16,
                         ),
                         itemCount: widget.destinations.length,
-                        itemBuilder: (context, idx) {
-                          final isSelected = widget.currentIndex == idx;
-                          final dest = widget.destinations[idx];
+                        itemBuilder: (context, index) {
+                          final isSelected = widget.currentIndex == index;
+                          final destination = widget.destinations[index];
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
@@ -623,12 +779,11 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                               borderRadius: NmtkDesignTokens.buttonShape,
                               child: InkWell(
                                 borderRadius: NmtkDesignTokens.buttonShape,
-                                // Defined Hover & Touch targets
                                 hoverColor: Theme.of(
                                   context,
                                 ).colorScheme.onSurface.withValues(alpha: 0.08),
                                 onTap: () =>
-                                    widget.onNavigationTargetSelected(idx),
+                                    widget.onNavigationTargetSelected(index),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -651,8 +806,9 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                                     children: [
                                       Icon(
                                         isSelected
-                                            ? (dest.selectedIcon ?? dest.icon)
-                                            : dest.icon,
+                                            ? (destination.selectedIcon ??
+                                                  destination.icon)
+                                            : destination.icon,
                                         color: isSelected
                                             ? Theme.of(
                                                 context,
@@ -663,7 +819,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                                       ),
                                       const SizedBox(width: 16),
                                       Text(
-                                        dest.label,
+                                        destination.label,
                                         style: TextStyle(
                                           fontWeight: isSelected
                                               ? FontWeight.w600
@@ -741,8 +897,9 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
 }
 
 /// ----------------------------------------------------------------------------
-/// DATACLASS FOR NAVIGATION ITEMS
+/// NAVIGATION ITEM DATACLASS
 /// ----------------------------------------------------------------------------
+
 class NavigationDestinationData {
   final IconData icon;
   final IconData? selectedIcon;
