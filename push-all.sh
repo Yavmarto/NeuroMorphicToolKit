@@ -1,14 +1,23 @@
 #!/usr/bin/env bash
 # push-all.sh — Stage, commit, and push changes in all submodules and the root repo.
-# Usage: ./push-all.sh [branch] [commit message]
-#   branch          — branch to push to (default: dev)
-#   commit message  — quoted message (default: "chore: update")
+# Usage: ./push-all.sh [commit message] [branch]
+#   commit message  — quoted message (default: prompt user)
+#   branch          — branch to push to (default: current branch)
 
 set -euo pipefail
 
-BRANCH="${1:-dev}"
-MESSAGE="${2:-chore: update}"
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "dev")
+
+if [[ $# -eq 0 ]]; then
+  echo -n "Enter commit message [chore: update]: "
+  read -r MESSAGE
+  MESSAGE="${MESSAGE:-chore: update}"
+  BRANCH="$CURRENT_BRANCH"
+else
+  MESSAGE="$1"
+  BRANCH="${2:-$CURRENT_BRANCH}"
+fi
 
 push_repo() {
   local dir="$1"

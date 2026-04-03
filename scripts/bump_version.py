@@ -32,13 +32,13 @@ def bump_pubspec(filepath, version):
         content = f.read()
 
     # Flutter version is usually x.y.z+build
-    # If version doesn't have +, we keep existing build number or default to 1
+    # If version doesn't have +, we increment existing build count or default to 1
     if "+" not in version:
         match = re.search(
-            r"^version:\s*(\d+\.\d+\.\d+)\+(\d+)", content, flags=re.MULTILINE
+            r"^version:\s*([0-9.]+)\+([0-9]+)", content, flags=re.MULTILINE
         )
         if match:
-            build = match.group(2)
+            build = int(match.group(2)) + 1
             version = f"{version}+{build}"
         else:
             version = f"{version}+1"

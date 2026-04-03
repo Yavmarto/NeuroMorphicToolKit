@@ -1,4 +1,4 @@
-.PHONY: release help dev build-submodules build-interactive clean-all build-all
+.PHONY: release help dev build-submodules build-interactive clean-all build-all bump-version
 
 MODULES = neurocnl Neurosim Neurochip Neurobench Neurosense Neurohub
 PORT_neurocnl = 8000
@@ -19,6 +19,7 @@ help:
 	@echo "  make build-submodules         - Build all submodule web frontends (only if changed)"
 	@echo "  make build-interactive        - Interactively select modules to build"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
+	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
 	@echo "  make clean-all                - Deep clean the entire monorepo"
 	@echo ""
 
@@ -42,6 +43,14 @@ release:
 		exit 1; \
 	fi
 	@bash scripts/release.sh $(VERSION)
+
+bump-version:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error: VERSION is not set. Use 'make bump-version VERSION=x.y.z'"; \
+		exit 1; \
+	fi
+	@chmod +x scripts/bump_all.py
+	@python3 scripts/bump_all.py $(VERSION)
 
 # Dependency rules for each module
 define BUILD_RULE
