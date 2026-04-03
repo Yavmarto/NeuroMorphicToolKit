@@ -79,7 +79,19 @@ class DefaultProcessRunner implements ProcessRunner {
   }
 }
 
+class _HealthProbeResponse {
+  const _HealthProbeResponse({
+    required this.statusCode,
+    required this.body,
+  });
+
+  final int statusCode;
+  final String body;
+}
+
 class ProcessManager {
+  static const int _maxConsecutiveHealthFailures = 2;
+
   static final ProcessManager _instance = ProcessManager._internal();
   factory ProcessManager(
       {ProcessRunner? processRunner, http.Client? httpClient}) {
@@ -101,14 +113,15 @@ class ProcessManager {
   ProcessManager._internal();
 
   ProcessRunner _processRunner = DefaultProcessRunner();
-  // ignore: unused_field
   http.Client _httpClient = http.Client();
 
   final Map<String, Process> _runningProcesses = {};
   final Map<String, StreamController<String>> _outputControllers = {};
   final Map<String, int> _retryCounts = {};
+  final Map<String, int> _consecutiveHealthFailures = {};
   final Map<String, DateTime> _nextRetryTimes = {};
   final Set<String> _intentionallyStopping = {};
+  final Set<String> _failureStopping = {};
   Timer? _healthTimer;
   bool _initialized = false;
   List<Module> _modules = [];
@@ -124,6 +137,99 @@ class ProcessManager {
       _modules[index] = module;
     }
     _statusController.add(module);
+  }
+
+  Module _currentModuleState(String moduleId, Module fallback) {
+    final index = _modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) {
+      return fallback;
+    }
+    return _modules[index];
+  }
+
+  void _resetHealthFailureCount(String moduleId) {
+    _consecutiveHealthFailures.remove(moduleId);
+  }
+
+  bool _isRetryableProbeError(Object error) {
+    return error is http.ClientException ||
+        error is SocketException ||
+        error is HttpException ||
+        error is TimeoutException;
+  }
+
+  Future<_HealthProbeResponse> _sendHealthProbe(Uri uri) async {
+    final request = http.Request('GET', uri)..persistentConnection = false;
+    final response = await _httpClient.send(request).timeout(
+          const Duration(seconds: 2),
+        );
+    final body = await response.stream.bytesToString();
+    return _HealthProbeResponse(statusCode: response.statusCode, body: body);
+  }
+
+  Future<_HealthProbeResponse> _probeHealth(Uri uri, String moduleId) async {
+    Object? lastError;
+
+    for (var attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await _sendHealthProbe(uri);
+      } catch (error) {
+        lastError = error;
+        if (!_isRetryableProbeError(error) || attempt == 2) {
+          break;
+        }
+        debugPrint(
+          '[$moduleId] Health probe transport error on attempt '
+          '$attempt/2, retrying with a fresh request: $error',
+        );
+      }
+    }
+
+    throw lastError!;
+  }
+
+  Future<void> _recordHealthFailure(Module module, String error) async {
+    final currentModule = _currentModuleState(module.id, module);
+    final failureCount = (_consecutiveHealthFailures[module.id] ?? 0) + 1;
+    _consecutiveHealthFailures[module.id] = failureCount;
+
+    if (failureCount < _maxConsecutiveHealthFailures) {
+      final nextStatus = currentModule.status == ModuleStatus.starting
+          ? ModuleStatus.starting
+          : ModuleStatus.degraded;
+      final updatedModule = currentModule.copyWith(
+        status: nextStatus,
+        healthStatus: 'Transient health probe issue ($failureCount/'
+            '$_maxConsecutiveHealthFailures): $error',
+      );
+      _updateModuleStatus(updatedModule);
+      return;
+    }
+
+    await _handleFailure(
+      currentModule,
+      'Health check failed after $failureCount consecutive probes: $error',
+    );
+  }
+
+  @visibleForTesting
+  Future<bool> checkHealthForTesting(Module module) => _checkHealth(module);
+
+  @visibleForTesting
+  int consecutiveHealthFailuresFor(String moduleId) =>
+      _consecutiveHealthFailures[moduleId] ?? 0;
+
+  @visibleForTesting
+  bool hasScheduledRetryFor(String moduleId) =>
+      _nextRetryTimes.containsKey(moduleId);
+
+  @visibleForTesting
+  Module? moduleStateForTesting(String moduleId) {
+    final index = _modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) {
+      return null;
+    }
+    return _modules[index];
   }
 
   void _scheduleRetry(Module module) {
@@ -154,6 +260,7 @@ class ProcessManager {
       return;
     }
 
+    _resetHealthFailureCount(module.id);
     debugPrint('[${module.id}] Handling failure: $error');
 
     final updatedModule = module.copyWith(
@@ -163,9 +270,11 @@ class ProcessManager {
     _updateModuleStatus(updatedModule);
 
     if (_runningProcesses.containsKey(module.id)) {
+      _failureStopping.add(module.id);
       await stopModule(module.id, isFailure: true);
     }
 
+    _failureStopping.remove(module.id);
     _scheduleRetry(updatedModule);
   }
 
@@ -187,8 +296,10 @@ class ProcessManager {
   void resetForTesting() {
     dispose();
     _retryCounts.clear();
+    _consecutiveHealthFailures.clear();
     _nextRetryTimes.clear();
     _intentionallyStopping.clear();
+    _failureStopping.clear();
     _modules.clear();
   }
 
@@ -200,6 +311,8 @@ class ProcessManager {
     }
     _outputControllers.clear();
     _runningProcesses.clear();
+    _consecutiveHealthFailures.clear();
+    _failureStopping.clear();
   }
 
   /// The directory containing pyproject.toml (for pip install).
@@ -433,6 +546,8 @@ class ProcessManager {
       _nextRetryTimes.remove(module.id);
     }
     _intentionallyStopping.remove(module.id);
+    _failureStopping.remove(module.id);
+    _resetHealthFailureCount(module.id);
 
     // Kill any zombie process from a previous session occupying our port
     await _killProcessOnPort(effectivePort);
@@ -519,11 +634,33 @@ class ProcessManager {
           _outputControllers[module.id]?.close();
           _outputControllers.remove(module.id);
 
-          final updatedModuleStopped = module.copyWith(
-            status: code == 0 ? ModuleStatus.installed : ModuleStatus.error,
-            healthStatus: code == 0 ? null : 'Process exited with code $code',
+          final wasIntentionalStop = _intentionallyStopping.remove(module.id);
+          final wasFailureStop = _failureStopping.remove(module.id);
+          final currentModule = _currentModuleState(module.id, module);
+
+          if (wasIntentionalStop) {
+            final updatedModuleStopped = currentModule.copyWith(
+              status: ModuleStatus.installed,
+              healthStatus: null,
+            );
+            _updateModuleStatus(updatedModuleStopped);
+            return;
+          }
+
+          if (wasFailureStop) {
+            return;
+          }
+
+          _resetHealthFailureCount(module.id);
+          final exitMessage = code == 0
+              ? 'Process exited unexpectedly'
+              : 'Process exited with code $code';
+          final updatedModuleStopped = currentModule.copyWith(
+            status: ModuleStatus.error,
+            healthStatus: exitMessage,
           );
           _updateModuleStatus(updatedModuleStopped);
+          _scheduleRetry(updatedModuleStopped);
         }),
       );
 
@@ -553,10 +690,16 @@ class ProcessManager {
       _intentionallyStopping.add(moduleId);
       _retryCounts.remove(moduleId);
       _nextRetryTimes.remove(moduleId);
+      _consecutiveHealthFailures.remove(moduleId);
     }
 
     final process = _runningProcesses[moduleId];
-    if (process == null) return;
+    if (process == null) {
+      if (!isFailure) {
+        _intentionallyStopping.remove(moduleId);
+      }
+      return;
+    }
 
     process.kill(ProcessSignal.sigterm);
 
@@ -574,23 +717,12 @@ class ProcessManager {
   Future<bool> _checkHealth(Module module) async {
     final effectivePort = module.customPort ?? module.port;
     if (effectivePort == null) return false;
+    final currentModule = _currentModuleState(module.id, module);
     try {
       final uri = Uri.parse('http://127.0.0.1:$effectivePort/health');
-
-      String body;
-      int statusCode;
-
-      if (kIsWeb) {
-        final response =
-            await http.get(uri).timeout(const Duration(seconds: 2));
-        body = response.body;
-        statusCode = response.statusCode;
-      } else {
-        final response =
-            await _httpClient.get(uri).timeout(const Duration(seconds: 2));
-        body = response.body;
-        statusCode = response.statusCode;
-      }
+      final response = await _probeHealth(uri, currentModule.id);
+      final body = response.body;
+      final statusCode = response.statusCode;
 
       ModuleStatus newStatus;
       String? healthInfo;
@@ -598,23 +730,31 @@ class ProcessManager {
       if (statusCode == 200) {
         newStatus = ModuleStatus.running;
         healthInfo = body;
+        _resetHealthFailureCount(currentModule.id);
       } else if (statusCode == 503) {
         newStatus = ModuleStatus.degraded;
         healthInfo = body;
+        _resetHealthFailureCount(currentModule.id);
       } else if (statusCode == 404) {
         // Server is running but has no /health endpoint — treat as running
         newStatus = ModuleStatus.running;
         healthInfo = 'No /health endpoint (server is up)';
+        _resetHealthFailureCount(currentModule.id);
       } else {
-        newStatus = ModuleStatus.error;
-        healthInfo = 'Health check failed: $statusCode';
+        await _recordHealthFailure(
+          currentModule,
+          'Health check returned HTTP $statusCode',
+        );
+        return false;
       }
 
-      if (module.status != newStatus || module.healthStatus != healthInfo) {
+      if (currentModule.status != newStatus ||
+          currentModule.healthStatus != healthInfo) {
         debugPrint(
-          '[${module.id}] Health status changed: ${module.status} -> $newStatus',
+          '[${currentModule.id}] Health status changed: '
+          '${currentModule.status} -> $newStatus',
         );
-        final updatedModule = module.copyWith(
+        final updatedModule = currentModule.copyWith(
           status: newStatus,
           healthStatus: healthInfo,
         );
@@ -622,11 +762,8 @@ class ProcessManager {
       }
       return statusCode == 200 || statusCode == 404;
     } catch (e) {
-      if (module.status == ModuleStatus.running ||
-          module.status == ModuleStatus.degraded) {
-        debugPrint('[${module.id}] Health check error: $e');
-        await _handleFailure(module, 'Health check error: $e');
-      }
+      debugPrint('[${currentModule.id}] Health check error: $e');
+      await _recordHealthFailure(currentModule, 'Health probe error: $e');
       return false;
     }
   }

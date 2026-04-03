@@ -357,11 +357,11 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  test('Health check updates module status and handles retries', () async {
-    final tempDir = Directory.systemTemp.createTempSync('nmtk_test_health');
+  test('single transport failure followed by success does not restart module',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('nmtk_test_health_single');
     final runDir = tempDir.path;
-
-    // Setup venv and python mock
     final venvPath = p.join(runDir, 'venv');
     Directory(venvPath).createSync(recursive: true);
     final pythonExe = Platform.isWindows
@@ -370,8 +370,8 @@ void main() {
     File(pythonExe).createSync(recursive: true);
 
     final module = Module(
-      id: 'health_test',
-      name: 'Health Test',
+      id: 'health_single',
+      name: 'Health Single',
       description: 'Desc',
       directory: runDir,
       port: 8003,
@@ -380,43 +380,151 @@ void main() {
 
     await processManager.init([module]);
 
-    int requestCount = 0;
-    final mockClient = MockClient((request) async {
+    var requestCount = 0;
+    processManager.httpClient = MockClient((request) async {
       requestCount++;
       if (requestCount == 1) {
-        return http.Response('{"status":"ok"}', 200);
-      } else if (requestCount == 2) {
-        return http.Response('{"status":"degraded"}', 503);
-      } else {
-        return http.Response('Error', 500);
+        throw http.ClientException('Connection reset by peer', request.url);
       }
+      return http.Response('{"status":"ok"}', 200);
     });
-
-    processManager.httpClient = mockClient;
     mockRunner.mockProcesses[pythonExe] = MockProcess();
-    // For retry
-    mockRunner.mockProcesses[pythonExe] = MockProcess();
-
-    // Capture status updates
-    final statusList = <ModuleStatus>[];
-    final subscription = processManager.statusUpdates.listen((m) {
-      if (m.id == 'health_test') {
-        statusList.add(m.status);
-      }
-    });
 
     await processManager.startModule(module);
 
-    // Give it time for startModule's initial health check and two polling intervals (5s each)
-    // Using a more generous timeout for CI
-    await Future<void>.delayed(const Duration(seconds: 20));
+    final updatedModule = processManager.moduleStateForTesting(module.id)!;
+    expect(updatedModule.status, ModuleStatus.running);
+    expect(processManager.consecutiveHealthFailuresFor(module.id), 0);
+    expect(processManager.hasScheduledRetryFor(module.id), isFalse);
 
-    expect(statusList, contains(ModuleStatus.running));
-    expect(statusList, contains(ModuleStatus.degraded));
-    expect(statusList, contains(ModuleStatus.error));
-
-    await subscription.cancel();
     tempDir.deleteSync(recursive: true);
+  });
+
+  test('two consecutive failed probe cycles trigger failure handling and retry',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('nmtk_test_health_retry');
+    final runDir = tempDir.path;
+    final venvPath = p.join(runDir, 'venv');
+    Directory(venvPath).createSync(recursive: true);
+    final pythonExe = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'python.exe')
+        : p.join(venvPath, 'bin', 'python');
+    File(pythonExe).createSync(recursive: true);
+
+    final module = Module(
+      id: 'health_retry',
+      name: 'Health Retry',
+      description: 'Desc',
+      directory: runDir,
+      port: 8004,
+      status: ModuleStatus.installed,
+    );
+
+    await processManager.init([module]);
+
+    processManager.httpClient = MockClient((request) async {
+      throw http.ClientException('Connection reset by peer', request.url);
+    });
+    mockRunner.mockProcesses[pythonExe] = MockProcess();
+
+    await processManager.startModule(module);
+    expect(processManager.consecutiveHealthFailuresFor(module.id), 1);
+
+    await processManager.checkHealthForTesting(module);
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+
+    final updatedModule = processManager.moduleStateForTesting(module.id)!;
+    expect(updatedModule.status, ModuleStatus.error);
+    expect(updatedModule.healthStatus, contains('Retrying in'));
+    expect(processManager.hasScheduledRetryFor(module.id), isTrue);
+    expect(processManager.consecutiveHealthFailuresFor(module.id), 0);
+
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test('successful probe resets consecutive failure counter', () async {
+    final module = Module(
+      id: 'health_reset',
+      name: 'Health Reset',
+      description: 'Desc',
+      directory: Directory.systemTemp.path,
+      port: 8005,
+      status: ModuleStatus.installed,
+    );
+
+    await processManager.init([module]);
+
+    processManager.httpClient =
+        MockClient((_) async => http.Response('Error', 500));
+    await processManager.checkHealthForTesting(module);
+
+    final afterFailure = processManager.moduleStateForTesting(module.id)!;
+    expect(afterFailure.status, ModuleStatus.degraded);
+    expect(processManager.consecutiveHealthFailuresFor(module.id), 1);
+
+    processManager.httpClient =
+        MockClient((_) async => http.Response('{"status":"ok"}', 200));
+    await processManager.checkHealthForTesting(module);
+
+    final afterRecovery = processManager.moduleStateForTesting(module.id)!;
+    expect(afterRecovery.status, ModuleStatus.running);
+    expect(processManager.consecutiveHealthFailuresFor(module.id), 0);
+  });
+
+  test('health responses preserve 200, 404, and 503 semantics', () async {
+    final scenarios = <({
+      String id,
+      int statusCode,
+      String body,
+      ModuleStatus expectedStatus,
+      bool expectedHealthy,
+    })>[
+      (
+        id: 'health_200',
+        statusCode: 200,
+        body: '{"status":"ok"}',
+        expectedStatus: ModuleStatus.running,
+        expectedHealthy: true,
+      ),
+      (
+        id: 'health_404',
+        statusCode: 404,
+        body: 'Not Found',
+        expectedStatus: ModuleStatus.running,
+        expectedHealthy: true,
+      ),
+      (
+        id: 'health_503',
+        statusCode: 503,
+        body: '{"status":"degraded"}',
+        expectedStatus: ModuleStatus.degraded,
+        expectedHealthy: false,
+      ),
+    ];
+
+    for (final scenario in scenarios) {
+      final module = Module(
+        id: scenario.id,
+        name: scenario.id,
+        description: 'Desc',
+        directory: Directory.systemTemp.path,
+        port: 8100 + scenarios.indexOf(scenario),
+        status: ModuleStatus.installed,
+      );
+
+      await processManager.init([module]);
+      processManager.httpClient = MockClient(
+        (_) async => http.Response(scenario.body, scenario.statusCode),
+      );
+
+      final healthy = await processManager.checkHealthForTesting(module);
+      final updatedModule = processManager.moduleStateForTesting(module.id)!;
+
+      expect(healthy, scenario.expectedHealthy);
+      expect(updatedModule.status, scenario.expectedStatus);
+      expect(processManager.consecutiveHealthFailuresFor(module.id), 0);
+    }
   });
 
   test('Simultaneous management of 1, 3, and 7 modules', () async {

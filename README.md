@@ -39,9 +39,12 @@ NMTK orchestrates the following specialized modules, which can be dynamically do
     *   *Purpose:* Standardized benchmarking and testing of neuromorphic models and hardware configurations.
     *   *Best for:* Evaluating performance, latency, and energy efficiency.
 6.  **[Neurohub](./Neurohub)**
-    *   *Purpose:* A central repository for sharing pre-trained neuromorphic models, datasets, and configurations.
-    *   *Best for:* Collaboration and discovering existing community resources.
-7.  **[Neuro-Dream-Hand](./Neuro-Dream-Hand)**
+    *   *Purpose:* Community registry for sharing and discovering pre-trained SNN models, neuromorphic datasets, hardware profiles, NeuroCNL spec templates, encoding presets, and benchmark baselines.
+    *   *Best for:* Researchers publishing work, engineers looking for a starting point, and anyone who wants to reuse community-validated artefacts across the suite.
+7.  **[NeuroDash](./NeuroDash)**
+    *   *Purpose:* Central orchestration dashboard for managing cross-app projects, pipelines, milestones, and team collaboration across the full suite.
+    *   *Best for:* Team leads and project managers coordinating work across multiple Neuro-space apps.
+8.  **[Neuro-Dream-Hand](./Neuro-Dream-Hand)**
     *   *Purpose:* Applied hardware robotics and edge integration (e.g., controlling a robotic hand via SNNs and Teensy microcontrollers).
     *   *Best for:* Applied robotics, edge AI, and end-to-end physical demonstrations.
 
@@ -52,7 +55,8 @@ NMTK orchestrates the following specialized modules, which can be dynamically do
 | **NeuroCNL** | 97% | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Neurosim** | 80% | ✅ | ⚠️ | ✅ | ✅ | ✅ |
 | **Neurosense** | 85% | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| **Neurohub** | 80% | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **Neurohub** | 0% | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **NeuroDash** | 80% | ✅ | ✅ | ✅ | ⚠️ | ✅ |
 | **Neurochip** | 90% | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Neurobench** | 70% | ⚠️ | ⚠️ | ✅ | ✅ | ✅ |
 | **Neuro-Dream-Hand** | 95% | ✅ | N/A | ✅ | N/A | ✅ |
