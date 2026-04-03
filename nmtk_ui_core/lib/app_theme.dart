@@ -80,6 +80,7 @@ enum NmtkThemeVariant {
 /// ----------------------------------------------------------------------------
 
 class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
+  // Base
   final Color terminalBackground;
   final Color syntaxHighlightColor;
   final LinearGradient brandGradient;
@@ -681,6 +682,11 @@ class ResponsiveScaffold extends StatefulWidget {
 }
 
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
+  static const double _expandedSidebarWidth = 256;
+  static const double _collapsedSidebarWidth = 88;
+
+  bool _isSidebarCollapsed = false;
+
   bool get _isDesktopContext {
     if (kIsWeb) {
       return true;
@@ -756,7 +762,10 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           body: Row(
             children: [
               Container(
-                width: 256,
+                key: const ValueKey('responsive-desktop-sidebar'),
+                width: _isSidebarCollapsed
+                    ? _collapsedSidebarWidth
+                    : _expandedSidebarWidth,
                 color: Theme.of(context).colorScheme.surface,
                 child: Column(
                   children: [
@@ -774,66 +783,97 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Material(
-                              color: Colors.transparent,
-                              borderRadius: NmtkDesignTokens.buttonShape,
-                              child: InkWell(
+                            child: Tooltip(
+                              message: destination.label,
+                              waitDuration: const Duration(milliseconds: 300),
+                              child: Material(
+                                color: Colors.transparent,
                                 borderRadius: NmtkDesignTokens.buttonShape,
-                                hoverColor: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withValues(alpha: 0.08),
-                                onTap: () =>
-                                    widget.onNavigationTargetSelected(index),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? Theme.of(context)
-                                              .colorScheme
-                                              .primaryContainer
-                                              .withValues(
-                                                alpha: _isDesktopContext
-                                                    ? 0.8
-                                                    : 1,
-                                              )
-                                        : Colors.transparent,
-                                    borderRadius: NmtkDesignTokens.buttonShape,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        isSelected
-                                            ? (destination.selectedIcon ??
-                                                  destination.icon)
-                                            : destination.icon,
-                                        color: isSelected
-                                            ? Theme.of(
-                                                context,
-                                              ).colorScheme.onPrimaryContainer
-                                            : Theme.of(
-                                                context,
-                                              ).colorScheme.onSurfaceVariant,
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Text(
-                                        destination.label,
-                                        style: TextStyle(
-                                          fontWeight: isSelected
-                                              ? FontWeight.w600
-                                              : FontWeight.w500,
-                                          color: isSelected
-                                              ? Theme.of(
-                                                  context,
-                                                ).colorScheme.onPrimaryContainer
-                                              : Theme.of(
-                                                  context,
-                                                ).colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ],
+                                child: InkWell(
+                                  borderRadius: NmtkDesignTokens.buttonShape,
+                                  hoverColor: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.08),
+                                  onTap: () =>
+                                      widget.onNavigationTargetSelected(index),
+                                  child: Container(
+                                    padding: _isSidebarCollapsed
+                                        ? const EdgeInsets.symmetric(
+                                            vertical: 12,
+                                          )
+                                        : const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? Theme.of(context)
+                                                .colorScheme
+                                                .primaryContainer
+                                                .withValues(
+                                                  alpha: _isDesktopContext
+                                                      ? 0.8
+                                                      : 1,
+                                                )
+                                          : Colors.transparent,
+                                      borderRadius:
+                                          NmtkDesignTokens.buttonShape,
+                                    ),
+                                    child: _isSidebarCollapsed
+                                        ? Center(
+                                            child: Icon(
+                                              isSelected
+                                                  ? (destination.selectedIcon ??
+                                                        destination.icon)
+                                                  : destination.icon,
+                                              color: isSelected
+                                                  ? Theme.of(context)
+                                                        .colorScheme
+                                                        .onPrimaryContainer
+                                                  : Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                            ),
+                                          )
+                                        : Row(
+                                            children: [
+                                              Icon(
+                                                isSelected
+                                                    ? (destination
+                                                              .selectedIcon ??
+                                                          destination.icon)
+                                                    : destination.icon,
+                                                color: isSelected
+                                                    ? Theme.of(context)
+                                                          .colorScheme
+                                                          .onPrimaryContainer
+                                                    : Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurfaceVariant,
+                                              ),
+                                              const SizedBox(width: 16),
+                                              Flexible(
+                                                child: Text(
+                                                  destination.label,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontWeight: isSelected
+                                                        ? FontWeight.w600
+                                                        : FontWeight.w500,
+                                                    color: isSelected
+                                                        ? Theme.of(context)
+                                                              .colorScheme
+                                                              .onPrimaryContainer
+                                                        : Theme.of(context)
+                                                              .colorScheme
+                                                              .onSurfaceVariant,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                   ),
                                 ),
                               ),
@@ -855,8 +895,44 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   }
 
   Widget _buildDesktopBrandHeader() {
+    final toggleButton = IconButton(
+      key: const ValueKey('responsive-sidebar-toggle'),
+      tooltip: _isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar',
+      onPressed: () {
+        setState(() {
+          _isSidebarCollapsed = !_isSidebarCollapsed;
+        });
+      },
+      icon: Icon(
+        _isSidebarCollapsed ? Icons.chevron_right : Icons.chevron_left,
+      ),
+    );
+
+    if (_isSidebarCollapsed) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 24, 12, 12),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.memory,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            toggleButton,
+          ],
+        ),
+      );
+    }
+
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
       child: Row(
         children: [
           Container(
@@ -870,26 +946,29 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'NMTK Hub',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+          if (!_isSidebarCollapsed) ...[
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'NMTK Hub',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                Text(
-                  'Neuromorphic Toolkit',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  Text(
+                    'Neuromorphic Toolkit',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
+          toggleButton,
         ],
       ),
     );

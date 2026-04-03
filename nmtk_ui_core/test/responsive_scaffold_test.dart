@@ -72,5 +72,38 @@ void main() {
       expect(find.text('Dashboard'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
     });
+
+    testWidgets('desktop sidebar can collapse and expand', (tester) async {
+      tester.view.physicalSize = const Size(1300, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(buildScaffold(const Size(1300, 800)));
+
+      final sidebarFinder = find.byKey(
+        const ValueKey('responsive-desktop-sidebar'),
+      );
+
+      expect(find.byTooltip('Collapse sidebar'), findsOneWidget);
+      expect(find.text('NMTK Hub'), findsOneWidget);
+      expect(find.text('Dashboard'), findsOneWidget);
+      expect(tester.getSize(sidebarFinder).width, 256);
+
+      await tester.tap(find.byKey(const ValueKey('responsive-sidebar-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Expand sidebar'), findsOneWidget);
+      expect(find.text('NMTK Hub'), findsNothing);
+      expect(find.text('Dashboard'), findsNothing);
+      expect(tester.getSize(sidebarFinder).width, 88);
+
+      await tester.tap(find.byKey(const ValueKey('responsive-sidebar-toggle')));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Collapse sidebar'), findsOneWidget);
+      expect(find.text('NMTK Hub'), findsOneWidget);
+      expect(find.text('Dashboard'), findsOneWidget);
+      expect(tester.getSize(sidebarFinder).width, 256);
+    });
   });
 }
