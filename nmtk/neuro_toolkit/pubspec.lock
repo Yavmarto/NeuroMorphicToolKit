@@ -269,7 +269,7 @@ packages:
       path: "../../nmtk_ui_core"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.6.0+3"
   objective_c:
     dependency: transitive
     description:
