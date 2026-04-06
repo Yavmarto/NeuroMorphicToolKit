@@ -27,6 +27,8 @@ jobs:
         flutter_channel: [stable, beta]
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: subosito/flutter-action@v2
         with:
@@ -81,6 +83,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
@@ -105,6 +109,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
