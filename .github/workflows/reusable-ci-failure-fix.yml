@@ -32,7 +32,7 @@ jobs:
     needs: sdd-context
     runs-on: self-hosted
     concurrency:
-      group: agent-work
+      group: ci-failure-fix-${{ inputs.run_id }}
       cancel-in-progress: false
     steps:
       - name: Checkout repo
@@ -53,7 +53,7 @@ jobs:
       - name: Invoke Jules to fix failure (primary key)
         id: jules-primary
         continue-on-error: true
-        uses: google-labs-code/jules-invoke@v1
+        uses: google-labs-code/jules-action@v1.0.0
         with:
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
@@ -80,7 +80,7 @@ jobs:
         id: jules-fallback
         if: steps.jules-primary.outcome == 'failure'
         continue-on-error: true
-        uses: google-labs-code/jules-invoke@v1
+        uses: google-labs-code/jules-action@v1.0.0
         with:
           prompt: |
             ${{ needs.sdd-context.outputs.context }}
@@ -105,7 +105,7 @@ jobs:
 
       - name: Invoke Jules to fix failure (retry primary key)
         if: steps.jules-primary.outcome == 'failure' && steps.jules-fallback.outcome == 'failure'
-        uses: google-labs-code/jules-invoke@v1
+        uses: google-labs-code/jules-action@v1.0.0
         with:
           prompt: |
             ${{ needs.sdd-context.outputs.context }}

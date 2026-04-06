@@ -45,7 +45,7 @@ jobs:
     if: ${{ contains(fromJSON(inputs.trusted_users), inputs.sender_login) }}
     runs-on: self-hosted
     concurrency:
-      group: agent-work
+      group: feature-builder-${{ inputs.issue_number }}
       cancel-in-progress: false
     steps:
       - name: Invoke Jules to build feature (primary key)

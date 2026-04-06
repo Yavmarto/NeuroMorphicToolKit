@@ -41,7 +41,7 @@ jobs:
     if: ${{ contains(fromJSON(inputs.trusted_users), inputs.issue_author) }}
     runs-on: self-hosted
     concurrency:
-      group: agent-work
+      group: unblocked-issues-${{ inputs.issue_number }}
       cancel-in-progress: false
     steps:
       - name: Invoke Jules on Unblocked Issue (primary key)

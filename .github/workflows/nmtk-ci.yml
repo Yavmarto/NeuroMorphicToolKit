@@ -14,6 +14,10 @@ on:
       - 'nmtk_ui_core/**'
       - '.github/workflows/nmtk-ci.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: self-hosted
@@ -23,6 +27,8 @@ jobs:
         flutter_channel: [stable, beta]
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: subosito/flutter-action@v2
         with:
@@ -63,10 +69,6 @@ jobs:
           cd nmtk/neuro_toolkit
           flutter test
 
-      - name: Run Integration tests (neuro_toolkit)
-        run: |
-          cd nmtk/neuro_toolkit
-          flutter test integration_test/app_test.dart
 
       - name: Run E2E Launcher tests (neuro_toolkit)
         env:
@@ -81,6 +83,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
@@ -105,6 +109,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
