@@ -14,9 +14,10 @@ find . -name ".venv" -type d -prune -exec rm -rf {} +
 find . -name "venv" -type d -prune -exec rm -rf {} +
 
 # 2. Remove Flutter Build Artifacts
-echo "Removing Flutter build artifacts (build, .dart_tool)..."
+echo "Removing Flutter build artifacts (build, .dart_tool, ephemeral)..."
 find . -name "build" -type d -prune -exec rm -rf {} +
 find . -name ".dart_tool" -type d -prune -exec rm -rf {} +
+find . -name "ephemeral" -type d -prune -exec rm -rf {} +
 
 # 3. Remove Python Caches
 echo "Removing Python caches (__pycache__, .pyc)..."

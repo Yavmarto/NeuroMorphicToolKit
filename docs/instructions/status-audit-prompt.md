@@ -19,6 +19,8 @@ Evaluate the adherence to the `CODING_STYLE_GUIDE.md`:
    - Run `mypy --strict` to inspect typing integrity (if applicable).
 2. **Dart / Flutter Analysis**:
    - Run `flutter analyze` across frontend folders to detect un-typed `dynamic` mappings or missing constructors.
+   - **Exception Rule**: If running in an isolated submodule context (e.g., in Jules or standalone CI), **ignore errors originating from `nmtk_ui_core` path resolution**. Since submodules depend on `nmtk_ui_core` via relative paths (`../../nmtk_ui_core`), they might fail to resolve in isolation.
+   - **Recommendation**: Run `scripts/setup-isolated-frontend.sh` (if available) before analysis to mock the missing dependency.
 3. Summarize the findings, documenting severe anomalies that threaten maintainability. 
 
 ## 📝 Step 3: Task Fragmentation Cleanup

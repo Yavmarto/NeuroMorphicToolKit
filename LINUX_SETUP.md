@@ -19,6 +19,7 @@ sudo apt install -y \
   # Flutter Desktop dependencies
   clang \
   cmake \
+  lld \
   ninja-build \
   pkg-config \
   libgtk-3-dev \
@@ -66,4 +67,19 @@ If you encounter GL errors when running simulations in a VM, try setting the ren
 export MUJOCO_GL=egl
 ```
 
-For heavy headless processing, ensure you have sufficient memory allocated to your OrbStack VM (at least 4GB recommended).
+For heavy headless processing, ensure you have sufficient memory allocated to your OrbStack VM (at least 4gb recommended).
+
+## 6. Graphical Applications (GUI) & X11
+
+OrbStack runs headless Linux environments. If you get a `cannot open display` error when running `make dev`:
+
+1.  **Install XQuartz** on your macOS host: `brew install --cask xquartz`
+2.  **Configure XQuartz**: Open XQuartz -> Preferences -> Security -> Check "Allow connections from network clients".
+3.  **Restart XQuartz**.
+4.  **Set Display in VM**:
+    ```bash
+    export DISPLAY=host.docker.internal:0
+    make dev
+    ```
+
+**Alternative (Recommended)**: Instead of the native Linux GUI, use **Docker Setup** (Option A in SETUP_GUIDE.md) and access the module UIs via your Mac's web browser at `http://localhost:8000`.
