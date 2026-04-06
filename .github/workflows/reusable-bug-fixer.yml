@@ -46,7 +46,7 @@ jobs:
     if: ${{ contains(fromJSON(inputs.trusted_users), inputs.sender_login) }}
     runs-on: self-hosted
     concurrency:
-      group: agent-work
+      group: bug-fixer-${{ inputs.issue_number }}
       cancel-in-progress: false
     steps:
       - name: Invoke Jules to fix bug (primary key)

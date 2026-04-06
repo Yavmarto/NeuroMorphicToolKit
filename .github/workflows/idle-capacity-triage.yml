@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: agent-work
+  group: idle-capacity-triage
   cancel-in-progress: false
 
 jobs:

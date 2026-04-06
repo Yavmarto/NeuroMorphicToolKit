@@ -44,7 +44,7 @@ jobs:
       - name: Invoke Jules to fix failure (primary key)
         id: jules-primary
         continue-on-error: true
-        uses: google-labs-code/jules-invoke@v1
+        uses: google-labs-code/jules-action@v1.0.0
         with:
           prompt: |
             ${{ steps.sdd.outputs.context }}
@@ -69,7 +69,7 @@ jobs:
 
       - name: Invoke Jules to fix failure (fallback key)
         if: steps.jules-primary.outcome == 'failure'
-        uses: google-labs-code/jules-invoke@v1
+        uses: google-labs-code/jules-action@v1.0.0
         with:
           prompt: |
             ${{ steps.sdd.outputs.context }}

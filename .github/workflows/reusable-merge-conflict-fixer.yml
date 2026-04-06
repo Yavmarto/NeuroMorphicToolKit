@@ -26,6 +26,9 @@ jobs:
   fix:
     name: Fix conflicts in PR #${{ inputs.pr_number }}
     runs-on: self-hosted
+    concurrency:
+      group: merge-conflict-fixer-${{ inputs.pr_number }}
+      cancel-in-progress: false
     steps:
       - name: Invoke Jules to resolve conflicts (primary key)
         id: jules-primary
