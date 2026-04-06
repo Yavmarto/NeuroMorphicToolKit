@@ -29,6 +29,9 @@
 |------|---------|--------------|
 | **Git** | 2.30+ | `git --version` |
 
+> [!TIP]
+> **Linux (Ubuntu/OrbStack) Users:** See the specialized [LINUX_SETUP.md](file:///Users/yoshimartodihardjo/NeuroMorphicToolKit/LINUX_SETUP.md) for Ubuntu-specific instructions and dependencies.
+
 ### For Docker setup (Option A)
 
 | Tool | Version | Check Command |

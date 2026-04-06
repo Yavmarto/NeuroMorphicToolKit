@@ -8,6 +8,16 @@ PORT_Neurobench = 8003
 PORT_Neurosense = 8004
 PORT_Neurohub = 8005
 
+# OS detection for Flutter device targeting
+OS := $(shell uname)
+ifeq ($(OS), Darwin)
+  FLUTTER_DEVICE = macos
+else ifeq ($(OS), Linux)
+  FLUTTER_DEVICE = linux
+else
+  FLUTTER_DEVICE = windows
+endif
+
 # Shared UI core dependency
 UI_CORE_FILES = $(shell find nmtk_ui_core/lib -type f) nmtk_ui_core/pubspec.yaml
 
@@ -31,7 +41,7 @@ build-interactive:
 	@./scripts/select_modules.sh
 
 dev: build-submodules
-	@cd nmtk/neuro_toolkit && flutter run -d macos
+	@cd nmtk/neuro_toolkit && flutter run -d $(FLUTTER_DEVICE)
 
 clean-all:
 	@chmod +x scripts/deep_clean.sh
