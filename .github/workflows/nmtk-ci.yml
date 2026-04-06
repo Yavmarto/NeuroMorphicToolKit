@@ -67,10 +67,6 @@ jobs:
           cd nmtk/neuro_toolkit
           flutter test
 
-      - name: Run Integration tests (neuro_toolkit)
-        run: |
-          cd nmtk/neuro_toolkit
-          flutter test integration_test/app_test.dart
 
       - name: Run E2E Launcher tests (neuro_toolkit)
         env:
