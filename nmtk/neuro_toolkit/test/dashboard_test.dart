@@ -101,6 +101,40 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
 }
 
 void main() {
+  testWidgets('DashboardScreen shows PYNQ Deploy button',
+      (WidgetTester tester) async {
+    final mockProvider = MockDashboardProvider();
+    mockProvider.setInstalledModules([]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChangeNotifierProvider<ModuleProvider>.value(
+          value: mockProvider,
+          child: const DashboardScreen(),
+        ),
+      ),
+    );
+
+    expect(find.text('PYNQ Deploy'), findsOneWidget);
+  });
+
+  testWidgets('DashboardScreen shows Teensy Deploy button',
+      (WidgetTester tester) async {
+    final mockProvider = MockDashboardProvider();
+    mockProvider.setInstalledModules([]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ChangeNotifierProvider<ModuleProvider>.value(
+          value: mockProvider,
+          child: const DashboardScreen(),
+        ),
+      ),
+    );
+
+    expect(find.text('Teensy Deploy'), findsOneWidget);
+  });
+
   testWidgets('DashboardScreen shows empty state when no modules are installed',
       (WidgetTester tester) async {
     final mockProvider = MockDashboardProvider();

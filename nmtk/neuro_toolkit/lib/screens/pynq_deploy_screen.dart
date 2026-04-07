@@ -50,46 +50,180 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
       ),
       body: Consumer<PynqDeployProvider>(
         builder: (context, provider, child) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildCnlInputCard(context, provider),
-                if (provider.exportResult != null) ...[
-                  const SizedBox(height: 16),
-                  _buildVerdictCard(context, provider),
-                ],
-                if (_canShowEndpointCard(provider)) ...[
-                  const SizedBox(height: 16),
-                  _buildEndpointCard(context, provider),
-                ],
-                if (provider.deployJob != null) ...[
-                  const SizedBox(height: 16),
-                  _buildDeployStatusCard(context, provider),
-                ],
-                if (provider.sitlResult != null) ...[
-                  const SizedBox(height: 16),
-                  _buildSitlResultCard(context, provider),
-                ],
-                if (provider.errorMessage != null &&
-                    provider.currentStep == PynqDeployStep.error) ...[
-                  const SizedBox(height: 16),
-                  _buildErrorCard(context, provider),
-                ],
-              ],
-            ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              NmtkPipelineStepper(steps: _buildPipelineSteps(provider)),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildCnlInputCard(context, provider),
+                      if (provider.exportResult != null) ...[
+                        const SizedBox(height: 16),
+                        _buildVerdictCard(context, provider),
+                      ],
+                      if (_canShowEndpointCard(provider)) ...[
+                        const SizedBox(height: 16),
+                        _buildEndpointCard(context, provider),
+                      ],
+                      if (provider.deployJob != null) ...[
+                        const SizedBox(height: 16),
+                        _buildDeployStatusCard(context, provider),
+                      ],
+                      if (provider.sitlResult != null) ...[
+                        const SizedBox(height: 16),
+                        _buildSitlResultCard(context, provider),
+                      ],
+                      if (provider.errorMessage != null &&
+                          provider.currentStep == PynqDeployStep.error) ...[
+                        const SizedBox(height: 16),
+                        _buildErrorCard(context, provider),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 
+  /// Maps the current [PynqDeployStep] to pipeline stepper step data.
+  List<NmtkPipelineStepData> _buildPipelineSteps(PynqDeployProvider provider) {
+    final step = provider.currentStep;
+
+    NmtkStepStatus prepareStatus;
+    NmtkStepStatus deployStatus;
+    NmtkStepStatus monitorStatus;
+    NmtkStepStatus verifyStatus;
+
+    switch (step) {
+      case PynqDeployStep.idle:
+        prepareStatus = NmtkStepStatus.idle;
+        deployStatus = NmtkStepStatus.idle;
+        monitorStatus = NmtkStepStatus.idle;
+        verifyStatus = NmtkStepStatus.idle;
+      case PynqDeployStep.checking:
+        prepareStatus = NmtkStepStatus.running;
+        deployStatus = NmtkStepStatus.idle;
+        monitorStatus = NmtkStepStatus.idle;
+        verifyStatus = NmtkStepStatus.idle;
+      case PynqDeployStep.checked:
+        prepareStatus = NmtkStepStatus.success;
+        deployStatus = NmtkStepStatus.idle;
+        monitorStatus = NmtkStepStatus.idle;
+        verifyStatus = NmtkStepStatus.idle;
+      case PynqDeployStep.deploying:
+        prepareStatus = NmtkStepStatus.success;
+        deployStatus = NmtkStepStatus.running;
+        monitorStatus = NmtkStepStatus.idle;
+        verifyStatus = NmtkStepStatus.idle;
+      case PynqDeployStep.polling:
+        prepareStatus = NmtkStepStatus.success;
+        deployStatus = NmtkStepStatus.success;
+        monitorStatus = NmtkStepStatus.running;
+        verifyStatus = NmtkStepStatus.idle;
+      case PynqDeployStep.verifying:
+        prepareStatus = NmtkStepStatus.success;
+        deployStatus = NmtkStepStatus.success;
+        monitorStatus = NmtkStepStatus.success;
+        verifyStatus = NmtkStepStatus.running;
+      case PynqDeployStep.done:
+        prepareStatus = NmtkStepStatus.success;
+        deployStatus = NmtkStepStatus.success;
+        monitorStatus = NmtkStepStatus.success;
+        verifyStatus = provider.sitlResult != null
+            ? NmtkStepStatus.success
+            : NmtkStepStatus.idle;
+      case PynqDeployStep.error:
+        // Mark the step that failed; determine from what's populated.
+        if (provider.exportResult == null) {
+          prepareStatus = NmtkStepStatus.error;
+          deployStatus = NmtkStepStatus.idle;
+          monitorStatus = NmtkStepStatus.idle;
+          verifyStatus = NmtkStepStatus.idle;
+        } else if (provider.deployJob == null) {
+          prepareStatus = NmtkStepStatus.success;
+          deployStatus = NmtkStepStatus.error;
+          monitorStatus = NmtkStepStatus.idle;
+          verifyStatus = NmtkStepStatus.idle;
+        } else if (provider.sitlResult == null) {
+          prepareStatus = NmtkStepStatus.success;
+          deployStatus = NmtkStepStatus.success;
+          monitorStatus = NmtkStepStatus.error;
+          verifyStatus = NmtkStepStatus.idle;
+        } else {
+          prepareStatus = NmtkStepStatus.success;
+          deployStatus = NmtkStepStatus.success;
+          monitorStatus = NmtkStepStatus.success;
+          verifyStatus = NmtkStepStatus.error;
+        }
+    }
+
+    return [
+      NmtkPipelineStepData(
+        label: 'Prepare',
+        status: prepareStatus,
+        detail: _prepareDetail(provider),
+        icon: Icons.fact_check_outlined,
+      ),
+      NmtkPipelineStepData(
+        label: 'Deploy',
+        status: deployStatus,
+        detail: step == PynqDeployStep.deploying ? 'uploading…' : null,
+        icon: Icons.rocket_launch_outlined,
+      ),
+      NmtkPipelineStepData(
+        label: 'Monitor',
+        status: monitorStatus,
+        detail: step == PynqDeployStep.polling ? 'polling…' : null,
+        icon: Icons.monitor_heart_outlined,
+      ),
+      NmtkPipelineStepData(
+        label: 'Verify',
+        status: verifyStatus,
+        detail: _verifyDetail(provider),
+        icon: Icons.science_outlined,
+      ),
+    ];
+  }
+
+  String? _prepareDetail(PynqDeployProvider provider) {
+    final result = provider.exportResult;
+    if (result == null) return null;
+    switch (result.supportState) {
+      case PynqSupportState.exportable:
+        return 'exportable';
+      case PynqSupportState.exportableWithWarnings:
+        return '${result.warnings.length} warning(s)';
+      case PynqSupportState.notExportable:
+        return 'not exportable';
+      case PynqSupportState.deployable:
+        return 'deployed';
+      case PynqSupportState.notDeployable:
+        return 'not deployable';
+    }
+  }
+
+  String? _verifyDetail(PynqDeployProvider provider) {
+    final result = provider.sitlResult;
+    if (result == null) return null;
+    return result.passed
+        ? '${result.passedCases}/${result.totalCases} passed'
+        : 'failed';
+  }
+
   bool _canShowEndpointCard(PynqDeployProvider provider) {
     if (provider.exportResult == null) return false;
     final state = provider.exportResult!.supportState;
     return state == PynqSupportState.exportable ||
-        state == PynqSupportState.exportableWithWarnings;
+        state == PynqSupportState.exportableWithWarnings ||
+        state == PynqSupportState.deployable;
   }
 
   // ---------- Step 1: CNL Input ----------
@@ -137,21 +271,25 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                   },
                 ),
                 const Spacer(),
-                FilledButton.icon(
-                  onPressed: isChecking || _specController.text.trim().isEmpty
-                      ? null
-                      : () => provider.checkExportability(
-                            spec: _specController.text,
-                            weightBitWidth: _weightBitWidth,
-                          ),
-                  icon: isChecking
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.fact_check),
-                  label: Text(isChecking ? 'Checking...' : 'Check Exportability'),
+                Flexible(
+                  child: FilledButton.icon(
+                    onPressed: isChecking || _specController.text.trim().isEmpty
+                        ? null
+                        : () => provider.checkExportability(
+                              spec: _specController.text,
+                              weightBitWidth: _weightBitWidth,
+                            ),
+                    icon: isChecking
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.fact_check),
+                    label: Text(
+                      isChecking ? 'Checking...' : 'Check Exportability',
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -221,7 +359,9 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                   onChanged: provider.setRunSitl,
                 ),
                 const SizedBox(width: 8),
-                const Text('Run SITL verification after deploy'),
+                const Flexible(
+                  child: Text('Run SITL verification after deploy'),
+                ),
                 const Spacer(),
                 FilledButton.icon(
                   onPressed: isDeploying

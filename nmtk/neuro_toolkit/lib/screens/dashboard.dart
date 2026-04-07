@@ -24,6 +24,12 @@ class DashboardScreen extends StatelessWidget {
         title: const Text('Dashboard'),
         actions: [
           FilledButton.tonalIcon(
+            onPressed: () => context.go('/deploy/pynq'),
+            icon: const Icon(Icons.developer_board),
+            label: const Text('PYNQ Deploy'),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.tonalIcon(
             onPressed: () => context.go('/deploy/teensy'),
             icon: const Icon(Icons.memory),
             label: const Text('Teensy Deploy'),
