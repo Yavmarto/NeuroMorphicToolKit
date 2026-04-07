@@ -125,3 +125,130 @@ class PynqNetworkResponse {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Deploy job status — mirrors /hardware/pynq/status
+// ---------------------------------------------------------------------------
+
+/// Lifecycle state of a PYNQ backend deploy job.
+enum PynqDeployJobStatus {
+  /// No deploy has been attempted yet.
+  notInitialised,
+
+  /// Overlay is being loaded and weights written.
+  deploying,
+
+  /// Overlay loaded and backend is configured and ready to run.
+  configured,
+
+  /// Deploy failed.
+  failed;
+
+  static PynqDeployJobStatus fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'not_initialised':
+      case 'not_initialized':
+        return PynqDeployJobStatus.notInitialised;
+      case 'deploying':
+        return PynqDeployJobStatus.deploying;
+      case 'configured':
+        return PynqDeployJobStatus.configured;
+      case 'failed':
+        return PynqDeployJobStatus.failed;
+      default:
+        return PynqDeployJobStatus.notInitialised;
+    }
+  }
+
+  double get progressFraction {
+    switch (this) {
+      case PynqDeployJobStatus.notInitialised:
+        return 0.0;
+      case PynqDeployJobStatus.deploying:
+        return 0.5;
+      case PynqDeployJobStatus.configured:
+        return 1.0;
+      case PynqDeployJobStatus.failed:
+        return 0.0;
+    }
+  }
+}
+
+/// Deploy status snapshot from GET /hardware/pynq/status.
+class PynqDeployJob {
+  final PynqDeployJobStatus status;
+  final String? bitstreamPath;
+
+  const PynqDeployJob({
+    required this.status,
+    this.bitstreamPath,
+  });
+
+  factory PynqDeployJob.fromJson(Map<String, dynamic> json) {
+    return PynqDeployJob(
+      status: PynqDeployJobStatus.fromString(json['state'] as String),
+      bitstreamPath: json['bitstream_path'] as String?,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// SITL verification result — mirrors /hardware/pynq/verify
+// ---------------------------------------------------------------------------
+
+/// Per-step result from SITL verification.
+class PynqSitlStepResult {
+  final String label;
+  final bool passed;
+  final double executionTimeUs;
+
+  const PynqSitlStepResult({
+    required this.label,
+    required this.passed,
+    required this.executionTimeUs,
+  });
+
+  factory PynqSitlStepResult.fromJson(Map<String, dynamic> json) {
+    return PynqSitlStepResult(
+      label: json['label'] as String,
+      passed: json['passed'] as bool,
+      executionTimeUs: (json['execution_time_us'] as num).toDouble(),
+    );
+  }
+}
+
+/// Full SITL verification result from POST /hardware/pynq/verify.
+class PynqSitlVerifyResult {
+  final bool passed;
+  final int totalCases;
+  final int passedCases;
+  final double meanExecUs;
+  final double maxExecUs;
+  final String summary;
+  final List<PynqSitlStepResult> steps;
+
+  const PynqSitlVerifyResult({
+    required this.passed,
+    required this.totalCases,
+    required this.passedCases,
+    required this.meanExecUs,
+    required this.maxExecUs,
+    required this.summary,
+    required this.steps,
+  });
+
+  factory PynqSitlVerifyResult.fromJson(Map<String, dynamic> json) {
+    return PynqSitlVerifyResult(
+      passed: json['passed'] as bool,
+      totalCases: json['total_cases'] as int,
+      passedCases: json['passed_cases'] as int,
+      meanExecUs: (json['mean_exec_us'] as num).toDouble(),
+      maxExecUs: (json['max_exec_us'] as num).toDouble(),
+      summary: json['summary'] as String,
+      steps: (json['steps'] as List)
+          .map((e) =>
+              PynqSitlStepResult.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}

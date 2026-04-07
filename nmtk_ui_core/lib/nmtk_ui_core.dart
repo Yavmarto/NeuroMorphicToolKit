@@ -7,6 +7,7 @@ export 'models/pynq_deployment_model.dart';
 export 'widgets/buttons.dart';
 export 'widgets/energy_bar_chart.dart';
 export 'widgets/pipeline_stepper.dart';
+export 'widgets/pynq_deploy_status_card.dart';
 export 'widgets/quantization_table.dart';
 export 'widgets/sparkline_chart.dart';
 export 'widgets/nmtk_navigation_rail.dart';
