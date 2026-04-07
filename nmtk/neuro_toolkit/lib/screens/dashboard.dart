@@ -23,6 +23,12 @@ class DashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Dashboard'),
         actions: [
+          FilledButton.tonalIcon(
+            onPressed: () => context.go('/deploy/teensy'),
+            icon: const Icon(Icons.memory),
+            label: const Text('Teensy Deploy'),
+          ),
+          const SizedBox(width: 8),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => provider.checkForUpdates(),

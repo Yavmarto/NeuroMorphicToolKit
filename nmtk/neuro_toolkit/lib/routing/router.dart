@@ -8,6 +8,7 @@ import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/onboarding.dart';
+import 'package:neuro_toolkit/screens/teensy_deploy_screen.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/app_provider.dart';
 
@@ -54,6 +55,11 @@ final goRouter = GoRouter(
           path: '/settings',
           name: 'settings',
           builder: (context, state) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: '/deploy/teensy',
+          name: 'teensy-deploy',
+          builder: (context, state) => const TeensyDeployScreen(),
         ),
       ],
     ),

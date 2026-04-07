@@ -5,6 +5,7 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/app_provider.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
+import 'package:neuro_toolkit/providers/teensy_deploy_provider.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/routing/router.dart';
 
@@ -39,6 +40,7 @@ void main() async {
           },
         ),
         Provider.value(value: analytics),
+        ChangeNotifierProvider(create: (_) => TeensyDeployProvider()),
       ],
       child: const NeuroToolkitApp(),
     ),
