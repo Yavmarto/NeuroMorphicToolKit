@@ -131,15 +131,29 @@ class PynqNetworkResponse {
 // ---------------------------------------------------------------------------
 
 /// Lifecycle state of a PYNQ backend deploy job.
+///
+/// Maps to the backend's `PynqState` enum plus router-level states:
+///   unloaded / not_initialised → [notInitialised]
+///   loaded                     → [loaded]
+///   deploying (UI-only)        → [deploying]
+///   configured                 → [configured]
+///   running                    → [running]
+///   failed                     → [failed]
 enum PynqDeployJobStatus {
-  /// No deploy has been attempted yet.
+  /// No deploy has been attempted yet (or backend is unloaded).
   notInitialised,
 
-  /// Overlay is being loaded and weights written.
+  /// Overlay loaded but weights not yet configured.
+  loaded,
+
+  /// Overlay is being loaded and weights written (UI-side state).
   deploying,
 
   /// Overlay loaded and backend is configured and ready to run.
   configured,
+
+  /// Backend is actively running inference.
+  running,
 
   /// Deploy failed.
   failed;
@@ -148,11 +162,16 @@ enum PynqDeployJobStatus {
     switch (value.toLowerCase()) {
       case 'not_initialised':
       case 'not_initialized':
+      case 'unloaded':
         return PynqDeployJobStatus.notInitialised;
+      case 'loaded':
+        return PynqDeployJobStatus.loaded;
       case 'deploying':
         return PynqDeployJobStatus.deploying;
       case 'configured':
         return PynqDeployJobStatus.configured;
+      case 'running':
+        return PynqDeployJobStatus.running;
       case 'failed':
         return PynqDeployJobStatus.failed;
       default:
@@ -164,10 +183,14 @@ enum PynqDeployJobStatus {
     switch (this) {
       case PynqDeployJobStatus.notInitialised:
         return 0.0;
+      case PynqDeployJobStatus.loaded:
+        return 0.25;
       case PynqDeployJobStatus.deploying:
         return 0.5;
       case PynqDeployJobStatus.configured:
         return 1.0;
+      case PynqDeployJobStatus.running:
+        return 0.9;
       case PynqDeployJobStatus.failed:
         return 0.0;
     }

@@ -72,7 +72,7 @@ Pick one real acquisition path and validate it properly:
 Avoid broadening hardware support until one path is reliable.
 
 ### Acceptance Criteria
-- [ ] One real board family is marked as the primary supported acquisition target.
+- [x] One real board family is marked as the primary supported acquisition target.
 - [ ] A hardware validation script succeeds on that board without mocks.
 - [ ] Real recordings from that board are checked into a safe sample-data location or documented as reproducible fixtures.
 - [ ] Errors and unsupported conditions are reported clearly in API and UI.
@@ -223,6 +223,24 @@ Treat this rollout as complete only when all of the following are true:
 
 # Progress Update
 
+## Current Status Snapshot
+
+Overall status: the foundation is in place, but the rollout is still midstream.
+
+Current standing by issue:
+- Issue 1 is complete.
+- Issue 2 is partially complete: `OpenBCI Cyton` is now the primary real-board target and the acceptance-prep path exists, but a no-mock validation run and real sample capture are still open.
+- Issue 3 is mostly complete: the canonical HDF5 session artifact is documented, versioned, tested, and used by recording/replay/export, but downstream `NeuroCNL` and `Neurobench` consumption is still open.
+- Issue 4 has not started yet.
+- Issue 5 has not started yet.
+- Issue 6 is partially complete: docs now use explicit support levels, but UI alignment is still open.
+- Issue 7 has started in prep form through the Cyton acceptance script and runbook, but the truthful end-to-end demo is not complete until it is run successfully without mocks.
+
+What this means in practice:
+- The repo now has a credible foundation for the flagship EMG workflow.
+- The biggest remaining credibility gap is still real hardware validation.
+- After that, the next major work is cross-module integration, benchmarks, UI label alignment, and a final truthful demo.
+
 ## 2026-04-07
 
 Completed in this slice:
@@ -256,3 +274,43 @@ Recommended next ticket:
   save one real session artifact,
   replay that artifact without mocks,
   and document every unsupported condition encountered.
+
+## 2026-04-07 Cyton Prep Update
+
+Completed in this slice:
+- Reworked the hardware acceptance flow around `OpenBCI Cyton` as the only active real-board validation target.
+- Replaced the broad validation script with a Cyton-first acceptance-prep script that supports `--mock`, `--serial-port`, canonical artifact creation, replay, disconnect, and pass/fail checklist output.
+- Hardened device discovery so the synthetic board is always available and Cyton is only shown when explicitly configured.
+- Extended the device connect route to accept an optional `serial_port` without changing the existing route shape.
+- Improved operator-facing error detail for missing Cyton configuration, missing serial port, already-connected state, and BrainFlow prepare/start failures.
+- Added a dedicated Cyton runbook with prerequisites, mock and real command examples, expected output, and troubleshooting guidance.
+- Updated touched docs so they no longer imply broad real-board readiness beyond the experimental Cyton path.
+
+Still open:
+- Run the Cyton acceptance script on a real board without mocks.
+- Capture one real flagship EMG session artifact from Cyton hardware.
+- Confirm the current API and UI messaging is clear enough when real-board connection fails for common operator mistakes.
+- Finish UI support-label alignment so docs and UI use the same labels.
+
+Recommended next ticket:
+- Execute the Cyton acceptance-prep script against a real `OpenBCI Cyton` device, record the outcome, and only then check off the remaining Issue 2 acceptance items that are actually proven.
+
+Completed in this slice:
+- Narrowed device discovery so the synthetic board is always available and
+  `OpenBCI Cyton` is the only active real-board validation target when
+  explicitly configured.
+- Added optional `serial_port` support to the device connect endpoint.
+- Replaced the old broad validation script with a Cyton-first acceptance-prep
+  flow that supports `--mock`, records a flagship EMG artifact, replays it, and
+  prints an operator checklist.
+- Added a dedicated Cyton acceptance-prep runbook and updated API/device docs to
+  stop implying broad real-board discovery support.
+
+Still open from Issue 2:
+- Real no-mock Cyton execution on hardware
+- real recording fixture or documented capture artifact from a physical board
+- UI-side error/support-label alignment for hardware-specific failures
+
+Recommended next ticket:
+- Execute the new Cyton acceptance-prep script on a real board and capture the
+  first hardware-backed artifact plus acceptance notes.

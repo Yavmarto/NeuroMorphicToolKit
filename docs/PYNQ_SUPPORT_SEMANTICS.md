@@ -19,10 +19,12 @@ An `EXPORTABLE` verdict means:
 - No recurrent/feedback connections, lateral inhibition, or spatial connectivity in the network
 - Estimated memory usage fits within the 512 KB on-chip BRAM budget
 
-Output artifacts:
+Output artifacts (contract ZIP contents):
 - `overlay_config.json` — populations, connections, quantized thresholds
-- `weights.bin` — packed fixed-point weight bytes
-- `finn_build_config.json` — placeholder for Phase 2 FINN integration
+- `weights.bin` — packed fixed-point weight bytes (int4 nibble-packed, int8, or int16)
+- `register_map.json` — Zynq-7000 MMIO register offsets
+- `manifest.json` — target device and checksum metadata
+- `README.md` — human-readable artifact summary
 
 ### Deployable
 
@@ -90,7 +92,7 @@ A `DEPLOYABLE` verdict means:
 | **Runtime dependency** | USB serial connection | Network connection to board |
 | **Export artifact** | C firmware code (`.ino` + `.h`) | JSON config + binary weights |
 | **UI color** | Green (deploy-ready) | Blue/teal (export-ready) |
-| **Full pipeline** | Yes (plan → export → flash → verify) | Partial (plan → export; deploy pending #11) |
+| **Full pipeline** | Yes (plan → export → flash → verify) | Yes with simulator fallback (plan → export → deploy → verify); real hardware blocked on bitstream synthesis |
 
 ## Scope Boundary
 
