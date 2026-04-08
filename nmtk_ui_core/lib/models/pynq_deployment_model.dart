@@ -1,12 +1,12 @@
-/// Data models for PYNQ Z2 export/deployment workflow.
-///
-/// Mirrors the Python backend schemas from:
-/// - neurocnl PynqExportResult / PynqSupportState
-/// - Neurochip PYNQ backend (issue 11)
-///
-/// Two-tier support model:
-/// - **Exportable**: toolkit can produce overlay artifacts offline (no board needed)
-/// - **Deployable**: overlay can be loaded onto real PYNQ hardware (runtime)
+// Data models for PYNQ Z2 export/deployment workflow.
+//
+// Mirrors the Python backend schemas from:
+// - neurocnl PynqExportResult / PynqSupportState
+// - Neurochip PYNQ backend (issue 11)
+//
+// Two-tier support model:
+// - Exportable: toolkit can produce overlay artifacts offline (no board needed)
+// - Deployable: overlay can be loaded onto real PYNQ hardware (runtime)
 
 import 'package:flutter/material.dart';
 

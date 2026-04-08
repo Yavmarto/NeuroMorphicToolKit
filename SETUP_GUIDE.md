@@ -200,8 +200,7 @@ uvicorn backend.app.main:app --reload --port 8000
 source .venv/bin/activate
 cd Neurosim
 pip install -e ".[dev]"
-cd neurosim
-uvicorn app.main:app --reload --port 8001
+uvicorn neurosim.app.main:app --reload --port 8001
 ```
 
 **Neurochip backend (port 8002):**
@@ -514,7 +513,7 @@ cd Neuro-Dream-Hand
 pytest -v
 
 # Neurosim
-cd Neurosim/neurosim
+cd Neurosim
 pytest -v
 
 # Neurochip (92% coverage)

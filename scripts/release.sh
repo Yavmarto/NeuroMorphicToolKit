@@ -34,7 +34,6 @@ for mod in "${MODULES[@]}"; do
     if [ -f "neurochip/pyproject.toml" ]; then VERSION_FILES+=("neurochip/pyproject.toml"); fi
     if [ -f "neurobench/pyproject.toml" ]; then VERSION_FILES+=("neurobench/pyproject.toml"); fi
     if [ -f "neurosense/pyproject.toml" ]; then VERSION_FILES+=("neurosense/pyproject.toml"); fi
-    if [ -f "neurosim/pyproject.toml" ]; then VERSION_FILES+=("neurosim/pyproject.toml"); fi
     if [ -f "frontend/pubspec.yaml" ]; then VERSION_FILES+=("frontend/pubspec.yaml"); fi
     if [ -f "nmtk_ui_core/pubspec.yaml" ]; then VERSION_FILES+=("nmtk_ui_core/pubspec.yaml"); fi
 

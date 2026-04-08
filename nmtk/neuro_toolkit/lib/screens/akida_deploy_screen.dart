@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:neuro_toolkit/providers/akida_deploy_provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-
-import '../providers/akida_deploy_provider.dart';
 
 /// BrainChip Akida scaffold export and optional SDK deployment screen.
 ///
@@ -396,7 +395,10 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
                 ),
                 const Spacer(),
                 FilledButton.icon(
-                  onPressed: isDeploying ? null : () => _startDeploy(provider),
+                  onPressed: isDeploying ||
+                          provider.exportResult?.mappedNetwork == null
+                      ? null
+                      : () => _startDeploy(provider),
                   icon: isDeploying
                       ? const SizedBox(
                           width: 16,
@@ -417,10 +419,12 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
   }
 
   Future<void> _startDeploy(AkidaDeployProvider provider) async {
+    final mappedNetwork = provider.exportResult?.mappedNetwork;
+    if (mappedNetwork == null) return;
     final dir = await getApplicationDocumentsDirectory();
     if (!mounted) return;
     await provider.startDeploy(
-      spec: _specController.text,
+      mappedNetwork: mappedNetwork,
       bitWidth: _weightBitWidth,
       outputDir: dir.path,
     );

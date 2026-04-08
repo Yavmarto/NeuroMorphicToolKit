@@ -212,7 +212,7 @@ void main() {
         'mean_exec_us': 50.0,
         'max_exec_us': 70.0,
         'summary': '1/2 cases failed',
-        'steps': [],
+        'steps': <Object>[],
       };
       final result = PynqSitlVerifyResult.fromJson(json);
 

@@ -1,9 +1,9 @@
-/// Data models for Teensy deployment workflow.
-///
-/// Mirrors the Python backend schemas from:
-/// - neurocnl TeensyNetworkResponse
-/// - Neurochip FlashJob / FlashStatus
-/// - neurodreamhand VerificationReport
+// Data models for Teensy deployment workflow.
+//
+// Mirrors the Python backend schemas from:
+// - neurocnl TeensyNetworkResponse
+// - Neurochip FlashJob / FlashStatus
+// - neurodreamhand VerificationReport
 
 enum TeensyDeploymentVerdict {
   faithful,

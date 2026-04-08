@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../models/pynq_deployment_model.dart';
+import 'package:nmtk_ui_core/models/pynq_deployment_model.dart';
 
 /// Displays a [PynqSupportState] as a coloured summary card.
 ///

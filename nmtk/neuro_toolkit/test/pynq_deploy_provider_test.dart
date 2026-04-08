@@ -36,7 +36,7 @@ class MockPynqDeployService extends PynqDeployService {
       throw PynqDeployException(error: 'parse_failed', messages: ['bad spec']);
     }
     return exportResult ??
-        PynqNetworkResponse(
+        const PynqNetworkResponse(
           supportState: PynqSupportState.exportable,
           warnings: [],
           rejectionReasons: [],
@@ -106,6 +106,11 @@ void main() {
       expect(provider.currentStep, PynqDeployStep.idle);
       expect(provider.exportResult, isNull);
       expect(provider.errorMessage, isNull);
+    });
+
+    test('initial boardBaseUrl is empty', () {
+      final provider = PynqDeployProvider(service: MockPynqDeployService());
+      expect(provider.boardBaseUrl, isEmpty);
     });
 
     test('checkExportability transitions idle → checking → checked', () async {

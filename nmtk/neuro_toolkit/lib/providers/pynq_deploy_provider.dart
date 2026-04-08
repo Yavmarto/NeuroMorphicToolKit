@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-
-import '../services/pynq_deploy_service.dart';
+import 'package:neuro_toolkit/services/pynq_deploy_service.dart';
 
 /// Step in the PYNQ deployment workflow.
 enum PynqDeployStep {
@@ -58,7 +57,7 @@ class PynqDeployProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   /// Remote board endpoint URL (set by the user in the UI).
-  String _boardBaseUrl = 'http://192.168.2.99:8002';
+  String _boardBaseUrl = '';
   String get boardBaseUrl => _boardBaseUrl;
 
   /// Optional API key for the remote board.

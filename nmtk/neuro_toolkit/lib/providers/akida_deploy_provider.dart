@@ -2,8 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-
-import '../services/akida_deploy_service.dart';
+import 'package:neuro_toolkit/services/akida_deploy_service.dart';
 
 /// Step in the Akida deployment workflow.
 enum AkidaDeployStep {
@@ -116,11 +115,11 @@ class AkidaDeployProvider with ChangeNotifier {
 
   /// Download the Akida scaffold package from Neurochip.
   ///
-  /// [spec] is the raw CNL spec text.
+  /// [mappedNetwork] is the pre-mapped network from the exportability check.
   /// [bitWidth] is the weight quantisation bit-width (1, 2, or 4).
   /// [outputDir] is the directory where the ZIP will be saved.
   Future<void> startDeploy({
-    required String spec,
+    required Map<String, dynamic> mappedNetwork,
     required int bitWidth,
     required String outputDir,
   }) async {
@@ -134,7 +133,7 @@ class AkidaDeployProvider with ChangeNotifier {
 
     try {
       _savedPackagePath = await _service.downloadPackage(
-        spec: spec,
+        mappedNetwork: mappedNetwork,
         bitWidth: bitWidth,
         outputDir: outputDir,
       );

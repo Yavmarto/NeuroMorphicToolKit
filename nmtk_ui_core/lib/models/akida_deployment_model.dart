@@ -1,15 +1,15 @@
-/// Data models for BrainChip Akida scaffold-export/deployment workflow.
-///
-/// Mirrors the Python backend schemas from:
-/// - neurocnl AkidaExportResult / AkidaSupportState
-/// - Neurochip Akida backend (akida_backend.py)
-///
-/// Three-tier support model:
-/// - **Unsupported**: network cannot target Akida
-/// - **Exportable Scaffold**: toolkit can produce MetaTF project scaffolding
-///   and quantized weights offline (no Akida SDK needed)
-/// - **SDK Deployable**: model can be compiled and mapped via Akida SDK
-///   onto hardware or AKD1000 simulator (runtime)
+// Data models for BrainChip Akida scaffold-export/deployment workflow.
+//
+// Mirrors the Python backend schemas from:
+// - neurocnl AkidaExportResult / AkidaSupportState
+// - Neurochip Akida backend (akida_backend.py)
+//
+// Three-tier support model:
+// - Unsupported: network cannot target Akida
+// - Exportable Scaffold: toolkit can produce MetaTF project scaffolding
+//   and quantized weights offline (no Akida SDK needed)
+// - SDK Deployable: model can be compiled and mapped via Akida SDK
+//   onto hardware or AKD1000 simulator (runtime)
 
 import 'package:flutter/material.dart';
 
@@ -112,6 +112,12 @@ class AkidaNetworkResponse {
   final List<String> rejectionReasons;
   final Map<String, dynamic>? networkSummary;
 
+  /// Pre-built mapped network for Neurochip /deploy/mapped.
+  ///
+  /// Null when [supportState] is [AkidaSupportState.unsupported] or when
+  /// the topology is not faithful (e.g. recurrent / branching networks).
+  final Map<String, dynamic>? mappedNetwork;
+
   const AkidaNetworkResponse({
     required this.supportState,
     required this.akidaVersion,
@@ -119,6 +125,7 @@ class AkidaNetworkResponse {
     required this.warnings,
     required this.rejectionReasons,
     this.networkSummary,
+    this.mappedNetwork,
   });
 
   factory AkidaNetworkResponse.fromJson(Map<String, dynamic> json) {
@@ -132,6 +139,7 @@ class AkidaNetworkResponse {
       rejectionReasons:
           (json['rejections'] as List).map((e) => e as String).toList(),
       networkSummary: json['network_summary'] as Map<String, dynamic>?,
+      mappedNetwork: json['mapped_network'] as Map<String, dynamic>?,
     );
   }
 }
@@ -177,6 +185,11 @@ enum AkidaDeployJobStatus {
         return AkidaDeployJobStatus.sdkLoading;
       case 'model_mapping':
         return AkidaDeployJobStatus.modelMapping;
+      // 'constructed' means the model is built but SDK mapping failed or was
+      // skipped (scaffold-only path). Treat as terminal mapped state so the
+      // poll timer stops and the UI shows the package as ready.
+      case 'constructed':
+        return AkidaDeployJobStatus.mapped;
       case 'mapped':
         return AkidaDeployJobStatus.mapped;
       case 'running':

@@ -63,36 +63,28 @@ class AkidaDeployService {
 
   /// Download the Akida scaffold package as a ZIP file.
   ///
-  /// Calls POST /api/neurochip/akida/deploy which returns application/zip.
-  /// Saves the bytes to [outputDir]/akida_deploy.zip.
-  /// Returns the absolute path of the saved file.
+  /// Calls POST /api/neurochip/akida/deploy/mapped with the pre-mapped network
+  /// returned by the NeuroCNL exportability check. Saves the bytes to
+  /// [outputDir]/akida_deploy.zip. Returns the absolute path of the saved file.
   /// Throws [AkidaDeployException] on failure.
   Future<String> downloadPackage({
-    required String spec,
+    required Map<String, dynamic> mappedNetwork,
     required int bitWidth,
     required String outputDir,
   }) async {
-    final uri = Uri.parse('$_neurochipBaseUrl/api/neurochip/akida/deploy');
+    final uri = Uri.parse(
+      '$_neurochipBaseUrl/api/neurochip/akida/deploy/mapped?bit_width=$bitWidth',
+    );
     final response = await _httpClient.post(
       uri,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'spec': spec,
-        'bit_width': bitWidth,
-      }),
+      body: jsonEncode(mappedNetwork),
     );
 
     if (response.statusCode == 200) {
       final outPath = p.join(outputDir, 'akida_deploy.zip');
       await File(outPath).writeAsBytes(response.bodyBytes);
       return outPath;
-    }
-
-    if (response.statusCode == 501) {
-      throw const AkidaDeployException(
-        error: 'sdk_not_available',
-        messages: ['Akida SDK is not installed — scaffold package unavailable.'],
-      );
     }
 
     final detail = _parseErrorDetail(response.body);

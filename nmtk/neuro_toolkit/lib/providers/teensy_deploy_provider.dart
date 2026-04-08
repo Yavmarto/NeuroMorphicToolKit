@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-
-import '../services/teensy_deploy_service.dart';
+import 'package:neuro_toolkit/services/teensy_deploy_service.dart';
 
 /// Step in the Teensy deployment workflow.
 enum TeensyDeployStep {

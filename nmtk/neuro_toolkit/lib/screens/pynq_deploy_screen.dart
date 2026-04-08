@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-
-import '../providers/pynq_deploy_provider.dart';
+import 'package:neuro_toolkit/providers/pynq_deploy_provider.dart';
+import 'package:provider/provider.dart';
 
 /// PYNQ Z2 deployment screen.
 ///
@@ -21,9 +20,7 @@ class PynqDeployScreen extends StatefulWidget {
 
 class _PynqDeployScreenState extends State<PynqDeployScreen> {
   final _specController = TextEditingController();
-  final _boardUrlController = TextEditingController(
-    text: 'http://192.168.2.99:8002',
-  );
+  final _boardUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
   int _weightBitWidth = 4;
 

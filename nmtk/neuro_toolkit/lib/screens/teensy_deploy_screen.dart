@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:neuro_toolkit/providers/teensy_deploy_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-
-import '../providers/teensy_deploy_provider.dart';
 
 /// Teensy deployment screen with a stepper UI.
 ///
@@ -30,27 +29,6 @@ class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
   void dispose() {
     _specController.dispose();
     super.dispose();
-  }
-
-  int _stepIndex(TeensyDeployStep step) {
-    switch (step) {
-      case TeensyDeployStep.idle:
-        return 0;
-      case TeensyDeployStep.deploying:
-        return 0;
-      case TeensyDeployStep.exporting:
-        return 1;
-      case TeensyDeployStep.selectingPort:
-        return 2;
-      case TeensyDeployStep.flashing:
-        return 3;
-      case TeensyDeployStep.verifying:
-        return 4;
-      case TeensyDeployStep.done:
-        return 5;
-      case TeensyDeployStep.error:
-        return 0;
-    }
   }
 
   @override
@@ -305,15 +283,28 @@ class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
                 style: TextStyle(color: Colors.grey),
               )
             else
-              ...provider.serialPorts.map(
-                (port) => RadioListTile<String>(
-                  title: Text(port.device),
-                  subtitle: Text(port.description ?? ''),
-                  secondary:
-                      port.isTeensy ? const Chip(label: Text('Teensy')) : null,
-                  value: port.device,
-                  groupValue: provider.selectedPort?.device,
-                  onChanged: (_) => provider.selectPort(port),
+              RadioGroup<String>(
+                groupValue: provider.selectedPort?.device,
+                onChanged: (value) {
+                  if (value == null) return;
+                  final port = provider.serialPorts.firstWhere(
+                    (serialPort) => serialPort.device == value,
+                  );
+                  provider.selectPort(port);
+                },
+                child: Column(
+                  children: provider.serialPorts
+                      .map(
+                        (port) => RadioListTile<String>(
+                          title: Text(port.device),
+                          subtitle: Text(port.description ?? ''),
+                          secondary: port.isTeensy
+                              ? const Chip(label: Text('Teensy'))
+                              : null,
+                          value: port.device,
+                        ),
+                      )
+                      .toList(),
                 ),
               ),
             const SizedBox(height: 8),

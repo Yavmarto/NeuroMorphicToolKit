@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../models/akida_deployment_model.dart';
+import 'package:nmtk_ui_core/models/akida_deployment_model.dart';
 
 /// Displays an [AkidaSupportState] as a coloured summary card.
 ///
