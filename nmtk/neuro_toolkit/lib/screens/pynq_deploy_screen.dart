@@ -488,10 +488,14 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
     switch (job.status) {
       case PynqDeployJobStatus.notInitialised:
         return 'Initialising…';
+      case PynqDeployJobStatus.loaded:
+        return 'Overlay loaded — writing weights…';
       case PynqDeployJobStatus.deploying:
         return 'Loading overlay…';
       case PynqDeployJobStatus.configured:
         return 'Overlay configured — board ready';
+      case PynqDeployJobStatus.running:
+        return 'Running';
       case PynqDeployJobStatus.failed:
         return 'Deploy failed';
     }

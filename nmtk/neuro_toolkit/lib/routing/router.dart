@@ -10,6 +10,7 @@ import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/onboarding.dart';
 import 'package:neuro_toolkit/screens/teensy_deploy_screen.dart';
 import 'package:neuro_toolkit/screens/pynq_deploy_screen.dart';
+import 'package:neuro_toolkit/screens/akida_deploy_screen.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/app_provider.dart';
 
@@ -66,6 +67,11 @@ final goRouter = GoRouter(
           path: '/deploy/pynq',
           name: 'pynq-deploy',
           builder: (context, state) => const PynqDeployScreen(),
+        ),
+        GoRoute(
+          path: '/deploy/akida',
+          name: 'akida-deploy',
+          builder: (context, state) => const AkidaDeployScreen(),
         ),
       ],
     ),
