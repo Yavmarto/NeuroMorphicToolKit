@@ -145,7 +145,7 @@ run_flutter_module() {
   flutter pub get --directory "$dir" --suppress-analytics > /dev/null 2>&1 || true
 
   echo -e "  ${CYAN}flutter analyze${RESET}"
-  flutter analyze --directory "$dir" && record "analyze" 0 || record "analyze" 1
+  (cd "$dir" && flutter analyze) && record "analyze" 0 || record "analyze" 1
 
   if [ -d "$dir/test" ]; then
     echo -e "  ${CYAN}flutter test${RESET}"

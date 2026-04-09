@@ -4,4 +4,5 @@ set -uo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 source "$ROOT_DIR/scripts/ci/lib.sh"
 cd "$ROOT_DIR"
-run_python_module "Neuro-Dream-Hand" "Neuro-Dream-Hand" "pip" "$@"
+export NENGO_CACHE_DISABLE=1
+run_python_module "Neuro-Dream-Hand" "Neuro-Dream-Hand" "pip_dev" "$@"
