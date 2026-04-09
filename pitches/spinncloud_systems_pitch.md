@@ -1,6 +1,6 @@
 # Subject: Application for SpiNNcloud Systems Developer Program - Integrating NMTK with SpiNNaker
 
-Neuromorphic computing is the future of efficient AI, but its widespread adoption is bottlenecked by a fragmented, multidisciplinary ecosystem. Neuroscientists understand the biology, hardware engineers build the chips, and software developers write the pipelines—but they all use different, disjointed tools. 
+Neuromorphic computing is the future of efficient AI, but its widespread adoption is bottlenecked by a fragmented, multidisciplinary ecosystem. Neuroscientists understand the biology, hardware engineers build the chips, and software developers write the pipelines—but they all use different, disjointed tools.
 
 To solve this, I am developing the **NeuroMorphicToolkit (NMTK)**. NMTK is a unified, cross-platform desktop application designed to bridge the gap between these disciplines. Orchestrated via a local micro-service architecture (a Flutter frontend managing Docker/Python backends), NMTK provides a cohesive framework for neuromorphic development. It seamlessly integrates modules for plain-English to SNN translation (NeuroCNL), sensory spike encoding (Neurosense), hardware interfacing (Neurochip), and performance benchmarking (Neurobench). My objective is to completely lower the barrier to entry, allowing researchers and developers to deploy models to edge devices without juggling fragmented repositories and dependency hell.
 

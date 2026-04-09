@@ -54,7 +54,6 @@ jobs:
         id: docker
         run: |
           echo "## Integration Test" >> "$GITHUB_STEP_SUMMARY"
-          COMPOSE_FILES=""
           STARTED=""
 
           for dir in Neurosim Neurochip/neurochip Neurosense/neurosense Neurohub/neurohub neurocnl Neurobench/neurobench; do
@@ -86,7 +85,6 @@ jobs:
         run: |
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### Health Checks" >> "$GITHUB_STEP_SUMMARY"
-          FAIL=0
 
           python3 -c "
           import httpx, sys

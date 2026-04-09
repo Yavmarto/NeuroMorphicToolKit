@@ -72,7 +72,6 @@ jobs:
       - name: Validate health endpoint declarations
         run: |
           echo "## Health Endpoint Audit" >> "$GITHUB_STEP_SUMMARY"
-          FAIL=0
           for dir in Neurosim Neurochip Neurosense Neurohub neurocnl Neuro-Dream-Hand Neurobench; do
             # Search for /health route in Python files
             if [ -d "$dir" ]; then
@@ -94,10 +93,12 @@ jobs:
               # Find cross-module HTTP calls
               CALLS=$(grep -rn 'localhost:\|127\.0\.0\.1:' "$dir" --include="*.py" 2>/dev/null || true)
               if [ -n "$CALLS" ]; then
-                echo "- **$dir** makes cross-module calls:" >> "$GITHUB_STEP_SUMMARY"
-                echo '```' >> "$GITHUB_STEP_SUMMARY"
-                echo "$CALLS" | head -10 >> "$GITHUB_STEP_SUMMARY"
-                echo '```' >> "$GITHUB_STEP_SUMMARY"
+                {
+                  echo "- **$dir** makes cross-module calls:"
+                  echo '```'
+                  echo "$CALLS" | head -10
+                  echo '```'
+                } >> "$GITHUB_STEP_SUMMARY"
               fi
             fi
           done

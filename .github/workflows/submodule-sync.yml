@@ -52,6 +52,7 @@ jobs:
           git commit -m "chore: sync submodule pointers to latest dev"
           git push origin "$BRANCH"
 
+          # shellcheck disable=SC2016
           BODY=$(git submodule foreach --quiet '
             LOCAL=$(git rev-parse HEAD)
             REMOTE=$(git rev-parse origin/dev 2>/dev/null || echo "unknown")

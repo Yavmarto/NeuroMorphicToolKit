@@ -1,4 +1,4 @@
-.PHONY: release help dev build-submodules build-interactive clean-all build-all bump-version
+.PHONY: release help dev build-submodules build-interactive clean-all build-all bump-version ci
 
 MODULES = neurocnl Neurosim Neurochip Neurobench Neurosense Neurohub
 PORT_neurocnl = 8000
@@ -42,6 +42,10 @@ build-interactive:
 
 dev: build-submodules
 	@cd nmtk/neuro_toolkit && flutter run -d $(FLUTTER_DEVICE)
+
+ci:
+	@chmod +x scripts/run_ci_local.sh
+	@./scripts/run_ci_local.sh --all
 
 clean-all:
 	@chmod +x scripts/deep_clean.sh

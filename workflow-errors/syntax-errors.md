@@ -6,7 +6,7 @@ These errors involve fundamental structural issues in the GitHub Actions YAML fi
 
 ### 1. Missing `runs-on` and `steps` / Misplaced `run`
 - **File**: `Neuro-Dream-Hand/.github/workflows/auto-merge-jules-prs.yml`
-- **Details**: 
+- **Details**:
     - Job `auto-merge` is missing the required `runs-on` and `steps` sections.
     - The `run` key is used at the job level (line 15), but it should be inside a step.
 - **Ease of Fix (Mac)**: **Easy (1/10)**. This is a copy-paste or structural oversight.

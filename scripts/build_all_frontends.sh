@@ -21,28 +21,28 @@ cd nmtk_ui_core && flutter pub get && cd ..
 for entry in $MODULE_LIST; do
   mod="${entry%%:*}"
   default_port="${entry#*:}"
-  
+
   # Resolve port from env (if exists) or use default
   env_var_name="$(echo $mod | tr '[:lower:]' '[:upper:]')_PORT"
   if [ "$mod" = "neurocnl" ]; then env_var_name="NEUROCNL_PORT"; fi
-  
+
   # Indirect variable expansion for port
   eval port=\${$env_var_name:-$default_port}
   frontend_dir="$REPO_ROOT/$mod/frontend"
-  
+
   if [ -d "$frontend_dir" ]; then
     echo "------------------------------------------------------------"
     echo "==> Building $mod frontend (Port: $port)"
     echo "------------------------------------------------------------"
-    
+
     cd "$frontend_dir"
     flutter pub get
-    
+
     # We use dart-define to inject the backend URL into the web app
     flutter build web \
       --release \
       --dart-define=API_BASE_URL="http://localhost:$port"
-    
+
     echo "==> $mod build complete."
     cd "$REPO_ROOT"
   else

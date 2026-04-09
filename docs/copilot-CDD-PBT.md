@@ -1,4 +1,4 @@
-# Contract-Driven & Property-Based Testing (CDD-PBT) Pipeline 
+# Contract-Driven & Property-Based Testing (CDD-PBT) Pipeline
 ### Tailored for the NeuroMorphic Toolkit (NMTK)
 
 This document outlines the pipeline for governing AI coding agents using **Contract-Driven Development (CDD)** and **Property-Based Testing (PBT)**. This replaces semantic/text-based guardrails (like BDD/Gherkin and BRMS) with strict mathematical and structural boundaries.
@@ -16,7 +16,7 @@ The pipeline operates on a strict sequence where humans define the boundaries (p
 
 ### Phase 2: Autonomous Implementation (AI-Led)
 1. **Agent Prompting:** The AI Agent is pointed at the empty functions and told: *"Implement this logic until all property tests pass."*
-2. **The Execution Loop:** 
+2. **The Execution Loop:**
    - Agent writes implementation.
    - Orchestrator runs type-checking (`mypy`) and property tests (`pytest` + `hypothesis`).
    - If a test fails, the stack trace and failing randomized input are piped directly back to the Agent.

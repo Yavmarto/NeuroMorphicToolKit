@@ -6,7 +6,7 @@ This document outlines the testing integration plan for **SpiNNaker 2** within t
 ## Usable Tutorials & Examples to Test
 
 ### 1. Software Simulation / Brian2 Backend Test
-Because access to physical SpiNNaker 2 boards might be restricted, `py-spinnaker2` provides a software simulation fallback utilizing Brian2. 
+Because access to physical SpiNNaker 2 boards might be restricted, `py-spinnaker2` provides a software simulation fallback utilizing Brian2.
 
 **What it tests**:
 - Evaluates the transcription of NeuroCNL's intermediate `nengo.Network` objects into the target `spinnaker2.snn` graph API format.
@@ -23,7 +23,7 @@ To validate execution against the physical board:
 1. Ensure the `py-spinnaker2` library is installed natively.
 2. Formulate a simple generic reflex network using the provided full-pipeline execution in `neurocnl/examples/04_full_pipeline.py`.
 3. In your script or test environment, swap the simulation backend from `nengo.Simulator(net)` to the `spinnaker2.hardware.SpiNNaker2Chip().run(net, timesteps)` exporter path.
-4. Retrieve the actual spikes by verifying `pop.get_spikes()` outputs format matches NMTK standards using the `spinnaker2_io.py` converter. 
+4. Retrieve the actual spikes by verifying `pop.get_spikes()` outputs format matches NMTK standards using the `spinnaker2_io.py` converter.
 
 *Note: Since hardware execution is usually mocked out via `@pytest.mark.hardware`, ensure your execution server is tied to the board cluster before running any CI steps targeting the hardware directly.*
 

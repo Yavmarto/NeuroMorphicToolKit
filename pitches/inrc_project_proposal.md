@@ -1,9 +1,9 @@
 # INRC Project Proposal: Validating NMTK's Automated SNN Toolchain on Loihi 2
 
 ## 1. Project Overview
-The NeuroMorphicToolKit (NMTK) is an open-source, cross-platform framework designed to unify the neuromorphic computing ecosystem. It serves as a bridge for neuroscientists and software engineers to design, build, and deploy Spiking Neural Networks (SNNs) to hardware edge devices without requiring extensive hardware-specific knowledge. 
+The NeuroMorphicToolKit (NMTK) is an open-source, cross-platform framework designed to unify the neuromorphic computing ecosystem. It serves as a bridge for neuroscientists and software engineers to design, build, and deploy Spiking Neural Networks (SNNs) to hardware edge devices without requiring extensive hardware-specific knowledge.
 
-Within this toolkit, the **NeuroCNL** (Conceptual Neuromorphic Language) module allows users to define biological network architectures which are then systematically parsed and converted via our internal compiler into backend hardware representations. 
+Within this toolkit, the **NeuroCNL** (Conceptual Neuromorphic Language) module allows users to define biological network architectures which are then systematically parsed and converted via our internal compiler into backend hardware representations.
 
 ## 2. Progress Checklist & Current Status
 Our team has achieved the following milestones, preparing us directly for hardware integration:

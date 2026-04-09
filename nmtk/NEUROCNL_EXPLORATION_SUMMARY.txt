@@ -231,7 +231,7 @@ PARSER PATTERN EXAMPLES
 
 Concept 1: Threshold Firing
   Input:  "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.8"
-  Parsed: {concept: 'threshold_firing', subject: 'sensory neuron', 
+  Parsed: {concept: 'threshold_firing', subject: 'sensory neuron',
            verb: 'MUST', action: 'fire', negated: False, condition: 'exceeds 0.8'}
 
 Concept 4: Synaptic Weight

@@ -1,7 +1,7 @@
 # Test Integration Plan: BrainChip Akida
 
 ## Overview
-This document details the test integration plan targeting **BrainChip Akida** technology. The goal here avoids CNN-to-SNN conversion constraints by parsing the pure, natural plain-English SNN specifications from NeuroCNL into a natively supported SNN architecture logic mapped onto Akida paradigms. 
+This document details the test integration plan targeting **BrainChip Akida** technology. The goal here avoids CNN-to-SNN conversion constraints by parsing the pure, natural plain-English SNN specifications from NeuroCNL into a natively supported SNN architecture logic mapped onto Akida paradigms.
 
 ## Usable Tutorials & Examples to Test
 

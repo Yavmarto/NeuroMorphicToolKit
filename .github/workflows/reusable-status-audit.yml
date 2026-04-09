@@ -75,9 +75,11 @@ jobs:
           Please constrain your analysis and issue-checking ONLY to the scope of '$TARGET_DIR'."
 
           # Pass to the next step
-          echo "prompt<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$PROMPT" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "prompt<<EOF"
+            echo "$PROMPT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Invoke Agent for Status Audit (Primary Key)
         id: agent-primary

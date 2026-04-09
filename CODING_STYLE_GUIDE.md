@@ -35,7 +35,7 @@ Applicable to: `Neuro-Dream-Hand`, `Neurobench`, `Neurochip`, `neurocnl`, `Neuro
 * **Import Sorting:** Use [isort](https://pycqa.github.io/isort/) to group imports into standard library, third-party, and first-party.
 
 ### 2. Typing & Static Analysis
-* **Type Hints:** All function arguments and return types must be type-hinted. 
+* **Type Hints:** All function arguments and return types must be type-hinted.
 * **Static Checker:** Code must pass `mypy` with `--strict` enabled.
 ```python
 # Good for Agentic Workflows
@@ -78,7 +78,7 @@ Applicable to: `neuro_toolkit`, `nmtk_ui_core`, and frontend components.
 * **Dartdoc (`///`):** Use triple slashes for documenting APIs. Document all public members, especially Widget parameters, as agents use these to understand how to compose your custom UI elements.
 ```dart
 /// Represents a customizable neural network visualization node.
-/// 
+///
 /// The [activationThreshold] must be a value between 0.0 and 1.0.
 class NeuronNodeWidget extends StatelessWidget {
   final double activationThreshold;

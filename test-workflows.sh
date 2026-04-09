@@ -98,7 +98,7 @@ if [ "$LINT" = true ] && [ ${#WORKFLOWS[@]} -gt 0 ]; then
   echo "──────────────────────────────────────────"
   echo "  Running actionlint (Syntax & Logic Check)"
   echo "──────────────────────────────────────────"
-  
+
   if actionlint "${WORKFLOWS[@]}"; then
     echo "[OK] All workflows passed linting."
   else
@@ -114,17 +114,17 @@ if [ "$RUN" = true ] && [ ${#WORKFLOWS[@]} -gt 0 ]; then
   echo "──────────────────────────────────────────"
   echo "NOTE: Executing 'act -n' (dry-run)."
   echo "      To fully execute, you must run 'act' manually in the respective directory."
-  
+
   for workflow in "${WORKFLOWS[@]}"; do
     repo_dir="$(dirname $(dirname $(dirname "$workflow")))"
     rel_path="${workflow#"$ROOT_DIR/"}"
-    
+
     echo ""
     echo "▶ Testing: $rel_path"
     echo "------------------------------------------"
-    
+
     cd "$repo_dir"
-    
+
     # -n: dry run
     # -W: specify workflow file path relative to repo_dir
     rel_workflow_path=".github/workflows/$(basename "$workflow")"
@@ -132,7 +132,7 @@ if [ "$RUN" = true ] && [ ${#WORKFLOWS[@]} -gt 0 ]; then
       echo "[FAIL] act encountered an error for $rel_path."
       FAILED=$((FAILED + 1))
     fi
-    
+
     cd "$ROOT_DIR"
   done
 fi

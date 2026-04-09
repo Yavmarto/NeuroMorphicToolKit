@@ -412,7 +412,7 @@ def run_pipeline(
     skip_assertions: bool = False,
 ) -> PipelineResult:
     """Execute the full pipeline: parse → validate → generate → simulate → assert.
-    
+
     Parameters
     ----------
     spec_text : str
@@ -427,12 +427,12 @@ def run_pipeline(
         If True, stop after network generation.
     skip_assertions : bool
         If True, skip Layer 3 assertion generation/execution.
-        
+
     Returns
     -------
     PipelineResult
         Aggregated result with parsed specs, validation, network, simulation, assertions.
-        
+
     Steps:
     1. Parse each non-empty, non-comment line using parse_spec_text()
     2. Build neuron_params from parsed specs using default_params_from_specs()
@@ -448,9 +448,9 @@ def run_pipeline(
 ```python
 def parse_spec_text(spec_text: str) -> list[dict]:
     """Parse each non-empty, non-comment line of spec_text.
-    
+
     Returns a list of result dicts with keys: line, raw, parsed, valid, error.
-    
+
     Returns
     -------
     list[dict]
@@ -467,20 +467,20 @@ def parse_spec_text(spec_text: str) -> list[dict]:
 ```python
 def parse(sentence: str) -> ParsedSentence:
     """Parse a CNL sentence into a structured dictionary.
-    
+
     Tries all 13 concept patterns in sequence until one matches.
     Uses pure regex — no LLM required.
-    
+
     Parameters
     ----------
     sentence : str
         A plain text CNL sentence.
-        
+
     Returns
     -------
     ParsedSentence
         Keys: concept, subject, condition, action, verb, negated, raw
-        
+
     Raises
     ------
     ParseError
@@ -496,10 +496,10 @@ def validate_spec(
     backend: str = "nengo",
 ) -> dict:
     """Run Layer 1 + Layer 2 validation and return a combined result.
-    
+
     Layer 1: Check physical invariants against neuron_params
     Layer 2: Check cross-sentence consistency
-    
+
     Returns
     -------
     dict
@@ -515,7 +515,7 @@ def validate_spec(
 ```python
 def default_params_from_specs(parsed_specs: list[ParsedSentence]) -> dict:
     """Build a reasonable neuron_params dict from parsed spec values.
-    
+
     Maps concept → parameter name:
     - "threshold_firing" → "threshold"
     - "refractory_period" → "refractory_period"
@@ -523,7 +523,7 @@ def default_params_from_specs(parsed_specs: list[ParsedSentence]) -> dict:
     - "synaptic_weight" → "synaptic_weight"
     - "axonal_delay" → "axonal_delay"
     - "population_coding" → "population_n_neurons"
-    
+
     Returns
     -------
     dict
@@ -548,7 +548,7 @@ def validate(
     backend: str = "nengo",
 ) -> dict:
     """Validate parsed CNL sentences against Layer 1 physical invariants.
-    
+
     Invariants checked:
     1. threshold_above_resting: threshold > resting_potential
     2. refractory_period_positive: refractory_period > 0
@@ -568,9 +568,9 @@ def validate(
     16. homeostatic_target_rate_positive: rate > 0
     17. neuromodulation_factor_positive: factor > 0
     18. population_coding_range_positive: range > 0
-    
+
     Plus Loihi-specific invariants if backend=="loihi"
-    
+
     Returns
     -------
     dict
@@ -586,12 +586,12 @@ def validate(
 ```python
 def validate_cross_sentence(parsed_specs: list[ParsedSentence]) -> dict:
     """Validate cross-sentence consistency of parsed CNL specs.
-    
+
     Checks:
     1. no_dangling_connections: All connection endpoints reference defined neurons
     2. no_contradictory_params: Same neuron doesn't have conflicting parameter values
     3. no_orphan_populations: Declared populations have connections
-    
+
     Returns
     -------
     dict
@@ -609,13 +609,13 @@ def validate_cross_sentence(parsed_specs: list[ParsedSentence]) -> dict:
 ```python
 def generate(parsed_specs: list[ParsedSentence], neuron_params: dict) -> nengo.Network:
     """Generate a Nengo network from validated CNL specifications.
-    
+
     Required concepts in parsed_specs:
     - "threshold_firing"
     - "refractory_period"
     - "membrane_potential_decay"
     - "synaptic_weight"
-    
+
     Creates:
     1. LIF neuron populations with tau_rc, tau_ref, threshold
     2. Synaptic connections with specified weights
@@ -623,14 +623,14 @@ def generate(parsed_specs: list[ParsedSentence], neuron_params: dict) -> nengo.N
     4. Motor probe for output recording
     5. Learning rule nodes if STDP/BCM/Oja specified
     6. Lateral inhibition, homeostatic, neuromodulation nodes
-    
+
     Parameters
     ----------
     parsed_specs : list[ParsedSentence]
         Validated output of parse()
     neuron_params : dict
         Parameters: tau, threshold, reset_potential, refractory_period, etc.
-        
+
     Returns
     -------
     nengo.Network
@@ -643,7 +643,7 @@ def generate(parsed_specs: list[ParsedSentence], neuron_params: dict) -> nengo.N
         - net.connection: first connection (backward compat)
         - net.has_stdp, net.learning_rule_type_name: STDP info
         - net.has_inhibitory, net.has_lateral_inhibition: etc.
-        
+
     Raises
     ------
     GeneratorError
@@ -655,7 +655,7 @@ def generate(parsed_specs: list[ParsedSentence], neuron_params: dict) -> nengo.N
 ```python
 def export(net, format: str, **kwargs) -> str:
     """Export a Nengo network to the specified format.
-    
+
     Parameters
     ----------
     net : nengo.Network
@@ -664,17 +664,17 @@ def export(net, format: str, **kwargs) -> str:
         Target format: 'neuroml', 'c_header', 'loihi', 'lava', 'spinnaker'.
     **kwargs
         Format-specific options passed to the exporter.
-        
+
     Returns
     -------
     str
         The exported code/markup as a string.
-        
+
     Raises
     ------
     ValueError
         If the format is not supported.
-        
+
     EXPORTERS dict:
     {
         "neuroml": export_neuroml,
@@ -695,28 +695,28 @@ def export_c_header(
     precision: str = "float",
 ) -> str:
     """Export a Nengo network to a C header file for microcontrollers.
-    
+
     Generates:
     1. #define macros for ensemble sizes, neuron indices
     2. LIF parameters (tau_rc, tau_ref) for each population
     3. Synaptic weight arrays
     4. LIF update loop: lif_step(dt, input[])
-    
+
     Returns
     -------
     str
         C header code ready for Teensy 4.1, Arduino, etc.
-        
+
     Example output:
     ```c
     #define SENSORY_N_NEURONS 50
     #define SENSORY_TAU_RC 0.02f
     #define SENSORY_TAU_REF 0.002f
     #define W_SENSORY_TO_MOTOR 1.5f
-    
+
     static float voltage[TOTAL_NEURONS];
     static float refractory[TOTAL_NEURONS];
-    
+
     static inline void lif_step(const float dt, const float* input) {
         for (int i = 0; i < TOTAL_NEURONS; i++) {
             if (refractory[i] > 0.0f) {
@@ -739,12 +739,12 @@ def export_c_header(
 ```python
 def rate_encode(signal: np.ndarray, dt: float, max_rate: float = 100.0) -> np.ndarray:
     """Convert analog signal to spike train using rate coding.
-    
+
     Spike probability at each timestep ∝ signal amplitude.
     Higher amplitude → higher spike rate.
-    
+
     Best for: slow signals (force, temperature)
-    
+
     Parameters
     ----------
     signal : np.ndarray
@@ -753,7 +753,7 @@ def rate_encode(signal: np.ndarray, dt: float, max_rate: float = 100.0) -> np.nd
         Simulation timestep (e.g., 0.001 for 1ms)
     max_rate : float
         Maximum spike rate in Hz at peak signal. Default 100 Hz.
-        
+
     Returns
     -------
     np.ndarray
@@ -762,12 +762,12 @@ def rate_encode(signal: np.ndarray, dt: float, max_rate: float = 100.0) -> np.nd
 
 def temporal_encode(signal: np.ndarray, dt: float, n_phases: int = 8) -> np.ndarray:
     """Convert analog signal to spike train using temporal/phase coding.
-    
+
     Signal divided into phase bins. Higher amplitude → earlier spike
     within the phase window.
-    
+
     Best for: fast signals (EMG, vibration)
-    
+
     Parameters
     ----------
     signal : np.ndarray
@@ -776,7 +776,7 @@ def temporal_encode(signal: np.ndarray, dt: float, n_phases: int = 8) -> np.ndar
         Simulation timestep
     n_phases : int
         Number of phase bins. Default 8.
-        
+
     Returns
     -------
     np.ndarray
@@ -785,12 +785,12 @@ def temporal_encode(signal: np.ndarray, dt: float, n_phases: int = 8) -> np.ndar
 
 def delta_encode(signal: np.ndarray, dt: float, threshold: float = 0.1) -> np.ndarray:
     """Convert analog signal to spike train using delta modulation.
-    
+
     Spike emitted when signal change exceeds threshold. Produces
     sparse trains for slow signals, dense for fast signals.
-    
+
     Best for: event-driven sensors
-    
+
     Parameters
     ----------
     signal : np.ndarray
@@ -799,7 +799,7 @@ def delta_encode(signal: np.ndarray, dt: float, threshold: float = 0.1) -> np.nd
         Simulation timestep (for documentation)
     threshold : float
         Minimum absolute signal change to trigger spike. Default 0.1.
-        
+
     Returns
     -------
     np.ndarray
@@ -1008,4 +1008,3 @@ neurocnl/export/c_header_exporter.py     127 lines
 | homeostatic_plasticity | `\w+.*MUST.*maintain average firing rate of\s+(\d+(?:\.\d+)?)\s+Hz` | "target rate of X Hz" | "MUST maintain average firing rate of 10 Hz" |
 | neuromodulation | `\w+.*MUST.*modulate synaptic weight\s+BY factor of\s+(\d+)` | "modulation factor of X" | "Dopamine MUST modulate synaptic weight BY factor of 1.5" |
 | population_coding_range | `\w+.*MUST.*encode.*WITH\s+(\d+)\s+degree range` | "range of X degrees" | "MUST encode stimulus orientation WITH 360 degree range" |
-

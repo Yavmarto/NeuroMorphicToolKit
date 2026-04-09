@@ -4,13 +4,13 @@
 
 Welcome to the **NeuroMorphicToolkit (NMTK)**—the central hub designed to bridge the gap between disciplines in the neuromorphic computing field. Whether you are a neuroscientist designing biological invariants, a software engineer building spiking neural networks, or a hardware roboticist deploying to edge devices, NMTK provides a unified, low-barrier entry point to streamline your R&D workflows.
 
-The toolkit centralizes several specialized applications into a single, cohesive platform. 
+The toolkit centralizes several specialized applications into a single, cohesive platform.
 
 ---
 
 ## 🎯 The Vision & Problem Statement
 
-Neuromorphic computing is inherently multidisciplinary. 
+Neuromorphic computing is inherently multidisciplinary.
 *   **Neuroscientists** understand the biological mechanisms but may lack the software engineering background for complex pipelines.
 *   **Software Developers** know how to build robust systems but struggle with the biological constraints (invariants) and specialized hardware.
 *   **Hardware Engineers** build the physical neuromorphic chips and robots but need accessible interfaces and compilers to test their designs.

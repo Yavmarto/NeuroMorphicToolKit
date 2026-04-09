@@ -1,7 +1,7 @@
 # Neurohub: create CI from scratch and add CDD-PBT verification
 
 **Module:** Neurohub
-**Spec Source:** 
+**Spec Source:**
 **Labels:** feature, cdd-pbt, migration, ci, critical
 
 ## Objective

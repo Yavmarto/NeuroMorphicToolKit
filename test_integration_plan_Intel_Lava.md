@@ -27,7 +27,7 @@ If you have an Intel Loihi 2 board connected, you can deploy to the actual hardw
 python Neuro-Dream-Hand/scripts/step13_loihi_deployment.py --weights output/sleep_weights.npz --target loihi2
 ```
 
-**Expected Outcome**: 
+**Expected Outcome**:
 A successful run will generate an analytics report saved to `output/step13_loihi_deployment.json` showcasing metrics such as step latency (ms), energy estimate (pJ), and total spikes.
 
 ### 2. NeuroCNL Lava I/O Exporter Stubs

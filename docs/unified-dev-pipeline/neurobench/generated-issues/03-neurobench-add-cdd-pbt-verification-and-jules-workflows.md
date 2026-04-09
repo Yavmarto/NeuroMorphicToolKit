@@ -1,7 +1,7 @@
 # Neurobench: add CDD-PBT verification and Jules workflows
 
 **Module:** Neurobench
-**Spec Source:** 
+**Spec Source:**
 **Labels:** feature, cdd-pbt, migration, ci
 
 ## Objective

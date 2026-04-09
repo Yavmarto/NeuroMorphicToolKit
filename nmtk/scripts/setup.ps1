@@ -8,7 +8,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$Arch = if ([Environment]::Is64BitOperatingSystem) { "x86_64" } else { 
+$Arch = if ([Environment]::Is64BitOperatingSystem) { "x86_64" } else {
     Write-Error "32-bit Windows is not supported"
     exit 1
 }

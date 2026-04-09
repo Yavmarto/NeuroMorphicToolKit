@@ -14,7 +14,7 @@ for dir in "${PYTHON_DIRS[@]}"; do
     if [ -d "$dir" ]; then
         echo "Running mypy in $dir..."
         cd "$dir"
-        
+
         if ! mypy . --exclude "$EXCLUDE_PATTERN"; then
             echo "Mypy failed in $dir"
             EXIT_CODE=1

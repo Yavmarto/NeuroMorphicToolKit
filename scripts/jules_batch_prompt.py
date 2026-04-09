@@ -340,7 +340,7 @@ Examples:
                         help="Scan each repo's issues/ folder and send each .md as a Jules session; "
                              "renames sent files to 'sent-<name>.md'")
     parser.add_argument("--title-prefix", default="Batch Script", help="Prefix for the PR title (default: 'Batch Script')")
-    
+
     args = parser.parse_args()
 
     # 1. Fetch source mapping
@@ -416,9 +416,9 @@ Examples:
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = [
             executor.submit(
-                trigger_jules_api, repo, prompt, branch, source_map, 
+                trigger_jules_api, repo, prompt, branch, source_map,
                 args.title_prefix, session_counter, counter_lock
-            ) 
+            )
             for repo in repos
         ]
         for future in futures:

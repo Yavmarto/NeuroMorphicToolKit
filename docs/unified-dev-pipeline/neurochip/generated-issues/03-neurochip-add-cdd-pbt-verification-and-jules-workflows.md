@@ -1,7 +1,7 @@
 # Neurochip: add CDD-PBT verification and Jules workflows
 
 **Module:** Neurochip
-**Spec Source:** 
+**Spec Source:**
 **Labels:** feature, cdd-pbt, migration, ci
 
 ## Objective

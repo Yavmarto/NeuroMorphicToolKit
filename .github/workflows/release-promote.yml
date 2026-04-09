@@ -37,6 +37,7 @@ jobs:
       - name: Promote submodules (dev → main)
         run: |
           FAILED=""
+          # shellcheck disable=SC2016
           git submodule foreach --quiet '
             echo "=== Promoting $name ==="
             git fetch origin dev main 2>/dev/null || { echo "  ⚠ Could not fetch $name, skipping"; exit 0; }

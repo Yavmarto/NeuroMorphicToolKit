@@ -32,15 +32,15 @@ if [ -d "$FRONTEND_DIR" ]; then
   echo "------------------------------------------------------------"
   echo "==> Building $MODULE frontend (Port: $PORT)"
   echo "------------------------------------------------------------"
-  
+
   cd "$FRONTEND_DIR"
   flutter pub get
-  
+
   # We use dart-define to inject the backend URL into the web app
   flutter build web \
     --release \
     --dart-define=API_BASE_URL="http://localhost:$PORT"
-  
+
   echo "==> $MODULE build complete."
 else
   echo "==> Error: $MODULE frontend directory not found at $FRONTEND_DIR"

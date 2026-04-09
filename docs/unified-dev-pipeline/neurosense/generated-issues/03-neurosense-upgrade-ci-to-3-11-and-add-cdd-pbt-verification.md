@@ -1,7 +1,7 @@
 # Neurosense: upgrade CI to 3.11 and add CDD-PBT verification
 
 **Module:** Neurosense
-**Spec Source:** 
+**Spec Source:**
 **Labels:** feature, cdd-pbt, migration, ci
 
 ## Objective

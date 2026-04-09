@@ -14,13 +14,13 @@ jobs:
       fail-fast: false
       matrix:
         module: [
-          'neurocnl', 
-          'Neurosim', 
-          'Neurosense', 
-          'Neurohub', 
-          'Neurochip', 
-          'Neurobench', 
-          'Neuro-Dream-Hand', 
+          'neurocnl',
+          'Neurosim',
+          'Neurosense',
+          'Neurohub',
+          'Neurochip',
+          'Neurobench',
+          'Neuro-Dream-Hand',
           '.'
         ]
     # Calls the reusable workflow we just created

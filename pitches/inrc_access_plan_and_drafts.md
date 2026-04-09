@@ -1,7 +1,7 @@
 # INRC Access Plan and Email Drafts
 
 ## 1. Feasibility Assessment: Is it realistic?
-**Yes, it is highly realistic.** The Intel Neuromorphic Research Community (INRC) actively looks for applicants who aren't starting from scratch but have already built models and used their software framework (Lava). NMTK's current architecture has perfectly positioned you for this request. 
+**Yes, it is highly realistic.** The Intel Neuromorphic Research Community (INRC) actively looks for applicants who aren't starting from scratch but have already built models and used their software framework (Lava). NMTK's current architecture has perfectly positioned you for this request.
 
 According to their checklist, you already meet the heavy technical requirements:
 - **Built and tested an SNN:** Yes, you have the `Neuro-Dream-Hand` project using trained SNN parameters.
@@ -15,7 +15,7 @@ You have essentially completed their entire prerequisite list for utilizing phys
 ## 2. Situation A: Direct Application (NMTK Core Maintainer)
 
 ### Strategy
-Apply directly on behalf of the NeuroMorphicToolKit (NMTK) project. Frame NMTK as an open-source development tool aimed at expanding the accessibility of neuromorphic computing, explicitly highlighting your existing Lava integration. Request Neuromorphic Research Cloud (vLab) access to validate your backend integrations. 
+Apply directly on behalf of the NeuroMorphicToolKit (NMTK) project. Frame NMTK as an open-source development tool aimed at expanding the accessibility of neuromorphic computing, explicitly highlighting your existing Lava integration. Request Neuromorphic Research Cloud (vLab) access to validate your backend integrations.
 
 ### Email Draft
 
@@ -62,7 +62,7 @@ Dear INRC Team,
 
 My name is [Your Name], and I am a researcher/student at Johannes Kepler University (JKU), studying under the guidance of [Professor/Advisor Name if applicable]. I am writing to formally apply for INRC membership and request access to the Neuromorphic Research Cloud (vLab).
 
-My research focuses on cross-platform SNN interoperability, primarily driven through the development of the open-source NeuroMorphicToolKit (NMTK). NMTK aims to lower the barrier for neuromorphic application deployment by providing automated compilation from high-level models into hardware-specific execution processes. 
+My research focuses on cross-platform SNN interoperability, primarily driven through the development of the open-source NeuroMorphicToolKit (NMTK). NMTK aims to lower the barrier for neuromorphic application deployment by providing automated compilation from high-level models into hardware-specific execution processes.
 
 To date, we have successfully developed our framework locally and met Intel's hardware evaluation prerequisites:
 1. **Lava Implementation:** We built an internal compiler that maps biological neural networks into Lava's native `LIF` and `Dense` processes.

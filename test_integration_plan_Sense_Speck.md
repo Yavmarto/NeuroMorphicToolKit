@@ -6,7 +6,7 @@ This document delineates the testing integration plan for the **SynSense Speck**
 ## Usable Tutorials & Examples to Test
 
 ### 1. Fallback Software Execution via NeuroBench
-The `NeuroBench` benchmarking engine supports orchestrating targets towards the `SynSenseBenchmarkRunner`. Due to `Sinabs` robust support structure, you can run simulations entirely using CPU-based standard PyTorch if you lack a physical Speck development kit. 
+The `NeuroBench` benchmarking engine supports orchestrating targets towards the `SynSenseBenchmarkRunner`. Due to `Sinabs` robust support structure, you can run simulations entirely using CPU-based standard PyTorch if you lack a physical Speck development kit.
 
 **Runner location:** `Neurobench/neurobench/app/runners/synsense_runner.py`
 
@@ -31,7 +31,7 @@ The standalone translation nodes mapping NIR internal structures (`nir.NIRGraph`
 Use existing `pytest` integrations aimed at verifying the translation dictionary specified within standard `nirtorch` mappings:
 ```bash
 pytest neurocnl/neurocnl/export/test_exporters.py -k "sinabs"
-``` 
+```
 By testing these, you emulate the conversion between NMTK's internal layer matrices (`LIF`, `Linear`, `Affine`) and SynSense hardware targets directly bridging the gap into native PyTorch.
 
 ## Official Documentation and External Tutorials

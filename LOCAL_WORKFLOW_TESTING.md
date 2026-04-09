@@ -96,10 +96,10 @@ If you have validated a workflow and want to execute it locally from end-to-end:
 
 ```bash
 # List all available jobs inside the workflow
-act -l 
+act -l
 
 # Simulate a 'push' event
-act 
+act
 
 # Run a specific job directly
 act -j <job_name>
