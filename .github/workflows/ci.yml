@@ -228,31 +228,31 @@ jobs:
           fi
       - name: Install dependencies
         run: |
-          if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
+          if [ -d "Neurochip" ] && [ -f "Neurochip/pyproject.toml" ]; then
             python -m pip install poetry
-            cd Neurochip/neurochip
-            poetry install
+            cd Neurochip
+            poetry install --no-interaction
           else
             echo "Submodule missing, skipping"
           fi
       - name: Lint with ruff
         run: |
-          if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
-            cd Neurochip/neurochip
+          if [ -d "Neurochip" ] && [ -f "Neurochip/pyproject.toml" ]; then
+            cd Neurochip
             poetry run ruff check .
             poetry run ruff format --check .
           fi
         continue-on-error: true # Allow for now if not configured
       - name: Type check with mypy
         run: |
-          if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
-            cd Neurochip/neurochip
+          if [ -d "Neurochip" ] && [ -f "Neurochip/pyproject.toml" ]; then
+            cd Neurochip
             poetry run mypy .
           fi
       - name: Run tests
         run: |
-          if [ -d "Neurochip/neurochip" ] && [ -f "Neurochip/neurochip/pyproject.toml" ]; then
-            cd Neurochip/neurochip
+          if [ -d "Neurochip" ] && [ -f "Neurochip/pyproject.toml" ]; then
+            cd Neurochip
             poetry run pytest --tb=short --hypothesis-show-statistics
           fi
 

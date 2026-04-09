@@ -85,6 +85,7 @@ WORKFLOWS=("${(@f)$(
   find "$ROOT_DIR" -type f \( -name "*.yml" -o -name "*.yaml" \) \
     -not -path "*/node_modules/*" \
     -not -path "*/build/*" \
+    -not -path "*/docs/*" \
     2>/dev/null | grep "/.github/workflows/" | sort
 )}")
 
@@ -126,7 +127,7 @@ if [ "$RUN" = true ] && [ ${#WORKFLOWS[@]} -gt 0 ]; then
     
     # -n: dry run
     # -W: specify workflow file path relative to repo_dir
-    local rel_workflow_path=".github/workflows/$(basename "$workflow")"
+    rel_workflow_path=".github/workflows/$(basename "$workflow")"
     if ! act -n -W "$rel_workflow_path"; then
       echo "[FAIL] act encountered an error for $rel_path."
       FAILED=$((FAILED + 1))

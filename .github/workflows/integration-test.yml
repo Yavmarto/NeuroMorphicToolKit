@@ -93,12 +93,12 @@ jobs:
 
           # Known module ports (from scaffold convention, default 8000)
           modules = {
-              'neurosim':  8000,
-              'neurochip': 8001,
-              'neurosense': 8002,
-              'neurohub':  8003,
-              'neurocnl':  8004,
-              'neurobench': 8005,
+              'neurocnl':  8000,
+              'neurosim':  8001,
+              'neurochip': 8002,
+              'neurobench': 8003,
+              'neurosense': 8004,
+              'neurohub':  8005,
           }
 
           failed = 0
