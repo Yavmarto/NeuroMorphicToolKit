@@ -15,6 +15,8 @@ RESET='\033[0m'
 RESULT_STAGES=()
 RESULT_STATUS=()
 TOTAL_FAIL=0
+FAIL_NAMES=()
+FAIL_OUTPUTS=()
 
 record() {
   local stage="$1" rc="$2"
@@ -25,6 +27,47 @@ record() {
     RESULT_STATUS+=("FAIL")
     TOTAL_FAIL=$((TOTAL_FAIL + 1))
   fi
+}
+
+# _stage STAGE_NAME "shell command string"
+# Runs the command, tees output to terminal, captures output on failure.
+_stage() {
+  local name="$1" cmd="$2"
+  local tmp rc
+  tmp=$(mktemp)
+  { eval "$cmd"; } 2>&1 | tee "$tmp"
+  rc=${PIPESTATUS[0]}
+  record "$name" "$rc"
+  if [ "$rc" -ne 0 ]; then
+    FAIL_NAMES+=("$name")
+    FAIL_OUTPUTS+=("$(cat "$tmp")")
+  fi
+  rm -f "$tmp"
+  return "$rc"
+}
+
+_write_failure_report() {
+  local mod="$1"
+  local ci_dir; ci_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local timestamp; timestamp=$(date +%Y%m%d_%H%M%S)
+  local report="${ci_dir}/failure_${mod}_${timestamp}.md"
+  {
+    echo "# CI Failure Report: ${mod}"
+    echo ""
+    echo "**Date:** $(date '+%Y-%m-%d %H:%M:%S')"
+    echo ""
+    echo "## Failed Stages"
+    echo ""
+    for i in "${!FAIL_NAMES[@]}"; do
+      echo "### ${FAIL_NAMES[$i]}"
+      echo ""
+      echo '```'
+      echo "${FAIL_OUTPUTS[$i]}"
+      echo '```'
+      echo ""
+    done
+  } > "$report"
+  echo -e "  ${YELLOW}Failure report saved: ${report}${RESET}"
 }
 
 print_summary() {
@@ -45,6 +88,7 @@ print_summary() {
     echo -e "  ${GREEN}${BOLD}All checks passed for $mod!${RESET}"
   else
     echo -e "  ${RED}${BOLD}${TOTAL_FAIL} check(s) failed for $mod.${RESET}"
+    _write_failure_report "$mod"
   fi
   echo ""
 }
@@ -101,25 +145,22 @@ run_python_module() {
   [ "$method" = "poetry" ] && run_cmd="poetry run" || run_cmd="python -m"
 
   echo -e "  ${CYAN}ruff check${RESET}"
-  (cd "$dir" && $run_cmd ruff check .) && record "ruff-check" 0 || record "ruff-check" 1
+  _stage "ruff-check" "cd '$dir' && $run_cmd ruff check ."
 
   echo -e "  ${CYAN}ruff format --check${RESET}"
-  (cd "$dir" && $run_cmd ruff format --check .) && record "ruff-format" 0 || record "ruff-format" 1
+  _stage "ruff-format" "cd '$dir' && $run_cmd ruff format --check ."
 
   echo -e "  ${CYAN}mypy${RESET}"
-  (cd "$dir" && $run_cmd mypy .) && record "mypy" 0 || record "mypy" 1
+  _stage "mypy" "cd '$dir' && $run_cmd mypy ."
 
   echo -e "  ${CYAN}pytest${RESET}"
   if [ "$mod" = "neurocnl" ]; then
-    (cd neurocnl && python -m pytest neurocnl/ -v --tb=short --hypothesis-show-statistics) \
-      && record "pytest-core" 0 || record "pytest-core" 1
+    _stage "pytest-core" "cd neurocnl && python -m pytest neurocnl/ -v --tb=short --hypothesis-show-statistics"
     if [ -f "neurocnl/backend/requirements.txt" ]; then
-      (cd neurocnl/backend && PYTHONPATH=. python -m pytest backend/tests --tb=short 2>/dev/null) \
-        && record "pytest-backend" 0 || record "pytest-backend" 1
+      _stage "pytest-backend" "cd neurocnl/backend && PYTHONPATH=. python -m pytest backend/tests --tb=short"
     fi
   else
-    (cd "$dir" && $run_cmd pytest --tb=short --hypothesis-show-statistics) \
-      && record "pytest" 0 || record "pytest" 1
+    _stage "pytest" "cd '$dir' && $run_cmd pytest --tb=short --hypothesis-show-statistics"
   fi
 
   print_summary "$mod"
@@ -145,11 +186,11 @@ run_flutter_module() {
   flutter pub get --directory "$dir" --suppress-analytics > /dev/null 2>&1 || true
 
   echo -e "  ${CYAN}flutter analyze${RESET}"
-  (cd "$dir" && flutter analyze) && record "analyze" 0 || record "analyze" 1
+  _stage "analyze" "cd '$dir' && flutter analyze"
 
   if [ -d "$dir/test" ]; then
     echo -e "  ${CYAN}flutter test${RESET}"
-    (cd "$dir" && flutter test) && record "test" 0 || record "test" 1
+    _stage "test" "cd '$dir' && flutter test"
   fi
 
   print_summary "$mod"
