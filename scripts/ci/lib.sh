@@ -157,7 +157,7 @@ run_python_module() {
   if [ "$mod" = "neurocnl" ]; then
     _stage "pytest-core" "cd neurocnl && python -m pytest neurocnl/ -v --tb=short --hypothesis-show-statistics"
     if [ -f "neurocnl/backend/requirements.txt" ]; then
-      _stage "pytest-backend" "cd neurocnl/backend && PYTHONPATH=. python -m pytest backend/tests --tb=short"
+      _stage "pytest-backend" "cd neurocnl/backend && PYTHONPATH=. python -m pytest tests --tb=short"
     fi
   else
     _stage "pytest" "cd '$dir' && $run_cmd pytest --tb=short --hypothesis-show-statistics"

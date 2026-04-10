@@ -578,7 +578,7 @@ jobs:
         run: |
           if [ -f "neurocnl/backend/requirements.txt" ]; then
             cd neurocnl/backend
-            PYTHONPATH=. python -m pytest backend/tests --tb=short
+            PYTHONPATH=. python -m pytest tests --tb=short
           else
             echo "neurocnl/backend missing, skipping backend tests"
           fi
