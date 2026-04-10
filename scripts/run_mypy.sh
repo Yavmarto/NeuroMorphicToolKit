@@ -1,8 +1,18 @@
 #!/bin/bash
 set -e
 
-# List of Python submodules/packages
-PYTHON_DIRS=("Neuro-Dream-Hand" "neurocnl" "Neurosense" "Neurohub" "Neurochip/neurochip" "Neurobench/neurobench" "Neurosim/neurosim")
+# Python module roots aligned with .github/workflows/ci.yml.
+# Run mypy from the same working directories the server pipeline uses so
+# local pre-commit results match CI semantics.
+PYTHON_DIRS=(
+    "Neuro-Dream-Hand"
+    "neurocnl"
+    "Neurosense"
+    "Neurohub"
+    "Neurochip"
+    "Neurobench/neurobench"
+    "Neurosim"
+)
 
 ROOT_DIR=$(pwd)
 EXIT_CODE=0
@@ -15,7 +25,7 @@ for dir in "${PYTHON_DIRS[@]}"; do
         echo "Running mypy in $dir..."
         cd "$dir"
 
-        if ! mypy . --exclude "$EXCLUDE_PATTERN"; then
+        if ! python -m mypy . --exclude "$EXCLUDE_PATTERN"; then
             echo "Mypy failed in $dir"
             EXIT_CODE=1
         fi

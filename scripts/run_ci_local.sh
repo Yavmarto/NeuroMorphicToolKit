@@ -146,14 +146,22 @@ echo -e "  Modules: ${CYAN}${SELECTED_MODULES[*]}${RESET}"
 echo ""
 
 # ── Pre-commit (global) ───────────────────────────────────────────────
+PRECOMMIT_STATUS="SKIP"
 if [ "$SKIP_PRECOMMIT" = false ] && command -v pre-commit >/dev/null 2>&1; then
   echo -e "${BOLD}-- Pre-commit --------------------------------------${RESET}"
-  pre-commit run --all-files \
-    && echo -e "${GREEN}pre-commit passed${RESET}" \
-    || echo -e "${RED}pre-commit failed${RESET}"
+  "$ROOT_DIR/scripts/run_precommit_local.sh" \
+    && {
+      PRECOMMIT_STATUS="pass"
+      echo -e "${GREEN}pre-commit passed${RESET}"
+    } \
+    || {
+      PRECOMMIT_STATUS="FAIL"
+      echo -e "${RED}pre-commit failed${RESET}"
+    }
   echo ""
 elif [ "$SKIP_PRECOMMIT" = false ]; then
-  echo -e "${YELLOW}pre-commit not installed, skipping (pip install pre-commit)${RESET}"
+  PRECOMMIT_STATUS="FAIL"
+  echo -e "${RED}pre-commit not installed; local CI cannot match the server pipeline (pip install pre-commit)${RESET}"
   echo ""
 fi
 
@@ -197,6 +205,13 @@ echo "======================================================${RESET}"
 echo ""
 printf "  %-30s %s\n" "MODULE" "RESULT"
 printf "  %-30s %s\n" "------------------------------" "------"
+if [ "$PRECOMMIT_STATUS" = "pass" ]; then
+  printf "  %-30s ${GREEN}PASS${RESET}\n" "pre-commit"
+elif [ "$PRECOMMIT_STATUS" = "FAIL" ]; then
+  printf "  %-30s ${RED}FAIL${RESET}\n" "pre-commit"
+else
+  printf "  %-30s ${YELLOW}SKIP${RESET}\n" "pre-commit"
+fi
 for i in "${!MOD_NAMES[@]}"; do
   local_mod="${MOD_NAMES[$i]}"
   local_status="${MOD_RESULTS[$i]}"
@@ -209,11 +224,13 @@ for i in "${!MOD_NAMES[@]}"; do
   fi
 done
 echo ""
-if [ "$TOTAL_MODULE_FAIL" -eq 0 ]; then
+OVERALL_FAIL=$TOTAL_MODULE_FAIL
+[ "$PRECOMMIT_STATUS" = "FAIL" ] && OVERALL_FAIL=$((OVERALL_FAIL + 1))
+if [ "$OVERALL_FAIL" -eq 0 ]; then
   echo -e "  ${GREEN}${BOLD}All modules passed!${RESET}"
 else
-  echo -e "  ${RED}${BOLD}${TOTAL_MODULE_FAIL} module(s) failed.${RESET}"
+  echo -e "  ${RED}${BOLD}${OVERALL_FAIL} stage(s) failed.${RESET}"
 fi
 echo ""
 
-[ "$TOTAL_MODULE_FAIL" -eq 0 ] && exit 0 || exit 1
+[ "$OVERALL_FAIL" -eq 0 ] && exit 0 || exit 1

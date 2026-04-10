@@ -15,19 +15,3 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi]
-
-  - repo: local
-    hooks:
-      - id: mypy
-        name: mypy
-        entry: scripts/run_mypy.sh
-        language: script
-        pass_filenames: false
-        types: [python]
-
-      - id: flutter-analyze
-        name: flutter-analyze
-        entry: scripts/analyze_flutter.sh
-        language: script
-        pass_filenames: false
-        types: [dart]
