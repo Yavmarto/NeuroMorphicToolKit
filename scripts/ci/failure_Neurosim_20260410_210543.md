@@ -267,7 +267,7 @@ _________________________ test_sweep_lifecycle_success _________________________
 neurosim/tests/routers/test_sweep_lifecycle.py:37: in test_sweep_lifecycle_success
     assert result["status"] == SimulationStatus.QUEUED
 E   AssertionError: assert 'failed' == <SimulationSt...UED: 'queued'>
-E     
+E  
 E     - queued
 E     + failed
 ----------------------------- Captured stdout call -----------------------------
@@ -314,7 +314,7 @@ __________________________ test_validate_valid_graph ___________________________
 neurosim/tests/routers/test_validation.py:31: in test_validate_valid_graph
     assert result["backend_support"]["verdict"] == "approximate"
 E   AssertionError: assert 'unsupported' == 'approximate'
-E     
+E  
 E     - approximate
 E     + unsupported
 ----------------------------- Captured stdout call -----------------------------
@@ -336,7 +336,7 @@ _____________________________ test_run_sweep_mock ______________________________
 neurosim/tests/services/test_sweep_runner.py:31: in test_run_sweep_mock
     assert response.status == "completed"
 E   AssertionError: assert <SimulationSt...LED: 'failed'> == 'completed'
-E     
+E  
 E     - completed
 E     + failed
 __________________________ test_run_sweep_single_step __________________________
@@ -825,4 +825,3 @@ FAILED neurosim/tests/services/test_sweep_runner.py::test_run_sweep_single_step
 FAILED neurosim/tests/test_neurocnl_integration.py::test_validation_equivalence
 ================== 10 failed, 80 passed, 3 warnings in 11.42s ==================
 ```
-

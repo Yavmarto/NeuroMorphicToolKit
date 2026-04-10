@@ -13,4 +13,3 @@ If this issue continues with mypy master, please report a bug at https://github.
 version: 1.11.2
 ./app/config.py:5: : note: please use --show-traceback to print a traceback when reporting a bug
 ```
-

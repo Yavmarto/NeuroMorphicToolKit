@@ -36,4 +36,3 @@ Found 2 errors.
 Would reformat: tests/test_router_robustness_reports.py
 1 file would be reformatted, 75 files already formatted
 ```
-
