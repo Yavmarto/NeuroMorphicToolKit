@@ -28,6 +28,9 @@ FL_DIRS=(nmtk_ui_core nmtk/neuro_toolkit neurocnl/frontend Neurochip/frontend Ne
 ALL_MODULES=("${PY_NAMES[@]}" "${FL_NAMES[@]}")
 RUN_LAUNCHER_GUARDRAILS=false
 RUN_LAUNCHER_INTEGRATION=false
+LOCAL_FAIL_NAMES=()
+LOCAL_FAIL_OUTPUTS=()
+LOCAL_FAILURE_REPORT=""
 
 # ── Parse arguments ───────────────────────────────────────────────────
 MODE="changed"
@@ -79,6 +82,61 @@ add_unique() {
   if ! has_element "$val" "${SELECTED_MODULES[@]+"${SELECTED_MODULES[@]}"}"; then
     SELECTED_MODULES+=("$val")
   fi
+}
+
+capture_local_stage() {
+  local stage="$1"
+  shift
+  local tmp rc
+  tmp=$(mktemp)
+  "$@" 2>&1 | tee "$tmp"
+  rc=${PIPESTATUS[0]}
+  if [ "$rc" -ne 0 ]; then
+    LOCAL_FAIL_NAMES+=("$stage")
+    LOCAL_FAIL_OUTPUTS+=("$(cat "$tmp")")
+  fi
+  rm -f "$tmp"
+  return "$rc"
+}
+
+write_local_failure_report() {
+  [ "${#LOCAL_FAIL_NAMES[@]}" -eq 0 ] && return 0
+
+  local ci_dir timestamp report
+  ci_dir="$ROOT_DIR/scripts/ci"
+  timestamp=$(date +%Y%m%d_%H%M%S)
+  report="${ci_dir}/failure_run_ci_local_${timestamp}.md"
+
+  {
+    echo "# CI Failure Report: run_ci_local"
+    echo ""
+    echo "**Date:** $(date '+%Y-%m-%d %H:%M:%S')"
+    echo ""
+    echo "## Failed Root Stages"
+    echo ""
+    for i in "${!LOCAL_FAIL_NAMES[@]}"; do
+      echo "### ${LOCAL_FAIL_NAMES[$i]}"
+      echo ""
+      echo '```'
+      echo "${LOCAL_FAIL_OUTPUTS[$i]}"
+      echo '```'
+      echo ""
+    done
+    if [ "$TOTAL_MODULE_FAIL" -gt 0 ]; then
+      echo "## Module Failures"
+      echo ""
+      echo "Module-specific CI scripts save their own reports under \`scripts/ci/\`."
+      echo ""
+      for i in "${!MOD_NAMES[@]}"; do
+        if [ "${MOD_RESULTS[$i]}" = "FAIL" ]; then
+          echo "- ${MOD_NAMES[$i]}"
+        fi
+      done
+      echo ""
+    fi
+  } > "$report"
+
+  LOCAL_FAILURE_REPORT="$report"
 }
 
 detect_changed_modules() {
@@ -162,7 +220,7 @@ echo ""
 PRECOMMIT_STATUS="SKIP"
 if [ "$SKIP_PRECOMMIT" = false ] && command -v pre-commit >/dev/null 2>&1; then
   echo -e "${BOLD}-- Pre-commit --------------------------------------${RESET}"
-  "$ROOT_DIR/scripts/run_precommit_local.sh" \
+  capture_local_stage "pre-commit" "$ROOT_DIR/scripts/run_precommit_local.sh" \
     && {
       PRECOMMIT_STATUS="pass"
       echo -e "${GREEN}pre-commit passed${RESET}"
@@ -174,6 +232,8 @@ if [ "$SKIP_PRECOMMIT" = false ] && command -v pre-commit >/dev/null 2>&1; then
   echo ""
 elif [ "$SKIP_PRECOMMIT" = false ]; then
   PRECOMMIT_STATUS="FAIL"
+  LOCAL_FAIL_NAMES+=("pre-commit")
+  LOCAL_FAIL_OUTPUTS+=("pre-commit not installed; local CI cannot match the server pipeline (pip install pre-commit)")
   echo -e "${RED}pre-commit not installed; local CI cannot match the server pipeline (pip install pre-commit)${RESET}"
   echo ""
 fi
@@ -187,7 +247,7 @@ run_launcher_guardrails_stage() {
   local args=()
   [ "$RUN_LAUNCHER_INTEGRATION" = true ] && args+=("--with-integration")
 
-  if bash "$ROOT_DIR/scripts/run_launcher_guardrails.sh" "${args[@]+"${args[@]}"}"; then
+  if capture_local_stage "launcher_guardrails" bash "$ROOT_DIR/scripts/run_launcher_guardrails.sh" "${args[@]+"${args[@]}"}"; then
     MOD_NAMES+=("launcher_guardrails"); MOD_RESULTS+=("pass")
   else
     MOD_NAMES+=("launcher_guardrails"); MOD_RESULTS+=("FAIL")
@@ -255,10 +315,14 @@ done
 echo ""
 OVERALL_FAIL=$TOTAL_MODULE_FAIL
 [ "$PRECOMMIT_STATUS" = "FAIL" ] && OVERALL_FAIL=$((OVERALL_FAIL + 1))
+write_local_failure_report
 if [ "$OVERALL_FAIL" -eq 0 ]; then
   echo -e "  ${GREEN}${BOLD}All modules passed!${RESET}"
 else
   echo -e "  ${RED}${BOLD}${OVERALL_FAIL} stage(s) failed.${RESET}"
+  if [ -n "$LOCAL_FAILURE_REPORT" ]; then
+    echo -e "  ${YELLOW}Failure report saved: ${LOCAL_FAILURE_REPORT}${RESET}"
+  fi
 fi
 echo ""
 

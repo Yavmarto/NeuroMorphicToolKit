@@ -18,7 +18,11 @@ Read before edit:
 - If editing more than one top-level module, name the write set explicitly and run the owning checks plus `python3 -m pytest tests/integration/test_cross_module.py` and `python3 -m pytest tests/integration/test_teensy_e2e.py`.
 
 Launcher and control-plane guardrails:
-- For changes under `nmtk/**`, root launcher manifests, `scripts/**`, or root `tests/**` that affect launcher or module lifecycle behavior, run `python3 scripts/launcher_control_service.py --doctor --json`.
+- For changes under `nmtk/**`, root launcher manifests such as `nmtk/neuro_toolkit/assets/modules.json`, `nmtk/neuro_toolkit/assets/remote_modules.json`, and root compose files, `scripts/**`, or root `tests/**` that affect launcher behavior, module lifecycle behavior, or suite-visible startup semantics, run `python3 scripts/launcher_control_service.py --doctor --json`.
+- Use `bash scripts/run_launcher_guardrails.sh` as the canonical local enforcement wrapper for launcher and control-plane work. Use `bash scripts/run_launcher_guardrails.sh --with-integration` when the change alters module contracts or suite-visible startup behavior.
 - Treat launcher doctor `fatalCount > 0` as a blocker unless the task is explicitly to diagnose or fix that failure.
+- Launcher work is not complete until launcher doctor and launcher unit coverage pass.
 - Report launcher doctor outcomes explicitly as either `preflight failed` or `degraded optional capability`; do not collapse both into a generic startup error.
-- Keep launcher UI state changes, module manifest changes, and launcher verification updates in the same change when they describe the same behavior.
+- Keep launcher UI state changes, module manifest changes, and launcher verification updates in the same change when they describe the same behavior. If a launcher-visible state transition depends on manifest metadata, update both surfaces together.
+- If `nmtk/neuro_toolkit/assets/modules.json` changes, update the launcher Dart models, launcher tests, and any consuming helper scripts in the same change.
+- Do not introduce a new install or startup strategy without doctor or preflight coverage.

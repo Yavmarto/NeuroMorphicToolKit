@@ -90,6 +90,19 @@ class LauncherControlServiceTest(unittest.TestCase):
         python_path.chmod(0o755)
         return python_path
 
+    def _create_fake_poetry_python(self) -> Path:
+        python_path = (
+            self.repo_root
+            / ".poetry-envs"
+            / "dummy"
+            / "bin"
+            / "python"
+        )
+        python_path.parent.mkdir(parents=True, exist_ok=True)
+        python_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        python_path.chmod(0o755)
+        return python_path
+
     def test_modules_endpoint_returns_manifest_data(self) -> None:
         payload = self.state.serialize_modules()
 
@@ -141,6 +154,34 @@ class LauncherControlServiceTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
         self.assertIn("Launcher control service", result.stdout)
+
+    def test_module_python_path_prefers_poetry_env_when_available(self) -> None:
+        pyproject = self.repo_root / "dummy_module" / "pyproject.toml"
+        pyproject.write_text(
+            "\n".join(
+                [
+                    "[tool.poetry]",
+                    'name = "dummy"',
+                    'version = "0.1.0"',
+                    "",
+                    "[build-system]",
+                    'requires = ["poetry-core>=1.0.0"]',
+                    'build-backend = "poetry.core.masonry.api"',
+                ]
+            ),
+            encoding="utf-8",
+        )
+        poetry_python = self._create_fake_poetry_python()
+        module = self.state._get_module("dummy")
+
+        with mock.patch.object(
+            launcher_server.subprocess,
+            "run",
+            return_value=mock.Mock(returncode=0, stdout=str(poetry_python.parents[1]), stderr=""),
+        ):
+            python_path = launcher_server._module_python_path(module)
+
+        self.assertEqual(python_path, poetry_python)
 
     def test_run_dev_script_passes_bash_syntax_check(self) -> None:
         result = subprocess.run(
@@ -263,6 +304,130 @@ class LauncherControlServiceTest(unittest.TestCase):
             ["Optional capability unavailable: lava.magma.core.run_conditions"],
         )
 
+    def test_doctor_report_marks_fatal_preflight_as_blocking(self) -> None:
+        with mock.patch.object(
+            self.state,
+            "_preflight_module",
+            return_value=launcher_server.PreflightResult(
+                status=launcher_server.PREFLIGHT_FAILED,
+                message="Missing required dependency: fastapi (needed by app.main)",
+                environment_fingerprint="fingerprint-fatal",
+            ),
+        ):
+            report = self.state.doctor_report()
+
+        self.assertEqual(report["status"], "error")
+        self.assertEqual(report["fatalCount"], 1)
+        self.assertEqual(report["degradedCount"], 0)
+        self.assertEqual(report["okCount"], 0)
+        self.assertEqual(report["modules"][0]["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
+        self.assertIn("fastapi", report["modules"][0]["preflightMessage"])
+
+    def test_doctor_report_keeps_optional_capability_degradation_nonfatal(self) -> None:
+        with mock.patch.object(
+            self.state,
+            "_preflight_module",
+            return_value=launcher_server.PreflightResult(
+                status=launcher_server.PREFLIGHT_DEGRADED,
+                message="Optional capability unavailable: lava.magma.core.run_conditions",
+                capability_warnings=[
+                    "Optional capability unavailable: lava.magma.core.run_conditions"
+                ],
+                environment_fingerprint="fingerprint-degraded",
+            ),
+        ):
+            report = self.state.doctor_report()
+
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(report["fatalCount"], 0)
+        self.assertEqual(report["degradedCount"], 1)
+        self.assertEqual(report["okCount"], 0)
+        self.assertEqual(
+            report["modules"][0]["preflightStatus"],
+            launcher_server.PREFLIGHT_DEGRADED,
+        )
+        self.assertEqual(
+            report["modules"][0]["capabilityWarnings"],
+            ["Optional capability unavailable: lava.magma.core.run_conditions"],
+        )
+
+    def test_render_doctor_report_uses_explicit_policy_terms(self) -> None:
+        report = {
+            "status": "error",
+            "fatalCount": 1,
+            "degradedCount": 1,
+            "okCount": 0,
+            "modules": [
+                {
+                    "id": "fatal-module",
+                    "preflightStatus": launcher_server.PREFLIGHT_FAILED,
+                    "preflightMessage": "Missing required dependency: fastapi",
+                    "capabilityWarnings": [],
+                },
+                {
+                    "id": "degraded-module",
+                    "preflightStatus": launcher_server.PREFLIGHT_DEGRADED,
+                    "preflightMessage": "Optional capability unavailable: lava",
+                    "capabilityWarnings": ["Optional capability unavailable: lava"],
+                },
+            ],
+        }
+
+        rendered = launcher_server._render_doctor_report(report)
+
+        self.assertIn("status=preflight failed", rendered)
+        self.assertIn("preflight failed fatal-module", rendered)
+        self.assertIn("degraded optional capability degraded-module", rendered)
+
+    def test_main_returns_nonzero_for_fatal_doctor_report(self) -> None:
+        fake_state = mock.Mock()
+        fake_state.doctor_report.return_value = {
+            "status": "error",
+            "fatalCount": 1,
+            "degradedCount": 0,
+            "okCount": 0,
+            "modules": [],
+        }
+
+        stdout = io.StringIO()
+        with (
+            mock.patch.object(launcher_server, "LauncherControlState", return_value=fake_state),
+            mock.patch.object(sys, "stdout", stdout),
+        ):
+            exit_code = launcher_server.main(["--doctor", "--json"])
+
+        self.assertEqual(exit_code, 1)
+        fake_state.shutdown.assert_called_once()
+        self.assertEqual(json.loads(stdout.getvalue()), fake_state.doctor_report.return_value)
+
+    def test_main_returns_zero_for_degraded_only_doctor_report(self) -> None:
+        fake_state = mock.Mock()
+        fake_state.doctor_report.return_value = {
+            "status": "ok",
+            "fatalCount": 0,
+            "degradedCount": 1,
+            "okCount": 0,
+            "modules": [
+                {
+                    "id": "dummy",
+                    "preflightStatus": launcher_server.PREFLIGHT_DEGRADED,
+                    "preflightMessage": "Optional capability unavailable: lava",
+                    "capabilityWarnings": ["Optional capability unavailable: lava"],
+                }
+            ],
+        }
+
+        stdout = io.StringIO()
+        with (
+            mock.patch.object(launcher_server, "LauncherControlState", return_value=fake_state),
+            mock.patch.object(sys, "stdout", stdout),
+        ):
+            exit_code = launcher_server.main(["--doctor", "--json"])
+
+        self.assertEqual(exit_code, 0)
+        fake_state.shutdown.assert_called_once()
+        self.assertEqual(json.loads(stdout.getvalue()), fake_state.doctor_report.return_value)
+
     def test_preflight_repairs_stale_environment_once(self) -> None:
         module = self.state._get_module("dummy")
         module["environmentFingerprint"] = "stale-fingerprint"
@@ -328,6 +493,45 @@ class LauncherControlServiceTest(unittest.TestCase):
         install_sync.assert_called_once_with("dummy")
         self.assertEqual(result.status, launcher_server.PREFLIGHT_FAILED)
         self.assertIn("fastapi", result.message)
+
+    def test_install_sync_uses_poetry_install_no_root_for_poetry_projects(self) -> None:
+        pyproject = self.repo_root / "dummy_module" / "pyproject.toml"
+        pyproject.write_text(
+            "\n".join(
+                [
+                    "[tool.poetry]",
+                    'name = "dummy"',
+                    'version = "0.1.0"',
+                    "",
+                    "[build-system]",
+                    'requires = ["poetry-core>=1.0.0"]',
+                    'build-backend = "poetry.core.masonry.api"',
+                ]
+            ),
+            encoding="utf-8",
+        )
+        poetry_python = self._create_fake_poetry_python()
+
+        with (
+            mock.patch.object(launcher_server, "_poetry_command", return_value="poetry"),
+            mock.patch.object(
+                launcher_server.subprocess,
+                "run",
+                return_value=mock.Mock(returncode=0, stdout=str(poetry_python.parents[1]), stderr=""),
+            ),
+            mock.patch.object(self.state, "_run_command") as run_command,
+            mock.patch.object(
+                self.state,
+                "_compute_environment_fingerprint",
+                return_value="fingerprint-poetry",
+            ),
+        ):
+            self.state._install_sync("dummy")
+
+        self.assertEqual(
+            run_command.call_args_list[-1].args[0],
+            ["poetry", "install", "--no-interaction", "--no-root"],
+        )
 
     def test_stream_logs_echoes_stdout_and_stderr_to_terminal(self) -> None:
         module_id = "dummy"

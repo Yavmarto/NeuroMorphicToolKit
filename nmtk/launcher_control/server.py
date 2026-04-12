@@ -7,11 +7,13 @@ import collections
 import hashlib
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
 import threading
 import time
+import tomllib
 import textwrap
 import urllib.error
 import urllib.request
@@ -137,6 +139,73 @@ def _module_venv_pip(module: dict[str, Any]) -> Path:
     if os.name == "nt":
         return install_dir / "venv" / "Scripts" / "pip.exe"
     return install_dir / "venv" / "bin" / "pip"
+
+
+def _module_pyproject_path(module: dict[str, Any]) -> Path | None:
+    install_dir = _module_install_dir(module)
+    module_root = _module_root(module)
+    for candidate in (
+        install_dir / "pyproject.toml",
+        module_root / "pyproject.toml",
+    ):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _module_uses_poetry(module: dict[str, Any]) -> bool:
+    pyproject_path = _module_pyproject_path(module)
+    if pyproject_path is None:
+        return False
+
+    try:
+        pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return False
+
+    build_backend = str(pyproject.get("build-system", {}).get("build-backend", "")).strip()
+    tool_table = pyproject.get("tool", {})
+    return build_backend == "poetry.core.masonry.api" or "poetry" in tool_table
+
+
+def _poetry_command() -> str | None:
+    return shutil.which("poetry")
+
+
+def _poetry_env_python(module: dict[str, Any]) -> Path | None:
+    if not _module_uses_poetry(module):
+        return None
+
+    poetry = _poetry_command()
+    if poetry is None:
+        return None
+
+    result = subprocess.run(
+        [poetry, "env", "info", "--path"],
+        cwd=_module_install_dir(module),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    env_path = Path((result.stdout or "").strip())
+    if result.returncode != 0 or not env_path:
+        return None
+
+    if os.name == "nt":
+        python_path = env_path / "Scripts" / "python.exe"
+    else:
+        python_path = env_path / "bin" / "python"
+    return python_path if python_path.exists() else None
+
+
+def _module_python_path(module: dict[str, Any]) -> Path:
+    return _poetry_env_python(module) or _module_venv_python(module)
+
+
+def _missing_python_message(module: dict[str, Any], python_path: Path) -> str:
+    if _module_uses_poetry(module):
+        return f"Module python missing at {python_path}"
+    return f"Virtualenv python missing at {python_path}"
 
 
 def _effective_port(module: dict[str, Any]) -> int | None:
@@ -272,15 +341,23 @@ def _message_from_probe_outcome(
 
 
 def _render_doctor_report(report: dict[str, Any]) -> str:
+    summary = (
+        "preflight failed"
+        if report["fatalCount"] > 0
+        else "degraded optional capability"
+        if report["degradedCount"] > 0
+        else "ok"
+    )
     lines = [
         "NMTK launcher doctor",
+        f"status={summary}",
         f"fatal={report['fatalCount']} degraded={report['degradedCount']} ok={report['okCount']}",
     ]
     for module in report["modules"]:
         prefix = (
-            "FAIL"
+            "preflight failed"
             if module["preflightStatus"] == PREFLIGHT_FAILED
-            else "WARN"
+            else "degraded optional capability"
             if module["preflightStatus"] == PREFLIGHT_DEGRADED
             else "OK"
         )
@@ -579,12 +656,13 @@ class LauncherControlState:
         return version
 
     def _compute_environment_fingerprint(self, module: dict[str, Any]) -> str:
-        python_path = _module_venv_python(module)
+        python_path = _module_python_path(module)
         if not python_path.exists():
-            raise RuntimeError(f"Virtualenv python missing at {python_path}")
+            raise RuntimeError(_missing_python_message(module, python_path))
 
         payload = {
             "pythonVersion": self._module_python_version(python_path),
+            "pythonPath": str(python_path),
             "installDir": str(_module_install_dir(module)),
             "runDir": str(_module_run_dir(module)),
             "installStrategy": _module_install_strategy(module),
@@ -600,11 +678,11 @@ class LauncherControlState:
         ).hexdigest()
 
     def _run_import_probe(self, module: dict[str, Any]) -> PreflightResult:
-        python_path = _module_venv_python(module)
+        python_path = _module_python_path(module)
         if not python_path.exists():
             return PreflightResult(
                 status=PREFLIGHT_FAILED,
-                message=f"Virtualenv python missing at {python_path}",
+                message=_missing_python_message(module, python_path),
             )
 
         required_imports = _module_required_imports(module)
@@ -691,16 +769,16 @@ class LauncherControlState:
                 message=f"Run directory not found: {run_dir}",
             )
 
-        python_path = _module_venv_python(module)
+        python_path = _module_python_path(module)
         if not python_path.exists():
             if not allow_repair:
                 return PreflightResult(
                     status=PREFLIGHT_FAILED,
-                    message=f"Virtualenv python missing at {python_path}",
+                    message=_missing_python_message(module, python_path),
                 )
             self._install_sync(module_id)
             module = self._get_module(module_id)
-            python_path = _module_venv_python(module)
+            python_path = _module_python_path(module)
 
         fingerprint = self._compute_environment_fingerprint(module)
         saved_fingerprint = str(module.get("environmentFingerprint") or "").strip()
@@ -749,9 +827,11 @@ class LauncherControlState:
 
         venv_python = _module_venv_python(module)
         venv_pip = _module_venv_pip(module)
+        poetry = _poetry_command()
+        use_poetry = _module_uses_poetry(module) and poetry is not None
 
         self._update_module_fields(module_id, status=STATUS_INDEX["installing"], installProgress=0.1)
-        if not venv_python.exists():
+        if not use_poetry and not venv_python.exists():
             self._run_command(
                 [sys.executable, "-m", "venv", "venv"],
                 cwd=install_dir,
@@ -762,18 +842,32 @@ class LauncherControlState:
         for dependency in module.get("localDeps", []):
             dep_path = (REPO_ROOT / dependency).resolve()
             if dep_path.exists():
-                self._run_command(
-                    [str(venv_pip), "install", str(dep_path)],
-                    cwd=install_dir,
-                    module_id=module_id,
-                )
+                if use_poetry:
+                    self._run_command(
+                        [poetry, "run", "python", "-m", "pip", "install", str(dep_path)],
+                        cwd=install_dir,
+                        module_id=module_id,
+                    )
+                else:
+                    self._run_command(
+                        [str(venv_pip), "install", str(dep_path)],
+                        cwd=install_dir,
+                        module_id=module_id,
+                    )
 
         self._update_module_fields(module_id, installProgress=0.6)
-        self._run_command(
-            [str(venv_pip), "install", "."],
-            cwd=install_dir,
-            module_id=module_id,
-        )
+        if use_poetry:
+            self._run_command(
+                [poetry, "install", "--no-interaction", "--no-root"],
+                cwd=install_dir,
+                module_id=module_id,
+            )
+        else:
+            self._run_command(
+                [str(venv_pip), "install", "."],
+                cwd=install_dir,
+                module_id=module_id,
+            )
         environment_fingerprint = self._compute_environment_fingerprint(module)
         self._update_module_fields(
             module_id,
@@ -832,9 +926,9 @@ class LauncherControlState:
 
         self._kill_process_on_port(port, module_id=module_id)
         run_dir = _module_run_dir(module)
-        python_path = _module_venv_python(module)
+        python_path = _module_python_path(module)
         if not python_path.exists():
-            raise RuntimeError(f"Virtualenv python missing at {python_path}")
+            raise RuntimeError(_missing_python_message(module, python_path))
 
         command = [
             str(python_path),

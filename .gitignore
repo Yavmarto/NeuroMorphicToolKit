@@ -11,3 +11,5 @@ __pycache__/
 *.db
 scripts/.env
 build
+nmtk/neuro_toolkit/module_states.json
+nmtk/neuro_toolkit/launcher_settings.json

@@ -36,14 +36,19 @@ This root repo is already the integration and control plane. Do not create a sec
 
 Before Jules edits code, it must read the owning repo's `AGENTS.md`, the relevant ADR directories, and the owning spec file. If the change affects a cross-repo contract, Jules must also inspect the peer repo that consumes or produces that contract before writing any code.
 
-For launcher or control-plane work in the root repo, Jules must also read `CODING_STYLE_GUIDE.md` and `nmtk/AGENTS.md`, then run:
+For launcher or control-plane work in the root repo, Jules must also read `CODING_STYLE_GUIDE.md` and `nmtk/AGENTS.md`, then run the canonical launcher guardrails wrapper:
 
 ```bash
-python3 scripts/launcher_control_service.py --doctor --json
-python3 -m unittest tests.test_launcher_control_service
+bash scripts/run_launcher_guardrails.sh
 ```
 
-If launcher doctor reports `fatalCount > 0`, treat that as a blocker unless the task is explicitly to diagnose or fix that failure. Report `preflight failed` and `degraded optional capability` separately.
+If launcher changes affect module contracts or suite-visible startup behavior, run:
+
+```bash
+bash scripts/run_launcher_guardrails.sh --with-integration
+```
+
+The wrapper runs launcher doctor, launcher unit tests, and launcher Flutter tests. If launcher doctor reports `fatalCount > 0`, treat that as a blocker unless the task is explicitly to diagnose or fix that failure. Report `preflight failed` and `degraded optional capability` separately.
 
 Examples:
 
@@ -71,9 +76,8 @@ Work only in the NeuroMorphicToolKit root repository.
 Before editing, read AGENTS.md, CODING_STYLE_GUIDE.md, and nmtk/AGENTS.md plus the relevant ADRs.
 Do not modify any submodule unless the task explicitly names it.
 Run:
-python3 scripts/launcher_control_service.py --doctor --json
-python3 -m unittest tests.test_launcher_control_service
-Run python3 -m pytest tests/integration/test_cross_module.py tests/integration/test_teensy_e2e.py when launcher changes affect module contracts or suite-visible startup behavior.
+bash scripts/run_launcher_guardrails.sh
+Run bash scripts/run_launcher_guardrails.sh --with-integration when launcher changes affect module contracts or suite-visible startup behavior.
 Report launcher doctor results explicitly as preflight failures versus degraded optional capabilities.
 Task: <task details>
 Success criteria: <expected behavior>

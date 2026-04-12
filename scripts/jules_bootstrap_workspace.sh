@@ -126,11 +126,13 @@ Cross-repo contract work:
   python3 -m pytest tests/integration/test_teensy_e2e.py
 
 Launcher or control-plane work:
-  python3 scripts/launcher_control_service.py --doctor --json
-  python3 -m unittest tests.test_launcher_control_service
-  cd nmtk/neuro_toolkit && flutter test
+  Read AGENTS.md, CODING_STYLE_GUIDE.md, and nmtk/AGENTS.md first.
+  bash scripts/run_launcher_guardrails.sh
+  bash scripts/run_launcher_guardrails.sh --with-integration  # when launcher changes affect module contracts or suite-visible startup behavior
 
+The wrapper runs launcher doctor, launcher unit tests, and launcher Flutter tests.
 If launcher doctor reports fatal preflight failures, stop and either fix them or explicitly scope the task as diagnosis.
+Report preflight failed and degraded optional capability separately.
 EOF
 }
 
@@ -171,20 +173,9 @@ run_smoke_checks() {
   fi
 }
 
-run_integration_checks() {
-  print_header "Integration Verification"
-  if ! command -v python3 >/dev/null 2>&1; then
-    echo "python3 is required to run integration verification." >&2
-    exit 1
-  fi
-
-  python3 -m pytest tests/integration/test_cross_module.py tests/integration/test_teensy_e2e.py
-}
-
 run_launcher_guardrails() {
   print_header "Launcher Guardrails"
-  python3 scripts/launcher_control_service.py --doctor --json
-  python3 -m unittest tests.test_launcher_control_service
+  bash scripts/run_launcher_guardrails.sh "$@"
 }
 
 print_header "Jules Workspace Bootstrap"
@@ -204,7 +195,6 @@ case "${MODE}" in
     ;;
   integration)
     run_smoke_checks
-    run_launcher_guardrails
-    run_integration_checks
+    run_launcher_guardrails --with-integration
     ;;
 esac

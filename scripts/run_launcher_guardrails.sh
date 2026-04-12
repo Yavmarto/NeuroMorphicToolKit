@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/run_launcher_guardrails.sh — Verify launcher/control-plane readiness
+# scripts/run_launcher_guardrails.sh — Canonical launcher/control-plane verification wrapper
 
 set -uo pipefail
 
@@ -7,6 +7,9 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 RUN_INTEGRATION=false
+FAIL_NAMES=()
+FAIL_OUTPUTS=()
+FAILURE_REPORT=""
 
 for arg in "$@"; do
   case "$arg" in
@@ -15,6 +18,9 @@ for arg in "$@"; do
       ;;
     --help|-h)
       echo "Usage: ./scripts/run_launcher_guardrails.sh [--with-integration]"
+      echo ""
+      echo "Runs launcher doctor, launcher unit tests, and launcher Flutter tests."
+      echo "--with-integration also runs the root integration tests for suite-visible launcher changes."
       exit 0
       ;;
     *)
@@ -26,6 +32,49 @@ done
 
 print_header() {
   printf '\n== %s ==\n' "$1"
+}
+
+capture_stage() {
+  local stage="$1"
+  shift
+  local tmp rc
+  tmp=$(mktemp)
+  "$@" 2>&1 | tee "$tmp"
+  rc=${PIPESTATUS[0]}
+  if [ "$rc" -ne 0 ]; then
+    FAIL_NAMES+=("$stage")
+    FAIL_OUTPUTS+=("$(cat "$tmp")")
+  fi
+  rm -f "$tmp"
+  return "$rc"
+}
+
+write_failure_report() {
+  [ "${#FAIL_NAMES[@]}" -eq 0 ] && return 0
+
+  local ci_dir timestamp report
+  ci_dir="$ROOT_DIR/scripts/ci"
+  timestamp=$(date +%Y%m%d_%H%M%S)
+  report="${ci_dir}/failure_launcher_guardrails_${timestamp}.md"
+
+  {
+    echo "# CI Failure Report: launcher_guardrails"
+    echo ""
+    echo "**Date:** $(date '+%Y-%m-%d %H:%M:%S')"
+    echo ""
+    echo "## Failed Stages"
+    echo ""
+    for i in "${!FAIL_NAMES[@]}"; do
+      echo "### ${FAIL_NAMES[$i]}"
+      echo ""
+      echo '```'
+      echo "${FAIL_OUTPUTS[$i]}"
+      echo '```'
+      echo ""
+    done
+  } > "$report"
+
+  FAILURE_REPORT="$report"
 }
 
 require_cmd() {
@@ -44,29 +93,47 @@ echo "Root: $ROOT_DIR"
 STATUS=0
 
 print_header "Environment Readiness"
-require_cmd python3 "Install or expose python3 on PATH before running launcher guardrails." || STATUS=1
-require_cmd flutter "Install Flutter or add it to PATH before running launcher guardrails." || STATUS=1
+if ! require_cmd python3 "Install or expose python3 on PATH before running launcher guardrails."; then
+  FAIL_NAMES+=("environment_readiness")
+  FAIL_OUTPUTS+=("Missing required tool: python3"$'\n'"Install or expose python3 on PATH before running launcher guardrails.")
+  STATUS=1
+fi
+if ! require_cmd flutter "Install Flutter or add it to PATH before running launcher guardrails."; then
+  FAIL_NAMES+=("environment_readiness")
+  FAIL_OUTPUTS+=("Missing required tool: flutter"$'\n'"Install Flutter or add it to PATH before running launcher guardrails.")
+  STATUS=1
+fi
 
 if [[ "$STATUS" -ne 0 ]]; then
   echo "Launcher guardrails failed before verification because required tools are missing." >&2
+  write_failure_report
+  if [[ -n "$FAILURE_REPORT" ]]; then
+    echo "Failure report saved: $FAILURE_REPORT" >&2
+  fi
   exit "$STATUS"
 fi
 
 print_header "Launcher Doctor"
-python3 scripts/launcher_control_service.py --doctor --json || STATUS=1
+capture_stage "launcher_doctor" python3 scripts/launcher_control_service.py --doctor --json || STATUS=1
 
 print_header "Launcher Unit Tests"
-python3 -m unittest tests.test_launcher_control_service || STATUS=1
+capture_stage "launcher_unit_tests" python3 -m unittest tests.test_launcher_control_service || STATUS=1
 
 print_header "Launcher Flutter Tests"
-(
-  cd nmtk/neuro_toolkit
-  flutter test
-) || STATUS=1
+capture_stage "launcher_flutter_tests" bash -lc "
+cd '$ROOT_DIR/nmtk/neuro_toolkit'
+flutter test
+" || STATUS=1
 
 if [[ "$RUN_INTEGRATION" == true ]]; then
   print_header "Root Integration Tests"
-  python3 -m pytest tests/integration/test_cross_module.py tests/integration/test_teensy_e2e.py || STATUS=1
+  capture_stage "root_integration_tests" python3 -m pytest tests/integration/test_cross_module.py tests/integration/test_teensy_e2e.py || STATUS=1
+fi
+
+write_failure_report
+if [[ "$STATUS" -ne 0 && -n "$FAILURE_REPORT" ]]; then
+  echo
+  echo "Failure report saved: $FAILURE_REPORT"
 fi
 
 exit "$STATUS"
