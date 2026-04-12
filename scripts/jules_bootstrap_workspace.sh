@@ -126,7 +126,11 @@ Cross-repo contract work:
   python3 -m pytest tests/integration/test_teensy_e2e.py
 
 Launcher or control-plane work:
+  python3 scripts/launcher_control_service.py --doctor --json
+  python3 -m unittest tests.test_launcher_control_service
   cd nmtk/neuro_toolkit && flutter test
+
+If launcher doctor reports fatal preflight failures, stop and either fix them or explicitly scope the task as diagnosis.
 EOF
 }
 
@@ -177,6 +181,12 @@ run_integration_checks() {
   python3 -m pytest tests/integration/test_cross_module.py tests/integration/test_teensy_e2e.py
 }
 
+run_launcher_guardrails() {
+  print_header "Launcher Guardrails"
+  python3 scripts/launcher_control_service.py --doctor --json
+  python3 -m unittest tests.test_launcher_control_service
+}
+
 print_header "Jules Workspace Bootstrap"
 echo "Mode: ${MODE}"
 echo "Root: ${ROOT_DIR}"
@@ -194,6 +204,7 @@ case "${MODE}" in
     ;;
   integration)
     run_smoke_checks
+    run_launcher_guardrails
     run_integration_checks
     ;;
 esac

@@ -18,9 +18,13 @@ Constraints:
 - The launcher uses Provider, GoRouter shell routes, and separate deployment providers by ADR. Do not introduce a second state-management stack or ad-hoc routing system inside the launcher without updating the ADR trail.
 - Module UIs are embedded web frontends. Keep module-specific product UI in the owning module or in `nmtk_ui_core`, not in bespoke launcher-only copies.
 - Any change to install paths, start strategies, ports, health checks, or tool routing requires updating launcher tests in the same change.
+- For launcher and module-lifecycle changes, run `python3 ../scripts/launcher_control_service.py --doctor --json` and treat `fatalCount > 0` as a blocker unless the task is to diagnose or fix that failure.
 - Verify touched surfaces with `cd neuro_toolkit && flutter test`.
 
 Do NOT:
 - Add manifest fields in Dart without adding them to `assets/modules.json`.
+- Change `modules.json` without updating launcher Dart models, launcher tests, and any consuming helper scripts in the same change.
+- Introduce a new install or startup strategy without adding doctor or preflight coverage.
+- Treat optional hardware or framework dependencies as fatal unless the manifest explicitly declares them required.
 - Duplicate `nmtk_ui_core` widgets inside the launcher.
 - Point launcher code at machine-local absolute paths or one-off developer ports.

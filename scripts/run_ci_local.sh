@@ -26,6 +26,8 @@ FL_NAMES=(nmtk_ui_core neuro_toolkit neurocnl_frontend Neurochip_frontend Neuroh
 FL_DIRS=(nmtk_ui_core nmtk/neuro_toolkit neurocnl/frontend Neurochip/frontend Neurohub/frontend Neurosense/frontend Neurobench/frontend)
 
 ALL_MODULES=("${PY_NAMES[@]}" "${FL_NAMES[@]}")
+RUN_LAUNCHER_GUARDRAILS=false
+RUN_LAUNCHER_INTEGRATION=false
 
 # ── Parse arguments ───────────────────────────────────────────────────
 MODE="changed"
@@ -118,6 +120,14 @@ detect_changed_modules() {
 
   echo "$changed_files" | grep -q "^nmtk/neuro_toolkit/" && add_unique "neuro_toolkit"
 
+  if echo "$changed_files" | grep -Eq '^(nmtk/neuro_toolkit/|nmtk/launcher_control/|scripts/launcher_control_service.py|scripts/run_launcher_guardrails.sh|tests/test_launcher_control_service.py|AGENTS.md|CODING_STYLE_GUIDE.md|docs/jules/JULES_WORKSPACE_GUIDE.md|CONTRIBUTING.md)'; then
+    RUN_LAUNCHER_GUARDRAILS=true
+  fi
+
+  if echo "$changed_files" | grep -Eq '^(nmtk/neuro_toolkit/assets/modules.json|tests/integration/test_cross_module.py|tests/integration/test_teensy_e2e.py)'; then
+    RUN_LAUNCHER_INTEGRATION=true
+  fi
+
   for i in "${!FL_NAMES[@]}"; do
     local fl="${FL_NAMES[$i]}" fl_dir="${FL_DIRS[$i]}"
     echo "$changed_files" | grep -q "^${fl_dir}/" && add_unique "$fl"
@@ -143,6 +153,9 @@ echo -e "${BOLD}======================================================"
 echo "  Local CI — NeuroMorphicToolKit"
 echo "======================================================${RESET}"
 echo -e "  Modules: ${CYAN}${SELECTED_MODULES[*]}${RESET}"
+if [ "$RUN_LAUNCHER_GUARDRAILS" = true ]; then
+  echo -e "  Launcher guardrails: ${CYAN}enabled${RESET}"
+fi
 echo ""
 
 # ── Pre-commit (global) ───────────────────────────────────────────────
@@ -170,6 +183,18 @@ MOD_NAMES=()
 MOD_RESULTS=()
 TOTAL_MODULE_FAIL=0
 
+run_launcher_guardrails_stage() {
+  local args=()
+  [ "$RUN_LAUNCHER_INTEGRATION" = true ] && args+=("--with-integration")
+
+  if bash "$ROOT_DIR/scripts/run_launcher_guardrails.sh" "${args[@]+"${args[@]}"}"; then
+    MOD_NAMES+=("launcher_guardrails"); MOD_RESULTS+=("pass")
+  else
+    MOD_NAMES+=("launcher_guardrails"); MOD_RESULTS+=("FAIL")
+    TOTAL_MODULE_FAIL=$((TOTAL_MODULE_FAIL + 1))
+  fi
+}
+
 run_module() {
   local mod="$1"
   local script_name
@@ -196,6 +221,10 @@ run_module() {
 for mod in "${SELECTED_MODULES[@]}"; do
   run_module "$mod"
 done
+
+if [ "$RUN_LAUNCHER_GUARDRAILS" = true ]; then
+  run_launcher_guardrails_stage
+fi
 
 # ── Consolidated summary ──────────────────────────────────────────────
 echo ""

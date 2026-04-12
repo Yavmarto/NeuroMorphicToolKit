@@ -16,3 +16,9 @@ Read before edit:
 - If editing `neurocli/**`, read `neurocli/AGENTS.md`.
 - If editing root-owned `docs/**`, `scripts/**`, `tests/**`, `monitoring/**`, or root config files, stay in the root repo and read the owning module `AGENTS.md` for every contract you touch.
 - If editing more than one top-level module, name the write set explicitly and run the owning checks plus `python3 -m pytest tests/integration/test_cross_module.py` and `python3 -m pytest tests/integration/test_teensy_e2e.py`.
+
+Launcher and control-plane guardrails:
+- For changes under `nmtk/**`, root launcher manifests, `scripts/**`, or root `tests/**` that affect launcher or module lifecycle behavior, run `python3 scripts/launcher_control_service.py --doctor --json`.
+- Treat launcher doctor `fatalCount > 0` as a blocker unless the task is explicitly to diagnose or fix that failure.
+- Report launcher doctor outcomes explicitly as either `preflight failed` or `degraded optional capability`; do not collapse both into a generic startup error.
+- Keep launcher UI state changes, module manifest changes, and launcher verification updates in the same change when they describe the same behavior.

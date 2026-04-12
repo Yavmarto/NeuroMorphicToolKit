@@ -65,6 +65,7 @@ All code must adhere to the [CODING_STYLE_GUIDE.md](./CODING_STYLE_GUIDE.md).
 2.  **Small Files**: Keep files under 500 lines to fit agent context windows.
 3.  **Self-Documenting**: Use Google-style docstrings for Python and Dartdoc for Flutter.
 4.  **Predictable Architecture**: Separate UI, business logic, and data layers.
+5.  **Launch Readiness**: Launcher and control-plane changes must pass launcher doctor and launcher tests before they are considered done.
 
 ---
 
@@ -86,6 +87,15 @@ pytest
 flutter test
 flutter analyze
 ```
+
+For root launcher and control-plane work, also run:
+
+```bash
+python3 scripts/launcher_control_service.py --doctor --json
+python3 -m unittest tests.test_launcher_control_service
+```
+
+If launcher doctor reports fatal preflight failures, treat that as a blocker unless the task is explicitly to diagnose or fix that failure. Report degraded optional capabilities separately from fatal startup failures.
 
 For more details on the unified pipeline scripts, see [docs/unified-dev-pipeline/](./docs/unified-dev-pipeline/README.md).
 
