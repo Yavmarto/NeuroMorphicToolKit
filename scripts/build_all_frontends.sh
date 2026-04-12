@@ -14,6 +14,7 @@ fi
 
 # Define modules and their default ports
 MODULE_LIST="neurocnl:8000 Neurosim:8001 Neurochip:8002 Neurobench:8003 Neurosense:8004 Neurohub:8005"
+API_HOST="${NMTK_API_HOST:-localhost}"
 
 echo "==> Building nmtk_ui_core shared package..."
 cd nmtk_ui_core && flutter pub get && cd ..
@@ -32,16 +33,26 @@ for entry in $MODULE_LIST; do
 
   if [ -d "$frontend_dir" ]; then
     echo "------------------------------------------------------------"
-    echo "==> Building $mod frontend (Port: $port)"
+    echo "==> Building $mod frontend (Port: $port, API host: $API_HOST)"
     echo "------------------------------------------------------------"
 
     cd "$frontend_dir"
     flutter pub get
 
+    build_args=(
+      --release
+      --no-wasm-dry-run
+      --dart-define=API_BASE_URL="http://$API_HOST:$port"
+    )
+
+    if [ "$mod" = "neurocnl" ]; then
+      build_args+=(
+        --dart-define=NEUROCHIP_BASE_URL="http://$API_HOST:8002"
+      )
+    fi
+
     # We use dart-define to inject the backend URL into the web app
-    flutter build web \
-      --release \
-      --dart-define=API_BASE_URL="http://localhost:$port"
+    flutter build web "${build_args[@]}"
 
     echo "==> $mod build complete."
     cd "$REPO_ROOT"

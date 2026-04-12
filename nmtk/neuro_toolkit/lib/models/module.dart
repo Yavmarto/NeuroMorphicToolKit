@@ -30,6 +30,14 @@ class Module {
   final String? remoteUrl;
   final bool isEnabled;
   final int? customPort;
+  final List<String> requiredImports;
+  final List<String> optionalImports;
+  final String installStrategy;
+  final String startStrategy;
+  String preflightStatus;
+  String? preflightMessage;
+  List<String> capabilityWarnings;
+  String? environmentFingerprint;
   ModuleStatus status;
   double installProgress;
   String? healthStatus;
@@ -54,6 +62,14 @@ class Module {
     this.remoteUrl,
     this.isEnabled = true,
     this.customPort,
+    this.requiredImports = const [],
+    this.optionalImports = const [],
+    this.installStrategy = 'pip',
+    this.startStrategy = 'uvicorn',
+    this.preflightStatus = 'ok',
+    this.preflightMessage,
+    this.capabilityWarnings = const [],
+    this.environmentFingerprint,
     this.status = ModuleStatus.notInstalled,
     this.installProgress = 0.0,
     this.healthStatus,
@@ -83,6 +99,20 @@ class Module {
       remoteUrl: json['remoteUrl'] as String?,
       isEnabled: json['isEnabled'] as bool? ?? true,
       customPort: json['customPort'] as int?,
+      requiredImports:
+          (json['requiredImports'] as List<dynamic>?)?.cast<String>() ??
+              const [],
+      optionalImports:
+          (json['optionalImports'] as List<dynamic>?)?.cast<String>() ??
+              const [],
+      installStrategy: json['installStrategy'] as String? ?? 'pip',
+      startStrategy: json['startStrategy'] as String? ?? 'uvicorn',
+      preflightStatus: json['preflightStatus'] as String? ?? 'ok',
+      preflightMessage: json['preflightMessage'] as String?,
+      capabilityWarnings:
+          (json['capabilityWarnings'] as List<dynamic>?)?.cast<String>() ??
+              const [],
+      environmentFingerprint: json['environmentFingerprint'] as String?,
       status: json['status'] != null
           ? ModuleStatus.values[json['status'] as int]
           : ModuleStatus.notInstalled,
@@ -111,6 +141,14 @@ class Module {
     Object? remoteUrl = const Object(),
     bool? isEnabled,
     Object? customPort = const Object(),
+    List<String>? requiredImports,
+    List<String>? optionalImports,
+    String? installStrategy,
+    String? startStrategy,
+    String? preflightStatus,
+    Object? preflightMessage = const Object(),
+    List<String>? capabilityWarnings,
+    Object? environmentFingerprint = const Object(),
     ModuleStatus? status,
     double? installProgress,
     Object? healthStatus = const Object(),
@@ -135,10 +173,38 @@ class Module {
       remoteUrl: remoteUrl is String? ? remoteUrl : this.remoteUrl,
       isEnabled: isEnabled ?? this.isEnabled,
       customPort: customPort is int? ? customPort : this.customPort,
+      requiredImports: requiredImports ?? this.requiredImports,
+      optionalImports: optionalImports ?? this.optionalImports,
+      installStrategy: installStrategy ?? this.installStrategy,
+      startStrategy: startStrategy ?? this.startStrategy,
+      preflightStatus: preflightStatus ?? this.preflightStatus,
+      preflightMessage: preflightMessage is String?
+          ? preflightMessage
+          : this.preflightMessage,
+      capabilityWarnings: capabilityWarnings ?? this.capabilityWarnings,
+      environmentFingerprint: environmentFingerprint is String?
+          ? environmentFingerprint
+          : this.environmentFingerprint,
       status: status ?? this.status,
       installProgress: installProgress ?? this.installProgress,
       healthStatus: healthStatus is String? ? healthStatus : this.healthStatus,
     );
+  }
+
+  int? get effectivePort => customPort ?? port;
+
+  bool get isPreflightFailed => preflightStatus == 'failed';
+
+  bool get isPreflightDegraded => preflightStatus == 'degraded';
+
+  String? get statusMessage {
+    if (preflightMessage != null && preflightMessage!.isNotEmpty) {
+      return preflightMessage;
+    }
+    if (capabilityWarnings.isNotEmpty) {
+      return capabilityWarnings.join(' | ');
+    }
+    return healthStatus;
   }
 
   Map<String, dynamic> toJson() => {
@@ -160,6 +226,14 @@ class Module {
         'remoteUrl': remoteUrl,
         'isEnabled': isEnabled,
         'customPort': customPort,
+        'requiredImports': requiredImports,
+        'optionalImports': optionalImports,
+        'installStrategy': installStrategy,
+        'startStrategy': startStrategy,
+        'preflightStatus': preflightStatus,
+        'preflightMessage': preflightMessage,
+        'capabilityWarnings': capabilityWarnings,
+        'environmentFingerprint': environmentFingerprint,
         'status': status.index,
         'installProgress': installProgress,
         'healthStatus': healthStatus,

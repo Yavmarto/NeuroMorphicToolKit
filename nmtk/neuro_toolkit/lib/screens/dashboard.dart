@@ -117,9 +117,9 @@ class DashboardScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(module.description),
-                                  if (module.healthStatus != null)
+                                  if (module.statusMessage != null)
                                     Text(
-                                      'Health: ${module.healthStatus}',
+                                      'Status: ${module.statusMessage}',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color:

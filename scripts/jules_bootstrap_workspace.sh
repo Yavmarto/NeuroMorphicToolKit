@@ -117,6 +117,7 @@ print_recommended_checks() {
   print_header "Recommended Checks"
   cat <<'EOF'
 Single-repo work:
+  Read CODING_STYLE_GUIDE.md first.
   Read the target repo's AGENTS.md and ADR/spec files first.
   Run the target repo's local tests before opening a PR.
 
@@ -139,12 +140,15 @@ run_smoke_checks() {
     "neurocnl/AGENTS.md"
     "neurocnl/docs/support_matrix.md"
     "neurocnl/docs/PRE_BETA_READINESS_REVIEW.md"
-    "Neurosim/neurosim/AGENTS.md"
-    "Neurochip/neurochip/AGENTS.md"
-    "Neurobench/neurobench/AGENTS.md"
+    "Neurosim/AGENTS.md"
+    "Neurochip/AGENTS.md"
+    "Neurobench/AGENTS.md"
     "Neuro-Dream-Hand/AGENTS.md"
-    "Neurosense/neurosense/AGENTS.md"
-    "Neurohub/neurohub/AGENTS.md"
+    "Neurosense/AGENTS.md"
+    "Neurohub/AGENTS.md"
+    "nmtk/AGENTS.md"
+    "nmtk_ui_core/AGENTS.md"
+    "neurocli/AGENTS.md"
   )
 
   local missing_any=0

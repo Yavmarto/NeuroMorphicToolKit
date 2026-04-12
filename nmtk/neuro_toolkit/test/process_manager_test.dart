@@ -145,6 +145,9 @@ void main() {
           MockClient((request) async => http.Response('{"status":"ok"}', 200)),
     );
     processManager.resetForTesting();
+    processManager.startupHealthGracePeriod = Duration.zero;
+    processManager.startupHealthProbeInterval =
+        const Duration(milliseconds: 10);
   });
 
   test('ProcessManager provides status updates', () {
@@ -395,6 +398,50 @@ void main() {
     final updatedModule = processManager.moduleStateForTesting(module.id)!;
     expect(updatedModule.status, ModuleStatus.running);
     expect(processManager.consecutiveHealthFailuresFor(module.id), 0);
+    expect(processManager.hasScheduledRetryFor(module.id), isFalse);
+
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test('startup grace allows a slow backend to become healthy', () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('nmtk_test_health_grace');
+    final runDir = tempDir.path;
+    final venvPath = p.join(runDir, 'venv');
+    Directory(venvPath).createSync(recursive: true);
+    final pythonExe = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'python.exe')
+        : p.join(venvPath, 'bin', 'python');
+    File(pythonExe).createSync(recursive: true);
+
+    final module = Module(
+      id: 'health_grace',
+      name: 'Health Grace',
+      description: 'Desc',
+      directory: runDir,
+      port: 8009,
+      status: ModuleStatus.installed,
+    );
+
+    await processManager.init([module]);
+    processManager.startupHealthGracePeriod = const Duration(seconds: 1);
+    processManager.startupHealthProbeInterval =
+        const Duration(milliseconds: 10);
+
+    var requestCount = 0;
+    processManager.httpClient = MockClient((request) async {
+      requestCount++;
+      if (requestCount < 3) {
+        throw http.ClientException('Connection refused', request.url);
+      }
+      return http.Response('{"status":"ok"}', 200);
+    });
+    mockRunner.mockProcesses[pythonExe] = MockProcess();
+
+    await processManager.startModule(module);
+
+    final updatedModule = processManager.moduleStateForTesting(module.id)!;
+    expect(updatedModule.status, ModuleStatus.running);
     expect(processManager.hasScheduledRetryFor(module.id), isFalse);
 
     tempDir.deleteSync(recursive: true);

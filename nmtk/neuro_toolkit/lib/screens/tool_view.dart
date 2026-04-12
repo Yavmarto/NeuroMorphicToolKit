@@ -26,6 +26,31 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   final Map<String, Timer> _pollTimers = {};
   late String _activeModuleId;
 
+  String _serviceHost() {
+    if (!kIsWeb) return 'localhost';
+    final host = Uri.base.host.trim();
+    if (host.isEmpty || host == '0.0.0.0') {
+      return 'localhost';
+    }
+    return host;
+  }
+
+  String _serviceScheme() {
+    if (!kIsWeb) return 'http';
+    final scheme = Uri.base.scheme.trim();
+    return scheme.isEmpty ? 'http' : scheme;
+  }
+
+  Uri _moduleUri(Module module, {bool healthCheck = false}) {
+    final path = healthCheck ? '/health' : (module.hasFrontend ? '' : '/docs');
+    return Uri(
+      scheme: _serviceScheme(),
+      host: _serviceHost(),
+      port: module.effectivePort,
+      path: path,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +80,11 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   void _startPollingForActiveModules() {
     final provider = context.read<ModuleProvider>();
     for (final module in provider.activeModules) {
+      if (module.isPreflightFailed || module.status == ModuleStatus.error) {
+        _pollTimers[module.id]?.cancel();
+        _pollTimers.remove(module.id);
+        continue;
+      }
       if (!(_readyStatus[module.id] ?? false) &&
           !_pollTimers.containsKey(module.id)) {
         _pollModuleHealth(module);
@@ -66,10 +96,16 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
     _pollTimers[module.id] =
         Timer.periodic(const Duration(seconds: 2), (timer) async {
       try {
-        if (module.port == null) return;
-        final response = await http
-            .get(Uri.parse('http://localhost:${module.port}/health'))
-            .timeout(const Duration(seconds: 1));
+        if (module.effectivePort == null ||
+            module.isPreflightFailed ||
+            module.status == ModuleStatus.error) {
+          timer.cancel();
+          _pollTimers.remove(module.id);
+          return;
+        }
+        final healthUri = _moduleUri(module, healthCheck: true);
+        final response =
+            await http.get(healthUri).timeout(const Duration(seconds: 1));
         if (response.statusCode == 200) {
           if (mounted) {
             setState(() {
@@ -80,7 +116,9 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
           _pollTimers.remove(module.id);
         }
       } catch (e) {
-        debugPrint('Polling health for ${module.name} failed: $e');
+        if (module.status != ModuleStatus.error && !module.isPreflightFailed) {
+          debugPrint('Polling health for ${module.name} failed: $e');
+        }
       }
     });
   }
@@ -90,9 +128,7 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
       return _controllers[module.id]!;
     }
 
-    final url = module.hasFrontend
-        ? 'http://localhost:${module.port}'
-        : 'http://localhost:${module.port}/docs';
+    final url = _moduleUri(module).toString();
 
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -112,10 +148,8 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   }
 
   Future<void> _launchInBrowser(Module module) async {
-    final url = module.hasFrontend
-        ? 'http://localhost:${module.port}'
-        : 'http://localhost:${module.port}/docs';
-    final uri = Uri.parse(url);
+    final uri = _moduleUri(module);
+    final url = uri.toString();
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -126,7 +160,7 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   }
 
   bool _isWebViewSupported() {
-    if (kIsWeb) return true;
+    if (kIsWeb) return false;
     return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
   }
 
@@ -226,10 +260,48 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
             children: activeModules.map((module) {
               final isReady = _readyStatus[module.id] ?? false;
               final supported = _isWebViewSupported();
+              final launchBlocked =
+                  module.isPreflightFailed || module.status == ModuleStatus.error;
 
               return Container(
                 key: ValueKey(module.id),
-                child: !isReady
+                child: launchBlocked
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 52,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                module.statusMessage ??
+                                    'This module could not be started.',
+                                textAlign: TextAlign.center,
+                              ),
+                              if (module.capabilityWarnings.isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  module.capabilityWarnings.join('\n'),
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () => provider.launchModule(module.id),
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry Start'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : !isReady
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -237,9 +309,16 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
                             const CircularProgressIndicator(),
                             const SizedBox(height: 16),
                             Text('Waiting for ${module.name} to start...'),
+                            if (module.statusMessage != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                module.statusMessage!,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             Text(
-                              'Checking http://localhost:${module.port}/health',
+                              'Checking ${_moduleUri(module, healthCheck: true)}',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                             const SizedBox(height: 16),

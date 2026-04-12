@@ -1,4 +1,4 @@
-.PHONY: release help dev build-submodules build-interactive clean-all build-all bump-version ci
+.PHONY: release help dev dev-web build-submodules rebuild-submodules build-interactive clean-all build-all bump-version ci
 
 MODULES = neurocnl Neurosim Neurochip Neurobench Neurosense Neurohub
 PORT_neurocnl = 8000
@@ -26,7 +26,10 @@ help:
 	@echo ""
 	@echo "Usage:"
 	@echo "  make dev                      - Build all submodules and run the launcher"
+	@echo "  make dev -w                  - Also build/serve the launcher web app on your LAN"
+	@echo "  make dev-web                 - Same as 'make dev -w'"
 	@echo "  make build-submodules         - Build all submodule web frontends (only if changed)"
+	@echo "  make rebuild-submodules       - Force rebuild all submodule web frontends"
 	@echo "  make build-interactive        - Interactively select modules to build"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
@@ -36,12 +39,37 @@ help:
 # Legacy target for backward compatibility, now only builds what's changed
 build-submodules: $(addprefix build-,$(MODULES))
 
+rebuild-submodules:
+	@chmod +x scripts/build_module.sh
+	@for mod in $(MODULES); do \
+		case "$$mod" in \
+			neurocnl) port="$(PORT_neurocnl)" ;; \
+			Neurosim) port="$(PORT_Neurosim)" ;; \
+			Neurochip) port="$(PORT_Neurochip)" ;; \
+			Neurobench) port="$(PORT_Neurobench)" ;; \
+			Neurosense) port="$(PORT_Neurosense)" ;; \
+			Neurohub) port="$(PORT_Neurohub)" ;; \
+			*) echo "Unknown module $$mod"; exit 1 ;; \
+		esac; \
+		./scripts/build_module.sh "$$mod" "$$port"; \
+	done
+
 build-interactive:
 	@chmod +x scripts/select_modules.sh
 	@./scripts/select_modules.sh
 
-dev: build-submodules
-	@cd nmtk/neuro_toolkit && flutter run -d $(FLUTTER_DEVICE)
+dev:
+	@chmod +x scripts/build_module.sh scripts/run_dev.sh
+	@case " $(MAKEFLAGS) " in \
+		*" --print-directory "*|*" w "*) \
+			./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" --with-web ;; \
+		*) \
+			./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" ;; \
+	esac
+
+dev-web:
+	@chmod +x scripts/build_module.sh scripts/run_dev.sh
+	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" --with-web
 
 ci:
 	@chmod +x scripts/run_ci_local.sh

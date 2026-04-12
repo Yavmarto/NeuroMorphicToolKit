@@ -91,6 +91,12 @@ class _HealthProbeResponse {
 
 class ProcessManager {
   static const int _maxConsecutiveHealthFailures = 2;
+  static const Duration _defaultStartupHealthGracePeriod = Duration(
+    seconds: 12,
+  );
+  static const Duration _defaultStartupHealthProbeInterval = Duration(
+    milliseconds: 500,
+  );
 
   static final ProcessManager _instance = ProcessManager._internal();
   factory ProcessManager(
@@ -110,6 +116,14 @@ class ProcessManager {
   @visibleForTesting
   set httpClient(http.Client client) => _httpClient = client;
 
+  @visibleForTesting
+  set startupHealthGracePeriod(Duration duration) =>
+      _startupHealthGracePeriod = duration;
+
+  @visibleForTesting
+  set startupHealthProbeInterval(Duration duration) =>
+      _startupHealthProbeInterval = duration;
+
   ProcessManager._internal();
 
   ProcessRunner _processRunner = DefaultProcessRunner();
@@ -120,12 +134,15 @@ class ProcessManager {
   final Map<String, int> _retryCounts = {};
   final Map<String, int> _consecutiveHealthFailures = {};
   final Map<String, DateTime> _nextRetryTimes = {};
+  final Map<String, DateTime> _startupGraceDeadlines = {};
   final Set<String> _intentionallyStopping = {};
   final Set<String> _failureStopping = {};
   Timer? _healthTimer;
   bool _initialized = false;
   List<Module> _modules = [];
   LogLevel _currentLogLevel = LogLevel.info;
+  Duration _startupHealthGracePeriod = _defaultStartupHealthGracePeriod;
+  Duration _startupHealthProbeInterval = _defaultStartupHealthProbeInterval;
 
   // Stream for status updates
   final _statusController = StreamController<Module>.broadcast();
@@ -149,6 +166,11 @@ class ProcessManager {
 
   void _resetHealthFailureCount(String moduleId) {
     _consecutiveHealthFailures.remove(moduleId);
+  }
+
+  bool _isInStartupGracePeriod(String moduleId) {
+    final deadline = _startupGraceDeadlines[moduleId];
+    return deadline != null && DateTime.now().isBefore(deadline);
   }
 
   bool _isRetryableProbeError(Object error) {
@@ -190,6 +212,19 @@ class ProcessManager {
 
   Future<void> _recordHealthFailure(Module module, String error) async {
     final currentModule = _currentModuleState(module.id, module);
+    if (currentModule.status == ModuleStatus.starting &&
+        _isInStartupGracePeriod(module.id)) {
+      final startupDeadline = _startupGraceDeadlines[module.id]!;
+      final updatedModule = currentModule.copyWith(
+        status: ModuleStatus.starting,
+        healthStatus:
+            'Waiting for startup until ${startupDeadline.toIso8601String()}: '
+            '$error',
+      );
+      _updateModuleStatus(updatedModule);
+      return;
+    }
+
     final failureCount = (_consecutiveHealthFailures[module.id] ?? 0) + 1;
     _consecutiveHealthFailures[module.id] = failureCount;
 
@@ -261,6 +296,7 @@ class ProcessManager {
     }
 
     _resetHealthFailureCount(module.id);
+    _startupGraceDeadlines.remove(module.id);
     debugPrint('[${module.id}] Handling failure: $error');
 
     final updatedModule = module.copyWith(
@@ -313,6 +349,7 @@ class ProcessManager {
     _runningProcesses.clear();
     _consecutiveHealthFailures.clear();
     _failureStopping.clear();
+    _startupGraceDeadlines.clear();
   }
 
   /// The directory containing pyproject.toml (for pip install).
@@ -555,6 +592,10 @@ class ProcessManager {
     final installDir = _installDir(module);
     final runDir = _runDir(module);
     final venvPath = p.join(installDir, 'venv');
+    final uvicornHost =
+        Platform.environment['NMTK_UVICORN_HOST']?.trim().isNotEmpty == true
+            ? Platform.environment['NMTK_UVICORN_HOST']!.trim()
+            : '127.0.0.1';
     final pythonPath = Platform.isWindows
         ? p.join(venvPath, 'Scripts', 'python.exe')
         : p.join(venvPath, 'bin', 'python');
@@ -563,7 +604,7 @@ class ProcessManager {
       '[${module.id}] startModule: installDir=$installDir runDir=$runDir',
     );
     debugPrint(
-      '[${module.id}] startModule: pythonPath=$pythonPath target=${module.uvicornTarget} port=$effectivePort',
+      '[${module.id}] startModule: pythonPath=$pythonPath target=${module.uvicornTarget} host=$uvicornHost port=$effectivePort',
     );
 
     // Guard: if venv doesn't exist, the module needs to be (re-)installed first
@@ -586,12 +627,15 @@ class ProcessManager {
     final updatedModuleStarting =
         module.copyWith(status: ModuleStatus.starting);
     _updateModuleStatus(updatedModuleStarting);
+    _startupGraceDeadlines[module.id] = DateTime.now().add(
+      _startupHealthGracePeriod,
+    );
 
     final startTime = DateTime.now();
 
     try {
       debugPrint(
-        '[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --port $effectivePort --log-level ${_currentLogLevel.name}',
+        '[${module.id}] Starting: $pythonPath -m uvicorn ${module.uvicornTarget} --host $uvicornHost --port $effectivePort --log-level ${_currentLogLevel.name}',
       );
       debugPrint('[${module.id}] Working directory: $runDir');
 
@@ -601,6 +645,8 @@ class ProcessManager {
           '-m',
           'uvicorn',
           module.uvicornTarget,
+          '--host',
+          uvicornHost,
           '--port',
           effectivePort.toString(),
           '--log-level',
@@ -637,6 +683,7 @@ class ProcessManager {
           final wasIntentionalStop = _intentionallyStopping.remove(module.id);
           final wasFailureStop = _failureStopping.remove(module.id);
           final currentModule = _currentModuleState(module.id, module);
+          _startupGraceDeadlines.remove(module.id);
 
           if (wasIntentionalStop) {
             final updatedModuleStopped = currentModule.copyWith(
@@ -664,9 +711,7 @@ class ProcessManager {
         }),
       );
 
-      // Give it some time to start up
-      await Future<void>.delayed(const Duration(seconds: 2));
-      final success = await _checkHealth(module);
+      final success = await _waitForHealthyStartup(module);
 
       final duration = DateTime.now().difference(startTime).inMilliseconds;
       unawaited(
@@ -685,6 +730,31 @@ class ProcessManager {
     }
   }
 
+  Future<bool> _waitForHealthyStartup(Module module) async {
+    final deadline = _startupGraceDeadlines[module.id] ??
+        DateTime.now().add(_startupHealthGracePeriod);
+
+    while (true) {
+      final success = await _checkHealth(module);
+      if (success) {
+        _startupGraceDeadlines.remove(module.id);
+        return true;
+      }
+
+      final currentModule = _currentModuleState(module.id, module);
+      if (currentModule.status == ModuleStatus.error ||
+          !_runningProcesses.containsKey(module.id)) {
+        return false;
+      }
+
+      if (DateTime.now().isAfter(deadline)) {
+        return false;
+      }
+
+      await Future<void>.delayed(_startupHealthProbeInterval);
+    }
+  }
+
   Future<void> stopModule(String moduleId, {bool isFailure = false}) async {
     if (!isFailure) {
       _intentionallyStopping.add(moduleId);
@@ -692,6 +762,7 @@ class ProcessManager {
       _nextRetryTimes.remove(moduleId);
       _consecutiveHealthFailures.remove(moduleId);
     }
+    _startupGraceDeadlines.remove(moduleId);
 
     final process = _runningProcesses[moduleId];
     if (process == null) {
