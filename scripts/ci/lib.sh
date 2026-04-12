@@ -121,11 +121,16 @@ _install_python_deps() {
   esac
 }
 
-# run_python_module MOD DIR METHOD [--skip-install]
+# run_python_module MOD DIR METHOD [TYPECHECK_TARGET] [--skip-install]
 run_python_module() {
   local mod="$1" dir="$2" method="$3"
+  local typecheck_target="."
   local skip_install=false
   shift 3
+  if [ "$#" -gt 0 ] && [[ "$1" != --* ]]; then
+    typecheck_target="$1"
+    shift
+  fi
   for arg in "$@"; do [ "$arg" = "--skip-install" ] && skip_install=true; done
 
   if [ ! -d "$dir" ] || [ ! -f "$dir/pyproject.toml" ]; then
@@ -151,7 +156,7 @@ run_python_module() {
   _stage "ruff-format" "cd '$dir' && $run_cmd ruff format --check ."
 
   echo -e "  ${CYAN}mypy${RESET}"
-  _stage "mypy" "cd '$dir' && $run_cmd mypy ."
+  _stage "mypy" "cd '$dir' && $run_cmd mypy '$typecheck_target'"
 
   echo -e "  ${CYAN}pytest${RESET}"
   if [ "$mod" = "neurocnl" ]; then

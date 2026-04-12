@@ -58,12 +58,14 @@ jobs:
               - 'Neurochip/frontend/**'
               - 'nmtk_ui_core/**'
             neurosense:
-              - 'Neurosense/neurosense/**'
+              - 'Neurosense/**'
+              - '!Neurosense/frontend/**'
             neurosense_frontend:
               - 'Neurosense/frontend/**'
               - 'nmtk_ui_core/**'
             neurohub:
-              - 'Neurohub/neurohub/**'
+              - 'Neurohub/**'
+              - '!Neurohub/frontend/**'
             neurohub_frontend:
               - 'Neurohub/frontend/**'
               - 'nmtk_ui_core/**'
@@ -304,29 +306,29 @@ jobs:
           fi
       - name: Install dependencies
         run: |
-          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
-            python -m pip install -e "./Neurosense/neurosense[dev]"
+          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/pyproject.toml" ]; then
+            python -m pip install -e "./Neurosense[dev]"
             python -m pip install ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
       - name: Lint with ruff
         run: |
-          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
-            cd Neurosense/neurosense
+          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/pyproject.toml" ]; then
+            cd Neurosense
             python -m ruff check .
             python -m ruff format --check .
           fi
       - name: Type check with mypy
         run: |
-          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
-            cd Neurosense/neurosense
+          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/pyproject.toml" ]; then
+            cd Neurosense
             python -m mypy neurosense
           fi
       - name: Run tests
         run: |
-          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
-            cd Neurosense/neurosense
+          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/pyproject.toml" ]; then
+            cd Neurosense
             python -m pytest --tb=short --hypothesis-show-statistics
           fi
 
@@ -378,29 +380,29 @@ jobs:
           fi
       - name: Install dependencies
         run: |
-          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
-            python -m pip install -e ./Neurohub/neurohub
+          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/pyproject.toml" ]; then
+            python -m pip install -e ./Neurohub
             python -m pip install pytest httpx ruff mypy
           else
             echo "Submodule missing, skipping"
           fi
       - name: Lint with ruff
         run: |
-          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
-            cd Neurohub/neurohub
+          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/pyproject.toml" ]; then
+            cd Neurohub
             python -m ruff check .
             python -m ruff format --check .
           fi
       - name: Type check with mypy
         run: |
-          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
-            cd Neurohub/neurohub
+          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/pyproject.toml" ]; then
+            cd Neurohub
             python -m mypy neurohub
           fi
       - name: Run tests
         run: |
-          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
-            cd Neurohub/neurohub
+          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/pyproject.toml" ]; then
+            cd Neurohub
             python -m pytest --tb=short --hypothesis-show-statistics
           fi
 

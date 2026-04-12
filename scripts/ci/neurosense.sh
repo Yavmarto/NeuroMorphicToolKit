@@ -4,4 +4,4 @@ set -uo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 source "$ROOT_DIR/scripts/ci/lib.sh"
 cd "$ROOT_DIR"
-run_python_module "Neurosense" "Neurosense" "pip_dev" "$@"
+run_python_module "Neurosense" "Neurosense" "pip_dev" "neurosense" "$@"

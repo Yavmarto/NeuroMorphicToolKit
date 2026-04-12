@@ -305,13 +305,16 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
 
     def test_doctor_report_marks_fatal_preflight_as_blocking(self) -> None:
-        with mock.patch.object(
-            self.state,
-            "_preflight_module",
-            return_value=launcher_server.PreflightResult(
-                status=launcher_server.PREFLIGHT_FAILED,
-                message="Missing required dependency: fastapi (needed by app.main)",
-                environment_fingerprint="fingerprint-fatal",
+        with (
+            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(
+                self.state,
+                "_preflight_module",
+                return_value=launcher_server.PreflightResult(
+                    status=launcher_server.PREFLIGHT_FAILED,
+                    message="Missing required dependency: fastapi (needed by app.main)",
+                    environment_fingerprint="fingerprint-fatal",
+                ),
             ),
         ):
             report = self.state.doctor_report()
@@ -324,16 +327,19 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertIn("fastapi", report["modules"][0]["preflightMessage"])
 
     def test_doctor_report_keeps_optional_capability_degradation_nonfatal(self) -> None:
-        with mock.patch.object(
-            self.state,
-            "_preflight_module",
-            return_value=launcher_server.PreflightResult(
-                status=launcher_server.PREFLIGHT_DEGRADED,
-                message="Optional capability unavailable: lava.magma.core.run_conditions",
-                capability_warnings=[
-                    "Optional capability unavailable: lava.magma.core.run_conditions"
-                ],
-                environment_fingerprint="fingerprint-degraded",
+        with (
+            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(
+                self.state,
+                "_preflight_module",
+                return_value=launcher_server.PreflightResult(
+                    status=launcher_server.PREFLIGHT_DEGRADED,
+                    message="Optional capability unavailable: lava.magma.core.run_conditions",
+                    capability_warnings=[
+                        "Optional capability unavailable: lava.magma.core.run_conditions"
+                    ],
+                    environment_fingerprint="fingerprint-degraded",
+                ),
             ),
         ):
             report = self.state.doctor_report()
@@ -356,7 +362,15 @@ class LauncherControlServiceTest(unittest.TestCase):
             "status": "error",
             "fatalCount": 1,
             "degradedCount": 1,
-            "okCount": 0,
+            "okCount": 1,
+            "globalChecks": [
+                {
+                    "id": "flutter-sdk",
+                    "preflightStatus": launcher_server.PREFLIGHT_FAILED,
+                    "preflightMessage": "Flutter SDK cache is not writable: /tmp/flutter/bin/cache",
+                    "capabilityWarnings": [],
+                }
+            ],
             "modules": [
                 {
                     "id": "fatal-module",
@@ -376,8 +390,66 @@ class LauncherControlServiceTest(unittest.TestCase):
         rendered = launcher_server._render_doctor_report(report)
 
         self.assertIn("status=preflight failed", rendered)
+        self.assertIn("preflight failed flutter-sdk", rendered)
         self.assertIn("preflight failed fatal-module", rendered)
         self.assertIn("degraded optional capability degraded-module", rendered)
+
+    def test_doctor_report_includes_global_preflight_failures(self) -> None:
+        with (
+            mock.patch.object(
+                launcher_server,
+                "_global_preflight_checks",
+                return_value=[
+                    {
+                        "id": "flutter-sdk",
+                        "name": "Flutter SDK",
+                        "preflightStatus": launcher_server.PREFLIGHT_FAILED,
+                        "preflightMessage": "Flutter SDK cache is not writable: /tmp/flutter/bin/cache",
+                        "capabilityWarnings": [],
+                    }
+                ],
+            ),
+            mock.patch.object(
+                self.state,
+                "_preflight_module",
+                return_value=launcher_server.PreflightResult(
+                    status=launcher_server.PREFLIGHT_OK,
+                    message=None,
+                ),
+            ),
+        ):
+            report = self.state.doctor_report()
+
+        self.assertEqual(report["status"], "error")
+        self.assertEqual(report["fatalCount"], 1)
+        self.assertEqual(len(report["globalChecks"]), 1)
+        self.assertEqual(report["globalChecks"][0]["id"], "flutter-sdk")
+
+    def test_global_preflight_checks_flag_unwritable_flutter_cache(self) -> None:
+        flutter_bin = self.repo_root / "flutter" / "bin" / "flutter"
+        cache_dir = flutter_bin.parent / "cache"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        flutter_bin.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        engine_stamp = cache_dir / "engine.stamp"
+        engine_stamp.write_text("ready\n", encoding="utf-8")
+        resolved_cache_dir = cache_dir.resolve()
+        resolved_engine_stamp = engine_stamp.resolve()
+
+        def fake_access(path: str | os.PathLike[str], mode: int) -> bool:
+            normalized = Path(path).resolve()
+            if normalized in {resolved_cache_dir, resolved_engine_stamp}:
+                return False
+            return True
+
+        with (
+            mock.patch.object(launcher_server.shutil, "which", return_value=str(flutter_bin)),
+            mock.patch.object(launcher_server.os, "access", side_effect=fake_access),
+        ):
+            checks = launcher_server._global_preflight_checks()
+
+        self.assertEqual(len(checks), 1)
+        self.assertEqual(checks[0]["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
+        self.assertIn("not writable", str(checks[0]["preflightMessage"]))
 
     def test_main_returns_nonzero_for_fatal_doctor_report(self) -> None:
         fake_state = mock.Mock()

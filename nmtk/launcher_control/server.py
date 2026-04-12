@@ -340,6 +340,71 @@ def _message_from_probe_outcome(
     return f"Required import check failed for {import_name}: {error}"
 
 
+def _doctor_prefix(status: str) -> str:
+    return (
+        "preflight failed"
+        if status == PREFLIGHT_FAILED
+        else "degraded optional capability"
+        if status == PREFLIGHT_DEGRADED
+        else "OK"
+    )
+
+
+def _flutter_sdk_check() -> dict[str, Any]:
+    flutter = shutil.which("flutter")
+    if flutter is None:
+        return {
+            "id": "flutter-sdk",
+            "name": "Flutter SDK",
+            "preflightStatus": PREFLIGHT_FAILED,
+            "preflightMessage": "Flutter executable not found on PATH",
+            "capabilityWarnings": [],
+        }
+
+    flutter_path = Path(flutter).resolve()
+    cache_dir = flutter_path.parent / "cache"
+    engine_stamp = cache_dir / "engine.stamp"
+
+    if not cache_dir.exists():
+        return {
+            "id": "flutter-sdk",
+            "name": "Flutter SDK",
+            "preflightStatus": PREFLIGHT_FAILED,
+            "preflightMessage": f"Flutter SDK cache directory missing: {cache_dir}",
+            "capabilityWarnings": [],
+        }
+
+    if not os.access(cache_dir, os.W_OK):
+        return {
+            "id": "flutter-sdk",
+            "name": "Flutter SDK",
+            "preflightStatus": PREFLIGHT_FAILED,
+            "preflightMessage": f"Flutter SDK cache is not writable: {cache_dir}",
+            "capabilityWarnings": [],
+        }
+
+    if engine_stamp.exists() and not os.access(engine_stamp, os.W_OK):
+        return {
+            "id": "flutter-sdk",
+            "name": "Flutter SDK",
+            "preflightStatus": PREFLIGHT_FAILED,
+            "preflightMessage": f"Flutter SDK cache stamp is not writable: {engine_stamp}",
+            "capabilityWarnings": [],
+        }
+
+    return {
+        "id": "flutter-sdk",
+        "name": "Flutter SDK",
+        "preflightStatus": PREFLIGHT_OK,
+        "preflightMessage": f"Flutter SDK cache ready: {cache_dir}",
+        "capabilityWarnings": [],
+    }
+
+
+def _global_preflight_checks() -> list[dict[str, Any]]:
+    return [_flutter_sdk_check()]
+
+
 def _render_doctor_report(report: dict[str, Any]) -> str:
     summary = (
         "preflight failed"
@@ -353,15 +418,18 @@ def _render_doctor_report(report: dict[str, Any]) -> str:
         f"status={summary}",
         f"fatal={report['fatalCount']} degraded={report['degradedCount']} ok={report['okCount']}",
     ]
-    for module in report["modules"]:
-        prefix = (
-            "preflight failed"
-            if module["preflightStatus"] == PREFLIGHT_FAILED
-            else "degraded optional capability"
-            if module["preflightStatus"] == PREFLIGHT_DEGRADED
-            else "OK"
+    for check in report.get("globalChecks", []):
+        lines.append(
+            f"{_doctor_prefix(str(check['preflightStatus']))} {check['id']}: "
+            f"{check['preflightMessage'] or 'ready'}"
         )
-        lines.append(f"{prefix} {module['id']}: {module['preflightMessage'] or 'ready'}")
+        for warning in check.get("capabilityWarnings", []):
+            lines.append(f"  - {warning}")
+    for module in report["modules"]:
+        lines.append(
+            f"{_doctor_prefix(str(module['preflightStatus']))} {module['id']}: "
+            f"{module['preflightMessage'] or 'ready'}"
+        )
         for warning in module.get("capabilityWarnings", []):
             lines.append(f"  - {warning}")
     return "\n".join(lines)
@@ -1147,9 +1215,19 @@ class LauncherControlState:
 
     def doctor_report(self) -> dict[str, Any]:
         modules: list[dict[str, Any]] = []
+        global_checks = _global_preflight_checks()
         fatal_count = 0
         degraded_count = 0
         ok_count = 0
+
+        for check in global_checks:
+            status = str(check.get("preflightStatus", PREFLIGHT_OK))
+            if status == PREFLIGHT_FAILED:
+                fatal_count += 1
+            elif status == PREFLIGHT_DEGRADED:
+                degraded_count += 1
+            else:
+                ok_count += 1
 
         with self._lock:
             snapshot = [dict(module) for module in self._modules.values()]
@@ -1193,6 +1271,7 @@ class LauncherControlState:
             "fatalCount": fatal_count,
             "degradedCount": degraded_count,
             "okCount": ok_count,
+            "globalChecks": global_checks,
             "modules": modules,
         }
 

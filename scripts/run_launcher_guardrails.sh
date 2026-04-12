@@ -19,7 +19,7 @@ for arg in "$@"; do
     --help|-h)
       echo "Usage: ./scripts/run_launcher_guardrails.sh [--with-integration]"
       echo ""
-      echo "Runs launcher doctor, launcher unit tests, and launcher Flutter tests."
+      echo "Runs launcher doctor, then launcher unit tests and launcher Flutter tests when doctor passes."
       echo "--with-integration also runs the root integration tests for suite-visible launcher changes."
       exit 0
       ;;
@@ -114,7 +114,16 @@ if [[ "$STATUS" -ne 0 ]]; then
 fi
 
 print_header "Launcher Doctor"
-capture_stage "launcher_doctor" python3 scripts/launcher_control_service.py --doctor --json || STATUS=1
+if ! capture_stage "launcher_doctor" python3 scripts/launcher_control_service.py --doctor --json; then
+  STATUS=1
+  echo "Launcher guardrails blocked by fatal launcher doctor findings." >&2
+  write_failure_report
+  if [[ -n "$FAILURE_REPORT" ]]; then
+    echo
+    echo "Failure report saved: $FAILURE_REPORT"
+  fi
+  exit "$STATUS"
+fi
 
 print_header "Launcher Unit Tests"
 capture_stage "launcher_unit_tests" python3 -m unittest tests.test_launcher_control_service || STATUS=1
