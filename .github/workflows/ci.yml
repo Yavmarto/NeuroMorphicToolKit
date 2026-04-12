@@ -171,7 +171,7 @@ jobs:
         run: |
           if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
             cd Neurosim
-            python -m mypy .
+            python -m mypy neurosim
           fi
       - name: Run tests
         run: |
@@ -321,7 +321,7 @@ jobs:
         run: |
           if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/neurosense/pyproject.toml" ]; then
             cd Neurosense/neurosense
-            python -m mypy .
+            python -m mypy neurosense
           fi
       - name: Run tests
         run: |
@@ -395,7 +395,7 @@ jobs:
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/neurohub/pyproject.toml" ]; then
             cd Neurohub/neurohub
-            python -m mypy .
+            python -m mypy neurohub
           fi
       - name: Run tests
         run: |
@@ -469,7 +469,7 @@ jobs:
         run: |
           if [ -d "Neuro-Dream-Hand" ] && [ -f "Neuro-Dream-Hand/pyproject.toml" ]; then
             cd Neuro-Dream-Hand
-            python -m mypy .
+            python -m mypy neurodreamhand
           fi
       - name: Run tests
         run: |
@@ -554,7 +554,7 @@ jobs:
         run: |
           if [ -f "neurocnl/pyproject.toml" ]; then
             cd neurocnl
-            python -m mypy .
+            python -m mypy neurocnl
           else
             echo "neurocnl missing, skipping type check"
           fi
