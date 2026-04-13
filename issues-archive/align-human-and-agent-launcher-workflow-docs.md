@@ -25,5 +25,5 @@ Ensure human onboarding and agent bootstrap docs give the same launcher workflow
 - [ ] Human and agent instructions no longer diverge on launcher readiness expectations.
 
 # Depends On
-- [launcher-doctor-required-gate.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues/launcher-doctor-required-gate.md)
-- [launcher-quality-bar-in-coding-style-guide.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues/launcher-quality-bar-in-coding-style-guide.md)
+- [launcher-doctor-required-gate.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues-archive/launcher-doctor-required-gate.md)
+- [launcher-quality-bar-in-coding-style-guide.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues-archive/launcher-quality-bar-in-coding-style-guide.md)

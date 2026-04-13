@@ -3,6 +3,19 @@ title: "Mitigate Topological Drift Risk for Akida Sequential Invariants"
 labels: ["maintenance", "validation", "hardware", "akida"]
 ---
 
+## Audit Status
+
+Status as of 2026-04-13: `partially implemented`
+
+What is already landed:
+- A shared `NetworkTopologyAnalyzer` now exists in `neurocnl/neurocnl/ir/topology.py`.
+- Akida capability planning in `neurocnl/neurocnl/backends/akida_capabilities.py` instantiates that analyzer.
+
+What is still open:
+- `neurocnl/neurocnl/layers/akida_validator.py` still relies on separate `_build_graph` / `_is_sequential_path` helpers instead of the shared analyzer.
+- Tests still permit some attributed connections that the shared analyzer would currently reject fail-closed, so validation and capability planning are not fully aligned.
+- Finish this by routing Akida sequential validation through `NetworkTopologyAnalyzer` and adding tests that reject unknown or unsupported topological structures consistently.
+
 # Problem Statement
 The Akida hardware backend integration currently handles hardware invariants by differentiating between Akida 1 (which strictly requires linear, feed-forward sequential topologies) and Akida 2 (which supports branching topologies). The validation logic in `neurocnl/layers/akida_validator.py` and `neurocnl/backends/akida_capabilities.py` correctly analyzes the graph structure to enforce these constraints.
 

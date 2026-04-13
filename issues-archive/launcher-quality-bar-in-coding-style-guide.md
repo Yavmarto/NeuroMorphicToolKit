@@ -25,4 +25,4 @@ Make launcher and runtime safety an explicit cross-repo quality bar in `CODING_S
 - [ ] Verification guidance distinguishes launcher-local checks from suite-visible integration requirements.
 
 # Depends On
-- [launcher-doctor-required-gate.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues/launcher-doctor-required-gate.md)
+- [launcher-doctor-required-gate.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues-archive/launcher-doctor-required-gate.md)

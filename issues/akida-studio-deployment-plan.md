@@ -3,6 +3,21 @@ title: "Move BrainChip Akida Deployment from Experimental to Usable Toolkit Work
 labels: ["enhancement", "frontend", "backend", "hardware", "akida", "brainchip", "integration", "toolkit"]
 ---
 
+## Audit Status
+
+Status as of 2026-04-13: `implemented with defects`
+
+What is already landed:
+- NeuroCNL exposes explicit Akida support states and returns them from the deploy gate.
+- NeuroCNL can map supported networks into a shared `mapped_network` representation for Neurochip handoff.
+- Neurochip owns scaffold package generation and optional SDK-backed deployment behavior.
+- NMTK has an Akida deployment screen and service flow, including optional Neurobench job submission.
+
+What is still open:
+- The topology-centralization work tracked in `akida-topological-drift.md` is not fully complete yet, so part of the Akida story still depends on split topology logic.
+- Local Python verification for the Akida surfaces was environment-blocked during the audit, so this issue still needs a clean runnable verification pass.
+- Keep runtime claims tied to truthful SDK availability. Treat real SDK/hardware proof as required evidence before calling the full workflow complete.
+
 # Problem Statement
 NeuroCNL includes Akida-specific planning, validation, and code generation, so the Studio experience can feel as if Akida deployment is already part of the normal parse/validate/generate/simulate/deploy flow.
 

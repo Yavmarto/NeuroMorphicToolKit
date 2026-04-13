@@ -3,6 +3,21 @@ title: "Move PYNQ-Z2 Deployment from Experimental to Usable Toolkit Workflow"
 labels: ["enhancement", "frontend", "backend", "hardware", "pynq", "fpga", "integration", "toolkit"]
 ---
 
+## Audit Status
+
+Status as of 2026-04-13: `implemented with defects`
+
+What is already landed:
+- The planner, contracts, and docs distinguish `exportable` from runtime `deployable`.
+- Neurochip has a hardware-aware PYNQ backend with simulator fallback plus SITL verification support.
+- NMTK has a PYNQ deployment screen, provider, and remote-board polling flow.
+- NeuroCNL includes a PYNQ handoff layer and related tests.
+
+What is still open:
+- The current launcher UI path does not hand a full NeuroCNL-produced runtime artifact through to Neurochip; it currently deploys with an empty weights list and a minimal config stub.
+- Real-board proof remains blocked on the missing synthesized `.bit` / `.hwh` overlay artifacts, so only simulator-backed deployment is evidenced today.
+- Keep this issue open until the guided UI flow carries the real artifact/handoff contract and the remaining real-board or agreed simulated acceptance evidence is documented.
+
 # Problem Statement
 NeuroCNL already contains a `pynq` capability profile and a PYNQ exporter, which makes the Studio appear closer to FPGA deployment than it really is.
 

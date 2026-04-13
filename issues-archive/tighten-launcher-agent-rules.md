@@ -24,4 +24,4 @@ Define launcher-specific process requirements in root `AGENTS.md` and `nmtk/AGEN
 - [ ] Launcher completion criteria require launcher doctor and launcher unit coverage.
 
 # Depends On
-- [launcher-doctor-required-gate.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues/launcher-doctor-required-gate.md)
+- [launcher-doctor-required-gate.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues-archive/launcher-doctor-required-gate.md)

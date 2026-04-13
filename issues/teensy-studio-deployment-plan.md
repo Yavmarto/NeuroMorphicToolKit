@@ -3,6 +3,20 @@ title: "Move Teensy Deployment from Experimental to Usable Toolkit Workflow"
 labels: ["enhancement", "frontend", "backend", "hardware", "teensy", "integration", "toolkit"]
 ---
 
+## Audit Status
+
+Status as of 2026-04-13: `implemented with defects`
+
+What is already landed:
+- NeuroCNL exposes a fail-closed Teensy deploy gate and maps accepted networks into the exact Neurochip payload shape.
+- Neurochip owns firmware generation, serial flashing, and post-flash verification endpoints.
+- NMTK has a target-specific Teensy deployment workflow with serial-port selection and flash polling.
+- Cross-module integration coverage exists for the happy path and rejected-network paths.
+
+What is still open:
+- The issue still lacks hard evidence of a recorded real-board smoke-test success in this repo state; current proof is API/test-contract strong but still hardware-light.
+- Keep the issue open until the post-flash verification story is backed by concrete acceptance evidence on an actual Teensy path, not just the mocked or contract-level flow.
+
 # Problem Statement
 The NeuroCNL Studio UI currently suggests a workflow of:
 

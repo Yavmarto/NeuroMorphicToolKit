@@ -3,6 +3,19 @@ title: "Add Canonical Launcher Guardrails Wrapper for Local Enforcement"
 labels: ["launcher", "scripts", "ci", "verification"]
 ---
 
+## Audit Status
+
+Status as of 2026-04-13: `implemented with defects`
+
+What is already landed:
+- `scripts/run_launcher_guardrails.sh` exists and is the canonical wrapper.
+- The wrapper checks for required tools, runs launcher doctor first, then launcher Python and Flutter tests, and supports `--with-integration`.
+- Root workflow docs and agent guidance point contributors at the wrapper consistently.
+
+What is still open:
+- The launcher Python verification surface is not clean yet: `python3 -m unittest tests.test_launcher_control_service` currently fails once on path normalization (`/private/var/...` vs `/var/...`).
+- Keep this issue open until the wrapper-owned verification path is green again and the wrapper can be treated as fully healthy rather than merely present.
+
 # Goal
 Add `scripts/run_launcher_guardrails.sh` as the canonical local enforcement wrapper for launcher-owned changes.
 
@@ -27,5 +40,5 @@ Add `scripts/run_launcher_guardrails.sh` as the canonical local enforcement wrap
 - [ ] Failure output is clear enough for both local developer use and CI orchestration.
 
 # Depends On
-- [launcher-doctor-required-gate.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues/launcher-doctor-required-gate.md)
-- [launcher-quality-bar-in-coding-style-guide.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues/launcher-quality-bar-in-coding-style-guide.md)
+- [launcher-doctor-required-gate.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues-archive/launcher-doctor-required-gate.md)
+- [launcher-quality-bar-in-coding-style-guide.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues-archive/launcher-quality-bar-in-coding-style-guide.md)

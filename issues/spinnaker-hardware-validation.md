@@ -3,6 +3,19 @@ title: "Implement Hardware-Aware Constraint Validation for SpiNNaker Targets"
 labels: ["enhancement", "validation", "hardware", "spinnaker"]
 ---
 
+## Audit Status
+
+Status as of 2026-04-13: `partially implemented`
+
+What is already landed:
+- `neurocnl/neurocnl/layers/spinnaker2_validator.py` enforces neurons-per-core and fan-in checks for the `spinnaker2` backend.
+- Layer-level tests cover the main `spinnaker2` validation path and oversized-neuron rejection.
+
+What is still open:
+- The implementation is clearly `spinnaker2`-specific; it does not yet obviously satisfy the broader `spinnaker` and `spinnaker2` wording in this issue.
+- The issue asked for clearer pre-export hardware rejection coverage, especially around fan-in and user-facing failure messaging.
+- Keep this issue open until the validation surface and tests are explicit about backend coverage and the remaining hardware-limit checks are fully exercised.
+
 # Problem Statement
 While the basic SNN translation and generation for SpiNNaker/SpiNNaker2 (via `spinnaker_exporter.py` and `spinnaker2_exporter.py`) are correctly mapping NetworkIR primitives to pyNN-style definitions, there is currently a lack of rigorous, hardware-specific constraint validation in the NeuroCNL validation pipeline.
 

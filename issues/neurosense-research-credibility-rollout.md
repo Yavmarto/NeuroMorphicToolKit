@@ -3,6 +3,22 @@ title: "Move NeuroSense from Prototype Breadth to Research-Credible Real Data an
 labels: ["enhancement", "planning", "neurosense", "biosignals", "hardware", "integration", "benchmarking"]
 ---
 
+## Audit Status
+
+Status as of 2026-04-13: `partially implemented`
+
+What is already landed:
+- The flagship workflow is documented and now anchors repo claims.
+- The canonical HDF5 session artifact contract is implemented, versioned, and exercised by fixture-backed tests.
+- Downstream bridge code exists for NeuroCNL and Neurobench consumption of the canonical artifact.
+- Support levels are documented more truthfully across the README and workflow docs.
+
+What is still open:
+- The real `OpenBCI Cyton` path is still not physically validated end to end, so the real-board credibility gap remains.
+- Benchmark evidence and regression thresholds for the signal-to-spike path are still open.
+- UI alignment for support levels and the final truthful end-to-end demo remain unfinished.
+- Keep the issue focused on converting the current credibility foundation into recorded real-hardware proof and measured performance evidence.
+
 # Purpose
 This file is the ordered issue list for turning `NeuroSense` into a more credible module for neuromorphic researchers, hardware engineers, and applied edge-AI teams.
 
