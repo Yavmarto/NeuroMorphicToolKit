@@ -176,6 +176,15 @@ def _poetry_env_python(module: dict[str, Any]) -> Path | None:
     if not _module_uses_poetry(module):
         return None
 
+    module_id = str(module.get("id") or "").strip()
+    fallback_env_root = REPO_ROOT / ".poetry-envs" / module_id
+    if os.name == "nt":
+        fallback_python = fallback_env_root / "Scripts" / "python.exe"
+    else:
+        fallback_python = fallback_env_root / "bin" / "python"
+    if fallback_python.exists():
+        return fallback_python.resolve()
+
     poetry = _poetry_command()
     if poetry is None:
         return None
@@ -195,7 +204,7 @@ def _poetry_env_python(module: dict[str, Any]) -> Path | None:
         python_path = env_path / "Scripts" / "python.exe"
     else:
         python_path = env_path / "bin" / "python"
-    return python_path if python_path.exists() else None
+    return python_path.resolve() if python_path.exists() else None
 
 
 def _module_python_path(module: dict[str, Any]) -> Path:

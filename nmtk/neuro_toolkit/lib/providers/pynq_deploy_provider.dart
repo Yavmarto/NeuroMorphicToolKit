@@ -128,6 +128,7 @@ class PynqDeployProvider with ChangeNotifier {
     required List<double> weights,
     required Map<String, dynamic> config,
     String? bitstreamPath,
+    Map<String, dynamic>? registerMap,
   }) async {
     _currentStep = PynqDeployStep.deploying;
     _errorMessage = null;
@@ -141,6 +142,7 @@ class PynqDeployProvider with ChangeNotifier {
         weights: weights,
         config: config,
         bitstreamPath: bitstreamPath,
+        registerMap: registerMap,
         apiKey: _boardApiKey.isNotEmpty ? _boardApiKey : null,
       );
 

@@ -105,12 +105,14 @@ class PynqNetworkResponse {
   final List<String> warnings;
   final List<String> rejectionReasons;
   final Map<String, dynamic>? networkSummary;
+  final PynqDeployPayload? deployPayload;
 
   const PynqNetworkResponse({
     required this.supportState,
     required this.warnings,
     required this.rejectionReasons,
     this.networkSummary,
+    this.deployPayload,
   });
 
   factory PynqNetworkResponse.fromJson(Map<String, dynamic> json) {
@@ -122,6 +124,36 @@ class PynqNetworkResponse {
       rejectionReasons:
           (json['rejections'] as List).map((e) => e as String).toList(),
       networkSummary: json['network_summary'] as Map<String, dynamic>?,
+      deployPayload: json['deploy_payload'] is Map<String, dynamic>
+          ? PynqDeployPayload.fromJson(
+              json['deploy_payload'] as Map<String, dynamic>,
+            )
+          : null,
+    );
+  }
+}
+
+class PynqDeployPayload {
+  final List<double> weights;
+  final Map<String, dynamic> config;
+  final String? bitstreamPath;
+  final Map<String, dynamic>? registerMap;
+
+  const PynqDeployPayload({
+    required this.weights,
+    required this.config,
+    this.bitstreamPath,
+    this.registerMap,
+  });
+
+  factory PynqDeployPayload.fromJson(Map<String, dynamic> json) {
+    return PynqDeployPayload(
+      weights: (json['weights'] as List<dynamic>? ?? const <dynamic>[])
+          .map((value) => (value as num).toDouble())
+          .toList(),
+      config: json['config'] as Map<String, dynamic>? ?? const <String, dynamic>{},
+      bitstreamPath: json['bitstream_path'] as String?,
+      registerMap: json['register_map'] as Map<String, dynamic>?,
     );
   }
 }

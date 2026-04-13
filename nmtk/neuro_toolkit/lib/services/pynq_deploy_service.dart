@@ -73,6 +73,7 @@ class PynqDeployService {
     required List<double> weights,
     required Map<String, dynamic> config,
     String? bitstreamPath,
+    Map<String, dynamic>? registerMap,
     String? apiKey,
   }) async {
     final uri = Uri.parse(
@@ -89,6 +90,9 @@ class PynqDeployService {
     };
     if (bitstreamPath != null && bitstreamPath.isNotEmpty) {
       body['bitstream_path'] = bitstreamPath;
+    }
+    if (registerMap != null && registerMap.isNotEmpty) {
+      body['register_map'] = registerMap;
     }
 
     final response = await _httpClient.post(

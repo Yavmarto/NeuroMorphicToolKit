@@ -104,6 +104,7 @@ void main() {
       expect(response.warnings, isEmpty);
       expect(response.rejectionReasons, isEmpty);
       expect(response.networkSummary?['n_neurons'], 100);
+      expect(response.deployPayload, isNull);
     });
 
     test('fromJson parses exportable_with_warnings state', () {
@@ -130,6 +131,27 @@ void main() {
 
       expect(response.supportState, PynqSupportState.notExportable);
       expect(response.rejectionReasons.length, 1);
+    });
+
+    test('fromJson parses deploy payload when present', () {
+      final json = {
+        'support_state': 'exportable',
+        'warnings': <String>[],
+        'rejections': <String>[],
+        'network_summary': {'n_neurons': 100},
+        'deploy_payload': {
+          'weights': [1, 2, 3],
+          'config': {'bit_width': 4},
+          'bitstream_path': 'snn_overlay.bit',
+          'register_map': {'weight_base_offset': 65536},
+        },
+      };
+      final response = PynqNetworkResponse.fromJson(json);
+
+      expect(response.deployPayload, isNotNull);
+      expect(response.deployPayload!.weights, [1.0, 2.0, 3.0]);
+      expect(response.deployPayload!.config['bit_width'], 4);
+      expect(response.deployPayload!.registerMap?['weight_base_offset'], 65536);
     });
   });
 

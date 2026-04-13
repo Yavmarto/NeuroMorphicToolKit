@@ -40,6 +40,10 @@ class MockPynqDeployService extends PynqDeployService {
           supportState: PynqSupportState.exportable,
           warnings: [],
           rejectionReasons: [],
+          deployPayload: PynqDeployPayload(
+            weights: [1.0],
+            config: {'bit_width': 4},
+          ),
         );
   }
 
@@ -49,6 +53,7 @@ class MockPynqDeployService extends PynqDeployService {
     required List<double> weights,
     required Map<String, dynamic> config,
     String? bitstreamPath,
+    Map<String, dynamic>? registerMap,
     String? apiKey,
   }) async {
     if (throwOnDeploy) {

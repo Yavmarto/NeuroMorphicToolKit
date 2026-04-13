@@ -181,7 +181,7 @@ class LauncherControlServiceTest(unittest.TestCase):
         ):
             python_path = launcher_server._module_python_path(module)
 
-        self.assertEqual(python_path, poetry_python)
+        self.assertEqual(python_path, poetry_python.resolve())
 
     def test_run_dev_script_passes_bash_syntax_check(self) -> None:
         result = subprocess.run(

@@ -382,18 +382,16 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
   }
 
   void _startDeploy(PynqDeployProvider provider) {
-    final summary = provider.exportResult?.networkSummary ?? {};
-    // Build a minimal config from what we know
-    final config = <String, dynamic>{
-      'bit_width': _weightBitWidth,
-      if (summary['n_neurons'] != null) 'n_neurons': summary['n_neurons'],
-    };
-    // Weights are not available offline — the deploy endpoint accepts an
-    // empty weights list if the board is being reconfigured; the Neurochip
-    // backend handles the actual weight binding from overlay_config.
+    final deployPayload = provider.exportResult?.deployPayload;
+    if (deployPayload == null) {
+      return;
+    }
+
     provider.startDeploy(
-      weights: [],
-      config: config,
+      weights: deployPayload.weights,
+      config: deployPayload.config,
+      bitstreamPath: deployPayload.bitstreamPath,
+      registerMap: deployPayload.registerMap,
     );
   }
 
