@@ -49,10 +49,8 @@ class PynqDeployService {
       if (d is Map<String, dynamic>) {
         throw PynqDeployException(
           error: d['error'] as String? ?? 'unknown',
-          messages: (d['messages'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [],
+          messages:
+              (d['messages'] as List?)?.map((e) => e.toString()).toList() ?? [],
         );
       }
       throw PynqDeployException(error: d.toString());
@@ -70,11 +68,9 @@ class PynqDeployService {
   /// Throws [PynqDeployException] on failure.
   Future<Map<String, dynamic>> deployToBoard({
     required String boardBaseUrl,
-    required List<double> weights,
-    required Map<String, dynamic> config,
-    String? bitstreamPath,
-    Map<String, dynamic>? registerMap,
+    required PynqDeployPayload payload,
     String? apiKey,
+    String? bitstreamPathOverride,
   }) async {
     final uri = Uri.parse(
       '${boardBaseUrl.replaceAll(RegExp(r'/$'), '')}/hardware/pynq/deploy',
@@ -84,15 +80,9 @@ class PynqDeployService {
       headers['X-API-Key'] = apiKey;
     }
 
-    final body = <String, dynamic>{
-      'weights': weights,
-      'config': config,
-    };
-    if (bitstreamPath != null && bitstreamPath.isNotEmpty) {
-      body['bitstream_path'] = bitstreamPath;
-    }
-    if (registerMap != null && registerMap.isNotEmpty) {
-      body['register_map'] = registerMap;
+    final body = payload.toJson();
+    if (bitstreamPathOverride != null && bitstreamPathOverride.isNotEmpty) {
+      body['bitstream_path'] = bitstreamPathOverride;
     }
 
     final response = await _httpClient.post(

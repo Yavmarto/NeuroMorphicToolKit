@@ -26,6 +26,8 @@ class MockPynqDeployService extends PynqDeployService {
   final bool throwOnExportability;
   final bool throwOnDeploy;
   final bool throwOnVerify;
+  PynqDeployPayload? lastDeployPayload;
+  String? lastBitstreamPathOverride;
 
   @override
   Future<PynqNetworkResponse> checkExportability({
@@ -41,8 +43,24 @@ class MockPynqDeployService extends PynqDeployService {
           warnings: [],
           rejectionReasons: [],
           deployPayload: PynqDeployPayload(
-            weights: [1.0],
-            config: {'bit_width': 4},
+            weights: [1.0, 2.0],
+            config: PynqDeployConfig(
+              threshold: 1.0,
+              bitWidth: 4,
+              scaleFactor: 7.0,
+            ),
+            bitstreamPath: 'snn_overlay.bit',
+            registerMap: PynqRegisterMap(
+              baseAddress: 0x40000000,
+              controlRegOffset: 0x00,
+              statusRegOffset: 0x04,
+              neuronBaseOffset: 0x100,
+              weightBaseOffset: 0x10000,
+              dmaChannel: 'axi_dma_0',
+              inputBufferAddr: 0,
+              outputBufferAddr: 0,
+              timestepUs: 1000,
+            ),
           ),
         );
   }
@@ -50,11 +68,9 @@ class MockPynqDeployService extends PynqDeployService {
   @override
   Future<Map<String, dynamic>> deployToBoard({
     required String boardBaseUrl,
-    required List<double> weights,
-    required Map<String, dynamic> config,
-    String? bitstreamPath,
-    Map<String, dynamic>? registerMap,
+    required PynqDeployPayload payload,
     String? apiKey,
+    String? bitstreamPathOverride,
   }) async {
     if (throwOnDeploy) {
       throw PynqDeployException(
@@ -62,6 +78,8 @@ class MockPynqDeployService extends PynqDeployService {
         messages: ['board unreachable'],
       );
     }
+    lastDeployPayload = payload;
+    lastBitstreamPathOverride = bitstreamPathOverride;
     return deployResponse ?? {'status': 'success'};
   }
 
@@ -148,11 +166,13 @@ void main() {
     test('startDeploy transitions checked → deploying → polling', () async {
       final provider = PynqDeployProvider(service: MockPynqDeployService());
       provider.setRunSitl(false);
+      provider.setBoardBaseUrl('http://10.0.0.1:8002');
+      await provider.checkExportability(spec: 'test spec', weightBitWidth: 4);
 
       final steps = <PynqDeployStep>[];
       provider.addListener(() => steps.add(provider.currentStep));
 
-      await provider.startDeploy(weights: [], config: {});
+      await provider.startDeploy();
 
       // polling is started asynchronously; we just check deploying was seen
       expect(steps, contains(PynqDeployStep.deploying));
@@ -163,11 +183,37 @@ void main() {
       final provider = PynqDeployProvider(
         service: MockPynqDeployService(throwOnDeploy: true),
       );
+      provider.setBoardBaseUrl('http://10.0.0.1:8002');
+      await provider.checkExportability(spec: 'test spec', weightBitWidth: 4);
 
-      await provider.startDeploy(weights: [], config: {});
+      await provider.startDeploy();
 
       expect(provider.currentStep, PynqDeployStep.error);
       expect(provider.errorMessage, contains('Deploy failed'));
+    });
+
+    test('startDeploy uses validated payload and bitstream override', () async {
+      final service = MockPynqDeployService();
+      final provider = PynqDeployProvider(service: service);
+      provider.setBoardBaseUrl('http://10.0.0.1:8002');
+      await provider.checkExportability(spec: 'test spec', weightBitWidth: 4);
+      provider.setBitstreamPathOverride('/opt/overlays/custom.bit');
+
+      await provider.startDeploy();
+
+      expect(service.lastDeployPayload, isNotNull);
+      expect(service.lastDeployPayload!.weightCount, 2);
+      expect(service.lastBitstreamPathOverride, '/opt/overlays/custom.bit');
+    });
+
+    test('startDeploy requires board URL', () async {
+      final provider = PynqDeployProvider(service: MockPynqDeployService());
+      await provider.checkExportability(spec: 'test spec', weightBitWidth: 4);
+
+      await provider.startDeploy();
+
+      expect(provider.currentStep, PynqDeployStep.error);
+      expect(provider.errorMessage, contains('Board endpoint URL is required'));
     });
 
     test('setBoardBaseUrl updates the URL', () {
@@ -180,6 +226,15 @@ void main() {
       final provider = PynqDeployProvider(service: MockPynqDeployService());
       provider.setBoardApiKey('secret-key');
       expect(provider.boardApiKey, 'secret-key');
+    });
+
+    test('checkExportability seeds bitstream path override from payload',
+        () async {
+      final provider = PynqDeployProvider(service: MockPynqDeployService());
+
+      await provider.checkExportability(spec: 'test spec', weightBitWidth: 4);
+
+      expect(provider.bitstreamPathOverride, 'snn_overlay.bit');
     });
 
     test('setRunSitl toggles flag', () {

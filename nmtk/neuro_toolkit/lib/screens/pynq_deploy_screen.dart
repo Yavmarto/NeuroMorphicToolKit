@@ -22,6 +22,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
   final _specController = TextEditingController();
   final _boardUrlController = TextEditingController();
   final _apiKeyController = TextEditingController();
+  final _bitstreamPathController = TextEditingController();
   int _weightBitWidth = 4;
 
   @override
@@ -29,6 +30,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
     _specController.dispose();
     _boardUrlController.dispose();
     _apiKeyController.dispose();
+    _bitstreamPathController.dispose();
     super.dispose();
   }
 
@@ -47,6 +49,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
       ),
       body: Consumer<PynqDeployProvider>(
         builder: (context, provider, child) {
+          _syncTextControllers(provider);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -61,6 +64,10 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                       if (provider.exportResult != null) ...[
                         const SizedBox(height: 16),
                         _buildVerdictCard(context, provider),
+                      ],
+                      if (provider.deployPayload != null) ...[
+                        const SizedBox(height: 16),
+                        _buildDeployPackageCard(context, provider),
                       ],
                       if (_canShowEndpointCard(provider)) ...[
                         const SizedBox(height: 16),
@@ -88,6 +95,17 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
         },
       ),
     );
+  }
+
+  void _syncTextControllers(PynqDeployProvider provider) {
+    if (_bitstreamPathController.text != provider.bitstreamPathOverride) {
+      _bitstreamPathController.value = TextEditingValue(
+        text: provider.bitstreamPathOverride,
+        selection: TextSelection.collapsed(
+          offset: provider.bitstreamPathOverride.length,
+        ),
+      );
+    }
   }
 
   /// Maps the current [PynqDeployStep] to pipeline stepper step data.
@@ -218,15 +236,15 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
   bool _canShowEndpointCard(PynqDeployProvider provider) {
     if (provider.exportResult == null) return false;
     final state = provider.exportResult!.supportState;
-    return state == PynqSupportState.exportable ||
-        state == PynqSupportState.exportableWithWarnings ||
-        state == PynqSupportState.deployable;
+    return provider.deployPayload != null &&
+        (state == PynqSupportState.exportable ||
+            state == PynqSupportState.exportableWithWarnings ||
+            state == PynqSupportState.deployable);
   }
 
   // ---------- Step 1: CNL Input ----------
 
-  Widget _buildCnlInputCard(
-      BuildContext context, PynqDeployProvider provider) {
+  Widget _buildCnlInputCard(BuildContext context, PynqDeployProvider provider) {
     final isChecking = provider.currentStep == PynqDeployStep.checking;
 
     return Card(
@@ -244,8 +262,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
               controller: _specController,
               maxLines: 8,
               decoration: const InputDecoration(
-                hintText:
-                    'Enter your NeuroCNL specification...\n'
+                hintText: 'Enter your NeuroCNL specification...\n'
                     'Example: The sensory neuron MUST fire ONLY IF '
                     'membrane potential exceeds 1.0.',
                 border: OutlineInputBorder(),
@@ -298,8 +315,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
 
   // ---------- Step 2: Exportability Verdict ----------
 
-  Widget _buildVerdictCard(
-      BuildContext context, PynqDeployProvider provider) {
+  Widget _buildVerdictCard(BuildContext context, PynqDeployProvider provider) {
     final result = provider.exportResult!;
     return PynqSupportStateCard(
       supportState: result.supportState,
@@ -309,12 +325,9 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
     );
   }
 
-  // ---------- Step 3: Remote Endpoint Config ----------
-
-  Widget _buildEndpointCard(
+  Widget _buildDeployPackageCard(
       BuildContext context, PynqDeployProvider provider) {
-    final isDeploying = provider.currentStep == PynqDeployStep.deploying ||
-        provider.currentStep == PynqDeployStep.polling;
+    final payload = provider.deployPayload!;
 
     return Card(
       child: Padding(
@@ -323,8 +336,90 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Remote PYNQ Board',
+              'Deployment Package',
               style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                _buildPackageChip(
+                  context,
+                  icon: Icons.scale,
+                  label: '${payload.config.bitWidth}-bit quantisation',
+                ),
+                _buildPackageChip(
+                  context,
+                  icon: Icons.account_tree_outlined,
+                  label: '${payload.weightCount} packed weights',
+                ),
+                _buildPackageChip(
+                  context,
+                  icon: Icons.memory_outlined,
+                  label: payload.registerMap.dmaChannel,
+                ),
+                _buildPackageChip(
+                  context,
+                  icon: Icons.timer_outlined,
+                  label: '${payload.registerMap.timestepUs} µs timestep',
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Validated bitstream path: ${payload.bitstreamPath}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Scale factor ${payload.config.scaleFactor.toStringAsFixed(1)} · '
+              'threshold ${payload.config.threshold.toStringAsFixed(1)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPackageChip(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+  }) {
+    return Chip(
+      avatar: Icon(icon, size: 18),
+      label: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+
+  // ---------- Step 3: Remote Endpoint Config ----------
+
+  Widget _buildEndpointCard(BuildContext context, PynqDeployProvider provider) {
+    final isDeploying = provider.currentStep == PynqDeployStep.deploying ||
+        provider.currentStep == PynqDeployStep.polling;
+    final canDeploy = provider.boardBaseUrl.trim().isNotEmpty &&
+        provider.deployPayload != null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Board Profile',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Deploys the validated NeuroCNL payload directly to a board-hosted '
+              'Neurochip PYNQ backend.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
             TextField(
@@ -349,6 +444,16 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
               onChanged: provider.setBoardApiKey,
             ),
             const SizedBox(height: 12),
+            TextField(
+              controller: _bitstreamPathController,
+              decoration: const InputDecoration(
+                labelText: 'Bitstream path on board',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.memory),
+              ),
+              onChanged: provider.setBitstreamPathOverride,
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Switch(
@@ -361,7 +466,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                 ),
                 const Spacer(),
                 FilledButton.icon(
-                  onPressed: isDeploying
+                  onPressed: isDeploying || !canDeploy
                       ? null
                       : () => _startDeploy(provider),
                   icon: isDeploying
@@ -382,17 +487,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
   }
 
   void _startDeploy(PynqDeployProvider provider) {
-    final deployPayload = provider.exportResult?.deployPayload;
-    if (deployPayload == null) {
-      return;
-    }
-
-    provider.startDeploy(
-      weights: deployPayload.weights,
-      config: deployPayload.config,
-      bitstreamPath: deployPayload.bitstreamPath,
-      registerMap: deployPayload.registerMap,
-    );
+    provider.startDeploy();
   }
 
   // ---------- Step 4: Deployment Status ----------
@@ -457,6 +552,16 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
+            if (job.runtimeMode.isSimulator) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Simulator fallback active. This confirms the deploy path, not real-board hardware readiness.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.orange.shade800,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
             if (!provider.runSitl &&
                 isConfigured &&
                 provider.currentStep == PynqDeployStep.done) ...[
@@ -488,7 +593,9 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
       case PynqDeployJobStatus.deploying:
         return 'Loading overlay…';
       case PynqDeployJobStatus.configured:
-        return 'Overlay configured — board ready';
+        return job.runtimeMode.isSimulator
+            ? 'Overlay configured — simulator ready'
+            : 'Overlay configured — board ready';
       case PynqDeployJobStatus.running:
         return 'Running';
       case PynqDeployJobStatus.failed:
@@ -546,8 +653,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
 
   // ---------- Error ----------
 
-  Widget _buildErrorCard(
-      BuildContext context, PynqDeployProvider provider) {
+  Widget _buildErrorCard(BuildContext context, PynqDeployProvider provider) {
     return Card(
       color: Colors.red.withValues(alpha: 0.08),
       child: Padding(

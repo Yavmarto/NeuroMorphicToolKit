@@ -22,8 +22,24 @@ class _NopPynqDeployService extends PynqDeployService {
       warnings: [],
       rejectionReasons: [],
       deployPayload: PynqDeployPayload(
-        weights: [1.0],
-        config: {'bit_width': 4},
+        weights: [1.0, 2.0],
+        config: PynqDeployConfig(
+          threshold: 1.0,
+          bitWidth: 4,
+          scaleFactor: 7.0,
+        ),
+        bitstreamPath: 'snn_overlay.bit',
+        registerMap: PynqRegisterMap(
+          baseAddress: 0x40000000,
+          controlRegOffset: 0x00,
+          statusRegOffset: 0x04,
+          neuronBaseOffset: 0x100,
+          weightBaseOffset: 0x10000,
+          dmaChannel: 'axi_dma_0',
+          inputBufferAddr: 0,
+          outputBufferAddr: 0,
+          timestepUs: 1000,
+        ),
       ),
     );
   }
@@ -31,11 +47,9 @@ class _NopPynqDeployService extends PynqDeployService {
   @override
   Future<Map<String, dynamic>> deployToBoard({
     required String boardBaseUrl,
-    required List<double> weights,
-    required Map<String, dynamic> config,
-    String? bitstreamPath,
-    Map<String, dynamic>? registerMap,
+    required PynqDeployPayload payload,
     String? apiKey,
+    String? bitstreamPathOverride,
   }) async =>
       {'status': 'ok'};
 
@@ -44,7 +58,10 @@ class _NopPynqDeployService extends PynqDeployService {
     required String boardBaseUrl,
     String? apiKey,
   }) async =>
-      const PynqDeployJob(status: PynqDeployJobStatus.configured);
+      const PynqDeployJob(
+        status: PynqDeployJobStatus.configured,
+        runtimeMode: PynqBackendRuntimeMode.simulator,
+      );
 
   @override
   Future<PynqSitlVerifyResult> runSitlVerification({
@@ -133,6 +150,22 @@ void main() {
 
       expect(provider.currentStep, PynqDeployStep.checked);
       expect(find.text('exportable'), findsOneWidget);
+    });
+
+    testWidgets('shows deployment package details after exportability check',
+        (WidgetTester tester) async {
+      final provider = PynqDeployProvider(service: _NopPynqDeployService());
+      await tester.pumpWidget(_buildTestApp(provider));
+
+      await provider.checkExportability(
+        spec: 'The sensory neuron MUST fire.',
+        weightBitWidth: 4,
+      );
+      await tester.pump();
+
+      expect(find.text('Deployment Package'), findsOneWidget);
+      expect(find.textContaining('2 packed weights'), findsOneWidget);
+      expect(find.textContaining('snn_overlay.bit'), findsWidgets);
     });
 
     testWidgets('AppBar shows PYNQ Z2 Deploy title',

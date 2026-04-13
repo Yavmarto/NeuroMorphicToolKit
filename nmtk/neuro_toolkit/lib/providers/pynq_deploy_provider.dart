@@ -64,11 +64,17 @@ class PynqDeployProvider with ChangeNotifier {
   String _boardApiKey = '';
   String get boardApiKey => _boardApiKey;
 
+  /// Optional bitstream override for the remote board.
+  String _bitstreamPathOverride = '';
+  String get bitstreamPathOverride => _bitstreamPathOverride;
+
   /// Whether to run optional SITL verification after deploy.
   bool _runSitl = false;
   bool get runSitl => _runSitl;
 
   Timer? _pollTimer;
+
+  PynqDeployPayload? get deployPayload => _exportResult?.deployPayload;
 
   // -- Actions -------------------------------------------------------------
 
@@ -89,6 +95,8 @@ class PynqDeployProvider with ChangeNotifier {
         spec: spec,
         weightBitWidth: weightBitWidth,
       );
+      _bitstreamPathOverride =
+          _exportResult?.deployPayload?.bitstreamPath ?? '';
       _currentStep = PynqDeployStep.checked;
       notifyListeners();
     } on PynqDeployException catch (e) {
@@ -114,22 +122,33 @@ class PynqDeployProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update the optional bitstream path override.
+  void setBitstreamPathOverride(String value) {
+    _bitstreamPathOverride = value;
+    notifyListeners();
+  }
+
   /// Toggle optional SITL verification.
   void setRunSitl(bool value) {
     _runSitl = value;
     notifyListeners();
   }
 
-  /// Deploy the overlay to the remote PYNQ board.
-  ///
-  /// The [weights] and [config] come from the network payload produced by
-  /// the NeuroCNL pipeline.  The UI passes them down from [exportResult].
-  Future<void> startDeploy({
-    required List<double> weights,
-    required Map<String, dynamic> config,
-    String? bitstreamPath,
-    Map<String, dynamic>? registerMap,
-  }) async {
+  /// Deploy the validated NeuroCNL handoff payload to the remote PYNQ board.
+  Future<void> startDeploy() async {
+    if (_boardBaseUrl.trim().isEmpty) {
+      _currentStep = PynqDeployStep.error;
+      _errorMessage = 'Board endpoint URL is required before deploy.';
+      notifyListeners();
+      return;
+    }
+    if (deployPayload == null) {
+      _currentStep = PynqDeployStep.error;
+      _errorMessage =
+          'No validated deploy payload available. Run exportability first.';
+      notifyListeners();
+      return;
+    }
     _currentStep = PynqDeployStep.deploying;
     _errorMessage = null;
     _deployJob = null;
@@ -139,11 +158,10 @@ class PynqDeployProvider with ChangeNotifier {
     try {
       await _service.deployToBoard(
         boardBaseUrl: _boardBaseUrl,
-        weights: weights,
-        config: config,
-        bitstreamPath: bitstreamPath,
-        registerMap: registerMap,
+        payload: deployPayload!,
         apiKey: _boardApiKey.isNotEmpty ? _boardApiKey : null,
+        bitstreamPathOverride:
+            _bitstreamPathOverride.isNotEmpty ? _bitstreamPathOverride : null,
       );
 
       _currentStep = PynqDeployStep.polling;
@@ -231,6 +249,7 @@ class PynqDeployProvider with ChangeNotifier {
     _deployJob = null;
     _sitlResult = null;
     _errorMessage = null;
+    _bitstreamPathOverride = '';
     notifyListeners();
   }
 

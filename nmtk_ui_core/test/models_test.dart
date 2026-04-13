@@ -82,21 +82,34 @@ void main() {
     });
 
     test('constructor creates a valid object', () {
-      const frame = SensorFrame(
-        timestamp: 100.0,
-        emgChannels: [1.0],
-      );
+      const frame = SensorFrame(timestamp: 100.0, emgChannels: [1.0]);
       expect(frame.timestamp, 100.0);
     });
   });
 
   group('PynqNetworkResponse', () {
-    test('fromJson parses exportable state', () {
+    test('fromJson parses exportable state and deploy payload', () {
       final json = {
         'support_state': 'exportable',
         'warnings': <String>[],
         'rejections': <String>[],
         'network_summary': {'n_neurons': 100, 'n_synapses': 200},
+        'deploy_payload': {
+          'weights': [1, 2, 3],
+          'config': {'threshold': 1.0, 'bit_width': 4, 'scale_factor': 7.0},
+          'bitstream_path': '/opt/overlays/snn_overlay.bit',
+          'register_map': {
+            'base_address': 1073741824,
+            'control_reg_offset': 0,
+            'status_reg_offset': 4,
+            'neuron_base_offset': 256,
+            'weight_base_offset': 65536,
+            'dma_channel': 'axi_dma_0',
+            'input_buffer_addr': 0,
+            'output_buffer_addr': 0,
+            'timestep_us': 1000,
+          },
+        },
       };
       final response = PynqNetworkResponse.fromJson(json);
 
@@ -104,7 +117,10 @@ void main() {
       expect(response.warnings, isEmpty);
       expect(response.rejectionReasons, isEmpty);
       expect(response.networkSummary?['n_neurons'], 100);
-      expect(response.deployPayload, isNull);
+      expect(response.deployPayload, isNotNull);
+      expect(response.deployPayload!.weightCount, 3);
+      expect(response.deployPayload!.config.bitWidth, 4);
+      expect(response.deployPayload!.registerMap.dmaChannel, 'axi_dma_0');
     });
 
     test('fromJson parses exportable_with_warnings state', () {
@@ -150,14 +166,17 @@ void main() {
 
       expect(response.deployPayload, isNotNull);
       expect(response.deployPayload!.weights, [1.0, 2.0, 3.0]);
-      expect(response.deployPayload!.config['bit_width'], 4);
-      expect(response.deployPayload!.registerMap?['weight_base_offset'], 65536);
+      expect(response.deployPayload!.config.bitWidth, 4);
+      expect(response.deployPayload!.registerMap.weightBaseOffset, 65536);
     });
   });
 
   group('PynqSupportState', () {
     test('fromString returns notExportable for unknown values', () {
-      expect(PynqSupportState.fromString('bogus'), PynqSupportState.notExportable);
+      expect(
+        PynqSupportState.fromString('bogus'),
+        PynqSupportState.notExportable,
+      );
     });
 
     test('labels and icons are non-null for all states', () {
@@ -174,11 +193,13 @@ void main() {
       final json = {
         'state': 'configured',
         'bitstream_path': '/overlays/snn_overlay.bit',
+        'runtime_mode': 'simulator',
       };
       final job = PynqDeployJob.fromJson(json);
 
       expect(job.status, PynqDeployJobStatus.configured);
       expect(job.bitstreamPath, '/overlays/snn_overlay.bit');
+      expect(job.runtimeMode, PynqBackendRuntimeMode.simulator);
     });
 
     test('fromJson parses not_initialised state', () {
@@ -187,6 +208,7 @@ void main() {
 
       expect(job.status, PynqDeployJobStatus.notInitialised);
       expect(job.bitstreamPath, isNull);
+      expect(job.runtimeMode, PynqBackendRuntimeMode.unknown);
     });
 
     test('progressFraction is 1.0 for configured', () {
@@ -208,11 +230,7 @@ void main() {
         'max_exec_us': 58.1,
         'summary': 'All 3 cases passed',
         'steps': [
-          {
-            'label': 'zero_input',
-            'passed': true,
-            'execution_time_us': 38.0,
-          },
+          {'label': 'zero_input', 'passed': true, 'execution_time_us': 38.0},
         ],
       };
       final result = PynqSitlVerifyResult.fromJson(json);

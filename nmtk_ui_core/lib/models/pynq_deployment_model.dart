@@ -99,6 +99,150 @@ enum PynqSupportState {
   }
 }
 
+/// Runtime mode reported by the Neurochip PYNQ backend.
+enum PynqBackendRuntimeMode {
+  unknown,
+  hardware,
+  simulator;
+
+  static PynqBackendRuntimeMode fromJson(Object? value) {
+    switch ((value as String?)?.toLowerCase()) {
+      case 'hardware':
+        return PynqBackendRuntimeMode.hardware;
+      case 'simulator':
+        return PynqBackendRuntimeMode.simulator;
+      default:
+        return PynqBackendRuntimeMode.unknown;
+    }
+  }
+
+  bool get isSimulator => this == PynqBackendRuntimeMode.simulator;
+}
+
+/// Typed deploy-time config for POST /hardware/pynq/deploy.
+class PynqDeployConfig {
+  final double threshold;
+  final int bitWidth;
+  final double scaleFactor;
+
+  const PynqDeployConfig({
+    required this.threshold,
+    required this.bitWidth,
+    required this.scaleFactor,
+  });
+
+  factory PynqDeployConfig.fromJson(Map<String, dynamic> json) {
+    return PynqDeployConfig(
+      threshold: (json['threshold'] as num?)?.toDouble() ?? 1.0,
+      bitWidth: json['bit_width'] as int? ?? 4,
+      scaleFactor: (json['scale_factor'] as num?)?.toDouble() ?? 1.0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'threshold': threshold,
+      'bit_width': bitWidth,
+      'scale_factor': scaleFactor,
+    };
+  }
+}
+
+/// Typed MMIO register map for the PYNQ SNN overlay.
+class PynqRegisterMap {
+  final int baseAddress;
+  final int controlRegOffset;
+  final int statusRegOffset;
+  final int neuronBaseOffset;
+  final int weightBaseOffset;
+  final String dmaChannel;
+  final int inputBufferAddr;
+  final int outputBufferAddr;
+  final int timestepUs;
+
+  const PynqRegisterMap({
+    required this.baseAddress,
+    required this.controlRegOffset,
+    required this.statusRegOffset,
+    required this.neuronBaseOffset,
+    required this.weightBaseOffset,
+    required this.dmaChannel,
+    required this.inputBufferAddr,
+    required this.outputBufferAddr,
+    required this.timestepUs,
+  });
+
+  factory PynqRegisterMap.fromJson(Map<String, dynamic> json) {
+    return PynqRegisterMap(
+      baseAddress: json['base_address'] as int? ?? 0x40000000,
+      controlRegOffset: json['control_reg_offset'] as int? ?? 0x00,
+      statusRegOffset: json['status_reg_offset'] as int? ?? 0x04,
+      neuronBaseOffset: json['neuron_base_offset'] as int? ?? 0x100,
+      weightBaseOffset: json['weight_base_offset'] as int? ?? 0x10000,
+      dmaChannel: json['dma_channel'] as String? ?? 'axi_dma_0',
+      inputBufferAddr: json['input_buffer_addr'] as int? ?? 0,
+      outputBufferAddr: json['output_buffer_addr'] as int? ?? 0,
+      timestepUs: json['timestep_us'] as int? ?? 1000,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'base_address': baseAddress,
+      'control_reg_offset': controlRegOffset,
+      'status_reg_offset': statusRegOffset,
+      'neuron_base_offset': neuronBaseOffset,
+      'weight_base_offset': weightBaseOffset,
+      'dma_channel': dmaChannel,
+      'input_buffer_addr': inputBufferAddr,
+      'output_buffer_addr': outputBufferAddr,
+      'timestep_us': timestepUs,
+    };
+  }
+}
+
+/// Validated deploy payload returned by NeuroCNL for Neurochip's PYNQ router.
+class PynqDeployPayload {
+  final List<double> weights;
+  final PynqDeployConfig config;
+  final String bitstreamPath;
+  final PynqRegisterMap registerMap;
+
+  const PynqDeployPayload({
+    required this.weights,
+    required this.config,
+    required this.bitstreamPath,
+    required this.registerMap,
+  });
+
+  int get weightCount => weights.length;
+
+  factory PynqDeployPayload.fromJson(Map<String, dynamic> json) {
+    return PynqDeployPayload(
+      weights: (json['weights'] as List? ?? const <Object>[])
+          .map((e) => (e as num).toDouble())
+          .toList(),
+      config: PynqDeployConfig.fromJson(
+        json['config'] as Map<String, dynamic>? ?? const <String, dynamic>{},
+      ),
+      bitstreamPath: json['bitstream_path'] as String? ?? 'snn_overlay.bit',
+      registerMap: PynqRegisterMap.fromJson(
+        json['register_map'] as Map<String, dynamic>? ??
+            const <String, dynamic>{},
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'weights': weights,
+      'config': config.toJson(),
+      'bitstream_path': bitstreamPath,
+      'register_map': registerMap.toJson(),
+    };
+  }
+}
+
 /// Response from PYNQ exportability planning endpoint.
 class PynqNetworkResponse {
   final PynqSupportState supportState;
@@ -117,43 +261,19 @@ class PynqNetworkResponse {
 
   factory PynqNetworkResponse.fromJson(Map<String, dynamic> json) {
     return PynqNetworkResponse(
-      supportState:
-          PynqSupportState.fromString(json['support_state'] as String),
-      warnings:
-          (json['warnings'] as List).map((e) => e as String).toList(),
-      rejectionReasons:
-          (json['rejections'] as List).map((e) => e as String).toList(),
+      supportState: PynqSupportState.fromString(
+        json['support_state'] as String,
+      ),
+      warnings: (json['warnings'] as List).map((e) => e as String).toList(),
+      rejectionReasons: (json['rejections'] as List)
+          .map((e) => e as String)
+          .toList(),
       networkSummary: json['network_summary'] as Map<String, dynamic>?,
       deployPayload: json['deploy_payload'] is Map<String, dynamic>
           ? PynqDeployPayload.fromJson(
               json['deploy_payload'] as Map<String, dynamic>,
             )
           : null,
-    );
-  }
-}
-
-class PynqDeployPayload {
-  final List<double> weights;
-  final Map<String, dynamic> config;
-  final String? bitstreamPath;
-  final Map<String, dynamic>? registerMap;
-
-  const PynqDeployPayload({
-    required this.weights,
-    required this.config,
-    this.bitstreamPath,
-    this.registerMap,
-  });
-
-  factory PynqDeployPayload.fromJson(Map<String, dynamic> json) {
-    return PynqDeployPayload(
-      weights: (json['weights'] as List<dynamic>? ?? const <dynamic>[])
-          .map((value) => (value as num).toDouble())
-          .toList(),
-      config: json['config'] as Map<String, dynamic>? ?? const <String, dynamic>{},
-      bitstreamPath: json['bitstream_path'] as String?,
-      registerMap: json['register_map'] as Map<String, dynamic>?,
     );
   }
 }
@@ -233,16 +353,19 @@ enum PynqDeployJobStatus {
 class PynqDeployJob {
   final PynqDeployJobStatus status;
   final String? bitstreamPath;
+  final PynqBackendRuntimeMode runtimeMode;
 
   const PynqDeployJob({
     required this.status,
     this.bitstreamPath,
+    this.runtimeMode = PynqBackendRuntimeMode.unknown,
   });
 
   factory PynqDeployJob.fromJson(Map<String, dynamic> json) {
     return PynqDeployJob(
       status: PynqDeployJobStatus.fromString(json['state'] as String),
       bitstreamPath: json['bitstream_path'] as String?,
+      runtimeMode: PynqBackendRuntimeMode.fromJson(json['runtime_mode']),
     );
   }
 }
@@ -301,8 +424,7 @@ class PynqSitlVerifyResult {
       maxExecUs: (json['max_exec_us'] as num).toDouble(),
       summary: json['summary'] as String,
       steps: (json['steps'] as List)
-          .map((e) =>
-              PynqSitlStepResult.fromJson(e as Map<String, dynamic>))
+          .map((e) => PynqSitlStepResult.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }
