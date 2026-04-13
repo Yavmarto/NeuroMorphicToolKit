@@ -5,18 +5,35 @@ labels: ["enhancement", "frontend", "backend", "hardware", "akida", "brainchip",
 
 ## Audit Status
 
-Status as of 2026-04-13: `implemented with defects`
+Status as of 2026-04-13: `implemented with remaining SDK-backed verification`
 
 What is already landed:
 - NeuroCNL exposes explicit Akida support states and returns them from the deploy gate.
 - NeuroCNL can map supported networks into a shared `mapped_network` representation for Neurochip handoff.
 - Neurochip owns scaffold package generation and optional SDK-backed deployment behavior.
 - NMTK has an Akida deployment screen and service flow, including optional Neurobench job submission.
+- The topology-centralization dependency in `akida-topological-drift.md` is now complete.
+- Targeted Akida validator / contract / mapper verification now passes locally.
 
 What is still open:
-- The topology-centralization work tracked in `akida-topological-drift.md` is not fully complete yet, so part of the Akida story still depends on split topology logic.
-- Local Python verification for the Akida surfaces was environment-blocked during the audit, so this issue still needs a clean runnable verification pass.
-- Keep runtime claims tied to truthful SDK availability. Treat real SDK/hardware proof as required evidence before calling the full workflow complete.
+- The remaining open work is truthful SDK-backed and hardware-backed proof for the `sdk_deployable` path.
+- Keep runtime claims tied to actual SDK availability and recorded evidence before calling the full workflow complete.
+
+## Continuation Order
+
+Active queue position: `3 of 4`
+
+Why this is third:
+- The contract and mapping semantics are now in place, and the topology dependency is no longer blocking.
+- What remains is environment-dependent proof work, so it should follow the easier hardware-evidence closures first.
+
+## Next Action To Continue
+
+- Run one clean Akida acceptance pass in an environment that actually has the BrainChip SDK available.
+- Record whether the current shared mapped representation reaches a truthful `sdk_deployable` outcome or needs another gap ticket.
+- If SDK-backed proof is not currently available, keep the product claims scoped to scaffold/export flow only.
+
+Historical note: the original plan sections below are retained for design context. Use the audit status, continuation order, and acceptance criteria above as the current source of truth.
 
 # Problem Statement
 NeuroCNL includes Akida-specific planning, validation, and code generation, so the Studio experience can feel as if Akida deployment is already part of the normal parse/validate/generate/simulate/deploy flow.
@@ -200,13 +217,13 @@ Use the following agent tiers:
 - Steps 3 and 4 should stay with top-tier agents; they are the hardest parts of this plan.
 
 # Acceptance Criteria
-- [ ] NeuroCNL planner exposes explicit Akida support levels rather than implying generic deployment support.
-- [ ] A formal Akida deployment contract exists and is enforced before generation/export.
-- [ ] NeuroCNL maps validated IR into a shared Akida deployment representation used by Neurochip.
-- [ ] Neurochip is the official toolkit module for Akida package generation and inference.
-- [ ] The NeuroCNL frontend exposes Akida-specific readiness, limitations, and toolkit deployment mode clearly.
-- [ ] The toolkit can optionally route deployed Akida artifacts into benchmark/verification flows.
-- [ ] NMTK can present the cross-module Akida deployment flow as one guided workflow.
+- [x] NeuroCNL planner exposes explicit Akida support levels rather than implying generic deployment support.
+- [x] A formal Akida deployment contract exists and is enforced before generation/export.
+- [x] NeuroCNL maps validated IR into a shared Akida deployment representation used by Neurochip.
+- [x] Neurochip is the official toolkit module for Akida package generation and inference.
+- [x] The NeuroCNL frontend exposes Akida-specific readiness, limitations, and toolkit deployment mode clearly.
+- [x] The toolkit can optionally route deployed Akida artifacts into benchmark/verification flows.
+- [x] NMTK can present the cross-module Akida deployment flow as one guided workflow.
 - [ ] Tests cover unsupported, scaffold-only, and SDK-deployable cases.
 
 # Out of Scope

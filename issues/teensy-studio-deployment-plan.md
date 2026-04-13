@@ -5,7 +5,7 @@ labels: ["enhancement", "frontend", "backend", "hardware", "teensy", "integratio
 
 ## Audit Status
 
-Status as of 2026-04-13: `implemented with defects`
+Status as of 2026-04-13: `implemented with remaining real-board evidence`
 
 What is already landed:
 - NeuroCNL exposes a fail-closed Teensy deploy gate and maps accepted networks into the exact Neurochip payload shape.
@@ -15,7 +15,23 @@ What is already landed:
 
 What is still open:
 - The issue still lacks hard evidence of a recorded real-board smoke-test success in this repo state; current proof is API/test-contract strong but still hardware-light.
-- Keep the issue open until the post-flash verification story is backed by concrete acceptance evidence on an actual Teensy path, not just the mocked or contract-level flow.
+- Keep the issue open until the post-flash verification story is backed by concrete acceptance evidence on an actual Teensy path, not just mocked or contract-level flow.
+
+## Continuation Order
+
+Active queue position: `1 of 4`
+
+Why this is first:
+- This is the closest remaining hardware workflow to closure.
+- The contract, handoff, UI, and integration-test surfaces are already in place; the main missing piece is real-board proof.
+
+## Next Action To Continue
+
+- Run one real Teensy flash and post-flash verification session from the current toolkit flow.
+- Record the exact board, serial port, firmware artifact, and verification outcome in this issue.
+- Only after that, check off the remaining hardware-proof acceptance item and close the ticket.
+
+Historical note: the original plan sections below are retained for design context. Use the audit status, continuation order, and acceptance criteria above as the current source of truth.
 
 # Problem Statement
 The NeuroCNL Studio UI currently suggests a workflow of:
@@ -200,14 +216,14 @@ Use the following agent tiers:
 - Step 3 should stay on the critical path and should not be delegated to a weaker agent without strong review.
 
 # Acceptance Criteria
-- [ ] A Teensy deployment contract exists and rejects unsupported NeuroCNL networks before export.
-- [ ] NeuroCNL can transform a validated network into the exact payload required by Neurochip's Teensy generator.
-- [ ] Neurochip is the official toolkit module for Teensy firmware generation and flashing.
-- [ ] The NeuroCNL frontend shows a target-specific toolkit deployment panel instead of the current generic export-only flow.
-- [ ] Users can generate firmware, pick a serial port, flash, and see job progress from the NeuroCNL/NMTK workflow.
+- [x] A Teensy deployment contract exists and rejects unsupported NeuroCNL networks before export.
+- [x] NeuroCNL can transform a validated network into the exact payload required by Neurochip's Teensy generator.
+- [x] Neurochip is the official toolkit module for Teensy firmware generation and flashing.
+- [x] The NeuroCNL frontend shows a target-specific toolkit deployment panel instead of the current generic export-only flow.
+- [x] Users can generate firmware, pick a serial port, flash, and see job progress from the NeuroCNL/NMTK workflow.
 - [ ] A post-flash smoke test confirms command/telemetry roundtrip with a connected Teensy.
-- [ ] For the prosthetic workflow, users can optionally continue into a Neuro-Dream-Hand runtime verification step.
-- [ ] End-to-end toolkit tests cover at least one deployable network and one rejected network.
+- [x] For the prosthetic workflow, users can optionally continue into a Neuro-Dream-Hand runtime verification step.
+- [x] End-to-end toolkit tests cover at least one deployable network and one rejected network.
 
 # Out of Scope
 - Full arbitrary-network deployment to Teensy.

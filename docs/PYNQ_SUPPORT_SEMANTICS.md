@@ -33,6 +33,7 @@ Output artifacts (contract ZIP contents):
 A `DEPLOYABLE` verdict means:
 - Export succeeded (all `EXPORTABLE` constraints met)
 - Real PYNQ Z2 board is reachable via network (Ethernet/USB)
+- Neurochip preflight reports canonical overlay assets present (`snn_overlay.bit` + `snn_overlay.hwh`)
 - Overlay bitstream loaded successfully onto Zynq-7000 programmable logic
 - DMA channels and SNN IP core are accessible
 
@@ -69,12 +70,14 @@ A `DEPLOYABLE` verdict means:
 |------|-------------|
 | `board_unreachable` | PYNQ Z2 board not reachable at configured endpoint |
 | `overlay_load_failure` | Bitstream flash failed on Zynq-7000 |
+| `overlay_assets_missing` | Canonical `.bit` / `.hwh` files are absent or incomplete for hardware runtime |
 
 ## Truthfulness Rules
 
 1. **The toolkit MAY claim "PYNQ Exportable"** when `plan_pynq_exportability()` returns `EXPORTABLE` or `EXPORTABLE_WITH_WARNINGS`.
 
 2. **The toolkit MUST NOT claim "PYNQ Deployable"** unless runtime board connectivity is confirmed and overlay load succeeds. This is issue #11 scope.
+   Neurochip's `GET /hardware/pynq/preflight` is the canonical readiness probe for this claim.
 
 3. **The UI MUST visually distinguish** export-ready (blue/teal) from deploy-ready (green) states. This prevents users from conflating "I can generate files" with "my board is running."
 

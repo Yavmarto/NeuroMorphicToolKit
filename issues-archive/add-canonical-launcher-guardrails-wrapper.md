@@ -5,16 +5,27 @@ labels: ["launcher", "scripts", "ci", "verification"]
 
 ## Audit Status
 
-Status as of 2026-04-13: `implemented with defects`
+Status as of 2026-04-13: `complete`
 
 What is already landed:
 - `scripts/run_launcher_guardrails.sh` exists and is the canonical wrapper.
 - The wrapper checks for required tools, runs launcher doctor first, then launcher Python and Flutter tests, and supports `--with-integration`.
 - Root workflow docs and agent guidance point contributors at the wrapper consistently.
+- `python3 -m unittest tests.test_launcher_control_service` now passes cleanly.
+- `bash scripts/run_launcher_guardrails.sh` now passes cleanly in the current repo state.
 
 What is still open:
-- The launcher Python verification surface is not clean yet: `python3 -m unittest tests.test_launcher_control_service` currently fails once on path normalization (`/private/var/...` vs `/var/...`).
-- Keep this issue open until the wrapper-owned verification path is green again and the wrapper can be treated as fully healthy rather than merely present.
+- No wrapper-specific implementation work remains.
+- Current launcher doctor output is `fatalCount = 0` with one degraded optional capability (`lava` unavailable in `Neurochip`), which is not a blocker for this issue.
+
+## Continuation Order
+
+Queue position: `completed foundation`
+
+## Next Action To Continue
+
+- No direct follow-up is required here.
+- If launcher behavior changes later, re-run `bash scripts/run_launcher_guardrails.sh` and only reopen this issue if the wrapper itself regresses.
 
 # Goal
 Add `scripts/run_launcher_guardrails.sh` as the canonical local enforcement wrapper for launcher-owned changes.
@@ -33,11 +44,11 @@ Add `scripts/run_launcher_guardrails.sh` as the canonical local enforcement wrap
 - support for optional root integration checks when launcher changes are suite-visible
 
 # Acceptance Criteria
-- [ ] One documented wrapper exists for launcher guardrails execution.
-- [ ] The wrapper fails clearly when required tools are unavailable.
-- [ ] The wrapper runs launcher doctor plus launcher-specific unit and Flutter tests.
-- [ ] The wrapper supports root integration checks for suite-visible launcher changes.
-- [ ] Failure output is clear enough for both local developer use and CI orchestration.
+- [x] One documented wrapper exists for launcher guardrails execution.
+- [x] The wrapper fails clearly when required tools are unavailable.
+- [x] The wrapper runs launcher doctor plus launcher-specific unit and Flutter tests.
+- [x] The wrapper supports root integration checks for suite-visible launcher changes.
+- [x] Failure output is clear enough for both local developer use and CI orchestration.
 
 # Depends On
 - [launcher-doctor-required-gate.md](/Users/yoshimartodihardjo/NeuroMorphicToolKit/issues-archive/launcher-doctor-required-gate.md)

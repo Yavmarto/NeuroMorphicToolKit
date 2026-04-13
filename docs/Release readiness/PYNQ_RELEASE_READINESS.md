@@ -61,6 +61,15 @@ The PYNQ Z2 workflow is **release-ready for export and simulator-backed deployme
 | Real PYNQ hardware deployment | `snn_overlay.bit` + `.hwh` require Xilinx Vivado synthesis | Cannot test on physical board |
 | Bitstream is not in-repo | FPGA synthesis is a manual, vendor-toolchain step | Expected; simulator covers CI |
 
+## Board-Readiness Guardrails
+
+- Relative PYNQ bitstream names now resolve against `Neurochip/neurochip/overlays/`.
+- Real-board readiness is exposed via `GET /hardware/pynq/preflight`.
+- Preflight returns:
+  - `ok` when hardware runtime is active and both overlay files are present
+  - `failed` when hardware runtime is active but overlay assets are incomplete
+  - `degraded` when simulator fallback is active, which keeps CI usable but is not real-board proof
+
 ## Out of Scope
 
 - **FINN integration** (Phase 2): automated HLS compilation from network IR

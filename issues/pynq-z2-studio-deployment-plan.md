@@ -5,7 +5,7 @@ labels: ["enhancement", "frontend", "backend", "hardware", "pynq", "fpga", "inte
 
 ## Audit Status
 
-Status as of 2026-04-13: `implemented with defects`
+Status as of 2026-04-13: `implemented with remaining board-ready artifact evidence`
 
 What is already landed:
 - The planner, contracts, and docs distinguish `exportable` from runtime `deployable`.
@@ -14,9 +14,27 @@ What is already landed:
 - NeuroCNL includes a PYNQ handoff layer and related tests.
 
 What is still open:
-- The current launcher UI path does not hand a full NeuroCNL-produced runtime artifact through to Neurochip; it currently deploys with an empty weights list and a minimal config stub.
 - Real-board proof remains blocked on the missing synthesized `.bit` / `.hwh` overlay artifacts, so only simulator-backed deployment is evidenced today.
-- Keep this issue open until the guided UI flow carries the real artifact/handoff contract and the remaining real-board or agreed simulated acceptance evidence is documented.
+- The remaining open question is not the basic handoff shape anymore; it is whether the board-ready overlay package and acceptance evidence are present for a truthful deployable claim.
+- Keep this issue open until either:
+  - a real board-ready overlay package is available and validated, or
+  - the repo explicitly narrows the accepted scope to simulator-backed deployment proof.
+
+## Continuation Order
+
+Active queue position: `2 of 4`
+
+Why this is next:
+- The planner/export contract, runtime artifact contract, Neurochip backend, and NMTK deploy flow are already present.
+- The ticket is now mostly waiting on board-ready artifacts and closure evidence rather than another large architecture pass.
+
+## Next Action To Continue
+
+- Decide whether the closure target is real-board deployment or simulator-backed acceptance only.
+- If real-board deployment is still the target, land the missing `.bit` / `.hwh` artifacts and record one successful configured-status run.
+- If simulator-backed acceptance is acceptable for this phase, tighten the issue wording and close out the remaining UI/status proof explicitly.
+
+Historical note: the original plan sections below are retained for design context. Use the audit status, continuation order, and acceptance criteria above as the current source of truth.
 
 # Problem Statement
 NeuroCNL already contains a `pynq` capability profile and a PYNQ exporter, which makes the Studio appear closer to FPGA deployment than it really is.
@@ -215,14 +233,14 @@ Use the following agent tiers:
 - Step 4 should stay with a top-tier agent.
 
 # Acceptance Criteria
-- [ ] Planner and UI clearly distinguish PYNQ `exportable` from `deployable`.
-- [ ] A shared PYNQ deployment artifact contract exists across NeuroCNL and Neurochip and can be reused for optional Dream-Hand verification.
-- [ ] Neurochip `PYNQBackend` performs real configuration and run steps instead of placeholder-only logic.
-- [ ] NeuroCNL can hand off a validated network to Neurochip for PYNQ deployment through a stable API or shared package boundary.
+- [x] Planner and UI clearly distinguish PYNQ `exportable` from `deployable`.
+- [x] A shared PYNQ deployment artifact contract exists across NeuroCNL and Neurochip and can be reused for optional Dream-Hand verification.
+- [x] Neurochip `PYNQBackend` performs real configuration and run steps instead of placeholder-only logic.
+- [x] NeuroCNL can hand off a validated network to Neurochip for PYNQ deployment through a stable API or shared package boundary.
 - [ ] The NeuroCNL frontend includes a PYNQ-specific toolkit deployment panel with readiness, warnings, deployment status, and verification results.
-- [ ] The toolkit can optionally route a successfully deployed artifact into a Dream-Hand SITL verification path.
-- [ ] NMTK can present the multi-module PYNQ flow as one guided operation.
-- [ ] End-to-end tests cover successful artifact export, rejected unsupported networks, and simulated runtime verification.
+- [x] The toolkit can optionally route a successfully deployed artifact into a Dream-Hand SITL verification path.
+- [x] NMTK can present the multi-module PYNQ flow as one guided operation.
+- [x] End-to-end tests cover successful artifact export, rejected unsupported networks, and simulated runtime verification.
 
 # Out of Scope
 - Full FPGA synthesis from arbitrary NeuroCNL graphs inside the Studio.

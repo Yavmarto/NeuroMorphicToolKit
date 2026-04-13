@@ -19,6 +19,22 @@ What is still open:
 - UI alignment for support levels and the final truthful end-to-end demo remain unfinished.
 - Keep the issue focused on converting the current credibility foundation into recorded real-hardware proof and measured performance evidence.
 
+## Continuation Order
+
+Active queue position: `4 of 4`
+
+Why this stays after the deployment tickets:
+- This is the broadest and most open-ended rollout in the set.
+- It benefits from first closing at least one narrower hardware-proof loop elsewhere so the repo has a recent pattern for recording acceptance evidence.
+
+## Next Action To Continue
+
+- Execute the real `OpenBCI Cyton` acceptance-prep flow without mocks and record the outcome.
+- Capture one canonical real session artifact from that run.
+- Then move directly into benchmark collection and the final truthful demo/runbook.
+
+Historical note: the original plan sections below are retained for design context. Use the audit status, continuation order, and the progress snapshot later in this file as the current source of truth.
+
 # Purpose
 This file is the ordered issue list for turning `NeuroSense` into a more credible module for neuromorphic researchers, hardware engineers, and applied edge-AI teams.
 

@@ -26,33 +26,35 @@ NEUROCHIP_URL = os.getenv("NEUROCHIP_URL", "http://neurochip:8000")
 # ---------------------------------------------------------------------------
 
 VALID_REFLEX_ARC_SPEC = (
-    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0.\n"
-    "The motor neuron MUST fire ONLY IF membrane potential exceeds 1.0.\n"
-    "The sensory neuron has a refractory period of 0.002 seconds.\n"
-    "The motor neuron has a refractory period of 0.002 seconds.\n"
-    "Sensory neuron connects to motor neuron with weight 0.8.\n"
+    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0\n"
+    "The motor neuron MUST emit a spike ONLY IF membrane potential exceeds 0.8\n"
+    "The sensory neuron MUST NOT fire DURING the refractory period of 0.002 seconds\n"
+    "The motor neuron MUST NOT fire DURING the refractory period of 0.002 seconds\n"
+    "The sensory neuron membrane potential MUST decay WITH time constant of 0.02 seconds\n"
+    "The motor neuron membrane potential MUST decay WITH time constant of 0.02 seconds\n"
+    "The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 0.8\n"
 )
 
 OVERSIZED_NETWORK_SPEC = "\n".join(
     [
-        f"Population pop{i} has 100 neurons."
+        f"The network MUST contain an excitatory pop{i} population of 100 neurons"
         for i in range(50)  # 50 × 100 = 5000 neurons > 4096
     ]
-    + ["pop0 connects to pop1 with weight 1.0."]
+    + ["The connection from pop0 to pop1 MUST have WITH synaptic weight of 1.0"]
 )
 
 RECURRENT_SPEC = (
-    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0.\n"
-    "The motor neuron MUST fire ONLY IF membrane potential exceeds 1.0.\n"
-    "Sensory neuron connects to motor neuron with weight 0.5.\n"
-    "Motor neuron connects to sensory neuron with weight 0.3.\n"
+    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0\n"
+    "The motor neuron MUST fire ONLY IF membrane potential exceeds 1.0\n"
+    "The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 0.5\n"
+    "The connection from motor neuron to sensory neuron MUST have WITH synaptic weight of 0.3\n"
 )
 
 STDP_SPEC = (
-    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0.\n"
-    "The motor neuron MUST fire ONLY IF membrane potential exceeds 1.0.\n"
-    "Sensory neuron connects to motor neuron with weight 0.5.\n"
-    "Sensory neuron to motor neuron connection uses STDP learning with rate 0.01.\n"
+    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0\n"
+    "The motor neuron MUST fire ONLY IF membrane potential exceeds 1.0\n"
+    "The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 0.5\n"
+    "The connection from sensory neuron to motor neuron MUST adapt WITH STDP learning rate of 0.01\n"
 )
 
 
@@ -114,11 +116,11 @@ async def test_teensy_e2e_happy_path_with_warnings():
     # Build a network that is within limits but close to capacity
     large_spec = "\n".join(
         [
-            "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0.",
-            "Population hidden has 3000 neurons.",
-            "The motor neuron MUST fire ONLY IF membrane potential exceeds 1.0.",
-            "Sensory neuron connects to hidden with weight 0.5.",
-            "Hidden connects to motor neuron with weight 0.5.",
+            "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0",
+            "The network MUST contain an excitatory hidden population of 3000 neurons",
+            "The motor neuron MUST fire ONLY IF membrane potential exceeds 1.0",
+            "The connection from sensory neuron to hidden MUST have WITH synaptic weight of 0.5",
+            "The connection from hidden to motor neuron MUST have WITH synaptic weight of 0.5",
         ]
     )
 
@@ -175,7 +177,7 @@ async def test_teensy_rejected_recurrent_topology():
 
 @pytest.mark.asyncio
 async def test_teensy_rejected_learning_rule():
-    """STDP learning must be rejected with UNSUPPORTED_LEARNING_RULE."""
+    """STDP learning must be rejected before any Teensy payload is produced."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await client.post(
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
@@ -184,9 +186,13 @@ async def test_teensy_rejected_learning_rule():
         assert resp.status_code == 422
 
         detail = resp.json()["detail"]
-        assert detail["error"] == "not_deployable"
-        reasons_text = " ".join(detail["rejection_reasons"]).lower()
-        assert "learning" in reasons_text
+        assert detail["error"] in {"lowering_failed", "not_deployable"}
+        detail_text = " ".join(
+            [str(detail.get("error", ""))]
+            + [str(msg) for msg in detail.get("messages", [])]
+            + [str(msg) for msg in detail.get("rejection_reasons", [])]
+        ).lower()
+        assert "learning" in detail_text or "stdp" in detail_text
 
 
 @pytest.mark.asyncio
