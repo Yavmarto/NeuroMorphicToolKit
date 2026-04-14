@@ -7,6 +7,9 @@ Covers:
 
 Requires running services (typically via docker-compose).
 Service URLs are read from environment variables with Docker service-name defaults.
+
+This file is intentionally Teensy-specific. It does not validate the PYNQ Z2
+deployment path or a real PYNQ board.
 """
 
 from __future__ import annotations
