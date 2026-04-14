@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 
 class ToolViewScreen extends StatefulWidget {
@@ -24,6 +25,7 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   final Map<String, WebViewController> _controllers = {};
   final Map<String, bool> _readyStatus = {};
   final Map<String, Timer> _pollTimers = {};
+  final Map<String, Uri> _pendingModuleRequests = {};
   late String _activeModuleId;
 
   String _serviceHost() {
@@ -128,12 +130,23 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
       return _controllers[module.id]!;
     }
 
-    final url = _moduleUri(module).toString();
+    final initialUri =
+        _pendingModuleRequests.remove(module.id) ?? _moduleUri(module);
+    final url = initialUri.toString();
 
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onNavigationRequest: (request) async {
+            final handled = await _handleCrossModuleNavigation(
+              module,
+              Uri.parse(request.url),
+            );
+            return handled
+                ? NavigationDecision.prevent
+                : NavigationDecision.navigate;
+          },
           onWebResourceError: (WebResourceError error) {
             debugPrint(
               'WebView error for ${module.name}: ${error.description}',
@@ -162,6 +175,41 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   bool _isWebViewSupported() {
     if (kIsWeb) return false;
     return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+  }
+
+  Future<bool> _handleCrossModuleNavigation(
+    Module currentModule,
+    Uri requestUri,
+  ) async {
+    final provider = context.read<ModuleProvider>();
+    final navigation = resolveCrossModuleNavigation(
+      targetUri: requestUri,
+      modules: provider.modules,
+      currentModuleId: currentModule.id,
+    );
+    if (navigation == null) {
+      return false;
+    }
+
+    final targetModule = navigation.targetModule;
+    _pendingModuleRequests[targetModule.id] = navigation.targetUri;
+
+    if (!provider.activeModuleIds.contains(targetModule.id)) {
+      await provider.launchModule(targetModule.id);
+    }
+
+    if (_controllers.containsKey(targetModule.id)) {
+      _pendingModuleRequests.remove(targetModule.id);
+      await _controllers[targetModule.id]!.loadRequest(navigation.targetUri);
+    }
+
+    if (mounted) {
+      setState(() {
+        _activeModuleId = targetModule.id;
+      });
+    }
+
+    return true;
   }
 
   @override
@@ -260,8 +308,8 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
             children: activeModules.map((module) {
               final isReady = _readyStatus[module.id] ?? false;
               final supported = _isWebViewSupported();
-              final launchBlocked =
-                  module.isPreflightFailed || module.status == ModuleStatus.error;
+              final launchBlocked = module.isPreflightFailed ||
+                  module.status == ModuleStatus.error;
 
               return Container(
                 key: ValueKey(module.id),
@@ -293,7 +341,8 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
                               ],
                               const SizedBox(height: 16),
                               ElevatedButton.icon(
-                                onPressed: () => provider.launchModule(module.id),
+                                onPressed: () =>
+                                    provider.launchModule(module.id),
                                 icon: const Icon(Icons.refresh),
                                 label: const Text('Retry Start'),
                               ),
@@ -302,58 +351,59 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
                         ),
                       )
                     : !isReady
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 16),
-                            Text('Waiting for ${module.name} to start...'),
-                            if (module.statusMessage != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                module.statusMessage!,
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            Text(
-                              'Checking ${_moduleUri(module, healthCheck: true)}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: () => _launchInBrowser(module),
-                              icon: const Icon(Icons.open_in_browser),
-                              label: const Text('Open in Browser instead'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : supported
-                        ? WebViewWidget(controller: _getController(module))
-                        : Center(
+                        ? Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(
-                                  Icons.warning,
-                                  size: 48,
-                                  color: Colors.orange,
-                                ),
+                                const CircularProgressIndicator(),
                                 const SizedBox(height: 16),
-                                const Text(
-                                  'WebView not supported on this platform.',
+                                Text('Waiting for ${module.name} to start...'),
+                                if (module.statusMessage != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    module.statusMessage!,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Checking ${_moduleUri(module, healthCheck: true)}',
+                                  style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   onPressed: () => _launchInBrowser(module),
                                   icon: const Icon(Icons.open_in_browser),
-                                  label: const Text('Open in System Browser'),
+                                  label: const Text('Open in Browser instead'),
                                 ),
                               ],
                             ),
-                          ),
+                          )
+                        : supported
+                            ? WebViewWidget(controller: _getController(module))
+                            : Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.warning,
+                                      size: 48,
+                                      color: Colors.orange,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'WebView not supported on this platform.',
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _launchInBrowser(module),
+                                      icon: const Icon(Icons.open_in_browser),
+                                      label:
+                                          const Text('Open in System Browser'),
+                                    ),
+                                  ],
+                                ),
+                              ),
               );
             }).toList(),
           ),

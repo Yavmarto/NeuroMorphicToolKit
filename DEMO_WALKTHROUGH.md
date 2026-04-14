@@ -1,6 +1,15 @@
-# NeuroMorphicToolkit (NMTK) — POC Demo Walkthrough
+# NeuroMorphicToolkit (NMTK) Demo Walkthrough
 
-This document provides a step-by-step guide to demonstrating the full POC scenario for the NeuroMorphicToolkit.
+This walkthrough is the simplest supported demo path:
+
+1. Launch NeuroCNL
+2. Paste a valid CNL
+3. Validate it
+4. Run the simulation
+5. Click `Open in NeuroSim`
+6. Confirm NeuroSim opens with the canvas already populated
+
+`Export` is optional. It is for saving files, not for moving the design into NeuroSim.
 
 ---
 
@@ -8,92 +17,63 @@ This document provides a step-by-step guide to demonstrating the full POC scenar
 
 ### 1.1 Start the Backends
 
-**Option A — Root docker-compose (recommended):**
-```bash
-# Start core services (neurocnl, neurosim, neurochip)
-docker compose up -d
+Recommended:
 
-# Or start all services including neurobench, neurosense, neurohub
-docker compose --profile full up -d
+```bash
+docker compose up -d
 ```
 
-**Option B — Individual module containers:**
+Or start the three demo services individually:
+
 ```bash
 cd neurocnl && docker compose up -d
 cd Neurosim && docker compose up -d
 cd Neurochip && docker compose up -d
 ```
 
-**Expected output:**
-```
-[+] Running 4/4
- ✔ Network nmtk-network  Created
- ✔ Container neuromorphictoolkit-neurocnl-1   Healthy
- ✔ Container neuromorphictoolkit-neurosim-1    Healthy
- ✔ Container neuromorphictoolkit-neurochip-1   Healthy
+Verify the services:
+
+```bash
+curl -s http://localhost:8000/health   # neurocnl
+curl -s http://localhost:8001/health   # neurosim
+curl -s http://localhost:8002/health   # neurochip
 ```
 
-Verify services are healthy:
-```bash
-curl -s http://localhost:8000/health   # neurocnl  → {"status":"ok"}
-curl -s http://localhost:8001/health   # neurosim  → {"status":"ok"}
-curl -s http://localhost:8002/health   # neurochip → {"status":"ok"}
+Expected result:
+
+```json
+{"status":"ok"}
 ```
 
 ### 1.2 Open the Launcher
-Open the NMTK Desktop Launcher (Flutter app).
+
 ```bash
-cd nmtk/neuro_toolkit/
-flutter run -d macos  # or linux, windows
+cd nmtk/neuro_toolkit
+flutter run -d macos
 ```
 
-**Expected output:**
-```
-Launching lib/main.dart on macOS in debug mode...
-Building macOS application...
-Syncing files to device macOS...
-```
+You can use another supported Flutter desktop target if needed.
 
 ---
 
-## 2. Guided Walkthrough
+## 2. Canonical Demo Flow
 
-### 2.1 Browse the Module Catalog
-Upon opening the launcher, you should see the **Module Catalog** showing all 7 available modules.
+### 2.1 Open NeuroCNL
 
-*   **NeuroCNL:** Controlled Natural Language compiler.
-*   **Neurosim:** Simulation environment.
-*   **Neurosense:** Sensory encoding.
-*   **Neurochip:** Hardware interfacing.
-*   **Neurobench:** Benchmarking.
-*   **Neurohub:** Model repository.
-*   **Neuro-Dream-Hand:** Robotics integration.
+1. In the launcher catalog, install and launch `CNL Studio` if needed.
+2. Wait for the embedded NeuroCNL page to load.
 
-> **[PLACEHOLDER: Screenshot of Module Catalog showing 7 modules]**
->
-> *You should see a grid/list of 7 module cards, each showing the module name, a brief description, and an Install/Launch button.*
+You should see:
 
-### 2.2 Install a Module
-1.  Locate **NeuroCNL** in the catalog.
-2.  Click the **Install** button.
-3.  Observe the real-time installation progress as the application creates a virtual environment and installs dependencies.
+- a CNL editor on the left
+- results tabs on the right
+- `Run Simulation`
+- `Open in NeuroSim`
+- `Export`
 
-> **[PLACEHOLDER: Screenshot of NeuroCNL installation in progress]**
->
-> *A progress indicator shows dependency installation. Once complete, the button changes from "Install" to "Launch".*
+### 2.2 Paste a Valid CNL
 
-**Expected behavior:** Installation takes 30-60 seconds depending on your system. The progress bar updates in real time.
-
-### 2.3 Launch NeuroCNL Studio
-1.  Once installed, the button will change to **Launch**.
-2.  Click **Launch** to open the NeuroCNL Studio interface (embedded WebView).
-
-> **[PLACEHOLDER: Screenshot of NeuroCNL Studio opening]**
->
-> *The NeuroCNL Studio opens in an embedded WebView tab within the launcher, showing an editor panel and a results panel.*
-
-### 2.4 Write a CNL Specification
-In the editor, type a simple reflex arc specification. You can use the following example:
+Use this exact demo spec:
 
 ```text
 # Simple Reflex Arc
@@ -104,142 +84,145 @@ The sensory neuron membrane potential MUST decay WITH time constant of 0.01 seco
 The sensory neuron MUST NOT fire DURING the refractory period of 0.01 seconds
 ```
 
-### 2.5 Validate the Specification
-Click the **Validate** button. The system will check the specification against Layer 1 (biophysical invariants) and Layer 2 (structural consistency).
+### 2.3 Validate
 
-*   Verify that the validation results appear, showing passed/failed invariants.
+NeuroCNL validates as you work. Confirm the validation panel reports success before continuing.
 
-> **[PLACEHOLDER: Screenshot of Validation results showing green/red indicators]**
->
-> *The results panel shows a checklist of invariants. Green checkmarks indicate passed checks (e.g., threshold within biophysical range, valid synaptic weight).*
+What to look for:
 
-**Expected API response:**
-```json
-{
-  "overall": true,
-  "layer1": {"passed": true, "checks": [...]},
-  "layer2": {"passed": true, "checks": [...]}
-}
-```
+- validation passes overall
+- no blocking parse errors
+- the network and simulation tabs become meaningful for this spec
 
-### 2.6 Run a Simulation
-1.  Click the **Simulate** button.
-2.  Once the simulation completes, view the **Spike Raster Plot** and membrane potential graphs.
+### 2.4 Run Simulation
 
-> **[PLACEHOLDER: Screenshot of Spike Raster Plot showing sensory and motor spikes]**
->
-> *A spike raster plot displays time on the x-axis and neuron index on the y-axis, with dots marking spike events. A membrane potential trace shows the voltage over time for each neuron.*
+1. Click `Run Simulation`.
+2. Wait for the run to finish.
+3. Confirm the simulation tab shows spike and timing results.
 
-**Expected behavior:** Simulation submits a job (you may see a spinner), then renders results within a few seconds.
+The important checkpoint is simple:
 
-### 2.7 Export to Hardware
-1.  Click the **Export** button.
-2.  Select the **C Header** or **Crossbar HDF5** format.
-3.  The file is generated and downloaded, ready for deployment to hardware (e.g., Teensy 4.1 or Loihi).
+- the CNL is valid
+- the simulation completes successfully
 
----
+### 2.5 Open in NeuroSim
 
-## 3. Exploring Other Modules
+1. Click `Open in NeuroSim`.
+2. The launcher should switch to the NeuroSim tab automatically.
+3. NeuroSim should open with:
+   - the imported CNL already present in the CNL panel
+   - the canvas already populated from that CNL
+   - a success banner confirming the import
 
-### 3.1 Neurosim Canvas
-1.  Return to the Launcher and launch **Neurosim**.
-2.  Observe the visual canvas where populations of neurons can be placed and connected.
+This is the intended handoff. You do **not** need to export a file first.
 
-> **[PLACEHOLDER: Screenshot of Neurosim Canvas with placed neuron populations]**
->
-> *The canvas shows draggable neuron population nodes connected by edges representing synaptic connections.*
+If the canvas is still empty, the flow is not working correctly.
 
-### 3.2 Neurochip Analysis
-1.  Launch **Neurochip**.
-2.  Show the **Constraint Analysis** for target hardware like **Teensy 4.1**, highlighting memory and compute limits.
+### 2.6 Confirm the NeuroSim State
 
-> **[PLACEHOLDER: Screenshot of Neurochip hardware constraint analysis]**
->
-> *A dashboard showing hardware constraints: memory usage bar, compute budget, supported neuron count, and compatibility status.*
+Once NeuroSim opens, confirm:
+
+- the canvas is not empty
+- at least the imported reflex-arc nodes are visible
+- the CNL panel contains the imported text
+- the import banner confirms the handoff worked
+
+If NeuroSim cannot parse the incoming spec, it should:
+
+- keep the imported text visible in the CNL panel
+- keep the canvas empty
+- show a clear banner telling you to fix the CNL and click `Sync to Canvas`
 
 ---
 
-## 4. Programmatic Verification (Smoke Test)
+## 3. Optional Artifact Export
 
-For developers, a smoke test script is available to verify the API functionality programmatically.
+Use `Export` only if you want to save files such as:
+
+- `.cnl`
+- HTML report
+- Python/Nengo script
+- hardware/export artifacts
+
+Expected behavior:
+
+- the current NeuroCNL page stays visible
+- a file download starts, or a clear fallback message appears
+- the export should **not** replace the entire page with raw text
+
+If clicking `Export` turns the whole embedded page into plain text, that is a bug.
+
+---
+
+## 4. Optional Follow-On Module Checks
+
+### 4.1 NeuroSim
+
+After the one-click handoff succeeds, you can continue in NeuroSim by:
+
+- inspecting the imported graph
+- editing the imported CNL and clicking `Sync to Canvas`
+- running further preview or export actions from NeuroSim
+
+### 4.2 Neurochip
+
+You can also open Neurochip separately to inspect hardware-oriented workflows after the simulation and NeuroSim handoff are complete.
+
+---
+
+## 5. Programmatic Smoke Test
+
+For API-only verification:
 
 ```bash
 ./scripts/demo_smoke_test.sh
 ```
 
-This script validates that the backends are healthy and can handle parse, validate, and simulate requests.
-
-**Example successful output:**
-```
-🚀 Starting NMTK POC Smoke Test...
-📍 Using API Base URL: http://localhost:8000
-🚀 Starting neurocnl backend...
-⏳ Waiting for backend health check...
-✅ Backend is healthy!
-🔍 Testing /api/parse...
-✅ Parse successful!
-⚖️ Testing /api/validate...
-✅ Validation successful!
-⚡ Testing /api/simulate...
-✅ Simulation job submitted (ID: abc123-...)
-⏳ Waiting for simulation results...
-✅ Simulation completed successfully!
-🎉 All POC Smoke Tests Passed!
-```
-
-**Example failure output:**
-```
-❌ Timeout waiting for backend health check.
-```
-This typically means the backend failed to start. Check `/tmp/nmtk_smoke_test_backend.log` for details.
+This checks the NeuroCNL parse, validate, and simulate pipeline, but it does not verify the launcher handoff UX.
 
 ---
 
-## 5. Troubleshooting
+## 6. Troubleshooting
+
+### `Open in NeuroSim` does nothing
+
+- Confirm both `http://localhost:8000/health` and `http://localhost:8001/health` return healthy responses.
+- If you are inside the launcher, make sure NeuroSim can be launched from the catalog.
+- If needed, use the launcher `Open in System Browser` button and retry from there.
+
+### NeuroSim opens but the canvas is empty
+
+- This means the handoff did not populate the graph correctly.
+- Check whether the imported CNL is visible in the NeuroSim CNL panel.
+- If the text is present but the graph is empty, NeuroSim should show an import error banner and you can try `Sync to Canvas`.
+
+### Export shows raw text in the page
+
+- That is incorrect behavior.
+- The page should remain in NeuroCNL and either download the file or show a fallback message.
 
 ### Port already in use
-```
-Error: address already in use :::8000
-```
-**Fix:** Kill the existing process or change the port in `.env`:
+
 ```bash
-lsof -ti:8000 | xargs kill -9   # kill process on port 8000
-# Or edit .env to use different ports
+lsof -ti:8000 | xargs kill -9
+lsof -ti:8001 | xargs kill -9
+lsof -ti:8002 | xargs kill -9
 ```
 
-### Docker containers fail to start
+### Docker services fail to start
+
 ```bash
-# Check container logs
 docker compose logs neurocnl
-
-# Rebuild from scratch
-docker compose down && docker compose build --no-cache && docker compose up -d
+docker compose logs neurosim
+docker compose logs neurochip
 ```
 
-### Health checks failing
-Services take up to 50 seconds to become healthy (10s interval x 5 retries). Wait and check again:
-```bash
-docker compose ps   # shows health status for each service
-```
+### Launcher does not start
 
-### Flutter app won't launch
 ```bash
-# Ensure Flutter is installed and up to date
+cd nmtk/neuro_toolkit
 flutter doctor
-
-# Clean and rebuild
-cd nmtk/neuro_toolkit && flutter clean && flutter pub get && flutter run -d macos
-```
-
-### Smoke test fails with "python3 not found"
-Ensure Python 3.10+ is on your PATH and uvicorn is installed:
-```bash
-python3 --version
-pip3 install uvicorn fastapi
-```
-
-### Module installation hangs
-Check that the backend for the module is actually running. The installer needs the backend API to be accessible:
-```bash
-curl -s http://localhost:8000/health
+flutter clean
+flutter pub get
+flutter run -d macos
 ```

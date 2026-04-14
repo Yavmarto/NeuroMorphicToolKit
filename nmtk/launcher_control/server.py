@@ -128,17 +128,22 @@ def _module_run_dir(module: dict[str, Any]) -> Path:
 
 
 def _module_venv_python(module: dict[str, Any]) -> Path:
+    """Return the python path, checking .venv (poetry in-project) before venv."""
     install_dir = _module_install_dir(module)
     if os.name == "nt":
-        return install_dir / "venv" / "Scripts" / "python.exe"
-    return install_dir / "venv" / "bin" / "python"
+        dotenv = install_dir / ".venv" / "Scripts" / "python.exe"
+        return dotenv if dotenv.exists() else install_dir / "venv" / "Scripts" / "python.exe"
+    dotenv = install_dir / ".venv" / "bin" / "python"
+    return dotenv if dotenv.exists() else install_dir / "venv" / "bin" / "python"
 
 
 def _module_venv_pip(module: dict[str, Any]) -> Path:
     install_dir = _module_install_dir(module)
     if os.name == "nt":
-        return install_dir / "venv" / "Scripts" / "pip.exe"
-    return install_dir / "venv" / "bin" / "pip"
+        dotenv = install_dir / ".venv" / "Scripts" / "pip.exe"
+        return dotenv if dotenv.exists() else install_dir / "venv" / "Scripts" / "pip.exe"
+    dotenv = install_dir / ".venv" / "bin" / "pip"
+    return dotenv if dotenv.exists() else install_dir / "venv" / "bin" / "pip"
 
 
 def _module_pyproject_path(module: dict[str, Any]) -> Path | None:
@@ -168,22 +173,52 @@ def _module_uses_poetry(module: dict[str, Any]) -> bool:
     return build_backend == "poetry.core.masonry.api" or "poetry" in tool_table
 
 
+def _poetry_fallback_env_root(module: dict[str, Any]) -> Path:
+    module_id = str(module.get("id") or "").strip()
+    return REPO_ROOT / ".poetry-envs" / module_id
+
+
 def _poetry_command() -> str | None:
-    return shutil.which("poetry")
+    found = shutil.which("poetry")
+    if found:
+        return found
+    # Poetry is commonly installed outside the system PATH.
+    # Probe well-known locations so the control service works even when
+    # launched by Flutter (which inherits a minimal environment).
+    candidates = [
+        Path.home() / ".local" / "bin" / "poetry",
+        Path.home() / ".poetry" / "bin" / "poetry",
+        # pipx default bin dir
+        Path.home() / ".local" / "pipx" / "venvs" / "poetry" / "bin" / "poetry",
+    ]
+    for candidate in candidates:
+        if candidate.exists() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return None
 
 
 def _poetry_env_python(module: dict[str, Any]) -> Path | None:
     if not _module_uses_poetry(module):
         return None
 
-    module_id = str(module.get("id") or "").strip()
-    fallback_env_root = REPO_ROOT / ".poetry-envs" / module_id
+    install_dir = _module_install_dir(module)
+
+    # Check in-project .venv first (set by poetry config virtualenvs.in-project true).
+    # This is the most reliable path and requires no subprocess call.
+    if os.name == "nt":
+        inproject_python = install_dir / ".venv" / "Scripts" / "python.exe"
+    else:
+        inproject_python = install_dir / ".venv" / "bin" / "python"
+    if inproject_python.exists():
+        return inproject_python
+
+    fallback_env_root = _poetry_fallback_env_root(module)
     if os.name == "nt":
         fallback_python = fallback_env_root / "Scripts" / "python.exe"
     else:
         fallback_python = fallback_env_root / "bin" / "python"
     if fallback_python.exists():
-        return fallback_python.resolve()
+        return fallback_python
 
     poetry = _poetry_command()
     if poetry is None:
@@ -191,7 +226,7 @@ def _poetry_env_python(module: dict[str, Any]) -> Path | None:
 
     result = subprocess.run(
         [poetry, "env", "info", "--path"],
-        cwd=_module_install_dir(module),
+        cwd=install_dir,
         capture_output=True,
         text=True,
         check=False,
@@ -204,7 +239,7 @@ def _poetry_env_python(module: dict[str, Any]) -> Path | None:
         python_path = env_path / "Scripts" / "python.exe"
     else:
         python_path = env_path / "bin" / "python"
-    return python_path.resolve() if python_path.exists() else None
+    return python_path if python_path.exists() else None
 
 
 def _module_python_path(module: dict[str, Any]) -> Path:
@@ -682,6 +717,7 @@ class LauncherControlState:
 
     def uninstall_module(self, module_id: str) -> dict[str, Any]:
         self.stop_module(module_id)
+        self._cleanup_module_environment(module_id)
         self._update_module_fields(
             module_id,
             status=STATUS_INDEX["notInstalled"],
@@ -753,6 +789,45 @@ class LauncherControlState:
         return hashlib.sha256(
             json.dumps(payload, sort_keys=True).encode("utf-8")
         ).hexdigest()
+
+    def _cleanup_module_environment(self, module_id: str) -> None:
+        with self._lock:
+            module = dict(self._get_module(module_id))
+
+        install_dir = _module_install_dir(module)
+        for venv_name in (".venv", "venv"):
+            venv_path = install_dir / venv_name
+            if venv_path.exists():
+                shutil.rmtree(venv_path, ignore_errors=True)
+
+        if not _module_uses_poetry(module):
+            return
+
+        poetry_toml = install_dir / "poetry.toml"
+        if poetry_toml.exists():
+            try:
+                poetry_toml.unlink()
+            except OSError:
+                pass
+
+        fallback_env_root = _poetry_fallback_env_root(module)
+        if fallback_env_root.exists():
+            shutil.rmtree(fallback_env_root, ignore_errors=True)
+
+        poetry = _poetry_command()
+        if poetry is None:
+            return
+
+        try:
+            subprocess.run(
+                [poetry, "env", "remove", "--all"],
+                cwd=install_dir,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except Exception:
+            pass
 
     def _run_import_probe(self, module: dict[str, Any]) -> PreflightResult:
         python_path = _module_python_path(module)
@@ -853,6 +928,8 @@ class LauncherControlState:
                     status=PREFLIGHT_FAILED,
                     message=_missing_python_message(module, python_path),
                 )
+            if _module_uses_poetry(module):
+                self._cleanup_module_environment(module_id)
             self._install_sync(module_id)
             module = self._get_module(module_id)
             python_path = _module_python_path(module)
@@ -860,6 +937,14 @@ class LauncherControlState:
         fingerprint = self._compute_environment_fingerprint(module)
         saved_fingerprint = str(module.get("environmentFingerprint") or "").strip()
         if saved_fingerprint and saved_fingerprint != fingerprint:
+            if (
+                _module_uses_poetry(module)
+                and str(module.get("preflightStatus", PREFLIGHT_OK)) == PREFLIGHT_FAILED
+            ):
+                recovered_result = self._run_import_probe(module)
+                recovered_result.environment_fingerprint = fingerprint
+                if recovered_result.status != PREFLIGHT_FAILED:
+                    return recovered_result
             message = (
                 "Environment fingerprint changed; reinstall required before launch"
             )
@@ -870,6 +955,8 @@ class LauncherControlState:
                     environment_fingerprint=fingerprint,
                 )
             self._append_log(module_id, message, emit_terminal=True)
+            if _module_uses_poetry(module):
+                self._cleanup_module_environment(module_id)
             self._install_sync(module_id)
             module = self._get_module(module_id)
             fingerprint = self._compute_environment_fingerprint(module)
@@ -879,11 +966,19 @@ class LauncherControlState:
         if probe_result.status != PREFLIGHT_FAILED or not allow_repair:
             return probe_result
 
-        self._append_log(
-            module_id,
-            "Preflight failed; reinstalling once to repair the module environment",
-            emit_terminal=True,
-        )
+        if _module_uses_poetry(module):
+            self._append_log(
+                module_id,
+                "Preflight failed; cleaning and reinstalling once to repair the module environment",
+                emit_terminal=True,
+            )
+            self._cleanup_module_environment(module_id)
+        else:
+            self._append_log(
+                module_id,
+                "Preflight failed; reinstalling once to repair the module environment",
+                emit_terminal=True,
+            )
         self._install_sync(module_id)
         module = self._get_module(module_id)
         repaired_result = self._run_import_probe(module)
@@ -908,6 +1003,14 @@ class LauncherControlState:
         use_poetry = _module_uses_poetry(module) and poetry is not None
 
         self._update_module_fields(module_id, status=STATUS_INDEX["installing"], installProgress=0.1)
+        if use_poetry:
+            # Configure Poetry before any `poetry run ...` command so repairs
+            # consistently recreate an in-project `.venv`.
+            self._run_command(
+                [poetry, "config", "virtualenvs.in-project", "true", "--local"],
+                cwd=install_dir,
+                module_id=module_id,
+            )
         if not use_poetry and not venv_python.exists():
             self._run_command(
                 [sys.executable, "-m", "venv", "venv"],
@@ -934,6 +1037,11 @@ class LauncherControlState:
 
         self._update_module_fields(module_id, installProgress=0.6)
         if use_poetry:
+            self._run_command(
+                [poetry, "lock"],
+                cwd=install_dir,
+                module_id=module_id,
+            )
             self._run_command(
                 [poetry, "install", "--no-interaction", "--no-root"],
                 cwd=install_dir,

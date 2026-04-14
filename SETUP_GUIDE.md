@@ -456,11 +456,13 @@ bash scripts/demo_smoke_test.sh
    ```
 
 3. Follow the demo flow:
-   - Open Catalog → Install neurocnl → Launch
-   - In the WebView, navigate to the CNL Studio
-   - Write a CNL specification (example below)
-   - Click Validate → Generate → Simulate
-   - View simulation results
+   - Open Catalog → Install `CNL Studio` → Launch
+   - Paste a valid CNL specification
+   - Confirm validation passes
+   - Click `Run Simulation`
+   - Click `Open in NeuroSim`
+   - Confirm NeuroSim opens with the canvas already populated from the imported CNL
+   - Use `Export` only if you want to save a file; export is not required for the NeuroSim handoff
 
 ### Example CNL specification
 

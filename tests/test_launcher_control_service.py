@@ -103,6 +103,33 @@ class LauncherControlServiceTest(unittest.TestCase):
         python_path.chmod(0o755)
         return python_path
 
+    def _write_poetry_pyproject(self) -> None:
+        pyproject = self.repo_root / "dummy_module" / "pyproject.toml"
+        pyproject.write_text(
+            "\n".join(
+                [
+                    "[tool.poetry]",
+                    'name = "dummy"',
+                    'version = "0.1.0"',
+                    "",
+                    "[build-system]",
+                    'requires = ["poetry-core>=1.0.0"]',
+                    'build-backend = "poetry.core.masonry.api"',
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+    def _create_fake_inproject_poetry_python_symlink(self) -> tuple[Path, Path]:
+        python_path = self.repo_root / "dummy_module" / ".venv" / "bin" / "python"
+        base_python = self.repo_root / "python-base" / "bin" / "python"
+        python_path.parent.mkdir(parents=True, exist_ok=True)
+        base_python.parent.mkdir(parents=True, exist_ok=True)
+        base_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        base_python.chmod(0o755)
+        python_path.symlink_to(base_python)
+        return python_path, base_python
+
     def test_modules_endpoint_returns_manifest_data(self) -> None:
         payload = self.state.serialize_modules()
 
@@ -155,33 +182,19 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
         self.assertIn("Launcher control service", result.stdout)
 
-    def test_module_python_path_prefers_poetry_env_when_available(self) -> None:
-        pyproject = self.repo_root / "dummy_module" / "pyproject.toml"
-        pyproject.write_text(
-            "\n".join(
-                [
-                    "[tool.poetry]",
-                    'name = "dummy"',
-                    'version = "0.1.0"',
-                    "",
-                    "[build-system]",
-                    'requires = ["poetry-core>=1.0.0"]',
-                    'build-backend = "poetry.core.masonry.api"',
-                ]
-            ),
-            encoding="utf-8",
-        )
-        poetry_python = self._create_fake_poetry_python()
+    def test_module_python_path_preserves_poetry_shim_path(self) -> None:
+        self._write_poetry_pyproject()
+        poetry_python, base_python = self._create_fake_inproject_poetry_python_symlink()
         module = self.state._get_module("dummy")
 
-        with mock.patch.object(
-            launcher_server.subprocess,
-            "run",
-            return_value=mock.Mock(returncode=0, stdout=str(poetry_python.parents[1]), stderr=""),
-        ):
-            python_path = launcher_server._module_python_path(module)
+        python_path = launcher_server._module_python_path(module)
+        expected_poetry_python = (
+            (self.repo_root / "dummy_module").resolve() / ".venv" / "bin" / "python"
+        )
 
-        self.assertEqual(python_path, poetry_python.resolve())
+        self.assertEqual(python_path, expected_poetry_python)
+        self.assertTrue(python_path.samefile(poetry_python))
+        self.assertNotEqual(python_path, base_python.resolve())
 
     def test_run_dev_script_passes_bash_syntax_check(self) -> None:
         result = subprocess.run(
@@ -566,22 +579,113 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(result.status, launcher_server.PREFLIGHT_FAILED)
         self.assertIn("fastapi", result.message)
 
-    def test_install_sync_uses_poetry_install_no_root_for_poetry_projects(self) -> None:
-        pyproject = self.repo_root / "dummy_module" / "pyproject.toml"
-        pyproject.write_text(
-            "\n".join(
-                [
-                    "[tool.poetry]",
-                    'name = "dummy"',
-                    'version = "0.1.0"',
-                    "",
-                    "[build-system]",
-                    'requires = ["poetry-core>=1.0.0"]',
-                    'build-backend = "poetry.core.masonry.api"',
-                ]
+    def test_preflight_accepts_recovered_poetry_probe_despite_stale_failed_fingerprint(self) -> None:
+        self._write_poetry_pyproject()
+        poetry_python = self.repo_root / "dummy_module" / ".venv" / "bin" / "python"
+        poetry_python.parent.mkdir(parents=True, exist_ok=True)
+        poetry_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        poetry_python.chmod(0o755)
+        module = self.state._get_module("dummy")
+        module["environmentFingerprint"] = "stale-fingerprint"
+        module["preflightStatus"] = launcher_server.PREFLIGHT_FAILED
+        module["preflightMessage"] = "Missing required dependency: fastapi (needed by app.main)"
+
+        with (
+            mock.patch.object(
+                self.state,
+                "_compute_environment_fingerprint",
+                return_value="fresh-fingerprint",
             ),
-            encoding="utf-8",
+            mock.patch.object(
+                self.state,
+                "_run_import_probe",
+                return_value=launcher_server.PreflightResult(
+                    status=launcher_server.PREFLIGHT_OK,
+                ),
+            ) as run_import_probe,
+            mock.patch.object(self.state, "_install_sync") as install_sync,
+        ):
+            result = self.state._preflight_module(module, allow_repair=False)
+
+        install_sync.assert_not_called()
+        run_import_probe.assert_called_once_with(module)
+        self.assertEqual(result.status, launcher_server.PREFLIGHT_OK)
+        self.assertEqual(result.environment_fingerprint, "fresh-fingerprint")
+
+    def test_preflight_cleans_poetry_env_before_reinstalling_once(self) -> None:
+        self._write_poetry_pyproject()
+        poetry_python = self.repo_root / "dummy_module" / ".venv" / "bin" / "python"
+        poetry_python.parent.mkdir(parents=True, exist_ok=True)
+        poetry_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        poetry_python.chmod(0o755)
+        module = self.state._get_module("dummy")
+
+        with (
+            mock.patch.object(
+                self.state,
+                "_compute_environment_fingerprint",
+                side_effect=["fingerprint-before", "fingerprint-after"],
+            ),
+            mock.patch.object(
+                self.state,
+                "_run_import_probe",
+                side_effect=[
+                    launcher_server.PreflightResult(
+                        status=launcher_server.PREFLIGHT_FAILED,
+                        message="Missing required dependency: fastapi (needed by app.main)",
+                    ),
+                    launcher_server.PreflightResult(
+                        status=launcher_server.PREFLIGHT_OK,
+                    ),
+                ],
+            ) as run_import_probe,
+            mock.patch.object(self.state, "_cleanup_module_environment") as cleanup_env,
+            mock.patch.object(self.state, "_install_sync") as install_sync,
+        ):
+            result = self.state._preflight_module(module, allow_repair=True)
+
+        cleanup_env.assert_called_once_with("dummy")
+        install_sync.assert_called_once_with("dummy")
+        self.assertEqual(run_import_probe.call_count, 2)
+        self.assertEqual(result.status, launcher_server.PREFLIGHT_OK)
+        self.assertEqual(result.environment_fingerprint, "fingerprint-after")
+
+    def test_cleanup_module_environment_removes_disposable_poetry_artifacts(self) -> None:
+        self._write_poetry_pyproject()
+        install_dir = self.repo_root / "dummy_module"
+        for venv_name in (".venv", "venv"):
+            venv_python = install_dir / venv_name / "bin" / "python"
+            venv_python.parent.mkdir(parents=True, exist_ok=True)
+            venv_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            venv_python.chmod(0o755)
+        poetry_toml = install_dir / "poetry.toml"
+        poetry_toml.write_text("[virtualenvs]\nin-project = true\n", encoding="utf-8")
+        fallback_env_root = self.repo_root / ".poetry-envs" / "dummy"
+        fallback_python = fallback_env_root / "bin" / "python"
+        fallback_python.parent.mkdir(parents=True, exist_ok=True)
+        fallback_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        fallback_python.chmod(0o755)
+
+        with (
+            mock.patch.object(launcher_server, "_poetry_command", return_value="poetry"),
+            mock.patch.object(launcher_server.subprocess, "run") as poetry_run,
+        ):
+            self.state._cleanup_module_environment("dummy")
+
+        self.assertFalse((install_dir / ".venv").exists())
+        self.assertFalse((install_dir / "venv").exists())
+        self.assertFalse(poetry_toml.exists())
+        self.assertFalse(fallback_env_root.exists())
+        poetry_run.assert_called_once_with(
+            ["poetry", "env", "remove", "--all"],
+            cwd=install_dir.resolve(),
+            capture_output=True,
+            text=True,
+            check=False,
         )
+
+    def test_install_sync_uses_poetry_install_no_root_for_poetry_projects(self) -> None:
+        self._write_poetry_pyproject()
         poetry_python = self._create_fake_poetry_python()
 
         with (

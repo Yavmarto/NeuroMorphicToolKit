@@ -1,0 +1,46 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/services/cross_module_navigation.dart';
+
+void main() {
+  final modules = [
+    Module(
+      id: 'neurocnl',
+      name: 'CNL Studio',
+      description: 'CNL',
+      directory: 'neurocnl',
+      port: 8000,
+      hasFrontend: true,
+    ),
+    Module(
+      id: 'Neurosim',
+      name: 'NeuroSim',
+      description: 'Sim',
+      directory: 'Neurosim',
+      port: 8001,
+      hasFrontend: true,
+    ),
+  ];
+
+  test('resolveCrossModuleNavigation detects a different module port', () {
+    final navigation = resolveCrossModuleNavigation(
+      targetUri: Uri.parse('http://localhost:8001/?import_cnl=abc123'),
+      modules: modules,
+      currentModuleId: 'neurocnl',
+    );
+
+    expect(navigation, isNotNull);
+    expect(navigation!.targetModule.id, 'Neurosim');
+    expect(navigation.targetUri.queryParameters['import_cnl'], 'abc123');
+  });
+
+  test('resolveCrossModuleNavigation ignores same-module navigation', () {
+    final navigation = resolveCrossModuleNavigation(
+      targetUri: Uri.parse('http://localhost:8000/deploy'),
+      modules: modules,
+      currentModuleId: 'neurocnl',
+    );
+
+    expect(navigation, isNull);
+  });
+}
