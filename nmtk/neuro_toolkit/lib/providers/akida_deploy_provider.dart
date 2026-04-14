@@ -17,7 +17,7 @@ enum AkidaDeployStep {
   /// Generating and downloading the scaffold package from Neurochip.
   deploying,
 
-  /// Package saved locally; polling Neurochip for backend state.
+  /// Package saved locally; verifying SDK deployability via Neurochip.
   polling,
 
   /// Running Neurobench verification.
@@ -49,6 +49,9 @@ class AkidaDeployProvider with ChangeNotifier {
 
   AkidaDeployJob? _deployJob;
   AkidaDeployJob? get deployJob => _deployJob;
+
+  AkidaSdkVerification? _sdkVerification;
+  AkidaSdkVerification? get sdkVerification => _sdkVerification;
 
   /// Absolute path to the saved akida_deploy.zip, if downloaded.
   String? _savedPackagePath;
@@ -83,6 +86,7 @@ class AkidaDeployProvider with ChangeNotifier {
     _errorMessage = null;
     _exportResult = null;
     _deployJob = null;
+    _sdkVerification = null;
     _savedPackagePath = null;
     _neurobenchJobId = null;
     _neurobenchResult = null;
@@ -126,6 +130,7 @@ class AkidaDeployProvider with ChangeNotifier {
     _currentStep = AkidaDeployStep.deploying;
     _errorMessage = null;
     _deployJob = null;
+    _sdkVerification = null;
     _savedPackagePath = null;
     _neurobenchJobId = null;
     _neurobenchResult = null;
@@ -139,7 +144,21 @@ class AkidaDeployProvider with ChangeNotifier {
       );
       _currentStep = AkidaDeployStep.polling;
       notifyListeners();
-      _startPolling();
+      _sdkVerification = await _service.verifySdk(
+        mappedNetwork: mappedNetwork,
+        bitWidth: bitWidth,
+      );
+      _deployJob = AkidaDeployJob.fromVerification(_sdkVerification!);
+      notifyListeners();
+
+      if (_runNeurobench &&
+          _savedPackagePath != null &&
+          _sdkVerification!.isDeployable) {
+        await runVerification();
+      } else {
+        _currentStep = AkidaDeployStep.done;
+        notifyListeners();
+      }
     } on AkidaDeployException catch (e) {
       _currentStep = AkidaDeployStep.error;
       _errorMessage = e.toString();
@@ -151,41 +170,17 @@ class AkidaDeployProvider with ChangeNotifier {
     }
   }
 
-  void _startPolling() {
-    _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      try {
-        _deployJob = await _service.getStatus();
-        notifyListeners();
-
-        final status = _deployJob!.status;
-        if (status == AkidaDeployJobStatus.mapped ||
-            status == AkidaDeployJobStatus.running) {
-          _pollTimer?.cancel();
-          _pollTimer = null;
-          if (_runNeurobench && _savedPackagePath != null) {
-            await runVerification();
-          } else {
-            _currentStep = AkidaDeployStep.done;
-            notifyListeners();
-          }
-        } else if (status == AkidaDeployJobStatus.failed) {
-          _pollTimer?.cancel();
-          _pollTimer = null;
-          _currentStep = AkidaDeployStep.error;
-          _errorMessage = 'Akida backend deploy failed';
-          notifyListeners();
-        }
-      } catch (e) {
-        debugPrint('Akida status poll error: $e');
-      }
-    });
-  }
-
   /// Submit a Neurobench verification job for the deployed package.
   Future<void> runVerification({
     String benchmarkId = 'akida_default',
   }) async {
+    if (_sdkVerification?.isDeployable != true) {
+      _errorMessage =
+          'Neurobench verification is blocked until Akida SDK verification succeeds.';
+      notifyListeners();
+      return;
+    }
+
     _currentStep = AkidaDeployStep.verifying;
     _errorMessage = null;
     notifyListeners();
@@ -203,7 +198,8 @@ class AkidaDeployProvider with ChangeNotifier {
       _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
         if (_neurobenchJobId == null) return;
         try {
-          final result = await _service.getNeurobenchJobStatus(_neurobenchJobId!);
+          final result =
+              await _service.getNeurobenchJobStatus(_neurobenchJobId!);
           _neurobenchResult = result;
           notifyListeners();
 
@@ -236,6 +232,7 @@ class AkidaDeployProvider with ChangeNotifier {
     _currentStep = AkidaDeployStep.idle;
     _exportResult = null;
     _deployJob = null;
+    _sdkVerification = null;
     _savedPackagePath = null;
     _neurobenchJobId = null;
     _neurobenchResult = null;

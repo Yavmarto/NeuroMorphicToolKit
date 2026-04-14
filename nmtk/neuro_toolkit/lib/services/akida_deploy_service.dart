@@ -9,7 +9,7 @@ import 'package:path/path.dart' as p;
 ///
 /// Talks to:
 /// - NeuroCNL (port 8000): /api/deploy/akida/network
-/// - Neurochip (port 8002): /api/neurochip/akida/{deploy,status}
+/// - Neurochip (port 8002): /api/neurochip/akida/{deploy,status,verify}
 /// - Neurobench (port 8003): /api/neurobench/run
 class AkidaDeployService {
   AkidaDeployService({
@@ -30,7 +30,7 @@ class AkidaDeployService {
   /// Check Akida exportability for a CNL spec.
   ///
   /// Calls POST /api/deploy/akida/network on the NeuroCNL backend.
-  /// Returns [AkidaNetworkResponse] on success.
+  /// Returns exportability only; runtime SDK proof is a later Neurochip step.
   /// Throws [AkidaDeployException] on HTTP or parse errors.
   Future<AkidaNetworkResponse> checkExportability({
     required String spec,
@@ -110,6 +110,37 @@ class AkidaDeployService {
     throw AkidaDeployException(
       error: 'status_check_failed',
       messages: ['HTTP ${response.statusCode}'],
+    );
+  }
+
+  /// Verify that the mapped network is deployable in the current Neurochip runtime.
+  ///
+  /// Calls POST /api/neurochip/akida/verify. When [mappedNetwork] is supplied
+  /// the backend verifies a fresh construction of that payload rather than any
+  /// previously cached runtime state.
+  Future<AkidaSdkVerification> verifySdk({
+    Map<String, dynamic>? mappedNetwork,
+    int bitWidth = 4,
+  }) async {
+    final uri = Uri.parse(
+        '$_neurochipBaseUrl/api/neurochip/akida/verify?bit_width=$bitWidth');
+    final response = await _httpClient.post(
+      uri,
+      headers:
+          mappedNetwork == null ? null : {'Content-Type': 'application/json'},
+      body: mappedNetwork == null ? null : jsonEncode(mappedNetwork),
+    );
+
+    if (response.statusCode == 200) {
+      return AkidaSdkVerification.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+
+    final detail = _parseErrorDetail(response.body);
+    throw AkidaDeployException(
+      error: detail['error'] as String? ?? 'sdk_verify_failed',
+      messages: _extractMessages(detail),
     );
   }
 

@@ -5,16 +5,16 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
-/// BrainChip Akida scaffold export and optional SDK deployment screen.
+/// BrainChip Akida scaffold export and runtime verification screen.
 ///
 /// Workflow:
 /// 1. CNL Specification — enter spec, choose bit-width and Akida version,
 ///    check readiness via NeuroCNL
 /// 2. Exportability Verdict — support state badge with topology verdict
-/// 3. Deploy Config — confirm settings, optionally enable Neurobench verify,
-///    download scaffold package from Neurochip
-/// 4. Deployment Status — progress indicator; open saved ZIP in Finder
-/// 5. Neurobench Verification (optional) — poll job status, show results
+/// 3. Deploy Config — generate scaffold package, then verify SDK deployability
+///    through Neurochip
+/// 4. Package And SDK Status — show saved ZIP plus runtime verification result
+/// 5. Neurobench Verification (optional) — available only after SDK verification
 class AkidaDeployScreen extends StatefulWidget {
   const AkidaDeployScreen({super.key});
 
@@ -68,6 +68,7 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
                         _buildDeployConfigCard(context, provider),
                       ],
                       if (provider.deployJob != null ||
+                          provider.sdkVerification != null ||
                           provider.savedPackagePath != null) ...[
                         const SizedBox(height: 16),
                         _buildDeployStatusCard(context, provider),
@@ -93,8 +94,7 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
   }
 
   /// Maps the current [AkidaDeployStep] to pipeline stepper step data.
-  List<NmtkPipelineStepData> _buildPipelineSteps(
-      AkidaDeployProvider provider) {
+  List<NmtkPipelineStepData> _buildPipelineSteps(AkidaDeployProvider provider) {
     final step = provider.currentStep;
 
     NmtkStepStatus readinessStatus;
@@ -131,12 +131,14 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
       case AkidaDeployStep.verifying:
         readinessStatus = NmtkStepStatus.success;
         scaffoldStatus = NmtkStepStatus.success;
-        sdkStatus = NmtkStepStatus.success;
+        sdkStatus = provider.sdkVerification?.isDeployable == true
+            ? NmtkStepStatus.success
+            : NmtkStepStatus.error;
         verifyStatus = NmtkStepStatus.running;
       case AkidaDeployStep.done:
         readinessStatus = NmtkStepStatus.success;
         scaffoldStatus = NmtkStepStatus.success;
-        sdkStatus = NmtkStepStatus.success;
+        sdkStatus = _sdkStepStatus(provider);
         verifyStatus = provider.neurobenchResult != null
             ? NmtkStepStatus.success
             : NmtkStepStatus.idle;
@@ -180,7 +182,7 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
       NmtkPipelineStepData(
         label: 'SDK',
         status: sdkStatus,
-        detail: step == AkidaDeployStep.polling ? 'polling…' : null,
+        detail: _sdkDetail(provider),
         icon: Icons.memory_outlined,
       ),
       NmtkPipelineStepData(
@@ -216,6 +218,39 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
     return status.isNotEmpty ? status : null;
   }
 
+  NmtkStepStatus _sdkStepStatus(AkidaDeployProvider provider) {
+    final verification = provider.sdkVerification;
+    if (verification == null) {
+      return provider.currentStep == AkidaDeployStep.polling
+          ? NmtkStepStatus.running
+          : NmtkStepStatus.idle;
+    }
+    return verification.isDeployable
+        ? NmtkStepStatus.success
+        : NmtkStepStatus.error;
+  }
+
+  String? _sdkDetail(AkidaDeployProvider provider) {
+    if (provider.currentStep == AkidaDeployStep.polling &&
+        provider.sdkVerification == null) {
+      return 'verifying…';
+    }
+
+    final verification = provider.sdkVerification;
+    if (verification == null) return null;
+
+    switch (verification.sdkStatus) {
+      case 'deployable':
+        return _runtimeTargetLabel(verification.runtimeTarget);
+      case 'not_available':
+        return 'sdk unavailable';
+      case 'mapping_failed':
+        return 'mapping failed';
+      default:
+        return 'not verified';
+    }
+  }
+
   bool _canShowDeployCard(AkidaDeployProvider provider) {
     if (provider.exportResult == null) return false;
     final state = provider.exportResult!.supportState;
@@ -246,8 +281,7 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
               controller: _specController,
               maxLines: 8,
               decoration: const InputDecoration(
-                hintText:
-                    'Enter your NeuroCNL specification…\n'
+                hintText: 'Enter your NeuroCNL specification…\n'
                     'Example: The sensory neuron MUST fire ONLY IF '
                     'membrane potential exceeds 1.0.',
                 border: OutlineInputBorder(),
@@ -327,8 +361,7 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
 
   // ---------- Step 2: Exportability Verdict ----------
 
-  Widget _buildVerdictCard(
-      BuildContext context, AkidaDeployProvider provider) {
+  Widget _buildVerdictCard(BuildContext context, AkidaDeployProvider provider) {
     final result = provider.exportResult!;
     return AkidaSupportStateCard(
       supportState: result.supportState,
@@ -347,20 +380,6 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
     final isDeploying = provider.currentStep == AkidaDeployStep.deploying ||
         provider.currentStep == AkidaDeployStep.polling;
 
-    final state = provider.exportResult?.supportState;
-    final String cardTitle;
-    final Color headerColor;
-    if (state == AkidaSupportState.sdkDeployable) {
-      cardTitle = 'SDK Deployment';
-      headerColor = const Color(0xFF388E3C); // Green 700
-    } else if (state == AkidaSupportState.sdkNotDeployable) {
-      cardTitle = 'Scaffold Only — SDK Unavailable';
-      headerColor = const Color(0xFFFFA000); // Amber 700
-    } else {
-      cardTitle = 'Scaffold Package';
-      headerColor = const Color(0xFF5C6BC0); // Indigo 400
-    }
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -368,20 +387,19 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              cardTitle,
+              'Scaffold Package + SDK Verify',
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
-                  ?.copyWith(color: headerColor),
+                  ?.copyWith(color: const Color(0xFF5C6BC0)),
             ),
-            if (state == AkidaSupportState.sdkNotDeployable) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'The Akida SDK is not installed. A MetaTF scaffold package '
-                'will be generated for offline use with the BrainChip SDK.',
-                style: TextStyle(fontStyle: FontStyle.italic),
-              ),
-            ],
+            const SizedBox(height: 8),
+            const Text(
+              'Generate the scaffold package first, then let Neurochip verify '
+              'whether the same mapped payload is deployable via the Akida SDK '
+              'in the current runtime environment.',
+              style: TextStyle(fontStyle: FontStyle.italic),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -435,17 +453,14 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
   Widget _buildDeployStatusCard(
       BuildContext context, AkidaDeployProvider provider) {
     final job = provider.deployJob;
+    final sdkVerification = provider.sdkVerification;
     final savedPath = provider.savedPackagePath;
     final isPolling = provider.currentStep == AkidaDeployStep.polling;
     final isDone = provider.currentStep == AkidaDeployStep.done ||
         provider.currentStep == AkidaDeployStep.verifying;
 
-    final progressValue = job != null
-        ? (isPolling &&
-                job.status == AkidaDeployJobStatus.notInitialised
-            ? null
-            : job.status.progressFraction)
-        : (isDone ? 1.0 : null);
+    final progressValue =
+        isPolling ? null : (savedPath != null || isDone ? 1.0 : null);
 
     return Card(
       child: Padding(
@@ -454,7 +469,7 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Deployment Status',
+              'Package And SDK Status',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -493,16 +508,61 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
                   Text(_jobLabel(job)),
                 ],
               ),
-              if (job.deviceInfo != null) ...[
+            ],
+            if (sdkVerification != null) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(
+                    _sdkIcon(sdkVerification),
+                    color: _sdkColor(sdkVerification),
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(_sdkStatusLabel(sdkVerification)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Runtime target: ${_runtimeTargetLabel(sdkVerification.runtimeTarget)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (sdkVerification.deviceInfo != null) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Device: ${job.deviceInfo}',
+                  'Device: ${sdkVerification.deviceInfo}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+              if (sdkVerification.sdkIssueDetail != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  sdkVerification.sdkIssueDetail!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ] else if (sdkVerification.sdkStatus == 'not_available') ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Run Neurochip on Linux or Windows with the BrainChip SDK installed to verify deployability.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ],
+            if (provider.runNeurobench &&
+                isDone &&
+                provider.neurobenchResult == null &&
+                provider.sdkVerification?.isDeployable != true) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Neurobench verification was skipped because SDK verification did not succeed.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
             if (!provider.runNeurobench &&
                 isDone &&
+                provider.sdkVerification?.isDeployable == true &&
                 provider.neurobenchResult == null) ...[
               const SizedBox(height: 12),
               Align(
@@ -560,11 +620,62 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
       case AkidaDeployJobStatus.modelMapping:
         return 'Mapping model to device…';
       case AkidaDeployJobStatus.mapped:
-        return 'Model mapped — device ready';
+        return 'Mapped representation prepared';
       case AkidaDeployJobStatus.running:
         return 'Running inference';
       case AkidaDeployJobStatus.failed:
         return 'Backend deploy failed';
+    }
+  }
+
+  IconData _sdkIcon(AkidaSdkVerification verification) {
+    switch (verification.sdkStatus) {
+      case 'deployable':
+        return Icons.check_circle;
+      case 'mapping_failed':
+        return Icons.error;
+      case 'not_available':
+        return Icons.cloud_off;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
+  Color _sdkColor(AkidaSdkVerification verification) {
+    switch (verification.sdkStatus) {
+      case 'deployable':
+        return Colors.green;
+      case 'mapping_failed':
+      case 'not_available':
+        return Colors.red;
+      default:
+        return Colors.blue;
+    }
+  }
+
+  String _sdkStatusLabel(AkidaSdkVerification verification) {
+    switch (verification.sdkStatus) {
+      case 'deployable':
+        return 'SDK verification succeeded';
+      case 'mapping_failed':
+        return 'SDK verification failed during model mapping';
+      case 'not_available':
+        return 'SDK verification blocked: BrainChip SDK unavailable';
+      default:
+        return 'SDK verification pending';
+    }
+  }
+
+  String _runtimeTargetLabel(String runtimeTarget) {
+    switch (runtimeTarget) {
+      case 'hardware':
+        return 'hardware';
+      case 'akd1000_simulator':
+        return 'AKD1000 simulator';
+      case 'software_fallback':
+        return 'software fallback';
+      default:
+        return 'unknown';
     }
   }
 
@@ -640,8 +751,7 @@ class _AkidaDeployScreenState extends State<AkidaDeployScreen> {
 
   // ---------- Error ----------
 
-  Widget _buildErrorCard(
-      BuildContext context, AkidaDeployProvider provider) {
+  Widget _buildErrorCard(BuildContext context, AkidaDeployProvider provider) {
     return Card(
       color: Colors.red.withValues(alpha: 0.08),
       child: Padding(

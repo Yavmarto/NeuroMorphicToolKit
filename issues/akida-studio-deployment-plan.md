@@ -11,13 +11,14 @@ What is already landed:
 - NeuroCNL exposes explicit Akida support states and returns them from the deploy gate.
 - NeuroCNL can map supported networks into a shared `mapped_network` representation for Neurochip handoff.
 - Neurochip owns scaffold package generation and optional SDK-backed deployment behavior.
-- NMTK has an Akida deployment screen and service flow, including optional Neurobench job submission.
+- Neurochip now reports runtime-target-aware SDK verification state separately from scaffold export.
+- NMTK now treats scaffold generation and SDK verification as separate steps, and only unlocks optional Neurobench work after verified SDK success.
 - The topology-centralization dependency in `akida-topological-drift.md` is now complete.
 - Targeted Akida validator / contract / mapper verification now passes locally.
 
 What is still open:
-- The remaining open work is truthful SDK-backed and hardware-backed proof for the `sdk_deployable` path.
-- Keep runtime claims tied to actual SDK availability and recorded evidence before calling the full workflow complete.
+- The remaining open work is one recorded BrainChip SDK-backed acceptance run in a supported environment.
+- Keep runtime claims tied to actual SDK availability and recorded evidence before calling the full workflow complete; simulator or scaffold proof alone is not enough to close the issue.
 
 ## Continuation Order
 
@@ -29,9 +30,20 @@ Why this is third:
 
 ## Next Action To Continue
 
-- Run one clean Akida acceptance pass in an environment that actually has the BrainChip SDK available.
-- Record whether the current shared mapped representation reaches a truthful `sdk_deployable` outcome or needs another gap ticket.
-- If SDK-backed proof is not currently available, keep the product claims scoped to scaffold/export flow only.
+- Run one clean Akida acceptance pass on Linux or Windows with the BrainChip SDK installed and Neurochip serving the verify endpoint.
+- Record whether the current shared mapped representation reaches a truthful SDK-verified outcome or needs another gap ticket.
+- If SDK-backed proof is not currently available, keep the issue open and keep public claims scoped to scaffold/export flow plus runtime verification gating.
+
+## Required Evidence For Closure
+
+- Runtime environment:
+  exact OS, Python version, BrainChip SDK version, and whether the runtime target was physical hardware or `AKD1000`.
+- Verification inputs:
+  exact CNL spec or artifact reference, requested Akida version, bit width, and checksum or other artifact identifier.
+- Verification outputs:
+  `sdk_status`, `runtime_target`, `device_info`, and final inference or mapping outcome from Neurochip.
+- Repository evidence:
+  a checked-in note or issue update that captures the run, rather than an unrecorded manual confirmation.
 
 Historical note: the original plan sections below are retained for design context. Use the audit status, continuation order, and acceptance criteria above as the current source of truth.
 

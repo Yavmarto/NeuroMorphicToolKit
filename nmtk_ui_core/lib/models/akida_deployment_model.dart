@@ -1,22 +1,22 @@
-// Data models for BrainChip Akida scaffold-export/deployment workflow.
+// Data models for BrainChip Akida scaffold-export and runtime verification.
 //
 // Mirrors the Python backend schemas from:
 // - neurocnl AkidaExportResult / AkidaSupportState
 // - Neurochip Akida backend (akida_backend.py)
 //
-// Three-tier support model:
-// - Unsupported: network cannot target Akida
-// - Exportable Scaffold: toolkit can produce MetaTF project scaffolding
-//   and quantized weights offline (no Akida SDK needed)
-// - SDK Deployable: model can be compiled and mapped via Akida SDK
-//   onto hardware or AKD1000 simulator (runtime)
+// Exportability and runtime verification are modeled separately:
+// - NeuroCNL reports whether the network is unsupported or exportable as a
+//   scaffold package plus mapped handoff payload.
+// - Neurochip later verifies whether that mapped payload is actually
+//   deployable via the Akida SDK in the current environment.
 
 import 'package:flutter/material.dart';
 
 /// Support state for BrainChip Akida target.
 ///
-/// Export-time states are deterministic at planning time.
-/// SDK deploy states are resolved at runtime.
+/// Export-time scaffold states come from NeuroCNL.
+/// SDK states are retained for UI compatibility and may be used by runtime
+/// surfaces that collapse export and verification into a single badge.
 enum AkidaSupportState {
   /// All constraints met; scaffold package can be generated.
   exportableScaffold,
@@ -60,9 +60,9 @@ enum AkidaSupportState {
       case AkidaSupportState.unsupported:
         return 'Unsupported — see rejections';
       case AkidaSupportState.sdkDeployable:
-        return 'Deployed — running via Akida SDK';
+        return 'Verified — Akida SDK runtime ready';
       case AkidaSupportState.sdkNotDeployable:
-        return 'Not Deployable — SDK unavailable';
+        return 'Scaffold Only — SDK verification blocked';
     }
   }
 
@@ -103,7 +103,7 @@ enum AkidaSupportState {
   }
 }
 
-/// Response from Akida exportability planning endpoint.
+/// Response from the NeuroCNL Akida exportability endpoint.
 class AkidaNetworkResponse {
   final AkidaSupportState supportState;
   final String akidaVersion;
@@ -130,14 +130,15 @@ class AkidaNetworkResponse {
 
   factory AkidaNetworkResponse.fromJson(Map<String, dynamic> json) {
     return AkidaNetworkResponse(
-      supportState:
-          AkidaSupportState.fromString(json['support_state'] as String),
+      supportState: AkidaSupportState.fromString(
+        json['support_state'] as String,
+      ),
       akidaVersion: json['akida_version'] as String? ?? 'akida',
       topologyVerdict: json['topology_verdict'] as String? ?? 'unknown',
-      warnings:
-          (json['warnings'] as List).map((e) => e as String).toList(),
-      rejectionReasons:
-          (json['rejections'] as List).map((e) => e as String).toList(),
+      warnings: (json['warnings'] as List).map((e) => e as String).toList(),
+      rejectionReasons: (json['rejections'] as List)
+          .map((e) => e as String)
+          .toList(),
       networkSummary: json['network_summary'] as Map<String, dynamic>?,
       mappedNetwork: json['mapped_network'] as Map<String, dynamic>?,
     );
@@ -145,7 +146,50 @@ class AkidaNetworkResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Deploy job status — mirrors Akida SDK deployment lifecycle
+// Runtime verification — reported by Neurochip verify/status endpoints
+// ---------------------------------------------------------------------------
+
+class AkidaSdkVerification {
+  final bool sdkAvailable;
+  final String sdkStatus;
+  final List<String> sdkIssues;
+  final String state;
+  final Map<String, dynamic>? modelSummary;
+  final String runtimeTarget;
+  final String? deviceInfo;
+  final String? sdkIssueDetail;
+
+  const AkidaSdkVerification({
+    required this.sdkAvailable,
+    required this.sdkStatus,
+    required this.sdkIssues,
+    required this.state,
+    this.modelSummary,
+    this.runtimeTarget = 'unknown',
+    this.deviceInfo,
+    this.sdkIssueDetail,
+  });
+
+  factory AkidaSdkVerification.fromJson(Map<String, dynamic> json) {
+    return AkidaSdkVerification(
+      sdkAvailable: json['sdk_available'] as bool? ?? false,
+      sdkStatus: json['sdk_status'] as String? ?? 'unknown',
+      sdkIssues:
+          (json['sdk_issues'] as List?)?.map((e) => e.toString()).toList() ??
+          const [],
+      state: json['state'] as String? ?? 'unknown',
+      modelSummary: json['model_summary'] as Map<String, dynamic>?,
+      runtimeTarget: json['runtime_target'] as String? ?? 'unknown',
+      deviceInfo: json['device_info'] as String?,
+      sdkIssueDetail: json['sdk_issue_detail'] as String?,
+    );
+  }
+
+  bool get isDeployable => sdkStatus == 'deployable';
+}
+
+// ---------------------------------------------------------------------------
+// Deploy job status — mirrors Akida backend lifecycle
 // ---------------------------------------------------------------------------
 
 /// Lifecycle state of an Akida SDK deploy job.
@@ -224,15 +268,19 @@ class AkidaDeployJob {
   final AkidaDeployJobStatus status;
   final String? deviceInfo;
 
-  const AkidaDeployJob({
-    required this.status,
-    this.deviceInfo,
-  });
+  const AkidaDeployJob({required this.status, this.deviceInfo});
 
   factory AkidaDeployJob.fromJson(Map<String, dynamic> json) {
     return AkidaDeployJob(
       status: AkidaDeployJobStatus.fromString(json['state'] as String),
       deviceInfo: json['device_info'] as String?,
+    );
+  }
+
+  factory AkidaDeployJob.fromVerification(AkidaSdkVerification verification) {
+    return AkidaDeployJob(
+      status: AkidaDeployJobStatus.fromString(verification.state),
+      deviceInfo: verification.deviceInfo,
     );
   }
 }

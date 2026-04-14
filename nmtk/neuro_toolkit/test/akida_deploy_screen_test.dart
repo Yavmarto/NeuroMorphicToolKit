@@ -76,8 +76,7 @@ void main() {
   group('AkidaDeployScreen — Neurobench toggle', () {
     testWidgets('deploy config card shows enabled Neurobench switch',
         (tester) async {
-      final provider =
-          AkidaDeployProvider(service: _NopAkidaDeployService());
+      final provider = AkidaDeployProvider(service: _NopAkidaDeployService());
       await provider.checkExportability(
         spec: 'The sensory neuron MUST fire.',
         weightBitWidth: 8,
@@ -97,8 +96,7 @@ void main() {
 
     testWidgets('Neurobench switch is interactive (not hard-disabled)',
         (tester) async {
-      final provider =
-          AkidaDeployProvider(service: _NopAkidaDeployService());
+      final provider = AkidaDeployProvider(service: _NopAkidaDeployService());
       await provider.checkExportability(
         spec: 'The sensory neuron MUST fire.',
         weightBitWidth: 8,
@@ -110,10 +108,10 @@ void main() {
       expect(find.textContaining('not yet available'), findsNothing);
     });
 
-    testWidgets('setRunNeurobench toggles provider state and Switch reflects it',
+    testWidgets(
+        'setRunNeurobench toggles provider state and Switch reflects it',
         (tester) async {
-      final provider =
-          AkidaDeployProvider(service: _NopAkidaDeployService());
+      final provider = AkidaDeployProvider(service: _NopAkidaDeployService());
       await provider.checkExportability(
         spec: 'The sensory neuron MUST fire.',
         weightBitWidth: 8,

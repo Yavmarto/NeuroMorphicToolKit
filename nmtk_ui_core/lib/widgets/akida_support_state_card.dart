@@ -51,10 +51,9 @@ class AkidaSupportStateCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     supportState.label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(color: color),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: color),
                   ),
                 ),
                 if (akidaVersion != null)
@@ -73,9 +72,11 @@ class AkidaSupportStateCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(left: 36),
                 child: Text(
-                  'Akida SDK unavailable — scaffold package only.',
+                  'Akida SDK not verified — scaffold package only.',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -122,7 +123,9 @@ class AkidaSupportStateCard extends StatelessWidget {
                 child: Text(
                   'Topology: $topologyVerdict',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ),

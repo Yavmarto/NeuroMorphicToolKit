@@ -1,5 +1,7 @@
 import os
 import time
+from pathlib import Path
+
 import httpx
 import pytest
 
@@ -10,6 +12,17 @@ NEUROCHIP_URL = os.getenv("NEUROCHIP_URL", "http://neurochip:8000")
 NEUROSENSE_URL = os.getenv("NEUROSENSE_URL", "http://neurosense:8000")
 NEUROHUB_URL = os.getenv("NEUROHUB_URL", "http://neurohub:8000")
 NEUROBENCH_URL = os.getenv("NEUROBENCH_URL", "http://neurobench:8000")
+
+
+def _default_neurosense_artifact_path() -> str:
+    return str(
+        Path(__file__).resolve().parents[2]
+        / "Neurosense"
+        / "neurosense"
+        / "tests"
+        / "fixtures"
+        / "canonical_emg_session.hdf5"
+    )
 
 
 @pytest.mark.asyncio
@@ -105,6 +118,71 @@ async def test_neurosense_to_neurocnl():
         )
         # The endpoint returns 202 Accepted for background jobs
         assert resp.status_code == 202
+
+
+@pytest.mark.asyncio
+async def test_neurosense_artifact_handoff():
+    """Test canonical NeuroSense artifact handoff into neurocnl and Neurobench."""
+    artifact_path = os.getenv(
+        "NEUROSENSE_ARTIFACT_PATH", _default_neurosense_artifact_path()
+    )
+
+    async with httpx.AsyncClient() as client:
+        replay_resp = await client.post(
+            f"{NEUROCNL_URL}/api/prosthetic/neurosense/replay",
+            json={"artifact_path": artifact_path, "preview_frames": 2},
+        )
+        if replay_resp.status_code == 404:
+            pytest.skip(
+                "NeuroCNL service could not access the configured NeuroSense artifact path."
+            )
+        assert replay_resp.status_code == 200, replay_resp.text
+        replay_data = replay_resp.json()
+        assert replay_data["artifact_schema_version"] == "1.0"
+        assert replay_data["frame_count"] > 0
+        assert replay_data["spike_event_count"] > 0
+
+        bench_resp = await client.post(
+            f"{NEUROBENCH_URL}/api/neurobench/run",
+            json={
+                "benchmark_id": "neurosense_replay_contract",
+                "network_path": "unused-for-recording-benchmark.cnl",
+                "params": {"artifact_path": artifact_path},
+            },
+        )
+        if bench_resp.status_code == 404:
+            pytest.skip(
+                "NeuroBench service does not have the NeuroSense recording benchmark loaded."
+            )
+        assert bench_resp.status_code == 200, bench_resp.text
+        job_id = bench_resp.json()["job_id"]
+
+        for _ in range(10):
+            status_resp = await client.get(
+                f"{NEUROBENCH_URL}/api/neurobench/run/{job_id}"
+            )
+            assert status_resp.status_code == 200, status_resp.text
+            status_data = status_resp.json()
+            if status_data["status"] == "COMPLETED":
+                result_resp = await client.get(
+                    f"{NEUROBENCH_URL}/api/neurobench/run/{job_id}/result"
+                )
+                assert result_resp.status_code == 200, result_resp.text
+                result = result_resp.json()
+                assert result["target_id"] == "neurosense_recording"
+                assert result["metrics"]["input_spike_events"] > 0
+                break
+            if status_data["status"] == "FAILED":
+                if "Session artifact not found" in (status_data.get("error") or ""):
+                    pytest.skip(
+                        "NeuroBench service could not access the configured NeuroSense artifact path."
+                    )
+                pytest.fail(
+                    f"NeuroBench recording benchmark failed: {status_data.get('error')}"
+                )
+            time.sleep(1)
+        else:
+            pytest.fail("Timed out waiting for NeuroBench recording benchmark job.")
 
 
 @pytest.mark.asyncio
