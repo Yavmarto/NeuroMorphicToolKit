@@ -220,6 +220,34 @@ void main() {
     });
   });
 
+  group('PynqPairedBoard', () {
+    test('fromJson parses paired board state', () {
+      final json = {
+        'id': 'board-1',
+        'displayName': 'Lab PYNQ',
+        'host': '192.168.1.50',
+        'sshPort': 22,
+        'username': 'xilinx',
+        'authMode': 'ssh_key',
+        'credentialRef': 'runtime-key',
+        'runtimeApiUrl': 'http://192.168.1.50:8002',
+        'overlayVersion': '2026.04.14',
+        'state': 'ready',
+        'lastPreflightStatus': 'ok',
+        'lastPreflightMessage': 'Ready',
+        'lastRuntimeMode': 'hardware',
+        'hasPassword': false,
+        'sshKeyPath': '/Users/test/.ssh/pynq',
+      };
+      final board = PynqPairedBoard.fromJson(json);
+
+      expect(board.id, 'board-1');
+      expect(board.state, PynqBoardState.ready);
+      expect(board.authMode, PynqBoardAuthMode.sshKey);
+      expect(board.isReady, isTrue);
+    });
+  });
+
   group('PynqSitlVerifyResult', () {
     test('fromJson parses a passing verification', () {
       final json = {

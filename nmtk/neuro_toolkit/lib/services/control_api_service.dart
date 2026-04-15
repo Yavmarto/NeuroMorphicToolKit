@@ -3,23 +3,30 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/module.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 class LauncherControlSettings {
   const LauncherControlSettings({
     required this.logLevel,
     required this.mujocoAvailable,
     required this.pythonAvailable,
+    required this.pynqBoards,
   });
 
   final String logLevel;
   final bool mujocoAvailable;
   final bool pythonAvailable;
+  final List<PynqPairedBoard> pynqBoards;
 
   factory LauncherControlSettings.fromJson(Map<String, dynamic> json) {
     return LauncherControlSettings(
       logLevel: json['logLevel'] as String? ?? 'info',
       mujocoAvailable: json['mujocoAvailable'] as bool? ?? false,
       pythonAvailable: json['pythonAvailable'] as bool? ?? true,
+      pynqBoards: (json['pynqBoards'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .map(PynqPairedBoard.fromJson)
+          .toList(growable: false),
     );
   }
 }
@@ -129,6 +136,129 @@ class ControlApiService {
       }),
     );
     await _ensureSuccess(response);
+  }
+
+  Future<List<PynqPairedBoard>> fetchPynqBoards() async {
+    final response = await _client.get(_uri('/api/launcher/pynq/boards'));
+    await _ensureSuccess(response);
+    final decoded = await _readJsonList(response);
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(PynqPairedBoard.fromJson)
+        .toList(growable: false);
+  }
+
+  Future<PynqPairedBoard> createPynqBoard(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _client.post(
+      _uri('/api/launcher/pynq/boards'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return PynqPairedBoard.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<PynqPairedBoard> updatePynqBoard(
+    String boardId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _client.put(
+      _uri('/api/launcher/pynq/boards/$boardId'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return PynqPairedBoard.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<void> deletePynqBoard(String boardId) async {
+    final response =
+        await _client.delete(_uri('/api/launcher/pynq/boards/$boardId'));
+    await _ensureSuccess(response);
+  }
+
+  Future<PynqPairedBoard> testPynqBoardConnectivity(String boardId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/pynq/boards/$boardId/connectivity-test'),
+    );
+    await _ensureSuccess(response);
+    return PynqPairedBoard.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<PynqPairedBoard> provisionPynqBoard(String boardId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/pynq/boards/$boardId/provision'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    final boardJson = payload['board'] as Map<String, dynamic>? ?? payload;
+    return PynqPairedBoard.fromJson(boardJson);
+  }
+
+  Future<PynqPairedBoard> installPynqOverlay(String boardId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/pynq/boards/$boardId/install-overlay'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    final boardJson = payload['board'] as Map<String, dynamic>? ?? payload;
+    return PynqPairedBoard.fromJson(boardJson);
+  }
+
+  Future<PynqPairedBoard> restartPynqRuntime(String boardId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/pynq/boards/$boardId/restart-runtime'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    final boardJson = payload['board'] as Map<String, dynamic>? ?? payload;
+    return PynqPairedBoard.fromJson(boardJson);
+  }
+
+  Future<PynqPairedBoard> fetchPynqBoardPreflight(String boardId) async {
+    final response = await _client.get(
+      _uri('/api/launcher/pynq/boards/$boardId/preflight'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    return PynqPairedBoard.fromJson(payload['board'] as Map<String, dynamic>);
+  }
+
+  Future<PynqDeployJob> fetchPynqBoardStatus(String boardId) async {
+    final response = await _client.get(
+      _uri('/api/launcher/pynq/boards/$boardId/status'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    return PynqDeployJob.fromJson(payload['status'] as Map<String, dynamic>);
+  }
+
+  Future<Map<String, dynamic>> proxyPynqDeploy(
+    String boardId, {
+    required Map<String, dynamic> payload,
+  }) async {
+    final response = await _client.post(
+      _uri('/api/launcher/pynq/boards/$boardId/deploy'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return await _readJsonResponse(response);
+  }
+
+  Future<PynqSitlVerifyResult> proxyPynqVerify(
+    String boardId, {
+    Map<String, dynamic>? payload,
+  }) async {
+    final response = await _client.post(
+      _uri('/api/launcher/pynq/boards/$boardId/verify'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload ?? const <String, dynamic>{}),
+    );
+    await _ensureSuccess(response);
+    return PynqSitlVerifyResult.fromJson(await _readJsonResponse(response));
   }
 
   Future<Module> installModule(String moduleId) async {

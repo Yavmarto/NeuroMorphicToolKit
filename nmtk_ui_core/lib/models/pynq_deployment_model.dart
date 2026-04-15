@@ -278,6 +278,228 @@ class PynqNetworkResponse {
   }
 }
 
+enum PynqBoardAuthMode {
+  password,
+  sshKey;
+
+  static PynqBoardAuthMode fromString(String? value) {
+    switch (value) {
+      case 'ssh_key':
+        return PynqBoardAuthMode.sshKey;
+      case 'password':
+      default:
+        return PynqBoardAuthMode.password;
+    }
+  }
+
+  String get apiValue {
+    switch (this) {
+      case PynqBoardAuthMode.password:
+        return 'password';
+      case PynqBoardAuthMode.sshKey:
+        return 'ssh_key';
+    }
+  }
+}
+
+enum PynqBoardState {
+  unpaired,
+  reachable,
+  provisioning,
+  provisionFailed,
+  runtimeInstalled,
+  overlayMissing,
+  ready,
+  degradedOptionalCapability,
+  error;
+
+  static PynqBoardState fromString(String? value) {
+    switch (value) {
+      case 'reachable':
+        return PynqBoardState.reachable;
+      case 'provisioning':
+        return PynqBoardState.provisioning;
+      case 'provision_failed':
+        return PynqBoardState.provisionFailed;
+      case 'runtime_installed':
+        return PynqBoardState.runtimeInstalled;
+      case 'overlay_missing':
+        return PynqBoardState.overlayMissing;
+      case 'ready':
+        return PynqBoardState.ready;
+      case 'degraded_optional_capability':
+        return PynqBoardState.degradedOptionalCapability;
+      case 'error':
+        return PynqBoardState.error;
+      case 'unpaired':
+      default:
+        return PynqBoardState.unpaired;
+    }
+  }
+
+  String get apiValue {
+    switch (this) {
+      case PynqBoardState.unpaired:
+        return 'unpaired';
+      case PynqBoardState.reachable:
+        return 'reachable';
+      case PynqBoardState.provisioning:
+        return 'provisioning';
+      case PynqBoardState.provisionFailed:
+        return 'provision_failed';
+      case PynqBoardState.runtimeInstalled:
+        return 'runtime_installed';
+      case PynqBoardState.overlayMissing:
+        return 'overlay_missing';
+      case PynqBoardState.ready:
+        return 'ready';
+      case PynqBoardState.degradedOptionalCapability:
+        return 'degraded_optional_capability';
+      case PynqBoardState.error:
+        return 'error';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case PynqBoardState.unpaired:
+        return 'Unpaired';
+      case PynqBoardState.reachable:
+        return 'Reachable';
+      case PynqBoardState.provisioning:
+        return 'Provisioning';
+      case PynqBoardState.provisionFailed:
+        return 'Provision Failed';
+      case PynqBoardState.runtimeInstalled:
+        return 'Runtime Installed';
+      case PynqBoardState.overlayMissing:
+        return 'Overlay Missing';
+      case PynqBoardState.ready:
+        return 'Ready';
+      case PynqBoardState.degradedOptionalCapability:
+        return 'Degraded Optional Capability';
+      case PynqBoardState.error:
+        return 'Error';
+    }
+  }
+}
+
+class PynqPairedBoard {
+  final String id;
+  final String displayName;
+  final String host;
+  final int sshPort;
+  final String username;
+  final PynqBoardAuthMode authMode;
+  final String credentialRef;
+  final String runtimeApiUrl;
+  final String overlayVersion;
+  final PynqBoardState state;
+  final String lastPreflightStatus;
+  final String lastPreflightMessage;
+  final String lastRuntimeMode;
+  final bool hasPassword;
+  final String sshKeyPath;
+  final Map<String, dynamic>? lastStatus;
+
+  const PynqPairedBoard({
+    required this.id,
+    required this.displayName,
+    required this.host,
+    required this.sshPort,
+    required this.username,
+    required this.authMode,
+    required this.credentialRef,
+    required this.runtimeApiUrl,
+    required this.overlayVersion,
+    required this.state,
+    required this.lastPreflightStatus,
+    required this.lastPreflightMessage,
+    required this.lastRuntimeMode,
+    required this.hasPassword,
+    required this.sshKeyPath,
+    this.lastStatus,
+  });
+
+  bool get isReady => state == PynqBoardState.ready;
+
+  factory PynqPairedBoard.fromJson(Map<String, dynamic> json) {
+    return PynqPairedBoard(
+      id: json['id'] as String? ?? '',
+      displayName: json['displayName'] as String? ?? 'PYNQ Board',
+      host: json['host'] as String? ?? '',
+      sshPort: json['sshPort'] as int? ?? 22,
+      username: json['username'] as String? ?? 'xilinx',
+      authMode: PynqBoardAuthMode.fromString(json['authMode'] as String?),
+      credentialRef: json['credentialRef'] as String? ?? '',
+      runtimeApiUrl: json['runtimeApiUrl'] as String? ?? '',
+      overlayVersion: json['overlayVersion'] as String? ?? '',
+      state: PynqBoardState.fromString(json['state'] as String?),
+      lastPreflightStatus: json['lastPreflightStatus'] as String? ?? '',
+      lastPreflightMessage: json['lastPreflightMessage'] as String? ?? '',
+      lastRuntimeMode: json['lastRuntimeMode'] as String? ?? '',
+      hasPassword: json['hasPassword'] as bool? ?? false,
+      sshKeyPath: json['sshKeyPath'] as String? ?? '',
+      lastStatus: json['lastStatus'] as Map<String, dynamic>?,
+    );
+  }
+
+  Map<String, dynamic> toJson({String? password}) {
+    return <String, dynamic>{
+      'id': id,
+      'displayName': displayName,
+      'host': host,
+      'sshPort': sshPort,
+      'username': username,
+      'authMode': authMode.apiValue,
+      'credentialRef': credentialRef,
+      if (password != null && password.isNotEmpty) 'password': password,
+      if (sshKeyPath.isNotEmpty) 'sshKeyPath': sshKeyPath,
+      if (runtimeApiUrl.isNotEmpty) 'runtimeApiUrl': runtimeApiUrl,
+      if (overlayVersion.isNotEmpty) 'overlayVersion': overlayVersion,
+      'state': state.apiValue,
+    };
+  }
+
+  PynqPairedBoard copyWith({
+    String? id,
+    String? displayName,
+    String? host,
+    int? sshPort,
+    String? username,
+    PynqBoardAuthMode? authMode,
+    String? credentialRef,
+    String? runtimeApiUrl,
+    String? overlayVersion,
+    PynqBoardState? state,
+    String? lastPreflightStatus,
+    String? lastPreflightMessage,
+    String? lastRuntimeMode,
+    bool? hasPassword,
+    String? sshKeyPath,
+    Map<String, dynamic>? lastStatus,
+  }) {
+    return PynqPairedBoard(
+      id: id ?? this.id,
+      displayName: displayName ?? this.displayName,
+      host: host ?? this.host,
+      sshPort: sshPort ?? this.sshPort,
+      username: username ?? this.username,
+      authMode: authMode ?? this.authMode,
+      credentialRef: credentialRef ?? this.credentialRef,
+      runtimeApiUrl: runtimeApiUrl ?? this.runtimeApiUrl,
+      overlayVersion: overlayVersion ?? this.overlayVersion,
+      state: state ?? this.state,
+      lastPreflightStatus: lastPreflightStatus ?? this.lastPreflightStatus,
+      lastPreflightMessage: lastPreflightMessage ?? this.lastPreflightMessage,
+      lastRuntimeMode: lastRuntimeMode ?? this.lastRuntimeMode,
+      hasPassword: hasPassword ?? this.hasPassword,
+      sshKeyPath: sshKeyPath ?? this.sshKeyPath,
+      lastStatus: lastStatus ?? this.lastStatus,
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Deploy job status — mirrors /hardware/pynq/status
 // ---------------------------------------------------------------------------

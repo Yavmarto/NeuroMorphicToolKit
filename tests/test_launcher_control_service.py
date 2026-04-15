@@ -7,6 +7,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest import mock
 
 import nmtk.launcher_control.server as launcher_server
@@ -141,6 +142,30 @@ class LauncherControlServiceTest(unittest.TestCase):
             launcher_server.STATUS_INDEX["notInstalled"],
         )
 
+    def test_missing_environment_normalizes_stale_installed_state(self) -> None:
+        state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"
+        state_file.write_text(
+            json.dumps(
+                {
+                    "dummy": {
+                        "id": "dummy",
+                        "status": launcher_server.STATUS_INDEX["installed"],
+                        "installProgress": 1.0,
+                        "environmentFingerprint": None,
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        self._fake_venv_python.unlink()
+
+        reloaded = launcher_server.LauncherControlState()
+        self.addCleanup(reloaded.shutdown)
+
+        payload = reloaded.serialize_module("dummy")
+        self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["notInstalled"])
+        self.assertEqual(payload["installProgress"], 0.0)
+
     def test_module_settings_round_trip_updates_state_file(self) -> None:
         updated = self.state.update_module_settings(
             "dummy",
@@ -162,6 +187,215 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(persisted["dummy"]["customPort"], 9001)
         self.assertFalse(persisted["dummy"]["isEnabled"])
         self.assertTrue(persisted["dummy"]["versionPinned"])
+
+    def test_pynq_board_round_trip_updates_settings_file(self) -> None:
+        created = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "sshPort": 22,
+                "username": "xilinx",
+                "authMode": "password",
+                "password": "secret",
+            }
+        )
+
+        self.assertEqual(created["displayName"], "Desk PYNQ")
+        self.assertEqual(created["state"], "unpaired")
+        self.assertTrue(created["hasPassword"])
+        self.assertEqual(
+            created["remoteInstallRoot"],
+            "/home/xilinx/.local/share/neurochip-pynq-agent",
+        )
+
+        persisted = json.loads(
+            (
+                self.repo_root
+                / "nmtk"
+                / "neuro_toolkit"
+                / "launcher_settings.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(len(persisted["pynqBoards"]), 1)
+        self.assertEqual(persisted["pynqBoards"][0]["host"], "192.168.1.50")
+        self.assertEqual(persisted["pynqBoards"][0]["password"], "secret")
+        self.assertEqual(
+            persisted["pynqBoards"][0]["remoteInstallRoot"],
+            "/home/xilinx/.local/share/neurochip-pynq-agent",
+        )
+
+    def test_pynq_board_normalization_migrates_legacy_opt_paths(self) -> None:
+        created = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+                "remoteInstallRoot": "/opt/neurochip-pynq-agent",
+                "remoteVenvPath": "/opt/neurochip-pynq-agent/venv",
+                "remoteOverlayDir": "/opt/neurochip-pynq-agent/overlays",
+            }
+        )
+
+        self.assertEqual(
+            created["remoteInstallRoot"],
+            "/home/xilinx/.local/share/neurochip-pynq-agent",
+        )
+        self.assertEqual(
+            created["remoteVenvPath"],
+            "/home/xilinx/.local/share/neurochip-pynq-agent/venv",
+        )
+        self.assertEqual(
+            created["remoteOverlayDir"],
+            "/home/xilinx/.local/share/neurochip-pynq-agent/overlays",
+        )
+
+    def test_pynq_board_connectivity_updates_board_state(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "sshPort": 22,
+                "username": "xilinx",
+                "authMode": "ssh_key",
+                "sshKeyPath": "/Users/test/.ssh/pynq",
+            }
+        )
+
+        with mock.patch.object(self.state, "_run_ssh") as run_ssh:
+            updated = self.state.test_pynq_board_connection(board["id"])
+
+        run_ssh.assert_called_once()
+        self.assertEqual(updated["state"], "reachable")
+
+    def test_run_ssh_password_auth_falls_back_to_askpass_without_sshpass(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "sshPort": 22,
+                "username": "xilinx",
+                "authMode": "password",
+                "password": "secret",
+            }
+        )
+        observed: dict[str, Any] = {}
+
+        class _FakeStream:
+            def __init__(self, lines: list[str]) -> None:
+                self._lines = [f"{line}\n" for line in lines]
+                self._index = 0
+
+            def readline(self) -> str:
+                if self._index >= len(self._lines):
+                    return ""
+                line = self._lines[self._index]
+                self._index += 1
+                return line
+
+            def close(self) -> None:
+                return None
+
+        class _FakeProcess:
+            def __init__(self, command: list[str], env: dict[str, str]) -> None:
+                self.command = command
+                self.env = env
+                self.stdout = _FakeStream(["Python 3.10.0"])
+                self.stderr = _FakeStream([])
+
+            def wait(self) -> int:
+                return 0
+
+        def _fake_popen(*args: Any, **kwargs: Any) -> _FakeProcess:
+            command = args[0]
+            env = kwargs.get("env")
+            self.assertNotIn("sshpass", command)
+            self.assertIn("PreferredAuthentications=password", command)
+            self.assertIsInstance(env, dict)
+            askpass_path = env["SSH_ASKPASS"]
+            self.assertTrue(Path(askpass_path).exists())
+            self.assertEqual(env["NMTK_PYNQ_PASSWORD"], "secret")
+            observed["askpass_path"] = askpass_path
+            return _FakeProcess(command, env)
+
+        with (
+            mock.patch.object(launcher_server.shutil, "which", return_value=None),
+            mock.patch.object(launcher_server.subprocess, "Popen", side_effect=_fake_popen),
+        ):
+            self.state._run_ssh(self.state._get_pynq_board(board["id"]), "python3 --version")
+
+        self.assertFalse(Path(observed["askpass_path"]).exists())
+
+    def test_run_scp_password_auth_falls_back_to_askpass_without_sshpass(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "sshPort": 22,
+                "username": "xilinx",
+                "authMode": "password",
+                "password": "secret",
+            }
+        )
+        local_file = self.repo_root / "bundle.txt"
+        local_file.write_text("bundle", encoding="utf-8")
+        observed: dict[str, Any] = {}
+
+        def _fake_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+            command = args[0]
+            env = kwargs.get("env")
+            self.assertEqual(command[0], "scp")
+            self.assertIn("PreferredAuthentications=password", command)
+            self.assertIsInstance(env, dict)
+            askpass_path = env["SSH_ASKPASS"]
+            self.assertTrue(Path(askpass_path).exists())
+            observed["askpass_path"] = askpass_path
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with (
+            mock.patch.object(launcher_server.shutil, "which", return_value=None),
+            mock.patch.object(launcher_server.subprocess, "run", side_effect=_fake_run),
+        ):
+            self.state._run_scp(
+                self.state._get_pynq_board(board["id"]),
+                local_file,
+                "/tmp/bundle.txt",
+            )
+
+        self.assertFalse(Path(observed["askpass_path"]).exists())
+
+    def test_doctor_report_includes_pynq_boards(self) -> None:
+        self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "state": "ready",
+                "lastPreflightStatus": "ok",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_preflight_module",
+            return_value=launcher_server.PreflightResult(
+                status=launcher_server.PREFLIGHT_OK,
+                message="ok",
+                environment_fingerprint="fingerprint-3",
+            ),
+        ):
+            report = self.state.doctor_report()
+
+        self.assertIn("pynqBoards", report)
+        self.assertEqual(report["pynqBoards"][0]["state"], "ready")
+
+    def test_doctor_report_skips_not_installed_module_preflight(self) -> None:
+        module = self.state._get_module("dummy")
+        module["status"] = launcher_server.STATUS_INDEX["notInstalled"]
+
+        with mock.patch.object(self.state, "_preflight_module") as preflight:
+            report = self.state.doctor_report()
+
+        preflight.assert_not_called()
+        self.assertEqual(report["modules"][0]["preflightMessage"], "Module not installed")
 
     def test_wrapper_runs_without_external_pythonpath(self) -> None:
         env = os.environ.copy()
@@ -318,6 +552,8 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
 
     def test_doctor_report_marks_fatal_preflight_as_blocking(self) -> None:
+        module = self.state._get_module("dummy")
+        module["status"] = launcher_server.STATUS_INDEX["installed"]
         with (
             mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
             mock.patch.object(
@@ -340,6 +576,8 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertIn("fastapi", report["modules"][0]["preflightMessage"])
 
     def test_doctor_report_keeps_optional_capability_degradation_nonfatal(self) -> None:
+        module = self.state._get_module("dummy")
+        module["status"] = launcher_server.STATUS_INDEX["installed"]
         with (
             mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
             mock.patch.object(

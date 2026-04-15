@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
+import 'package:neuro_toolkit/services/control_api_service.dart';
+
 /// REST client for PYNQ Z2 deployment endpoints.
 ///
 /// Talks to:
@@ -12,11 +14,14 @@ class PynqDeployService {
   PynqDeployService({
     http.Client? httpClient,
     String? neurocnlBaseUrl,
+    ControlApiService? controlApiService,
   })  : _httpClient = httpClient ?? http.Client(),
-        _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000';
+        _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000',
+        _controlApiService = controlApiService ?? ControlApiService();
 
   final http.Client _httpClient;
   final String _neurocnlBaseUrl;
+  final ControlApiService _controlApiService;
 
   /// Check PYNQ exportability for a CNL spec.
   ///
@@ -61,43 +66,132 @@ class PynqDeployService {
     );
   }
 
-  /// Deploy overlay to a remote PYNQ Z2 board.
-  ///
-  /// Calls POST {boardBaseUrl}/hardware/pynq/deploy.
-  /// Returns the raw JSON response dict on success.
-  /// Throws [PynqDeployException] on failure.
+  Future<List<PynqPairedBoard>> fetchPairedBoards() async {
+    try {
+      return await _controlApiService.fetchPynqBoards();
+    } catch (e) {
+      throw PynqDeployException(
+          error: 'Failed to fetch paired boards', messages: ['$e']);
+    }
+  }
+
+  Future<PynqPairedBoard> savePairedBoard({
+    String? boardId,
+    required String displayName,
+    required String host,
+    required int sshPort,
+    required String username,
+    required PynqBoardAuthMode authMode,
+    String credentialRef = '',
+    String password = '',
+    String sshKeyPath = '',
+    String overlayVersion = '',
+  }) async {
+    final payload = <String, dynamic>{
+      'displayName': displayName,
+      'host': host,
+      'sshPort': sshPort,
+      'username': username,
+      'authMode': authMode.apiValue,
+      'credentialRef': credentialRef,
+      if (password.isNotEmpty) 'password': password,
+      if (sshKeyPath.isNotEmpty) 'sshKeyPath': sshKeyPath,
+      if (overlayVersion.isNotEmpty) 'overlayVersion': overlayVersion,
+    };
+    try {
+      if (boardId == null || boardId.isEmpty) {
+        return await _controlApiService.createPynqBoard(payload);
+      }
+      return await _controlApiService.updatePynqBoard(boardId, payload);
+    } catch (e) {
+      throw PynqDeployException(
+          error: 'Failed to save paired board', messages: ['$e']);
+    }
+  }
+
+  Future<void> deletePairedBoard(String boardId) async {
+    try {
+      await _controlApiService.deletePynqBoard(boardId);
+    } catch (e) {
+      throw PynqDeployException(
+          error: 'Failed to delete paired board', messages: ['$e']);
+    }
+  }
+
+  Future<PynqPairedBoard> testBoardConnectivity({
+    required String boardId,
+  }) async {
+    try {
+      return await _controlApiService.testPynqBoardConnectivity(boardId);
+    } catch (e) {
+      throw PynqDeployException(
+          error: 'Connectivity test failed', messages: ['$e']);
+    }
+  }
+
+  Future<PynqPairedBoard> provisionBoard({
+    required String boardId,
+  }) async {
+    try {
+      return await _controlApiService.provisionPynqBoard(boardId);
+    } catch (e) {
+      throw PynqDeployException(error: 'Provisioning failed', messages: ['$e']);
+    }
+  }
+
+  Future<PynqPairedBoard> installOverlay({
+    required String boardId,
+  }) async {
+    try {
+      return await _controlApiService.installPynqOverlay(boardId);
+    } catch (e) {
+      throw PynqDeployException(
+          error: 'Overlay install failed', messages: ['$e']);
+    }
+  }
+
+  Future<PynqPairedBoard> refreshBoardPreflight({
+    required String boardId,
+  }) async {
+    try {
+      return await _controlApiService.fetchPynqBoardPreflight(boardId);
+    } catch (e) {
+      throw PynqDeployException(
+          error: 'Preflight check failed', messages: ['$e']);
+    }
+  }
+
+  Future<PynqPairedBoard> restartRuntime({
+    required String boardId,
+  }) async {
+    try {
+      return await _controlApiService.restartPynqRuntime(boardId);
+    } catch (e) {
+      throw PynqDeployException(
+          error: 'Runtime restart failed', messages: ['$e']);
+    }
+  }
+
   Future<Map<String, dynamic>> deployToBoard({
-    required String boardBaseUrl,
+    required String boardId,
     required PynqDeployPayload payload,
-    String? apiKey,
     String? bitstreamPathOverride,
   }) async {
-    final uri = Uri.parse(
-      '${boardBaseUrl.replaceAll(RegExp(r'/$'), '')}/hardware/pynq/deploy',
-    );
-    final headers = <String, String>{'Content-Type': 'application/json'};
-    if (apiKey != null && apiKey.isNotEmpty) {
-      headers['X-API-Key'] = apiKey;
-    }
-
     final body = payload.toJson();
     if (bitstreamPathOverride != null && bitstreamPathOverride.isNotEmpty) {
       body['bitstream_path'] = bitstreamPathOverride;
     }
-
-    final response = await _httpClient.post(
-      uri,
-      headers: headers,
-      body: jsonEncode(body),
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body) as Map<String, dynamic>;
+    try {
+      return await _controlApiService.proxyPynqDeploy(
+        boardId,
+        payload: body,
+      );
+    } catch (e) {
+      throw PynqDeployException(
+        error: 'Deploy failed',
+        messages: ['$e'],
+      );
     }
-    throw PynqDeployException(
-      error: 'Deploy failed',
-      messages: ['HTTP ${response.statusCode}: ${response.body}'],
-    );
   }
 
   /// Poll the deployment status of a remote PYNQ Z2 board.
@@ -105,28 +199,16 @@ class PynqDeployService {
   /// Calls GET {boardBaseUrl}/hardware/pynq/status.
   /// Returns [PynqDeployJob] on success.
   Future<PynqDeployJob> getDeployStatus({
-    required String boardBaseUrl,
-    String? apiKey,
+    required String boardId,
   }) async {
-    final uri = Uri.parse(
-      '${boardBaseUrl.replaceAll(RegExp(r'/$'), '')}/hardware/pynq/status',
-    );
-    final headers = <String, String>{};
-    if (apiKey != null && apiKey.isNotEmpty) {
-      headers['X-API-Key'] = apiKey;
-    }
-
-    final response = await _httpClient.get(uri, headers: headers);
-
-    if (response.statusCode == 200) {
-      return PynqDeployJob.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
+    try {
+      return await _controlApiService.fetchPynqBoardStatus(boardId);
+    } catch (e) {
+      throw PynqDeployException(
+        error: 'Status check failed',
+        messages: ['$e'],
       );
     }
-    throw PynqDeployException(
-      error: 'Status check failed',
-      messages: ['HTTP ${response.statusCode}'],
-    );
   }
 
   /// Run SITL verification on the remote PYNQ Z2 board.
@@ -134,43 +216,24 @@ class PynqDeployService {
   /// Calls POST {boardBaseUrl}/hardware/pynq/verify.
   /// Returns [PynqSitlVerifyResult] on success.
   Future<PynqSitlVerifyResult> runSitlVerification({
-    required String boardBaseUrl,
-    String? apiKey,
+    required String boardId,
     List<double>? weights,
     Map<String, dynamic>? config,
   }) async {
-    final uri = Uri.parse(
-      '${boardBaseUrl.replaceAll(RegExp(r'/$'), '')}/hardware/pynq/verify',
-    );
-    final headers = <String, String>{'Content-Type': 'application/json'};
-    if (apiKey != null && apiKey.isNotEmpty) {
-      headers['X-API-Key'] = apiKey;
-    }
-
     final body = <String, dynamic>{};
     if (weights != null) body['weights'] = weights;
     if (config != null) body['config'] = config;
-
-    final response = await _httpClient.post(
-      uri,
-      headers: headers,
-      body: jsonEncode(body),
-    );
-
-    if (response.statusCode == 200) {
-      return PynqSitlVerifyResult.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
+    try {
+      return await _controlApiService.proxyPynqVerify(
+        boardId,
+        payload: body,
       );
-    }
-    if (response.statusCode == 400) {
+    } catch (e) {
       throw PynqDeployException(
-        error: 'No backend deployed — call deploy first',
+        error: 'SITL verification failed',
+        messages: ['$e'],
       );
     }
-    throw PynqDeployException(
-      error: 'SITL verification failed',
-      messages: ['HTTP ${response.statusCode}: ${response.body}'],
-    );
   }
 
   void dispose() {

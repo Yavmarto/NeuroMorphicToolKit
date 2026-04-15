@@ -258,37 +258,44 @@ Goal: the end-to-end product workflow is usable by a non-expert without dropping
 Goal: the toolkit clearly distinguishes export-only from real deployable support.
 
 1. Complete the shared launcher setup.
-2. In `CNL Studio`, load a known-good PYNQ-compatible spec.
-3. Open the deployment flow and choose `PYNQ-Z2`.
-4. Confirm the UI shows whether the network is `Exportable` or `Deployable`.
-5. Confirm the user can inspect why the support level is what it is.
+2. Open the launcher `PYNQ Z2 Deploy` screen.
+3. Paste a known-good PYNQ-compatible spec and click `Check Exportability`.
+4. Confirm the verdict explains whether the network is exportable and shows why.
+5. Confirm the flow does not depend on a manual `Board URL` field.
 6. Load a spec that should only be exportable.
-7. Confirm the UI allows export but does not present the same affordances as a fully deployable case.
-8. Confirm the wording does not imply real board execution when only artifact generation is available.
+7. Confirm the UI still allows artifact/package inspection but does not imply that the board is already ready.
+8. Confirm the wording points board provisioning and real deploy through the launcher-owned paired-board flow.
 
 ### PYNQ Checkpoint P2
 Goal: the runtime path is real enough that the user can submit a deployment and observe execution state.
 
 1. Complete the shared launcher setup.
-2. Prepare either a real PYNQ-Z2 board or the agreed simulated backend.
-3. In `CNL Studio`, load a deployable PYNQ test case.
-4. Start the PYNQ deployment flow.
-5. Confirm the toolkit shows the artifact bundle that will be handed off to Neurochip.
-6. Submit the deployment.
-7. Confirm the UI shows at least these phases or their equivalents:
-   `Pack artifact`, `Transfer or load runtime`, `Configure`, `Run`.
-8. Confirm success produces a visible job result, runtime summary, or verification summary.
-9. Trigger one unsupported mapping case and confirm the failure is reported before the user reaches a fake `Run` state.
+2. Prepare a real PYNQ-Z2 board on the network.
+3. In `PYNQ Z2 Deploy`, enter board details in `Paired Board` and click `Pair Board`.
+4. Click `Test SSH` and confirm the board reaches the `Reachable` state.
+5. Click `Provision Runtime`.
+6. If needed, click `Install Overlay`.
+7. Click `Check Readiness`.
+8. Confirm the board reaches `Ready` or `Degraded Optional Capability`.
+9. Confirm `Provision Failed` or a failed preflight is treated as blocking.
+10. Load a deployable PYNQ test case and click `Check Exportability`.
+11. Confirm the `Deployment Package` card appears before deploy.
+12. Click `Deploy To Board`.
+13. Confirm the stepper progresses through `Prepare`, `Deploy`, and `Monitor`, with `Verify` when SITL is enabled.
+14. Confirm success produces a visible deploy job or verification result instead of a silent handoff.
+15. Trigger one unsupported or rejected case and confirm the failure appears before the user sees a fake ready-to-run state.
 
 ### PYNQ Checkpoint P3
 Goal: the workflow is usable as an early product, even if still limited.
 
 1. Complete the shared launcher setup with `NDH Simulator` if SITL verification is included.
-2. In `CNL Studio`, load one deployable PYNQ case and one export-only PYNQ case.
-3. Confirm the UI differentiates them consistently in all relevant screens.
-4. Run deployment for the deployable case and confirm end-to-end progress is visible.
-5. Run export for the export-only case and confirm the UX clearly stops at export rather than pretending it deployed.
-6. If SITL verification exists, launch it through the intended toolkit handoff and confirm the user can read the result.
+2. In `PYNQ Z2 Deploy`, run one real paired-board case and one export-only case.
+3. Confirm the UI differentiates remembered board state from exportability verdicts.
+4. Confirm the paired-board flow can recover with `Restart Runtime` and `Check Readiness`.
+5. Confirm `Overlay Missing`, `Degraded Optional Capability`, and `Ready` are all distinguishable in the UI.
+6. Run deployment for the real-board case and confirm end-to-end progress is visible.
+7. Run the export-only case and confirm the UX clearly stops at export/package guidance rather than pretending it deployed.
+8. If SITL verification exists, enable `Run SITL verification after deploy` and confirm the result is readable from the launcher UI.
 
 ## Akida Manual Acceptance
 

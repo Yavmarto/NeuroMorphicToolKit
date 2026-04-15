@@ -116,6 +116,100 @@ Do not call it plug-and-play until:
 - launcher preflight reports board readiness correctly
 - real-board inference succeeds from the guided flow
 
+## Step-By-Step UI Test Guide
+
+Use this when testing the real launcher-owned PYNQ flow on a board.
+
+### Before You Start
+
+Make sure all of these are true first:
+
+- the PYNQ board is powered on
+- the board is on the same network as the machine running NMTK
+- you know the board hostname or IP
+- you know the SSH username and either the password or SSH key path
+- the launcher and launcher control service are running
+
+For most stock images the default SSH username is `xilinx`.
+
+### Happy-Path UI Script
+
+1. Open the NMTK launcher.
+2. Open the `PYNQ Z2 Deploy` screen.
+3. In `CNL Specification`, paste a known-good PYNQ-compatible spec.
+4. Pick the desired weight bit-width.
+5. Click `Check Exportability`.
+6. Confirm the `Prepare` step turns successful and that the verdict card does not reject the network.
+7. In the `Paired Board` card, leave `Remembered board` empty if this is a first-time board.
+8. Enter:
+   - `Display name`
+   - `Board host or IP`
+   - `SSH username`
+   - `SSH port`
+   - `Auth mode`
+   - password or `SSH key path`
+   - optional `Runtime API key`
+   - optional `Overlay version`
+9. Click `Pair Board`.
+10. Confirm the board now appears in `Remembered board`.
+11. Click `Test SSH`.
+12. Confirm the board state moves to `Reachable`.
+13. Click `Provision Runtime`.
+14. Wait for provisioning to finish.
+15. If the board state becomes `Overlay Missing`, click `Install Overlay`.
+16. Click `Check Readiness`.
+17. Confirm the state becomes either:
+   - `Ready`
+   - `Degraded Optional Capability`
+18. Treat `Ready` as the normal success case.
+19. Treat `Degraded Optional Capability` as usable only if the warning is clearly optional.
+20. Treat `Provision Failed`, `Error`, or a failed preflight message as blockers.
+21. Confirm a `Deployment Package` card is visible after exportability passes.
+22. Optionally enable `Run SITL verification after deploy`.
+23. Optionally set `Bitstream path override` if this board needs a non-default path.
+24. Click `Deploy To Board`.
+25. Watch the stepper and confirm the flow advances through:
+   - `Prepare`
+   - `Deploy`
+   - `Monitor`
+   - `Verify` when SITL is enabled
+26. Confirm `Deployment Status` becomes visible and shows a real job state rather than a blank or fake success.
+27. If SITL verification is enabled, confirm the result card shows either `SITL Verification Passed` or `SITL Verification Failed`.
+
+### Recovery Actions To Test
+
+Run these checks after the happy path works:
+
+1. Click `Restart Runtime` and then `Check Readiness` again.
+2. Confirm the board returns to `Ready` or `Degraded Optional Capability`.
+3. Click `New Pairing` and confirm the form resets cleanly for another board.
+4. Re-select the remembered board and confirm its saved metadata is restored.
+5. Click `Delete` only on a disposable test pairing and confirm it disappears from `Remembered board`.
+
+### Failure Cases To Test
+
+At minimum, test these UI-visible failures:
+
+1. Enter a bad host or wrong password and confirm `Test SSH` does not produce a fake success.
+2. Use a board without overlay assets and confirm the state becomes `Overlay Missing`.
+3. Trigger a preflight problem and confirm the UI surfaces it as `preflight failed`, not as a vague generic error.
+4. Trigger an optional-capability warning and confirm the UI surfaces it as `degraded optional capability`, not as a hard failure.
+5. Try a PYNQ spec that is exportable but not suitable for runtime deployment and confirm the UI stops at export/package guidance instead of pretending the board is ready.
+
+### What To Record During Manual Testing
+
+Capture these details for each test run:
+
+- spec used
+- board hostname or IP
+- selected auth mode
+- whether provisioning was first-time or repeat
+- final board state
+- preflight status and message
+- deploy job status
+- SITL result, if enabled
+- any exact UI wording that looked misleading
+
 ## First Recommended Implementation Step
 
 Start by extracting the board-side `neurochip-pynq-agent`.
