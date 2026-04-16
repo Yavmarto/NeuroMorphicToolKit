@@ -156,25 +156,28 @@ For most stock images the default SSH username is `xilinx`.
 12. Confirm the board state moves to `Reachable`.
 13. Click `Provision Runtime`.
 14. Wait for provisioning to finish.
-15. If the board state becomes `Overlay Missing`, click `Install Overlay`.
-16. Click `Check Readiness`.
-17. Confirm the state becomes either:
+15. If the board state becomes `Overlay Missing`, place the externally built
+    `snn_overlay.bit` and `snn_overlay.hwh` files under
+    `Neurochip/overlay_staging/pynq_z2/` on the host machine.
+16. Click `Install Overlay`.
+17. Click `Check Readiness`.
+18. Confirm the state becomes either:
    - `Ready`
    - `Degraded Optional Capability`
-18. Treat `Ready` as the normal success case.
-19. Treat `Degraded Optional Capability` as usable only if the warning is clearly optional.
-20. Treat `Provision Failed`, `Error`, or a failed preflight message as blockers.
-21. Confirm a `Deployment Package` card is visible after exportability passes.
-22. Optionally enable `Run SITL verification after deploy`.
-23. Optionally set `Bitstream path override` if this board needs a non-default path.
-24. Click `Deploy To Board`.
-25. Watch the stepper and confirm the flow advances through:
+19. Treat `Ready` as the normal success case.
+20. Treat `Degraded Optional Capability` as usable only if the warning is clearly optional.
+21. Treat `Provision Failed`, `Error`, or a failed preflight message as blockers.
+22. Confirm a `Deployment Package` card is visible after exportability passes.
+23. Optionally enable `Run SITL verification after deploy`.
+24. Optionally set `Bitstream path override` if this board needs a non-default path.
+25. Click `Deploy To Board`.
+26. Watch the stepper and confirm the flow advances through:
    - `Prepare`
    - `Deploy`
    - `Monitor`
    - `Verify` when SITL is enabled
-26. Confirm `Deployment Status` becomes visible and shows a real job state rather than a blank or fake success.
-27. If SITL verification is enabled, confirm the result card shows either `SITL Verification Passed` or `SITL Verification Failed`.
+27. Confirm `Deployment Status` becomes visible and shows a real job state rather than a blank or fake success.
+28. If SITL verification is enabled, confirm the result card shows either `SITL Verification Passed` or `SITL Verification Failed`.
 
 ### Recovery Actions To Test
 

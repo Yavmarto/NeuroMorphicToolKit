@@ -245,6 +245,10 @@ class LauncherControlServiceTest(unittest.TestCase):
             "/home/xilinx/.local/share/neurochip-pynq-agent/venv",
         )
         self.assertEqual(
+            created["remotePynqVenvPath"],
+            "/home/xilinx/.local/share/neurochip-pynq-agent/pynq-venv",
+        )
+        self.assertEqual(
             created["remoteOverlayDir"],
             "/home/xilinx/.local/share/neurochip-pynq-agent/overlays",
         )
@@ -386,6 +390,226 @@ class LauncherControlServiceTest(unittest.TestCase):
 
         self.assertIn("pynqBoards", report)
         self.assertEqual(report["pynqBoards"][0]["state"], "ready")
+
+    def test_read_remote_pynq_install_status_decodes_machine_readable_result(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_run_ssh",
+            return_value=json.dumps({"installMode": "user-space", "message": "fallback"}),
+        ):
+            status = self.state._read_remote_pynq_install_status(self.state._get_pynq_board(board["id"]))
+
+        self.assertEqual(status["installMode"], "user-space")
+
+    def test_restart_pynq_runtime_returns_warning_for_user_space_install(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_read_remote_pynq_install_status",
+            return_value={"installMode": "user-space"},
+        ):
+            result = self.state.restart_pynq_runtime(board["id"])
+
+        self.assertEqual(result["board"]["state"], "degraded_optional_capability")
+        self.assertIn("user space", result["warning"])
+
+    def test_describe_pynq_preflight_reports_overlay_missing_actionably(self) -> None:
+        description = launcher_server._describe_pynq_preflight(
+            {
+                "preflight_status": "failed",
+                "overlay_assets": {"ready_for_hardware": False},
+            }
+        )
+
+        self.assertIn("overlay assets missing", description)
+
+    def test_provision_pynq_board_reports_install_status(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with (
+            mock.patch.object(self.state, "_build_local_pynq_bundle"),
+            mock.patch.object(self.state, "_run_ssh"),
+            mock.patch.object(self.state, "_run_scp"),
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "user-space"},
+            ),
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                return_value={"board": {"state": "degraded_optional_capability"}},
+            ),
+        ):
+            result = self.state.provision_pynq_board(board["id"])
+
+        self.assertEqual(result["installStatus"]["installMode"], "user-space")
+
+    def test_install_pynq_overlay_assets_reports_missing_staged_package(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with (
+            mock.patch.object(self.state, "_run_ssh") as run_ssh,
+            mock.patch.object(self.state, "_run_scp") as run_scp,
+        ):
+            result = self.state.install_pynq_overlay_assets(board["id"])
+
+        self.assertEqual(result["board"]["state"], "overlay_missing")
+        self.assertIn("Local staged overlay package is incomplete", result["board"]["lastPreflightMessage"])
+        self.assertIn(
+            str(self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"),
+            result["board"]["lastPreflightMessage"],
+        )
+        self.assertFalse(result["localOverlayPackage"]["ready"])
+        run_ssh.assert_not_called()
+        run_scp.assert_not_called()
+
+    def test_install_pynq_overlay_assets_uploads_staged_package(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+        staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        bitstream = staging_dir / "snn_overlay.bit"
+        hwh = staging_dir / "snn_overlay.hwh"
+        manifest = staging_dir / "overlay_manifest.json"
+        bitstream.write_bytes(b"bitstream")
+        hwh.write_text("<hwh/>", encoding="utf-8")
+        manifest.write_text(
+            json.dumps(
+                {
+                    "overlay_id": "snn_overlay_v1",
+                    "overlay_version": "1.0.0",
+                    "target_part": "xc7z020clg400-1",
+                    "supported_neuron_models": ["LIF"],
+                    "supported_weight_bit_widths": [8],
+                    "max_neurons": 256,
+                    "max_synapses": 65536,
+                    "max_populations": 2,
+                    "dma_ip_name": "axi_dma_0",
+                    "snn_ip_name": "snn_engine_0",
+                    "register_map": {
+                        "base_address": 1073741824,
+                        "control_reg_offset": 0,
+                        "status_reg_offset": 4,
+                        "population_count_offset": 8,
+                        "input_neuron_count_offset": 12,
+                        "output_neuron_count_offset": 16,
+                        "timestep_count_offset": 20,
+                        "threshold_base_offset": 256,
+                        "neuron_base_offset": 256,
+                        "weight_base_offset": 65536,
+                        "dma_channel": "axi_dma_0",
+                        "input_buffer_addr": 0,
+                        "output_buffer_addr": 0,
+                        "timestep_us": 1000,
+                    },
+                    "weight_layout": {
+                        "format": "int8_dense_row_major",
+                        "storage": "mmio",
+                        "base_offset": 65536,
+                        "stride_bytes": 1,
+                        "max_entries": 65536,
+                    },
+                    "threshold_layout": {
+                        "format": "float32_per_population",
+                        "storage": "mmio",
+                        "base_offset": 256,
+                        "stride_bytes": 4,
+                        "max_entries": 2,
+                    },
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
+        with (
+            mock.patch.object(self.state, "_run_ssh") as run_ssh,
+            mock.patch.object(self.state, "_run_scp") as run_scp,
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                return_value={"board": {"state": "ready"}},
+            ),
+        ):
+            result = self.state.install_pynq_overlay_assets(board["id"])
+
+        run_ssh.assert_called_once_with(
+            self.state._get_pynq_board(board["id"]),
+            f"mkdir -p {board['remoteOverlayDir']}",
+        )
+        self.assertEqual(run_scp.call_count, 3)
+        self.assertEqual(run_scp.call_args_list[0].args[1].resolve(), bitstream.resolve())
+        self.assertEqual(
+            run_scp.call_args_list[0].args[2],
+            f"{board['remoteOverlayDir']}/snn_overlay.bit",
+        )
+        self.assertEqual(run_scp.call_args_list[1].args[1].resolve(), hwh.resolve())
+        self.assertEqual(
+            run_scp.call_args_list[1].args[2],
+            f"{board['remoteOverlayDir']}/snn_overlay.hwh",
+        )
+        self.assertEqual(run_scp.call_args_list[2].args[1].resolve(), manifest.resolve())
+        self.assertEqual(
+            run_scp.call_args_list[2].args[2],
+            f"{board['remoteOverlayDir']}/overlay_manifest.json",
+        )
+        self.assertTrue(result["localOverlayPackage"]["ready"])
+
+    def test_fetch_pynq_board_preflight_marks_overlay_missing_when_assets_are_missing(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_runtime_json_request",
+            return_value={
+                "preflight_status": "failed",
+                "preflight_message": "Install Overlay next.",
+                "runtime_mode": "hardware",
+                "overlay_assets": {"ready_for_hardware": False},
+            },
+        ):
+            result = self.state.fetch_pynq_board_preflight(board["id"])
+
+        self.assertEqual(result["board"]["state"], "overlay_missing")
 
     def test_doctor_report_skips_not_installed_module_preflight(self) -> None:
         module = self.state._get_module("dummy")

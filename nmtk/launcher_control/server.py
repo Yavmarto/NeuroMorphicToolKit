@@ -64,6 +64,7 @@ DEFAULT_PYNQ_BOARD_STATE = "unpaired"
 DEFAULT_PYNQ_AUTH_MODE = "password"
 LEGACY_PYNQ_REMOTE_INSTALL_ROOT = "/opt/neurochip-pynq-agent"
 LEGACY_PYNQ_REMOTE_VENV_PATH = f"{LEGACY_PYNQ_REMOTE_INSTALL_ROOT}/venv"
+DEFAULT_PYNQ_REMOTE_PYNQ_VENV_DIRNAME = "pynq-venv"
 LEGACY_PYNQ_REMOTE_OVERLAY_DIR = f"{LEGACY_PYNQ_REMOTE_INSTALL_ROOT}/overlays"
 PYNQ_BOARD_STATES = {
     "unpaired",
@@ -167,6 +168,10 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
     if not remote_venv_path or remote_venv_path == LEGACY_PYNQ_REMOTE_VENV_PATH:
         remote_venv_path = f"{remote_install_root}/venv"
 
+    remote_pynq_venv_path = str(raw.get("remotePynqVenvPath") or "").strip()
+    if not remote_pynq_venv_path:
+        remote_pynq_venv_path = f"{remote_install_root}/{DEFAULT_PYNQ_REMOTE_PYNQ_VENV_DIRNAME}"
+
     remote_overlay_dir = str(raw.get("remoteOverlayDir") or "").strip()
     if not remote_overlay_dir or remote_overlay_dir == LEGACY_PYNQ_REMOTE_OVERLAY_DIR:
         remote_overlay_dir = f"{remote_install_root}/overlays"
@@ -190,6 +195,7 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
         "lastStatus": raw.get("lastStatus") if isinstance(raw.get("lastStatus"), dict) else None,
         "remoteInstallRoot": remote_install_root,
         "remoteVenvPath": remote_venv_path,
+        "remotePynqVenvPath": remote_pynq_venv_path,
         "remoteOverlayDir": remote_overlay_dir,
         "remoteServiceName": str(
             raw.get("remoteServiceName") or "neurochip-pynq-agent"
@@ -456,6 +462,18 @@ def _status_for_health_response(
     if status_code == HTTPStatus.SERVICE_UNAVAILABLE or preflight_status == PREFLIGHT_DEGRADED:
         return STATUS_INDEX["degraded"]
     return STATUS_INDEX["running"]
+
+
+def _describe_pynq_preflight(preflight: dict[str, Any]) -> str:
+    status = str(preflight.get("preflight_status") or "").strip().lower()
+    overlay_assets = preflight.get("overlay_assets")
+    if status == PREFLIGHT_OK:
+        return "preflight ready"
+    if status == PREFLIGHT_DEGRADED:
+        return "degraded optional capability"
+    if isinstance(overlay_assets, dict) and not overlay_assets.get("ready_for_hardware", False):
+        return "preflight failed: overlay assets missing; install overlay assets next"
+    return "preflight failed"
 
 
 def _message_from_probe_outcome(
@@ -894,7 +912,7 @@ class LauncherControlState:
             command.extend(["-i", ssh_key_path])
         return prefix + command, env, cleanup
 
-    def _run_ssh(self, board: dict[str, Any], remote_command: str) -> None:
+    def _run_ssh(self, board: dict[str, Any], remote_command: str) -> str:
         target = f"{board['username']}@{board['host']}"
         command, env, cleanup = self._prepare_ssh_invocation(board)
         command.extend([target, remote_command])
@@ -942,6 +960,23 @@ class LauncherControlState:
             message = "\n".join(stderr_lines or stdout_lines).strip() or "ssh command failed"
             raise RuntimeError(message)
         self._emit_pynq_terminal_log(board, "ssh step completed")
+        return "\n".join(stdout_lines).strip()
+
+    def _remote_pynq_install_status_path(self, board: dict[str, Any]) -> str:
+        return f"{board['remoteInstallRoot']}/install-status.json"
+
+    def _read_remote_pynq_install_status(self, board: dict[str, Any]) -> dict[str, Any]:
+        raw = self._run_ssh(
+            board,
+            f"cat {self._remote_pynq_install_status_path(board)}",
+        )
+        try:
+            decoded = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"Remote install status is not valid JSON: {raw}") from exc
+        if not isinstance(decoded, dict):
+            raise RuntimeError("Remote install status must decode to an object")
+        return decoded
 
     def _run_scp(
         self,
@@ -1045,7 +1080,7 @@ class LauncherControlState:
         preflight = self._runtime_json_request(board, "GET", "/hardware/pynq/preflight")
         self._emit_pynq_terminal_log(
             board,
-            f"preflight completed with status={preflight.get('preflight_status', '') or 'unknown'}",
+            _describe_pynq_preflight(preflight),
         )
         updated = self._apply_preflight_to_board(board_id, preflight)
         return {
@@ -1077,10 +1112,29 @@ class LauncherControlState:
             overlay_version=overlay_version,
             repo_root=neurochip_root,
             install_root=str(board["remoteInstallRoot"]),
-            venv_path=str(board["remoteVenvPath"]),
+            agent_venv_path=str(board["remoteVenvPath"]),
+            pynq_venv_path=str(board["remotePynqVenvPath"]),
             overlay_dir=str(board["remoteOverlayDir"]),
             service_name=str(board["remoteServiceName"]),
         )
+
+    def _inspect_local_pynq_overlay_package(self) -> dict[str, Any]:
+        neurochip_root = REPO_ROOT / "Neurochip"
+        neurochip_package_root = str(neurochip_root)
+        if neurochip_package_root not in sys.path:
+            sys.path.insert(0, neurochip_package_root)
+        from neurochip.provisioning import (
+            DEFAULT_STAGED_OVERLAY_DIRNAME,
+            DEFAULT_STAGED_OVERLAY_TARGET,
+            inspect_staged_overlay_package,
+        )
+
+        staging_dir = (
+            neurochip_root
+            / DEFAULT_STAGED_OVERLAY_DIRNAME
+            / DEFAULT_STAGED_OVERLAY_TARGET
+        )
+        return inspect_staged_overlay_package(staging_dir=staging_dir).to_dict()
 
     def provision_pynq_board(self, board_id: str) -> dict[str, Any]:
         board = self._update_pynq_board_fields(board_id, state="provisioning")
@@ -1112,16 +1166,31 @@ class LauncherControlState:
                     " ".join(
                         [
                             f"INSTALL_ROOT={board['remoteInstallRoot']}",
-                            f"VENV_PATH={board['remoteVenvPath']}",
+                            f"AGENT_VENV_PATH={board['remoteVenvPath']}",
+                            f"PYNQ_VENV_PATH={board['remotePynqVenvPath']}",
                             f"OVERLAY_DIR={board['remoteOverlayDir']}",
                             f"SERVICE_NAME={board['remoteServiceName']}",
                             f"bash {remote_bundle_dir}/install-pynq-agent.sh",
                         ]
                     ),
                 )
+                install_status = self._read_remote_pynq_install_status(board)
+                install_mode = str(install_status.get("installMode") or "unknown").strip() or "unknown"
+                self._emit_pynq_terminal_log(
+                    board,
+                    f"runtime install mode resolved to {install_mode}",
+                )
             self._update_pynq_board_fields(board_id, state="runtime_installed")
             self._emit_pynq_terminal_log(board, "runtime install finished; fetching preflight")
-            return self.fetch_pynq_board_preflight(board_id)
+            result = self.fetch_pynq_board_preflight(board_id)
+            board_state = str(result.get("board", {}).get("state") or "").strip()
+            if board_state == "overlay_missing":
+                self._emit_pynq_terminal_log(
+                    board,
+                    "runtime installed successfully; overlay assets are still missing, so the board is not hardware-ready yet",
+                )
+            result["installStatus"] = install_status
+            return result
         except Exception as exc:  # noqa: BLE001
             self._emit_pynq_terminal_log(board, f"runtime provisioning failed: {exc}", stderr=True)
             updated = self._update_pynq_board_fields(
@@ -1134,36 +1203,81 @@ class LauncherControlState:
     def install_pynq_overlay_assets(self, board_id: str) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
         self._emit_pynq_terminal_log(board, "starting overlay asset install")
-        overlay_dir = REPO_ROOT / "Neurochip" / "neurochip" / "overlays"
-        bitstream = overlay_dir / "snn_overlay.bit"
-        hwh = overlay_dir / "snn_overlay.hwh"
-        if not bitstream.exists() or not hwh.exists():
+        overlay_package = self._inspect_local_pynq_overlay_package()
+        bitstream = Path(str(overlay_package["bitstreamPath"]))
+        hwh = Path(str(overlay_package["hwhPath"]))
+        manifest = Path(str(overlay_package["manifestPath"]))
+        if not bool(overlay_package.get("ready", False)):
+            issues = overlay_package.get("issues", [])
+            issues_text = (
+                "; ".join(str(issue) for issue in issues)
+                if isinstance(issues, list) and issues
+                else "staged overlay package is incomplete"
+            )
+            message = (
+                "Local staged overlay package is incomplete. "
+                f"Stage externally built snn_overlay.bit and snn_overlay.hwh under "
+                f"{overlay_package['stagingDir']}. "
+                f"Details: {issues_text}"
+            )
             self._emit_pynq_terminal_log(
                 board,
-                "local overlay assets missing; expected snn_overlay.bit and snn_overlay.hwh",
+                message,
                 stderr=True,
             )
             updated = self._update_pynq_board_fields(
                 board_id,
                 state="overlay_missing",
-                lastPreflightMessage="Local overlay assets are incomplete; expected snn_overlay.bit and snn_overlay.hwh",
+                lastPreflightMessage=message,
             )
-            return {"board": _serialize_pynq_board(updated)}
+            return {
+                "board": _serialize_pynq_board(updated),
+                "localOverlayPackage": overlay_package,
+            }
+        self._emit_pynq_terminal_log(
+            board,
+            f"using staged overlay package from {overlay_package['stagingDir']}",
+        )
         self._emit_pynq_terminal_log(board, f"ensuring remote overlay dir {board['remoteOverlayDir']}")
         self._run_ssh(board, f"mkdir -p {board['remoteOverlayDir']}")
         self._emit_pynq_terminal_log(board, "uploading snn_overlay.bit")
         self._run_scp(board, bitstream, f"{board['remoteOverlayDir']}/snn_overlay.bit")
         self._emit_pynq_terminal_log(board, "uploading snn_overlay.hwh")
         self._run_scp(board, hwh, f"{board['remoteOverlayDir']}/snn_overlay.hwh")
+        self._emit_pynq_terminal_log(board, "uploading overlay_manifest.json")
+        self._run_scp(board, manifest, f"{board['remoteOverlayDir']}/overlay_manifest.json")
         self._emit_pynq_terminal_log(board, "overlay upload finished; fetching preflight")
-        return self.fetch_pynq_board_preflight(board_id)
+        result = self.fetch_pynq_board_preflight(board_id)
+        result["localOverlayPackage"] = overlay_package
+        return result
 
     def restart_pynq_runtime(self, board_id: str) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
+        install_status = self._read_remote_pynq_install_status(board)
+        install_mode = str(install_status.get("installMode") or "unknown").strip() or "unknown"
+        if install_mode == "user-space":
+            message = (
+                "Runtime is installed in user space; launcher restart requires privileged "
+                "systemd setup on the board."
+            )
+            updated = self._update_pynq_board_fields(
+                board_id,
+                state="degraded_optional_capability",
+                lastPreflightStatus=PREFLIGHT_DEGRADED,
+                lastPreflightMessage=message,
+            )
+            self._emit_pynq_terminal_log(board, message)
+            return {
+                "board": _serialize_pynq_board(updated),
+                "warning": message,
+                "installStatus": install_status,
+            }
         self._emit_pynq_terminal_log(board, f"restarting systemd service {board['remoteServiceName']}.service")
         self._run_ssh(board, f"sudo systemctl restart {board['remoteServiceName']}.service")
         self._emit_pynq_terminal_log(board, "runtime restart completed; fetching preflight")
-        return self.fetch_pynq_board_preflight(board_id)
+        result = self.fetch_pynq_board_preflight(board_id)
+        result["installStatus"] = install_status
+        return result
 
     def proxy_pynq_deploy(self, board_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)

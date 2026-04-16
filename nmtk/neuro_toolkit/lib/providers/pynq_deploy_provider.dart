@@ -292,9 +292,15 @@ class PynqDeployProvider with ChangeNotifier {
       final updated = await _service.provisionBoard(boardId: board.id);
       _upsertBoard(updated);
       _errorMessage = null;
-      _finishBoardOperation(
-        'Runtime provisioning finished. Check the board state and readiness message below.',
-      );
+      final completionMessage = switch (updated.state) {
+        PynqBoardState.overlayMissing =>
+          'Runtime provisioning finished. Runtime is installed; install overlay assets next.',
+        PynqBoardState.degradedOptionalCapability =>
+          'Runtime provisioning finished in degraded mode. Review the readiness message below for the next step.',
+        _ =>
+          'Runtime provisioning finished. Check the board state and readiness message below.',
+      };
+      _finishBoardOperation(completionMessage);
     } on PynqDeployException catch (e) {
       _errorMessage = e.toString();
       _failBoardOperation(
@@ -319,9 +325,12 @@ class PynqDeployProvider with ChangeNotifier {
       final updated = await _service.installOverlay(boardId: board.id);
       _upsertBoard(updated);
       _errorMessage = null;
-      _finishBoardOperation(
-        'Overlay installation finished. Run readiness again if needed.',
-      );
+      final completionMessage = switch (updated.state) {
+        PynqBoardState.overlayMissing =>
+          'Overlay installation did not start because the local staged overlay package is missing or incomplete.',
+        _ => 'Overlay installation finished. Run readiness again if needed.',
+      };
+      _finishBoardOperation(completionMessage);
     } on PynqDeployException catch (e) {
       _errorMessage = e.toString();
       _failBoardOperation(

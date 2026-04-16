@@ -11,6 +11,7 @@ import 'package:neuro_toolkit/services/pynq_deploy_service.dart';
 
 class _NopPynqDeployService extends PynqDeployService {
   Completer<PynqPairedBoard>? provisionCompleter;
+  Completer<PynqPairedBoard>? installOverlayCompleter;
 
   @override
   Future<List<PynqPairedBoard>> fetchPairedBoards() async {
@@ -73,6 +74,32 @@ class _NopPynqDeployService extends PynqDeployService {
   }) async {
     if (provisionCompleter != null) {
       return provisionCompleter!.future;
+    }
+    return const PynqPairedBoard(
+      id: 'board-1',
+      displayName: 'Desk PYNQ',
+      host: '192.168.1.50',
+      sshPort: 22,
+      username: 'xilinx',
+      authMode: PynqBoardAuthMode.password,
+      credentialRef: '',
+      runtimeApiUrl: 'http://192.168.1.50:8002',
+      overlayVersion: '',
+      state: PynqBoardState.ready,
+      lastPreflightStatus: 'ok',
+      lastPreflightMessage: 'Ready',
+      lastRuntimeMode: 'hardware',
+      hasPassword: true,
+      sshKeyPath: '',
+    );
+  }
+
+  @override
+  Future<PynqPairedBoard> installOverlay({
+    required String boardId,
+  }) async {
+    if (installOverlayCompleter != null) {
+      return installOverlayCompleter!.future;
     }
     return const PynqPairedBoard(
       id: 'board-1',
@@ -174,7 +201,91 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.textContaining('Runtime provisioning finished'), findsWidgets);
+      expect(
+          find.textContaining('Runtime provisioning finished'), findsWidgets);
+    });
+
+    testWidgets(
+        'shows overlay-install guidance after provisioning completes without assets',
+        (tester) async {
+      final service = _NopPynqDeployService();
+      final completer = Completer<PynqPairedBoard>();
+      service.provisionCompleter = completer;
+      final provider = PynqDeployProvider(service: service);
+      await tester.pumpWidget(_buildTestApp(provider));
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('Provision Runtime'));
+      await tester.tap(find.text('Provision Runtime'));
+      await tester.pump();
+
+      completer.complete(
+        const PynqPairedBoard(
+          id: 'board-1',
+          displayName: 'Desk PYNQ',
+          host: '192.168.1.50',
+          sshPort: 22,
+          username: 'xilinx',
+          authMode: PynqBoardAuthMode.password,
+          credentialRef: '',
+          runtimeApiUrl: 'http://192.168.1.50:8002',
+          overlayVersion: '',
+          state: PynqBoardState.overlayMissing,
+          lastPreflightStatus: 'failed',
+          lastPreflightMessage: 'Install Overlay next.',
+          lastRuntimeMode: 'hardware',
+          hasPassword: true,
+          sshKeyPath: '',
+        ),
+      );
+      await tester.pump();
+
+      expect(find.textContaining('install overlay assets next'), findsWidgets);
+      expect(find.text('State: Overlay Missing'), findsOneWidget);
+    });
+
+    testWidgets(
+        'shows staged-overlay guidance when install overlay cannot start',
+        (tester) async {
+      final service = _NopPynqDeployService();
+      final completer = Completer<PynqPairedBoard>();
+      service.installOverlayCompleter = completer;
+      final provider = PynqDeployProvider(service: service);
+      await tester.pumpWidget(_buildTestApp(provider));
+      await tester.pump();
+
+      await tester.ensureVisible(find.text('Install Overlay'));
+      await tester.tap(find.text('Install Overlay'));
+      await tester.pump();
+
+      completer.complete(
+        const PynqPairedBoard(
+          id: 'board-1',
+          displayName: 'Desk PYNQ',
+          host: '192.168.1.50',
+          sshPort: 22,
+          username: 'xilinx',
+          authMode: PynqBoardAuthMode.password,
+          credentialRef: '',
+          runtimeApiUrl: 'http://192.168.1.50:8002',
+          overlayVersion: '',
+          state: PynqBoardState.overlayMissing,
+          lastPreflightStatus: 'failed',
+          lastPreflightMessage: 'Stage overlay assets locally first.',
+          lastRuntimeMode: 'hardware',
+          hasPassword: true,
+          sshKeyPath: '',
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.textContaining(
+          'local staged overlay package is missing or incomplete',
+        ),
+        findsWidgets,
+      );
+      expect(find.text('State: Overlay Missing'), findsOneWidget);
     });
   });
 }

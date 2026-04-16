@@ -30,6 +30,7 @@ class MockPynqDeployService extends PynqDeployService {
     this.exportResult,
     this.statusResponse,
     this.sitlResult,
+    this.installOverlayResult,
     this.throwOnDeploy = false,
   });
 
@@ -37,10 +38,12 @@ class MockPynqDeployService extends PynqDeployService {
   final PynqNetworkResponse? exportResult;
   final PynqDeployJob? statusResponse;
   final PynqSitlVerifyResult? sitlResult;
+  final PynqPairedBoard? installOverlayResult;
   final bool throwOnDeploy;
   String? lastBoardId;
   PynqDeployPayload? lastDeployPayload;
   Completer<PynqPairedBoard>? provisionCompleter;
+  Completer<PynqPairedBoard>? installOverlayCompleter;
 
   @override
   Future<List<PynqPairedBoard>> fetchPairedBoards() async => boards;
@@ -112,6 +115,21 @@ class MockPynqDeployService extends PynqDeployService {
       lastPreflightStatus: 'ok',
       lastPreflightMessage: 'Ready',
     );
+  }
+
+  @override
+  Future<PynqPairedBoard> installOverlay({
+    required String boardId,
+  }) async {
+    if (installOverlayCompleter != null) {
+      return installOverlayCompleter!.future;
+    }
+    return installOverlayResult ??
+        boards.first.copyWith(
+          state: PynqBoardState.ready,
+          lastPreflightStatus: 'ok',
+          lastPreflightMessage: 'Ready',
+        );
   }
 
   @override
@@ -216,6 +234,67 @@ void main() {
         contains('Runtime provisioning finished'),
       );
       expect(provider.selectedBoard?.state, PynqBoardState.ready);
+    });
+
+    test(
+        'provisionSelectedBoard points to overlay install when assets are missing',
+        () async {
+      final service = MockPynqDeployService();
+      final completer = Completer<PynqPairedBoard>();
+      service.provisionCompleter = completer;
+      final provider = PynqDeployProvider(service: service);
+      await Future<void>.delayed(Duration.zero);
+
+      final future = provider.provisionSelectedBoard();
+
+      completer.complete(
+        provider.selectedBoard!.copyWith(
+          state: PynqBoardState.overlayMissing,
+          lastPreflightStatus: 'failed',
+          lastPreflightMessage: 'Install Overlay next.',
+        ),
+      );
+      await future;
+
+      expect(provider.boardOperationInProgress, isFalse);
+      expect(provider.boardFeedbackMessage,
+          contains('install overlay assets next'));
+      expect(provider.selectedBoard?.state, PynqBoardState.overlayMissing);
+    });
+
+    test(
+        'installOverlayForSelectedBoard explains when the staged host package is missing',
+        () async {
+      final service = MockPynqDeployService(
+        installOverlayResult: const PynqPairedBoard(
+          id: 'board-1',
+          displayName: 'Desk PYNQ',
+          host: '192.168.1.50',
+          sshPort: 22,
+          username: 'xilinx',
+          authMode: PynqBoardAuthMode.password,
+          credentialRef: '',
+          runtimeApiUrl: 'http://192.168.1.50:8002',
+          overlayVersion: '',
+          state: PynqBoardState.overlayMissing,
+          lastPreflightStatus: 'failed',
+          lastPreflightMessage: 'Stage overlay assets locally first.',
+          lastRuntimeMode: 'hardware',
+          hasPassword: true,
+          sshKeyPath: '',
+        ),
+      );
+      final provider = PynqDeployProvider(service: service);
+      await Future<void>.delayed(Duration.zero);
+
+      await provider.installOverlayForSelectedBoard();
+
+      expect(provider.boardOperationInProgress, isFalse);
+      expect(
+        provider.boardFeedbackMessage,
+        contains('local staged overlay package is missing or incomplete'),
+      );
+      expect(provider.selectedBoard?.state, PynqBoardState.overlayMissing);
     });
   });
 }
