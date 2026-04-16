@@ -4,6 +4,7 @@ import subprocess
 import uuid
 import os
 import sys
+import shlex
 from dotenv import load_dotenv
 
 # --- ENVIRONMENT CONFIGURATION ---
@@ -27,8 +28,9 @@ AGENTS_CONFIG = [
         "agent_name": "claude-code-worker",
         "tool_name": "claude-code",
         "role": "coder",
+        "description_prefix": "Execute this task automatically: ",
         # How this specific agent executes tasks
-        "command_template": 'claude "Execute this task automatically: {description}"',
+        "command_template": 'claude {description}',
         "connection_id": f"cli-daemon-claude-{uuid.uuid4().hex[:8]}"
     },
     {
@@ -36,8 +38,9 @@ AGENTS_CONFIG = [
         "agent_name": "codex-worker",
         "tool_name": "codex",
         "role": "coder",
+        "description_prefix": "",
         # A different tool requires a different CLI syntax
-        "command_template": 'codex --task "{description}" --auto-confirm',
+        "command_template": 'codex exec --full-auto {description}',
         "connection_id": f"cli-daemon-codex-{uuid.uuid4().hex[:8]}"
     }
 ]
@@ -101,8 +104,10 @@ def process_agent_tasks(agent):
                 print(f"⚠️ Failed to mark task {task_id} as in_progress: {e}")
             
             # 4. Format the CLI command
-            # Note: Escaping quotes to prevent shell syntax errors
-            safe_description = task.get('description', '').replace('"', '\\"')
+            # Note: Properly quote to prevent shell expansions and injections
+            prefix = agent.get('description_prefix', '')
+            raw_description = prefix + task.get('description', '')
+            safe_description = shlex.quote(raw_description)
             command = agent["command_template"].format(description=safe_description)
             
             # 5. Execute the CLI tool locally and stream output
