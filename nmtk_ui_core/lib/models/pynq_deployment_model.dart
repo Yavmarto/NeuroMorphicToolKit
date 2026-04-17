@@ -393,6 +393,7 @@ class PynqPairedBoard {
   final PynqBoardAuthMode authMode;
   final String credentialRef;
   final String runtimeApiUrl;
+  final String runtimeApiUrlOverride;
   final String overlayVersion;
   final PynqBoardState state;
   final String lastPreflightStatus;
@@ -411,6 +412,7 @@ class PynqPairedBoard {
     required this.authMode,
     required this.credentialRef,
     required this.runtimeApiUrl,
+    this.runtimeApiUrlOverride = '',
     required this.overlayVersion,
     required this.state,
     required this.lastPreflightStatus,
@@ -433,6 +435,7 @@ class PynqPairedBoard {
       authMode: PynqBoardAuthMode.fromString(json['authMode'] as String?),
       credentialRef: json['credentialRef'] as String? ?? '',
       runtimeApiUrl: json['runtimeApiUrl'] as String? ?? '',
+      runtimeApiUrlOverride: json['runtimeApiUrlOverride'] as String? ?? '',
       overlayVersion: json['overlayVersion'] as String? ?? '',
       state: PynqBoardState.fromString(json['state'] as String?),
       lastPreflightStatus: json['lastPreflightStatus'] as String? ?? '',
@@ -455,7 +458,8 @@ class PynqPairedBoard {
       'credentialRef': credentialRef,
       if (password != null && password.isNotEmpty) 'password': password,
       if (sshKeyPath.isNotEmpty) 'sshKeyPath': sshKeyPath,
-      if (runtimeApiUrl.isNotEmpty) 'runtimeApiUrl': runtimeApiUrl,
+      if (runtimeApiUrlOverride.isNotEmpty)
+        'runtimeApiUrlOverride': runtimeApiUrlOverride,
       if (overlayVersion.isNotEmpty) 'overlayVersion': overlayVersion,
       'state': state.apiValue,
     };
@@ -470,6 +474,7 @@ class PynqPairedBoard {
     PynqBoardAuthMode? authMode,
     String? credentialRef,
     String? runtimeApiUrl,
+    String? runtimeApiUrlOverride,
     String? overlayVersion,
     PynqBoardState? state,
     String? lastPreflightStatus,
@@ -488,6 +493,8 @@ class PynqPairedBoard {
       authMode: authMode ?? this.authMode,
       credentialRef: credentialRef ?? this.credentialRef,
       runtimeApiUrl: runtimeApiUrl ?? this.runtimeApiUrl,
+      runtimeApiUrlOverride:
+          runtimeApiUrlOverride ?? this.runtimeApiUrlOverride,
       overlayVersion: overlayVersion ?? this.overlayVersion,
       state: state ?? this.state,
       lastPreflightStatus: lastPreflightStatus ?? this.lastPreflightStatus,

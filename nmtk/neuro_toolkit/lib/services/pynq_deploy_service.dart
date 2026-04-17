@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
+import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+
+export 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 
 /// REST client for PYNQ Z2 deployment endpoints.
 ///
@@ -85,6 +88,7 @@ class PynqDeployService {
     String credentialRef = '',
     String password = '',
     String sshKeyPath = '',
+    String runtimeApiUrlOverride = '',
     String overlayVersion = '',
   }) async {
     final payload = <String, dynamic>{
@@ -94,6 +98,7 @@ class PynqDeployService {
       'username': username,
       'authMode': authMode.apiValue,
       'credentialRef': credentialRef,
+      'runtimeApiUrlOverride': runtimeApiUrlOverride,
       if (password.isNotEmpty) 'password': password,
       if (sshKeyPath.isNotEmpty) 'sshKeyPath': sshKeyPath,
       if (overlayVersion.isNotEmpty) 'overlayVersion': overlayVersion,
@@ -139,7 +144,7 @@ class PynqDeployService {
     }
   }
 
-  Future<PynqPairedBoard> installOverlay({
+  Future<PynqOverlayInstallResult> installOverlay({
     required String boardId,
   }) async {
     try {
@@ -161,7 +166,7 @@ class PynqDeployService {
     }
   }
 
-  Future<PynqPairedBoard> restartRuntime({
+  Future<PynqRestartRuntimeResult> restartRuntime({
     required String boardId,
   }) async {
     try {

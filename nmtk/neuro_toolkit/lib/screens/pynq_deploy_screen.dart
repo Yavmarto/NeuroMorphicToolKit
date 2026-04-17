@@ -19,6 +19,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
   final _credentialRefController = TextEditingController();
   final _passwordController = TextEditingController();
   final _sshKeyPathController = TextEditingController();
+  final _runtimeApiUrlOverrideController = TextEditingController();
   final _overlayVersionController = TextEditingController();
   final _bitstreamPathController = TextEditingController();
 
@@ -36,6 +37,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
     _credentialRefController.dispose();
     _passwordController.dispose();
     _sshKeyPathController.dispose();
+    _runtimeApiUrlOverrideController.dispose();
     _overlayVersionController.dispose();
     _bitstreamPathController.dispose();
     super.dispose();
@@ -116,10 +118,13 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
       _credentialRefController.text = selectedBoard.credentialRef;
       _passwordController.clear();
       _sshKeyPathController.text = selectedBoard.sshKeyPath;
+      _runtimeApiUrlOverrideController.text =
+          selectedBoard.runtimeApiUrlOverride;
       _overlayVersionController.text = selectedBoard.overlayVersion;
       _authMode = selectedBoard.authMode;
     } else if (selectedBoard == null && _formBoardId != null) {
       _formBoardId = null;
+      _runtimeApiUrlOverrideController.clear();
     }
 
     if (_bitstreamPathController.text != provider.bitstreamPathOverride) {
@@ -331,6 +336,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                   _credentialRefController.clear();
                   _passwordController.clear();
                   _sshKeyPathController.clear();
+                  _runtimeApiUrlOverrideController.clear();
                   _overlayVersionController.clear();
                   setState(() => _authMode = PynqBoardAuthMode.password);
                 }
@@ -455,6 +461,17 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                     ),
                   ),
                 ),
+                SizedBox(
+                  width: 320,
+                  child: TextField(
+                    controller: _runtimeApiUrlOverrideController,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      labelText: 'Runtime API URL override (optional)',
+                      helperText: 'Leave blank to use http://<host>:8002',
+                    ),
+                  ),
+                ),
                 if (_authMode == PynqBoardAuthMode.password)
                   SizedBox(
                     width: 260,
@@ -507,6 +524,8 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                             credentialRef: _credentialRefController.text.trim(),
                             password: _passwordController.text,
                             sshKeyPath: _sshKeyPathController.text.trim(),
+                            runtimeApiUrlOverride:
+                                _runtimeApiUrlOverrideController.text.trim(),
                             overlayVersion:
                                 _overlayVersionController.text.trim(),
                           ),
@@ -629,6 +648,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                           _credentialRefController.clear();
                           _passwordController.clear();
                           _sshKeyPathController.clear();
+                          _runtimeApiUrlOverrideController.clear();
                           _overlayVersionController.clear();
                           setState(
                               () => _authMode = PynqBoardAuthMode.password);

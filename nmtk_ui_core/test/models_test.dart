@@ -231,6 +231,7 @@ void main() {
         'authMode': 'ssh_key',
         'credentialRef': 'runtime-key',
         'runtimeApiUrl': 'http://192.168.1.50:8002',
+        'runtimeApiUrlOverride': 'http://192.168.1.60:8002',
         'overlayVersion': '2026.04.14',
         'state': 'ready',
         'lastPreflightStatus': 'ok',
@@ -244,7 +245,36 @@ void main() {
       expect(board.id, 'board-1');
       expect(board.state, PynqBoardState.ready);
       expect(board.authMode, PynqBoardAuthMode.sshKey);
+      expect(board.runtimeApiUrlOverride, 'http://192.168.1.60:8002');
       expect(board.isReady, isTrue);
+    });
+
+    test('toJson and copyWith preserve runtime API override separately', () {
+      const board = PynqPairedBoard(
+        id: 'board-1',
+        displayName: 'Lab PYNQ',
+        host: '192.168.1.50',
+        sshPort: 22,
+        username: 'xilinx',
+        authMode: PynqBoardAuthMode.password,
+        credentialRef: '',
+        runtimeApiUrl: 'http://192.168.1.50:8002',
+        runtimeApiUrlOverride: 'http://192.168.1.60:8002',
+        overlayVersion: '',
+        state: PynqBoardState.ready,
+        lastPreflightStatus: 'ok',
+        lastPreflightMessage: 'Ready',
+        lastRuntimeMode: 'hardware',
+        hasPassword: true,
+        sshKeyPath: '',
+      );
+
+      final updated = board.copyWith(runtimeApiUrlOverride: '');
+      final payload = board.toJson();
+
+      expect(updated.runtimeApiUrlOverride, isEmpty);
+      expect(payload['runtimeApiUrlOverride'], 'http://192.168.1.60:8002');
+      expect(payload.containsKey('runtimeApiUrl'), isFalse);
     });
   });
 

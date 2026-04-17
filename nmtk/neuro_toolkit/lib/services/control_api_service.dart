@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
@@ -197,24 +198,22 @@ class ControlApiService {
     return PynqPairedBoard.fromJson(boardJson);
   }
 
-  Future<PynqPairedBoard> installPynqOverlay(String boardId) async {
+  Future<PynqOverlayInstallResult> installPynqOverlay(String boardId) async {
     final response = await _client.post(
       _uri('/api/launcher/pynq/boards/$boardId/install-overlay'),
     );
     await _ensureSuccess(response);
     final payload = await _readJsonResponse(response);
-    final boardJson = payload['board'] as Map<String, dynamic>? ?? payload;
-    return PynqPairedBoard.fromJson(boardJson);
+    return PynqOverlayInstallResult.fromJson(payload);
   }
 
-  Future<PynqPairedBoard> restartPynqRuntime(String boardId) async {
+  Future<PynqRestartRuntimeResult> restartPynqRuntime(String boardId) async {
     final response = await _client.post(
       _uri('/api/launcher/pynq/boards/$boardId/restart-runtime'),
     );
     await _ensureSuccess(response);
     final payload = await _readJsonResponse(response);
-    final boardJson = payload['board'] as Map<String, dynamic>? ?? payload;
-    return PynqPairedBoard.fromJson(boardJson);
+    return PynqRestartRuntimeResult.fromJson(payload);
   }
 
   Future<PynqPairedBoard> fetchPynqBoardPreflight(String boardId) async {

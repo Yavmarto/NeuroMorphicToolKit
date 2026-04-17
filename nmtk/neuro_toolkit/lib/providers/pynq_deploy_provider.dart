@@ -183,6 +183,19 @@ class PynqDeployProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  String _restartRuntimeCompletionMessage(PynqRestartRuntimeResult result) {
+    if (!result.hasWarning) {
+      return 'Runtime restart completed. Readiness was refreshed afterward.';
+    }
+
+    final warning = result.warning!;
+    if (warning.contains('Enable passwordless sudo') &&
+        warning.contains('re-run Provision Runtime')) {
+      return warning;
+    }
+    return '$warning Complete the restart manually on the board, then run Check Readiness again.';
+  }
+
   Future<void> savePairedBoard({
     String? boardId,
     required String displayName,
@@ -193,6 +206,7 @@ class PynqDeployProvider with ChangeNotifier {
     String credentialRef = '',
     String password = '',
     String sshKeyPath = '',
+    String runtimeApiUrlOverride = '',
     String overlayVersion = '',
   }) async {
     _startBoardOperation(
@@ -212,6 +226,7 @@ class PynqDeployProvider with ChangeNotifier {
         credentialRef: credentialRef,
         password: password,
         sshKeyPath: sshKeyPath,
+        runtimeApiUrlOverride: runtimeApiUrlOverride,
         overlayVersion: overlayVersion,
       );
       _upsertBoard(board);
@@ -322,12 +337,19 @@ class PynqDeployProvider with ChangeNotifier {
       'Installing overlay assets. Watch the launcher terminal for copy steps.',
     );
     try {
-      final updated = await _service.installOverlay(boardId: board.id);
+      final result = await _service.installOverlay(boardId: board.id);
+      final updated = result.board;
       _upsertBoard(updated);
       _errorMessage = null;
       final completionMessage = switch (updated.state) {
         PynqBoardState.overlayMissing =>
           'Overlay installation did not start because the local staged overlay package is missing or incomplete.',
+        PynqBoardState.degradedOptionalCapability when result.hasWarning =>
+          updated.lastPreflightMessage.isNotEmpty
+              ? updated.lastPreflightMessage
+              : 'Overlay assets were uploaded, but runtime recovery still needs manual action before readiness can pass.',
+        PynqBoardState.degradedOptionalCapability =>
+          'Overlay installation finished in degraded mode. Review the readiness message below before retrying.',
         _ => 'Overlay installation finished. Run readiness again if needed.',
       };
       _finishBoardOperation(completionMessage);
@@ -379,12 +401,11 @@ class PynqDeployProvider with ChangeNotifier {
       'Restarting board runtime. Watch the launcher terminal for system service steps.',
     );
     try {
-      final updated = await _service.restartRuntime(boardId: board.id);
+      final result = await _service.restartRuntime(boardId: board.id);
+      final updated = result.board;
       _upsertBoard(updated);
       _errorMessage = null;
-      _finishBoardOperation(
-        'Runtime restart completed. Readiness was refreshed afterward.',
-      );
+      _finishBoardOperation(_restartRuntimeCompletionMessage(result));
     } on PynqDeployException catch (e) {
       _errorMessage = e.toString();
       _failBoardOperation(

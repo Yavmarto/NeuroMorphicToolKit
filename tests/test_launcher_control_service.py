@@ -307,6 +307,77 @@ class LauncherControlServiceTest(unittest.TestCase):
             "/home/xilinx/.local/share/neurochip-pynq-agent/overlays",
         )
 
+    def test_pynq_board_normalization_clears_legacy_runtime_url_when_it_matches_default(
+        self,
+    ) -> None:
+        created = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "runtimeApiUrl": "http://192.168.1.50:8002",
+            }
+        )
+
+        self.assertEqual(created["runtimeApiUrl"], "http://192.168.1.50:8002")
+        self.assertEqual(created["runtimeApiUrlOverride"], "")
+
+    def test_pynq_board_normalization_preserves_custom_legacy_runtime_url_as_override(
+        self,
+    ) -> None:
+        created = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "runtimeApiUrl": "http://192.168.1.99:8002",
+            }
+        )
+
+        self.assertEqual(created["runtimeApiUrl"], "http://192.168.1.99:8002")
+        self.assertEqual(
+            created["runtimeApiUrlOverride"],
+            "http://192.168.1.99:8002",
+        )
+
+    def test_pynq_board_host_update_recomputes_effective_runtime_url_without_override(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.2.50",
+            }
+        )
+
+        updated = self.state.update_pynq_board(
+            board["id"],
+            {
+                "host": "192.168.2.53",
+            },
+        )
+
+        self.assertEqual(updated["runtimeApiUrl"], "http://192.168.2.53:8002")
+        self.assertEqual(updated["runtimeApiUrlOverride"], "")
+
+    def test_pynq_board_update_clearing_override_resets_effective_runtime_url(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.2.50",
+                "runtimeApiUrlOverride": "http://192.168.2.99:8002",
+            }
+        )
+
+        updated = self.state.update_pynq_board(
+            board["id"],
+            {
+                "host": "192.168.2.53",
+                "runtimeApiUrlOverride": "",
+            },
+        )
+
+        self.assertEqual(updated["runtimeApiUrl"], "http://192.168.2.53:8002")
+        self.assertEqual(updated["runtimeApiUrlOverride"], "")
+
     def test_pynq_board_connectivity_updates_board_state(self) -> None:
         board = self.state.create_pynq_board(
             {
@@ -383,6 +454,58 @@ class LauncherControlServiceTest(unittest.TestCase):
 
         self.assertFalse(Path(observed["askpass_path"]).exists())
 
+    def test_run_ssh_ignores_benign_known_host_warning_as_primary_failure_reason(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "sshPort": 22,
+                "username": "xilinx",
+                "authMode": "ssh_key",
+                "sshKeyPath": "/Users/test/.ssh/pynq",
+            }
+        )
+
+        class _FakeStream:
+            def __init__(self, lines: list[str]) -> None:
+                self._lines = [f"{line}\n" for line in lines]
+                self._index = 0
+
+            def readline(self) -> str:
+                if self._index >= len(self._lines):
+                    return ""
+                line = self._lines[self._index]
+                self._index += 1
+                return line
+
+            def close(self) -> None:
+                return None
+
+        class _FakeProcess:
+            def __init__(self) -> None:
+                self.stdout = _FakeStream(["install script failed on remote host"])
+                self.stderr = _FakeStream(
+                    [
+                        "Warning: Permanently added '192.168.1.50' (ED25519) to the list of known hosts."
+                    ]
+                )
+
+            def wait(self) -> int:
+                return 255
+
+        with mock.patch.object(
+            launcher_server.subprocess,
+            "Popen",
+            return_value=_FakeProcess(),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "install script failed on remote host"):
+                self.state._run_ssh(
+                    self.state._get_pynq_board(board["id"]),
+                    "bash /tmp/install.sh",
+                )
+
     def test_run_scp_password_auth_falls_back_to_askpass_without_sshpass(self) -> None:
         board = self.state.create_pynq_board(
             {
@@ -420,6 +543,61 @@ class LauncherControlServiceTest(unittest.TestCase):
             )
 
         self.assertFalse(Path(observed["askpass_path"]).exists())
+
+    def test_run_ssh_detached_ignores_benign_known_host_warning(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+                "authMode": "ssh_key",
+                "sshKeyPath": "/Users/test/.ssh/pynq",
+            }
+        )
+
+        with mock.patch.object(
+            launcher_server.subprocess,
+            "run",
+            return_value=subprocess.CompletedProcess(
+                ["ssh"],
+                255,
+                "",
+                "Warning: Permanently added '192.168.1.50' (ED25519) to the list of known hosts.\n",
+            ),
+        ):
+            self.state._run_ssh_detached(
+                self.state._get_pynq_board(board["id"]),
+                "true",
+            )
+
+    def test_restart_user_space_agent_uses_shared_neurochip_launch_command(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+        install_status = {
+            "agentVenvPath": "/home/xilinx/.local/share/neurochip-pynq-agent/venv",
+            "pynqVenvPath": "/home/xilinx/.local/share/neurochip-pynq-agent/pynq-venv",
+            "runtimeLogPath": "/home/xilinx/.local/share/neurochip-pynq-agent/runtime.log",
+        }
+
+        with (
+            mock.patch.object(self.state, "_run_ssh_detached") as run_ssh_detached,
+            mock.patch.object(self.state, "_wait_for_board_agent_health"),
+        ):
+            self.state._restart_user_space_agent(
+                self.state._get_pynq_board(board["id"]),
+                install_status,
+            )
+
+        remote_command = run_ssh_detached.call_args.args[1]
+        self.assertIn("command -v setsid >/dev/null 2>&1", remote_command)
+        self.assertIn("setsid sh -c", remote_command)
+        self.assertIn("nohup sh -c", remote_command)
+        self.assertNotIn("nohup env", remote_command)
 
     def test_doctor_report_includes_pynq_boards(self) -> None:
         self.state.create_pynq_board(
@@ -481,6 +659,56 @@ class LauncherControlServiceTest(unittest.TestCase):
 
         self.assertEqual(result["board"]["state"], "degraded_optional_capability")
         self.assertIn("user space", result["warning"])
+        self.assertIn("Enable passwordless sudo for 'xilinx'", result["warning"])
+        self.assertIn("re-run Provision Runtime", result["warning"])
+
+    def test_restart_pynq_runtime_waits_for_health_before_preflight_when_systemd_managed(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+        events: list[str] = []
+
+        def record_run_ssh(*_args: Any, **_kwargs: Any) -> str:
+            events.append("ssh")
+            return ""
+
+        def record_wait(*_args: Any, **_kwargs: Any) -> None:
+            events.append("wait")
+
+        def record_preflight(*_args: Any, **_kwargs: Any) -> dict[str, Any]:
+            events.append("preflight")
+            return {"board": {"state": "ready"}}
+
+        with (
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "systemd"},
+            ),
+            mock.patch.object(self.state, "_run_ssh", side_effect=record_run_ssh),
+            mock.patch.object(
+                self.state,
+                "_wait_for_board_agent_health",
+                side_effect=record_wait,
+            ) as wait_for_health,
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                side_effect=record_preflight,
+            ) as fetch_preflight,
+        ):
+            result = self.state.restart_pynq_runtime(board["id"])
+
+        wait_for_health.assert_called_once()
+        fetch_preflight.assert_called_once_with(board["id"])
+        self.assertEqual(events, ["ssh", "wait", "preflight"])
+        self.assertEqual(result["board"]["state"], "ready")
 
     def test_describe_pynq_preflight_reports_overlay_missing_actionably(self) -> None:
         description = launcher_server._describe_pynq_preflight(
@@ -519,6 +747,45 @@ class LauncherControlServiceTest(unittest.TestCase):
             result = self.state.provision_pynq_board(board["id"])
 
         self.assertEqual(result["installStatus"]["installMode"], "user-space")
+        self.assertEqual(result["board"]["state"], "degraded_optional_capability")
+        self.assertIn(
+            "Enable passwordless sudo for 'xilinx'",
+            result["board"]["lastPreflightMessage"],
+        )
+        self.assertIn(
+            "re-run Provision Runtime",
+            result["board"]["lastPreflightMessage"],
+        )
+
+    def test_provision_pynq_board_tails_runtime_log_when_install_script_fails(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with (
+            mock.patch.object(self.state, "_build_local_pynq_bundle"),
+            mock.patch.object(
+                self.state,
+                "_run_ssh",
+                side_effect=["", RuntimeError("install script failed on remote host")],
+            ),
+            mock.patch.object(self.state, "_run_scp"),
+            mock.patch.object(self.state, "_emit_runtime_log_tail") as emit_runtime_log_tail,
+        ):
+            result = self.state.provision_pynq_board(board["id"])
+
+        emit_runtime_log_tail.assert_called_once()
+        self.assertEqual(emit_runtime_log_tail.call_args.args[1], {})
+        self.assertEqual(result["error"], "install script failed on remote host")
+        self.assertEqual(result["board"]["state"], "provision_failed")
+        self.assertEqual(
+            result["board"]["lastPreflightMessage"],
+            "install script failed on remote host",
+        )
 
     def test_install_pynq_overlay_assets_reports_missing_staged_package(self) -> None:
         board = self.state.create_pynq_board(
@@ -739,6 +1006,85 @@ class LauncherControlServiceTest(unittest.TestCase):
             msg for msg, _stderr in emissions if "restart did not become healthy" in msg
         ]
         self.assertTrue(summary_messages, "expected a summary line about restart failure")
+
+    def test_install_pynq_overlay_assets_degrades_when_readiness_refresh_fails_after_upload(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+        staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        _stage_overlay_package(staging_dir)
+
+        with (
+            mock.patch.object(self.state, "_run_ssh"),
+            mock.patch.object(self.state, "_run_scp"),
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "user-space"},
+            ),
+            mock.patch.object(
+                self.state,
+                "_restart_user_space_agent",
+                side_effect=RuntimeError("agent did not become healthy within 60s"),
+            ),
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                side_effect=RuntimeError("connection refused"),
+            ),
+        ):
+            result = self.state.install_pynq_overlay_assets(board["id"])
+
+        self.assertEqual(result["board"]["state"], "degraded_optional_capability")
+        self.assertEqual(result["board"]["lastPreflightStatus"], "degraded")
+        self.assertEqual(
+            result["board"]["lastPreflightMessage"],
+            launcher_server.PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE,
+        )
+        self.assertIn("overlayRestartWarning", result)
+        self.assertIn("agent did not become healthy", result["overlayRestartWarning"])
+
+    def test_install_pynq_overlay_assets_preserves_explicit_overlay_missing_preflight(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+        staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        _stage_overlay_package(staging_dir)
+
+        with (
+            mock.patch.object(self.state, "_run_ssh"),
+            mock.patch.object(self.state, "_run_scp"),
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "systemd"},
+            ),
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                return_value={
+                    "board": {
+                        "state": "overlay_missing",
+                        "lastPreflightStatus": "failed",
+                        "lastPreflightMessage": "Install Overlay next.",
+                    }
+                },
+            ),
+        ):
+            result = self.state.install_pynq_overlay_assets(board["id"])
+
+        self.assertEqual(result["board"]["state"], "overlay_missing")
+        self.assertNotIn("overlayRestartWarning", result)
 
     def test_resolve_pynq_agent_health_timeout_respects_env_and_bounds(self) -> None:
         cases = {

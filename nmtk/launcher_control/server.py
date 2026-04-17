@@ -66,6 +66,13 @@ PYNQ_RUNTIME_LOG_TAIL_LINES = 80
 DEFAULT_PYNQ_BOARD_USERNAME = "xilinx"
 DEFAULT_PYNQ_BOARD_STATE = "unpaired"
 DEFAULT_PYNQ_AUTH_MODE = "password"
+BENIGN_SSH_WARNING_PREFIXES = (
+    "Warning: Permanently added ",
+)
+PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE = (
+    "Overlay files were uploaded, but the user-space runtime did not become healthy. "
+    "Restart the board or run restart-runtime manually, then check readiness again."
+)
 LEGACY_PYNQ_REMOTE_INSTALL_ROOT = "/opt/neurochip-pynq-agent"
 LEGACY_PYNQ_REMOTE_VENV_PATH = f"{LEGACY_PYNQ_REMOTE_INSTALL_ROOT}/venv"
 DEFAULT_PYNQ_REMOTE_PYNQ_VENV_DIRNAME = "pynq-venv"
@@ -152,6 +159,39 @@ def _default_runtime_api_url(host: str, port: int = DEFAULT_PYNQ_BOARD_PORT) -> 
     return f"http://{host}:{port}"
 
 
+def _normalize_runtime_api_url_override(
+    host: str,
+    raw: dict[str, Any],
+) -> str:
+    default_url = _default_runtime_api_url(host) if host else ""
+    explicit_override = raw.get("runtimeApiUrlOverride")
+    if explicit_override is not None:
+        override = str(explicit_override).strip()
+        return "" if not override or override == default_url else override
+
+    legacy_runtime_api_url = str(raw.get("runtimeApiUrl") or "").strip()
+    if legacy_runtime_api_url and legacy_runtime_api_url != default_url:
+        return legacy_runtime_api_url
+    return ""
+
+
+def _effective_runtime_api_url(host: str, runtime_api_url_override: str) -> str:
+    normalized_override = str(runtime_api_url_override or "").strip()
+    if normalized_override:
+        return normalized_override
+    normalized_host = host.strip()
+    return _default_runtime_api_url(normalized_host) if normalized_host else ""
+
+
+def _pynq_user_space_upgrade_message(username: str) -> str:
+    normalized_username = username.strip() or DEFAULT_PYNQ_BOARD_USERNAME
+    return (
+        "Runtime is installed in user space. "
+        f"Enable passwordless sudo for '{normalized_username}', then re-run Provision "
+        "Runtime to upgrade the board to systemd auto-start and launcher-managed restarts."
+    )
+
+
 def _resolve_pynq_agent_health_timeout() -> float:
     raw = os.getenv("NEUROCHIP_PYNQ_HEALTH_TIMEOUT_SECONDS", "").strip()
     if not raw:
@@ -171,7 +211,7 @@ def _default_pynq_remote_install_root(username: str) -> str:
 
 def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
     host = str(raw.get("host", "")).strip()
-    runtime_api_url = str(raw.get("runtimeApiUrl") or "").strip()
+    runtime_api_url_override = _normalize_runtime_api_url_override(host, raw)
     ssh_port = raw.get("sshPort", DEFAULT_PYNQ_BOARD_SSH_PORT)
     if not isinstance(ssh_port, int):
         ssh_port = DEFAULT_PYNQ_BOARD_SSH_PORT
@@ -202,7 +242,8 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
         "credentialRef": str(raw.get("credentialRef") or "").strip(),
         "password": str(raw.get("password") or ""),
         "sshKeyPath": str(raw.get("sshKeyPath") or "").strip(),
-        "runtimeApiUrl": runtime_api_url or _default_runtime_api_url(host),
+        "runtimeApiUrl": _effective_runtime_api_url(host, runtime_api_url_override),
+        "runtimeApiUrlOverride": runtime_api_url_override,
         "overlayVersion": str(raw.get("overlayVersion") or "").strip(),
         "state": _normalize_pynq_board_state(raw.get("state")),
         "lastPreflightStatus": str(raw.get("lastPreflightStatus") or "").strip(),
@@ -222,9 +263,32 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
 
 def _serialize_pynq_board(board: dict[str, Any]) -> dict[str, Any]:
     payload = dict(board)
+    payload["runtimeApiUrlOverride"] = str(payload.get("runtimeApiUrlOverride") or "").strip()
+    payload["runtimeApiUrl"] = _effective_runtime_api_url(
+        str(payload.get("host") or "").strip(),
+        str(payload.get("runtimeApiUrlOverride") or "").strip(),
+    )
     payload.pop("password", None)
     payload["hasPassword"] = bool(board.get("password"))
     return payload
+
+
+def _ssh_failure_message(stdout_lines: list[str], stderr_lines: list[str]) -> str:
+    non_benign_stderr = [
+        line for line in stderr_lines if not _is_benign_ssh_warning_line(line)
+    ]
+    if non_benign_stderr:
+        return "\n".join(non_benign_stderr).strip()
+    if stdout_lines:
+        return "\n".join(stdout_lines).strip()
+    return "ssh command failed"
+
+
+def _resolved_pynq_runtime_api_url(board: dict[str, Any]) -> str:
+    return _effective_runtime_api_url(
+        str(board.get("host") or "").strip(),
+        str(board.get("runtimeApiUrlOverride") or "").strip(),
+    )
 
 
 def _module_root(module: dict[str, Any]) -> Path:
@@ -620,6 +684,13 @@ def _dedupe_messages(messages: list[str]) -> list[str]:
     return deduped
 
 
+def _is_benign_ssh_warning_line(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped:
+        return True
+    return any(stripped.startswith(prefix) for prefix in BENIGN_SSH_WARNING_PREFIXES)
+
+
 @dataclass
 class ManagedProcess:
     """Represents a launched module process and its recent logs."""
@@ -816,10 +887,7 @@ class LauncherControlState:
     def update_pynq_board(self, board_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
             board = self._get_pynq_board(board_id)
-            merged = dict(board)
-            merged.update(payload)
-            merged["id"] = board_id
-            normalized = _normalize_pynq_board(merged)
+            normalized = self._normalize_updated_pynq_board(board, {"id": board_id, **payload})
             board.clear()
             board.update(normalized)
             self._persist_settings()
@@ -843,9 +911,26 @@ class LauncherControlState:
     def _update_pynq_board_fields(self, board_id: str, **fields: Any) -> dict[str, Any]:
         with self._lock:
             board = self._get_pynq_board(board_id)
-            board.update(fields)
+            normalized = self._normalize_updated_pynq_board(board, {"id": board_id, **fields})
+            board.clear()
+            board.update(normalized)
             self._persist_settings()
             return dict(board)
+
+    def _normalize_updated_pynq_board(
+        self,
+        board: dict[str, Any],
+        updates: dict[str, Any],
+    ) -> dict[str, Any]:
+        merged = dict(board)
+        merged.update(updates)
+        if (
+            "runtimeApiUrlOverride" not in updates
+            and "runtimeApiUrl" not in updates
+            and not str(board.get("runtimeApiUrlOverride") or "").strip()
+        ):
+            merged.pop("runtimeApiUrl", None)
+        return _normalize_pynq_board(merged)
 
     def _emit_pynq_terminal_log(self, board: dict[str, Any], message: str, *, stderr: bool = False) -> None:
         stream = sys.stderr if stderr else sys.stdout
@@ -973,7 +1058,7 @@ class LauncherControlState:
             if cleanup is not None:
                 cleanup()
         if return_code != 0:
-            message = "\n".join(stderr_lines or stdout_lines).strip() or "ssh command failed"
+            message = _ssh_failure_message(stdout_lines, stderr_lines)
             raise RuntimeError(message)
         self._emit_pynq_terminal_log(board, "ssh step completed")
         return "\n".join(stdout_lines).strip()
@@ -1002,7 +1087,7 @@ class LauncherControlState:
         effective_timeout = (
             _resolve_pynq_agent_health_timeout() if timeout is None else float(timeout)
         )
-        base_url = str(board.get("runtimeApiUrl") or _default_runtime_api_url(board["host"])).rstrip("/")
+        base_url = _resolved_pynq_runtime_api_url(board).rstrip("/")
         health_url = f"{base_url}/health"
         self._emit_pynq_terminal_log(
             board, f"polling agent health at {health_url} (timeout {effective_timeout:.0f}s)"
@@ -1058,6 +1143,31 @@ class LauncherControlState:
             if line:
                 self._emit_pynq_terminal_log(board, f"runtime.log | {line}", stderr=True)
 
+    def _build_remote_pynq_user_space_launch_command(
+        self,
+        *,
+        agent_venv_path: str,
+        pynq_venv_path: str,
+        install_status_path: str,
+        overlay_dir: str,
+        runtime_log_path: str,
+    ) -> str:
+        neurochip_root = REPO_ROOT / "Neurochip"
+        if not (neurochip_root / "neurochip").exists():
+            neurochip_root = Path(__file__).resolve().parents[2] / "Neurochip"
+        neurochip_package_root = str(neurochip_root)
+        if neurochip_package_root not in sys.path:
+            sys.path.insert(0, neurochip_package_root)
+        from neurochip.provisioning import build_pynq_user_space_agent_launch_command
+
+        return build_pynq_user_space_agent_launch_command(
+            agent_executable=f"{agent_venv_path}/bin/neurochip-pynq-agent",
+            pynq_python_path=f"{pynq_venv_path}/bin/python",
+            install_status_path=install_status_path,
+            overlay_dir=overlay_dir,
+            runtime_log_path=runtime_log_path,
+        )
+
     def _run_ssh_detached(
         self,
         board: dict[str, Any],
@@ -1090,9 +1200,28 @@ class LauncherControlState:
             if result.stderr.strip():
                 self._emit_pynq_terminal_log(board, result.stderr.strip())
             if result.returncode != 0:
-                raise RuntimeError(
-                    result.stderr.strip() or result.stdout.strip() or "ssh detached command failed"
+                stderr_lines = [
+                    line.strip()
+                    for line in result.stderr.splitlines()
+                    if line.strip()
+                ]
+                non_benign_stderr = [
+                    line for line in stderr_lines if not _is_benign_ssh_warning_line(line)
+                ]
+                if non_benign_stderr:
+                    raise RuntimeError("\n".join(non_benign_stderr))
+                stdout_lines = [
+                    line.strip()
+                    for line in result.stdout.splitlines()
+                    if line.strip()
+                ]
+                if stdout_lines:
+                    raise RuntimeError("\n".join(stdout_lines))
+                self._emit_pynq_terminal_log(
+                    board,
+                    "ssh step completed with only benign SSH warnings; proceeding to health check",
                 )
+                return
             self._emit_pynq_terminal_log(board, "ssh step completed")
         except subprocess.TimeoutExpired:
             self._emit_pynq_terminal_log(
@@ -1115,16 +1244,17 @@ class LauncherControlState:
         self._emit_pynq_terminal_log(
             board, f"restarting user-space agent with NEUROCHIP_PYNQ_OVERLAY_DIR={overlay_dir}"
         )
+        launch_command = self._build_remote_pynq_user_space_launch_command(
+            agent_venv_path=agent_venv_path,
+            pynq_venv_path=pynq_venv_path,
+            install_status_path=install_status_path,
+            overlay_dir=overlay_dir,
+            runtime_log_path=runtime_log_path,
+        )
         restart_cmd = (
             f'pkill -f "{agent_venv_path}/bin/neurochip-pynq-agent" >/dev/null 2>&1 || true; '
             f"sleep 1; "
-            f"nohup env "
-            f'NEUROCHIP_PYNQ_PYTHON="{pynq_venv_path}/bin/python" '
-            f'NEUROCHIP_PYNQ_INSTALL_MODE="user-space" '
-            f'NEUROCHIP_PYNQ_INSTALL_STATUS_PATH="{install_status_path}" '
-            f'NEUROCHIP_PYNQ_OVERLAY_DIR="{overlay_dir}" '
-            f'"{agent_venv_path}/bin/neurochip-pynq-agent" '
-            f'>"{runtime_log_path}" 2>&1 </dev/null &'
+            f"{launch_command}"
         )
         self._run_ssh_detached(board, restart_cmd)
         self._emit_pynq_terminal_log(board, "waiting for restarted agent to become healthy")
@@ -1171,7 +1301,7 @@ class LauncherControlState:
         path: str,
         payload: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        base_url = str(board.get("runtimeApiUrl") or _default_runtime_api_url(board["host"])).rstrip("/")
+        base_url = _resolved_pynq_runtime_api_url(board).rstrip("/")
         url = f"{base_url}{path}"
         headers = {"Content-Type": "application/json"}
         credential_ref = str(board.get("credentialRef") or "").strip()
@@ -1291,6 +1421,9 @@ class LauncherControlState:
     def provision_pynq_board(self, board_id: str) -> dict[str, Any]:
         board = self._update_pynq_board_fields(board_id, state="provisioning")
         self._emit_pynq_terminal_log(board, "starting runtime provisioning")
+        install_status: dict[str, Any] = {}
+        install_mode = "unknown"
+        install_script_started = False
         try:
             with tempfile.TemporaryDirectory(prefix="pynq-agent-bundle-") as tmp_dir:
                 bundle_dir = Path(tmp_dir) / "bundle"
@@ -1313,6 +1446,7 @@ class LauncherControlState:
                 self._emit_pynq_terminal_log(board, f"uploading provisioning bundle to {remote_bundle_parent}")
                 self._run_scp(board, bundle_dir, remote_bundle_parent, recursive=True)
                 self._emit_pynq_terminal_log(board, "running remote install script")
+                install_script_started = True
                 self._run_ssh(
                     board,
                     " ".join(
@@ -1341,9 +1475,23 @@ class LauncherControlState:
                     board,
                     "runtime installed successfully; overlay assets are still missing, so the board is not hardware-ready yet",
                 )
+            if board_state == "degraded_optional_capability" and install_mode == "user-space":
+                guidance = _pynq_user_space_upgrade_message(str(board.get("username") or ""))
+                updated = self._update_pynq_board_fields(
+                    board_id,
+                    state="degraded_optional_capability",
+                    lastPreflightStatus=PREFLIGHT_DEGRADED,
+                    lastPreflightMessage=guidance,
+                )
+                result["board"] = _serialize_pynq_board(updated)
+                preflight = result.get("preflight")
+                if isinstance(preflight, dict):
+                    preflight["preflight_message"] = guidance
             result["installStatus"] = install_status
             return result
         except Exception as exc:  # noqa: BLE001
+            if install_script_started:
+                self._emit_runtime_log_tail(board, install_status)
             self._emit_pynq_terminal_log(board, f"runtime provisioning failed: {exc}", stderr=True)
             updated = self._update_pynq_board_fields(
                 board_id,
@@ -1421,7 +1569,38 @@ class LauncherControlState:
                     stderr=True,
                 )
         self._emit_pynq_terminal_log(board, "fetching preflight")
-        result = self.fetch_pynq_board_preflight(board_id)
+        try:
+            result = self.fetch_pynq_board_preflight(board_id)
+        except Exception as exc:
+            if install_mode != "user-space":
+                raise
+            if restart_warning is None:
+                restart_warning = (
+                    "Follow-up preflight could not reach the runtime after overlay upload: "
+                    f"{exc}"
+                )
+            self._emit_pynq_terminal_log(
+                board,
+                (
+                    "readiness refresh after overlay upload did not complete: "
+                    f"{exc}; {PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE}"
+                ),
+                stderr=True,
+            )
+            updated = self._update_pynq_board_fields(
+                board_id,
+                state="degraded_optional_capability",
+                lastPreflightStatus=PREFLIGHT_DEGRADED,
+                lastPreflightMessage=PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE,
+            )
+            result = {
+                "board": _serialize_pynq_board(updated),
+                "preflight": {
+                    "preflight_status": PREFLIGHT_DEGRADED,
+                    "preflight_message": PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE,
+                    "runtime_mode": str(updated.get("lastRuntimeMode") or "unknown"),
+                },
+            }
         result["localOverlayPackage"] = overlay_package
         if restart_warning is not None:
             result["overlayRestartWarning"] = restart_warning
@@ -1432,10 +1611,7 @@ class LauncherControlState:
         install_status = self._read_remote_pynq_install_status(board)
         install_mode = str(install_status.get("installMode") or "unknown").strip() or "unknown"
         if install_mode == "user-space":
-            message = (
-                "Runtime is installed in user space; launcher restart requires privileged "
-                "systemd setup on the board."
-            )
+            message = _pynq_user_space_upgrade_message(str(board.get("username") or ""))
             updated = self._update_pynq_board_fields(
                 board_id,
                 state="degraded_optional_capability",
@@ -1450,6 +1626,8 @@ class LauncherControlState:
             }
         self._emit_pynq_terminal_log(board, f"restarting systemd service {board['remoteServiceName']}.service")
         self._run_ssh(board, f"sudo systemctl restart {board['remoteServiceName']}.service")
+        self._emit_pynq_terminal_log(board, "waiting for restarted systemd service to become healthy")
+        self._wait_for_board_agent_health(board)
         self._emit_pynq_terminal_log(board, "runtime restart completed; fetching preflight")
         result = self.fetch_pynq_board_preflight(board_id)
         result["installStatus"] = install_status
@@ -2236,7 +2414,8 @@ class LauncherControlState:
                     "state": state,
                     "lastPreflightStatus": board.get("lastPreflightStatus"),
                     "lastPreflightMessage": board.get("lastPreflightMessage"),
-                    "runtimeApiUrl": board.get("runtimeApiUrl"),
+                    "runtimeApiUrl": _resolved_pynq_runtime_api_url(board),
+                    "runtimeApiUrlOverride": str(board.get("runtimeApiUrlOverride") or "").strip(),
                 }
             )
 

@@ -31,6 +31,7 @@ class MockPynqDeployService extends PynqDeployService {
     this.statusResponse,
     this.sitlResult,
     this.installOverlayResult,
+    this.restartRuntimeResult,
     this.throwOnDeploy = false,
   });
 
@@ -38,15 +39,58 @@ class MockPynqDeployService extends PynqDeployService {
   final PynqNetworkResponse? exportResult;
   final PynqDeployJob? statusResponse;
   final PynqSitlVerifyResult? sitlResult;
-  final PynqPairedBoard? installOverlayResult;
+  final PynqOverlayInstallResult? installOverlayResult;
+  final PynqRestartRuntimeResult? restartRuntimeResult;
   final bool throwOnDeploy;
   String? lastBoardId;
   PynqDeployPayload? lastDeployPayload;
+  String? lastSavedHost;
+  String? lastSavedRuntimeApiUrlOverride;
   Completer<PynqPairedBoard>? provisionCompleter;
   Completer<PynqPairedBoard>? installOverlayCompleter;
 
   @override
   Future<List<PynqPairedBoard>> fetchPairedBoards() async => boards;
+
+  @override
+  Future<PynqPairedBoard> savePairedBoard({
+    String? boardId,
+    required String displayName,
+    required String host,
+    required int sshPort,
+    required String username,
+    required PynqBoardAuthMode authMode,
+    String credentialRef = '',
+    String password = '',
+    String sshKeyPath = '',
+    String runtimeApiUrlOverride = '',
+    String overlayVersion = '',
+  }) async {
+    lastSavedHost = host;
+    lastSavedRuntimeApiUrlOverride = runtimeApiUrlOverride;
+    final effectiveRuntimeApiUrl = runtimeApiUrlOverride.isNotEmpty
+        ? runtimeApiUrlOverride
+        : 'http://$host:8002';
+    return PynqPairedBoard(
+      id: boardId ?? 'board-1',
+      displayName: displayName,
+      host: host,
+      sshPort: sshPort,
+      username: username,
+      authMode: authMode,
+      credentialRef: credentialRef,
+      runtimeApiUrl: effectiveRuntimeApiUrl,
+      runtimeApiUrlOverride: runtimeApiUrlOverride,
+      overlayVersion: overlayVersion,
+      state: PynqBoardState.unpaired,
+      lastPreflightStatus: '',
+      lastPreflightMessage: '',
+      lastRuntimeMode: '',
+      hasPassword: password.isNotEmpty ||
+          (boards.isNotEmpty && boards.first.hasPassword),
+      sshKeyPath: sshKeyPath,
+    );
+  }
 
   @override
   Future<PynqNetworkResponse> checkExportability({
@@ -118,17 +162,34 @@ class MockPynqDeployService extends PynqDeployService {
   }
 
   @override
-  Future<PynqPairedBoard> installOverlay({
+  Future<PynqOverlayInstallResult> installOverlay({
     required String boardId,
   }) async {
     if (installOverlayCompleter != null) {
-      return installOverlayCompleter!.future;
+      return PynqOverlayInstallResult(
+          board: await installOverlayCompleter!.future);
     }
     return installOverlayResult ??
-        boards.first.copyWith(
-          state: PynqBoardState.ready,
-          lastPreflightStatus: 'ok',
-          lastPreflightMessage: 'Ready',
+        PynqOverlayInstallResult(
+          board: boards.first.copyWith(
+            state: PynqBoardState.ready,
+            lastPreflightStatus: 'ok',
+            lastPreflightMessage: 'Ready',
+          ),
+        );
+  }
+
+  @override
+  Future<PynqRestartRuntimeResult> restartRuntime({
+    required String boardId,
+  }) async {
+    return restartRuntimeResult ??
+        PynqRestartRuntimeResult(
+          board: boards.first.copyWith(
+            state: PynqBoardState.ready,
+            lastPreflightStatus: 'ok',
+            lastPreflightMessage: 'Ready',
+          ),
         );
   }
 
@@ -162,6 +223,50 @@ void main() {
 
       expect(provider.pairedBoards, isNotEmpty);
       expect(provider.selectedBoard?.displayName, 'Desk PYNQ');
+    });
+
+    test('savePairedBoard follows host when runtime override is blank',
+        () async {
+      final service = MockPynqDeployService();
+      final provider = PynqDeployProvider(service: service);
+      await Future<void>.delayed(Duration.zero);
+
+      await provider.savePairedBoard(
+        boardId: 'board-1',
+        displayName: 'Desk PYNQ',
+        host: '192.168.2.53',
+        sshPort: 22,
+        username: 'xilinx',
+        authMode: PynqBoardAuthMode.password,
+        runtimeApiUrlOverride: '',
+      );
+
+      expect(service.lastSavedHost, '192.168.2.53');
+      expect(service.lastSavedRuntimeApiUrlOverride, isEmpty);
+      expect(provider.selectedBoard?.runtimeApiUrl, 'http://192.168.2.53:8002');
+      expect(provider.selectedBoard?.runtimeApiUrlOverride, isEmpty);
+    });
+
+    test('savePairedBoard preserves explicit runtime override', () async {
+      final service = MockPynqDeployService();
+      final provider = PynqDeployProvider(service: service);
+      await Future<void>.delayed(Duration.zero);
+
+      await provider.savePairedBoard(
+        boardId: 'board-1',
+        displayName: 'Desk PYNQ',
+        host: '192.168.2.53',
+        sshPort: 22,
+        username: 'xilinx',
+        authMode: PynqBoardAuthMode.password,
+        runtimeApiUrlOverride: 'http://192.168.2.99:8002',
+      );
+
+      expect(
+          service.lastSavedRuntimeApiUrlOverride, 'http://192.168.2.99:8002');
+      expect(provider.selectedBoard?.runtimeApiUrl, 'http://192.168.2.99:8002');
+      expect(provider.selectedBoard?.runtimeApiUrlOverride,
+          'http://192.168.2.99:8002');
     });
 
     test('checkExportability seeds deploy payload and override', () async {
@@ -266,22 +371,24 @@ void main() {
         'installOverlayForSelectedBoard explains when the staged host package is missing',
         () async {
       final service = MockPynqDeployService(
-        installOverlayResult: const PynqPairedBoard(
-          id: 'board-1',
-          displayName: 'Desk PYNQ',
-          host: '192.168.1.50',
-          sshPort: 22,
-          username: 'xilinx',
-          authMode: PynqBoardAuthMode.password,
-          credentialRef: '',
-          runtimeApiUrl: 'http://192.168.1.50:8002',
-          overlayVersion: '',
-          state: PynqBoardState.overlayMissing,
-          lastPreflightStatus: 'failed',
-          lastPreflightMessage: 'Stage overlay assets locally first.',
-          lastRuntimeMode: 'hardware',
-          hasPassword: true,
-          sshKeyPath: '',
+        installOverlayResult: const PynqOverlayInstallResult(
+          board: PynqPairedBoard(
+            id: 'board-1',
+            displayName: 'Desk PYNQ',
+            host: '192.168.1.50',
+            sshPort: 22,
+            username: 'xilinx',
+            authMode: PynqBoardAuthMode.password,
+            credentialRef: '',
+            runtimeApiUrl: 'http://192.168.1.50:8002',
+            overlayVersion: '',
+            state: PynqBoardState.overlayMissing,
+            lastPreflightStatus: 'failed',
+            lastPreflightMessage: 'Stage overlay assets locally first.',
+            lastRuntimeMode: 'hardware',
+            hasPassword: true,
+            sshKeyPath: '',
+          ),
         ),
       );
       final provider = PynqDeployProvider(service: service);
@@ -295,6 +402,103 @@ void main() {
         contains('local staged overlay package is missing or incomplete'),
       );
       expect(provider.selectedBoard?.state, PynqBoardState.overlayMissing);
+    });
+
+    test(
+        'installOverlayForSelectedBoard surfaces recovery guidance when runtime restart needs manual action',
+        () async {
+      final service = MockPynqDeployService(
+        installOverlayResult: const PynqOverlayInstallResult(
+          board: PynqPairedBoard(
+            id: 'board-1',
+            displayName: 'Desk PYNQ',
+            host: '192.168.1.50',
+            sshPort: 22,
+            username: 'xilinx',
+            authMode: PynqBoardAuthMode.password,
+            credentialRef: '',
+            runtimeApiUrl: 'http://192.168.1.50:8002',
+            overlayVersion: '',
+            state: PynqBoardState.degradedOptionalCapability,
+            lastPreflightStatus: 'degraded',
+            lastPreflightMessage:
+                'Overlay files were uploaded, but the user-space runtime did not become healthy. Restart the board or run restart-runtime manually, then check readiness again.',
+            lastRuntimeMode: 'hardware',
+            hasPassword: true,
+            sshKeyPath: '',
+          ),
+          warning: 'agent did not become healthy within 60s',
+        ),
+      );
+      final provider = PynqDeployProvider(service: service);
+      await Future<void>.delayed(Duration.zero);
+
+      await provider.installOverlayForSelectedBoard();
+
+      expect(provider.boardOperationInProgress, isFalse);
+      expect(
+        provider.boardFeedbackMessage,
+        contains('Restart the board or run restart-runtime manually'),
+      );
+      expect(
+        provider.errorMessage,
+        isNull,
+      );
+      expect(
+        provider.selectedBoard?.state,
+        PynqBoardState.degradedOptionalCapability,
+      );
+    });
+
+    test('restartSelectedBoardRuntime surfaces manual recovery warning',
+        () async {
+      final service = MockPynqDeployService(
+        restartRuntimeResult: const PynqRestartRuntimeResult(
+          board: PynqPairedBoard(
+            id: 'board-1',
+            displayName: 'Desk PYNQ',
+            host: '192.168.1.50',
+            sshPort: 22,
+            username: 'xilinx',
+            authMode: PynqBoardAuthMode.password,
+            credentialRef: '',
+            runtimeApiUrl: 'http://192.168.1.50:8002',
+            overlayVersion: '',
+            state: PynqBoardState.degradedOptionalCapability,
+            lastPreflightStatus: 'degraded',
+            lastPreflightMessage:
+                "Runtime is installed in user space. Enable passwordless sudo for 'xilinx', then re-run Provision Runtime to upgrade the board to systemd auto-start and launcher-managed restarts.",
+            lastRuntimeMode: 'hardware',
+            hasPassword: true,
+            sshKeyPath: '',
+          ),
+          warning:
+              "Runtime is installed in user space. Enable passwordless sudo for 'xilinx', then re-run Provision Runtime to upgrade the board to systemd auto-start and launcher-managed restarts.",
+        ),
+      );
+      final provider = PynqDeployProvider(service: service);
+      await Future<void>.delayed(Duration.zero);
+
+      await provider.restartSelectedBoardRuntime();
+
+      expect(provider.boardOperationInProgress, isFalse);
+      expect(
+        provider.boardFeedbackMessage,
+        contains('Enable passwordless sudo'),
+      );
+      expect(
+        provider.boardFeedbackMessage,
+        contains('re-run Provision Runtime'),
+      );
+      expect(
+        provider.boardFeedbackMessage,
+        isNot(contains('Complete the restart manually on the board')),
+      );
+      expect(provider.errorMessage, isNull);
+      expect(
+        provider.selectedBoard?.state,
+        PynqBoardState.degradedOptionalCapability,
+      );
     });
   });
 }
