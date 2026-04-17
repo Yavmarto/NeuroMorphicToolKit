@@ -59,6 +59,10 @@ SUPPORTED_START_STRATEGIES = {"uvicorn", "none"}
 PREFLIGHT_SENTINEL = "NMTK_PREFLIGHT_JSON="
 DEFAULT_PYNQ_BOARD_PORT = 8002
 DEFAULT_PYNQ_BOARD_SSH_PORT = 22
+DEFAULT_PYNQ_AGENT_HEALTH_TIMEOUT_SECONDS = 60.0
+PYNQ_AGENT_HEALTH_TIMEOUT_BOUNDS = (5.0, 300.0)
+PYNQ_AGENT_HEALTH_HEARTBEAT_AFTER_SECONDS = 15.0
+PYNQ_RUNTIME_LOG_TAIL_LINES = 80
 DEFAULT_PYNQ_BOARD_USERNAME = "xilinx"
 DEFAULT_PYNQ_BOARD_STATE = "unpaired"
 DEFAULT_PYNQ_AUTH_MODE = "password"
@@ -146,6 +150,18 @@ def _normalize_auth_mode(value: Any) -> str:
 
 def _default_runtime_api_url(host: str, port: int = DEFAULT_PYNQ_BOARD_PORT) -> str:
     return f"http://{host}:{port}"
+
+
+def _resolve_pynq_agent_health_timeout() -> float:
+    raw = os.getenv("NEUROCHIP_PYNQ_HEALTH_TIMEOUT_SECONDS", "").strip()
+    if not raw:
+        return DEFAULT_PYNQ_AGENT_HEALTH_TIMEOUT_SECONDS
+    try:
+        parsed = float(raw)
+    except ValueError:
+        return DEFAULT_PYNQ_AGENT_HEALTH_TIMEOUT_SECONDS
+    lower, upper = PYNQ_AGENT_HEALTH_TIMEOUT_BOUNDS
+    return max(lower, min(upper, parsed))
 
 
 def _default_pynq_remote_install_root(username: str) -> str:
@@ -978,6 +994,142 @@ class LauncherControlState:
             raise RuntimeError("Remote install status must decode to an object")
         return decoded
 
+    def _wait_for_board_agent_health(
+        self,
+        board: dict[str, Any],
+        timeout: float | None = None,
+    ) -> None:
+        effective_timeout = (
+            _resolve_pynq_agent_health_timeout() if timeout is None else float(timeout)
+        )
+        base_url = str(board.get("runtimeApiUrl") or _default_runtime_api_url(board["host"])).rstrip("/")
+        health_url = f"{base_url}/health"
+        self._emit_pynq_terminal_log(
+            board, f"polling agent health at {health_url} (timeout {effective_timeout:.0f}s)"
+        )
+        start = time.monotonic()
+        deadline = start + effective_timeout
+        last_exc: Exception | None = None
+        heartbeat_emitted = False
+        while time.monotonic() < deadline:
+            try:
+                with urllib.request.urlopen(health_url, timeout=2.0) as resp:
+                    if resp.status == 200:
+                        self._emit_pynq_terminal_log(board, "agent health check passed")
+                        return
+            except Exception as exc:
+                last_exc = exc
+            elapsed = time.monotonic() - start
+            if not heartbeat_emitted and elapsed >= PYNQ_AGENT_HEALTH_HEARTBEAT_AFTER_SECONDS:
+                self._emit_pynq_terminal_log(
+                    board, f"still polling /health ({elapsed:.0f}s elapsed)"
+                )
+                heartbeat_emitted = True
+            time.sleep(1.0)
+        raise RuntimeError(
+            f"Agent at {health_url} did not become healthy within {effective_timeout:.0f}s"
+            + (f": {last_exc}" if last_exc else "")
+        )
+
+    def _emit_runtime_log_tail(
+        self,
+        board: dict[str, Any],
+        install_status: dict[str, Any],
+        *,
+        lines: int = PYNQ_RUNTIME_LOG_TAIL_LINES,
+    ) -> None:
+        runtime_log_path = str(
+            install_status.get("runtimeLogPath")
+            or f"{board['remoteInstallRoot']}/runtime.log"
+        )
+        self._emit_pynq_terminal_log(
+            board, f"fetching last {lines} lines of {runtime_log_path}"
+        )
+        try:
+            tail = self._run_ssh(board, f"tail -n {int(lines)} {runtime_log_path}")
+        except Exception as exc:  # noqa: BLE001
+            self._emit_pynq_terminal_log(
+                board,
+                f"could not read remote runtime log at {runtime_log_path}: {exc}",
+                stderr=True,
+            )
+            return
+        for line in tail.splitlines() or [tail]:
+            if line:
+                self._emit_pynq_terminal_log(board, f"runtime.log | {line}", stderr=True)
+
+    def _run_ssh_detached(
+        self,
+        board: dict[str, Any],
+        remote_command: str,
+        *,
+        ssh_timeout: float = 15.0,
+    ) -> None:
+        """Run an SSH command that starts a detached background process.
+
+        sshd keeps the channel open until all its pipe fds reach EOF, which
+        prevents the SSH client from exiting even after the remote shell exits.
+        We tolerate this by killing the local SSH client after ssh_timeout seconds;
+        the remote background process continues running independently.
+        """
+        target = f"{board['username']}@{board['host']}"
+        command, env, cleanup = self._prepare_ssh_invocation(board)
+        command.extend([target, remote_command])
+        self._emit_pynq_terminal_log(board, f"ssh (detached) -> {target}: {remote_command}")
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=ssh_timeout,
+                check=False,
+                env=env,
+            )
+            if result.stdout.strip():
+                self._emit_pynq_terminal_log(board, result.stdout.strip())
+            if result.stderr.strip():
+                self._emit_pynq_terminal_log(board, result.stderr.strip())
+            if result.returncode != 0:
+                raise RuntimeError(
+                    result.stderr.strip() or result.stdout.strip() or "ssh detached command failed"
+                )
+            self._emit_pynq_terminal_log(board, "ssh step completed")
+        except subprocess.TimeoutExpired:
+            self._emit_pynq_terminal_log(
+                board,
+                f"ssh client timed out after {ssh_timeout:.0f}s; "
+                "background agent process was already started — proceeding to health check",
+            )
+        finally:
+            if cleanup is not None:
+                cleanup()
+
+    def _restart_user_space_agent(self, board: dict[str, Any], install_status: dict[str, Any]) -> None:
+        agent_venv_path = str(install_status.get("agentVenvPath") or board["remoteVenvPath"])
+        pynq_venv_path = str(install_status.get("pynqVenvPath") or board["remotePynqVenvPath"])
+        runtime_log_path = str(
+            install_status.get("runtimeLogPath") or f"{board['remoteInstallRoot']}/runtime.log"
+        )
+        install_status_path = self._remote_pynq_install_status_path(board)
+        overlay_dir = str(board["remoteOverlayDir"])
+        self._emit_pynq_terminal_log(
+            board, f"restarting user-space agent with NEUROCHIP_PYNQ_OVERLAY_DIR={overlay_dir}"
+        )
+        restart_cmd = (
+            f'pkill -f "{agent_venv_path}/bin/neurochip-pynq-agent" >/dev/null 2>&1 || true; '
+            f"sleep 1; "
+            f"nohup env "
+            f'NEUROCHIP_PYNQ_PYTHON="{pynq_venv_path}/bin/python" '
+            f'NEUROCHIP_PYNQ_INSTALL_MODE="user-space" '
+            f'NEUROCHIP_PYNQ_INSTALL_STATUS_PATH="{install_status_path}" '
+            f'NEUROCHIP_PYNQ_OVERLAY_DIR="{overlay_dir}" '
+            f'"{agent_venv_path}/bin/neurochip-pynq-agent" '
+            f'>"{runtime_log_path}" 2>&1 </dev/null &'
+        )
+        self._run_ssh_detached(board, restart_cmd)
+        self._emit_pynq_terminal_log(board, "waiting for restarted agent to become healthy")
+        self._wait_for_board_agent_health(board)
+
     def _run_scp(
         self,
         board: dict[str, Any],
@@ -1246,9 +1398,33 @@ class LauncherControlState:
         self._run_scp(board, hwh, f"{board['remoteOverlayDir']}/snn_overlay.hwh")
         self._emit_pynq_terminal_log(board, "uploading overlay_manifest.json")
         self._run_scp(board, manifest, f"{board['remoteOverlayDir']}/overlay_manifest.json")
-        self._emit_pynq_terminal_log(board, "overlay upload finished; fetching preflight")
+        self._emit_pynq_terminal_log(board, "overlay upload finished; checking install mode")
+        try:
+            install_status = self._read_remote_pynq_install_status(board)
+        except Exception:
+            install_status = {}
+        install_mode = str(install_status.get("installMode") or "unknown").strip()
+        restart_warning: str | None = None
+        if install_mode == "user-space":
+            try:
+                self._restart_user_space_agent(board, install_status)
+            except RuntimeError as exc:
+                restart_warning = str(exc)
+                self._emit_runtime_log_tail(board, install_status)
+                self._emit_pynq_terminal_log(
+                    board,
+                    (
+                        f"user-space agent restart did not become healthy: {exc}; "
+                        "overlay files are uploaded — restart the board or run "
+                        "restart-runtime manually"
+                    ),
+                    stderr=True,
+                )
+        self._emit_pynq_terminal_log(board, "fetching preflight")
         result = self.fetch_pynq_board_preflight(board_id)
         result["localOverlayPackage"] = overlay_package
+        if restart_warning is not None:
+            result["overlayRestartWarning"] = restart_warning
         return result
 
     def restart_pynq_runtime(self, board_id: str) -> dict[str, Any]:

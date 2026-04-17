@@ -15,6 +15,60 @@ import nmtk.launcher_control.server as launcher_server
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _stage_overlay_package(staging_dir: Path) -> None:
+    staging_dir.mkdir(parents=True, exist_ok=True)
+    (staging_dir / "snn_overlay.bit").write_bytes(b"bitstream")
+    (staging_dir / "snn_overlay.hwh").write_text("<hwh/>", encoding="utf-8")
+    (staging_dir / "overlay_manifest.json").write_text(
+        json.dumps(
+            {
+                "overlay_id": "snn_overlay_v1",
+                "overlay_version": "1.0.0",
+                "target_part": "xc7z020clg400-1",
+                "supported_neuron_models": ["LIF"],
+                "supported_weight_bit_widths": [8],
+                "max_neurons": 256,
+                "max_synapses": 65536,
+                "max_populations": 2,
+                "dma_ip_name": "axi_dma_0",
+                "snn_ip_name": "snn_engine_0",
+                "register_map": {
+                    "base_address": 1073741824,
+                    "control_reg_offset": 0,
+                    "status_reg_offset": 4,
+                    "population_count_offset": 8,
+                    "input_neuron_count_offset": 12,
+                    "output_neuron_count_offset": 16,
+                    "timestep_count_offset": 20,
+                    "threshold_base_offset": 256,
+                    "neuron_base_offset": 256,
+                    "weight_base_offset": 65536,
+                    "dma_channel": "axi_dma_0",
+                    "input_buffer_addr": 0,
+                    "output_buffer_addr": 0,
+                    "timestep_us": 1000,
+                },
+                "weight_layout": {
+                    "format": "int8_dense_row_major",
+                    "storage": "mmio",
+                    "base_offset": 65536,
+                    "stride_bytes": 1,
+                    "max_entries": 65536,
+                },
+                "threshold_layout": {
+                    "format": "float32_per_population",
+                    "storage": "mmio",
+                    "base_offset": 256,
+                    "stride_bytes": 4,
+                    "max_entries": 2,
+                },
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
 class LauncherControlServiceTest(unittest.TestCase):
     def setUp(self) -> None:
         self._tempdir = tempfile.TemporaryDirectory()
@@ -560,6 +614,12 @@ class LauncherControlServiceTest(unittest.TestCase):
             mock.patch.object(self.state, "_run_scp") as run_scp,
             mock.patch.object(
                 self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "systemd"},
+            ),
+            mock.patch.object(self.state, "_restart_user_space_agent") as restart_agent,
+            mock.patch.object(
+                self.state,
                 "fetch_pynq_board_preflight",
                 return_value={"board": {"state": "ready"}},
             ),
@@ -570,6 +630,7 @@ class LauncherControlServiceTest(unittest.TestCase):
             self.state._get_pynq_board(board["id"]),
             f"mkdir -p {board['remoteOverlayDir']}",
         )
+        restart_agent.assert_not_called()
         self.assertEqual(run_scp.call_count, 3)
         self.assertEqual(run_scp.call_args_list[0].args[1].resolve(), bitstream.resolve())
         self.assertEqual(
@@ -587,6 +648,115 @@ class LauncherControlServiceTest(unittest.TestCase):
             f"{board['remoteOverlayDir']}/overlay_manifest.json",
         )
         self.assertTrue(result["localOverlayPackage"]["ready"])
+        self.assertNotIn("overlayRestartWarning", result)
+
+    def test_install_pynq_overlay_assets_restarts_user_space_agent(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+        staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        _stage_overlay_package(staging_dir)
+
+        with (
+            mock.patch.object(self.state, "_run_ssh"),
+            mock.patch.object(self.state, "_run_scp"),
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "user-space"},
+            ),
+            mock.patch.object(self.state, "_restart_user_space_agent") as restart_agent,
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                return_value={"board": {"state": "degraded_optional_capability"}},
+            ),
+        ):
+            result = self.state.install_pynq_overlay_assets(board["id"])
+
+        restart_agent.assert_called_once()
+        self.assertNotIn("overlayRestartWarning", result)
+
+    def test_install_pynq_overlay_assets_returns_warning_when_agent_restart_times_out(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+        staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        _stage_overlay_package(staging_dir)
+
+        emissions: list[tuple[str, bool]] = []
+
+        def record_emit(_board: Any, message: str, *, stderr: bool = False) -> None:
+            emissions.append((message, stderr))
+
+        with (
+            mock.patch.object(self.state, "_run_scp"),
+            mock.patch.object(
+                self.state,
+                "_run_ssh",
+                side_effect=[None, "line1\nline2\n"],
+            ),
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={
+                    "installMode": "user-space",
+                    "runtimeLogPath": "/home/xilinx/.local/share/neurochip-pynq-agent/runtime.log",
+                },
+            ),
+            mock.patch.object(
+                self.state,
+                "_restart_user_space_agent",
+                side_effect=RuntimeError("agent did not become healthy within 60s"),
+            ),
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                return_value={"board": {"state": "degraded_optional_capability"}},
+            ),
+            mock.patch.object(self.state, "_emit_pynq_terminal_log", side_effect=record_emit),
+        ):
+            result = self.state.install_pynq_overlay_assets(board["id"])
+
+        self.assertIn("overlayRestartWarning", result)
+        self.assertIn("agent did not become healthy", result["overlayRestartWarning"])
+        tail_messages = [msg for msg, _stderr in emissions if msg.startswith("runtime.log | ")]
+        self.assertEqual(
+            tail_messages,
+            ["runtime.log | line1", "runtime.log | line2"],
+        )
+        summary_messages = [
+            msg for msg, _stderr in emissions if "restart did not become healthy" in msg
+        ]
+        self.assertTrue(summary_messages, "expected a summary line about restart failure")
+
+    def test_resolve_pynq_agent_health_timeout_respects_env_and_bounds(self) -> None:
+        cases = {
+            "": launcher_server.DEFAULT_PYNQ_AGENT_HEALTH_TIMEOUT_SECONDS,
+            "45": 45.0,
+            "2": launcher_server.PYNQ_AGENT_HEALTH_TIMEOUT_BOUNDS[0],
+            "9999": launcher_server.PYNQ_AGENT_HEALTH_TIMEOUT_BOUNDS[1],
+            "not-a-number": launcher_server.DEFAULT_PYNQ_AGENT_HEALTH_TIMEOUT_SECONDS,
+        }
+        for raw, expected in cases.items():
+            with mock.patch.dict(
+                os.environ,
+                {"NEUROCHIP_PYNQ_HEALTH_TIMEOUT_SECONDS": raw},
+                clear=False,
+            ):
+                self.assertEqual(
+                    launcher_server._resolve_pynq_agent_health_timeout(), expected, raw
+                )
 
     def test_fetch_pynq_board_preflight_marks_overlay_missing_when_assets_are_missing(self) -> None:
         board = self.state.create_pynq_board(
