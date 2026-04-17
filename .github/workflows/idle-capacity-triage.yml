@@ -146,6 +146,7 @@ jobs:
             - When in doubt, err toward p1 over p0
 
       - name: Invoke Jules to classify issues (fallback key)
+<<<<<<< Updated upstream
         id: jules-fallback
         if: steps.gate.outputs.should_run == 'true' && steps.jules-primary.outcome == 'failure'
         continue-on-error: true
@@ -188,6 +189,12 @@ jobs:
         uses: google-labs-code/jules-action@v1.0.0
         with:
           jules_api_key: ${{ secrets.JULES_API_KEY }}
+=======
+        if: steps.gate.outputs.should_run == 'true' && steps.jules-primary.outcome == 'failure'
+        uses: google-labs-code/jules-action@v1.0.0
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY_F }}
+>>>>>>> Stashed changes
           prompt: |
             You are a triage agent. The agent pipeline has idle capacity (${{ steps.gate.outputs.budget_used }} runs used today).
             Classify unlabeled GitHub issues so they are queued correctly.
