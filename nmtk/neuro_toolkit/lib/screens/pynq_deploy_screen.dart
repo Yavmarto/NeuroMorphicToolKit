@@ -43,6 +43,16 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
     super.dispose();
   }
 
+  String _exportabilityErrorGuidance(String errorMessage) {
+    final message = errorMessage.toLowerCase();
+    if (message.contains('localhost:8000') ||
+        message.contains('/api/deploy/pynq/network') ||
+        message.contains('connection refused')) {
+      return 'NeuroCNL is not reachable at http://localhost:8000, so the launcher cannot run Check Exportability yet. Start the CNL Studio service first, then retry Check Exportability. This check runs directly from the launcher UI, so this kind of connection failure may not appear in the launcher terminal.';
+    }
+    return 'Check Exportability could not complete. Review the error details below and make sure the NeuroCNL backend is reachable before retrying.';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,10 +90,8 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                         const SizedBox(height: 16),
                         _buildDeployPackageCard(context, provider),
                       ],
-                      if (provider.deployPayload != null) ...[
-                        const SizedBox(height: 16),
-                        _buildDeployActionCard(context, provider),
-                      ],
+                      const SizedBox(height: 16),
+                      _buildDeployActionCard(context, provider),
                       if (provider.deployJob != null) ...[
                         const SizedBox(height: 16),
                         _buildDeployStatusCard(context, provider),
@@ -780,19 +788,36 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
     final selectedBoard = provider.selectedBoard;
     final isDeploying = provider.currentStep == PynqDeployStep.deploying ||
         provider.currentStep == PynqDeployStep.polling;
+    final hasDeployPayload = provider.deployPayload != null;
+    final boardReady = selectedBoard?.state == PynqBoardState.ready;
+    final canDeploy =
+        !isDeploying && selectedBoard != null && hasDeployPayload && boardReady;
+    final prereqMessage = selectedBoard == null
+        ? 'Pair a board first, then run Check Exportability to prepare a deployable payload.'
+        : !hasDeployPayload
+            ? 'Run Check Exportability first. The launcher only enables deploy after NeuroCNL returns a validated PYNQ payload.'
+            : !boardReady
+                ? 'The board is paired, but not ready yet. Complete Provision Runtime, Install Overlay, and Check Readiness until the board state shows Ready.'
+                : 'Press Deploy to PYNQ to send the validated weights and runtime configuration to ${selectedBoard.displayName}.';
+    final expectationMessage = provider.deployJob == null
+        ? 'What to expect after pressing Deploy: the launcher sends the already validated payload to the board-hosted PYNQ runtime. It does not reprovision the runtime or reinstall the overlay; it configures the installed overlay so the board is ready for inference or optional SITL verification.'
+        : 'Deploy is in progress or completed. After configuration finishes, the board should be ready for inference, and you can optionally run SITL verification if enabled.';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Deploy And Verify',
+            Text('Deploy to PYNQ',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
             Text(
-              selectedBoard == null
-                  ? 'Pair and provision a board before deploy.'
-                  : 'Deploy will route through launcher-control to ${selectedBoard.displayName}.',
+              prereqMessage,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              expectationMessage,
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
@@ -815,9 +840,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                 const Expanded(
                     child: Text('Run SITL verification after deploy')),
                 FilledButton.icon(
-                  onPressed: isDeploying || selectedBoard == null
-                      ? null
-                      : () => provider.startDeploy(),
+                  onPressed: canDeploy ? () => provider.startDeploy() : null,
                   icon: isDeploying
                       ? const SizedBox(
                           width: 16,
@@ -825,7 +848,7 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.rocket_launch),
-                  label: Text(isDeploying ? 'Deploying...' : 'Deploy To Board'),
+                  label: Text(isDeploying ? 'Deploying...' : 'Deploy to PYNQ'),
                 ),
               ],
             ),
@@ -906,18 +929,35 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
   }
 
   Widget _buildErrorCard(BuildContext context, PynqDeployProvider provider) {
+    final errorMessage = provider.errorMessage!;
+    final guidance = _exportabilityErrorGuidance(errorMessage);
+
     return Card(
       color: Colors.red.withValues(alpha: 0.08),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Icon(Icons.error, color: Colors.red),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                provider.errorMessage!,
-                style: const TextStyle(color: Colors.red),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    guidance,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    errorMessage,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ],
               ),
             ),
           ],

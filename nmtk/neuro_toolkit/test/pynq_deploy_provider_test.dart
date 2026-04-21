@@ -97,6 +97,16 @@ class MockPynqDeployService extends PynqDeployService {
     required String spec,
     required int weightBitWidth,
   }) async {
+    if (spec == 'neurocnl offline') {
+      throw PynqDeployException(
+        error: 'NeuroCNL is not reachable at http://localhost:8000.',
+        messages: <String>[
+          'Start the CNL Studio / NeuroCNL service and retry Check Exportability.',
+          'This step needs the NeuroCNL backend because it calls /api/deploy/pynq/network.',
+        ],
+      );
+    }
+
     return exportResult ??
         const PynqNetworkResponse(
           supportState: PynqSupportState.exportable,
@@ -277,6 +287,30 @@ void main() {
       expect(provider.currentStep, PynqDeployStep.checked);
       expect(provider.deployPayload, isNotNull);
       expect(provider.bitstreamPathOverride, 'snn_overlay.bit');
+    });
+
+    test('checkExportability surfaces actionable NeuroCNL connection failure',
+        () async {
+      final provider = PynqDeployProvider(service: MockPynqDeployService());
+
+      await provider.checkExportability(
+        spec: 'neurocnl offline',
+        weightBitWidth: 4,
+      );
+
+      expect(provider.currentStep, PynqDeployStep.error);
+      expect(
+        provider.errorMessage,
+        contains('NeuroCNL is not reachable at http://localhost:8000.'),
+      );
+      expect(
+        provider.errorMessage,
+        contains('Start the CNL Studio / NeuroCNL service'),
+      );
+      expect(
+        provider.errorMessage,
+        contains('/api/deploy/pynq/network'),
+      );
     });
 
     test('startDeploy uses selected paired board', () async {

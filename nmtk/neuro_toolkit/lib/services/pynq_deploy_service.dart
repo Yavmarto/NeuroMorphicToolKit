@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
@@ -36,14 +37,22 @@ class PynqDeployService {
     required int weightBitWidth,
   }) async {
     final uri = Uri.parse('$_neurocnlBaseUrl/api/deploy/pynq/network');
-    final response = await _httpClient.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'spec': spec,
-        'weight_bit_width': weightBitWidth,
-      }),
-    );
+    http.Response response;
+
+    try {
+      response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'spec': spec,
+          'weight_bit_width': weightBitWidth,
+        }),
+      );
+    } on http.ClientException catch (e) {
+      throw _buildExportabilityConnectionException(uri, e);
+    } catch (e) {
+      throw _buildExportabilityUnknownException(uri, e);
+    }
 
     if (response.statusCode == 200) {
       return PynqNetworkResponse.fromJson(
@@ -67,6 +76,58 @@ class PynqDeployService {
       error: 'HTTP ${response.statusCode}',
       messages: [response.body],
     );
+  }
+
+  PynqDeployException _buildExportabilityConnectionException(
+    Uri uri,
+    http.ClientException error,
+  ) {
+    final host = uri.host.isEmpty ? 'localhost' : uri.host;
+    final port = uri.hasPort ? uri.port.toString() : '(default)';
+    final target = 'NeuroCNL exportability service at $host:$port';
+
+    if (_looksLikeConnectionRefused(error)) {
+      return PynqDeployException(
+        error: 'Could not reach $target.',
+        messages: [
+          'The launcher could not connect to ${uri.toString()}.',
+          'What to do next: start the CNL Studio / NeuroCNL backend, then run Check Exportability again.',
+          'If NeuroCNL is running on a different host or port, update the launcher configuration to point at that service.',
+          'Raw error: $error',
+        ],
+      );
+    }
+
+    return PynqDeployException(
+      error: 'Failed to contact $target.',
+      messages: [
+        'The launcher could not reach ${uri.toString()}.',
+        'Verify that the CNL Studio / NeuroCNL backend is running and reachable from this machine, then try Check Exportability again.',
+        'Raw error: $error',
+      ],
+    );
+  }
+
+  PynqDeployException _buildExportabilityUnknownException(
+    Uri uri,
+    Object error,
+  ) {
+    return PynqDeployException(
+      error: 'PYNQ exportability check failed before a response was received.',
+      messages: [
+        'The launcher could not complete the request to ${uri.toString()}.',
+        'Make sure the CNL Studio / NeuroCNL backend is running and reachable, then try again.',
+        'Raw error: $error',
+      ],
+    );
+  }
+
+  bool _looksLikeConnectionRefused(http.ClientException error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('connection refused') ||
+        message.contains('errno = 61') ||
+        message.contains('failed host lookup') ||
+        (kIsWeb && message.contains('xmlhttprequest error'));
   }
 
   Future<List<PynqPairedBoard>> fetchPairedBoards() async {

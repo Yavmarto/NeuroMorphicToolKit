@@ -193,6 +193,15 @@ void main() {
       expect(find.text('Paired Board'), findsOneWidget);
       expect(find.text('Provision Runtime'), findsOneWidget);
       expect(find.text('Check Readiness'), findsOneWidget);
+      expect(find.text('Deploy to PYNQ'), findsOneWidget);
+      expect(
+        find.textContaining('Run Check Exportability first'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('What to expect after pressing Deploy'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('loads runtime API URL override into the pairing form',
@@ -264,7 +273,14 @@ void main() {
 
       expect(find.text('Deployment Package'), findsOneWidget);
       expect(find.textContaining('2 packed weights'), findsOneWidget);
-      expect(find.text('Deploy And Verify'), findsOneWidget);
+      expect(find.text('Deploy to PYNQ'), findsWidgets);
+      expect(
+        find.textContaining(
+          'Press Deploy to PYNQ to send the validated weights and runtime configuration to Desk PYNQ.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Deploy to PYNQ'), findsOneWidget);
     });
 
     testWidgets('shows board activity feedback while provisioning',

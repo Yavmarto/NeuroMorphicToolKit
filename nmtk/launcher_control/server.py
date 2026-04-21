@@ -12,10 +12,9 @@ import socket
 import subprocess
 import sys
 import tempfile
+import textwrap
 import threading
 import time
-import tomllib
-import textwrap
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -26,6 +25,7 @@ from typing import Any, Callable
 from urllib.parse import urlparse
 from uuid import uuid4
 
+import tomllib
 
 STATUS_INDEX: dict[str, int] = {
     "notInstalled": 0,
@@ -66,9 +66,7 @@ PYNQ_RUNTIME_LOG_TAIL_LINES = 80
 DEFAULT_PYNQ_BOARD_USERNAME = "xilinx"
 DEFAULT_PYNQ_BOARD_STATE = "unpaired"
 DEFAULT_PYNQ_AUTH_MODE = "password"
-BENIGN_SSH_WARNING_PREFIXES = (
-    "Warning: Permanently added ",
-)
+BENIGN_SSH_WARNING_PREFIXES = ("Warning: Permanently added ",)
 PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE = (
     "Overlay files were uploaded, but the user-space runtime did not become healthy. "
     "Restart the board or run restart-runtime manually, then check readiness again."
@@ -215,9 +213,15 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
     ssh_port = raw.get("sshPort", DEFAULT_PYNQ_BOARD_SSH_PORT)
     if not isinstance(ssh_port, int):
         ssh_port = DEFAULT_PYNQ_BOARD_SSH_PORT
-    username = str(raw.get("username") or DEFAULT_PYNQ_BOARD_USERNAME).strip() or DEFAULT_PYNQ_BOARD_USERNAME
+    username = (
+        str(raw.get("username") or DEFAULT_PYNQ_BOARD_USERNAME).strip()
+        or DEFAULT_PYNQ_BOARD_USERNAME
+    )
     remote_install_root = str(raw.get("remoteInstallRoot") or "").strip()
-    if not remote_install_root or remote_install_root == LEGACY_PYNQ_REMOTE_INSTALL_ROOT:
+    if (
+        not remote_install_root
+        or remote_install_root == LEGACY_PYNQ_REMOTE_INSTALL_ROOT
+    ):
         remote_install_root = _default_pynq_remote_install_root(username)
 
     remote_venv_path = str(raw.get("remoteVenvPath") or "").strip()
@@ -226,7 +230,9 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
 
     remote_pynq_venv_path = str(raw.get("remotePynqVenvPath") or "").strip()
     if not remote_pynq_venv_path:
-        remote_pynq_venv_path = f"{remote_install_root}/{DEFAULT_PYNQ_REMOTE_PYNQ_VENV_DIRNAME}"
+        remote_pynq_venv_path = (
+            f"{remote_install_root}/{DEFAULT_PYNQ_REMOTE_PYNQ_VENV_DIRNAME}"
+        )
 
     remote_overlay_dir = str(raw.get("remoteOverlayDir") or "").strip()
     if not remote_overlay_dir or remote_overlay_dir == LEGACY_PYNQ_REMOTE_OVERLAY_DIR:
@@ -249,7 +255,9 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
         "lastPreflightStatus": str(raw.get("lastPreflightStatus") or "").strip(),
         "lastPreflightMessage": str(raw.get("lastPreflightMessage") or "").strip(),
         "lastRuntimeMode": str(raw.get("lastRuntimeMode") or "").strip(),
-        "lastStatus": raw.get("lastStatus") if isinstance(raw.get("lastStatus"), dict) else None,
+        "lastStatus": raw.get("lastStatus")
+        if isinstance(raw.get("lastStatus"), dict)
+        else None,
         "remoteInstallRoot": remote_install_root,
         "remoteVenvPath": remote_venv_path,
         "remotePynqVenvPath": remote_pynq_venv_path,
@@ -263,7 +271,9 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
 
 def _serialize_pynq_board(board: dict[str, Any]) -> dict[str, Any]:
     payload = dict(board)
-    payload["runtimeApiUrlOverride"] = str(payload.get("runtimeApiUrlOverride") or "").strip()
+    payload["runtimeApiUrlOverride"] = str(
+        payload.get("runtimeApiUrlOverride") or ""
+    ).strip()
     payload["runtimeApiUrl"] = _effective_runtime_api_url(
         str(payload.get("host") or "").strip(),
         str(payload.get("runtimeApiUrlOverride") or "").strip(),
@@ -311,7 +321,11 @@ def _module_venv_python(module: dict[str, Any]) -> Path:
     install_dir = _module_install_dir(module)
     if os.name == "nt":
         dotenv = install_dir / ".venv" / "Scripts" / "python.exe"
-        return dotenv if dotenv.exists() else install_dir / "venv" / "Scripts" / "python.exe"
+        return (
+            dotenv
+            if dotenv.exists()
+            else install_dir / "venv" / "Scripts" / "python.exe"
+        )
     dotenv = install_dir / ".venv" / "bin" / "python"
     return dotenv if dotenv.exists() else install_dir / "venv" / "bin" / "python"
 
@@ -320,7 +334,9 @@ def _module_venv_pip(module: dict[str, Any]) -> Path:
     install_dir = _module_install_dir(module)
     if os.name == "nt":
         dotenv = install_dir / ".venv" / "Scripts" / "pip.exe"
-        return dotenv if dotenv.exists() else install_dir / "venv" / "Scripts" / "pip.exe"
+        return (
+            dotenv if dotenv.exists() else install_dir / "venv" / "Scripts" / "pip.exe"
+        )
     dotenv = install_dir / ".venv" / "bin" / "pip"
     return dotenv if dotenv.exists() else install_dir / "venv" / "bin" / "pip"
 
@@ -347,7 +363,9 @@ def _module_uses_poetry(module: dict[str, Any]) -> bool:
     except (OSError, tomllib.TOMLDecodeError):
         return False
 
-    build_backend = str(pyproject.get("build-system", {}).get("build-backend", "")).strip()
+    build_backend = str(
+        pyproject.get("build-system", {}).get("build-backend", "")
+    ).strip()
     tool_table = pyproject.get("tool", {})
     return build_backend == "poetry.core.masonry.api" or "poetry" in tool_table
 
@@ -539,7 +557,10 @@ def _status_for_health_response(
     status_code: int,
     preflight_status: str,
 ) -> int:
-    if status_code == HTTPStatus.SERVICE_UNAVAILABLE or preflight_status == PREFLIGHT_DEGRADED:
+    if (
+        status_code == HTTPStatus.SERVICE_UNAVAILABLE
+        or preflight_status == PREFLIGHT_DEGRADED
+    ):
         return STATUS_INDEX["degraded"]
     return STATUS_INDEX["running"]
 
@@ -551,7 +572,9 @@ def _describe_pynq_preflight(preflight: dict[str, Any]) -> str:
         return "preflight ready"
     if status == PREFLIGHT_DEGRADED:
         return "degraded optional capability"
-    if isinstance(overlay_assets, dict) and not overlay_assets.get("ready_for_hardware", False):
+    if isinstance(overlay_assets, dict) and not overlay_assets.get(
+        "ready_for_hardware", False
+    ):
         return "preflight failed: overlay assets missing; install overlay assets next"
     return "preflight failed"
 
@@ -765,7 +788,9 @@ class LauncherControlState:
             module["directory"] = str(_module_root(module))
             module["remoteVersion"] = remote_versions.get(module_id, "0.0.0")
             module["versionPinned"] = bool(saved.get("versionPinned", False))
-            module["version"] = str(saved.get("version", module.get("version", "0.0.0")))
+            module["version"] = str(
+                saved.get("version", module.get("version", "0.0.0"))
+            )
             module["isEnabled"] = bool(saved.get("isEnabled", True))
             module["customPort"] = saved.get("customPort")
             status_index = saved.get("status", STATUS_INDEX["notInstalled"])
@@ -786,7 +811,9 @@ class LauncherControlState:
                 status_index = STATUS_INDEX["notInstalled"]
                 module["installProgress"] = 0.0
             module["status"] = status_index
-            module["installProgress"] = float(module.get("installProgress", saved.get("installProgress", 0.0)))
+            module["installProgress"] = float(
+                module.get("installProgress", saved.get("installProgress", 0.0))
+            )
             module["healthStatus"] = saved.get("healthStatus")
             module["requiredImports"] = _module_required_imports(module)
             module["optionalImports"] = _module_optional_imports(module)
@@ -847,7 +874,8 @@ class LauncherControlState:
                 "mujocoAvailable": self._settings["mujocoAvailable"],
                 "pythonAvailable": self._settings["pythonAvailable"],
                 "pynqBoards": [
-                    _serialize_pynq_board(board) for board in self._settings["pynqBoards"]
+                    _serialize_pynq_board(board)
+                    for board in self._settings["pynqBoards"]
                 ],
             }
 
@@ -884,10 +912,14 @@ class LauncherControlState:
             self._persist_settings()
             return _serialize_pynq_board(board)
 
-    def update_pynq_board(self, board_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def update_pynq_board(
+        self, board_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         with self._lock:
             board = self._get_pynq_board(board_id)
-            normalized = self._normalize_updated_pynq_board(board, {"id": board_id, **payload})
+            normalized = self._normalize_updated_pynq_board(
+                board, {"id": board_id, **payload}
+            )
             board.clear()
             board.update(normalized)
             self._persist_settings()
@@ -911,7 +943,9 @@ class LauncherControlState:
     def _update_pynq_board_fields(self, board_id: str, **fields: Any) -> dict[str, Any]:
         with self._lock:
             board = self._get_pynq_board(board_id)
-            normalized = self._normalize_updated_pynq_board(board, {"id": board_id, **fields})
+            normalized = self._normalize_updated_pynq_board(
+                board, {"id": board_id, **fields}
+            )
             board.clear()
             board.update(normalized)
             self._persist_settings()
@@ -932,9 +966,13 @@ class LauncherControlState:
             merged.pop("runtimeApiUrl", None)
         return _normalize_pynq_board(merged)
 
-    def _emit_pynq_terminal_log(self, board: dict[str, Any], message: str, *, stderr: bool = False) -> None:
+    def _emit_pynq_terminal_log(
+        self, board: dict[str, Any], message: str, *, stderr: bool = False
+    ) -> None:
         stream = sys.stderr if stderr else sys.stdout
-        board_label = str(board.get("displayName") or board.get("host") or board.get("id") or "pynq")
+        board_label = str(
+            board.get("displayName") or board.get("host") or board.get("id") or "pynq"
+        )
         print(f"[pynq:{board_label}] {message}", file=stream, flush=True)
 
     def _prepare_ssh_invocation(
@@ -1074,7 +1112,9 @@ class LauncherControlState:
         try:
             decoded = json.loads(raw)
         except json.JSONDecodeError as exc:
-            raise RuntimeError(f"Remote install status is not valid JSON: {raw}") from exc
+            raise RuntimeError(
+                f"Remote install status is not valid JSON: {raw}"
+            ) from exc
         if not isinstance(decoded, dict):
             raise RuntimeError("Remote install status must decode to an object")
         return decoded
@@ -1090,7 +1130,8 @@ class LauncherControlState:
         base_url = _resolved_pynq_runtime_api_url(board).rstrip("/")
         health_url = f"{base_url}/health"
         self._emit_pynq_terminal_log(
-            board, f"polling agent health at {health_url} (timeout {effective_timeout:.0f}s)"
+            board,
+            f"polling agent health at {health_url} (timeout {effective_timeout:.0f}s)",
         )
         start = time.monotonic()
         deadline = start + effective_timeout
@@ -1105,7 +1146,10 @@ class LauncherControlState:
             except Exception as exc:
                 last_exc = exc
             elapsed = time.monotonic() - start
-            if not heartbeat_emitted and elapsed >= PYNQ_AGENT_HEALTH_HEARTBEAT_AFTER_SECONDS:
+            if (
+                not heartbeat_emitted
+                and elapsed >= PYNQ_AGENT_HEALTH_HEARTBEAT_AFTER_SECONDS
+            ):
                 self._emit_pynq_terminal_log(
                     board, f"still polling /health ({elapsed:.0f}s elapsed)"
                 )
@@ -1141,7 +1185,9 @@ class LauncherControlState:
             return
         for line in tail.splitlines() or [tail]:
             if line:
-                self._emit_pynq_terminal_log(board, f"runtime.log | {line}", stderr=True)
+                self._emit_pynq_terminal_log(
+                    board, f"runtime.log | {line}", stderr=True
+                )
 
     def _build_remote_pynq_user_space_launch_command(
         self,
@@ -1185,7 +1231,9 @@ class LauncherControlState:
         target = f"{board['username']}@{board['host']}"
         command, env, cleanup = self._prepare_ssh_invocation(board)
         command.extend([target, remote_command])
-        self._emit_pynq_terminal_log(board, f"ssh (detached) -> {target}: {remote_command}")
+        self._emit_pynq_terminal_log(
+            board, f"ssh (detached) -> {target}: {remote_command}"
+        )
         try:
             result = subprocess.run(
                 command,
@@ -1201,19 +1249,17 @@ class LauncherControlState:
                 self._emit_pynq_terminal_log(board, result.stderr.strip())
             if result.returncode != 0:
                 stderr_lines = [
-                    line.strip()
-                    for line in result.stderr.splitlines()
-                    if line.strip()
+                    line.strip() for line in result.stderr.splitlines() if line.strip()
                 ]
                 non_benign_stderr = [
-                    line for line in stderr_lines if not _is_benign_ssh_warning_line(line)
+                    line
+                    for line in stderr_lines
+                    if not _is_benign_ssh_warning_line(line)
                 ]
                 if non_benign_stderr:
                     raise RuntimeError("\n".join(non_benign_stderr))
                 stdout_lines = [
-                    line.strip()
-                    for line in result.stdout.splitlines()
-                    if line.strip()
+                    line.strip() for line in result.stdout.splitlines() if line.strip()
                 ]
                 if stdout_lines:
                     raise RuntimeError("\n".join(stdout_lines))
@@ -1233,16 +1279,24 @@ class LauncherControlState:
             if cleanup is not None:
                 cleanup()
 
-    def _restart_user_space_agent(self, board: dict[str, Any], install_status: dict[str, Any]) -> None:
-        agent_venv_path = str(install_status.get("agentVenvPath") or board["remoteVenvPath"])
-        pynq_venv_path = str(install_status.get("pynqVenvPath") or board["remotePynqVenvPath"])
+    def _restart_user_space_agent(
+        self, board: dict[str, Any], install_status: dict[str, Any]
+    ) -> None:
+        agent_venv_path = str(
+            install_status.get("agentVenvPath") or board["remoteVenvPath"]
+        )
+        pynq_venv_path = str(
+            install_status.get("pynqVenvPath") or board["remotePynqVenvPath"]
+        )
         runtime_log_path = str(
-            install_status.get("runtimeLogPath") or f"{board['remoteInstallRoot']}/runtime.log"
+            install_status.get("runtimeLogPath")
+            or f"{board['remoteInstallRoot']}/runtime.log"
         )
         install_status_path = self._remote_pynq_install_status_path(board)
         overlay_dir = str(board["remoteOverlayDir"])
         self._emit_pynq_terminal_log(
-            board, f"restarting user-space agent with NEUROCHIP_PYNQ_OVERLAY_DIR={overlay_dir}"
+            board,
+            f"restarting user-space agent with NEUROCHIP_PYNQ_OVERLAY_DIR={overlay_dir}",
         )
         launch_command = self._build_remote_pynq_user_space_launch_command(
             agent_venv_path=agent_venv_path,
@@ -1257,7 +1311,9 @@ class LauncherControlState:
             f"{launch_command}"
         )
         self._run_ssh_detached(board, restart_cmd)
-        self._emit_pynq_terminal_log(board, "waiting for restarted agent to become healthy")
+        self._emit_pynq_terminal_log(
+            board, "waiting for restarted agent to become healthy"
+        )
         self._wait_for_board_agent_health(board)
 
     def _run_scp(
@@ -1291,7 +1347,9 @@ class LauncherControlState:
                 result.stderr.strip() or result.stdout.strip() or "scp command failed",
                 stderr=True,
             )
-            raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "scp command failed")
+            raise RuntimeError(
+                result.stderr.strip() or result.stdout.strip() or "scp command failed"
+            )
         self._emit_pynq_terminal_log(board, "scp step completed")
 
     def _runtime_json_request(
@@ -1314,12 +1372,36 @@ class LauncherControlState:
             headers=headers,
             method=method,
         )
-        with urllib.request.urlopen(request, timeout=15.0) as response:
-            body = response.read().decode("utf-8")
-            decoded = json.loads(body) if body else {}
-            if not isinstance(decoded, dict):
-                raise RuntimeError(f"Unexpected runtime response from {url}")
-            return decoded
+        try:
+            with urllib.request.urlopen(request, timeout=15.0) as response:
+                body = response.read().decode("utf-8")
+                decoded = json.loads(body) if body else {}
+                if not isinstance(decoded, dict):
+                    raise RuntimeError(f"Unexpected runtime response from {url}")
+                return decoded
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            self._emit_pynq_terminal_log(
+                board,
+                (
+                    f"runtime request failed: {method} {url} returned HTTP {exc.code}"
+                    + (f" with body: {error_body}" if error_body else "")
+                ),
+                stderr=True,
+            )
+            raise RuntimeError(
+                f"Runtime request failed for {method} {url}: HTTP {exc.code}"
+                + (f" — {error_body}" if error_body else "")
+            ) from exc
+        except urllib.error.URLError as exc:
+            self._emit_pynq_terminal_log(
+                board,
+                f"runtime request failed: {method} {url} could not be reached: {exc}",
+                stderr=True,
+            )
+            raise RuntimeError(
+                f"Runtime request failed for {method} {url}: {exc}"
+            ) from exc
 
     def _apply_preflight_to_board(
         self,
@@ -1337,7 +1419,9 @@ class LauncherControlState:
             board_state = "ready"
         elif status == PREFLIGHT_DEGRADED:
             board_state = "degraded_optional_capability"
-        elif isinstance(overlay_assets, dict) and not overlay_assets.get("ready_for_hardware", False):
+        elif isinstance(overlay_assets, dict) and not overlay_assets.get(
+            "ready_for_hardware", False
+        ):
             board_state = "overlay_missing"
         return self._update_pynq_board_fields(
             board_id,
@@ -1353,7 +1437,9 @@ class LauncherControlState:
         self._run_ssh(board, "python3 --version")
         self._emit_pynq_terminal_log(board, "SSH connectivity succeeded")
         return _serialize_pynq_board(
-            self._update_pynq_board_fields(board_id, state="reachable", lastPreflightMessage="SSH reachable")
+            self._update_pynq_board_fields(
+                board_id, state="reachable", lastPreflightMessage="SSH reachable"
+            )
         )
 
     def fetch_pynq_board_preflight(self, board_id: str) -> dict[str, Any]:
@@ -1381,7 +1467,9 @@ class LauncherControlState:
         )
         return {"board": _serialize_pynq_board(updated), "status": status}
 
-    def _build_local_pynq_bundle(self, board: dict[str, Any], bundle_dir: Path) -> dict[str, Any]:
+    def _build_local_pynq_bundle(
+        self, board: dict[str, Any], bundle_dir: Path
+    ) -> dict[str, Any]:
         neurochip_root = REPO_ROOT / "Neurochip"
         neurochip_package_root = str(neurochip_root)
         if neurochip_package_root not in sys.path:
@@ -1443,7 +1531,9 @@ class LauncherControlState:
                         f"&& rm -rf {remote_bundle_dir}"
                     ),
                 )
-                self._emit_pynq_terminal_log(board, f"uploading provisioning bundle to {remote_bundle_parent}")
+                self._emit_pynq_terminal_log(
+                    board, f"uploading provisioning bundle to {remote_bundle_parent}"
+                )
                 self._run_scp(board, bundle_dir, remote_bundle_parent, recursive=True)
                 self._emit_pynq_terminal_log(board, "running remote install script")
                 install_script_started = True
@@ -1461,13 +1551,18 @@ class LauncherControlState:
                     ),
                 )
                 install_status = self._read_remote_pynq_install_status(board)
-                install_mode = str(install_status.get("installMode") or "unknown").strip() or "unknown"
+                install_mode = (
+                    str(install_status.get("installMode") or "unknown").strip()
+                    or "unknown"
+                )
                 self._emit_pynq_terminal_log(
                     board,
                     f"runtime install mode resolved to {install_mode}",
                 )
             self._update_pynq_board_fields(board_id, state="runtime_installed")
-            self._emit_pynq_terminal_log(board, "runtime install finished; fetching preflight")
+            self._emit_pynq_terminal_log(
+                board, "runtime install finished; fetching preflight"
+            )
             result = self.fetch_pynq_board_preflight(board_id)
             board_state = str(result.get("board", {}).get("state") or "").strip()
             if board_state == "overlay_missing":
@@ -1475,8 +1570,13 @@ class LauncherControlState:
                     board,
                     "runtime installed successfully; overlay assets are still missing, so the board is not hardware-ready yet",
                 )
-            if board_state == "degraded_optional_capability" and install_mode == "user-space":
-                guidance = _pynq_user_space_upgrade_message(str(board.get("username") or ""))
+            if (
+                board_state == "degraded_optional_capability"
+                and install_mode == "user-space"
+            ):
+                guidance = _pynq_user_space_upgrade_message(
+                    str(board.get("username") or "")
+                )
                 updated = self._update_pynq_board_fields(
                     board_id,
                     state="degraded_optional_capability",
@@ -1492,7 +1592,9 @@ class LauncherControlState:
         except Exception as exc:  # noqa: BLE001
             if install_script_started:
                 self._emit_runtime_log_tail(board, install_status)
-            self._emit_pynq_terminal_log(board, f"runtime provisioning failed: {exc}", stderr=True)
+            self._emit_pynq_terminal_log(
+                board, f"runtime provisioning failed: {exc}", stderr=True
+            )
             updated = self._update_pynq_board_fields(
                 board_id,
                 state="provision_failed",
@@ -1538,15 +1640,21 @@ class LauncherControlState:
             board,
             f"using staged overlay package from {overlay_package['stagingDir']}",
         )
-        self._emit_pynq_terminal_log(board, f"ensuring remote overlay dir {board['remoteOverlayDir']}")
+        self._emit_pynq_terminal_log(
+            board, f"ensuring remote overlay dir {board['remoteOverlayDir']}"
+        )
         self._run_ssh(board, f"mkdir -p {board['remoteOverlayDir']}")
         self._emit_pynq_terminal_log(board, "uploading snn_overlay.bit")
         self._run_scp(board, bitstream, f"{board['remoteOverlayDir']}/snn_overlay.bit")
         self._emit_pynq_terminal_log(board, "uploading snn_overlay.hwh")
         self._run_scp(board, hwh, f"{board['remoteOverlayDir']}/snn_overlay.hwh")
         self._emit_pynq_terminal_log(board, "uploading overlay_manifest.json")
-        self._run_scp(board, manifest, f"{board['remoteOverlayDir']}/overlay_manifest.json")
-        self._emit_pynq_terminal_log(board, "overlay upload finished; checking install mode")
+        self._run_scp(
+            board, manifest, f"{board['remoteOverlayDir']}/overlay_manifest.json"
+        )
+        self._emit_pynq_terminal_log(
+            board, "overlay upload finished; checking install mode"
+        )
         try:
             install_status = self._read_remote_pynq_install_status(board)
         except Exception:
@@ -1609,7 +1717,9 @@ class LauncherControlState:
     def restart_pynq_runtime(self, board_id: str) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
         install_status = self._read_remote_pynq_install_status(board)
-        install_mode = str(install_status.get("installMode") or "unknown").strip() or "unknown"
+        install_mode = (
+            str(install_status.get("installMode") or "unknown").strip() or "unknown"
+        )
         if install_mode == "user-space":
             message = _pynq_user_space_upgrade_message(str(board.get("username") or ""))
             updated = self._update_pynq_board_fields(
@@ -1624,36 +1734,56 @@ class LauncherControlState:
                 "warning": message,
                 "installStatus": install_status,
             }
-        self._emit_pynq_terminal_log(board, f"restarting systemd service {board['remoteServiceName']}.service")
-        self._run_ssh(board, f"sudo systemctl restart {board['remoteServiceName']}.service")
-        self._emit_pynq_terminal_log(board, "waiting for restarted systemd service to become healthy")
+        self._emit_pynq_terminal_log(
+            board, f"restarting systemd service {board['remoteServiceName']}.service"
+        )
+        self._run_ssh(
+            board, f"sudo systemctl restart {board['remoteServiceName']}.service"
+        )
+        self._emit_pynq_terminal_log(
+            board, "waiting for restarted systemd service to become healthy"
+        )
         self._wait_for_board_agent_health(board)
-        self._emit_pynq_terminal_log(board, "runtime restart completed; fetching preflight")
+        self._emit_pynq_terminal_log(
+            board, "runtime restart completed; fetching preflight"
+        )
         result = self.fetch_pynq_board_preflight(board_id)
         result["installStatus"] = install_status
         return result
 
-    def proxy_pynq_deploy(self, board_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def proxy_pynq_deploy(
+        self, board_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
-        response = self._runtime_json_request(board, "POST", "/hardware/pynq/deploy", payload)
+        response = self._runtime_json_request(
+            board, "POST", "/hardware/pynq/deploy", payload
+        )
         return response
 
-    def proxy_pynq_verify(self, board_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def proxy_pynq_verify(
+        self, board_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
-        return self._runtime_json_request(board, "POST", "/hardware/pynq/verify", payload)
+        return self._runtime_json_request(
+            board, "POST", "/hardware/pynq/verify", payload
+        )
 
     def proxy_pynq_runtime_status(self, board_id: str) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
         return self._runtime_json_request(board, "GET", "/hardware/pynq/status")
 
-    def update_module_settings(self, module_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def update_module_settings(
+        self, module_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
         with self._lock:
             module = self._get_module(module_id)
             if "isEnabled" in payload:
                 module["isEnabled"] = bool(payload["isEnabled"])
             if "customPort" in payload:
                 custom_port = payload["customPort"]
-                module["customPort"] = custom_port if isinstance(custom_port, int) else None
+                module["customPort"] = (
+                    custom_port if isinstance(custom_port, int) else None
+                )
             if "versionPinned" in payload:
                 module["versionPinned"] = bool(payload["versionPinned"])
             self._persist_states()
@@ -1746,7 +1876,9 @@ class LauncherControlState:
         return task is not None and task.is_alive()
 
     def _spawn_task(self, module_id: str, target: Callable[[], None]) -> None:
-        thread = threading.Thread(target=self._run_task, args=(module_id, target), daemon=True)
+        thread = threading.Thread(
+            target=self._run_task, args=(module_id, target), daemon=True
+        )
         self._tasks[module_id] = thread
         thread.start()
 
@@ -1769,7 +1901,8 @@ class LauncherControlState:
         version = (result.stdout or result.stderr).strip()
         if result.returncode != 0 or not version:
             raise RuntimeError(
-                result.stderr.strip() or f"Failed to inspect Python version at {python_path}"
+                result.stderr.strip()
+                or f"Failed to inspect Python version at {python_path}"
             )
         return version
 
@@ -1858,14 +1991,20 @@ class LauncherControlState:
             check=False,
         )
         if result.stderr:
-            self._append_log(module["id"], result.stderr, stderr=True, emit_terminal=True)
+            self._append_log(
+                module["id"], result.stderr, stderr=True, emit_terminal=True
+            )
         if result.stdout:
             for line in result.stdout.splitlines():
                 if not line.startswith(PREFLIGHT_SENTINEL):
                     self._append_log(module["id"], line, emit_terminal=True)
 
         sentinel_line = next(
-            (line for line in result.stdout.splitlines() if line.startswith(PREFLIGHT_SENTINEL)),
+            (
+                line
+                for line in result.stdout.splitlines()
+                if line.startswith(PREFLIGHT_SENTINEL)
+            ),
             "",
         )
         if result.returncode != 0 or not sentinel_line:
@@ -1882,11 +2021,13 @@ class LauncherControlState:
         required_failures = [
             outcome for outcome in payload.get("required", []) if not outcome.get("ok")
         ]
-        capability_warnings = _dedupe_messages([
-            _message_from_probe_outcome(outcome, optional=True)
-            for outcome in payload.get("optional", [])
-            if not outcome.get("ok")
-        ])
+        capability_warnings = _dedupe_messages(
+            [
+                _message_from_probe_outcome(outcome, optional=True)
+                for outcome in payload.get("optional", [])
+                if not outcome.get("ok")
+            ]
+        )
 
         if required_failures:
             failure_messages = _dedupe_messages(
@@ -1910,7 +2051,9 @@ class LauncherControlState:
 
         return PreflightResult(status=PREFLIGHT_OK)
 
-    def _preflight_module(self, module: dict[str, Any], *, allow_repair: bool) -> PreflightResult:
+    def _preflight_module(
+        self, module: dict[str, Any], *, allow_repair: bool
+    ) -> PreflightResult:
         module_id = str(module["id"])
         install_dir = _module_install_dir(module)
         run_dir = _module_run_dir(module)
@@ -1987,7 +2130,9 @@ class LauncherControlState:
         self._install_sync(module_id)
         module = self._get_module(module_id)
         repaired_result = self._run_import_probe(module)
-        repaired_result.environment_fingerprint = self._compute_environment_fingerprint(module)
+        repaired_result.environment_fingerprint = self._compute_environment_fingerprint(
+            module
+        )
         return repaired_result
 
     def _install_sync(self, module_id: str) -> None:
@@ -2007,7 +2152,9 @@ class LauncherControlState:
         poetry = _poetry_command()
         use_poetry = _module_uses_poetry(module) and poetry is not None
 
-        self._update_module_fields(module_id, status=STATUS_INDEX["installing"], installProgress=0.1)
+        self._update_module_fields(
+            module_id, status=STATUS_INDEX["installing"], installProgress=0.1
+        )
         if use_poetry:
             # Configure Poetry before any `poetry run ...` command so repairs
             # consistently recreate an in-project `.venv`.
@@ -2029,7 +2176,15 @@ class LauncherControlState:
             if dep_path.exists():
                 if use_poetry:
                     self._run_command(
-                        [poetry, "run", "python", "-m", "pip", "install", str(dep_path)],
+                        [
+                            poetry,
+                            "run",
+                            "python",
+                            "-m",
+                            "pip",
+                            "install",
+                            str(dep_path),
+                        ],
                         cwd=install_dir,
                         module_id=module_id,
                     )
@@ -2104,7 +2259,9 @@ class LauncherControlState:
         module = self._get_module(module_id)
         start_strategy = _module_start_strategy(module)
         if start_strategy == "none":
-            raise RuntimeError(f"Module '{module_id}' does not define a runnable backend")
+            raise RuntimeError(
+                f"Module '{module_id}' does not define a runnable backend"
+            )
         if start_strategy not in SUPPORTED_START_STRATEGIES:
             raise RuntimeError(
                 f"Unsupported start strategy '{start_strategy}' for {module_id}"
@@ -2259,7 +2416,11 @@ class LauncherControlState:
                         status=next_status,
                         healthStatus=health_text
                         if health_text
-                        else ("No /health endpoint (server is up)" if status_code == 404 else None),
+                        else (
+                            "No /health endpoint (server is up)"
+                            if status_code == 404
+                            else None
+                        ),
                     )
                 elif module_id in self._processes:
                     self._update_module_fields(
@@ -2281,7 +2442,9 @@ class LauncherControlState:
         if result.stderr:
             self._append_log(module_id, result.stderr, stderr=True, emit_terminal=True)
         if result.returncode != 0:
-            raise RuntimeError(result.stderr.strip() or f"Command failed: {' '.join(command)}")
+            raise RuntimeError(
+                result.stderr.strip() or f"Command failed: {' '.join(command)}"
+            )
 
     def _append_log(
         self,
@@ -2309,7 +2472,9 @@ class LauncherControlState:
             for line in terminal_lines:
                 self._emit_terminal_log(module_id, line, stderr=stderr)
 
-    def _emit_terminal_log(self, module_id: str, line: str, *, stderr: bool = False) -> None:
+    def _emit_terminal_log(
+        self, module_id: str, line: str, *, stderr: bool = False
+    ) -> None:
         stream = sys.stderr if stderr else sys.stdout
         with self._terminal_lock:
             print(f"[{module_id}] {line}", file=stream, flush=True)
@@ -2331,7 +2496,9 @@ class LauncherControlState:
                 continue
             try:
                 os.kill(int(pid_text), 9)
-                self._append_log(module_id, f"Killed stale process {pid_text} on port {port}")
+                self._append_log(
+                    module_id, f"Killed stale process {pid_text} on port {port}"
+                )
             except OSError:
                 continue
 
@@ -2361,7 +2528,10 @@ class LauncherControlState:
                     status=PREFLIGHT_OK,
                     message="Module disabled",
                 )
-            elif int(module.get("status", STATUS_INDEX["notInstalled"])) == STATUS_INDEX["notInstalled"]:
+            elif (
+                int(module.get("status", STATUS_INDEX["notInstalled"]))
+                == STATUS_INDEX["notInstalled"]
+            ):
                 result = PreflightResult(
                     status=PREFLIGHT_OK,
                     message="Module not installed",
@@ -2395,7 +2565,9 @@ class LauncherControlState:
             )
 
         with self._lock:
-            board_snapshot = [dict(board) for board in self._settings.get("pynqBoards", [])]
+            board_snapshot = [
+                dict(board) for board in self._settings.get("pynqBoards", [])
+            ]
 
         for board in board_snapshot:
             state = _normalize_pynq_board_state(board.get("state"))
@@ -2415,7 +2587,9 @@ class LauncherControlState:
                     "lastPreflightStatus": board.get("lastPreflightStatus"),
                     "lastPreflightMessage": board.get("lastPreflightMessage"),
                     "runtimeApiUrl": _resolved_pynq_runtime_api_url(board),
-                    "runtimeApiUrlOverride": str(board.get("runtimeApiUrlOverride") or "").strip(),
+                    "runtimeApiUrlOverride": str(
+                        board.get("runtimeApiUrlOverride") or ""
+                    ).strip(),
                 }
             )
 
@@ -2552,10 +2726,17 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 return
 
             segments = [segment for segment in path.split("/") if segment]
-            if len(segments) >= 5 and segments[:4] == ["api", "launcher", "pynq", "boards"]:
+            if len(segments) >= 5 and segments[:4] == [
+                "api",
+                "launcher",
+                "pynq",
+                "boards",
+            ]:
                 board_id = segments[4]
                 if len(segments) == 5 and method == "GET":
-                    self._send_json(HTTPStatus.OK, self.server.state.get_pynq_board(board_id))
+                    self._send_json(
+                        HTTPStatus.OK, self.server.state.get_pynq_board(board_id)
+                    )
                     return
                 if len(segments) == 5 and method == "PUT":
                     self._send_json(
@@ -2567,31 +2748,51 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     self.server.state.delete_pynq_board(board_id)
                     self._send_json(HTTPStatus.NO_CONTENT, {})
                     return
-                if len(segments) == 6 and segments[5] == "connectivity-test" and method == "POST":
+                if (
+                    len(segments) == 6
+                    and segments[5] == "connectivity-test"
+                    and method == "POST"
+                ):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.test_pynq_board_connection(board_id),
                     )
                     return
-                if len(segments) == 6 and segments[5] == "provision" and method == "POST":
+                if (
+                    len(segments) == 6
+                    and segments[5] == "provision"
+                    and method == "POST"
+                ):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.provision_pynq_board(board_id),
                     )
                     return
-                if len(segments) == 6 and segments[5] == "install-overlay" and method == "POST":
+                if (
+                    len(segments) == 6
+                    and segments[5] == "install-overlay"
+                    and method == "POST"
+                ):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.install_pynq_overlay_assets(board_id),
                     )
                     return
-                if len(segments) == 6 and segments[5] == "restart-runtime" and method == "POST":
+                if (
+                    len(segments) == 6
+                    and segments[5] == "restart-runtime"
+                    and method == "POST"
+                ):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.restart_pynq_runtime(board_id),
                     )
                     return
-                if len(segments) == 6 and segments[5] == "preflight" and method == "GET":
+                if (
+                    len(segments) == 6
+                    and segments[5] == "preflight"
+                    and method == "GET"
+                ):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.fetch_pynq_board_preflight(board_id),
@@ -2615,7 +2816,11 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                         self.server.state.proxy_pynq_verify(board_id, body or {}),
                     )
                     return
-                if len(segments) == 6 and segments[5] == "runtime-status" and method == "GET":
+                if (
+                    len(segments) == 6
+                    and segments[5] == "runtime-status"
+                    and method == "GET"
+                ):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.proxy_pynq_runtime_status(board_id),
@@ -2631,7 +2836,9 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     )
                     return
                 if len(segments) == 5 and segments[4] == "logs" and method == "GET":
-                    self._send_json(HTTPStatus.OK, self.server.state.get_logs(module_id))
+                    self._send_json(
+                        HTTPStatus.OK, self.server.state.get_logs(module_id)
+                    )
                     return
                 if len(segments) == 5 and segments[4] == "install" and method == "POST":
                     self._send_json(
@@ -2646,9 +2853,15 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     )
                     return
                 if len(segments) == 5 and segments[4] == "stop" and method == "POST":
-                    self._send_json(HTTPStatus.OK, self.server.state.stop_module(module_id))
+                    self._send_json(
+                        HTTPStatus.OK, self.server.state.stop_module(module_id)
+                    )
                     return
-                if len(segments) == 5 and segments[4] == "uninstall" and method == "POST":
+                if (
+                    len(segments) == 5
+                    and segments[4] == "uninstall"
+                    and method == "POST"
+                ):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.uninstall_module(module_id),
@@ -2696,7 +2909,9 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(encoded)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        self.send_header(
+            "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"
+        )
         self.end_headers()
         if status != HTTPStatus.NO_CONTENT:
             self.wfile.write(encoded)
