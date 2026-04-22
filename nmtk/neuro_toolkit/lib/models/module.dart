@@ -10,6 +10,73 @@ enum ModuleStatus {
   updating,
 }
 
+class AkidaRuntimeConfig {
+  const AkidaRuntimeConfig({
+    required this.supportedPlatforms,
+    required this.pythonRange,
+    required this.requiredPackages,
+    required this.docsUrl,
+    this.localModeFallback = 'simulator_only',
+  });
+
+  final List<String> supportedPlatforms;
+  final String pythonRange;
+  final List<String> requiredPackages;
+  final String docsUrl;
+  final String localModeFallback;
+
+  factory AkidaRuntimeConfig.fromJson(Map<String, dynamic> json) {
+    return AkidaRuntimeConfig(
+      supportedPlatforms:
+          (json['supportedPlatforms'] as List<dynamic>? ?? const <dynamic>[])
+              .map((dynamic value) => value.toString())
+              .toList(growable: false),
+      pythonRange: json['pythonRange'] as String? ?? '>=3.10,<3.13',
+      requiredPackages:
+          (json['requiredPackages'] as List<dynamic>? ?? const <dynamic>[])
+              .map((dynamic value) => value.toString())
+              .toList(growable: false),
+      docsUrl: json['docsUrl'] as String? ?? '',
+      localModeFallback:
+          json['localModeFallback'] as String? ?? 'simulator_only',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'supportedPlatforms': supportedPlatforms,
+        'pythonRange': pythonRange,
+        'requiredPackages': requiredPackages,
+        'docsUrl': docsUrl,
+        'localModeFallback': localModeFallback,
+      };
+}
+
+class AkidaRuntimeState {
+  const AkidaRuntimeState({
+    required this.status,
+    this.message,
+    this.preparedAt,
+  });
+
+  final String status;
+  final String? message;
+  final String? preparedAt;
+
+  factory AkidaRuntimeState.fromJson(Map<String, dynamic> json) {
+    return AkidaRuntimeState(
+      status: json['status'] as String? ?? 'idle',
+      message: json['message'] as String?,
+      preparedAt: json['preparedAt'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'status': status,
+        'message': message,
+        'preparedAt': preparedAt,
+      };
+}
+
 class Module {
   final String id;
   final String name;
@@ -34,6 +101,8 @@ class Module {
   final List<String> optionalImports;
   final String installStrategy;
   final String startStrategy;
+  final AkidaRuntimeConfig? akidaRuntime;
+  final AkidaRuntimeState? akidaRuntimeState;
   String preflightStatus;
   String? preflightMessage;
   List<String> capabilityWarnings;
@@ -66,6 +135,8 @@ class Module {
     this.optionalImports = const [],
     this.installStrategy = 'pip',
     this.startStrategy = 'uvicorn',
+    this.akidaRuntime,
+    this.akidaRuntimeState,
     this.preflightStatus = 'ok',
     this.preflightMessage,
     this.capabilityWarnings = const [],
@@ -107,6 +178,16 @@ class Module {
               const [],
       installStrategy: json['installStrategy'] as String? ?? 'pip',
       startStrategy: json['startStrategy'] as String? ?? 'uvicorn',
+      akidaRuntime: json['akidaRuntime'] is Map<String, dynamic>
+          ? AkidaRuntimeConfig.fromJson(
+              json['akidaRuntime'] as Map<String, dynamic>,
+            )
+          : null,
+      akidaRuntimeState: json['akidaRuntimeState'] is Map<String, dynamic>
+          ? AkidaRuntimeState.fromJson(
+              json['akidaRuntimeState'] as Map<String, dynamic>,
+            )
+          : null,
       preflightStatus: json['preflightStatus'] as String? ?? 'ok',
       preflightMessage: json['preflightMessage'] as String?,
       capabilityWarnings:
@@ -145,6 +226,8 @@ class Module {
     List<String>? optionalImports,
     String? installStrategy,
     String? startStrategy,
+    Object? akidaRuntime = const Object(),
+    Object? akidaRuntimeState = const Object(),
     String? preflightStatus,
     Object? preflightMessage = const Object(),
     List<String>? capabilityWarnings,
@@ -177,6 +260,12 @@ class Module {
       optionalImports: optionalImports ?? this.optionalImports,
       installStrategy: installStrategy ?? this.installStrategy,
       startStrategy: startStrategy ?? this.startStrategy,
+      akidaRuntime: akidaRuntime is AkidaRuntimeConfig?
+          ? akidaRuntime
+          : this.akidaRuntime,
+      akidaRuntimeState: akidaRuntimeState is AkidaRuntimeState?
+          ? akidaRuntimeState
+          : this.akidaRuntimeState,
       preflightStatus: preflightStatus ?? this.preflightStatus,
       preflightMessage: preflightMessage is String?
           ? preflightMessage
@@ -230,6 +319,8 @@ class Module {
         'optionalImports': optionalImports,
         'installStrategy': installStrategy,
         'startStrategy': startStrategy,
+        'akidaRuntime': akidaRuntime?.toJson(),
+        'akidaRuntimeState': akidaRuntimeState?.toJson(),
         'preflightStatus': preflightStatus,
         'preflightMessage': preflightMessage,
         'capabilityWarnings': capabilityWarnings,

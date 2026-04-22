@@ -1,15 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
-import 'package:neuro_toolkit/providers/app_provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
-import 'package:neuro_toolkit/providers/teensy_deploy_provider.dart';
-import 'package:neuro_toolkit/providers/pynq_deploy_provider.dart';
-import 'package:neuro_toolkit/providers/akida_deploy_provider.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
-import 'package:neuro_toolkit/routing/router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +12,7 @@ void main() async {
   final analytics = AnalyticsService();
   await analytics.init();
 
-  final settings = SettingsProvider();
+  final settings = SettingsProvider(analyticsService: analytics);
   await settings.init();
 
   // Global error handlers for crash reporting
@@ -31,32 +26,23 @@ void main() async {
   };
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AppProvider()),
-        ChangeNotifierProvider.value(value: settings),
-        ChangeNotifierProxyProvider<SettingsProvider, ModuleProvider>(
-          create: (_) => ModuleProvider()..updateSettingsProvider(settings),
-          update: (_, settings, moduleProvider) {
-            return moduleProvider!..updateSettingsProvider(settings);
-          },
-        ),
-        Provider.value(value: analytics),
-        ChangeNotifierProvider(create: (_) => TeensyDeployProvider()),
-        ChangeNotifierProvider(create: (_) => PynqDeployProvider()),
-        ChangeNotifierProvider(create: (_) => AkidaDeployProvider()),
+    ProviderScope(
+      overrides: [
+        analyticsServiceProvider.overrideWithValue(analytics),
+        settingsStateProvider.overrideWith((ref) => settings),
       ],
       child: const NeuroToolkitApp(),
     ),
   );
 }
 
-class NeuroToolkitApp extends StatelessWidget {
+class NeuroToolkitApp extends ConsumerWidget {
   const NeuroToolkitApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsStateProvider);
+    final router = ref.watch(goRouterProvider);
 
     return MaterialApp.router(
       title: 'NeuroToolkit',
@@ -67,7 +53,7 @@ class NeuroToolkitApp extends StatelessWidget {
       darkTheme: settings.isHighContrast
           ? AppTheme.highContrastDarkTheme
           : AppTheme.darkTheme,
-      routerConfig: goRouter,
+      routerConfig: router,
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(

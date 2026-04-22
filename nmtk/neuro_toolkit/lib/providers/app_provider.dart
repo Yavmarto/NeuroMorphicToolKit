@@ -2,13 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:neuro_toolkit/services/preferences_service.dart';
 
 class AppProvider with ChangeNotifier {
-  static final AppProvider _instance = AppProvider._internal();
-  factory AppProvider() => _instance;
-  AppProvider._internal() {
+  AppProvider({PreferencesService? preferencesService})
+      : _prefs = preferencesService ?? PreferencesService() {
     _init();
   }
 
-  final PreferencesService _prefs = PreferencesService();
+  final PreferencesService _prefs;
 
   bool _hasSeenOnboarding = false;
   bool _isInitialized = false;

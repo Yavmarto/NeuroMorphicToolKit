@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/pynq_deploy_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 
-class PynqDeployScreen extends StatefulWidget {
+class PynqDeployScreen extends ConsumerStatefulWidget {
   const PynqDeployScreen({super.key});
 
   @override
-  State<PynqDeployScreen> createState() => _PynqDeployScreenState();
+  ConsumerState<PynqDeployScreen> createState() => _PynqDeployScreenState();
 }
 
-class _PynqDeployScreenState extends State<PynqDeployScreen> {
+class _PynqDeployScreenState extends ConsumerState<PynqDeployScreen> {
   final _specController = TextEditingController();
   final _displayNameController = TextEditingController();
   final _hostController = TextEditingController();
@@ -62,12 +63,13 @@ class _PynqDeployScreenState extends State<PynqDeployScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Reset workflow',
-            onPressed: () => context.read<PynqDeployProvider>().reset(),
+            onPressed: () => ref.read(pynqDeployStateProvider).reset(),
           ),
         ],
       ),
-      body: Consumer<PynqDeployProvider>(
-        builder: (context, provider, child) {
+      body: Builder(
+        builder: (context) {
+          final provider = ref.watch(pynqDeployStateProvider);
           _syncControllers(provider);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

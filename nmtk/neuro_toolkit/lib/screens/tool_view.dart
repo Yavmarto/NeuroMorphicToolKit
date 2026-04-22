@@ -2,26 +2,27 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 
-class ToolViewScreen extends StatefulWidget {
+class ToolViewScreen extends ConsumerStatefulWidget {
   final String initialModuleId;
 
   const ToolViewScreen({super.key, required this.initialModuleId});
 
   @override
-  State<ToolViewScreen> createState() => _ToolViewScreenState();
+  ConsumerState<ToolViewScreen> createState() => _ToolViewScreenState();
 }
 
-class _ToolViewScreenState extends State<ToolViewScreen> {
+class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   final Map<String, WebViewController> _controllers = {};
   final Map<String, bool> _readyStatus = {};
   final Map<String, Timer> _pollTimers = {};
@@ -80,7 +81,7 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
   }
 
   void _startPollingForActiveModules() {
-    final provider = context.read<ModuleProvider>();
+    final provider = ref.read(moduleStateProvider);
     for (final module in provider.activeModules) {
       if (module.isPreflightFailed || module.status == ModuleStatus.error) {
         _pollTimers[module.id]?.cancel();
@@ -181,7 +182,7 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
     Module currentModule,
     Uri requestUri,
   ) async {
-    final provider = context.read<ModuleProvider>();
+    final provider = ref.read(moduleStateProvider);
     final navigation = resolveCrossModuleNavigation(
       targetUri: requestUri,
       modules: provider.modules,
@@ -214,201 +215,195 @@ class _ToolViewScreenState extends State<ToolViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ModuleProvider>(
-      builder: (context, provider, child) {
-        final activeModules = provider.activeModules;
+    final provider = ref.watch(moduleStateProvider);
+    final activeModules = provider.activeModules;
 
-        if (activeModules.isEmpty) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Workspace')),
-            body: const Center(
-              child: Text(
-                'No modules launched. Go to Dashboard to launch a module.',
-              ),
-            ),
-          );
-        }
-
-        // Ensure _activeModuleId is still valid
-        if (!activeModules.any((m) => m.id == _activeModuleId)) {
-          _activeModuleId =
-              activeModules.isNotEmpty ? activeModules.last.id : '';
-        }
-
-        if (_activeModuleId.isEmpty) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Module Workspace'),
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(48),
-              child: ModuleTabBar(
-                activeModuleId: _activeModuleId,
-                onTabSelected: (String id) {
-                  setState(() {
-                    _activeModuleId = id;
-                  });
-                  _startPollingForActiveModules();
-                },
-                onTabClosed: (String id) {
-                  provider.closeTab(id);
-                  _pollTimers[id]?.cancel();
-                  _pollTimers.remove(id);
-                  if (activeModules.length <= 1) {
-                    context.go('/');
-                  } else if (_activeModuleId == id) {
-                    setState(() {
-                      _activeModuleId = provider.activeModuleIds.last;
-                    });
-                  }
-                },
-              ),
-            ),
-            actions: [
-              Semantics(
-                label: 'Open module in system browser',
-                button: true,
-                child: IconButton(
-                  icon: const Icon(Icons.open_in_browser),
-                  onPressed: () {
-                    final module = activeModules.firstWhere(
-                      (m) => m.id == _activeModuleId,
-                    );
-                    _launchInBrowser(module);
-                  },
-                  tooltip: 'Open in System Browser',
-                ),
-              ),
-              Semantics(
-                label: 'Stop currently active module',
-                button: true,
-                child: IconButton(
-                  icon: const Icon(Icons.stop_circle, color: Colors.red),
-                  onPressed: () {
-                    final idToStop = _activeModuleId;
-                    provider.stopModule(idToStop);
-                    _pollTimers[idToStop]?.cancel();
-                    _pollTimers.remove(idToStop);
-                    if (provider.activeModuleIds.isEmpty) {
-                      context.go('/');
-                    }
-                  },
-                  tooltip: 'Stop Module',
-                ),
-              ),
-            ],
+    if (activeModules.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Workspace')),
+        body: const Center(
+          child: Text(
+            'No modules launched. Go to Dashboard to launch a module.',
           ),
-          body: IndexedStack(
-            key: const ValueKey('ModuleStack'),
-            index: activeModules.indexWhere((m) => m.id == _activeModuleId),
-            children: activeModules.map((module) {
-              final isReady = _readyStatus[module.id] ?? false;
-              final supported = _isWebViewSupported();
-              final launchBlocked = module.isPreflightFailed ||
-                  module.status == ModuleStatus.error;
+        ),
+      );
+    }
 
-              return Container(
-                key: ValueKey(module.id),
-                child: launchBlocked
+    // Ensure _activeModuleId is still valid
+    if (!activeModules.any((m) => m.id == _activeModuleId)) {
+      _activeModuleId = activeModules.isNotEmpty ? activeModules.last.id : '';
+    }
+
+    if (_activeModuleId.isEmpty) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Module Workspace'),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: ModuleTabBar(
+            activeModuleId: _activeModuleId,
+            onTabSelected: (String id) {
+              setState(() {
+                _activeModuleId = id;
+              });
+              _startPollingForActiveModules();
+            },
+            onTabClosed: (String id) {
+              provider.closeTab(id);
+              _pollTimers[id]?.cancel();
+              _pollTimers.remove(id);
+              if (activeModules.length <= 1) {
+                context.go('/');
+              } else if (_activeModuleId == id) {
+                setState(() {
+                  _activeModuleId = provider.activeModuleIds.last;
+                });
+              }
+            },
+          ),
+        ),
+        actions: [
+          Semantics(
+            label: 'Open module in system browser',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.open_in_browser),
+              onPressed: () {
+                final module = activeModules.firstWhere(
+                  (m) => m.id == _activeModuleId,
+                );
+                _launchInBrowser(module);
+              },
+              tooltip: 'Open in System Browser',
+            ),
+          ),
+          Semantics(
+            label: 'Stop currently active module',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.stop_circle, color: Colors.red),
+              onPressed: () {
+                final idToStop = _activeModuleId;
+                provider.stopModule(idToStop);
+                _pollTimers[idToStop]?.cancel();
+                _pollTimers.remove(idToStop);
+                if (provider.activeModuleIds.isEmpty) {
+                  context.go('/');
+                }
+              },
+              tooltip: 'Stop Module',
+            ),
+          ),
+        ],
+      ),
+      body: IndexedStack(
+        key: const ValueKey('ModuleStack'),
+        index: activeModules.indexWhere((m) => m.id == _activeModuleId),
+        children: activeModules.map((module) {
+          final isReady = _readyStatus[module.id] ?? false;
+          final supported = _isWebViewSupported();
+          final launchBlocked =
+              module.isPreflightFailed || module.status == ModuleStatus.error;
+
+          return Container(
+            key: ValueKey(module.id),
+            child: launchBlocked
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 52,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            module.statusMessage ??
+                                'This module could not be started.',
+                            textAlign: TextAlign.center,
+                          ),
+                          if (module.capabilityWarnings.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              module.capabilityWarnings.join('\n'),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: () => provider.launchModule(module.id),
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry Start'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : !isReady
                     ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                size: 52,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(height: 16),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 16),
+                            Text('Waiting for ${module.name} to start...'),
+                            if (module.statusMessage != null) ...[
+                              const SizedBox(height: 8),
                               Text(
-                                module.statusMessage ??
-                                    'This module could not be started.',
+                                module.statusMessage!,
                                 textAlign: TextAlign.center,
                               ),
-                              if (module.capabilityWarnings.isNotEmpty) ...[
-                                const SizedBox(height: 12),
-                                Text(
-                                  module.capabilityWarnings.join('\n'),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                              const SizedBox(height: 16),
-                              ElevatedButton.icon(
-                                onPressed: () =>
-                                    provider.launchModule(module.id),
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Retry Start'),
-                              ),
                             ],
-                          ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Checking ${_moduleUri(module, healthCheck: true)}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: () => _launchInBrowser(module),
+                              icon: const Icon(Icons.open_in_browser),
+                              label: const Text('Open in Browser instead'),
+                            ),
+                          ],
                         ),
                       )
-                    : !isReady
-                        ? Center(
+                    : supported
+                        ? WebViewWidget(controller: _getController(module))
+                        : Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const CircularProgressIndicator(),
+                                const Icon(
+                                  Icons.warning,
+                                  size: 48,
+                                  color: Colors.orange,
+                                ),
                                 const SizedBox(height: 16),
-                                Text('Waiting for ${module.name} to start...'),
-                                if (module.statusMessage != null) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    module.statusMessage!,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Checking ${_moduleUri(module, healthCheck: true)}',
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                const Text(
+                                  'WebView not supported on this platform.',
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   onPressed: () => _launchInBrowser(module),
                                   icon: const Icon(Icons.open_in_browser),
-                                  label: const Text('Open in Browser instead'),
+                                  label: const Text('Open in System Browser'),
                                 ),
                               ],
                             ),
-                          )
-                        : supported
-                            ? WebViewWidget(controller: _getController(module))
-                            : Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.warning,
-                                      size: 48,
-                                      color: Colors.orange,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                      'WebView not supported on this platform.',
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton.icon(
-                                      onPressed: () => _launchInBrowser(module),
-                                      icon: const Icon(Icons.open_in_browser),
-                                      label:
-                                          const Text('Open in System Browser'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-              );
-            }).toList(),
-          ),
-        );
-      },
+                          ),
+          );
+        }).toList(),
+      ),
     );
   }
 }

@@ -7,6 +7,9 @@ import 'package:neuro_toolkit/services/analytics_service.dart';
 enum LogLevel { info, debug, warning, error, critical }
 
 class SettingsProvider with ChangeNotifier {
+  SettingsProvider({AnalyticsService? analyticsService})
+      : _analytics = analyticsService ?? AnalyticsService();
+
   static const String _telemetryKey = 'telemetry_enabled';
   static const String _endpointKey = 'remote_endpoint';
   static const String _themeModeKey = 'theme_mode';
@@ -24,6 +27,7 @@ class SettingsProvider with ChangeNotifier {
   Map<String, Map<String, dynamic>> _moduleSettings = {};
 
   late final SharedPreferences _prefs;
+  final AnalyticsService _analytics;
   bool _initialized = false;
 
   bool get telemetryEnabled => _telemetryEnabled;
@@ -60,9 +64,8 @@ class SettingsProvider with ChangeNotifier {
     }
 
     // Sync with AnalyticsService
-    final analytics = AnalyticsService();
-    analytics.telemetryEnabled = _telemetryEnabled;
-    analytics.remoteEndpoint = _remoteEndpoint;
+    _analytics.telemetryEnabled = _telemetryEnabled;
+    _analytics.remoteEndpoint = _remoteEndpoint;
 
     _initialized = true;
     notifyListeners();
@@ -71,7 +74,7 @@ class SettingsProvider with ChangeNotifier {
   Future<void> setTelemetryEnabled(bool value) async {
     _telemetryEnabled = value;
     await _prefs.setBool(_telemetryKey, value);
-    AnalyticsService().telemetryEnabled = value;
+    _analytics.telemetryEnabled = value;
     notifyListeners();
   }
 
@@ -82,7 +85,7 @@ class SettingsProvider with ChangeNotifier {
     } else {
       await _prefs.setString(_endpointKey, value);
     }
-    AnalyticsService().remoteEndpoint = value;
+    _analytics.remoteEndpoint = value;
     notifyListeners();
   }
 

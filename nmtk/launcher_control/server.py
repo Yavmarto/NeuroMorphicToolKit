@@ -18,6 +18,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -465,6 +466,82 @@ def _effective_port(module: dict[str, Any]) -> int | None:
     return port if isinstance(port, int) else None
 
 
+def _current_platform_key() -> str:
+    if sys.platform.startswith("linux"):
+        return "linux"
+    if sys.platform.startswith(("win32", "cygwin")):
+        return "windows"
+    if sys.platform == "darwin":
+        return "macos"
+    return sys.platform
+
+
+def _normalize_akida_runtime_config(raw: Any) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    return {
+        "supportedPlatforms": [
+            str(value).strip()
+            for value in raw.get("supportedPlatforms", [])
+            if str(value).strip()
+        ],
+        "pythonRange": str(raw.get("pythonRange") or ">=3.10,<3.13").strip(),
+        "requiredPackages": [
+            str(value).strip()
+            for value in raw.get("requiredPackages", [])
+            if str(value).strip()
+        ],
+        "docsUrl": str(raw.get("docsUrl") or "").strip(),
+        "localModeFallback": str(raw.get("localModeFallback") or "simulator_only").strip(),
+    }
+
+
+def _normalize_akida_runtime_state(raw: Any) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    status = str(raw.get("status") or "").strip()
+    if not status:
+        return None
+    return {
+        "status": status,
+        "message": str(raw.get("message") or "").strip() or None,
+        "preparedAt": str(raw.get("preparedAt") or "").strip() or None,
+    }
+
+
+def _parse_version_tuple(version: str) -> tuple[int, int, int] | None:
+    parts = [part.strip() for part in version.split(".") if part.strip()]
+    if len(parts) < 2:
+        return None
+    try:
+        parsed = [int(part) for part in parts[:3]]
+    except ValueError:
+        return None
+    while len(parsed) < 3:
+        parsed.append(0)
+    return parsed[0], parsed[1], parsed[2]
+
+
+def _version_matches_range(version: str, version_range: str) -> bool:
+    parsed_version = _parse_version_tuple(version)
+    if parsed_version is None:
+        return False
+    for raw_part in version_range.split(","):
+        part = raw_part.strip()
+        if not part:
+            continue
+        if part.startswith(">="):
+            minimum = _parse_version_tuple(part[2:])
+            if minimum is None or parsed_version < minimum:
+                return False
+            continue
+        if part.startswith("<"):
+            maximum = _parse_version_tuple(part[1:])
+            if maximum is None or parsed_version >= maximum:
+                return False
+    return True
+
+
 def _uvicorn_host() -> str:
     host = os.environ.get("NMTK_UVICORN_HOST", "127.0.0.1").strip()
     return host or "127.0.0.1"
@@ -823,6 +900,12 @@ class LauncherControlState:
             module["optionalImports"] = _module_optional_imports(module)
             module["installStrategy"] = _module_install_strategy(module)
             module["startStrategy"] = _module_start_strategy(module)
+            module["akidaRuntime"] = _normalize_akida_runtime_config(
+                module.get("akidaRuntime")
+            )
+            module["akidaRuntimeState"] = _normalize_akida_runtime_state(
+                saved.get("akidaRuntimeState")
+            )
             module["preflightStatus"] = str(saved.get("preflightStatus", PREFLIGHT_OK))
             module["preflightMessage"] = saved.get("preflightMessage")
             module["capabilityWarnings"] = _normalized_import_list(
@@ -1823,6 +1906,107 @@ class LauncherControlState:
             self._spawn_task(module_id, lambda: self._update_sync(module_id))
             return self._serialize_module(module)
 
+    def prepare_akida_runtime(self, module_id: str) -> dict[str, Any]:
+        module = self._get_module(module_id)
+        runtime = _normalize_akida_runtime_config(module.get("akidaRuntime"))
+        if runtime is None:
+            raise RuntimeError(f"Module '{module_id}' does not define an Akida runtime profile")
+
+        preflight = self._preflight_module(module, allow_repair=False)
+        self._update_module_fields(module_id, **preflight.state_fields())
+        if preflight.status == PREFLIGHT_FAILED:
+            self._update_module_fields(
+                module_id,
+                akidaRuntimeState={
+                    "status": "error",
+                    "message": preflight.message or "Module preflight failed",
+                    "preparedAt": None,
+                },
+            )
+            return self.serialize_module(module_id)
+
+        platform_key = _current_platform_key()
+        if platform_key not in runtime["supportedPlatforms"]:
+            self._update_module_fields(
+                module_id,
+                akidaRuntimeState={
+                    "status": "unsupported_host",
+                    "message": (
+                        "Local Akida SDK install is not supported on this host. "
+                        "Use the local simulator and a Linux or Windows Neurochip "
+                        "host for SDK verification."
+                    ),
+                    "preparedAt": None,
+                },
+            )
+            return self.serialize_module(module_id)
+
+        install_dir = _module_install_dir(module)
+        python_path = _module_python_path(module)
+        python_version_result = self._run_command(
+            [
+                str(python_path),
+                "-c",
+                'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")',
+            ],
+            cwd=install_dir,
+            module_id=module_id,
+        )
+        python_version = str(python_version_result.stdout or "").strip()
+        if not _version_matches_range(python_version, runtime["pythonRange"]):
+            self._update_module_fields(
+                module_id,
+                akidaRuntimeState={
+                    "status": "unsupported_python",
+                    "message": (
+                        "Akida SDK installation requires Python "
+                        f"{runtime['pythonRange']}; current module env is "
+                        f"{python_version or 'unknown'}."
+                    ),
+                    "preparedAt": None,
+                },
+            )
+            return self.serialize_module(module_id)
+
+        self._update_module_fields(
+            module_id,
+            akidaRuntimeState={
+                "status": "preparing",
+                "message": "Installing Akida runtime dependencies...",
+                "preparedAt": None,
+            },
+        )
+
+        if _module_uses_poetry(module) and (poetry := _poetry_command()) is not None:
+            command = [
+                poetry,
+                "run",
+                "python",
+                "-m",
+                "pip",
+                "install",
+                *runtime["requiredPackages"],
+            ]
+        else:
+            command = [
+                str(python_path),
+                "-m",
+                "pip",
+                "install",
+                *runtime["requiredPackages"],
+            ]
+        self._run_command(command, cwd=install_dir, module_id=module_id)
+
+        self._update_module_fields(
+            module_id,
+            akidaRuntimeState={
+                "status": "ready",
+                "message": "Akida runtime is prepared for local SDK verification.",
+                "preparedAt": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        return self.serialize_module(module_id)
+
     def start_module(self, module_id: str) -> dict[str, Any]:
         with self._lock:
             module = self._get_module(module_id)
@@ -2655,6 +2839,9 @@ class LauncherControlState:
                 "optionalImports": list(module.get("optionalImports", [])),
                 "installStrategy": module.get("installStrategy", "pip"),
                 "startStrategy": module.get("startStrategy", "uvicorn"),
+                "akidaRuntimeState": _normalize_akida_runtime_state(
+                    module.get("akidaRuntimeState")
+                ),
             }
             for module_id, module in self._modules.items()
         }
@@ -2875,6 +3062,17 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         HTTPStatus.ACCEPTED,
                         self.server.state.update_module(module_id),
+                    )
+                    return
+                if (
+                    len(segments) == 6
+                    and segments[4] == "akida-runtime"
+                    and segments[5] == "prepare"
+                    and method == "POST"
+                ):
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.prepare_akida_runtime(module_id),
                     )
                     return
                 if len(segments) == 5 and segments[4] == "settings" and method == "PUT":

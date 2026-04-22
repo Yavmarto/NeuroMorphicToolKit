@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
@@ -11,74 +11,75 @@ import 'package:neuro_toolkit/screens/onboarding.dart';
 import 'package:neuro_toolkit/screens/teensy_deploy_screen.dart';
 import 'package:neuro_toolkit/screens/pynq_deploy_screen.dart';
 import 'package:neuro_toolkit/screens/akida_deploy_screen.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/app_provider.dart';
 
-// ignore: avoid_dynamic_calls
-final goRouter = GoRouter(
-  initialLocation: '/',
-  refreshListenable: AppProvider(),
-  redirect: (context, state) {
-    final appProvider = AppProvider();
-    if (!appProvider.isInitialized) return null; // Wait for init
-    if (!appProvider.hasSeenOnboarding && state.uri.path != '/onboarding') {
-      return '/onboarding';
-    }
-    return null;
-  },
-  routes: [
-    GoRoute(
-      path: '/onboarding',
-      name: 'onboarding',
-      builder: (context, state) => const OnboardingScreen(),
-    ),
-    ShellRoute(
-      builder: (context, state, child) => MainScreen(child: child),
-      routes: [
-        GoRoute(
-          path: '/',
-          name: 'dashboard',
-          builder: (context, state) => const DashboardScreen(),
-        ),
-        GoRoute(
-          path: '/catalog',
-          name: 'catalog',
-          builder: (context, state) => const CatalogScreen(),
-        ),
-        GoRoute(
-          path: '/tool/:moduleId',
-          name: 'tool',
-          builder: (context, state) {
-            final moduleId = state.pathParameters['moduleId']!;
-            return ToolViewScreen(initialModuleId: moduleId);
-          },
-        ),
-        GoRoute(
-          path: '/settings',
-          name: 'settings',
-          builder: (context, state) => const SettingsScreen(),
-        ),
-        GoRoute(
-          path: '/deploy/teensy',
-          name: 'teensy-deploy',
-          builder: (context, state) => const TeensyDeployScreen(),
-        ),
-        GoRoute(
-          path: '/deploy/pynq',
-          name: 'pynq-deploy',
-          builder: (context, state) => const PynqDeployScreen(),
-        ),
-        GoRoute(
-          path: '/deploy/akida',
-          name: 'akida-deploy',
-          builder: (context, state) => const AkidaDeployScreen(),
-        ),
-      ],
-    ),
-  ],
-);
+GoRouter createGoRouter(AppProvider appProvider) {
+  return GoRouter(
+    initialLocation: '/',
+    refreshListenable: appProvider,
+    redirect: (context, state) {
+      if (!appProvider.isInitialized) return null;
+      if (!appProvider.hasSeenOnboarding && state.uri.path != '/onboarding') {
+        return '/onboarding';
+      }
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      ShellRoute(
+        builder: (context, state, child) => MainScreen(child: child),
+        routes: [
+          GoRoute(
+            path: '/',
+            name: 'dashboard',
+            builder: (context, state) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/catalog',
+            name: 'catalog',
+            builder: (context, state) => const CatalogScreen(),
+          ),
+          GoRoute(
+            path: '/tool/:moduleId',
+            name: 'tool',
+            builder: (context, state) {
+              final moduleId = state.pathParameters['moduleId']!;
+              return ToolViewScreen(initialModuleId: moduleId);
+            },
+          ),
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/deploy/teensy',
+            name: 'teensy-deploy',
+            builder: (context, state) => const TeensyDeployScreen(),
+          ),
+          GoRoute(
+            path: '/deploy/pynq',
+            name: 'pynq-deploy',
+            builder: (context, state) => const PynqDeployScreen(),
+          ),
+          GoRoute(
+            path: '/deploy/akida',
+            name: 'akida-deploy',
+            builder: (context, state) => const AkidaDeployScreen(),
+          ),
+        ],
+      ),
+    ],
+  );
+}
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends ConsumerWidget {
   final Widget child;
   const MainScreen({super.key, required this.child});
 
@@ -140,8 +141,8 @@ class MainScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<ModuleProvider>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final provider = ref.watch(moduleStateProvider);
 
     // If Python is not available, show setup screen instead of normal UI
     if (!provider.pythonAvailable && !provider.isLoading) {

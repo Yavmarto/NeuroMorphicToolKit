@@ -2,10 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:provider/provider.dart';
 
 import 'package:neuro_toolkit/providers/pynq_deploy_provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/pynq_deploy_screen.dart';
 import 'package:neuro_toolkit/services/pynq_deploy_service.dart';
 
@@ -174,8 +175,10 @@ class _NopPynqDeployService extends PynqDeployService {
 
 Widget _buildTestApp(PynqDeployProvider provider) {
   return MaterialApp(
-    home: ChangeNotifierProvider<PynqDeployProvider>.value(
-      value: provider,
+    home: ProviderScope(
+      overrides: [
+        pynqDeployStateProvider.overrideWith((ref) => provider),
+      ],
       child: const PynqDeployScreen(),
     ),
   );
@@ -193,7 +196,7 @@ void main() {
       expect(find.text('Paired Board'), findsOneWidget);
       expect(find.text('Provision Runtime'), findsOneWidget);
       expect(find.text('Check Readiness'), findsOneWidget);
-      expect(find.text('Deploy to PYNQ'), findsOneWidget);
+      expect(find.text('Deploy to PYNQ'), findsWidgets);
       expect(
         find.textContaining('Run Check Exportability first'),
         findsOneWidget,
@@ -280,7 +283,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Deploy to PYNQ'), findsOneWidget);
+      expect(find.text('Deploy to PYNQ'), findsWidgets);
     });
 
     testWidgets('shows board activity feedback while provisioning',

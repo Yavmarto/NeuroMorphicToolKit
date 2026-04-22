@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/screens/catalog.dart';
-import 'package:provider/provider.dart';
 
 class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockModules = [];
@@ -214,6 +215,31 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('Module.fromJson parses Akida runtime metadata', () {
+    final module = Module.fromJson({
+      'id': 'Neurochip',
+      'name': 'NeuroChip',
+      'description': 'Hardware deployment',
+      'installPath': 'Neurochip/',
+      'akidaRuntime': {
+        'supportedPlatforms': ['linux', 'windows'],
+        'pythonRange': '>=3.10,<3.13',
+        'requiredPackages': ['akida==2.19.1'],
+        'docsUrl': 'https://doc.brainchipinc.com/installation.html',
+        'localModeFallback': 'simulator_only',
+      },
+      'akidaRuntimeState': {
+        'status': 'ready',
+        'message': 'Prepared',
+        'preparedAt': '2026-04-22T10:00:00Z',
+      },
+    });
+
+    expect(module.akidaRuntime, isNotNull);
+    expect(module.akidaRuntime!.supportedPlatforms, ['linux', 'windows']);
+    expect(module.akidaRuntimeState?.status, 'ready');
+  });
+
   testWidgets('CatalogScreen shows all 7 modules', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1920, 2000);
     tester.view.devicePixelRatio = 1.0;
@@ -222,10 +248,12 @@ void main() {
     provider.loadModules();
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ChangeNotifierProvider<ModuleProvider>.value(
-          value: provider,
-          child: const CatalogScreen(),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => provider),
+        ],
+        child: const MaterialApp(
+          home: CatalogScreen(),
         ),
       ),
     );
@@ -252,10 +280,12 @@ void main() {
     provider.loadModules();
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ChangeNotifierProvider<ModuleProvider>.value(
-          value: provider,
-          child: const CatalogScreen(),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => provider),
+        ],
+        child: const MaterialApp(
+          home: CatalogScreen(),
         ),
       ),
     );

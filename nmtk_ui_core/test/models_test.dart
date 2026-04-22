@@ -318,4 +318,31 @@ void main() {
       expect(result.passedCases, 1);
     });
   });
+
+  group('AkidaSdkVerification', () {
+    test('fromJson parses environment checks for simulator-only hosts', () {
+      final verification = AkidaSdkVerification.fromJson({
+        'sdk_available': false,
+        'sdk_status': 'not_available',
+        'sdk_issues': ['unsupported_os', 'sdk_not_available'],
+        'state': 'not_initialised',
+        'runtime_target': 'software_fallback',
+        'environment_checks': {
+          'host_supported': false,
+          'python_supported': true,
+          'tensorflow_available': false,
+          'cnn2snn_available': false,
+          'akida_models_available': false,
+          'recommended_runtime': 'simulator_only',
+        },
+      });
+
+      expect(verification.environmentChecks, isNotNull);
+      expect(verification.environmentChecks!.hostSupported, isFalse);
+      expect(
+        verification.environmentChecks!.recommendedRuntime,
+        'simulator_only',
+      );
+    });
+  });
 }

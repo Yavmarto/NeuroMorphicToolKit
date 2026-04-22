@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/services/akida_deploy_service.dart';
 
@@ -34,10 +36,14 @@ enum AkidaDeployStep {
 ///
 /// Follows the ChangeNotifier + Provider pattern used by [PynqDeployProvider].
 class AkidaDeployProvider with ChangeNotifier {
-  AkidaDeployProvider({AkidaDeployService? service})
-      : _service = service ?? AkidaDeployService();
+  AkidaDeployProvider({
+    AkidaDeployService? service,
+    ControlApiService? controlApiService,
+  })  : _service = service ?? AkidaDeployService(),
+        _controlApiService = controlApiService ?? ControlApiService();
 
   final AkidaDeployService _service;
+  final ControlApiService _controlApiService;
 
   // -- State ---------------------------------------------------------------
 
@@ -68,6 +74,18 @@ class AkidaDeployProvider with ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  Module? _neurochipModule;
+  Module? get neurochipModule => _neurochipModule;
+
+  bool _isLoadingRuntimeSetup = false;
+  bool get isLoadingRuntimeSetup => _isLoadingRuntimeSetup;
+
+  bool _isPreparingRuntime = false;
+  bool get isPreparingRuntime => _isPreparingRuntime;
+
+  String? _runtimeSetupError;
+  String? get runtimeSetupError => _runtimeSetupError;
+
   /// Whether to run Neurobench verification after the package is downloaded.
   bool _runNeurobench = false;
   bool get runNeurobench => _runNeurobench;
@@ -75,6 +93,38 @@ class AkidaDeployProvider with ChangeNotifier {
   Timer? _pollTimer;
 
   // -- Actions -------------------------------------------------------------
+
+  Future<void> refreshRuntimeSetup() async {
+    _isLoadingRuntimeSetup = true;
+    _runtimeSetupError = null;
+    notifyListeners();
+
+    try {
+      _neurochipModule = await _controlApiService.fetchModule('Neurochip');
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+    } finally {
+      _isLoadingRuntimeSetup = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> prepareLocalRuntime() async {
+    _isPreparingRuntime = true;
+    _runtimeSetupError = null;
+    notifyListeners();
+
+    try {
+      _neurochipModule = await _controlApiService.prepareAkidaRuntime(
+        'Neurochip',
+      );
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+    } finally {
+      _isPreparingRuntime = false;
+      notifyListeners();
+    }
+  }
 
   /// Check Akida exportability for a CNL spec.
   Future<void> checkExportability({
@@ -237,6 +287,7 @@ class AkidaDeployProvider with ChangeNotifier {
     _neurobenchJobId = null;
     _neurobenchResult = null;
     _errorMessage = null;
+    _runtimeSetupError = null;
     notifyListeners();
   }
 

@@ -300,6 +300,14 @@ class ControlApiService {
     return Module.fromJson(await _readJsonResponse(response));
   }
 
+  Future<Module> prepareAkidaRuntime(String moduleId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/modules/$moduleId/akida-runtime/prepare'),
+    );
+    await _ensureSuccess(response);
+    return Module.fromJson(await _readJsonResponse(response));
+  }
+
   Future<Module> updateModuleSettings(
     String moduleId, {
     bool? isEnabled,

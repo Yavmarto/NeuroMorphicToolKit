@@ -148,6 +148,7 @@ void main() {
     processManager.startupHealthGracePeriod = Duration.zero;
     processManager.startupHealthProbeInterval =
         const Duration(milliseconds: 10);
+    processManager.platformOverride = null;
   });
 
   test('ProcessManager provides status updates', () {
@@ -180,6 +181,60 @@ void main() {
     expect(
       mockRunner.calls.any(
         (c) => c.arguments.contains('install') && c.arguments.contains('.'),
+      ),
+      isTrue,
+    );
+
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test('prepareAkidaRuntime installs configured package set on supported hosts',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('nmtk_test_prepare_akida');
+    final installDir = tempDir.path;
+    final venvPath = p.join(installDir, 'venv');
+    Directory(venvPath).createSync(recursive: true);
+    final pythonExe = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'python.exe')
+        : p.join(venvPath, 'bin', 'python');
+    final pipExe = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'pip.exe')
+        : p.join(venvPath, 'bin', 'pip');
+    File(pythonExe).createSync(recursive: true);
+    File(pipExe).createSync(recursive: true);
+
+    mockRunner.runResult = ProcessResult(0, 0, '3.11.8\n', '');
+    processManager.platformOverride = 'linux';
+
+    final module = Module(
+      id: 'Neurochip',
+      name: 'Neurochip',
+      description: 'Hardware deployment',
+      directory: installDir,
+      sourcePath: '.',
+      akidaRuntime: const AkidaRuntimeConfig(
+        supportedPlatforms: ['linux', 'windows'],
+        pythonRange: '>=3.10,<3.13',
+        requiredPackages: [
+          'tensorflow==2.19.*',
+          'akida==2.19.1',
+          'cnn2snn==2.19.1',
+          'akida-models==1.13.1',
+        ],
+        docsUrl: 'https://doc.brainchipinc.com/installation.html',
+      ),
+    );
+
+    final updatedModule = await processManager.prepareAkidaRuntime(module);
+
+    expect(updatedModule.akidaRuntimeState?.status, 'ready');
+    expect(
+      mockRunner.calls.any(
+        (call) =>
+            call.arguments.contains('install') &&
+            call.arguments.contains('akida==2.19.1') &&
+            call.arguments.contains('akida-models==1.13.1'),
       ),
       isTrue,
     );

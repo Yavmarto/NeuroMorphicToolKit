@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/providers/teensy_deploy_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 /// Teensy deployment screen with a stepper UI.
 ///
 /// Workflow: CNL Input → Verdict → Firmware Export → Serial Port → Flash → Verify
-class TeensyDeployScreen extends StatefulWidget {
+class TeensyDeployScreen extends ConsumerStatefulWidget {
   const TeensyDeployScreen({super.key});
 
   @override
-  State<TeensyDeployScreen> createState() => _TeensyDeployScreenState();
+  ConsumerState<TeensyDeployScreen> createState() => _TeensyDeployScreenState();
 }
 
-class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
+class _TeensyDeployScreenState extends ConsumerState<TeensyDeployScreen> {
   final _specController = TextEditingController();
   int _weightBitWidth = 8;
 
@@ -21,7 +22,7 @@ class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TeensyDeployProvider>().refreshPorts();
+      ref.read(teensyDeployStateProvider).refreshPorts();
     });
   }
 
@@ -40,12 +41,13 @@ class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Reset',
-            onPressed: () => context.read<TeensyDeployProvider>().reset(),
+            onPressed: () => ref.read(teensyDeployStateProvider).reset(),
           ),
         ],
       ),
-      body: Consumer<TeensyDeployProvider>(
-        builder: (context, provider, child) {
+      body: Builder(
+        builder: (context) {
+          final provider = ref.watch(teensyDeployStateProvider);
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -106,8 +108,7 @@ class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
               controller: _specController,
               maxLines: 8,
               decoration: const InputDecoration(
-                hintText:
-                    'Enter your NeuroCNL specification...\n'
+                hintText: 'Enter your NeuroCNL specification...\n'
                     'Example: The sensory neuron MUST fire ONLY IF '
                     'membrane potential exceeds 1.0.',
                 border: OutlineInputBorder(),
@@ -205,8 +206,8 @@ class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
               ...result.warnings.map(
                 (w) => Padding(
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
-                  child:
-                      Text('⚠ $w', style: const TextStyle(color: Colors.orange)),
+                  child: Text('⚠ $w',
+                      style: const TextStyle(color: Colors.orange)),
                 ),
               ),
             ],
@@ -215,7 +216,8 @@ class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
               ...result.rejectionReasons.map(
                 (r) => Padding(
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
-                  child: Text('✗ $r', style: const TextStyle(color: Colors.red)),
+                  child:
+                      Text('✗ $r', style: const TextStyle(color: Colors.red)),
                 ),
               ),
             ],
@@ -409,9 +411,7 @@ class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  report.passed
-                      ? 'Verification Passed'
-                      : 'Verification Failed',
+                  report.passed ? 'Verification Passed' : 'Verification Failed',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: report.passed ? Colors.green : Colors.red,
                       ),
@@ -442,8 +442,7 @@ class _TeensyDeployScreenState extends State<TeensyDeployScreen> {
 
   // ---------- Error ----------
 
-  Widget _buildErrorCard(
-      BuildContext context, TeensyDeployProvider provider) {
+  Widget _buildErrorCard(BuildContext context, TeensyDeployProvider provider) {
     return Card(
       color: Colors.red.withValues(alpha: 0.08),
       child: Padding(

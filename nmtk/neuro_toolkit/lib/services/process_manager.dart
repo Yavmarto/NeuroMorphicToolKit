@@ -124,6 +124,9 @@ class ProcessManager {
   set startupHealthProbeInterval(Duration duration) =>
       _startupHealthProbeInterval = duration;
 
+  @visibleForTesting
+  String? platformOverride;
+
   ProcessManager._internal();
 
   ProcessRunner _processRunner = DefaultProcessRunner();
@@ -362,6 +365,76 @@ class ProcessManager {
     return p.normalize(p.join(module.directory, module.runPath));
   }
 
+  String _currentPlatformKey() {
+    final override = platformOverride;
+    if (override != null && override.isNotEmpty) {
+      return override;
+    }
+    if (Platform.isWindows) return 'windows';
+    if (Platform.isLinux) return 'linux';
+    if (Platform.isMacOS) return 'macos';
+    return Platform.operatingSystem;
+  }
+
+  bool _pythonVersionMatchesRange(String range, String version) {
+    final versionParts = version
+        .trim()
+        .split('.')
+        .take(3)
+        .map(int.tryParse)
+        .whereType<int>()
+        .toList(growable: false);
+    if (versionParts.length < 2) {
+      return false;
+    }
+
+    int compare(List<int> left, List<int> right) {
+      for (var i = 0; i < 3; i++) {
+        final leftValue = i < left.length ? left[i] : 0;
+        final rightValue = i < right.length ? right[i] : 0;
+        if (leftValue != rightValue) {
+          return leftValue.compareTo(rightValue);
+        }
+      }
+      return 0;
+    }
+
+    final current = <int>[
+      versionParts[0],
+      versionParts[1],
+      versionParts.length > 2 ? versionParts[2] : 0,
+    ];
+
+    for (final rawPart in range.split(',')) {
+      final part = rawPart.trim();
+      if (part.isEmpty) continue;
+      if (part.startsWith('>=')) {
+        final minVersion = part
+            .substring(2)
+            .split('.')
+            .map(int.tryParse)
+            .whereType<int>()
+            .toList(growable: false);
+        if (compare(current, minVersion) < 0) {
+          return false;
+        }
+        continue;
+      }
+      if (part.startsWith('<')) {
+        final maxVersion = part
+            .substring(1)
+            .split('.')
+            .map(int.tryParse)
+            .whereType<int>()
+            .toList(growable: false);
+        if (compare(current, maxVersion) >= 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   Future<void> installModule(
     Module module, {
     void Function(double)? onProgress,
@@ -529,6 +602,107 @@ class ProcessManager {
       _updateModuleStatus(updatedModule);
       rethrow;
     }
+  }
+
+  Future<Module> prepareAkidaRuntime(Module module) async {
+    final runtimeConfig = module.akidaRuntime;
+    if (runtimeConfig == null) {
+      throw Exception('Akida runtime is not configured for ${module.id}.');
+    }
+
+    final installDir = _installDir(module);
+    final venvPath = p.join(installDir, 'venv');
+    final pythonPath = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'python.exe')
+        : p.join(venvPath, 'bin', 'python');
+    final pipPath = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'pip.exe')
+        : p.join(venvPath, 'bin', 'pip');
+
+    Module updatedModule = module;
+
+    Future<Module> persist(Module nextModule) async {
+      _updateModuleStatus(nextModule);
+      await saveModuleState(nextModule);
+      return nextModule;
+    }
+
+    if (!await File(pythonPath).exists()) {
+      updatedModule = updatedModule.copyWith(
+        akidaRuntimeState: const AkidaRuntimeState(
+          status: 'error',
+          message: 'Install Neurochip before preparing the Akida runtime.',
+        ),
+      );
+      return persist(updatedModule);
+    }
+
+    final platformKey = _currentPlatformKey();
+    if (!runtimeConfig.supportedPlatforms.contains(platformKey)) {
+      updatedModule = updatedModule.copyWith(
+        akidaRuntimeState: AkidaRuntimeState(
+          status: 'unsupported_host',
+          message:
+              'Local Akida SDK install is not supported on $platformKey. Use the local simulator and a Linux or Windows Neurochip host for SDK verification.',
+        ),
+      );
+      return persist(updatedModule);
+    }
+
+    final versionResult = await _processRunner.run(
+      pythonPath,
+      const [
+        '-c',
+        'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")',
+      ],
+      workingDirectory: installDir,
+    );
+    final pythonVersion = versionResult.stdout.toString().trim();
+    if (versionResult.exitCode != 0 ||
+        !_pythonVersionMatchesRange(runtimeConfig.pythonRange, pythonVersion)) {
+      updatedModule = updatedModule.copyWith(
+        akidaRuntimeState: AkidaRuntimeState(
+          status: 'unsupported_python',
+          message:
+              'Akida SDK installation requires Python ${runtimeConfig.pythonRange}; current module env is ${pythonVersion.isEmpty ? "unknown" : pythonVersion}.',
+        ),
+      );
+      return persist(updatedModule);
+    }
+
+    updatedModule = updatedModule.copyWith(
+      akidaRuntimeState: const AkidaRuntimeState(
+        status: 'preparing',
+        message: 'Installing Akida runtime dependencies…',
+      ),
+    );
+    await persist(updatedModule);
+
+    final pipResult = await _processRunner.run(
+      pipPath,
+      ['install', ...runtimeConfig.requiredPackages],
+      workingDirectory: installDir,
+    );
+
+    if (pipResult.exitCode != 0) {
+      updatedModule = updatedModule.copyWith(
+        akidaRuntimeState: AkidaRuntimeState(
+          status: 'error',
+          message:
+              'Failed to install Akida runtime dependencies: ${pipResult.stderr}',
+        ),
+      );
+      return persist(updatedModule);
+    }
+
+    updatedModule = updatedModule.copyWith(
+      akidaRuntimeState: AkidaRuntimeState(
+        status: 'ready',
+        message: 'Akida runtime is prepared for local SDK verification.',
+        preparedAt: DateTime.now().toUtc().toIso8601String(),
+      ),
+    );
+    return persist(updatedModule);
   }
 
   /// Kill any leftover process listening on a port (from a previous crash/session).
@@ -899,6 +1073,8 @@ class ProcessManager {
             // Restore version and pinning info
             final savedVersion = saved['version'] as String?;
             final savedPinned = saved['versionPinned'] as bool?;
+            final savedAkidaRuntimeState =
+                saved['akidaRuntimeState'] as Map<String, dynamic>?;
 
             // Only restore installation status, not runtime status or paths.
             // Paths are always freshly resolved from BundleManager + modules.json.
@@ -914,11 +1090,17 @@ class ProcessManager {
                   installProgress: 1.0,
                   version: savedVersion,
                   versionPinned: savedPinned,
+                  akidaRuntimeState: savedAkidaRuntimeState == null
+                      ? modules[i].akidaRuntimeState
+                      : AkidaRuntimeState.fromJson(savedAkidaRuntimeState),
                 );
               } else {
                 modules[i] = modules[i].copyWith(
                   version: savedVersion,
                   versionPinned: savedPinned,
+                  akidaRuntimeState: savedAkidaRuntimeState == null
+                      ? modules[i].akidaRuntimeState
+                      : AkidaRuntimeState.fromJson(savedAkidaRuntimeState),
                 );
               }
             }

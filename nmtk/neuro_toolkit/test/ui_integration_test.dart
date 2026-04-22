@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 
@@ -127,10 +128,12 @@ void main() {
     await mockProvider.launchModule('m1');
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ChangeNotifierProvider<ModuleProvider>.value(
-          value: mockProvider,
-          child: const ToolViewScreen(initialModuleId: 'm1'),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => mockProvider),
+        ],
+        child: const MaterialApp(
+          home: ToolViewScreen(initialModuleId: 'm1'),
         ),
       ),
     );
@@ -173,10 +176,12 @@ void main() {
     await mockProvider.launchModule('m1');
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ChangeNotifierProvider<ModuleProvider>.value(
-          value: mockProvider,
-          child: const ToolViewScreen(initialModuleId: 'm1'),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => mockProvider),
+        ],
+        child: const MaterialApp(
+          home: ToolViewScreen(initialModuleId: 'm1'),
         ),
       ),
     );

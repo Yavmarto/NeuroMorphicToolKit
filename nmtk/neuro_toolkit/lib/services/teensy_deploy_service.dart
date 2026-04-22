@@ -52,10 +52,8 @@ class TeensyDeployService {
       if (d is Map<String, dynamic>) {
         throw TeensyDeployException(
           error: d['error'] as String? ?? 'unknown',
-          messages: (d['messages'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [],
+          messages:
+              (d['messages'] as List?)?.map((e) => e.toString()).toList() ?? [],
           rejectionReasons: (d['rejection_reasons'] as List?)
                   ?.map((e) => e.toString())
                   .toList() ??
@@ -143,8 +141,8 @@ class TeensyDeployService {
 
   /// Poll flash job status.
   Future<FlashJob> pollFlashJob(String jobId) async {
-    final uri = Uri.parse(
-        '$_neurochipBaseUrl/api/neurochip/serial/flash/$jobId');
+    final uri =
+        Uri.parse('$_neurochipBaseUrl/api/neurochip/serial/flash/$jobId');
     final response = await _httpClient.get(uri);
 
     if (response.statusCode == 200) {

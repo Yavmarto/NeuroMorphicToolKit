@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/dashboard.dart';
-import 'package:provider/provider.dart';
 
 class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
   final List<Module> _mockInstalledModules = [];
@@ -107,10 +108,12 @@ void main() {
     mockProvider.setInstalledModules([]);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ChangeNotifierProvider<ModuleProvider>.value(
-          value: mockProvider,
-          child: const DashboardScreen(),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => mockProvider),
+        ],
+        child: const MaterialApp(
+          home: DashboardScreen(),
         ),
       ),
     );
@@ -124,10 +127,12 @@ void main() {
     mockProvider.setInstalledModules([]);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ChangeNotifierProvider<ModuleProvider>.value(
-          value: mockProvider,
-          child: const DashboardScreen(),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => mockProvider),
+        ],
+        child: const MaterialApp(
+          home: DashboardScreen(),
         ),
       ),
     );
@@ -141,10 +146,12 @@ void main() {
     mockProvider.setInstalledModules([]);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ChangeNotifierProvider<ModuleProvider>.value(
-          value: mockProvider,
-          child: const DashboardScreen(),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => mockProvider),
+        ],
+        child: const MaterialApp(
+          home: DashboardScreen(),
         ),
       ),
     );
@@ -170,10 +177,12 @@ void main() {
     mockProvider.setInstalledModules([installedModule]);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ChangeNotifierProvider<ModuleProvider>.value(
-          value: mockProvider,
-          child: const DashboardScreen(),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => mockProvider),
+        ],
+        child: const MaterialApp(
+          home: DashboardScreen(),
         ),
       ),
     );
@@ -226,10 +235,12 @@ void main() {
     mockProvider.setInstalledModules([runningModule]);
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: ChangeNotifierProvider<ModuleProvider>.value(
-          value: mockProvider,
-          child: const DashboardScreen(),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => mockProvider),
+        ],
+        child: const MaterialApp(
+          home: DashboardScreen(),
         ),
       ),
     );

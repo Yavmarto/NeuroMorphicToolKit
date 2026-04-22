@@ -149,6 +149,35 @@ class AkidaNetworkResponse {
 // Runtime verification — reported by Neurochip verify/status endpoints
 // ---------------------------------------------------------------------------
 
+class AkidaEnvironmentChecks {
+  final bool hostSupported;
+  final bool pythonSupported;
+  final bool tensorflowAvailable;
+  final bool cnn2snnAvailable;
+  final bool akidaModelsAvailable;
+  final String recommendedRuntime;
+
+  const AkidaEnvironmentChecks({
+    required this.hostSupported,
+    required this.pythonSupported,
+    required this.tensorflowAvailable,
+    required this.cnn2snnAvailable,
+    required this.akidaModelsAvailable,
+    required this.recommendedRuntime,
+  });
+
+  factory AkidaEnvironmentChecks.fromJson(Map<String, dynamic> json) {
+    return AkidaEnvironmentChecks(
+      hostSupported: json['host_supported'] as bool? ?? false,
+      pythonSupported: json['python_supported'] as bool? ?? false,
+      tensorflowAvailable: json['tensorflow_available'] as bool? ?? false,
+      cnn2snnAvailable: json['cnn2snn_available'] as bool? ?? false,
+      akidaModelsAvailable: json['akida_models_available'] as bool? ?? false,
+      recommendedRuntime: json['recommended_runtime'] as String? ?? 'local_sdk',
+    );
+  }
+}
+
 class AkidaSdkVerification {
   final bool sdkAvailable;
   final String sdkStatus;
@@ -158,6 +187,7 @@ class AkidaSdkVerification {
   final String runtimeTarget;
   final String? deviceInfo;
   final String? sdkIssueDetail;
+  final AkidaEnvironmentChecks? environmentChecks;
 
   const AkidaSdkVerification({
     required this.sdkAvailable,
@@ -168,6 +198,7 @@ class AkidaSdkVerification {
     this.runtimeTarget = 'unknown',
     this.deviceInfo,
     this.sdkIssueDetail,
+    this.environmentChecks,
   });
 
   factory AkidaSdkVerification.fromJson(Map<String, dynamic> json) {
@@ -182,6 +213,11 @@ class AkidaSdkVerification {
       runtimeTarget: json['runtime_target'] as String? ?? 'unknown',
       deviceInfo: json['device_info'] as String?,
       sdkIssueDetail: json['sdk_issue_detail'] as String?,
+      environmentChecks: json['environment_checks'] is Map<String, dynamic>
+          ? AkidaEnvironmentChecks.fromJson(
+              json['environment_checks'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 

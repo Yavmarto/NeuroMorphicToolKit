@@ -1,20 +1,20 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Screen shown when no Python interpreter is detected.
 /// Guides the user through installing Python on their platform.
-class PythonSetupScreen extends StatefulWidget {
+class PythonSetupScreen extends ConsumerStatefulWidget {
   const PythonSetupScreen({super.key});
 
   @override
-  State<PythonSetupScreen> createState() => _PythonSetupScreenState();
+  ConsumerState<PythonSetupScreen> createState() => _PythonSetupScreenState();
 }
 
-class _PythonSetupScreenState extends State<PythonSetupScreen> {
+class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
   bool _isInstalling = false;
   bool _isChecking = false;
   String? _installOutput;
@@ -93,7 +93,7 @@ class _PythonSetupScreenState extends State<PythonSetupScreen> {
       _errorMessage = null;
     });
 
-    final provider = context.read<ModuleProvider>();
+    final provider = ref.read(moduleStateProvider);
     unawaited(provider.recheckPython());
 
     if (mounted) {

@@ -94,6 +94,18 @@ class LauncherControlServiceTest(unittest.TestCase):
                         "frontendStatus": "Yes",
                         "requiresMuJoCo": False,
                         "version": "1.0.0",
+                        "akidaRuntime": {
+                            "supportedPlatforms": ["linux", "windows"],
+                            "pythonRange": ">=3.10,<3.13",
+                            "requiredPackages": [
+                                "tensorflow==2.19.*",
+                                "akida==2.19.1",
+                                "cnn2snn==2.19.1",
+                                "akida-models==1.13.1",
+                            ],
+                            "docsUrl": "https://doc.brainchipinc.com/installation.html",
+                            "localModeFallback": "simulator_only",
+                        },
                     }
                 ]
             ),
@@ -195,6 +207,63 @@ class LauncherControlServiceTest(unittest.TestCase):
             payload[0]["status"],
             launcher_server.STATUS_INDEX["notInstalled"],
         )
+        self.assertEqual(
+            payload[0]["akidaRuntime"]["localModeFallback"],
+            "simulator_only",
+        )
+
+    def test_prepare_akida_runtime_marks_unsupported_host_without_installing(self) -> None:
+        with (
+            mock.patch.object(
+                self.state,
+                "_preflight_module",
+                return_value=launcher_server.PreflightResult(
+                    status=launcher_server.PREFLIGHT_OK,
+                    message="ok",
+                ),
+            ),
+            mock.patch.object(launcher_server, "_current_platform_key", return_value="macos"),
+            mock.patch.object(self.state, "_run_command") as run_command,
+        ):
+            updated = self.state.prepare_akida_runtime("dummy")
+
+        self.assertEqual(updated["akidaRuntimeState"]["status"], "unsupported_host")
+        self.assertIn("Linux or Windows Neurochip host", updated["akidaRuntimeState"]["message"])
+        run_command.assert_not_called()
+
+    def test_prepare_akida_runtime_installs_required_packages_on_supported_host(self) -> None:
+        commands: list[list[str]] = []
+
+        def fake_run_command(
+            command: list[str],
+            *,
+            cwd: Path,
+            module_id: str,
+        ) -> subprocess.CompletedProcess[str]:
+            commands.append(command)
+            if "-c" in command:
+                return subprocess.CompletedProcess(command, 0, "3.11.8\n", "")
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with (
+            mock.patch.object(
+                self.state,
+                "_preflight_module",
+                return_value=launcher_server.PreflightResult(
+                    status=launcher_server.PREFLIGHT_OK,
+                    message="ok",
+                ),
+            ),
+            mock.patch.object(launcher_server, "_current_platform_key", return_value="linux"),
+            mock.patch.object(self.state, "_run_command", side_effect=fake_run_command),
+        ):
+            updated = self.state.prepare_akida_runtime("dummy")
+
+        self.assertEqual(updated["akidaRuntimeState"]["status"], "ready")
+        self.assertEqual(len(commands), 2)
+        self.assertEqual(commands[1][1:4], ["-m", "pip", "install"])
+        self.assertTrue(commands[1][0].endswith("/dummy_module/venv/bin/python"))
+        self.assertIn("akida==2.19.1", commands[1])
 
     def test_missing_environment_normalizes_stale_installed_state(self) -> None:
         state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"

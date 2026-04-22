@@ -43,6 +43,18 @@ The backend process is running, but the frontend cannot connect to it.
     *   Check if the backend crashed shortly after starting (Status will change to "Error").
     *   Ensure your firewall is not blocking local connections on ports 8000-8006.
 
+### 5. Akida SDK Verification Is Blocked
+The Akida deploy flow can generate a scaffold package, but Neurochip reports that SDK verification is unavailable.
+
+*   **Common Causes**:
+    *   **Unsupported host OS**: BrainChip's Akida SDK is supported on Linux and Windows, not macOS.
+    *   **Unsupported Python version**: the Akida stack expects Python `3.10` to `3.12`.
+    *   **Missing MetaTF packages**: local Akida verification also needs `tensorflow==2.19.*`, `akida==2.19.1`, `cnn2snn==2.19.1`, and `akida-models==1.13.1`.
+    *   **Windows prerequisite missing**: the Visual C++ redistributable is not installed.
+*   **Solution**:
+    *   On supported Linux or Windows hosts, use **Prepare Akida Runtime** from the Akida deploy flow to install the full BrainChip package set into the Neurochip environment.
+    *   On macOS, continue using scaffold export and local simulator fallback, but point SDK verification at a Neurochip instance running on Linux or Windows.
+
 ---
 
 ## Still Having Issues?

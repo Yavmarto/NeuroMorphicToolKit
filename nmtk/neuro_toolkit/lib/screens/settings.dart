@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
-import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/models/module.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final TextEditingController _endpointController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    final settings = context.read<SettingsProvider>();
+    final settings = ref.read(settingsStateProvider);
     _endpointController.text = settings.remoteEndpoint ?? '';
   }
 
@@ -30,9 +31,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = context.watch<SettingsProvider>();
-    final moduleProvider = context.watch<ModuleProvider>();
-    final analytics = AnalyticsService();
+    final settings = ref.watch(settingsStateProvider);
+    final moduleProvider = ref.watch(moduleStateProvider);
+    final analytics = ref.watch(analyticsServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -228,16 +229,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-class ModuleSettingsTile extends StatefulWidget {
+class ModuleSettingsTile extends ConsumerStatefulWidget {
   final Module module;
 
   const ModuleSettingsTile({super.key, required this.module});
 
   @override
-  State<ModuleSettingsTile> createState() => _ModuleSettingsTileState();
+  ConsumerState<ModuleSettingsTile> createState() => _ModuleSettingsTileState();
 }
 
-class _ModuleSettingsTileState extends State<ModuleSettingsTile> {
+class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
   late TextEditingController _portController;
 
   @override
@@ -269,7 +270,7 @@ class _ModuleSettingsTileState extends State<ModuleSettingsTile> {
 
   @override
   Widget build(BuildContext context) {
-    final moduleProvider = context.read<ModuleProvider>();
+    final moduleProvider = ref.read(moduleStateProvider);
 
     return ExpansionTile(
       title: Text(widget.module.name),

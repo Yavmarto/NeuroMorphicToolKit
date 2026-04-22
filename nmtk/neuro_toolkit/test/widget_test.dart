@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/main.dart';
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 
 class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
@@ -75,14 +78,20 @@ void main() {
   testWidgets('App loads smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<ModuleProvider>(
-            create: (_) => LocalMockModuleProvider(),
-          ),
-          ChangeNotifierProvider<SettingsProvider>(
-            create: (_) => SettingsProvider(),
-          ),
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => LocalMockModuleProvider()),
+          settingsStateProvider.overrideWith((ref) => SettingsProvider()),
+          goRouterProvider.overrideWith((ref) {
+            return GoRouter(
+              routes: [
+                GoRoute(
+                  path: '/',
+                  builder: (context, state) => const DashboardScreen(),
+                ),
+              ],
+            );
+          }),
         ],
         child: const NeuroToolkitApp(),
       ),

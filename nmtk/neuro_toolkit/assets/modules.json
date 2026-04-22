@@ -52,6 +52,18 @@
     "startStrategy": "uvicorn",
     "uvicornTarget": "neurochip.app.main:app",
     "optionalImports": ["lava.magma.core.run_conditions"],
+    "akidaRuntime": {
+      "supportedPlatforms": ["linux", "windows"],
+      "pythonRange": ">=3.10,<3.13",
+      "requiredPackages": [
+        "tensorflow==2.19.*",
+        "akida==2.19.1",
+        "cnn2snn==2.19.1",
+        "akida-models==1.13.1"
+      ],
+      "docsUrl": "https://doc.brainchipinc.com/installation.html",
+      "localModeFallback": "simulator_only"
+    },
     "hasFrontend": true,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,

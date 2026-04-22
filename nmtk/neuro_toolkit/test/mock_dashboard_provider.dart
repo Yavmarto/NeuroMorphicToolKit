@@ -89,7 +89,8 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
   }
 
   @override
-  Future<void> updateModuleSettings(String id, {int? customPort, bool? isEnabled}) async {}
+  Future<void> updateModuleSettings(String id,
+      {int? customPort, bool? isEnabled}) async {}
 
   @override
   void updateSettingsProvider(dynamic settingsProvider) {}

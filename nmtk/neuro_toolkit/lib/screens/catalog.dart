@@ -1,20 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 
-class CatalogScreen extends StatelessWidget {
+class CatalogScreen extends ConsumerWidget {
   const CatalogScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final provider = ref.watch(moduleStateProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Module Catalog'),
       ),
-      body: Consumer<ModuleProvider>(
-        builder: (context, provider, child) {
+      body: Builder(
+        builder: (context) {
           if (provider.isLoading) {
             return const Center(
               child: CircularProgressIndicator(),
