@@ -95,6 +95,7 @@ Because the sub-apps require heavy Python environments, Docker containers, and c
 ## 📚 Documentation
 
 For users and developers:
+-   **[API Reference Index](./docs/api/README.md)** — Suite-level API entrypoint with service ports, live OpenAPI links, auth notes, and module API guides.
 -   **[User Guide: Installation](./docs/user/installation.md)** — Getting started with NMTK.
 -   **[User Guide: Troubleshooting](./docs/user/troubleshooting.md)** — Solutions for common startup issues.
 -   **[Developer Setup Guide](./SETUP_GUIDE.md)** — Running the full suite from source.

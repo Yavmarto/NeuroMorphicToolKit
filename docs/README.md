@@ -16,10 +16,16 @@ Based on the files already in this folder, `docs` is not a single manual or API 
 
 These files describe how to use, deploy, and troubleshoot the suite:
 
+- [`api/README.md`](./api/README.md)
 - [`user/installation.md`](./user/installation.md)
 - [`user/troubleshooting.md`](./user/troubleshooting.md)
 - [`PRODUCTION_PLAYBOOK.md`](./PRODUCTION_PLAYBOOK.md)
 - [`CI_OVERVIEW.md`](./CI_OVERVIEW.md)
+
+The API index is the entrypoint for service ports, live Swagger/OpenAPI links,
+module-specific API guides, authentication notes, and endpoint smoke-test
+instructions. It intentionally points to live `/openapi.json` documents instead
+of duplicating a generated endpoint catalog in the root docs.
 
 ### Audit and status artifacts
 

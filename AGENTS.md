@@ -17,6 +17,10 @@ Read before edit:
 - If editing root-owned `docs/**`, `scripts/**`, `tests/**`, `monitoring/**`, or root config files, stay in the root repo and read the owning module `AGENTS.md` for every contract you touch.
 - If editing more than one top-level module, name the write set explicitly and run the owning checks plus `python3 -m pytest tests/integration/test_cross_module.py` and `python3 -m pytest tests/integration/test_teensy_e2e.py`.
 
+Backend endpoint smoke testing:
+- For backend endpoint work, use `docs/agents/nmtk-backend-smoke.md` and `python3 scripts/backend_endpoint_smoke.py` to probe `/health`, inspect `/openapi.json`, and call changed endpoints against the manifest-defined module ports.
+- Treat `nmtk/neuro_toolkit/assets/modules.json` as the source of truth for module ids, ports, run paths, and uvicorn targets; do not maintain a separate static endpoint catalog.
+
 Launcher and control-plane guardrails:
 - For changes under `nmtk/**`, root launcher manifests such as `nmtk/neuro_toolkit/assets/modules.json`, `nmtk/neuro_toolkit/assets/remote_modules.json`, and root compose files, `scripts/**`, or root `tests/**` that affect launcher behavior, module lifecycle behavior, or suite-visible startup semantics, run `python3 scripts/launcher_control_service.py --doctor --json`.
 - Use `bash scripts/run_launcher_guardrails.sh` as the canonical local enforcement wrapper for launcher and control-plane work. Use `bash scripts/run_launcher_guardrails.sh --with-integration` when the change alters module contracts or suite-visible startup behavior.
