@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 
@@ -10,101 +12,90 @@ class CatalogScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = ref.watch(moduleStateProvider);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Module Catalog'),
-      ),
+      appBar: AppBar(title: const Text('Module Catalog')),
       body: Builder(
         builder: (context) {
           if (provider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (provider.error != null) {
-            return Center(
-              child: Text(provider.error!),
+            return NmtkEmptyState(
+              title: 'Catalog Unavailable',
+              message: provider.error!,
+              icon: Icons.cloud_off,
+              tone: NmtkTone.danger,
             );
           }
 
           final modules = provider.modules;
 
           if (modules.isEmpty) {
-            return const Center(
-              child: Text('No modules available.'),
+            return const NmtkEmptyState(
+              title: 'No Modules Available',
+              message: 'The launcher did not load any installable modules.',
+              icon: Icons.inventory_2_outlined,
             );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: modules.length,
             itemBuilder: (context, index) {
               final module = modules[index];
               final isMuJoCoUnavailable =
                   module.requiresMuJoCo && !provider.isMuJoCoAvailable();
 
-              return Opacity(
-                opacity: isMuJoCoUnavailable ? 0.5 : 1.0,
-                child: Card(
-                  margin: const EdgeInsets.all(8.0),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Opacity(
+                  opacity: isMuJoCoUnavailable ? 0.55 : 1.0,
+                  child: NmtkSurfaceCard(
+                    title: module.name,
+                    subtitle: module.description,
+                    leading: Icon(_getIconData(module.icon), size: 28),
+                    trailing: _buildStatusBadge(
+                      module: module,
+                      isMuJoCoUnavailable: isMuJoCoUnavailable,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
-                            Icon(_getIconData(module.icon), size: 32),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Semantics(
-                                    label: 'Module Name',
-                                    child: Text(
-                                      module.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge,
-                                    ),
-                                  ),
-                                  Text(
-                                    'ID: ${module.id}',
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
-                                  ),
-                                ],
+                            Text(
+                              'ID: ${module.id}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            if (module.version != '0.0.0')
+                              Text(
+                                'Version: ${module.version}',
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
-                            ),
-                            _buildStatusBadge(
-                              context,
-                              module,
-                              isMuJoCoUnavailable,
-                            ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(module.description),
-                        const SizedBox(height: 4),
-                        if (module.version != '0.0.0')
-                          Text(
-                            'Version: ${module.version}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
                         const SizedBox(height: 16),
                         if (module.status == ModuleStatus.installing ||
                             module.status == ModuleStatus.updating)
-                          Column(
-                            children: [
-                              LinearProgressIndicator(
-                                value: module.installProgress,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${module.status == ModuleStatus.installing ? "Installing" : "Updating"}... ${(module.installProgress * 100).toInt()}%',
-                              ),
-                            ],
+                          NmtkSurfaceCard(
+                            tone: NmtkTone.info,
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${module.status == ModuleStatus.installing ? "Installing" : "Updating"}... ${(module.installProgress * 100).toInt()}%',
+                                ),
+                                const SizedBox(height: 10),
+                                LinearProgressIndicator(
+                                  value: module.installProgress,
+                                ),
+                              ],
+                            ),
                           )
                         else if (module.status == ModuleStatus.error)
                           Row(
@@ -123,13 +114,15 @@ class CatalogScreen extends ConsumerWidget {
                               Semantics(
                                 label: 'Retry installation of ${module.name}',
                                 button: true,
-                                child: ElevatedButton(
+                                child: NmtkPrimaryButton(
                                   onPressed: () {
                                     unawaited(
                                       provider.installModule(module.id),
                                     );
                                   },
-                                  child: const Text('Retry'),
+                                  label: 'Retry',
+                                  icon: Icons.refresh,
+                                  tone: NmtkTone.danger,
                                 ),
                               ),
                             ],
@@ -140,7 +133,7 @@ class CatalogScreen extends ConsumerWidget {
                             child: Semantics(
                               label: 'Install ${module.name}',
                               button: true,
-                              child: ElevatedButton(
+                              child: NmtkPrimaryButton(
                                 onPressed: isMuJoCoUnavailable
                                     ? null
                                     : () {
@@ -148,47 +141,41 @@ class CatalogScreen extends ConsumerWidget {
                                           provider.installModule(module.id),
                                         );
                                       },
-                                child: const Text('Install'),
+                                icon: Icons.download,
+                                label: 'Install',
                               ),
                             ),
                           )
                         else if (module.status == ModuleStatus.installed ||
                             module.status == ModuleStatus.running ||
                             module.status == ModuleStatus.degraded)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                          Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: 10,
+                            runSpacing: 10,
                             children: [
                               if (module.remoteVersion != '0.0.0' &&
                                   module.remoteVersion != module.version)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8.0),
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      unawaited(
-                                        provider.updateModule(module.id),
-                                      );
-                                    },
-                                    icon: const Icon(Icons.system_update),
-                                    label: Text(
-                                      'Update to ${module.remoteVersion}',
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue.shade100,
-                                      foregroundColor: Colors.blue.shade900,
-                                    ),
-                                  ),
+                                NmtkPrimaryButton(
+                                  onPressed: () {
+                                    unawaited(provider.updateModule(module.id));
+                                  },
+                                  icon: Icons.system_update,
+                                  label: 'Update to ${module.remoteVersion}',
+                                  tone: NmtkTone.info,
                                 ),
-                              OutlinedButton(
+                              NmtkOutlinedButton(
                                 onPressed: () {
                                   unawaited(
                                     provider.uninstallModule(module.id),
                                   );
                                 },
-                                child: Text(
-                                  module.status == ModuleStatus.installed
-                                      ? 'Installed'
-                                      : 'Running',
-                                ),
+                                label: module.status == ModuleStatus.installed
+                                    ? 'Installed'
+                                    : 'Running',
+                                tone: module.status == ModuleStatus.degraded
+                                    ? NmtkTone.warning
+                                    : NmtkTone.neutral,
                               ),
                             ],
                           ),
@@ -225,73 +212,73 @@ class CatalogScreen extends ConsumerWidget {
     }
   }
 
-  Widget _buildStatusBadge(
-    BuildContext context,
-    Module module,
-    bool isMuJoCoUnavailable,
-  ) {
-    String text;
-    Color color;
-
+  Widget _buildStatusBadge({
+    required Module module,
+    required bool isMuJoCoUnavailable,
+  }) {
     if (isMuJoCoUnavailable) {
-      text = 'MuJoCo Missing';
-      color = Colors.grey;
-    } else {
-      switch (module.status) {
-        case ModuleStatus.notInstalled:
-          text = 'Not Installed';
-          color = Colors.orange;
-          break;
-        case ModuleStatus.installing:
-          text = 'Installing';
-          color = Colors.blue;
-          break;
-        case ModuleStatus.installed:
-          text = 'Installed';
-          color = Colors.green;
-          break;
-        case ModuleStatus.starting:
-          text = 'Starting';
-          color = Colors.blue;
-          break;
-        case ModuleStatus.running:
-          text = 'Running';
-          color = Colors.teal;
-          break;
-        case ModuleStatus.stopping:
-          text = 'Stopping';
-          color = Colors.orange;
-          break;
-        case ModuleStatus.error:
-          text = 'Error';
-          color = Colors.red;
-          break;
-        case ModuleStatus.degraded:
-          text = 'Degraded';
-          color = Colors.yellow.shade700;
-          break;
-        case ModuleStatus.updating:
-          text = 'Updating';
-          color = Colors.blue;
-          break;
-      }
+      return const NmtkStatusBadge(
+        label: 'MuJoCo Missing',
+        tone: NmtkTone.warning,
+        icon: Icons.hardware_outlined,
+      );
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
+    switch (module.status) {
+      case ModuleStatus.notInstalled:
+        return const NmtkStatusBadge(
+          label: 'Not Installed',
+          tone: NmtkTone.warning,
+          icon: Icons.download_outlined,
+        );
+      case ModuleStatus.installing:
+        return const NmtkStatusBadge(
+          label: 'Installing',
+          tone: NmtkTone.info,
+          icon: Icons.sync,
+        );
+      case ModuleStatus.installed:
+        return const NmtkStatusBadge(
+          label: 'Installed',
+          tone: NmtkTone.success,
+          icon: Icons.check_circle_outline,
+        );
+      case ModuleStatus.starting:
+        return const NmtkStatusBadge(
+          label: 'Starting',
+          tone: NmtkTone.info,
+          icon: Icons.play_circle_outline,
+        );
+      case ModuleStatus.running:
+        return const NmtkStatusBadge(
+          label: 'Running',
+          tone: NmtkTone.success,
+          icon: Icons.bolt,
+        );
+      case ModuleStatus.stopping:
+        return const NmtkStatusBadge(
+          label: 'Stopping',
+          tone: NmtkTone.warning,
+          icon: Icons.stop_circle_outlined,
+        );
+      case ModuleStatus.error:
+        return const NmtkStatusBadge(
+          label: 'Error',
+          tone: NmtkTone.danger,
+          icon: Icons.error_outline,
+        );
+      case ModuleStatus.degraded:
+        return const NmtkStatusBadge(
+          label: 'Degraded',
+          tone: NmtkTone.warning,
+          icon: Icons.warning_amber_rounded,
+        );
+      case ModuleStatus.updating:
+        return const NmtkStatusBadge(
+          label: 'Updating',
+          tone: NmtkTone.info,
+          icon: Icons.system_update,
+        );
+    }
   }
 }

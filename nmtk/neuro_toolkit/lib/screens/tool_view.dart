@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
@@ -96,8 +97,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   void _pollModuleHealth(Module module) {
-    _pollTimers[module.id] =
-        Timer.periodic(const Duration(seconds: 2), (timer) async {
+    _pollTimers[module.id] = Timer.periodic(const Duration(seconds: 2), (
+      timer,
+    ) async {
       try {
         if (module.effectivePort == null ||
             module.isPreflightFailed ||
@@ -107,8 +109,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           return;
         }
         final healthUri = _moduleUri(module, healthCheck: true);
-        final response =
-            await http.get(healthUri).timeout(const Duration(seconds: 1));
+        final response = await http
+            .get(healthUri)
+            .timeout(const Duration(seconds: 1));
         if (response.statusCode == 200) {
           if (mounted) {
             setState(() {
@@ -166,9 +169,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final url = uri.toString();
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not launch $url')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not launch $url')));
       }
     }
   }
@@ -221,10 +224,10 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     if (activeModules.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Workspace')),
-        body: const Center(
-          child: Text(
-            'No modules launched. Go to Dashboard to launch a module.',
-          ),
+        body: const NmtkEmptyState(
+          title: 'No Active Workspace',
+          message: 'Launch a module from the Dashboard to open it here.',
+          icon: Icons.laptop_outlined,
         ),
       );
     }
@@ -235,9 +238,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
 
     if (_activeModuleId.isEmpty) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -313,94 +314,54 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           return Container(
             key: ValueKey(module.id),
             child: launchBlocked
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 52,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            module.statusMessage ??
-                                'This module could not be started.',
-                            textAlign: TextAlign.center,
-                          ),
-                          if (module.capabilityWarnings.isNotEmpty) ...[
-                            const SizedBox(height: 12),
-                            Text(
-                              module.capabilityWarnings.join('\n'),
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: () => provider.launchModule(module.id),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry Start'),
-                          ),
-                        ],
-                      ),
+                ? NmtkEmptyState(
+                    title: '${module.name} Could Not Start',
+                    message: [
+                      module.statusMessage ??
+                          'This module could not be started.',
+                      if (module.capabilityWarnings.isNotEmpty)
+                        module.capabilityWarnings.join('\n'),
+                    ].join('\n\n'),
+                    icon: Icons.error_outline,
+                    tone: NmtkTone.danger,
+                    action: NmtkPrimaryButton(
+                      onPressed: () => provider.launchModule(module.id),
+                      icon: Icons.refresh,
+                      label: 'Retry Start',
+                      tone: NmtkTone.danger,
                     ),
                   )
                 : !isReady
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 16),
-                            Text('Waiting for ${module.name} to start...'),
-                            if (module.statusMessage != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                module.statusMessage!,
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                            const SizedBox(height: 8),
-                            Text(
-                              'Checking ${_moduleUri(module, healthCheck: true)}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              onPressed: () => _launchInBrowser(module),
-                              icon: const Icon(Icons.open_in_browser),
-                              label: const Text('Open in Browser instead'),
-                            ),
-                          ],
-                        ),
-                      )
-                    : supported
-                        ? WebViewWidget(controller: _getController(module))
-                        : Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.warning,
-                                  size: 48,
-                                  color: Colors.orange,
-                                ),
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'WebView not supported on this platform.',
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () => _launchInBrowser(module),
-                                  icon: const Icon(Icons.open_in_browser),
-                                  label: const Text('Open in System Browser'),
-                                ),
-                              ],
-                            ),
-                          ),
+                ? NmtkEmptyState(
+                    title: 'Waiting for ${module.name}',
+                    message: [
+                      if (module.statusMessage != null) module.statusMessage!,
+                      'Checking ${_moduleUri(module, healthCheck: true)}',
+                    ].join('\n\n'),
+                    icon: Icons.sync,
+                    tone: NmtkTone.info,
+                    action: NmtkOutlinedButton(
+                      onPressed: () => _launchInBrowser(module),
+                      icon: Icons.open_in_browser,
+                      label: 'Open in Browser instead',
+                      tone: NmtkTone.info,
+                    ),
+                  )
+                : supported
+                ? WebViewWidget(controller: _getController(module))
+                : NmtkEmptyState(
+                    title: 'WebView Not Supported',
+                    message:
+                        'Open ${module.name} in your system browser on this platform.',
+                    icon: Icons.warning_amber_rounded,
+                    tone: NmtkTone.warning,
+                    action: NmtkPrimaryButton(
+                      onPressed: () => _launchInBrowser(module),
+                      icon: Icons.open_in_browser,
+                      label: 'Open in System Browser',
+                      tone: NmtkTone.warning,
+                    ),
+                  ),
           );
         }).toList(),
       ),

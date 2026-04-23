@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -28,7 +30,6 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
     });
 
     try {
-      // Check if Homebrew is available
       final brewCheck = await Process.run('which', ['brew']);
       if (brewCheck.exitCode != 0) {
         setState(() {
@@ -61,11 +62,11 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
       if (mounted) {
         setState(() => _isInstalling = false);
         if (exitCode == 0) {
-          // Recheck Python availability
           unawaited(_retryCheck());
         } else {
           setState(() {
-            _errorMessage = 'Homebrew install exited with code $exitCode. '
+            _errorMessage =
+                'Homebrew install exited with code $exitCode. '
                 'Try installing manually from python.org.';
           });
         }
@@ -103,168 +104,117 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.terminal,
-                  size: 72,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Python Required',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'NeuroMorphic ToolKit requires Python 3.10+ to run '
-                  'module backends. Please install Python to continue.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // --- macOS-specific install options ---
-                if (Platform.isMacOS) ...[
-                  Semantics(
-                    label: 'Install Python using Homebrew',
-                    button: true,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _isInstalling ? null : _installWithHomebrew,
-                        icon: const Icon(Icons.download),
-                        label: _isInstalling
-                            ? const Text('Installing...')
-                            : const Text('Install with Homebrew'),
-                      ),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  NmtkSurfaceCard(
+                    child: Column(
+                      children: [
+                        const Icon(Icons.terminal, size: 72),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Python Required',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'NeuroMorphic ToolKit requires Python 3.10+ to run '
+                          'module backends. Install Python to continue.',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        const SizedBox(height: 24),
+                        if (Platform.isMacOS) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: NmtkPrimaryButton(
+                              onPressed: _isInstalling
+                                  ? null
+                                  : _installWithHomebrew,
+                              icon: Icons.download,
+                              label: _isInstalling
+                                  ? 'Installing...'
+                                  : 'Install with Homebrew',
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: NmtkOutlinedButton(
+                              onPressed: _openPythonOrg,
+                              icon: Icons.open_in_new,
+                              label: 'Download from python.org',
+                              tone: NmtkTone.info,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        SizedBox(
+                          width: double.infinity,
+                          child: NmtkPrimaryButton(
+                            onPressed: (_isInstalling || _isChecking)
+                                ? null
+                                : _retryCheck,
+                            icon: Icons.refresh,
+                            label: _isChecking
+                                ? 'Checking for Python...'
+                                : 'Retry Detection',
+                            tone: NmtkTone.neutral,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  if (_installOutput != null) ...[
+                    const SizedBox(height: 12),
+                    NmtkSurfaceCard(
+                      title: 'Installer Output',
+                      child: SizedBox(
+                        height: 180,
+                        child: SingleChildScrollView(
+                          reverse: true,
+                          child: SelectableText(
+                            _installOutput!,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(fontFamily: 'monospace'),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    NmtkSurfaceCard(
+                      title: 'Installation Problem',
+                      tone: NmtkTone.danger,
+                      child: Text(_errorMessage!),
+                    ),
+                  ],
                   const SizedBox(height: 12),
-                  Semantics(
-                    label: 'Download Python from python.org website',
-                    button: true,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _openPythonOrg,
-                        icon: const Icon(Icons.open_in_new),
-                        label: const Text('Download from python.org'),
+                  NmtkSurfaceCard(
+                    title: 'Or Install via Terminal',
+                    tone: NmtkTone.info,
+                    child: SelectableText(
+                      Platform.isMacOS
+                          ? 'brew install python'
+                          : 'sudo apt install python3 python3-venv',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                 ],
-
-                const SizedBox(height: 16),
-
-                // --- Retry button ---
-                Semantics(
-                  label: 'Retry detecting installed Python',
-                  button: true,
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonalIcon(
-                      onPressed:
-                          (_isInstalling || _isChecking) ? null : _retryCheck,
-                      icon: _isChecking
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.refresh),
-                      label: const Text('Retry Detection'),
-                    ),
-                  ),
-                ),
-
-                // --- Install output ---
-                if (_installOutput != null) ...[
-                  const SizedBox(height: 24),
-                  Container(
-                    width: double.infinity,
-                    height: 160,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: SingleChildScrollView(
-                      reverse: true,
-                      child: SelectableText(
-                        _installOutput!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-
-                // --- Error message ---
-                if (_errorMessage != null) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _errorMessage!,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onErrorContainer,
-                      ),
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 24),
-                // Hint for terminal users
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Or install via terminal:',
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      SelectableText(
-                        Platform.isMacOS
-                            ? 'brew install python'
-                            : 'sudo apt install python3 python3-venv',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
