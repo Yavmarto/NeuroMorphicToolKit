@@ -23,11 +23,11 @@ Use it as the resume point for implementation.
   - static weights only
   - `int8` weights only
   - max `256` neurons
-  - max `65536` synapses
+  - max `15360` synapses
   - max `2` populations
 - overlay identity:
   - `overlay_id = "snn_overlay_v1"`
-  - `overlay_version = "1.0.0"`
+  - `overlay_version = "1.0.1"`
 
 ## Write Sets
 

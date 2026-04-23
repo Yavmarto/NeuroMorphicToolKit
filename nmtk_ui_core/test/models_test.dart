@@ -96,18 +96,32 @@ void main() {
         'network_summary': {'n_neurons': 100, 'n_synapses': 200},
         'deploy_payload': {
           'weights': [1, 2, 3],
-          'config': {'threshold': 1.0, 'bit_width': 4, 'scale_factor': 7.0},
+          'config': {'threshold': 1.0, 'bit_width': 8, 'scale_factor': 127.0},
           'bitstream_path': '/opt/overlays/snn_overlay.bit',
+          'overlay_id': 'snn_overlay_v1',
+          'overlay_version': '1.0.1',
+          'weight_bit_width': 8,
+          'max_supported_neurons': 256,
+          'max_supported_synapses': 15360,
+          'dma_ip_name': 'axi_dma_0',
+          'snn_ip_name': 'snn_engine_0',
+          'contract_digest': 'abc123',
           'register_map': {
             'base_address': 1073741824,
             'control_reg_offset': 0,
             'status_reg_offset': 4,
+            'population_count_offset': 8,
+            'input_neuron_count_offset': 12,
+            'output_neuron_count_offset': 16,
+            'timestep_count_offset': 20,
+            'threshold_base_offset': 256,
             'neuron_base_offset': 256,
             'weight_base_offset': 4096,
             'dma_channel': 'axi_dma_0',
             'input_buffer_addr': 0,
             'output_buffer_addr': 0,
             'timestep_us': 1000,
+            'addr_range': 65536,
           },
         },
       };
@@ -119,14 +133,36 @@ void main() {
       expect(response.networkSummary?['n_neurons'], 100);
       expect(response.deployPayload, isNotNull);
       expect(response.deployPayload!.weightCount, 3);
-      expect(response.deployPayload!.config.bitWidth, 4);
+      expect(response.deployPayload!.config.bitWidth, 8);
+      expect(response.deployPayload!.overlayVersion, '1.0.1');
+      expect(response.deployPayload!.maxSupportedSynapses, 15360);
       expect(response.deployPayload!.registerMap.dmaChannel, 'axi_dma_0');
+      expect(response.deployPayload!.registerMap.populationCountOffset, 8);
+      expect(response.deployPayload!.registerMap.thresholdBaseOffset, 256);
+
+      final roundTrip = response.deployPayload!.toJson();
+      final roundTripRegisterMap =
+          roundTrip['register_map'] as Map<String, dynamic>;
+      expect(roundTrip['overlay_id'], 'snn_overlay_v1');
+      expect(roundTrip['overlay_version'], '1.0.1');
+      expect(roundTrip['weight_bit_width'], 8);
+      expect(roundTrip['max_supported_neurons'], 256);
+      expect(roundTrip['max_supported_synapses'], 15360);
+      expect(roundTrip['dma_ip_name'], 'axi_dma_0');
+      expect(roundTrip['snn_ip_name'], 'snn_engine_0');
+      expect(roundTrip['contract_digest'], 'abc123');
+      expect(roundTripRegisterMap['population_count_offset'], 8);
+      expect(roundTripRegisterMap['input_neuron_count_offset'], 12);
+      expect(roundTripRegisterMap['output_neuron_count_offset'], 16);
+      expect(roundTripRegisterMap['timestep_count_offset'], 20);
+      expect(roundTripRegisterMap['threshold_base_offset'], 256);
+      expect(roundTripRegisterMap['addr_range'], 65536);
     });
 
     test('fromJson parses exportable_with_warnings state', () {
       final json = {
         'support_state': 'exportable_with_warnings',
-        'warnings': ['Network uses 52429/65536 neurons (>80% capacity)'],
+        'warnings': ['Network uses 205/256 neurons (>80% capacity)'],
         'rejections': <String>[],
         'network_summary': null,
       };
@@ -157,7 +193,7 @@ void main() {
         'network_summary': {'n_neurons': 100},
         'deploy_payload': {
           'weights': [1, 2, 3],
-          'config': {'bit_width': 4},
+          'config': {'bit_width': 8},
           'bitstream_path': 'snn_overlay.bit',
           'register_map': {'weight_base_offset': 4096},
         },
@@ -166,7 +202,7 @@ void main() {
 
       expect(response.deployPayload, isNotNull);
       expect(response.deployPayload!.weights, [1.0, 2.0, 3.0]);
-      expect(response.deployPayload!.config.bitWidth, 4);
+      expect(response.deployPayload!.config.bitWidth, 8);
       expect(response.deployPayload!.registerMap.weightBaseOffset, 4096);
     });
   });
@@ -415,9 +451,18 @@ void main() {
       const host = AkidaPairedHost(
         id: 'akida-host-1',
         displayName: 'Linux Akida Host',
+        host: '192.168.1.60',
+        sshPort: 22,
+        username: 'operator',
         runtimeApiUrl: 'http://192.168.1.60:8002',
+        controlApiUrl: 'http://192.168.1.60:8090',
         authMode: AkidaHostAuthMode.none,
         credentialRef: '',
+        password: '',
+        hasPassword: false,
+        sshKeyPath: '',
+        remoteInstallRoot: '/opt/neurochip-akida-host',
+        serviceUser: 'neurochip',
         hostOs: 'linux',
         pythonVersion: '3.11.8',
         runtimeMode: AkidaRuntimeMode.remoteSdk,

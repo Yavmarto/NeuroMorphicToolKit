@@ -24,7 +24,7 @@ class _PynqDeployScreenState extends ConsumerState<PynqDeployScreen> {
   final _overlayVersionController = TextEditingController();
   final _bitstreamPathController = TextEditingController();
 
-  int _weightBitWidth = 4;
+  int _weightBitWidth = 8;
   PynqBoardAuthMode _authMode = PynqBoardAuthMode.password;
   String? _formBoardId;
 
@@ -268,9 +268,7 @@ class _PynqDeployScreenState extends ConsumerState<PynqDeployScreen> {
                 DropdownButton<int>(
                   value: _weightBitWidth,
                   items: const [
-                    DropdownMenuItem(value: 4, child: Text('4-bit')),
                     DropdownMenuItem(value: 8, child: Text('8-bit')),
-                    DropdownMenuItem(value: 16, child: Text('16-bit')),
                   ],
                   onChanged: (value) {
                     if (value != null) {

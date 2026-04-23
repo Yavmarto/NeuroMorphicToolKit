@@ -33,7 +33,18 @@ class AkidaDeployScreen extends ConsumerStatefulWidget {
 class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   final _specController = TextEditingController();
   final _remoteHostNameController = TextEditingController();
+  final _remoteHostAddressController = TextEditingController();
+  final _remoteHostSshPortController = TextEditingController(text: '22');
+  final _remoteHostUsernameController = TextEditingController();
+  final _remoteHostPasswordController = TextEditingController();
   final _remoteHostUrlController = TextEditingController();
+  final _remoteControlUrlController = TextEditingController();
+  final _remoteInstallRootController = TextEditingController(
+    text: '/opt/neurochip-akida-host',
+  );
+  final _remoteServiceUserController = TextEditingController(
+    text: 'neurochip',
+  );
   int _weightBitWidth = 4;
   String _akidaVersion = 'akida1';
   String? _remoteHostFormId;
@@ -51,7 +62,14 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   void dispose() {
     _specController.dispose();
     _remoteHostNameController.dispose();
+    _remoteHostAddressController.dispose();
+    _remoteHostSshPortController.dispose();
+    _remoteHostUsernameController.dispose();
+    _remoteHostPasswordController.dispose();
     _remoteHostUrlController.dispose();
+    _remoteControlUrlController.dispose();
+    _remoteInstallRootController.dispose();
+    _remoteServiceUserController.dispose();
     super.dispose();
   }
 
@@ -61,11 +79,25 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
         selectedRemoteHost != null) {
       _remoteHostFormId = selectedRemoteHost.id;
       _remoteHostNameController.text = selectedRemoteHost.displayName;
+      _remoteHostAddressController.text = selectedRemoteHost.host;
+      _remoteHostSshPortController.text = selectedRemoteHost.sshPort.toString();
+      _remoteHostUsernameController.text = selectedRemoteHost.username;
+      _remoteHostPasswordController.clear();
       _remoteHostUrlController.text = selectedRemoteHost.runtimeApiUrl;
+      _remoteControlUrlController.text = selectedRemoteHost.controlApiUrl;
+      _remoteInstallRootController.text = selectedRemoteHost.remoteInstallRoot;
+      _remoteServiceUserController.text = selectedRemoteHost.serviceUser;
     } else if (selectedRemoteHost == null && _remoteHostFormId != null) {
       _remoteHostFormId = null;
       _remoteHostNameController.clear();
+      _remoteHostAddressController.clear();
+      _remoteHostSshPortController.text = '22';
+      _remoteHostUsernameController.clear();
+      _remoteHostPasswordController.clear();
       _remoteHostUrlController.clear();
+      _remoteControlUrlController.clear();
+      _remoteInstallRootController.text = '/opt/neurochip-akida-host';
+      _remoteServiceUserController.text = 'neurochip';
     }
   }
 
@@ -332,8 +364,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
               controller: _specController,
               maxLines: 8,
               decoration: const InputDecoration(
-                hintText:
-                    'Enter your NeuroCNL specification…\n'
+                hintText: 'Enter your NeuroCNL specification…\n'
                     'Example: The sensory neuron MUST fire ONLY IF '
                     'membrane potential exceeds 1.0.',
                 border: OutlineInputBorder(),
@@ -390,10 +421,10 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   onPressed: isChecking || _specController.text.trim().isEmpty
                       ? null
                       : () => provider.checkExportability(
-                          spec: _specController.text,
-                          weightBitWidth: _weightBitWidth,
-                          akidaVersion: _akidaVersion,
-                        ),
+                            spec: _specController.text,
+                            weightBitWidth: _weightBitWidth,
+                            akidaVersion: _akidaVersion,
+                          ),
                   icon: isChecking
                       ? const SizedBox(
                           width: 16,
@@ -442,12 +473,10 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     final simulatorOnly =
         !hostSupported && runtimeConfig?.localModeFallback == 'simulator_only';
     final connectedChecks = runtimeStatus?.environmentChecks;
-    final requiresRemoteRuntime =
-        checks?.recommendedRuntime == 'remote_sdk' ||
+    final requiresRemoteRuntime = checks?.recommendedRuntime == 'remote_sdk' ||
         connectedChecks?.recommendedRuntime == 'remote_sdk' ||
         runtimeState?.status == 'unsupported_python';
-    final showPrepareButton =
-        provider.isLocalSdkMode &&
+    final showPrepareButton = provider.isLocalSdkMode &&
         runtimeConfig != null &&
         hostSupported &&
         !provider.isPreparingRuntime &&
@@ -641,11 +670,12 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     AkidaDeployProvider provider,
   ) {
     final selectedRemoteHost = provider.selectedRemoteHost;
+    final hostOperationInProgress = provider.hostOperationInProgress;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Choose a Linux or Windows Neurochip runtime that already has the BrainChip SDK installed. The launcher will send scaffold generation and runtime verification requests to that host.',
+          'Register a blank Linux host, test SSH connectivity, provision Neurochip and the Akida runtime, then use the resulting runtime for scaffold generation and SDK verification.',
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
@@ -685,13 +715,87 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
               ),
             ),
             SizedBox(
-              width: 340,
+              width: 240,
+              child: TextField(
+                controller: _remoteHostAddressController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Host address',
+                  helperText: 'Example: akida-linux.local',
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 120,
+              child: TextField(
+                controller: _remoteHostSshPortController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'SSH port',
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 180,
+              child: TextField(
+                controller: _remoteHostUsernameController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'SSH user',
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 240,
+              child: TextField(
+                controller: _remoteHostPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'SSH password',
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 320,
               child: TextField(
                 controller: _remoteHostUrlController,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
                   labelText: 'Neurochip runtime URL',
                   helperText: 'Example: http://akida-linux:8002',
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 320,
+              child: TextField(
+                controller: _remoteControlUrlController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Control API URL',
+                  helperText: 'Example: http://akida-linux:8090',
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 320,
+              child: TextField(
+                controller: _remoteInstallRootController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Remote install root',
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 180,
+              child: TextField(
+                controller: _remoteServiceUserController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Service user',
                 ),
               ),
             ),
@@ -703,23 +807,68 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
           runSpacing: 8,
           children: [
             FilledButton.icon(
-              onPressed: provider.isLoadingRuntimeSetup
+              onPressed: hostOperationInProgress
                   ? null
                   : () => provider.saveRemoteHost(
-                      hostId: selectedRemoteHost?.id,
-                      displayName: _remoteHostNameController.text.trim().isEmpty
-                          ? _remoteHostUrlController.text.trim()
-                          : _remoteHostNameController.text.trim(),
-                      runtimeApiUrl: _remoteHostUrlController.text.trim(),
-                    ),
+                        hostId: selectedRemoteHost?.id,
+                        displayName:
+                            _remoteHostNameController.text.trim().isEmpty
+                                ? _remoteHostAddressController.text.trim()
+                                : _remoteHostNameController.text.trim(),
+                        hostAddress: _remoteHostAddressController.text.trim(),
+                        sshPort: int.tryParse(
+                                _remoteHostSshPortController.text.trim()) ??
+                            22,
+                        username: _remoteHostUsernameController.text.trim(),
+                        password: _remoteHostPasswordController.text,
+                        runtimeApiUrl: _remoteHostUrlController.text.trim(),
+                        controlApiUrl: _remoteControlUrlController.text.trim(),
+                        remoteInstallRoot:
+                            _remoteInstallRootController.text.trim(),
+                        serviceUser: _remoteServiceUserController.text.trim(),
+                      ),
               icon: const Icon(Icons.cloud_done_outlined),
               label: Text(
                 selectedRemoteHost == null ? 'Save Host' : 'Update Host',
               ),
             ),
             OutlinedButton.icon(
-              onPressed:
-                  selectedRemoteHost == null || provider.isLoadingRuntimeSetup
+              onPressed: selectedRemoteHost == null || hostOperationInProgress
+                  ? null
+                  : () => provider.testSelectedRemoteHostConnectivity(),
+              icon: const Icon(Icons.network_ping_outlined),
+              label: const Text('Test Connectivity'),
+            ),
+            FilledButton.icon(
+              onPressed: selectedRemoteHost == null || hostOperationInProgress
+                  ? null
+                  : () => provider.provisionSelectedRemoteHost(),
+              icon: const Icon(Icons.download_for_offline_outlined),
+              label: const Text('Provision Host'),
+            ),
+            OutlinedButton.icon(
+              onPressed: selectedRemoteHost == null || hostOperationInProgress
+                  ? null
+                  : () => provider.checkSelectedRemoteHostReadiness(),
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('Check Readiness'),
+            ),
+            OutlinedButton.icon(
+              onPressed: selectedRemoteHost == null || hostOperationInProgress
+                  ? null
+                  : () => provider.repairSelectedRemoteHost(),
+              icon: const Icon(Icons.build_circle_outlined),
+              label: const Text('Repair'),
+            ),
+            OutlinedButton.icon(
+              onPressed: selectedRemoteHost == null || hostOperationInProgress
+                  ? null
+                  : () => provider.restartSelectedRemoteHostServices(),
+              icon: const Icon(Icons.restart_alt_outlined),
+              label: const Text('Restart Services'),
+            ),
+            OutlinedButton.icon(
+              onPressed: selectedRemoteHost == null || hostOperationInProgress
                   ? null
                   : () => provider.deleteSelectedRemoteHost(),
               icon: const Icon(Icons.delete_outline),
@@ -727,12 +876,57 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
             ),
           ],
         ),
+        if (provider.hostOperationInProgress) ...[
+          const SizedBox(height: 12),
+          const LinearProgressIndicator(),
+        ],
+        if (provider.hostFeedbackMessage != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            provider.hostFeedbackMessage!,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
         if (selectedRemoteHost != null) ...[
           const SizedBox(height: 12),
           Text(
             'Selected runtime: ${selectedRemoteHost.displayName} • ${selectedRemoteHost.runtimeApiUrl}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
+          const SizedBox(height: 4),
+          Text(
+            'State: ${selectedRemoteHost.state.label} • SSH ${selectedRemoteHost.username}@${selectedRemoteHost.host}:${selectedRemoteHost.sshPort}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          if (selectedRemoteHost.controlApiUrl.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Control API: ${selectedRemoteHost.controlApiUrl}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (selectedRemoteHost.lastReadinessMessage.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              selectedRemoteHost.lastReadinessMessage,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (selectedRemoteHost.hostOs.isNotEmpty ||
+              selectedRemoteHost.pythonVersion.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Remote environment: ${selectedRemoteHost.hostOs.isEmpty ? "unknown os" : selectedRemoteHost.hostOs} • Python ${selectedRemoteHost.pythonVersion.isEmpty ? "unknown" : selectedRemoteHost.pythonVersion}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (selectedRemoteHost.hasPassword) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Launcher has stored SSH credentials for provisioning and repair.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ],
       ],
     );
@@ -742,11 +936,9 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     BuildContext context,
     AkidaDeployProvider provider,
   ) {
-    final isDeploying =
-        provider.currentStep == AkidaDeployStep.deploying ||
+    final isDeploying = provider.currentStep == AkidaDeployStep.deploying ||
         provider.currentStep == AkidaDeployStep.polling;
-    final canStartDeploy =
-        provider.exportResult?.mappedNetwork != null &&
+    final canStartDeploy = provider.exportResult?.mappedNetwork != null &&
         provider.canDeployToSelectedRuntime;
 
     return Card(
@@ -870,13 +1062,11 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     final sdkVerification = provider.sdkVerification;
     final savedPath = provider.savedPackagePath;
     final isPolling = provider.currentStep == AkidaDeployStep.polling;
-    final isDone =
-        provider.currentStep == AkidaDeployStep.done ||
+    final isDone = provider.currentStep == AkidaDeployStep.done ||
         provider.currentStep == AkidaDeployStep.verifying;
 
-    final progressValue = isPolling
-        ? null
-        : (savedPath != null || isDone ? 1.0 : null);
+    final progressValue =
+        isPolling ? null : (savedPath != null || isDone ? 1.0 : null);
 
     return Card(
       child: Padding(
@@ -979,8 +1169,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ] else if (sdkVerification
-                      .environmentChecks
-                      ?.recommendedRuntime ==
+                      .environmentChecks?.recommendedRuntime ==
                   'simulator_only') ...[
                 const SizedBox(height: 4),
                 Text(
@@ -1221,8 +1410,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
       color: isCompleted
           ? Colors.green.withValues(alpha: 0.08)
           : isFailed
-          ? Colors.red.withValues(alpha: 0.08)
-          : null,
+              ? Colors.red.withValues(alpha: 0.08)
+              : null,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -1234,13 +1423,13 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   isCompleted
                       ? Icons.verified
                       : isFailed
-                      ? Icons.error
-                      : Icons.hourglass_top,
+                          ? Icons.error
+                          : Icons.hourglass_top,
                   color: isCompleted
                       ? Colors.green
                       : isFailed
-                      ? Colors.red
-                      : Colors.blue,
+                          ? Colors.red
+                          : Colors.blue,
                   size: 28,
                 ),
                 const SizedBox(width: 8),

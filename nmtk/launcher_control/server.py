@@ -57,7 +57,8 @@ SUPPORTED_INSTALL_STRATEGIES = {"pip"}
 SUPPORTED_START_STRATEGIES = {"uvicorn", "none"}
 PREFLIGHT_SENTINEL = "NMTK_PREFLIGHT_JSON="
 DEFAULT_AKIDA_HOST_PORT = 8002
-DEFAULT_AKIDA_HOST_STATE = "unpaired"
+DEFAULT_AKIDA_CONTROL_PORT = 8090
+DEFAULT_AKIDA_HOST_SSH_PORT = 22
 DEFAULT_PYNQ_BOARD_PORT = 8002
 DEFAULT_PYNQ_BOARD_SSH_PORT = 22
 # 60s was too tight: a cold provision on a Pynq-Z2 regularly needs 90-100s for
@@ -76,24 +77,23 @@ DEFAULT_PYNQ_BOARD_USERNAME = "xilinx"
 DEFAULT_PYNQ_BOARD_STATE = "unpaired"
 DEFAULT_PYNQ_AUTH_MODE = "password"
 DEFAULT_AKIDA_HOST_STATE = "unknown"
-DEFAULT_AKIDA_AUTH_MODE = "none"
+DEFAULT_AKIDA_AUTH_MODE = "password"
+DEFAULT_AKIDA_SERVICE_USER = "neurochip"
+DEFAULT_AKIDA_REMOTE_INSTALL_ROOT = "/opt/neurochip-akida-host"
+DEFAULT_AKIDA_RUNTIME_SERVICE_NAME = "neurochip"
+DEFAULT_AKIDA_CONTROL_SERVICE_NAME = "neurochip-akida-control"
+DEFAULT_AKIDA_REMOTE_VENV_PATH = f"{DEFAULT_AKIDA_REMOTE_INSTALL_ROOT}/venv"
+DEFAULT_AKIDA_TOKEN_PATH = f"{DEFAULT_AKIDA_REMOTE_INSTALL_ROOT}/credentials/api-token"
 AKIDA_RUNTIME_MODES = {
     "local_sdk",
     "remote_sdk",
     "simulator_only",
     "unknown",
 }
-AKIDA_HOST_STATES = {
-    "unknown",
-    "pending",
-    "ready",
-    "degraded",
-    "simulator_only",
-    "blocked",
-    "error",
-}
 AKIDA_HOST_AUTH_MODES = {
     "none",
+    "password",
+    "ssh_key",
     "basic",
     "bearer_token",
 }
@@ -133,12 +133,16 @@ AKIDA_HOST_STATES = {
     "unpaired",
     "pending",
     "reachable",
+    "bootstrapping",
+    "installing_runtime",
+    "verifying_sdk",
     "ready",
     "degraded",
     "degraded_optional_capability",
     "simulator_only",
     "blocked",
     "preflight_failed",
+    "provision_failed",
     "error",
 }
 IMPORT_PROBE_SCRIPT = textwrap.dedent(
@@ -413,6 +417,10 @@ def _default_akida_base_url(host: str, port: int = DEFAULT_AKIDA_HOST_PORT) -> s
     return f"http://{host}:{port}"
 
 
+def _default_akida_control_url(host: str, port: int = DEFAULT_AKIDA_CONTROL_PORT) -> str:
+    return f"http://{host}:{port}"
+
+
 def _default_runtime_api_url(host: str, port: int = DEFAULT_PYNQ_BOARD_PORT) -> str:
     return f"http://{host}:{port}"
 
@@ -635,6 +643,19 @@ def _resolved_akida_base_url(host: dict[str, Any]) -> str:
     return _default_akida_base_url(normalized_host, port)
 
 
+def _resolved_akida_control_api_url(host: dict[str, Any]) -> str:
+    control_api_url = _normalize_base_url(host.get("controlApiUrl"))
+    if control_api_url:
+        return control_api_url
+    normalized_host = str(host.get("host") or "").strip()
+    if not normalized_host:
+        return ""
+    port = host.get("controlPort", DEFAULT_AKIDA_CONTROL_PORT)
+    if not isinstance(port, int):
+        port = DEFAULT_AKIDA_CONTROL_PORT
+    return _default_akida_control_url(normalized_host, port)
+
+
 class RuntimeRequestError(RuntimeError):
     def __init__(
         self,
@@ -643,11 +664,13 @@ class RuntimeRequestError(RuntimeError):
         kind: str,
         url: str,
         status_code: int | None = None,
+        response_body: str = "",
     ) -> None:
         super().__init__(message)
         self.kind = kind
         self.url = url
         self.status_code = status_code
+        self.response_body = response_body
 
 
 def _runtime_request_error_kind(exc: Exception) -> str:
@@ -945,11 +968,18 @@ def _default_akida_host_display_name(runtime_api_url: str) -> str:
 
 def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
     runtime_api_url = _normalize_base_url(raw.get("runtimeApiUrl"))
+    control_api_url = _normalize_base_url(raw.get("controlApiUrl"))
     base_url = _normalize_base_url(raw.get("baseUrl"))
     host = str(raw.get("host") or "").strip()
     port = raw.get("port", DEFAULT_AKIDA_HOST_PORT)
     if not isinstance(port, int):
         port = DEFAULT_AKIDA_HOST_PORT
+    ssh_port = raw.get("sshPort", DEFAULT_AKIDA_HOST_SSH_PORT)
+    if not isinstance(ssh_port, int):
+        ssh_port = DEFAULT_AKIDA_HOST_SSH_PORT
+    control_port = raw.get("controlPort", DEFAULT_AKIDA_CONTROL_PORT)
+    if not isinstance(control_port, int):
+        control_port = DEFAULT_AKIDA_CONTROL_PORT
     if not base_url and runtime_api_url:
         base_url = runtime_api_url
     if not runtime_api_url and base_url:
@@ -965,6 +995,8 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
     elif host and not base_url:
         base_url = _default_akida_base_url(host, port)
         runtime_api_url = runtime_api_url or base_url
+    if not control_api_url and host:
+        control_api_url = _default_akida_control_url(host, control_port)
     capability_snapshot = _normalize_akida_capability_snapshot(
         raw.get("capabilitySnapshot", raw.get("capability_snapshot"))
     )
@@ -980,10 +1012,32 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         ).strip(),
         "host": host,
         "port": port,
+        "sshPort": ssh_port,
+        "controlPort": control_port,
+        "username": str(raw.get("username") or "").strip(),
         "baseUrl": base_url,
         "runtimeApiUrl": runtime_api_url,
+        "controlApiUrl": control_api_url,
         "authMode": _normalize_akida_host_auth_mode(raw.get("authMode")),
         "credentialRef": str(raw.get("credentialRef") or "").strip(),
+        "password": str(raw.get("password") or ""),
+        "sshKeyPath": str(raw.get("sshKeyPath") or "").strip(),
+        "remoteInstallRoot": str(
+            raw.get("remoteInstallRoot") or DEFAULT_AKIDA_REMOTE_INSTALL_ROOT
+        ).strip(),
+        "remoteVenvPath": str(
+            raw.get("remoteVenvPath") or DEFAULT_AKIDA_REMOTE_VENV_PATH
+        ).strip(),
+        "serviceUser": str(
+            raw.get("serviceUser") or DEFAULT_AKIDA_SERVICE_USER
+        ).strip(),
+        "runtimeServiceName": str(
+            raw.get("runtimeServiceName") or DEFAULT_AKIDA_RUNTIME_SERVICE_NAME
+        ).strip(),
+        "controlServiceName": str(
+            raw.get("controlServiceName") or DEFAULT_AKIDA_CONTROL_SERVICE_NAME
+        ).strip(),
+        "tokenPath": str(raw.get("tokenPath") or DEFAULT_AKIDA_TOKEN_PATH).strip(),
         "hostOs": str(raw.get("hostOs") or "").strip(),
         "pythonVersion": str(raw.get("pythonVersion") or "").strip(),
         "runtimeMode": runtime_mode,
@@ -997,6 +1051,9 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         else None,
         "lastReadinessMessage": str(raw.get("lastReadinessMessage") or "").strip(),
         "lastVerifiedAt": str(raw.get("lastVerifiedAt") or "").strip(),
+        "lastInstallStatus": raw.get("lastInstallStatus")
+        if isinstance(raw.get("lastInstallStatus"), dict)
+        else None,
         "capabilitySnapshot": capability_snapshot,
     }
 
@@ -1011,9 +1068,14 @@ def _serialize_akida_host(host: dict[str, Any]) -> dict[str, Any]:
     payload["runtimeApiUrl"] = str(
         payload.get("runtimeApiUrl") or _resolved_akida_base_url(payload)
     ).strip()
+    payload["controlApiUrl"] = str(
+        payload.get("controlApiUrl") or _resolved_akida_control_api_url(payload)
+    ).strip()
     payload["host"] = str(
         payload.get("host") or urlparse(payload["baseUrl"]).hostname or ""
     ).strip()
+    payload["hasPassword"] = bool(payload.get("password"))
+    payload.pop("password", None)
     return payload
 
 
@@ -1156,16 +1218,25 @@ def _status_for_health_response(
 
 def _describe_pynq_preflight(preflight: dict[str, Any]) -> str:
     status = str(preflight.get("preflight_status") or "").strip().lower()
+    message = str(preflight.get("preflight_message") or "").strip()
     overlay_assets = preflight.get("overlay_assets")
     if status == PREFLIGHT_OK:
         return "preflight ready"
     if status == PREFLIGHT_DEGRADED:
-        return "degraded optional capability"
+        return (
+            f"degraded optional capability: {message}"
+            if message
+            else "degraded optional capability"
+        )
     if isinstance(overlay_assets, dict) and not overlay_assets.get(
         "ready_for_hardware", False
     ):
-        return "preflight failed: overlay assets missing; install overlay assets next"
-    return "preflight failed"
+        return (
+            f"preflight failed: overlay assets missing; {message}"
+            if message
+            else "preflight failed: overlay assets missing; install overlay assets next"
+        )
+    return f"preflight failed: {message}" if message else "preflight failed"
 
 
 def _message_from_probe_outcome(
@@ -1577,8 +1648,8 @@ class LauncherControlState:
 
     def create_akida_host(self, payload: dict[str, Any]) -> dict[str, Any]:
         host = _normalize_akida_host(payload)
-        if not _resolved_akida_base_url(host):
-            raise ValueError("Akida host runtimeApiUrl is required")
+        if not _resolved_akida_base_url(host) and not str(host.get("host") or "").strip():
+            raise ValueError("Akida host runtimeApiUrl or host is required")
         with self._lock:
             hosts = self._settings["akidaHosts"]
             if any(existing["id"] == host["id"] for existing in hosts):
@@ -2144,9 +2215,13 @@ class LauncherControlState:
                 ),
                 stderr=True,
             )
-            raise RuntimeError(
+            raise RuntimeRequestError(
                 f"Runtime request failed for {method} {url}: HTTP {exc.code}"
-                + (f" — {error_body}" if error_body else "")
+                + (f" - {error_body}" if error_body else ""),
+                kind="http",
+                url=url,
+                status_code=exc.code,
+                response_body=error_body,
             ) from exc
         except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
             kind = _runtime_request_error_kind(exc)
@@ -2596,7 +2671,7 @@ class LauncherControlState:
     ) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
         response = self._runtime_json_request(
-            board, "POST", "/hardware/pynq/deploy", payload
+            board, "POST", "/hardware/pynq/deploy", payload, timeout=120.0
         )
         return response
 
@@ -2620,6 +2695,227 @@ class LauncherControlState:
             host.get("displayName") or host.get("host") or host.get("id") or "akida"
         )
         print(f"[akida:{host_label}] {message}", file=stream, flush=True)
+
+    def _prepare_akida_ssh_invocation(
+        self,
+        host: dict[str, Any],
+        *,
+        copy_mode: bool = False,
+    ) -> tuple[list[str], dict[str, str] | None, Callable[[], None] | None]:
+        env: dict[str, str] | None = None
+        cleanup: Callable[[], None] | None = None
+        prefix: list[str] = []
+        auth_mode = str(host.get("authMode", DEFAULT_AKIDA_AUTH_MODE))
+        if auth_mode == "password":
+            password = str(host.get("password") or "")
+            if not password:
+                raise RuntimeError("Password authentication requires a stored password")
+            sshpass = shutil.which("sshpass")
+            if sshpass is not None:
+                prefix.extend([sshpass, "-p", password])
+            else:
+                self._emit_akida_terminal_log(
+                    host,
+                    "sshpass not found on host; falling back to SSH_ASKPASS for password authentication",
+                )
+                askpass_handle = tempfile.NamedTemporaryFile(
+                    mode="w",
+                    encoding="utf-8",
+                    prefix="nmtk-akida-askpass-",
+                    delete=False,
+                )
+                askpass_handle.write("#!/bin/sh\n")
+                askpass_handle.write("printf '%s\\n' \"$NMTK_AKIDA_PASSWORD\"\n")
+                askpass_handle.close()
+                os.chmod(askpass_handle.name, 0o700)
+
+                env = os.environ.copy()
+                env["NMTK_AKIDA_PASSWORD"] = password
+                env["SSH_ASKPASS"] = askpass_handle.name
+                env["SSH_ASKPASS_REQUIRE"] = "force"
+                env.setdefault("DISPLAY", "nmtk-launcher-control:0")
+
+                def _cleanup_askpass() -> None:
+                    try:
+                        os.unlink(askpass_handle.name)
+                    except FileNotFoundError:
+                        return None
+
+                cleanup = _cleanup_askpass
+        command = ["scp"] if copy_mode else ["ssh"]
+        port_flag = "-P" if copy_mode else "-p"
+        command.extend(
+            [
+                "-o",
+                "StrictHostKeyChecking=accept-new",
+                "-o",
+                "UserKnownHostsFile=/dev/null",
+                port_flag,
+                str(host.get("sshPort", DEFAULT_AKIDA_HOST_SSH_PORT)),
+            ]
+        )
+        if auth_mode == "password":
+            command.extend(
+                [
+                    "-o",
+                    "PreferredAuthentications=password",
+                    "-o",
+                    "PubkeyAuthentication=no",
+                    "-o",
+                    "NumberOfPasswordPrompts=1",
+                ]
+            )
+        if auth_mode == "ssh_key":
+            ssh_key_path = str(host.get("sshKeyPath") or "").strip()
+            if not ssh_key_path:
+                raise RuntimeError("SSH-key authentication requires sshKeyPath")
+            command.extend(["-i", ssh_key_path])
+        return prefix + command, env, cleanup
+
+    def _run_akida_ssh(self, host: dict[str, Any], remote_command: str) -> str:
+        username = str(host.get("username") or "").strip()
+        if not username:
+            raise RuntimeError("Akida host username is required for SSH operations")
+        target = f"{username}@{host['host']}"
+        command, env, cleanup = self._prepare_akida_ssh_invocation(host)
+        command.extend([target, remote_command])
+        self._emit_akida_terminal_log(host, f"ssh -> {target}: {remote_command}")
+        try:
+            process = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=env,
+            )
+            stdout_lines: list[str] = []
+            stderr_lines: list[str] = []
+
+            def _pump(stream: Any, sink: list[str], *, stderr: bool = False) -> None:
+                for raw_line in iter(stream.readline, ""):
+                    line = raw_line.rstrip()
+                    if not line:
+                        continue
+                    sink.append(line)
+                    self._emit_akida_terminal_log(host, line, stderr=stderr)
+                stream.close()
+
+            stdout_thread = threading.Thread(
+                target=_pump,
+                args=(process.stdout, stdout_lines),
+                name=f"akida-ssh-stdout-{host['id']}",
+            )
+            stderr_thread = threading.Thread(
+                target=_pump,
+                args=(process.stderr, stderr_lines),
+                kwargs={"stderr": True},
+                name=f"akida-ssh-stderr-{host['id']}",
+            )
+            stdout_thread.start()
+            stderr_thread.start()
+            return_code = process.wait()
+            stdout_thread.join()
+            stderr_thread.join()
+        finally:
+            if cleanup is not None:
+                cleanup()
+        if return_code != 0:
+            message = _ssh_failure_message(stdout_lines, stderr_lines)
+            raise RuntimeError(message)
+        self._emit_akida_terminal_log(host, "ssh step completed")
+        return "\n".join(stdout_lines).strip()
+
+    def _run_akida_scp(
+        self,
+        host: dict[str, Any],
+        local_path: Path,
+        remote_path: str,
+        *,
+        recursive: bool = False,
+    ) -> None:
+        username = str(host.get("username") or "").strip()
+        if not username:
+            raise RuntimeError("Akida host username is required for SCP operations")
+        command, env, cleanup = self._prepare_akida_ssh_invocation(host, copy_mode=True)
+        if recursive:
+            command.append("-r")
+        target = f"{username}@{host['host']}:{remote_path}"
+        command.extend([str(local_path), target])
+        self._emit_akida_terminal_log(host, f"scp -> {target} from {local_path}")
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+                env=env,
+            )
+        finally:
+            if cleanup is not None:
+                cleanup()
+        if result.returncode != 0:
+            self._emit_akida_terminal_log(
+                host,
+                result.stderr.strip() or result.stdout.strip() or "scp command failed",
+                stderr=True,
+            )
+            raise RuntimeError(
+                result.stderr.strip() or result.stdout.strip() or "scp command failed"
+            )
+        self._emit_akida_terminal_log(host, "scp step completed")
+
+    def _akida_control_json_request(
+        self,
+        host: dict[str, Any],
+        method: str,
+        path: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        base_url = _resolved_akida_control_api_url(host).rstrip("/")
+        if not base_url:
+            raise RuntimeError("Akida host controlApiUrl is not configured")
+        url = f"{base_url}{path}"
+        headers = {"Content-Type": "application/json"}
+        credential_ref = str(host.get("credentialRef") or "").strip()
+        if credential_ref:
+            headers["X-API-Key"] = credential_ref
+        data = json.dumps(payload).encode("utf-8") if payload is not None else None
+        request = urllib.request.Request(
+            url,
+            data=data,
+            headers=headers,
+            method=method,
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=15.0) as response:
+                body = response.read().decode("utf-8")
+                decoded = json.loads(body) if body else {}
+                if not isinstance(decoded, dict):
+                    raise RuntimeError(f"Unexpected control response from {url}")
+                return decoded
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            self._emit_akida_terminal_log(
+                host,
+                (
+                    f"control request failed: {method} {url} returned HTTP {exc.code}"
+                    + (f" with body: {error_body}" if error_body else "")
+                ),
+                stderr=True,
+            )
+            raise RuntimeError(
+                f"Control request failed for {method} {url}: HTTP {exc.code}"
+                + (f" — {error_body}" if error_body else "")
+            ) from exc
+        except urllib.error.URLError as exc:
+            self._emit_akida_terminal_log(
+                host,
+                f"control request failed: {method} {url} could not be reached: {exc}",
+                stderr=True,
+            )
+            raise RuntimeError(
+                f"Control request failed for {method} {url}: {exc}"
+            ) from exc
 
     def _akida_json_request(
         self,
@@ -2676,79 +2972,335 @@ class LauncherControlState:
 
     def test_akida_host_connection(self, host_id: str) -> dict[str, Any]:
         host = self._get_akida_host(host_id)
-        self._emit_akida_terminal_log(host, "testing HTTP connectivity")
-        health = self._akida_json_request(host, "GET", "/health")
-        health_status = str(health.get("status") or "ok").strip() or "ok"
-        self._emit_akida_terminal_log(host, "HTTP connectivity succeeded")
+        if str(host.get("username") or "").strip():
+            self._emit_akida_terminal_log(host, "testing SSH connectivity")
+            self._run_akida_ssh(host, "python3 --version")
+            self._emit_akida_terminal_log(host, "SSH connectivity succeeded")
+            message = "SSH reachable"
+        else:
+            self._emit_akida_terminal_log(host, "testing HTTP connectivity")
+            health = self._akida_json_request(host, "GET", "/health")
+            health_status = str(health.get("status") or "ok").strip() or "ok"
+            self._emit_akida_terminal_log(host, "HTTP connectivity succeeded")
+            message = f"Health reachable: {health_status}"
         return _serialize_akida_host(
             self._update_akida_host_fields(
                 host_id,
                 state="reachable",
-                lastPreflightMessage=f"Health reachable: {health_status}",
+                lastPreflightMessage=message,
             )
         )
+
+    def _build_local_akida_bundle(
+        self, host: dict[str, Any], bundle_dir: Path
+    ) -> dict[str, Any]:
+        neurochip_root = REPO_ROOT / "Neurochip"
+        neurochip_package_root = str(neurochip_root)
+        if neurochip_package_root not in sys.path:
+            sys.path.insert(0, neurochip_package_root)
+        from neurochip.provisioning import build_akida_host_bundle
+
+        neurochip_module = self._get_module("Neurochip")
+        akida_runtime = neurochip_module.get("akidaRuntime", {})
+        required_packages = akida_runtime.get("requiredPackages", [])
+        if not isinstance(required_packages, list) or not all(
+            isinstance(item, str) for item in required_packages
+        ):
+            raise RuntimeError("Neurochip Akida runtime manifest is invalid")
+        return build_akida_host_bundle(
+            bundle_dir,
+            repo_root=neurochip_root,
+            required_packages=required_packages,
+            install_root=str(host["remoteInstallRoot"]),
+            service_user=str(host["serviceUser"]),
+            venv_path=str(host["remoteVenvPath"]),
+            runtime_service_name=str(host["runtimeServiceName"]),
+            control_service_name=str(host["controlServiceName"]),
+            runtime_port=int(host.get("port", DEFAULT_AKIDA_HOST_PORT)),
+            control_port=int(host.get("controlPort", DEFAULT_AKIDA_CONTROL_PORT)),
+        )
+
+    def _remote_akida_install_status_path(self, host: dict[str, Any]) -> str:
+        return f"{host['remoteInstallRoot']}/install-status.json"
+
+    def _read_remote_akida_install_status(self, host: dict[str, Any]) -> dict[str, Any]:
+        raw = self._run_akida_ssh(host, f"cat {self._remote_akida_install_status_path(host)}")
+        try:
+            decoded = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                f"Remote Akida install status is not valid JSON: {raw}"
+            ) from exc
+        if not isinstance(decoded, dict):
+            raise RuntimeError("Remote Akida install status must decode to an object")
+        return decoded
+
+    def _read_remote_akida_token(self, host: dict[str, Any]) -> str:
+        token_path = str(host.get("tokenPath") or DEFAULT_AKIDA_TOKEN_PATH).strip()
+        return self._run_akida_ssh(host, f"sudo cat {token_path}").strip()
+
+    def _apply_preflight_to_akida_host(
+        self,
+        host_id: str,
+        preflight: dict[str, Any],
+        *,
+        runtime_status: dict[str, Any] | None = None,
+        install_status: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        status = str(preflight.get("preflight_status") or "").strip().lower()
+        message = str(preflight.get("preflight_message") or "").strip()
+        runtime_target = str(preflight.get("runtime_target") or "").strip()
+        sdk_status = str(preflight.get("sdk_status") or "").strip()
+        state = "preflight_failed"
+        if status == PREFLIGHT_OK:
+            state = "ready" if runtime_target == "hardware" else "degraded_optional_capability"
+        elif status == PREFLIGHT_DEGRADED:
+            state = (
+                "simulator_only"
+                if runtime_target in {"software_fallback", "akd1000_simulator"}
+                else "degraded_optional_capability"
+            )
+        return self._update_akida_host_fields(
+            host_id,
+            state=state,
+            lastPreflightStatus=status,
+            lastPreflightMessage=message,
+            lastSdkStatus=sdk_status,
+            lastRuntimeTarget=runtime_target,
+            lastStatus=runtime_status,
+            lastInstallStatus=install_status,
+            lastReadinessMessage=message,
+            lastVerifiedAt=datetime.now(timezone.utc).isoformat(),
+        )
+
+    def provision_akida_host(self, host_id: str) -> dict[str, Any]:
+        host = self._update_akida_host_fields(
+            host_id,
+            state="bootstrapping",
+            lastReadinessMessage="Starting blank-host bootstrap.",
+        )
+        install_status: dict[str, Any] = {}
+        try:
+            with tempfile.TemporaryDirectory(prefix="akida-host-bundle-") as tmp_dir:
+                bundle_dir = Path(tmp_dir) / "bundle"
+                bundle_dir.mkdir(parents=True, exist_ok=True)
+                self._emit_akida_terminal_log(host, "building local Akida host bundle")
+                self._build_local_akida_bundle(host, bundle_dir)
+                remote_bundle_parent = "/tmp"
+                remote_bundle_dir = f"{remote_bundle_parent}/{bundle_dir.name}"
+                self._run_akida_ssh(
+                    host,
+                    (
+                        f"mkdir -p {host['remoteInstallRoot']} && "
+                        f"rm -rf {remote_bundle_dir}"
+                    ),
+                )
+                self._emit_akida_terminal_log(host, "uploading provisioning bundle")
+                self._run_akida_scp(host, bundle_dir, remote_bundle_parent, recursive=True)
+                host = self._update_akida_host_fields(
+                    host_id,
+                    state="installing_runtime",
+                    lastReadinessMessage="Running remote install script.",
+                )
+                self._emit_akida_terminal_log(host, "running remote install script")
+                self._run_akida_ssh(
+                    host,
+                    " ".join(
+                        [
+                            f"INSTALL_ROOT={host['remoteInstallRoot']}",
+                            f"SERVICE_USER={host['serviceUser']}",
+                            f"VENV_PATH={host['remoteVenvPath']}",
+                            f"RUNTIME_SERVICE_NAME={host['runtimeServiceName']}",
+                            f"CONTROL_SERVICE_NAME={host['controlServiceName']}",
+                            f"RUNTIME_PORT={host['port']}",
+                            f"CONTROL_PORT={host['controlPort']}",
+                            f"TOKEN_PATH={host['tokenPath']}",
+                            f"bash {remote_bundle_dir}/install-akida-host.sh",
+                        ]
+                    ),
+                )
+                install_status = self._read_remote_akida_install_status(host)
+                token_value = self._read_remote_akida_token(host)
+                host = self._update_akida_host_fields(
+                    host_id,
+                    credentialRef=token_value,
+                    runtimeApiUrl=str(install_status.get("runtimeApiUrl") or "").strip()
+                    or _default_akida_base_url(str(host["host"]), int(host["port"])),
+                    controlApiUrl=str(install_status.get("controlApiUrl") or "").strip()
+                    or _default_akida_control_url(
+                        str(host["host"]), int(host["controlPort"])
+                    ),
+                    hostOs=str(install_status.get("hostOs") or "").strip(),
+                    pythonVersion=str(install_status.get("pythonVersion") or "").strip(),
+                    state="verifying_sdk",
+                    lastInstallStatus=install_status,
+                    lastReadinessMessage="Remote install completed; verifying SDK and hardware.",
+                )
+            result = self.fetch_akida_host_preflight(host_id)
+            result["installStatus"] = install_status
+            return result
+        except Exception as exc:  # noqa: BLE001
+            self._emit_akida_terminal_log(
+                host, f"runtime provisioning failed: {exc}", stderr=True
+            )
+            updated = self._update_akida_host_fields(
+                host_id,
+                state="provision_failed",
+                lastPreflightMessage=str(exc),
+                lastReadinessMessage=str(exc),
+                lastInstallStatus=install_status if install_status else None,
+            )
+            return {
+                "host": _serialize_akida_host(updated),
+                "error": str(exc),
+                "installStatus": install_status if install_status else None,
+            }
+
+    def repair_akida_host(self, host_id: str) -> dict[str, Any]:
+        return self.provision_akida_host(host_id)
+
+    def restart_akida_host_services(self, host_id: str) -> dict[str, Any]:
+        host = self._get_akida_host(host_id)
+        self._emit_akida_terminal_log(host, "restarting remote Akida services")
+        self._run_akida_ssh(
+            host,
+            (
+                f"sudo systemctl restart {host['runtimeServiceName']}.service "
+                f"{host['controlServiceName']}.service"
+            ),
+        )
+        return self.fetch_akida_host_preflight(host_id)
 
     def fetch_akida_host_preflight(self, host_id: str) -> dict[str, Any]:
         host = self._get_akida_host(host_id)
         self._emit_akida_terminal_log(host, "requesting runtime preflight")
+        verification: dict[str, Any] = {}
+        runtime_status: dict[str, Any] | None = None
+        install_status: dict[str, Any] | None = None
         try:
-            verification = self._akida_json_request(
-                host, "POST", "/api/neurochip/akida/verify"
-            )
-            preflight_status = _preflight_status_for_akida_verification(verification)
-            preflight_message = _describe_akida_preflight(verification)
-            host_state = (
-                "ready"
-                if preflight_status == PREFLIGHT_OK
-                else "degraded_optional_capability"
-            )
+            if _resolved_akida_control_api_url(host):
+                try:
+                    doctor = self._akida_control_json_request(
+                        host, "GET", "/api/remote-akida/doctor"
+                    )
+                    preflight = doctor.get("preflight")
+                    if isinstance(preflight, dict):
+                        verification = preflight
+                    runtime_status = (
+                        doctor.get("runtimeStatus")
+                        if isinstance(doctor.get("runtimeStatus"), dict)
+                        else None
+                    )
+                    install_status = (
+                        doctor.get("installStatus")
+                        if isinstance(doctor.get("installStatus"), dict)
+                        else None
+                    )
+                except Exception as control_exc:  # noqa: BLE001
+                    self._emit_akida_terminal_log(
+                        host,
+                        (
+                            "remote control API unavailable during preflight; "
+                            f"falling back to runtime verify: {control_exc}"
+                        ),
+                        stderr=True,
+                    )
+                    verification = self._akida_json_request(
+                        host, "POST", "/api/neurochip/akida/verify"
+                    )
+                    runtime_status = verification
+            else:
+                verification = self._akida_json_request(
+                    host, "POST", "/api/neurochip/akida/verify"
+                )
+                runtime_status = verification
         except Exception as exc:  # noqa: BLE001
-            preflight_status = PREFLIGHT_FAILED
-            preflight_message = str(exc)
-            verification = {}
-            host_state = "preflight_failed"
+            verification = {
+                "preflight_status": PREFLIGHT_FAILED,
+                "preflight_message": str(exc),
+                "sdk_status": "",
+                "runtime_target": "",
+                "sdk_available": False,
+                "sdk_issues": [],
+                "sdk_issue_detail": str(exc),
+                "environment_checks": None,
+            }
+        if "preflight_status" not in verification:
+            preflight_status = _preflight_status_for_akida_verification(verification)
+            verification = {
+                "preflight_status": preflight_status,
+                "preflight_message": _describe_akida_preflight(verification),
+                "sdk_status": str(verification.get("sdk_status") or "").strip(),
+                "runtime_target": str(verification.get("runtime_target") or "").strip(),
+                "sdk_available": bool(verification.get("sdk_available")),
+                "sdk_issues": verification.get("sdk_issues")
+                if isinstance(verification.get("sdk_issues"), list)
+                else [],
+                "sdk_issue_detail": str(verification.get("sdk_issue_detail") or "").strip(),
+                "environment_checks": verification.get("environment_checks")
+                if isinstance(verification.get("environment_checks"), dict)
+                else None,
+                "sdk_verification": verification,
+            }
         self._emit_akida_terminal_log(
-            host, f"preflight {preflight_status}: {preflight_message}"
+            host,
+            f"preflight {verification.get('preflight_status')}: {verification.get('preflight_message')}",
         )
-        updated = self._update_akida_host_fields(
+        updated = self._apply_preflight_to_akida_host(
             host_id,
-            state=host_state,
-            lastPreflightStatus=preflight_status,
-            lastPreflightMessage=preflight_message,
-            lastSdkStatus=str(verification.get("sdk_status") or "").strip(),
-            lastRuntimeTarget=str(verification.get("runtime_target") or "").strip(),
+            verification,
+            runtime_status=runtime_status,
+            install_status=install_status,
         )
-        raw_sdk_issues = verification.get("sdk_issues", [])
-        if not isinstance(raw_sdk_issues, list):
-            raw_sdk_issues = []
-        sdk_issues = [
-            str(issue).strip()
-            for issue in raw_sdk_issues
-            if str(issue).strip()
-        ]
-        preflight = {
-            "preflight_status": preflight_status,
-            "preflight_message": preflight_message,
-            "sdk_status": str(verification.get("sdk_status") or "").strip(),
-            "runtime_target": str(verification.get("runtime_target") or "").strip(),
-            "sdk_available": bool(verification.get("sdk_available")),
-            "sdk_issues": sdk_issues,
-            "sdk_issue_detail": str(
-                verification.get("sdk_issue_detail") or ""
-            ).strip(),
-            "environment_checks": verification.get("environment_checks")
-            if isinstance(verification.get("environment_checks"), dict)
-            else None,
-            "sdk_verification": verification if verification else None,
-        }
+        if str(updated.get("hostOs") or "").strip() == "" and install_status:
+            updated = self._update_akida_host_fields(
+                host_id,
+                hostOs=str(install_status.get("hostOs") or "").strip(),
+                pythonVersion=str(install_status.get("pythonVersion") or "").strip(),
+            )
         return {
             "host": _serialize_akida_host(updated),
-            "preflight": preflight,
+            "preflight": verification,
+            "status": runtime_status,
+            "installStatus": install_status,
         }
 
     def fetch_akida_host_status(self, host_id: str) -> dict[str, Any]:
         host = self._get_akida_host(host_id)
         self._emit_akida_terminal_log(host, "requesting runtime status")
+        if _resolved_akida_control_api_url(host):
+            try:
+                doctor = self._akida_control_json_request(
+                    host, "GET", "/api/remote-akida/doctor"
+                )
+                runtime_status = (
+                    doctor.get("runtimeStatus")
+                    if isinstance(doctor.get("runtimeStatus"), dict)
+                    else {}
+                )
+                preflight = (
+                    doctor.get("preflight")
+                    if isinstance(doctor.get("preflight"), dict)
+                    else {}
+                )
+                updated = self._apply_preflight_to_akida_host(
+                    host_id,
+                    preflight,
+                    runtime_status=runtime_status,
+                    install_status=doctor.get("installStatus")
+                    if isinstance(doctor.get("installStatus"), dict)
+                    else None,
+                )
+                return {"host": _serialize_akida_host(updated), "status": runtime_status}
+            except Exception as control_exc:  # noqa: BLE001
+                self._emit_akida_terminal_log(
+                    host,
+                    (
+                        "remote control API unavailable during status poll; "
+                        f"falling back to runtime status: {control_exc}"
+                    ),
+                    stderr=True,
+                )
         status = self._akida_json_request(host, "GET", "/api/neurochip/akida/status")
         updated = self._update_akida_host_fields(
             host_id,
@@ -3676,9 +4228,18 @@ class LauncherControlState:
             state = _normalize_akida_host_state(host.get("state"))
             if state == "ready":
                 ok_count += 1
-            elif state in {"degraded_optional_capability", "degraded", "simulator_only"}:
+            elif state in {
+                "degraded_optional_capability",
+                "degraded",
+                "simulator_only",
+                "reachable",
+                "bootstrapping",
+                "installing_runtime",
+                "verifying_sdk",
+                "unpaired",
+            }:
                 degraded_count += 1
-            elif state in {"preflight_failed", "blocked", "error"}:
+            elif state in {"preflight_failed", "blocked", "error", "provision_failed"}:
                 fatal_count += 1
 
             akida_hosts.append(
@@ -3691,9 +4252,12 @@ class LauncherControlState:
                         or ""
                     ),
                     "baseUrl": _resolved_akida_base_url(host),
+                    "controlApiUrl": _resolved_akida_control_api_url(host),
                     "runtimeApiUrl": str(
                         host.get("runtimeApiUrl") or _resolved_akida_base_url(host)
                     ).strip(),
+                    "sshPort": int(host.get("sshPort", DEFAULT_AKIDA_HOST_SSH_PORT)),
+                    "username": str(host.get("username") or "").strip(),
                     "runtimeMode": _normalize_akida_runtime_mode(
                         host.get("runtimeMode")
                     ),
@@ -3925,6 +4489,28 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                         self.server.state.test_akida_host_connection(host_id),
                     )
                     return
+                if len(segments) == 6 and segments[5] == "provision" and method == "POST":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.provision_akida_host(host_id),
+                    )
+                    return
+                if len(segments) == 6 and segments[5] == "repair" and method == "POST":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.repair_akida_host(host_id),
+                    )
+                    return
+                if (
+                    len(segments) == 6
+                    and segments[5] == "restart-services"
+                    and method == "POST"
+                ):
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.restart_akida_host_services(host_id),
+                    )
+                    return
                 if (
                     len(segments) == 6
                     and segments[5] == "preflight"
@@ -4110,6 +4696,25 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.NOT_FOUND, {"error": f"Unknown route: {path}"})
         except KeyError as exc:
             self._send_json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
+        except RuntimeRequestError as exc:
+            status = HTTPStatus.INTERNAL_SERVER_ERROR
+            if exc.status_code is not None:
+                try:
+                    status = HTTPStatus(exc.status_code)
+                except ValueError:
+                    status = HTTPStatus.BAD_GATEWAY
+            payload: dict[str, Any] = {
+                "error": str(exc),
+                "path": path,
+                "method": method,
+            }
+            if exc.response_body:
+                payload["runtimeBody"] = exc.response_body
+                try:
+                    payload["runtimeJson"] = json.loads(exc.response_body)
+                except json.JSONDecodeError:
+                    pass
+            self._send_json(status, payload)
         except Exception as exc:  # noqa: BLE001
             self._send_json(
                 HTTPStatus.INTERNAL_SERVER_ERROR,

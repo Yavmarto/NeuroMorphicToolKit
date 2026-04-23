@@ -63,7 +63,7 @@ The v1 overlay supports only:
 - delays: none
 - weight precision: `int8` only
 - maximum neurons: `256`
-- maximum synapses: `65536`
+- maximum synapses: `15360`
 - maximum populations: `2`
 - one dense connection matrix from input population to output population
 

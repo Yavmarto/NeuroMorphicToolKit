@@ -62,11 +62,17 @@ enum AkidaRuntimeMode {
 
 enum AkidaHostAuthMode {
   none,
+  password,
+  sshKey,
   basic,
   bearerToken;
 
   static AkidaHostAuthMode fromString(String? value) {
     switch (value) {
+      case 'password':
+        return AkidaHostAuthMode.password;
+      case 'ssh_key':
+        return AkidaHostAuthMode.sshKey;
       case 'basic':
         return AkidaHostAuthMode.basic;
       case 'bearer_token':
@@ -82,6 +88,10 @@ enum AkidaHostAuthMode {
     switch (this) {
       case AkidaHostAuthMode.none:
         return 'none';
+      case AkidaHostAuthMode.password:
+        return 'password';
+      case AkidaHostAuthMode.sshKey:
+        return 'ssh_key';
       case AkidaHostAuthMode.basic:
         return 'basic';
       case AkidaHostAuthMode.bearerToken:
@@ -92,25 +102,49 @@ enum AkidaHostAuthMode {
 
 enum AkidaPairedHostState {
   unknown,
+  unpaired,
+  reachable,
+  bootstrapping,
+  installingRuntime,
+  verifyingSdk,
   pending,
   ready,
   degraded,
+  degradedOptionalCapability,
   simulatorOnly,
   blocked,
+  preflightFailed,
+  provisionFailed,
   error;
 
   static AkidaPairedHostState fromString(String? value) {
     switch (value) {
+      case 'unpaired':
+        return AkidaPairedHostState.unpaired;
+      case 'reachable':
+        return AkidaPairedHostState.reachable;
+      case 'bootstrapping':
+        return AkidaPairedHostState.bootstrapping;
+      case 'installing_runtime':
+        return AkidaPairedHostState.installingRuntime;
+      case 'verifying_sdk':
+        return AkidaPairedHostState.verifyingSdk;
       case 'pending':
         return AkidaPairedHostState.pending;
       case 'ready':
         return AkidaPairedHostState.ready;
       case 'degraded':
         return AkidaPairedHostState.degraded;
+      case 'degraded_optional_capability':
+        return AkidaPairedHostState.degradedOptionalCapability;
       case 'simulator_only':
         return AkidaPairedHostState.simulatorOnly;
       case 'blocked':
         return AkidaPairedHostState.blocked;
+      case 'preflight_failed':
+        return AkidaPairedHostState.preflightFailed;
+      case 'provision_failed':
+        return AkidaPairedHostState.provisionFailed;
       case 'error':
         return AkidaPairedHostState.error;
       case 'unknown':
@@ -123,16 +157,32 @@ enum AkidaPairedHostState {
     switch (this) {
       case AkidaPairedHostState.unknown:
         return 'unknown';
+      case AkidaPairedHostState.unpaired:
+        return 'unpaired';
+      case AkidaPairedHostState.reachable:
+        return 'reachable';
+      case AkidaPairedHostState.bootstrapping:
+        return 'bootstrapping';
+      case AkidaPairedHostState.installingRuntime:
+        return 'installing_runtime';
+      case AkidaPairedHostState.verifyingSdk:
+        return 'verifying_sdk';
       case AkidaPairedHostState.pending:
         return 'pending';
       case AkidaPairedHostState.ready:
         return 'ready';
       case AkidaPairedHostState.degraded:
         return 'degraded';
+      case AkidaPairedHostState.degradedOptionalCapability:
+        return 'degraded_optional_capability';
       case AkidaPairedHostState.simulatorOnly:
         return 'simulator_only';
       case AkidaPairedHostState.blocked:
         return 'blocked';
+      case AkidaPairedHostState.preflightFailed:
+        return 'preflight_failed';
+      case AkidaPairedHostState.provisionFailed:
+        return 'provision_failed';
       case AkidaPairedHostState.error:
         return 'error';
     }
@@ -142,16 +192,32 @@ enum AkidaPairedHostState {
     switch (this) {
       case AkidaPairedHostState.unknown:
         return 'Unknown';
+      case AkidaPairedHostState.unpaired:
+        return 'Host Added';
+      case AkidaPairedHostState.reachable:
+        return 'Connectivity Tested';
+      case AkidaPairedHostState.bootstrapping:
+        return 'Bootstrap In Progress';
+      case AkidaPairedHostState.installingRuntime:
+        return 'Neurochip Install In Progress';
+      case AkidaPairedHostState.verifyingSdk:
+        return 'SDK Verification In Progress';
       case AkidaPairedHostState.pending:
         return 'Pending';
       case AkidaPairedHostState.ready:
         return 'Ready';
       case AkidaPairedHostState.degraded:
         return 'Degraded';
+      case AkidaPairedHostState.degradedOptionalCapability:
+        return 'Degraded Optional Capability';
       case AkidaPairedHostState.simulatorOnly:
         return 'Simulator Only';
       case AkidaPairedHostState.blocked:
         return 'Blocked';
+      case AkidaPairedHostState.preflightFailed:
+        return 'Preflight Failed';
+      case AkidaPairedHostState.provisionFailed:
+        return 'Provision Failed';
       case AkidaPairedHostState.error:
         return 'Error';
     }
@@ -408,9 +474,18 @@ class AkidaSdkVerification {
 class AkidaPairedHost {
   final String id;
   final String displayName;
+  final String host;
+  final int sshPort;
+  final String username;
   final String runtimeApiUrl;
+  final String controlApiUrl;
   final AkidaHostAuthMode authMode;
   final String credentialRef;
+  final String password;
+  final bool hasPassword;
+  final String sshKeyPath;
+  final String remoteInstallRoot;
+  final String serviceUser;
   final String hostOs;
   final String pythonVersion;
   final AkidaRuntimeMode runtimeMode;
@@ -422,9 +497,18 @@ class AkidaPairedHost {
   const AkidaPairedHost({
     required this.id,
     required this.displayName,
+    required this.host,
+    required this.sshPort,
+    required this.username,
     required this.runtimeApiUrl,
+    required this.controlApiUrl,
     required this.authMode,
     required this.credentialRef,
+    required this.password,
+    required this.hasPassword,
+    required this.sshKeyPath,
+    required this.remoteInstallRoot,
+    required this.serviceUser,
     required this.hostOs,
     required this.pythonVersion,
     required this.runtimeMode,
@@ -443,9 +527,16 @@ class AkidaPairedHost {
           json['displayName'] as String? ??
           json['display_name'] as String? ??
           'Akida Host',
+      host: json['host'] as String? ?? '',
+      sshPort: json['sshPort'] as int? ?? json['ssh_port'] as int? ?? 22,
+      username: json['username'] as String? ?? json['user'] as String? ?? '',
       runtimeApiUrl:
           json['runtimeApiUrl'] as String? ??
           json['runtime_api_url'] as String? ??
+          '',
+      controlApiUrl:
+          json['controlApiUrl'] as String? ??
+          json['control_api_url'] as String? ??
           '',
       authMode: AkidaHostAuthMode.fromString(
         json['authMode'] as String? ?? json['auth_mode'] as String?,
@@ -453,6 +544,22 @@ class AkidaPairedHost {
       credentialRef:
           json['credentialRef'] as String? ??
           json['credential_ref'] as String? ??
+          '',
+      password: json['password'] as String? ?? '',
+      hasPassword:
+          json['hasPassword'] as bool? ??
+          (json['password'] as String? ?? '').isNotEmpty,
+      sshKeyPath:
+          json['sshKeyPath'] as String? ??
+          json['ssh_key_path'] as String? ??
+          '',
+      remoteInstallRoot:
+          json['remoteInstallRoot'] as String? ??
+          json['remote_install_root'] as String? ??
+          '',
+      serviceUser:
+          json['serviceUser'] as String? ??
+          json['service_user'] as String? ??
           '',
       hostOs: json['hostOs'] as String? ?? json['host_os'] as String? ?? '',
       pythonVersion:
@@ -487,9 +594,18 @@ class AkidaPairedHost {
     return {
       'id': id,
       'displayName': displayName,
+      'host': host,
+      'sshPort': sshPort,
+      'username': username,
       'runtimeApiUrl': runtimeApiUrl,
+      'controlApiUrl': controlApiUrl,
       'authMode': authMode.apiValue,
       'credentialRef': credentialRef,
+      'password': password,
+      'hasPassword': hasPassword,
+      'sshKeyPath': sshKeyPath,
+      'remoteInstallRoot': remoteInstallRoot,
+      'serviceUser': serviceUser,
       'hostOs': hostOs,
       'pythonVersion': pythonVersion,
       'runtimeMode': runtimeMode.apiValue,
@@ -504,9 +620,18 @@ class AkidaPairedHost {
   AkidaPairedHost copyWith({
     String? id,
     String? displayName,
+    String? host,
+    int? sshPort,
+    String? username,
     String? runtimeApiUrl,
+    String? controlApiUrl,
     AkidaHostAuthMode? authMode,
     String? credentialRef,
+    String? password,
+    bool? hasPassword,
+    String? sshKeyPath,
+    String? remoteInstallRoot,
+    String? serviceUser,
     String? hostOs,
     String? pythonVersion,
     AkidaRuntimeMode? runtimeMode,
@@ -518,9 +643,18 @@ class AkidaPairedHost {
     return AkidaPairedHost(
       id: id ?? this.id,
       displayName: displayName ?? this.displayName,
+      host: host ?? this.host,
+      sshPort: sshPort ?? this.sshPort,
+      username: username ?? this.username,
       runtimeApiUrl: runtimeApiUrl ?? this.runtimeApiUrl,
+      controlApiUrl: controlApiUrl ?? this.controlApiUrl,
       authMode: authMode ?? this.authMode,
       credentialRef: credentialRef ?? this.credentialRef,
+      password: password ?? this.password,
+      hasPassword: hasPassword ?? this.hasPassword,
+      sshKeyPath: sshKeyPath ?? this.sshKeyPath,
+      remoteInstallRoot: remoteInstallRoot ?? this.remoteInstallRoot,
+      serviceUser: serviceUser ?? this.serviceUser,
       hostOs: hostOs ?? this.hostOs,
       pythonVersion: pythonVersion ?? this.pythonVersion,
       runtimeMode: runtimeMode ?? this.runtimeMode,

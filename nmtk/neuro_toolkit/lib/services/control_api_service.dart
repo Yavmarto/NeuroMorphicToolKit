@@ -56,8 +56,8 @@ class LauncherControlSettings {
 
 class ControlApiService {
   ControlApiService({http.Client? client, Uri? baseUri})
-    : _client = client ?? http.Client(),
-      _baseUri = baseUri ?? _resolveBaseUri();
+      : _client = client ?? http.Client(),
+        _baseUri = baseUri ?? _resolveBaseUri();
 
   final http.Client _client;
   final Uri _baseUri;
@@ -78,9 +78,8 @@ class ControlApiService {
 
     if (kIsWeb) {
       final baseHost = Uri.base.host.trim();
-      final host = baseHost.isEmpty || baseHost == '0.0.0.0'
-          ? 'localhost'
-          : baseHost;
+      final host =
+          baseHost.isEmpty || baseHost == '0.0.0.0' ? 'localhost' : baseHost;
       final scheme = Uri.base.scheme.trim().isEmpty ? 'http' : Uri.base.scheme;
       return Uri(scheme: scheme, host: host, port: configuredPort);
     }
@@ -333,6 +332,64 @@ class ControlApiService {
       _uri('/api/launcher/akida/hosts/$hostId'),
     );
     await _ensureSuccess(response);
+  }
+
+  Future<AkidaPairedHost> testAkidaHostConnectivity(String hostId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/akida/hosts/$hostId/connectivity-test'),
+    );
+    await _ensureSuccess(response);
+    return AkidaPairedHost.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<AkidaPairedHost> provisionAkidaHost(String hostId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/akida/hosts/$hostId/provision'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
+    return AkidaPairedHost.fromJson(hostJson);
+  }
+
+  Future<AkidaPairedHost> repairAkidaHost(String hostId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/akida/hosts/$hostId/repair'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
+    return AkidaPairedHost.fromJson(hostJson);
+  }
+
+  Future<AkidaPairedHost> restartAkidaHostServices(String hostId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/akida/hosts/$hostId/restart-services'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
+    return AkidaPairedHost.fromJson(hostJson);
+  }
+
+  Future<AkidaPairedHost> fetchAkidaHostPreflight(String hostId) async {
+    final response = await _client.get(
+      _uri('/api/launcher/akida/hosts/$hostId/preflight'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
+    return AkidaPairedHost.fromJson(hostJson);
+  }
+
+  Future<AkidaPairedHost> fetchAkidaHostStatus(String hostId) async {
+    final response = await _client.get(
+      _uri('/api/launcher/akida/hosts/$hostId/status'),
+    );
+    await _ensureSuccess(response);
+    final payload = await _readJsonResponse(response);
+    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
+    return AkidaPairedHost.fromJson(hostJson);
   }
 
   Future<Module> installModule(String moduleId) async {

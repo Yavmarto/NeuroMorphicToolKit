@@ -25,12 +25,12 @@ def _stage_overlay_package(staging_dir: Path) -> None:
         json.dumps(
             {
                 "overlay_id": "snn_overlay_v1",
-                "overlay_version": "1.0.0",
+                "overlay_version": "1.0.1",
                 "target_part": "xc7z020clg400-1",
                 "supported_neuron_models": ["LIF"],
                 "supported_weight_bit_widths": [8],
                 "max_neurons": 256,
-                "max_synapses": 65536,
+                "max_synapses": 15360,
                 "max_populations": 2,
                 "dma_ip_name": "axi_dma_0",
                 "snn_ip_name": "snn_engine_0",
@@ -51,11 +51,11 @@ def _stage_overlay_package(staging_dir: Path) -> None:
                     "timestep_us": 1000,
                 },
                 "weight_layout": {
-                    "format": "int8_dense_row_major",
+                    "format": "int8_dense_row_major_word_mmio",
                     "storage": "mmio",
                     "base_offset": 4096,
-                    "stride_bytes": 1,
-                    "max_entries": 65536,
+                    "stride_bytes": 4,
+                    "max_entries": 15360,
                 },
                 "threshold_layout": {
                     "format": "float32_per_population",
@@ -371,6 +371,65 @@ class LauncherControlServiceTest(unittest.TestCase):
             "Linux or Windows Neurochip host",
             payload["akidaRuntimeState"]["message"],
         )
+
+    def test_pynq_deploy_http_endpoint_propagates_runtime_422(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+        board = server.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.2.99",
+                "username": "xilinx",
+                "password": "xilinx",
+            }
+        )
+        runtime_body = json.dumps(
+            {
+                "detail": {
+                    "detail": "register_map does not match the installed overlay contract",
+                    "error_code": "OVERLAY_REGISTER_MAP_MISMATCH",
+                }
+            }
+        )
+
+        with mock.patch.object(
+            server.state,
+            "_runtime_json_request",
+            side_effect=launcher_server.RuntimeRequestError(
+                (
+                    "Runtime request failed for POST "
+                    "http://192.168.2.99:8002/hardware/pynq/deploy: HTTP 422"
+                    f" - {runtime_body}"
+                ),
+                kind="http",
+                url="http://192.168.2.99:8002/hardware/pynq/deploy",
+                status_code=422,
+                response_body=runtime_body,
+            ),
+        ):
+            request = urllib.request.Request(
+                (
+                    f"http://127.0.0.1:{server.server_address[1]}"
+                    f"/api/launcher/pynq/boards/{board['id']}/deploy"
+                ),
+                data=json.dumps({"weights": [1.0]}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(urllib.error.HTTPError) as exc_info:
+                urllib.request.urlopen(request, timeout=5)
+
+        self.assertEqual(exc_info.exception.code, 422)
+        payload = json.loads(exc_info.exception.read().decode("utf-8"))
+        self.assertEqual(
+            payload["runtimeJson"]["detail"]["error_code"],
+            "OVERLAY_REGISTER_MAP_MISMATCH",
+        )
+        self.assertIn("OVERLAY_REGISTER_MAP_MISMATCH", payload["runtimeBody"])
 
     def test_missing_environment_normalizes_stale_installed_state(self) -> None:
         state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"
@@ -1232,11 +1291,30 @@ class LauncherControlServiceTest(unittest.TestCase):
         description = launcher_server._describe_pynq_preflight(
             {
                 "preflight_status": "failed",
+                "preflight_message": "Install Overlay next. Checked bitstream path: /tmp/snn_overlay.bit.",
                 "overlay_assets": {"ready_for_hardware": False},
             }
         )
 
         self.assertIn("overlay assets missing", description)
+        self.assertIn("/tmp/snn_overlay.bit", description)
+
+    def test_describe_pynq_preflight_surfaces_runtime_probe_context(self) -> None:
+        description = launcher_server._describe_pynq_preflight(
+            {
+                "preflight_status": "failed",
+                "preflight_message": (
+                    "Hardware runtime assets are present, but the board cannot open a usable "
+                    "PYNQ device yet. Runtime probe failed: Bitstream not found: "
+                    "snn_overlay.bit. Checked bitstream path: "
+                    "/home/xilinx/.local/share/neurochip-pynq-agent/overlays/snn_overlay.bit."
+                ),
+                "overlay_assets": {"ready_for_hardware": True},
+            }
+        )
+
+        self.assertIn("Bitstream not found", description)
+        self.assertIn("/home/xilinx/.local/share/neurochip-pynq-agent/overlays/snn_overlay.bit", description)
 
     def test_provision_pynq_board_reports_install_status(self) -> None:
         board = self.state.create_pynq_board(
@@ -1349,12 +1427,12 @@ class LauncherControlServiceTest(unittest.TestCase):
             json.dumps(
                 {
                     "overlay_id": "snn_overlay_v1",
-                    "overlay_version": "1.0.0",
+                    "overlay_version": "1.0.1",
                     "target_part": "xc7z020clg400-1",
                     "supported_neuron_models": ["LIF"],
                     "supported_weight_bit_widths": [8],
                     "max_neurons": 256,
-                    "max_synapses": 65536,
+                    "max_synapses": 15360,
                     "max_populations": 2,
                     "dma_ip_name": "axi_dma_0",
                     "snn_ip_name": "snn_engine_0",
@@ -1368,18 +1446,18 @@ class LauncherControlServiceTest(unittest.TestCase):
                         "timestep_count_offset": 20,
                         "threshold_base_offset": 256,
                         "neuron_base_offset": 256,
-                        "weight_base_offset": 65536,
+                        "weight_base_offset": 4096,
                         "dma_channel": "axi_dma_0",
                         "input_buffer_addr": 0,
                         "output_buffer_addr": 0,
                         "timestep_us": 1000,
                     },
                     "weight_layout": {
-                        "format": "int8_dense_row_major",
+                        "format": "int8_dense_row_major_word_mmio",
                         "storage": "mmio",
-                        "base_offset": 65536,
-                        "stride_bytes": 1,
-                        "max_entries": 65536,
+                        "base_offset": 4096,
+                        "stride_bytes": 4,
+                        "max_entries": 15360,
                     },
                     "threshold_layout": {
                         "format": "float32_per_population",
@@ -1796,7 +1874,10 @@ class LauncherControlServiceTest(unittest.TestCase):
             "_runtime_json_request",
             return_value={
                 "preflight_status": "failed",
-                "preflight_message": "Runtime probe failed: No Devices Found.",
+                "preflight_message": (
+                    "Runtime probe failed: No Devices Found. Checked bitstream path: "
+                    "/home/xilinx/.local/share/neurochip-pynq-agent/overlays/snn_overlay.bit."
+                ),
                 "runtime_mode": "hardware",
                 "overlay_assets": {"ready_for_hardware": True},
             },
@@ -1804,6 +1885,10 @@ class LauncherControlServiceTest(unittest.TestCase):
             result = self.state.fetch_pynq_board_preflight(board["id"])
 
         self.assertEqual(result["board"]["state"], "preflight_failed")
+        self.assertIn(
+            "/home/xilinx/.local/share/neurochip-pynq-agent/overlays/snn_overlay.bit",
+            result["board"]["lastPreflightMessage"],
+        )
 
     def test_doctor_report_skips_not_installed_module_preflight(self) -> None:
         module = self.state._get_module("dummy")

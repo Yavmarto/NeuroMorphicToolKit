@@ -12,8 +12,8 @@ The PYNQ Z2 workflow is **release-ready for export and simulator-backed deployme
 ### Export-Only Path
 - `plan_pynq_exportability()` evaluates 9 constraints (neuron count, synapse count, memory budget, weight quantizability, neuron models, learning rules, topology, bit-width, recurrence)
 - Three verdicts: `EXPORTABLE`, `EXPORTABLE_WITH_WARNINGS` (>80% capacity), `NOT_EXPORTABLE`
-- Artifact ZIP generation produces 5 contract-compliant files: `overlay_config.json`, `weights.bin`, `register_map.json`, `manifest.json`, `README.md`
-- Weight packing supports int4 (nibble-packed), int8, and int16 bit-widths
+- Artifact ZIP generation produces 6 contract-compliant files: `overlay_config.json`, `weights.bin`, `register_map.json`, `overlay_manifest.json`, `manifest.json`, `README.md`
+- Weight packing supports overlay-v1.0.1 int8 weights; board MMIO writes use 32-bit word stride
 - `validate_pynq_artifact_completeness()` enforces ZIP structure
 
 ### Rejected-Network Path
@@ -94,9 +94,9 @@ total_kb      = (weight_bytes + neuron_bytes + index_bytes) / 1024
 
 ## Integration Fixes Applied (Issue #16)
 
-1. **Weight packing correctness**: `_pack_weights_bytes()` now branches on bit-width (was always int4)
+1. **Weight packing correctness**: `_pack_weights_bytes()` emits int8 payload bytes for overlay-v1
 2. **Semantic overflow check**: weight count validated against `MAX_SYNAPSES` (was `MAX_NEURONS`)
-3. **Rejection message accuracy**: synapse capacity message uses `{bit_width}` placeholder (was hardcoded "int4")
+3. **Rejection message accuracy**: synapse capacity message follows the active overlay contract
 4. **Hardware JSON completeness**: `synapse_capacity` added to `pynq_z2.json`
 5. **Dart status enum alignment**: `loaded` and `running` states added to `PynqDeployJobStatus`
 6. **Documentation truthfulness**: artifact list corrected, pipeline status updated

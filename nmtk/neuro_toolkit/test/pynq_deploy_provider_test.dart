@@ -116,8 +116,8 @@ class MockPynqDeployService extends PynqDeployService {
             weights: <double>[1.0, 2.0],
             config: PynqDeployConfig(
               threshold: 1.0,
-              bitWidth: 4,
-              scaleFactor: 7.0,
+              bitWidth: 8,
+              scaleFactor: 127.0,
             ),
             bitstreamPath: 'snn_overlay.bit',
             registerMap: PynqRegisterMap(

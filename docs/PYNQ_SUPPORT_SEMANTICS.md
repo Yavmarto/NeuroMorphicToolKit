@@ -11,17 +11,17 @@ This document defines the **truthfulness boundary** for PYNQ Z2 support in the N
 **The toolkit can quantize weights and produce PYNQ overlay artifacts offline. No board required.**
 
 An `EXPORTABLE` verdict means:
-- All network populations fit within the 65,536 neuron limit
-- Total synapse count fits within the 65,536 synapse limit (at int4 quantization)
-- All float weights can be mapped to the target fixed-point bit-width (int4/int8/int16)
-- All neuron models are in the supported set: `{LIF, Izhikevich}`
+- All network populations fit within the 256-neuron limit
+- Total synapse count fits within the 15,360-synapse limit at int8 quantization
+- All float weights can be mapped to the target fixed-point bit-width (int8)
+- All neuron models are in the supported set: `{LIF}`
 - No on-chip learning rules are declared
 - No recurrent/feedback connections, lateral inhibition, or spatial connectivity in the network
 - Estimated memory usage fits within the 512 KB on-chip BRAM budget
 
 Output artifacts (contract ZIP contents):
 - `overlay_config.json` — populations, connections, quantized thresholds
-- `weights.bin` — packed fixed-point weight bytes (int4 nibble-packed, int8, or int16)
+- `weights.bin` — packed int8 fixed-point weight bytes
 - `register_map.json` — Zynq-7000 MMIO register offsets
 - `manifest.json` — target device and checksum metadata
 - `README.md` — human-readable artifact summary
@@ -55,14 +55,14 @@ A `DEPLOYABLE` verdict means:
 
 | Code | Description |
 |------|-------------|
-| `exceeds_neuron_capacity` | Network requires >65,536 neurons |
-| `exceeds_synapse_capacity` | Network requires >65,536 synapses |
+| `exceeds_neuron_capacity` | Network requires >256 neurons |
+| `exceeds_synapse_capacity` | Network requires >15,360 synapses |
 | `exceeds_memory_budget` | Estimated memory exceeds 512 KB |
-| `weight_not_quantizable` | Weights cannot map to target int4/int8/int16 |
-| `unsupported_neuron_model` | Model not in {LIF, Izhikevich} |
+| `weight_not_quantizable` | Weights cannot map to target int8 |
+| `unsupported_neuron_model` | Model not in {LIF} |
 | `unsupported_learning_rule` | On-chip learning not supported on FPGA overlay |
 | `unsupported_topology` | Recurrent connections or advanced topology features |
-| `weight_bit_width_unsupported` | Requested bit-width not in {4, 8, 16} |
+| `weight_bit_width_unsupported` | Requested bit-width not in {8} |
 
 ### Deploy-Time Rejections (Runtime)
 

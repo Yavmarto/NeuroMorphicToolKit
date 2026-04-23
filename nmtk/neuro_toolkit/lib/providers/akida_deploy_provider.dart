@@ -34,6 +34,16 @@ enum AkidaDeployStep {
 
 enum AkidaRuntimeMode { localSimulator, localSdk, remoteSdk }
 
+enum AkidaHostOperation {
+  savingHost,
+  deletingHost,
+  testingConnectivity,
+  provisioningHost,
+  repairingHost,
+  checkingReadiness,
+  restartingServices,
+}
+
 extension AkidaRuntimeModeLabel on AkidaRuntimeMode {
   String get label {
     switch (this) {
@@ -55,9 +65,9 @@ class AkidaDeployProvider with ChangeNotifier {
     AkidaDeployService? service,
     ControlApiService? controlApiService,
     TargetPlatform? platformOverride,
-  }) : _service = service ?? AkidaDeployService(),
-       _controlApiService = controlApiService ?? ControlApiService(),
-       _platformOverride = platformOverride;
+  })  : _service = service ?? AkidaDeployService(),
+        _controlApiService = controlApiService ?? ControlApiService(),
+        _platformOverride = platformOverride;
 
   final AkidaDeployService _service;
   final ControlApiService _controlApiService;
@@ -113,6 +123,13 @@ class AkidaDeployProvider with ChangeNotifier {
 
   String? _runtimeSetupError;
   String? get runtimeSetupError => _runtimeSetupError;
+
+  AkidaHostOperation? _activeHostOperation;
+  AkidaHostOperation? get activeHostOperation => _activeHostOperation;
+  bool get hostOperationInProgress => _activeHostOperation != null;
+
+  String? _hostFeedbackMessage;
+  String? get hostFeedbackMessage => _hostFeedbackMessage;
 
   List<AkidaPairedHost> _remoteHosts = <AkidaPairedHost>[];
   List<AkidaPairedHost> get remoteHosts =>
@@ -216,28 +233,51 @@ class AkidaDeployProvider with ChangeNotifier {
   Future<void> saveRemoteHost({
     String? hostId,
     required String displayName,
+    required String hostAddress,
+    required int sshPort,
+    required String username,
+    required String password,
     required String runtimeApiUrl,
+    required String controlApiUrl,
+    required String remoteInstallRoot,
+    required String serviceUser,
   }) async {
-    _isLoadingRuntimeSetup = true;
-    _runtimeSetupError = null;
-    notifyListeners();
+    _startHostOperation(
+      AkidaHostOperation.savingHost,
+      hostId == null || hostId.isEmpty
+          ? 'Saving remote Akida host.'
+          : 'Updating remote Akida host.',
+    );
 
     try {
       final payload = <String, dynamic>{
         'displayName': displayName,
+        'host': hostAddress,
+        'sshPort': sshPort,
+        'username': username,
+        'authMode': 'password',
+        'password': password,
         'runtimeApiUrl': runtimeApiUrl,
+        'controlApiUrl': controlApiUrl,
+        'remoteInstallRoot': remoteInstallRoot,
+        'serviceUser': serviceUser,
       };
-      final host = hostId == null || hostId.isEmpty
+      final savedHost = hostId == null || hostId.isEmpty
           ? await _controlApiService.createAkidaHost(payload)
           : await _controlApiService.updateAkidaHost(hostId, payload);
-      await _controlApiService.updateSettings(selectedAkidaHostId: host.id);
-      _upsertRemoteHost(host);
-      _selectedRemoteHostId = host.id;
+      await _controlApiService.updateSettings(
+        selectedAkidaHostId: savedHost.id,
+      );
+      _upsertRemoteHost(savedHost);
+      _selectedRemoteHostId = savedHost.id;
       _runtimeMode = AkidaRuntimeMode.remoteSdk;
+      _finishHostOperation(
+        'Remote Akida host saved. Test connectivity or provision it next.',
+      );
     } catch (e) {
       _runtimeSetupError = e.toString();
+      _failHostOperation('Failed to save remote Akida host.');
     } finally {
-      _isLoadingRuntimeSetup = false;
       notifyListeners();
     }
   }
@@ -248,9 +288,10 @@ class AkidaDeployProvider with ChangeNotifier {
       return;
     }
 
-    _isLoadingRuntimeSetup = true;
-    _runtimeSetupError = null;
-    notifyListeners();
+    _startHostOperation(
+      AkidaHostOperation.deletingHost,
+      'Removing remote Akida host.',
+    );
 
     try {
       await _controlApiService.deleteAkidaHost(hostId);
@@ -260,10 +301,11 @@ class AkidaDeployProvider with ChangeNotifier {
             ? AkidaRuntimeMode.localSdk
             : AkidaRuntimeMode.localSimulator;
       }
+      _finishHostOperation('Remote Akida host removed.');
     } catch (e) {
       _runtimeSetupError = e.toString();
+      _failHostOperation('Failed to remove remote Akida host.');
     } finally {
-      _isLoadingRuntimeSetup = false;
       notifyListeners();
     }
   }
@@ -517,6 +559,209 @@ class AkidaDeployProvider with ChangeNotifier {
       final updated = List<AkidaPairedHost>.from(_remoteHosts);
       updated[index] = host;
       _remoteHosts = updated;
+    }
+  }
+
+  void _replaceRemoteHost(AkidaPairedHost host) {
+    final index = _remoteHosts.indexWhere((item) => item.id == host.id);
+    if (index == -1) {
+      _remoteHosts = <AkidaPairedHost>[..._remoteHosts, host];
+      return;
+    }
+    final updated = List<AkidaPairedHost>.from(_remoteHosts);
+    updated[index] = host;
+    _remoteHosts = updated;
+  }
+
+  void _startHostOperation(
+    AkidaHostOperation operation,
+    String message, {
+    AkidaPairedHostState? optimisticState,
+  }) {
+    _activeHostOperation = operation;
+    _hostFeedbackMessage = message;
+    _runtimeSetupError = null;
+    final host = selectedRemoteHost;
+    if (host != null && optimisticState != null) {
+      _replaceRemoteHost(
+        host.copyWith(
+          state: optimisticState,
+          lastReadinessMessage: message,
+        ),
+      );
+    }
+    notifyListeners();
+  }
+
+  void _finishHostOperation(String message) {
+    _activeHostOperation = null;
+    _hostFeedbackMessage = message;
+    notifyListeners();
+  }
+
+  void _failHostOperation(
+    String message, {
+    AkidaPairedHostState? fallbackState,
+  }) {
+    _activeHostOperation = null;
+    _hostFeedbackMessage = message;
+    final host = selectedRemoteHost;
+    if (host != null && fallbackState != null) {
+      _replaceRemoteHost(
+        host.copyWith(
+          state: fallbackState,
+          lastReadinessMessage: message,
+        ),
+      );
+    }
+    notifyListeners();
+  }
+
+  Future<void> testSelectedRemoteHostConnectivity() async {
+    final host = selectedRemoteHost;
+    if (host == null) {
+      _runtimeSetupError =
+          'Save a remote Akida host before running connectivity checks.';
+      notifyListeners();
+      return;
+    }
+    _startHostOperation(
+      AkidaHostOperation.testingConnectivity,
+      'Testing connectivity to the remote Akida host.',
+      optimisticState: AkidaPairedHostState.reachable,
+    );
+    try {
+      final updated = await _controlApiService.testAkidaHostConnectivity(
+        host.id,
+      );
+      _upsertRemoteHost(updated);
+      _finishHostOperation(
+          'Connectivity succeeded. The remote host is reachable.');
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+      _failHostOperation(
+        'Connectivity test failed.',
+        fallbackState: AkidaPairedHostState.error,
+      );
+    }
+  }
+
+  Future<void> provisionSelectedRemoteHost() async {
+    final host = selectedRemoteHost;
+    if (host == null) {
+      _runtimeSetupError = 'Save a remote Akida host before provisioning.';
+      notifyListeners();
+      return;
+    }
+    _startHostOperation(
+      AkidaHostOperation.provisioningHost,
+      'Provisioning blank host. Watch the launcher terminal for SSH and install steps.',
+      optimisticState: AkidaPairedHostState.bootstrapping,
+    );
+    try {
+      final updated = await _controlApiService.provisionAkidaHost(host.id);
+      _upsertRemoteHost(updated);
+      _finishHostOperation(
+        updated.lastReadinessMessage.isNotEmpty
+            ? updated.lastReadinessMessage
+            : 'Provisioning completed. Review host readiness below.',
+      );
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+      _failHostOperation(
+        'Provisioning failed.',
+        fallbackState: AkidaPairedHostState.provisionFailed,
+      );
+    }
+  }
+
+  Future<void> repairSelectedRemoteHost() async {
+    final host = selectedRemoteHost;
+    if (host == null) {
+      _runtimeSetupError = 'Select a remote Akida host before repairing it.';
+      notifyListeners();
+      return;
+    }
+    _startHostOperation(
+      AkidaHostOperation.repairingHost,
+      'Repairing remote Akida host.',
+      optimisticState: AkidaPairedHostState.installingRuntime,
+    );
+    try {
+      final updated = await _controlApiService.repairAkidaHost(host.id);
+      _upsertRemoteHost(updated);
+      _finishHostOperation(
+        updated.lastReadinessMessage.isNotEmpty
+            ? updated.lastReadinessMessage
+            : 'Repair completed. Review host readiness below.',
+      );
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+      _failHostOperation(
+        'Repair failed.',
+        fallbackState: AkidaPairedHostState.provisionFailed,
+      );
+    }
+  }
+
+  Future<void> checkSelectedRemoteHostReadiness() async {
+    final host = selectedRemoteHost;
+    if (host == null) {
+      _runtimeSetupError =
+          'Select a remote Akida host before checking readiness.';
+      notifyListeners();
+      return;
+    }
+    _startHostOperation(
+      AkidaHostOperation.checkingReadiness,
+      'Checking remote Akida host readiness.',
+      optimisticState: AkidaPairedHostState.verifyingSdk,
+    );
+    try {
+      final updated = await _controlApiService.fetchAkidaHostPreflight(host.id);
+      _upsertRemoteHost(updated);
+      _finishHostOperation(
+        updated.lastReadinessMessage.isNotEmpty
+            ? updated.lastReadinessMessage
+            : 'Readiness refresh completed.',
+      );
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+      _failHostOperation(
+        'Readiness check failed.',
+        fallbackState: AkidaPairedHostState.preflightFailed,
+      );
+    }
+  }
+
+  Future<void> restartSelectedRemoteHostServices() async {
+    final host = selectedRemoteHost;
+    if (host == null) {
+      _runtimeSetupError =
+          'Select a remote Akida host before restarting services.';
+      notifyListeners();
+      return;
+    }
+    _startHostOperation(
+      AkidaHostOperation.restartingServices,
+      'Restarting remote Neurochip services.',
+      optimisticState: AkidaPairedHostState.verifyingSdk,
+    );
+    try {
+      final updated =
+          await _controlApiService.restartAkidaHostServices(host.id);
+      _upsertRemoteHost(updated);
+      _finishHostOperation(
+        updated.lastReadinessMessage.isNotEmpty
+            ? updated.lastReadinessMessage
+            : 'Remote services restarted.',
+      );
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+      _failHostOperation(
+        'Remote service restart failed.',
+        fallbackState: AkidaPairedHostState.error,
+      );
     }
   }
 
