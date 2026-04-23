@@ -190,6 +190,16 @@ def _normalize_akida_host_state(value: Any) -> str:
     return candidate if candidate in AKIDA_HOST_STATES else DEFAULT_AKIDA_HOST_STATE
 
 
+def _normalize_akida_runtime_mode(value: Any) -> str:
+    candidate = str(value or "unknown").strip().lower()
+    return candidate if candidate in AKIDA_RUNTIME_MODES else "unknown"
+
+
+def _normalize_akida_host_auth_mode(value: Any) -> str:
+    candidate = str(value or DEFAULT_AKIDA_AUTH_MODE).strip().lower()
+    return candidate if candidate in AKIDA_HOST_AUTH_MODES else DEFAULT_AKIDA_AUTH_MODE
+
+
 def _normalize_auth_mode(value: Any) -> str:
     candidate = str(value or DEFAULT_PYNQ_AUTH_MODE).strip().lower()
     return candidate if candidate in {"password", "ssh_key"} else DEFAULT_PYNQ_AUTH_MODE
@@ -1293,80 +1303,6 @@ class LauncherControlState:
             boards = self._settings.get("pynqBoards", [])
             return [_serialize_pynq_board(board) for board in boards]
 
-    def list_akida_hosts(self) -> list[dict[str, Any]]:
-        with self._lock:
-            hosts = self._settings.get("akidaHosts", [])
-            return [_serialize_akida_host(host) for host in hosts]
-
-    def get_akida_host(self, host_id: str) -> dict[str, Any]:
-        with self._lock:
-            host = self._get_akida_host(host_id)
-            return _serialize_akida_host(host)
-
-    def create_akida_host(self, payload: dict[str, Any]) -> dict[str, Any]:
-        host = _normalize_akida_host(payload)
-        if not host["baseUrl"]:
-            raise ValueError("Akida host baseUrl is required")
-        with self._lock:
-            hosts = self._settings["akidaHosts"]
-            if any(existing["id"] == host["id"] for existing in hosts):
-                raise ValueError(f"Akida host '{host['id']}' already exists")
-            hosts.append(host)
-            self._persist_settings()
-            return _serialize_akida_host(host)
-
-    def update_akida_host(
-        self, host_id: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
-        with self._lock:
-            host = self._get_akida_host(host_id)
-            normalized = self._normalize_updated_akida_host(
-                host, {"id": host_id, **payload}
-            )
-            host.clear()
-            host.update(normalized)
-            self._persist_settings()
-            return _serialize_akida_host(host)
-
-    def delete_akida_host(self, host_id: str) -> None:
-        with self._lock:
-            hosts = self._settings["akidaHosts"]
-            next_hosts = [host for host in hosts if host["id"] != host_id]
-            if len(next_hosts) == len(hosts):
-                raise KeyError(f"Unknown Akida host '{host_id}'")
-            self._settings["akidaHosts"] = next_hosts
-            self._persist_settings()
-
-    def _get_akida_host(self, host_id: str) -> dict[str, Any]:
-        for host in self._settings.get("akidaHosts", []):
-            if host["id"] == host_id:
-                return host
-        raise KeyError(f"Unknown Akida host '{host_id}'")
-
-    def _update_akida_host_fields(self, host_id: str, **fields: Any) -> dict[str, Any]:
-        with self._lock:
-            host = self._get_akida_host(host_id)
-            normalized = self._normalize_updated_akida_host(
-                host, {"id": host_id, **fields}
-            )
-            host.clear()
-            host.update(normalized)
-            self._persist_settings()
-            return dict(host)
-
-    def _normalize_updated_akida_host(
-        self,
-        host: dict[str, Any],
-        updates: dict[str, Any],
-    ) -> dict[str, Any]:
-        merged = dict(host)
-        merged.update(updates)
-        if "baseUrl" in updates and "host" not in updates:
-            merged["host"] = ""
-        if "baseUrl" in updates and "port" not in updates:
-            merged["port"] = ""
-        return _normalize_akida_host(merged)
-
     def get_pynq_board(self, board_id: str) -> dict[str, Any]:
         with self._lock:
             board = self._get_pynq_board(board_id)
@@ -1417,6 +1353,17 @@ class LauncherControlState:
             if host["id"] == host_id:
                 return host
         raise KeyError(f"Unknown Akida host '{host_id}'")
+
+    def _update_akida_host_fields(self, host_id: str, **fields: Any) -> dict[str, Any]:
+        with self._lock:
+            host = self._get_akida_host(host_id)
+            normalized = self._normalize_updated_akida_host(
+                host, {"id": host_id, **fields}
+            )
+            host.clear()
+            host.update(normalized)
+            self._persist_settings()
+            return dict(host)
 
     def _update_pynq_board_fields(self, board_id: str, **fields: Any) -> dict[str, Any]:
         with self._lock:

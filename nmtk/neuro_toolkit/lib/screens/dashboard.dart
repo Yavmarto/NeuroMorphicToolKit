@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
@@ -11,13 +12,13 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final provider = ref.read(moduleStateProvider);
+    final controller = ref.read(moduleStateProvider);
     final moduleState = ref.watch(moduleStateProvider);
+    final theme = Theme.of(context);
 
-    // Show launcher update dialog if available
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (provider.pendingLauncherUpdate != null) {
-        _showLauncherUpdateDialog(context, provider);
+      if (controller.pendingLauncherUpdate != null) {
+        _showLauncherUpdateDialog(context, controller);
       }
     });
 
@@ -27,7 +28,7 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => provider.checkForUpdates(),
+            onPressed: () => controller.checkForUpdates(),
             tooltip: 'Check for Updates',
           ),
           IconButton(
@@ -37,210 +38,77 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildDeployButton(
-                    context: context,
-                    route: '/deploy/akida',
-                    icon: Icons.architecture,
-                    label: 'Akida Deploy',
-                  ),
-                  _buildDeployButton(
-                    context: context,
-                    route: '/deploy/pynq',
-                    icon: Icons.developer_board,
-                    label: 'PYNQ Deploy',
-                  ),
-                  _buildDeployButton(
-                    context: context,
-                    route: '/deploy/teensy',
-                    icon: Icons.memory,
-                    label: 'Teensy Deploy',
-                  ),
-                ],
-              ),
+          NmtkSurfaceCard(
+            title: 'Deployment Workflows',
+            subtitle:
+                'Jump into hardware-specific deployment flows from the launcher.',
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _buildDeployButton(
+                  context: context,
+                  route: '/deploy/akida',
+                  icon: Icons.architecture,
+                  label: 'Akida Deploy',
+                ),
+                _buildDeployButton(
+                  context: context,
+                  route: '/deploy/pynq',
+                  icon: Icons.developer_board,
+                  label: 'PYNQ Deploy',
+                ),
+                _buildDeployButton(
+                  context: context,
+                  route: '/deploy/teensy',
+                  icon: Icons.memory,
+                  label: 'Teensy Deploy',
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: moduleState.installedModules.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No modules installed yet. Go to the Catalog to install modules.',
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: moduleState.installedModules.length,
-                    itemBuilder: (context, index) {
-                      final module = moduleState.installedModules[index];
-                      return Card(
-                        margin: const EdgeInsets.all(8.0),
-                        child: ListTile(
-                          title: Wrap(
-                            spacing: 8.0,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Semantics(
-                                label: 'Module Name',
-                                child: Text(
-                                  module.name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              _buildStatusIndicator(module.status),
-                              if (module.versionPinned) ...[
-                                const Icon(
-                                  Icons.push_pin,
-                                  size: 14,
-                                  color: Colors.blue,
-                                ),
-                              ],
-                              Text(
-                                'v${module.version}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(module.description),
-                              if (module.statusMessage != null)
-                                Text(
-                                  'Status: ${module.statusMessage}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: module.status == ModuleStatus.error
-                                        ? Colors.red
-                                        : Colors.grey[600],
-                                    fontWeight:
-                                        module.status == ModuleStatus.error
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                  ),
-                                  maxLines: 3,
-                                ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (module.status != ModuleStatus.updating)
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 8.0),
-                                  child: ElevatedButton.icon(
-                                    onPressed: () =>
-                                        moduleState.updateModule(module.id),
-                                    icon: const Icon(Icons.system_update),
-                                    label: Text(
-                                      'Update to ${module.remoteVersion}',
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                              if (module.status == ModuleStatus.updating)
-                                SizedBox(
-                                  width: 100,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      LinearProgressIndicator(
-                                        value: module.installProgress,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      const Text(
-                                        'Updating...',
-                                        style: TextStyle(fontSize: 10),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              else if (module.status ==
-                                      ModuleStatus.installed ||
-                                  module.status == ModuleStatus.error)
-                                Semantics(
-                                  label: 'Start ${module.name}',
-                                  button: true,
-                                  child: ElevatedButton(
-                                    onPressed: () =>
-                                        moduleState.launchModule(module.id),
-                                    child: const Text('Start'),
-                                  ),
-                                )
-                              else if (module.status == ModuleStatus.starting)
-                                const CircularProgressIndicator()
-                              else if (module.status == ModuleStatus.running ||
-                                  module.status == ModuleStatus.degraded)
-                                Row(
-                                  children: [
-                                    Semantics(
-                                      label: 'Open ${module.name} in Workspace',
-                                      button: true,
-                                      child: ElevatedButton(
-                                        onPressed: () =>
-                                            context.go('/tool/${module.id}'),
-                                        child: const Text('Open'),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Semantics(
-                                      label: 'Stop ${module.name}',
-                                      button: true,
-                                      child: ElevatedButton(
-                                        onPressed: () => moduleState.stopModule(
-                                          module.id,
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.orange,
-                                          foregroundColor: Colors.white,
-                                        ),
-                                        child: const Text('Stop'),
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              else if (module.status == ModuleStatus.stopping)
-                                const CircularProgressIndicator(
-                                  color: Colors.orange,
-                                ),
-                              const SizedBox(width: 8),
-                              Semantics(
-                                label: 'Uninstall ${module.name}',
-                                button: true,
-                                child: IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () {
-                                    moduleState.uninstallModule(module.id);
-                                  },
-                                  tooltip: 'Uninstall',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+          const SizedBox(height: 16),
+          Text(
+            'Installed Modules',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
+          const SizedBox(height: 12),
+          if (moduleState.installedModules.isEmpty)
+            const NmtkEmptyState(
+              title: 'No Modules Installed',
+              message:
+                  'No modules installed yet. Go to the Catalog to install modules.',
+              icon: Icons.widgets_outlined,
+            )
+          else
+            ...moduleState.installedModules.map(
+              (module) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ModuleSummaryCard(
+                  module: module,
+                  onLaunch: () => controller.launchModule(module.id),
+                  onOpen: () => context.go('/tool/${module.id}'),
+                  onStop: () => controller.stopModule(module.id),
+                  onUninstall: () => controller.uninstallModule(module.id),
+                  onUpdate: _hasUpdateAvailable(module)
+                      ? () => controller.updateModule(module.id)
+                      : null,
+                ),
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  static bool _hasUpdateAvailable(Module module) {
+    return module.remoteVersion != '0.0.0' &&
+        module.remoteVersion != module.version;
   }
 
   Widget _buildDeployButton({
@@ -249,69 +117,17 @@ class DashboardScreen extends ConsumerWidget {
     required IconData icon,
     required String label,
   }) {
-    return FilledButton.tonalIcon(
+    return NmtkPrimaryButton(
       onPressed: () => context.go(route),
-      icon: Icon(icon),
-      label: Text(label),
-    );
-  }
-
-  Widget _buildStatusIndicator(ModuleStatus status) {
-    Color color;
-    String label;
-    switch (status) {
-      case ModuleStatus.running:
-        color = Colors.green;
-        label = 'Running';
-        break;
-      case ModuleStatus.degraded:
-        color = Colors.yellow[700]!;
-        label = 'Degraded';
-        break;
-      case ModuleStatus.error:
-        color = Colors.red;
-        label = 'Error';
-        break;
-      case ModuleStatus.starting:
-        color = Colors.blue;
-        label = 'Starting';
-        break;
-      case ModuleStatus.stopping:
-        color = Colors.orange;
-        label = 'Stopping';
-        break;
-      case ModuleStatus.updating:
-        color = Colors.purple;
-        label = 'Updating';
-        break;
-      default:
-        color = Colors.grey;
-        label = 'Stopped';
-    }
-
-    return Semantics(
-      label: 'Status: $label',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+      icon: icon,
+      label: label,
     );
   }
 
   void _showLauncherUpdateDialog(
-      BuildContext context, ModuleProvider provider) {
+    BuildContext context,
+    ModuleProvider provider,
+  ) {
     final update = provider.pendingLauncherUpdate!;
     showDialog<void>(
       context: context,
@@ -323,10 +139,13 @@ class DashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-                'A new version of NeuroToolkit (${update.version}) is available.'),
+              'A new version of NeuroToolkit (${update.version}) is available.',
+            ),
             const SizedBox(height: 16),
-            const Text('Release Notes:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Release Notes:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             Text(update.releaseNotes),
           ],
         ),
@@ -347,6 +166,254 @@ class DashboardScreen extends ConsumerWidget {
             },
             child: const Text('Download Now'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModuleSummaryCard extends StatelessWidget {
+  final Module module;
+  final VoidCallback onLaunch;
+  final VoidCallback onOpen;
+  final VoidCallback onStop;
+  final VoidCallback onUninstall;
+  final VoidCallback? onUpdate;
+
+  const _ModuleSummaryCard({
+    required this.module,
+    required this.onLaunch,
+    required this.onOpen,
+    required this.onStop,
+    required this.onUninstall,
+    required this.onUpdate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return NmtkSurfaceCard(
+      title: module.name,
+      subtitle: module.description,
+      trailing: _buildStatusIndicator(module.status),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'v${module.version}',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (module.versionPinned)
+                const NmtkStatusBadge(
+                  label: 'Pinned',
+                  tone: NmtkTone.info,
+                  icon: Icons.push_pin,
+                ),
+            ],
+          ),
+          if (module.statusMessage != null) ...[
+            const SizedBox(height: 12),
+            NmtkSurfaceCard(
+              tone: module.status == ModuleStatus.error
+                  ? NmtkTone.danger
+                  : module.status == ModuleStatus.degraded
+                  ? NmtkTone.warning
+                  : NmtkTone.info,
+              padding: const EdgeInsets.all(14),
+              child: Text(
+                module.statusMessage!,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          if (module.status == ModuleStatus.updating)
+            _ModuleProgressState(
+              label: 'Updating to ${module.remoteVersion}',
+              progress: module.installProgress,
+            )
+          else if (module.status == ModuleStatus.starting)
+            const _ModuleActivityState(label: 'Starting module...')
+          else if (module.status == ModuleStatus.stopping)
+            const _ModuleActivityState(
+              label: 'Stopping module...',
+              tone: NmtkTone.warning,
+            )
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (onUpdate != null)
+                  NmtkPrimaryButton(
+                    onPressed: onUpdate,
+                    icon: Icons.system_update,
+                    label: 'Update to ${module.remoteVersion}',
+                    tone: NmtkTone.success,
+                  ),
+                if (module.status == ModuleStatus.installed ||
+                    module.status == ModuleStatus.error)
+                  Semantics(
+                    label: 'Start ${module.name}',
+                    button: true,
+                    child: NmtkPrimaryButton(
+                      onPressed: onLaunch,
+                      icon: Icons.play_arrow,
+                      label: 'Start',
+                    ),
+                  ),
+                if (module.status == ModuleStatus.running ||
+                    module.status == ModuleStatus.degraded) ...[
+                  Semantics(
+                    label: 'Open ${module.name} in Workspace',
+                    button: true,
+                    child: NmtkPrimaryButton(
+                      onPressed: onOpen,
+                      icon: Icons.open_in_new,
+                      label: 'Open',
+                    ),
+                  ),
+                  Semantics(
+                    label: 'Stop ${module.name}',
+                    button: true,
+                    child: NmtkOutlinedButton(
+                      onPressed: onStop,
+                      icon: Icons.stop_circle_outlined,
+                      label: 'Stop',
+                      tone: NmtkTone.warning,
+                    ),
+                  ),
+                ],
+                Semantics(
+                  label: 'Uninstall ${module.name}',
+                  button: true,
+                  child: NmtkOutlinedButton(
+                    onPressed: onUninstall,
+                    icon: Icons.delete,
+                    label: 'Uninstall',
+                    tone: NmtkTone.danger,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator(ModuleStatus status) {
+    switch (status) {
+      case ModuleStatus.running:
+        return const NmtkStatusBadge(
+          label: 'Running',
+          tone: NmtkTone.success,
+          icon: Icons.check_circle,
+          semanticsLabel: 'Status: Running',
+        );
+      case ModuleStatus.degraded:
+        return const NmtkStatusBadge(
+          label: 'Degraded',
+          tone: NmtkTone.warning,
+          icon: Icons.warning_amber_rounded,
+          semanticsLabel: 'Status: Degraded',
+        );
+      case ModuleStatus.error:
+        return const NmtkStatusBadge(
+          label: 'Error',
+          tone: NmtkTone.danger,
+          icon: Icons.error_outline,
+          semanticsLabel: 'Status: Error',
+        );
+      case ModuleStatus.starting:
+        return const NmtkStatusBadge(
+          label: 'Starting',
+          tone: NmtkTone.info,
+          icon: Icons.sync,
+          semanticsLabel: 'Status: Starting',
+        );
+      case ModuleStatus.stopping:
+        return const NmtkStatusBadge(
+          label: 'Stopping',
+          tone: NmtkTone.warning,
+          icon: Icons.stop_circle_outlined,
+          semanticsLabel: 'Status: Stopping',
+        );
+      case ModuleStatus.updating:
+        return const NmtkStatusBadge(
+          label: 'Updating',
+          tone: NmtkTone.info,
+          icon: Icons.system_update,
+          semanticsLabel: 'Status: Updating',
+        );
+      default:
+        return const NmtkStatusBadge(
+          label: 'Stopped',
+          tone: NmtkTone.neutral,
+          icon: Icons.pause_circle_outline,
+          semanticsLabel: 'Status: Stopped',
+        );
+    }
+  }
+}
+
+class _ModuleProgressState extends StatelessWidget {
+  final String label;
+  final double progress;
+
+  const _ModuleProgressState({required this.label, required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    return NmtkSurfaceCard(
+      tone: NmtkTone.info,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(value: progress),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModuleActivityState extends StatelessWidget {
+  final String label;
+  final NmtkTone tone;
+
+  const _ModuleActivityState({required this.label, this.tone = NmtkTone.info});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = resolveNmtkTonePalette(context, tone);
+
+    return NmtkSurfaceCard(
+      tone: tone,
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: palette.foreground,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(label),
         ],
       ),
     );
