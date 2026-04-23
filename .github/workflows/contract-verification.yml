@@ -55,6 +55,23 @@ jobs:
             neurohub:
               - 'Neurohub/**'
 
+  verify-teensy-contract-version-sync:
+    needs: detect-changes
+    if: >-
+      needs.detect-changes.outputs.neurocnl == 'true' ||
+      needs.detect-changes.outputs.neurochip == 'true'
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify mirrored Teensy contract versions
+        run: python scripts/check_teensy_contract_versions.py
+
   # ── Stage 2: neurocnl (dedicated job — most contracts) ─────────────
   verify-neurocnl:
     needs: detect-changes
