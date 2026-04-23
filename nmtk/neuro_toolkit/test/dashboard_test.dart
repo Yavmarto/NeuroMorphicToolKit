@@ -85,8 +85,11 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> updateModule(String moduleId) async {}
 
   @override
-  Future<void> updateModuleSettings(String moduleId,
-      {bool? isEnabled, int? customPort}) async {}
+  Future<void> updateModuleSettings(
+    String moduleId, {
+    bool? isEnabled,
+    int? customPort,
+  }) async {}
 
   @override
   void updateSettingsProvider(SettingsProvider settingsProvider) {}
@@ -102,128 +105,120 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
 }
 
 void main() {
-  testWidgets('DashboardScreen shows PYNQ Deploy button',
-      (WidgetTester tester) async {
+  testWidgets('DashboardScreen shows PYNQ Deploy button', (
+    WidgetTester tester,
+  ) async {
     final mockProvider = MockDashboardProvider();
     mockProvider.setInstalledModules([]);
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          moduleStateProvider.overrideWith((ref) => mockProvider),
-        ],
-        child: const MaterialApp(
-          home: DashboardScreen(),
-        ),
+        overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
+        child: const MaterialApp(home: DashboardScreen()),
       ),
     );
 
     expect(find.text('PYNQ Deploy'), findsOneWidget);
   });
 
-  testWidgets('DashboardScreen shows Teensy Deploy button',
-      (WidgetTester tester) async {
+  testWidgets('DashboardScreen shows Teensy Deploy button', (
+    WidgetTester tester,
+  ) async {
     final mockProvider = MockDashboardProvider();
     mockProvider.setInstalledModules([]);
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          moduleStateProvider.overrideWith((ref) => mockProvider),
-        ],
-        child: const MaterialApp(
-          home: DashboardScreen(),
-        ),
+        overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
+        child: const MaterialApp(home: DashboardScreen()),
       ),
     );
 
     expect(find.text('Teensy Deploy'), findsOneWidget);
   });
 
-  testWidgets('DashboardScreen shows empty state when no modules are installed',
-      (WidgetTester tester) async {
-    final mockProvider = MockDashboardProvider();
-    mockProvider.setInstalledModules([]);
+  testWidgets(
+    'DashboardScreen shows empty state when no modules are installed',
+    (WidgetTester tester) async {
+      final mockProvider = MockDashboardProvider();
+      mockProvider.setInstalledModules([]);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          moduleStateProvider.overrideWith((ref) => mockProvider),
-        ],
-        child: const MaterialApp(
-          home: DashboardScreen(),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
+          child: const MaterialApp(home: DashboardScreen()),
         ),
-      ),
-    );
+      );
 
-    expect(
-      find.text(
-        'No modules installed yet. Go to the Catalog to install modules.',
-      ),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('DashboardScreen shows installed modules and responds to buttons',
-      (WidgetTester tester) async {
-    final mockProvider = MockDashboardProvider();
-    final installedModule = Module(
-      id: 'test_module',
-      name: 'Test Module',
-      description: 'Test description',
-      directory: 'dir',
-      status: ModuleStatus.installed,
-    );
-    mockProvider.setInstalledModules([installedModule]);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          moduleStateProvider.overrideWith((ref) => mockProvider),
-        ],
-        child: const MaterialApp(
-          home: DashboardScreen(),
+      expect(
+        find.text(
+          'No modules installed yet. Go to the Catalog to install modules.',
         ),
-      ),
-    );
+        findsOneWidget,
+      );
+    },
+  );
 
-    expect(find.text('Test Module'), findsOneWidget);
-    expect(find.text('Test description'), findsOneWidget);
+  testWidgets(
+    'DashboardScreen shows installed modules and responds to buttons',
+    (WidgetTester tester) async {
+      final mockProvider = MockDashboardProvider();
+      final installedModule = Module(
+        id: 'test_module',
+        name: 'Test Module',
+        description: 'Test description',
+        directory: 'dir',
+        status: ModuleStatus.installed,
+      );
+      mockProvider.setInstalledModules([installedModule]);
 
-    // Find the Start button
-    final startButton = find.text('Start');
-    expect(startButton, findsOneWidget);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
+          child: const MaterialApp(home: DashboardScreen()),
+        ),
+      );
 
-    // Tap the Start button
-    await tester.tap(startButton);
-    await tester.pump();
+      expect(find.text('Test Module'), findsOneWidget);
+      expect(find.text('Test description'), findsOneWidget);
 
-    expect(mockProvider.launchCalls, contains('test_module'));
+      // Find the Start button
+      final startButton = find.text('Start');
+      expect(startButton, findsOneWidget);
 
-    // Update status to running
-    final runningModule =
-        installedModule.copyWith(status: ModuleStatus.running);
-    mockProvider.setInstalledModules([runningModule]);
-    await tester.pump();
+      // Tap the Start button
+      await tester.tap(startButton);
+      await tester.pump();
 
-    expect(find.text('Open'), findsOneWidget);
-    expect(find.text('Stop'), findsOneWidget);
+      expect(mockProvider.launchCalls, contains('test_module'));
 
-    // Tap the Stop button
-    await tester.tap(find.text('Stop'));
-    await tester.pump();
+      // Update status to running
+      final runningModule = installedModule.copyWith(
+        status: ModuleStatus.running,
+      );
+      mockProvider.setInstalledModules([runningModule]);
+      await tester.pump();
 
-    expect(mockProvider.stopCalls, contains('test_module'));
+      expect(find.text('Open'), findsOneWidget);
+      expect(find.text('Stop'), findsOneWidget);
 
-    // Tap the Uninstall button
-    await tester.tap(find.byIcon(Icons.delete));
-    await tester.pump();
+      // Tap the Stop button
+      await tester.tap(find.text('Stop'));
+      await tester.pump();
 
-    expect(mockProvider.uninstallCalls, contains('test_module'));
-  });
+      expect(mockProvider.stopCalls, contains('test_module'));
 
-  testWidgets('DashboardScreen handles Open button click',
-      (WidgetTester tester) async {
+      // Tap the Uninstall button
+      await tester.tap(find.byIcon(Icons.delete));
+      await tester.pump();
+
+      expect(mockProvider.uninstallCalls, contains('test_module'));
+    },
+  );
+
+  testWidgets('DashboardScreen handles Open button click', (
+    WidgetTester tester,
+  ) async {
     final mockProvider = MockDashboardProvider();
     final runningModule = Module(
       id: 'test_module',
@@ -236,15 +231,37 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          moduleStateProvider.overrideWith((ref) => mockProvider),
-        ],
-        child: const MaterialApp(
-          home: DashboardScreen(),
-        ),
+        overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
+        child: const MaterialApp(home: DashboardScreen()),
       ),
     );
 
     expect(find.text('Open'), findsOneWidget);
+  });
+
+  testWidgets('DashboardScreen hides update actions for non-newer versions', (
+    WidgetTester tester,
+  ) async {
+    final mockProvider = MockDashboardProvider();
+    mockProvider.setInstalledModules([
+      Module(
+        id: 'test_module',
+        name: 'Test Module',
+        description: 'Test description',
+        directory: 'dir',
+        status: ModuleStatus.installed,
+        version: '1.0.0',
+        remoteVersion: '0.5.0',
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+
+    expect(find.text('Update to 0.5.0'), findsNothing);
   });
 }

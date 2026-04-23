@@ -78,6 +78,8 @@ class LauncherControlServiceTest(unittest.TestCase):
         assets_dir = self.repo_root / "nmtk" / "neuro_toolkit" / "assets"
         assets_dir.mkdir(parents=True, exist_ok=True)
         (self.repo_root / "dummy_module").mkdir(parents=True, exist_ok=True)
+        self._resolved_versions: dict[str, str | None] = {"dummy": None}
+        self._resolver_calls: list[str] = []
 
         (assets_dir / "modules.json").write_text(
             json.dumps(
@@ -96,6 +98,7 @@ class LauncherControlServiceTest(unittest.TestCase):
                         "frontendStatus": "Yes",
                         "requiresMuJoCo": False,
                         "version": "1.0.0",
+                        "remoteUrl": "https://api.github.com/repos/example/dummy",
                         "akidaRuntime": {
                             "supportedPlatforms": ["linux", "windows"],
                             "pythonRange": ">=3.10,<3.13",
@@ -113,10 +116,6 @@ class LauncherControlServiceTest(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        (assets_dir / "remote_modules.json").write_text(
-            json.dumps([{"id": "dummy", "version": "1.1.0"}]),
-            encoding="utf-8",
-        )
 
         self._patches = [
             mock.patch.object(launcher_server, "REPO_ROOT", self.repo_root),
@@ -124,11 +123,6 @@ class LauncherControlServiceTest(unittest.TestCase):
                 launcher_server,
                 "MODULES_MANIFEST",
                 assets_dir / "modules.json",
-            ),
-            mock.patch.object(
-                launcher_server,
-                "REMOTE_MANIFEST",
-                assets_dir / "remote_modules.json",
             ),
             mock.patch.object(
                 launcher_server,
@@ -145,7 +139,9 @@ class LauncherControlServiceTest(unittest.TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
 
-        self.state = launcher_server.LauncherControlState()
+        self.state = launcher_server.LauncherControlState(
+            remote_version_resolver=self._resolve_remote_version
+        )
         self._fake_venv_python = self._create_fake_venv_python()
 
     def tearDown(self) -> None:
@@ -199,12 +195,17 @@ class LauncherControlServiceTest(unittest.TestCase):
         python_path.symlink_to(base_python)
         return python_path, base_python
 
+    def _resolve_remote_version(self, module: dict[str, Any]) -> str | None:
+        module_id = str(module["id"])
+        self._resolver_calls.append(module_id)
+        return self._resolved_versions.get(module_id)
+
     def test_modules_endpoint_returns_manifest_data(self) -> None:
         payload = self.state.serialize_modules()
 
         self.assertIsInstance(payload, list)
         self.assertEqual(payload[0]["id"], "dummy")
-        self.assertEqual(payload[0]["remoteVersion"], "1.1.0")
+        self.assertEqual(payload[0]["remoteVersion"], "1.0.0")
         self.assertEqual(
             payload[0]["status"],
             launcher_server.STATUS_INDEX["notInstalled"],
@@ -213,6 +214,40 @@ class LauncherControlServiceTest(unittest.TestCase):
             payload[0]["akidaRuntime"]["localModeFallback"],
             "simulator_only",
         )
+        self.assertEqual(self._resolver_calls, [])
+
+    def test_serialize_modules_refresh_updates_uses_remote_version_resolver(self) -> None:
+        self._resolved_versions["dummy"] = "1.2.0"
+
+        payload = self.state.serialize_modules(refresh_updates=True)
+
+        self.assertEqual(payload[0]["remoteVersion"], "1.2.0")
+        self.assertEqual(self._resolver_calls, ["dummy"])
+
+    def test_refresh_remote_versions_ignores_older_versions(self) -> None:
+        self._resolved_versions["dummy"] = "0.9.0"
+
+        payload = self.state.serialize_modules(refresh_updates=True)
+
+        self.assertEqual(payload[0]["remoteVersion"], "1.0.0")
+
+    def test_refresh_remote_versions_keeps_last_known_update_when_lookup_fails(self) -> None:
+        self._resolved_versions["dummy"] = "1.2.0"
+        self.state.serialize_modules(refresh_updates=True)
+        self._resolved_versions["dummy"] = None
+
+        payload = self.state.serialize_modules(refresh_updates=True)
+
+        self.assertEqual(payload[0]["remoteVersion"], "1.2.0")
+
+    def test_pinned_modules_do_not_surface_remote_updates(self) -> None:
+        self.state.update_module_settings("dummy", {"versionPinned": True})
+        self._resolved_versions["dummy"] = "1.3.0"
+
+        payload = self.state.serialize_modules(refresh_updates=True)
+
+        self.assertTrue(payload[0]["versionPinned"])
+        self.assertEqual(payload[0]["remoteVersion"], "1.0.0")
 
     def test_prepare_akida_runtime_marks_unsupported_host_without_installing(self) -> None:
         with (
@@ -354,7 +389,9 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
         self._fake_venv_python.unlink()
 
-        reloaded = launcher_server.LauncherControlState()
+        reloaded = launcher_server.LauncherControlState(
+            remote_version_resolver=self._resolve_remote_version
+        )
         self.addCleanup(reloaded.shutdown)
 
         payload = reloaded.serialize_module("dummy")
