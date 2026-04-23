@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:neuro_toolkit/providers/settings_provider.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
-import 'package:neuro_toolkit/models/module.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -36,171 +37,136 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final analytics = ref.watch(analyticsServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildAppearanceSection(settings),
-          const Divider(),
-          _buildLoggingSection(settings),
-          const Divider(),
-          _buildTelemetrySection(settings),
-          const Divider(),
-          _buildCrashLogSection(analytics),
-          const Divider(),
-          _buildModulesSection(moduleProvider, settings),
+          NmtkSurfaceCard(
+            title: 'Appearance',
+            subtitle: 'Control how the launcher theme is rendered.',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Theme'),
+              trailing: DropdownButton<ThemeMode>(
+                value: settings.themeMode,
+                onChanged: (ThemeMode? newValue) {
+                  if (newValue != null) {
+                    settings.setThemeMode(newValue);
+                  }
+                },
+                items: const [
+                  DropdownMenuItem(
+                    value: ThemeMode.system,
+                    child: Text('System'),
+                  ),
+                  DropdownMenuItem(
+                    value: ThemeMode.light,
+                    child: Text('Light'),
+                  ),
+                  DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          NmtkSurfaceCard(
+            title: 'Logging',
+            subtitle: 'Tune launcher logging verbosity for diagnostics.',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Log Level'),
+              trailing: DropdownButton<LogLevel>(
+                value: settings.logLevel,
+                onChanged: (LogLevel? newValue) {
+                  if (newValue != null) {
+                    settings.setLogLevel(newValue);
+                  }
+                },
+                items: LogLevel.values.map((LogLevel level) {
+                  return DropdownMenuItem<LogLevel>(
+                    value: level,
+                    child: Text(level.name.toUpperCase()),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          NmtkSurfaceCard(
+            title: 'Analytics & Telemetry',
+            subtitle:
+                'Decide how much anonymous health data the launcher can send.',
+            child: Column(
+              children: [
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Opt-in Telemetry'),
+                  subtitle: const Text(
+                    'Share anonymous usage data and performance metrics.',
+                  ),
+                  value: settings.telemetryEnabled,
+                  onChanged: (value) => settings.setTelemetryEnabled(value),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _endpointController,
+                  decoration: const InputDecoration(
+                    labelText: 'Remote Reporting Endpoint',
+                    hintText: 'https://example.com/api/logs',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => settings.setRemoteEndpoint(value),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          NmtkSurfaceCard(
+            title: 'Local Crash Logs',
+            subtitle: 'Inspect launcher crash history without leaving the app.',
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                NmtkPrimaryButton(
+                  onPressed: () async {
+                    final logs = await analytics.getLocalLogs();
+                    if (mounted) {
+                      _showLogDialog(context, logs);
+                    }
+                  },
+                  icon: Icons.history,
+                  label: 'View Local Logs',
+                ),
+                NmtkOutlinedButton(
+                  onPressed: () async {
+                    await analytics.clearLocalLogs();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Local logs cleared')),
+                      );
+                    }
+                  },
+                  icon: Icons.delete_outline,
+                  label: 'Clear Local Logs',
+                  tone: NmtkTone.danger,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          NmtkSurfaceCard(
+            title: 'Modules Configuration',
+            subtitle: 'Toggle modules and override launcher-assigned ports.',
+            child: Column(
+              children: [
+                for (final module in moduleProvider.modules)
+                  ModuleSettingsTile(module: module),
+              ],
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildAppearanceSection(SettingsProvider settings) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Appearance',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        ListTile(
-          title: const Text('Theme'),
-          trailing: DropdownButton<ThemeMode>(
-            value: settings.themeMode,
-            onChanged: (ThemeMode? newValue) {
-              if (newValue != null) {
-                settings.setThemeMode(newValue);
-              }
-            },
-            items: const [
-              DropdownMenuItem(
-                value: ThemeMode.system,
-                child: Text('System'),
-              ),
-              DropdownMenuItem(
-                value: ThemeMode.light,
-                child: Text('Light'),
-              ),
-              DropdownMenuItem(
-                value: ThemeMode.dark,
-                child: Text('Dark'),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoggingSection(SettingsProvider settings) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Logging',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        ListTile(
-          title: const Text('Log Level'),
-          trailing: DropdownButton<LogLevel>(
-            value: settings.logLevel,
-            onChanged: (LogLevel? newValue) {
-              if (newValue != null) {
-                settings.setLogLevel(newValue);
-              }
-            },
-            items: LogLevel.values.map((LogLevel level) {
-              return DropdownMenuItem<LogLevel>(
-                value: level,
-                child: Text(level.name.toUpperCase()),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildModulesSection(
-      ModuleProvider moduleProvider, SettingsProvider settings) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Modules Configuration',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        ...moduleProvider.modules.map((module) {
-          return ModuleSettingsTile(module: module);
-        }),
-      ],
-    );
-  }
-
-  Widget _buildTelemetrySection(SettingsProvider settings) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Analytics & Telemetry',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        SwitchListTile(
-          title: const Text('Opt-in Telemetry'),
-          subtitle:
-              const Text('Share anonymous usage data and performance metrics'),
-          value: settings.telemetryEnabled,
-          onChanged: (value) => settings.setTelemetryEnabled(value),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _endpointController,
-          decoration: const InputDecoration(
-            labelText: 'Remote Reporting Endpoint',
-            hintText: 'https://example.com/api/logs',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (value) => settings.setRemoteEndpoint(value),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCrashLogSection(AnalyticsService analytics) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Local Crash Logs',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 16),
-        ElevatedButton.icon(
-          onPressed: () async {
-            final logs = await analytics.getLocalLogs();
-            if (mounted) {
-              _showLogDialog(context, logs);
-            }
-          },
-          icon: const Icon(Icons.history),
-          label: const Text('View Local Logs'),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: () async {
-            await analytics.clearLocalLogs();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Local logs cleared')),
-              );
-            }
-          },
-          icon: const Icon(Icons.delete_outline),
-          label: const Text('Clear Local Logs'),
-        ),
-      ],
     );
   }
 
@@ -245,7 +211,8 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
   void initState() {
     super.initState();
     _portController = TextEditingController(
-      text: widget.module.customPort?.toString() ??
+      text:
+          widget.module.customPort?.toString() ??
           widget.module.port?.toString() ??
           '',
     );
@@ -256,7 +223,8 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.module.customPort != widget.module.customPort ||
         oldWidget.module.port != widget.module.port) {
-      _portController.text = widget.module.customPort?.toString() ??
+      _portController.text =
+          widget.module.customPort?.toString() ??
           widget.module.port?.toString() ??
           '';
     }
@@ -272,61 +240,69 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
   Widget build(BuildContext context) {
     final moduleProvider = ref.read(moduleStateProvider);
 
-    return ExpansionTile(
-      title: Text(widget.module.name),
-      subtitle: Text(
-          'Port: ${widget.module.customPort ?? widget.module.port ?? 'None'}'),
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          child: Column(
-            children: [
-              SwitchListTile(
-                title: const Text('Enabled'),
-                value: widget.module.isEnabled,
-                onChanged: (bool value) {
-                  moduleProvider.updateModuleSettings(
-                    widget.module.id,
-                    isEnabled: value,
-                    customPort: widget.module.customPort,
-                  );
-                },
-              ),
-              if (widget.module.port != null)
-                TextField(
-                  controller: _portController,
-                  decoration: InputDecoration(
-                    labelText: 'Custom Port',
-                    hintText: 'Default: ${widget.module.port}',
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.save),
-                      onPressed: () {
-                        final parsed = int.tryParse(_portController.text);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: NmtkSurfaceCard(
+        padding: EdgeInsets.zero,
+        child: ExpansionTile(
+          title: Text(widget.module.name),
+          subtitle: Text(
+            'Port: ${widget.module.customPort ?? widget.module.port ?? 'None'}',
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Enabled'),
+                    value: widget.module.isEnabled,
+                    onChanged: (bool value) {
+                      moduleProvider.updateModuleSettings(
+                        widget.module.id,
+                        isEnabled: value,
+                        customPort: widget.module.customPort,
+                      );
+                    },
+                  ),
+                  if (widget.module.port != null)
+                    TextField(
+                      controller: _portController,
+                      decoration: InputDecoration(
+                        labelText: 'Custom Port',
+                        hintText: 'Default: ${widget.module.port}',
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.save),
+                          onPressed: () {
+                            final parsed = int.tryParse(_portController.text);
+                            moduleProvider.updateModuleSettings(
+                              widget.module.id,
+                              isEnabled: widget.module.isEnabled,
+                              customPort: parsed,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Port updated')),
+                            );
+                          },
+                        ),
+                      ),
+                      keyboardType: TextInputType.number,
+                      onSubmitted: (value) {
+                        final parsed = int.tryParse(value);
                         moduleProvider.updateModuleSettings(
                           widget.module.id,
                           isEnabled: widget.module.isEnabled,
                           customPort: parsed,
                         );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Port updated')),
-                        );
                       },
                     ),
-                  ),
-                  keyboardType: TextInputType.number,
-                  onSubmitted: (value) {
-                    final parsed = int.tryParse(value);
-                    moduleProvider.updateModuleSettings(
-                      widget.module.id,
-                      isEnabled: widget.module.isEnabled,
-                      customPort: parsed,
-                    );
-                  },
-                ),
-            ],
-          ),
+                ],
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
