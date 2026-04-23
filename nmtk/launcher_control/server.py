@@ -71,6 +71,28 @@ PYNQ_RUNTIME_LOG_TAIL_LINES = 80
 DEFAULT_PYNQ_BOARD_USERNAME = "xilinx"
 DEFAULT_PYNQ_BOARD_STATE = "unpaired"
 DEFAULT_PYNQ_AUTH_MODE = "password"
+DEFAULT_AKIDA_HOST_STATE = "unknown"
+DEFAULT_AKIDA_AUTH_MODE = "none"
+AKIDA_RUNTIME_MODES = {
+    "local_sdk",
+    "remote_sdk",
+    "simulator_only",
+    "unknown",
+}
+AKIDA_HOST_STATES = {
+    "unknown",
+    "pending",
+    "ready",
+    "degraded",
+    "simulator_only",
+    "blocked",
+    "error",
+}
+AKIDA_HOST_AUTH_MODES = {
+    "none",
+    "basic",
+    "bearer_token",
+}
 BENIGN_SSH_WARNING_PREFIXES = ("Warning: Permanently added ",)
 PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE = (
     "Overlay files were uploaded, but the user-space runtime did not become healthy. "
@@ -156,6 +178,27 @@ def _normalize_pynq_board_state(value: Any) -> str:
 def _normalize_auth_mode(value: Any) -> str:
     candidate = str(value or DEFAULT_PYNQ_AUTH_MODE).strip().lower()
     return candidate if candidate in {"password", "ssh_key"} else DEFAULT_PYNQ_AUTH_MODE
+
+
+def _normalize_akida_host_auth_mode(value: Any) -> str:
+    candidate = str(value or DEFAULT_AKIDA_AUTH_MODE).strip().lower()
+    if candidate == "token":
+        candidate = "bearer_token"
+    return candidate if candidate in AKIDA_HOST_AUTH_MODES else DEFAULT_AKIDA_AUTH_MODE
+
+
+def _normalize_akida_runtime_mode(value: Any) -> str:
+    candidate = str(value or "unknown").strip().lower()
+    if candidate == "remote_host":
+        candidate = "remote_sdk"
+    if candidate == "software_fallback":
+        candidate = "simulator_only"
+    return candidate if candidate in AKIDA_RUNTIME_MODES else "unknown"
+
+
+def _normalize_akida_host_state(value: Any) -> str:
+    candidate = str(value or DEFAULT_AKIDA_HOST_STATE).strip().lower()
+    return candidate if candidate in AKIDA_HOST_STATES else DEFAULT_AKIDA_HOST_STATE
 
 
 def _default_runtime_api_url(host: str, port: int = DEFAULT_PYNQ_BOARD_PORT) -> str:
@@ -507,6 +550,73 @@ def _normalize_akida_runtime_state(raw: Any) -> dict[str, Any] | None:
         "message": str(raw.get("message") or "").strip() or None,
         "preparedAt": str(raw.get("preparedAt") or "").strip() or None,
     }
+
+
+def _normalize_akida_capability_snapshot(raw: Any) -> dict[str, Any] | None:
+    if not isinstance(raw, dict):
+        return None
+    return {
+        "hostSupported": bool(
+            raw.get("hostSupported", raw.get("host_supported", False))
+        ),
+        "pythonSupported": bool(
+            raw.get("pythonSupported", raw.get("python_supported", False))
+        ),
+        "tensorflowAvailable": bool(
+            raw.get("tensorflowAvailable", raw.get("tensorflow_available", False))
+        ),
+        "cnn2snnAvailable": bool(
+            raw.get("cnn2snnAvailable", raw.get("cnn2snn_available", False))
+        ),
+        "akidaModelsAvailable": bool(
+            raw.get("akidaModelsAvailable", raw.get("akida_models_available", False))
+        ),
+        "recommendedRuntime": _normalize_akida_runtime_mode(
+            raw.get("recommendedRuntime", raw.get("recommended_runtime"))
+        ),
+    }
+
+
+def _default_akida_host_display_name(runtime_api_url: str) -> str:
+    parsed = urlparse(runtime_api_url)
+    label = parsed.netloc.strip() or parsed.path.strip()
+    return label or "Akida Host"
+
+
+def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
+    runtime_api_url = str(raw.get("runtimeApiUrl") or "").strip()
+    capability_snapshot = _normalize_akida_capability_snapshot(
+        raw.get("capabilitySnapshot", raw.get("capability_snapshot"))
+    )
+    runtime_mode = _normalize_akida_runtime_mode(
+        raw.get("runtimeMode")
+        or (capability_snapshot or {}).get("recommendedRuntime")
+    )
+    return {
+        "id": str(raw.get("id") or uuid4()),
+        "displayName": str(
+            raw.get("displayName") or _default_akida_host_display_name(runtime_api_url)
+        ).strip(),
+        "runtimeApiUrl": runtime_api_url,
+        "authMode": _normalize_akida_host_auth_mode(raw.get("authMode")),
+        "credentialRef": str(raw.get("credentialRef") or "").strip(),
+        "hostOs": str(raw.get("hostOs") or "").strip(),
+        "pythonVersion": str(raw.get("pythonVersion") or "").strip(),
+        "runtimeMode": runtime_mode,
+        "state": _normalize_akida_host_state(raw.get("state")),
+        "lastReadinessMessage": str(raw.get("lastReadinessMessage") or "").strip(),
+        "lastVerifiedAt": str(raw.get("lastVerifiedAt") or "").strip(),
+        "capabilitySnapshot": capability_snapshot,
+    }
+
+
+def _serialize_akida_host(host: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(host)
+    capability_snapshot = payload.get("capabilitySnapshot")
+    payload["capabilitySnapshot"] = (
+        dict(capability_snapshot) if isinstance(capability_snapshot, dict) else None
+    )
+    return payload
 
 
 def _parse_version_tuple(version: str) -> tuple[int, int, int] | None:
@@ -921,10 +1031,24 @@ class LauncherControlState:
             "mujocoAvailable": _mujoco_available(),
             "pythonAvailable": True,
             "pynqBoards": [],
+            "akidaHosts": [],
+            "selectedAkidaHostId": None,
         }
         stored = _read_json_file(SETTINGS_FILE, {})
         if not isinstance(stored, dict):
             return defaults
+        akida_hosts = [
+            _normalize_akida_host(host)
+            for host in stored.get("akidaHosts", [])
+            if isinstance(host, dict)
+        ]
+        selected_akida_host_id = str(stored.get("selectedAkidaHostId") or "").strip()
+        if akida_hosts and not any(
+            host["id"] == selected_akida_host_id for host in akida_hosts
+        ):
+            selected_akida_host_id = akida_hosts[0]["id"]
+        if not akida_hosts:
+            selected_akida_host_id = ""
         defaults.update(
             {
                 "logLevel": stored.get("logLevel", DEFAULT_CONTROL_LOG_LEVEL),
@@ -935,6 +1059,8 @@ class LauncherControlState:
                     for board in stored.get("pynqBoards", [])
                     if isinstance(board, dict)
                 ],
+                "akidaHosts": akida_hosts,
+                "selectedAkidaHostId": selected_akida_host_id or None,
             }
         )
         return defaults
@@ -964,6 +1090,11 @@ class LauncherControlState:
                     _serialize_pynq_board(board)
                     for board in self._settings["pynqBoards"]
                 ],
+                "akidaHosts": [
+                    _serialize_akida_host(host)
+                    for host in self._settings["akidaHosts"]
+                ],
+                "selectedAkidaHostId": self._settings["selectedAkidaHostId"],
             }
 
     def update_settings(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -971,11 +1102,72 @@ class LauncherControlState:
             log_level = payload.get("logLevel")
             if isinstance(log_level, str) and log_level:
                 self._settings["logLevel"] = log_level.lower()
+            if "selectedAkidaHostId" in payload:
+                selected_akida_host_id = str(
+                    payload.get("selectedAkidaHostId") or ""
+                ).strip()
+                if not selected_akida_host_id:
+                    self._settings["selectedAkidaHostId"] = None
+                elif any(
+                    host["id"] == selected_akida_host_id
+                    for host in self._settings.get("akidaHosts", [])
+                ):
+                    self._settings["selectedAkidaHostId"] = selected_akida_host_id
+                else:
+                    raise KeyError(f"Unknown Akida host '{selected_akida_host_id}'")
             self._persist_settings()
             return self.get_settings()
 
     def _persist_settings(self) -> None:
         _write_json_file(SETTINGS_FILE, self._settings)
+
+    def list_akida_hosts(self) -> list[dict[str, Any]]:
+        with self._lock:
+            hosts = self._settings.get("akidaHosts", [])
+            return [_serialize_akida_host(host) for host in hosts]
+
+    def get_akida_host(self, host_id: str) -> dict[str, Any]:
+        with self._lock:
+            host = self._get_akida_host(host_id)
+            return _serialize_akida_host(host)
+
+    def create_akida_host(self, payload: dict[str, Any]) -> dict[str, Any]:
+        host = _normalize_akida_host(payload)
+        if not host["runtimeApiUrl"]:
+            raise ValueError("Akida host runtimeApiUrl is required")
+        with self._lock:
+            hosts = self._settings["akidaHosts"]
+            if any(existing["id"] == host["id"] for existing in hosts):
+                raise ValueError(f"Akida host '{host['id']}' already exists")
+            hosts.append(host)
+            if not self._settings.get("selectedAkidaHostId"):
+                self._settings["selectedAkidaHostId"] = host["id"]
+            self._persist_settings()
+            return _serialize_akida_host(host)
+
+    def update_akida_host(
+        self, host_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        with self._lock:
+            host = self._get_akida_host(host_id)
+            normalized = self._normalize_updated_akida_host(host, {"id": host_id, **payload})
+            host.clear()
+            host.update(normalized)
+            self._persist_settings()
+            return _serialize_akida_host(host)
+
+    def delete_akida_host(self, host_id: str) -> None:
+        with self._lock:
+            hosts = self._settings["akidaHosts"]
+            next_hosts = [host for host in hosts if host["id"] != host_id]
+            if len(next_hosts) == len(hosts):
+                raise KeyError(f"Unknown Akida host '{host_id}'")
+            self._settings["akidaHosts"] = next_hosts
+            if self._settings.get("selectedAkidaHostId") == host_id:
+                self._settings["selectedAkidaHostId"] = (
+                    next_hosts[0]["id"] if next_hosts else None
+                )
+            self._persist_settings()
 
     def list_pynq_boards(self) -> list[dict[str, Any]]:
         with self._lock:
@@ -1027,6 +1219,12 @@ class LauncherControlState:
                 return board
         raise KeyError(f"Unknown PYNQ board '{board_id}'")
 
+    def _get_akida_host(self, host_id: str) -> dict[str, Any]:
+        for host in self._settings.get("akidaHosts", []):
+            if host["id"] == host_id:
+                return host
+        raise KeyError(f"Unknown Akida host '{host_id}'")
+
     def _update_pynq_board_fields(self, board_id: str, **fields: Any) -> dict[str, Any]:
         with self._lock:
             board = self._get_pynq_board(board_id)
@@ -1052,6 +1250,15 @@ class LauncherControlState:
         ):
             merged.pop("runtimeApiUrl", None)
         return _normalize_pynq_board(merged)
+
+    def _normalize_updated_akida_host(
+        self,
+        host: dict[str, Any],
+        updates: dict[str, Any],
+    ) -> dict[str, Any]:
+        merged = dict(host)
+        merged.update(updates)
+        return _normalize_akida_host(merged)
 
     def _emit_pynq_terminal_log(
         self, board: dict[str, Any], message: str, *, stderr: bool = False
@@ -2695,6 +2902,7 @@ class LauncherControlState:
     def doctor_report(self) -> dict[str, Any]:
         modules: list[dict[str, Any]] = []
         pynq_boards: list[dict[str, Any]] = []
+        akida_hosts: list[dict[str, Any]] = []
         global_checks = _global_preflight_checks()
         fatal_count = 0
         degraded_count = 0
@@ -2758,6 +2966,9 @@ class LauncherControlState:
             board_snapshot = [
                 dict(board) for board in self._settings.get("pynqBoards", [])
             ]
+            akida_host_snapshot = [
+                dict(host) for host in self._settings.get("akidaHosts", [])
+            ]
 
         for board in board_snapshot:
             state = _normalize_pynq_board_state(board.get("state"))
@@ -2783,6 +2994,32 @@ class LauncherControlState:
                 }
             )
 
+        for host in akida_host_snapshot:
+            state = _normalize_akida_host_state(host.get("state"))
+            if state == "ready":
+                ok_count += 1
+            elif state in {"degraded", "simulator_only"}:
+                degraded_count += 1
+            elif state in {"blocked", "error"}:
+                fatal_count += 1
+
+            akida_hosts.append(
+                {
+                    "id": host["id"],
+                    "displayName": host["displayName"],
+                    "runtimeApiUrl": host["runtimeApiUrl"],
+                    "runtimeMode": _normalize_akida_runtime_mode(
+                        host.get("runtimeMode")
+                    ),
+                    "state": state,
+                    "hostOs": str(host.get("hostOs") or "").strip(),
+                    "pythonVersion": str(host.get("pythonVersion") or "").strip(),
+                    "lastReadinessMessage": str(
+                        host.get("lastReadinessMessage") or ""
+                    ).strip(),
+                }
+            )
+
         return {
             "status": "ok" if fatal_count == 0 else "error",
             "fatalCount": fatal_count,
@@ -2791,6 +3028,7 @@ class LauncherControlState:
             "globalChecks": global_checks,
             "modules": modules,
             "pynqBoards": pynq_boards,
+            "akidaHosts": akida_hosts,
         }
 
     def _set_error(self, module_id: str, message: str) -> None:
@@ -2907,6 +3145,17 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 )
                 return
 
+            if method == "GET" and path == "/api/launcher/akida/hosts":
+                self._send_json(HTTPStatus.OK, self.server.state.list_akida_hosts())
+                return
+
+            if method == "POST" and path == "/api/launcher/akida/hosts":
+                self._send_json(
+                    HTTPStatus.CREATED,
+                    self.server.state.create_akida_host(body or {}),
+                )
+                return
+
             if method == "GET" and path == "/api/launcher/pynq/boards":
                 self._send_json(HTTPStatus.OK, self.server.state.list_pynq_boards())
                 return
@@ -2919,6 +3168,29 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 return
 
             segments = [segment for segment in path.split("/") if segment]
+            if len(segments) >= 5 and segments[:4] == [
+                "api",
+                "launcher",
+                "akida",
+                "hosts",
+            ]:
+                host_id = segments[4]
+                if len(segments) == 5 and method == "GET":
+                    self._send_json(
+                        HTTPStatus.OK, self.server.state.get_akida_host(host_id)
+                    )
+                    return
+                if len(segments) == 5 and method == "PUT":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.update_akida_host(host_id, body or {}),
+                    )
+                    return
+                if len(segments) == 5 and method == "DELETE":
+                    self.server.state.delete_akida_host(host_id)
+                    self._send_json(HTTPStatus.NO_CONTENT, {})
+                    return
+
             if len(segments) >= 5 and segments[:4] == [
                 "api",
                 "launcher",
