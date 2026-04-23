@@ -4,11 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/providers/akida_deploy_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/akida_deploy_screen.dart';
 import 'package:neuro_toolkit/services/akida_deploy_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/providers/akida_deploy_provider.dart'
+    as deploy_provider;
 
 // ---------------------------------------------------------------------------
 // Minimal mock service (no network calls)
@@ -35,7 +36,9 @@ class _NopAkidaDeployService extends AkidaDeployService {
     required Map<String, dynamic> mappedNetwork,
     required int bitWidth,
     required String outputDir,
-  }) async => '/tmp/akida_deploy.zip';
+    String? neurochipBaseUrl,
+  }) async =>
+      '/tmp/akida_deploy.zip';
 
   @override
   Future<AkidaDeployJob> getStatus() async =>
@@ -46,51 +49,51 @@ class _NopAkidaDeployService extends AkidaDeployService {
     required String benchmarkId,
     required String networkPath,
     String target = 'simulation',
-  }) async => 'job-001';
+  }) async =>
+      'job-001';
 
   @override
   Future<Map<String, dynamic>> getNeurobenchJobStatus(String jobId) async => {
-    'status': 'complete',
-  };
+        'status': 'complete',
+      };
 
   @override
   void dispose() {}
 }
 
-class _RemoteHostAkidaDeployService extends _NopAkidaDeployService {
-  @override
-  Future<AkidaSdkVerification> verifySdk({
-    Map<String, dynamic>? mappedNetwork,
-    int bitWidth = 4,
-  }) async {
-    return const AkidaSdkVerification(
-      sdkAvailable: false,
-      sdkStatus: 'not_available',
-      sdkIssues: ['unsupported_python', 'sdk_not_available'],
-      state: 'constructed',
-      runtimeTarget: 'unknown',
-      sdkIssueDetail:
-          'Akida SDK installation requires Python 3.10 to 3.12. This Neurochip backend is running Python 3.9.18; use a Linux or Windows Neurochip host running Python 3.10-3.12 for SDK verification.',
-      environmentChecks: AkidaEnvironmentChecks(
-        hostSupported: true,
-        pythonSupported: false,
-        tensorflowAvailable: true,
-        cnn2snnAvailable: true,
-        akidaModelsAvailable: true,
-        recommendedRuntime: 'remote_sdk',
-      ),
-    );
-  }
-}
-
 class _FakeControlApiService extends ControlApiService {
-  _FakeControlApiService({required Module module}) : _module = module;
+  _FakeControlApiService({
+    required Module module,
+    this.remoteHosts = const <AkidaPairedHost>[],
+    this.selectedAkidaHostId,
+  }) : _module = module;
 
   Module _module;
   int prepareCalls = 0;
+  final List<AkidaPairedHost> remoteHosts;
+  String? selectedAkidaHostId;
 
   @override
   Future<Module> fetchModule(String moduleId) async => _module;
+
+  @override
+  Future<LauncherControlSettings> fetchSettings() async =>
+      LauncherControlSettings(
+        logLevel: 'info',
+        mujocoAvailable: false,
+        pythonAvailable: true,
+        pynqBoards: const <PynqPairedBoard>[],
+        akidaHosts: remoteHosts,
+        selectedAkidaHostId: selectedAkidaHostId,
+      );
+
+  @override
+  Future<void> updateSettings({
+    String? logLevel,
+    String? selectedAkidaHostId,
+  }) async {
+    this.selectedAkidaHostId = selectedAkidaHostId ?? this.selectedAkidaHostId;
+  }
 
   @override
   Future<Module> prepareAkidaRuntime(String moduleId) async {
@@ -111,7 +114,7 @@ class _FakeControlApiService extends ControlApiService {
 // ---------------------------------------------------------------------------
 
 Widget _buildTestApp(
-  AkidaDeployProvider provider, {
+  deploy_provider.AkidaDeployProvider provider, {
   TargetPlatform platform = TargetPlatform.android,
 }) {
   return MaterialApp(
@@ -156,9 +159,10 @@ void main() {
     testWidgets('deploy config card shows enabled Neurobench switch', (
       tester,
     ) async {
-      final provider = AkidaDeployProvider(
+      final provider = deploy_provider.AkidaDeployProvider(
         service: _NopAkidaDeployService(),
         controlApiService: _FakeControlApiService(module: neurochipModule),
+        platformOverride: TargetPlatform.macOS,
       );
       await provider.checkExportability(
         spec: 'The sensory neuron MUST fire.',
@@ -180,7 +184,7 @@ void main() {
     testWidgets('Neurobench switch is interactive (not hard-disabled)', (
       tester,
     ) async {
-      final provider = AkidaDeployProvider(
+      final provider = deploy_provider.AkidaDeployProvider(
         service: _NopAkidaDeployService(),
         controlApiService: _FakeControlApiService(module: neurochipModule),
       );
@@ -199,7 +203,7 @@ void main() {
       'setRunNeurobench toggles provider state and Switch reflects it',
       (tester) async {
         final controlApi = _FakeControlApiService(module: neurochipModule);
-        final provider = AkidaDeployProvider(
+        final provider = deploy_provider.AkidaDeployProvider(
           service: _NopAkidaDeployService(),
           controlApiService: controlApi,
         );
@@ -231,7 +235,7 @@ void main() {
     );
 
     testWidgets('shows simulator-only guidance on macOS hosts', (tester) async {
-      final provider = AkidaDeployProvider(
+      final provider = deploy_provider.AkidaDeployProvider(
         service: _NopAkidaDeployService(),
         controlApiService: _FakeControlApiService(module: neurochipModule),
       );
@@ -246,19 +250,71 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('Local Akida SDK install is simulator-only'),
+        find.textContaining('Use the local Neurochip module in simulator-only'),
         findsOneWidget,
       );
       expect(find.text('Prepare Akida Runtime'), findsNothing);
     });
 
+    testWidgets(
+      'shows explicit runtime mode choices and remote host selector',
+      (tester) async {
+        final provider = deploy_provider.AkidaDeployProvider(
+          service: _NopAkidaDeployService(),
+          controlApiService: _FakeControlApiService(
+            module: neurochipModule,
+            remoteHosts: const <AkidaPairedHost>[
+              AkidaPairedHost(
+                id: 'remote-akida-1',
+                displayName: 'Remote Akida Linux',
+                runtimeApiUrl: 'http://akida-linux:8002',
+                authMode: AkidaHostAuthMode.none,
+                credentialRef: '',
+                hostOs: 'linux',
+                pythonVersion: '3.11.8',
+                runtimeMode: AkidaRuntimeMode.remoteSdk,
+                state: AkidaPairedHostState.ready,
+                lastReadinessMessage: 'Remote SDK ready',
+                lastVerifiedAt: '',
+              ),
+            ],
+            selectedAkidaHostId: 'remote-akida-1',
+          ),
+          platformOverride: TargetPlatform.windows,
+        );
+        await provider.checkExportability(
+          spec: 'The sensory neuron MUST fire.',
+          weightBitWidth: 4,
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(provider, platform: TargetPlatform.windows),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Local simulator'), findsOneWidget);
+        expect(find.text('Local SDK'), findsWidgets);
+        expect(find.text('Remote SDK host'), findsOneWidget);
+
+        provider.setRuntimeMode(deploy_provider.AkidaRuntimeMode.remoteSdk);
+        await tester.pump();
+
+        expect(find.text('Remembered remote host'), findsOneWidget);
+        expect(
+          find.textContaining('Selected runtime: Remote Akida Linux'),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgets('offers local runtime preparation on supported hosts', (
       tester,
     ) async {
       final controlApi = _FakeControlApiService(module: neurochipModule);
-      final provider = AkidaDeployProvider(
+      final provider = deploy_provider.AkidaDeployProvider(
         service: _NopAkidaDeployService(),
         controlApiService: controlApi,
+        platformOverride: TargetPlatform.windows,
       );
       await provider.checkExportability(
         spec: 'The sensory neuron MUST fire.',
@@ -281,49 +337,5 @@ void main() {
         findsOneWidget,
       );
     });
-
-    testWidgets(
-      'steers unsupported local Python toward a remote Neurochip host',
-      (tester) async {
-        final provider = AkidaDeployProvider(
-          service: _RemoteHostAkidaDeployService(),
-          controlApiService: _FakeControlApiService(module: neurochipModule),
-        );
-        await provider.checkExportability(
-          spec: 'The sensory neuron MUST fire.',
-          weightBitWidth: 4,
-        );
-        await provider.startDeploy(
-          mappedNetwork: const {
-            'network_summary': {'n_populations': 2},
-            'populations': [],
-            'connections': [],
-          },
-          bitWidth: 4,
-          outputDir: '/tmp',
-        );
-
-        await tester.pumpWidget(
-          _buildTestApp(provider, platform: TargetPlatform.windows),
-        );
-        await tester.pumpAndSettle();
-
-        expect(
-          find.textContaining(
-            'does not satisfy the local Akida SDK requirements',
-          ),
-          findsOneWidget,
-        );
-        expect(find.text('Prepare Akida Runtime'), findsNothing);
-        expect(
-          find.text('SDK verification blocked: unsupported Python runtime'),
-          findsOneWidget,
-        );
-        expect(
-          find.textContaining('Linux or Windows Neurochip host'),
-          findsWidgets,
-        );
-      },
-    );
   });
 }

@@ -19,7 +19,7 @@ enum AkidaDeployStep {
   /// Generating and downloading the scaffold package from Neurochip.
   deploying,
 
-  /// Package saved locally; verifying SDK deployability via Neurochip.
+  /// Generating the package completed; runtime target verification is running.
   polling,
 
   /// Running Neurobench verification.
@@ -32,6 +32,21 @@ enum AkidaDeployStep {
   error,
 }
 
+enum AkidaRuntimeMode { localSimulator, localSdk, remoteSdk }
+
+extension AkidaRuntimeModeLabel on AkidaRuntimeMode {
+  String get label {
+    switch (this) {
+      case AkidaRuntimeMode.localSimulator:
+        return 'Local simulator';
+      case AkidaRuntimeMode.localSdk:
+        return 'Local SDK';
+      case AkidaRuntimeMode.remoteSdk:
+        return 'Remote SDK host';
+    }
+  }
+}
+
 /// State management for the Akida deploy screen.
 ///
 /// Follows the ChangeNotifier + Provider pattern used by [PynqDeployProvider].
@@ -39,16 +54,26 @@ class AkidaDeployProvider with ChangeNotifier {
   AkidaDeployProvider({
     AkidaDeployService? service,
     ControlApiService? controlApiService,
+    TargetPlatform? platformOverride,
   })  : _service = service ?? AkidaDeployService(),
-        _controlApiService = controlApiService ?? ControlApiService();
+        _controlApiService = controlApiService ?? ControlApiService(),
+        _platformOverride = platformOverride;
 
   final AkidaDeployService _service;
   final ControlApiService _controlApiService;
+  final TargetPlatform? _platformOverride;
 
   // -- State ---------------------------------------------------------------
 
   AkidaDeployStep _currentStep = AkidaDeployStep.idle;
   AkidaDeployStep get currentStep => _currentStep;
+
+  AkidaRuntimeMode _runtimeMode = AkidaRuntimeMode.localSimulator;
+  AkidaRuntimeMode get runtimeMode => _runtimeMode;
+  bool get isLocalSimulatorMode =>
+      _runtimeMode == AkidaRuntimeMode.localSimulator;
+  bool get isLocalSdkMode => _runtimeMode == AkidaRuntimeMode.localSdk;
+  bool get isRemoteSdkMode => _runtimeMode == AkidaRuntimeMode.remoteSdk;
 
   AkidaNetworkResponse? _exportResult;
   AkidaNetworkResponse? get exportResult => _exportResult;
@@ -86,6 +111,51 @@ class AkidaDeployProvider with ChangeNotifier {
   String? _runtimeSetupError;
   String? get runtimeSetupError => _runtimeSetupError;
 
+  List<AkidaPairedHost> _remoteHosts = <AkidaPairedHost>[];
+  List<AkidaPairedHost> get remoteHosts =>
+      List<AkidaPairedHost>.unmodifiable(_remoteHosts);
+
+  String? _selectedRemoteHostId;
+  String? get selectedRemoteHostId => _selectedRemoteHostId;
+
+  AkidaPairedHost? get selectedRemoteHost {
+    final selectedRemoteHostId = _selectedRemoteHostId;
+    if (selectedRemoteHostId == null) {
+      return null;
+    }
+    for (final host in _remoteHosts) {
+      if (host.id == selectedRemoteHostId) {
+        return host;
+      }
+    }
+    return null;
+  }
+
+  String get selectedRuntimeBaseUrl {
+    if (isRemoteSdkMode && selectedRemoteHost != null) {
+      return selectedRemoteHost!.runtimeApiUrl;
+    }
+    return _service.localNeurochipBaseUrl;
+  }
+
+  bool get canDeployToSelectedRuntime =>
+      !isRemoteSdkMode || selectedRemoteHost != null;
+
+  bool get localRuntimeSupported {
+    final runtime = _neurochipModule?.akidaRuntime;
+    if (runtime == null) {
+      return false;
+    }
+    return runtime.supportedPlatforms.contains(_currentPlatformKey());
+  }
+
+  bool get isExpectedLocalSimulatorOutcome {
+    final verification = _sdkVerification;
+    return verification != null &&
+        isLocalSimulatorMode &&
+        verification.sdkStatus == 'not_available';
+  }
+
   /// Whether to run Neurobench verification after the package is downloaded.
   bool _runNeurobench = false;
   bool get runNeurobench => _runNeurobench;
@@ -101,6 +171,8 @@ class AkidaDeployProvider with ChangeNotifier {
 
     try {
       _neurochipModule = await _controlApiService.fetchModule('Neurochip');
+      _applySettings(await _controlApiService.fetchSettings());
+      _applyDefaultRuntimeMode();
     } catch (e) {
       _runtimeSetupError = e.toString();
     } finally {
@@ -124,6 +196,80 @@ class AkidaDeployProvider with ChangeNotifier {
       _isPreparingRuntime = false;
       notifyListeners();
     }
+  }
+
+  Future<void> saveRemoteHost({
+    String? hostId,
+    required String displayName,
+    required String runtimeApiUrl,
+  }) async {
+    _isLoadingRuntimeSetup = true;
+    _runtimeSetupError = null;
+    notifyListeners();
+
+    try {
+      final payload = <String, dynamic>{
+        'displayName': displayName,
+        'runtimeApiUrl': runtimeApiUrl,
+      };
+      final host = hostId == null || hostId.isEmpty
+          ? await _controlApiService.createAkidaHost(payload)
+          : await _controlApiService.updateAkidaHost(hostId, payload);
+      await _controlApiService.updateSettings(selectedAkidaHostId: host.id);
+      _upsertRemoteHost(host);
+      _selectedRemoteHostId = host.id;
+      _runtimeMode = AkidaRuntimeMode.remoteSdk;
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+    } finally {
+      _isLoadingRuntimeSetup = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteSelectedRemoteHost() async {
+    final hostId = _selectedRemoteHostId;
+    if (hostId == null) {
+      return;
+    }
+
+    _isLoadingRuntimeSetup = true;
+    _runtimeSetupError = null;
+    notifyListeners();
+
+    try {
+      await _controlApiService.deleteAkidaHost(hostId);
+      _applySettings(await _controlApiService.fetchSettings());
+      if (isRemoteSdkMode && _selectedRemoteHostId == null) {
+        _runtimeMode = localRuntimeSupported
+            ? AkidaRuntimeMode.localSdk
+            : AkidaRuntimeMode.localSimulator;
+      }
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+    } finally {
+      _isLoadingRuntimeSetup = false;
+      notifyListeners();
+    }
+  }
+
+  void setRuntimeMode(AkidaRuntimeMode runtimeMode) {
+    _runtimeMode = runtimeMode;
+    if (_runtimeMode == AkidaRuntimeMode.remoteSdk &&
+        _selectedRemoteHostId == null &&
+        _remoteHosts.isNotEmpty) {
+      _selectedRemoteHostId = _remoteHosts.first.id;
+    }
+    notifyListeners();
+  }
+
+  void selectRemoteHost(String? hostId) {
+    _selectedRemoteHostId = hostId;
+    if (hostId != null) {
+      _runtimeMode = AkidaRuntimeMode.remoteSdk;
+      unawaited(_persistSelectedRemoteHost(hostId));
+    }
+    notifyListeners();
   }
 
   /// Check Akida exportability for a CNL spec.
@@ -177,6 +323,14 @@ class AkidaDeployProvider with ChangeNotifier {
     required int bitWidth,
     required String outputDir,
   }) async {
+    if (!canDeployToSelectedRuntime) {
+      _currentStep = AkidaDeployStep.error;
+      _errorMessage =
+          'Select or create a remote Akida host before routing deploy and verification to a remote SDK runtime.';
+      notifyListeners();
+      return;
+    }
+
     _currentStep = AkidaDeployStep.deploying;
     _errorMessage = null;
     _deployJob = null;
@@ -187,18 +341,23 @@ class AkidaDeployProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      final runtimeBaseUrl = selectedRuntimeBaseUrl;
       _savedPackagePath = await _service.downloadPackage(
         mappedNetwork: mappedNetwork,
         bitWidth: bitWidth,
         outputDir: outputDir,
+        neurochipBaseUrl: runtimeBaseUrl,
       );
       _currentStep = AkidaDeployStep.polling;
       notifyListeners();
       _sdkVerification = await _service.verifySdk(
         mappedNetwork: mappedNetwork,
         bitWidth: bitWidth,
+        neurochipBaseUrl: runtimeBaseUrl,
       );
-      _deployJob = AkidaDeployJob.fromVerification(_sdkVerification!);
+      if (!isExpectedLocalSimulatorOutcome) {
+        _deployJob = AkidaDeployJob.fromVerification(_sdkVerification!);
+      }
       notifyListeners();
 
       if (_runNeurobench &&
@@ -221,9 +380,7 @@ class AkidaDeployProvider with ChangeNotifier {
   }
 
   /// Submit a Neurobench verification job for the deployed package.
-  Future<void> runVerification({
-    String benchmarkId = 'akida_default',
-  }) async {
+  Future<void> runVerification({String benchmarkId = 'akida_default'}) async {
     if (_sdkVerification?.isDeployable != true) {
       _errorMessage =
           'Neurobench verification is blocked until Akida SDK verification succeeds.';
@@ -248,8 +405,9 @@ class AkidaDeployProvider with ChangeNotifier {
       _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
         if (_neurobenchJobId == null) return;
         try {
-          final result =
-              await _service.getNeurobenchJobStatus(_neurobenchJobId!);
+          final result = await _service.getNeurobenchJobStatus(
+            _neurobenchJobId!,
+          );
           _neurobenchResult = result;
           notifyListeners();
 
@@ -296,5 +454,66 @@ class AkidaDeployProvider with ChangeNotifier {
     _pollTimer?.cancel();
     _service.dispose();
     super.dispose();
+  }
+
+  void _applyDefaultRuntimeMode() {
+    if (isRemoteSdkMode && selectedRemoteHost == null) {
+      _runtimeMode = localRuntimeSupported
+          ? AkidaRuntimeMode.localSdk
+          : AkidaRuntimeMode.localSimulator;
+      return;
+    }
+    if (isLocalSdkMode && !localRuntimeSupported) {
+      _runtimeMode = AkidaRuntimeMode.localSimulator;
+      return;
+    }
+    if (_runtimeMode == AkidaRuntimeMode.localSimulator &&
+        localRuntimeSupported) {
+      _runtimeMode = AkidaRuntimeMode.localSdk;
+    }
+  }
+
+  void _applySettings(LauncherControlSettings settings) {
+    _remoteHosts = settings.akidaHosts;
+    final selectedRemoteHostId = settings.selectedAkidaHostId;
+    if (selectedRemoteHostId != null &&
+        _remoteHosts.any((host) => host.id == selectedRemoteHostId)) {
+      _selectedRemoteHostId = selectedRemoteHostId;
+      return;
+    }
+    _selectedRemoteHostId = _remoteHosts.isEmpty ? null : _remoteHosts.first.id;
+  }
+
+  Future<void> _persistSelectedRemoteHost(String hostId) async {
+    try {
+      await _controlApiService.updateSettings(selectedAkidaHostId: hostId);
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+      notifyListeners();
+    }
+  }
+
+  void _upsertRemoteHost(AkidaPairedHost host) {
+    final index = _remoteHosts.indexWhere((item) => item.id == host.id);
+    if (index == -1) {
+      _remoteHosts = <AkidaPairedHost>[..._remoteHosts, host];
+    } else {
+      final updated = List<AkidaPairedHost>.from(_remoteHosts);
+      updated[index] = host;
+      _remoteHosts = updated;
+    }
+  }
+
+  String _currentPlatformKey() {
+    switch (_platformOverride ?? defaultTargetPlatform) {
+      case TargetPlatform.macOS:
+        return 'macos';
+      case TargetPlatform.windows:
+        return 'windows';
+      case TargetPlatform.linux:
+        return 'linux';
+      default:
+        return (_platformOverride ?? defaultTargetPlatform).name;
+    }
   }
 }

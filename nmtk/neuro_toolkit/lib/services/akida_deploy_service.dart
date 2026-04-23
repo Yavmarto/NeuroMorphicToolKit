@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:path/path.dart' as p;
@@ -18,18 +19,20 @@ class AkidaDeployService {
     String? neurochipBaseUrl,
     String? neurobenchBaseUrl,
     String? controlApiBaseUrl,
-  }) : _httpClient = httpClient ?? http.Client(),
-       _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000',
-       _neurochipBaseUrl = resolveNeurochipBaseUrl(
-         explicitBaseUrl: neurochipBaseUrl,
-         controlApiBaseUrl: controlApiBaseUrl,
-       ),
-       _neurobenchBaseUrl = neurobenchBaseUrl ?? 'http://localhost:8003';
+  })  : _httpClient = httpClient ?? http.Client(),
+        _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000',
+        _neurochipBaseUrl = resolveNeurochipBaseUrl(
+          explicitBaseUrl: neurochipBaseUrl,
+          controlApiBaseUrl: controlApiBaseUrl,
+        ),
+        _neurobenchBaseUrl = neurobenchBaseUrl ?? 'http://localhost:8003';
 
   final http.Client _httpClient;
   final String _neurocnlBaseUrl;
   final String _neurochipBaseUrl;
   final String _neurobenchBaseUrl;
+
+  String get localNeurochipBaseUrl => _neurochipBaseUrl;
 
   static String resolveNeurochipBaseUrl({
     String? explicitBaseUrl,
@@ -56,12 +59,10 @@ class AkidaDeployService {
     );
     if (normalizedControl != null) {
       final controlUri = Uri.parse(normalizedControl);
-      final scheme = controlUri.scheme.trim().isEmpty
-          ? 'http'
-          : controlUri.scheme;
-      final host = controlUri.host.trim().isEmpty
-          ? 'localhost'
-          : controlUri.host;
+      final scheme =
+          controlUri.scheme.trim().isEmpty ? 'http' : controlUri.scheme;
+      final host =
+          controlUri.host.trim().isEmpty ? 'localhost' : controlUri.host;
       return Uri(scheme: scheme, host: host, port: 8002).toString();
     }
 
@@ -122,15 +123,29 @@ class AkidaDeployService {
     required Map<String, dynamic> mappedNetwork,
     required int bitWidth,
     required String outputDir,
+    String? neurochipBaseUrl,
   }) async {
+    final baseUrl = _resolveNeurochipBaseUrl(neurochipBaseUrl);
     final uri = Uri.parse(
-      '$_neurochipBaseUrl/api/neurochip/akida/deploy/mapped?bit_width=$bitWidth',
+      '$baseUrl/api/neurochip/akida/deploy/mapped?bit_width=$bitWidth',
     );
-    final response = await _httpClient.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(mappedNetwork),
-    );
+    http.Response response;
+
+    try {
+      response = await _httpClient.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(mappedNetwork),
+      );
+    } on http.ClientException catch (e) {
+      throw _buildRuntimeConnectionException(
+        uri,
+        'generate scaffold package',
+        e,
+      );
+    } catch (e) {
+      throw _buildRuntimeUnknownException(uri, 'generate scaffold package', e);
+    }
 
     if (response.statusCode == 200) {
       final outPath = p.join(outputDir, 'akida_deploy.zip');
@@ -150,8 +165,22 @@ class AkidaDeployService {
   /// Calls GET /api/neurochip/akida/status.
   /// Returns [AkidaDeployJob] on success.
   Future<AkidaDeployJob> getStatus() async {
-    final uri = Uri.parse('$_neurochipBaseUrl/api/neurochip/akida/status');
-    final response = await _httpClient.get(uri);
+    final uri = Uri.parse(
+      '${_resolveNeurochipBaseUrl(null)}/api/neurochip/akida/status',
+    );
+    http.Response response;
+
+    try {
+      response = await _httpClient.get(uri);
+    } on http.ClientException catch (e) {
+      throw _buildRuntimeConnectionException(
+        uri,
+        'check Akida runtime status',
+        e,
+      );
+    } catch (e) {
+      throw _buildRuntimeUnknownException(uri, 'check Akida runtime status', e);
+    }
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -172,17 +201,26 @@ class AkidaDeployService {
   Future<AkidaSdkVerification> verifySdk({
     Map<String, dynamic>? mappedNetwork,
     int bitWidth = 4,
+    String? neurochipBaseUrl,
   }) async {
+    final baseUrl = _resolveNeurochipBaseUrl(neurochipBaseUrl);
     final uri = Uri.parse(
-      '$_neurochipBaseUrl/api/neurochip/akida/verify?bit_width=$bitWidth',
+      '$baseUrl/api/neurochip/akida/verify?bit_width=$bitWidth',
     );
-    final response = await _httpClient.post(
-      uri,
-      headers: mappedNetwork == null
-          ? null
-          : {'Content-Type': 'application/json'},
-      body: mappedNetwork == null ? null : jsonEncode(mappedNetwork),
-    );
+    http.Response response;
+
+    try {
+      response = await _httpClient.post(
+        uri,
+        headers:
+            mappedNetwork == null ? null : {'Content-Type': 'application/json'},
+        body: mappedNetwork == null ? null : jsonEncode(mappedNetwork),
+      );
+    } on http.ClientException catch (e) {
+      throw _buildRuntimeConnectionException(uri, 'verify Akida runtime', e);
+    } catch (e) {
+      throw _buildRuntimeUnknownException(uri, 'verify Akida runtime', e);
+    }
 
     if (response.statusCode == 200) {
       return AkidaSdkVerification.fromJson(
@@ -266,6 +304,64 @@ class AkidaDeployService {
     final msgs = detail['messages'];
     if (msgs is List) return msgs.map((e) => e.toString()).toList();
     return [];
+  }
+
+  String _resolveNeurochipBaseUrl(String? override) {
+    final normalizedOverride = _normalizeBaseUrl(override);
+    return normalizedOverride ?? _neurochipBaseUrl;
+  }
+
+  AkidaDeployException _buildRuntimeConnectionException(
+    Uri uri,
+    String action,
+    http.ClientException error,
+  ) {
+    final host = uri.host.isEmpty ? 'localhost' : uri.host;
+    final port = uri.hasPort ? uri.port.toString() : '(default)';
+    final target = 'Neurochip runtime at $host:$port';
+
+    if (_looksLikeConnectionRefused(error)) {
+      return AkidaDeployException(
+        error: 'Could not reach $target.',
+        messages: [
+          'The launcher could not connect to ${uri.toString()} while trying to $action.',
+          'Check that the selected Neurochip runtime is running and reachable from this launcher host, then retry.',
+          'Raw error: $error',
+        ],
+      );
+    }
+
+    return AkidaDeployException(
+      error: 'Failed to contact $target.',
+      messages: [
+        'The launcher could not reach ${uri.toString()} while trying to $action.',
+        'Verify that the selected Neurochip runtime is reachable from this machine, then try again.',
+        'Raw error: $error',
+      ],
+    );
+  }
+
+  AkidaDeployException _buildRuntimeUnknownException(
+    Uri uri,
+    String action,
+    Object error,
+  ) {
+    return AkidaDeployException(
+      error: 'Akida runtime request failed before a response was received.',
+      messages: [
+        'The launcher could not complete the request to ${uri.toString()} while trying to $action.',
+        'Check that the selected Neurochip runtime is reachable from this machine, then try again.',
+        'Raw error: $error',
+      ],
+    );
+  }
+
+  bool _looksLikeConnectionRefused(http.ClientException error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('connection refused') ||
+        message.contains('errno = 61') ||
+        message.contains('failed host lookup') ||
+        (kIsWeb && message.contains('xmlhttprequest error'));
   }
 }
 
