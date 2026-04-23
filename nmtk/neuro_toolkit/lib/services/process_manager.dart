@@ -664,7 +664,7 @@ class ProcessManager {
         akidaRuntimeState: AkidaRuntimeState(
           status: 'unsupported_python',
           message:
-              'Akida SDK installation requires Python ${runtimeConfig.pythonRange}; current module env is ${pythonVersion.isEmpty ? "unknown" : pythonVersion}.',
+              'Akida SDK installation requires Python ${runtimeConfig.pythonRange}; current module env is ${pythonVersion.isEmpty ? "unknown" : pythonVersion}. Keep scaffold export local, then verify through a Linux or Windows Neurochip host running Python 3.10-3.12.',
         ),
       );
       return persist(updatedModule);
