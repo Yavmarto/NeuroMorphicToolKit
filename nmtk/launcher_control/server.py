@@ -58,6 +58,8 @@ PREFLIGHT_FAILED = "failed"
 SUPPORTED_INSTALL_STRATEGIES = {"pip"}
 SUPPORTED_START_STRATEGIES = {"uvicorn", "none"}
 PREFLIGHT_SENTINEL = "NMTK_PREFLIGHT_JSON="
+DEFAULT_AKIDA_HOST_PORT = 8002
+DEFAULT_AKIDA_HOST_STATE = "unpaired"
 DEFAULT_PYNQ_BOARD_PORT = 8002
 DEFAULT_PYNQ_BOARD_SSH_PORT = 22
 # 60s was too tight: a cold provision on a Pynq-Z2 regularly needs 90-100s for
@@ -111,6 +113,14 @@ PYNQ_BOARD_STATES = {
     "overlay_missing",
     "ready",
     "degraded_optional_capability",
+    "error",
+}
+AKIDA_HOST_STATES = {
+    "unpaired",
+    "reachable",
+    "ready",
+    "degraded_optional_capability",
+    "preflight_failed",
     "error",
 }
 IMPORT_PROBE_SCRIPT = textwrap.dedent(
@@ -175,34 +185,33 @@ def _normalize_pynq_board_state(value: Any) -> str:
     return candidate if candidate in PYNQ_BOARD_STATES else DEFAULT_PYNQ_BOARD_STATE
 
 
-def _normalize_auth_mode(value: Any) -> str:
-    candidate = str(value or DEFAULT_PYNQ_AUTH_MODE).strip().lower()
-    return candidate if candidate in {"password", "ssh_key"} else DEFAULT_PYNQ_AUTH_MODE
-
-
-def _normalize_akida_host_auth_mode(value: Any) -> str:
-    candidate = str(value or DEFAULT_AKIDA_AUTH_MODE).strip().lower()
-    if candidate == "token":
-        candidate = "bearer_token"
-    return candidate if candidate in AKIDA_HOST_AUTH_MODES else DEFAULT_AKIDA_AUTH_MODE
-
-
-def _normalize_akida_runtime_mode(value: Any) -> str:
-    candidate = str(value or "unknown").strip().lower()
-    if candidate == "remote_host":
-        candidate = "remote_sdk"
-    if candidate == "software_fallback":
-        candidate = "simulator_only"
-    return candidate if candidate in AKIDA_RUNTIME_MODES else "unknown"
-
-
 def _normalize_akida_host_state(value: Any) -> str:
     candidate = str(value or DEFAULT_AKIDA_HOST_STATE).strip().lower()
     return candidate if candidate in AKIDA_HOST_STATES else DEFAULT_AKIDA_HOST_STATE
 
 
+def _normalize_auth_mode(value: Any) -> str:
+    candidate = str(value or DEFAULT_PYNQ_AUTH_MODE).strip().lower()
+    return candidate if candidate in {"password", "ssh_key"} else DEFAULT_PYNQ_AUTH_MODE
+
+
+def _default_akida_base_url(host: str, port: int = DEFAULT_AKIDA_HOST_PORT) -> str:
+    return f"http://{host}:{port}"
+
+
 def _default_runtime_api_url(host: str, port: int = DEFAULT_PYNQ_BOARD_PORT) -> str:
     return f"http://{host}:{port}"
+
+
+def _normalize_base_url(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    candidate = raw if "://" in raw else f"http://{raw}"
+    parsed = urlparse(candidate)
+    if not parsed.scheme or not parsed.netloc:
+        return raw.rstrip("/")
+    return parsed._replace(params="", query="", fragment="").geturl().rstrip("/")
 
 
 def _normalize_runtime_api_url_override(
@@ -253,6 +262,38 @@ def _resolve_pynq_agent_health_timeout() -> float:
 def _default_pynq_remote_install_root(username: str) -> str:
     normalized_username = username.strip() or DEFAULT_PYNQ_BOARD_USERNAME
     return f"/home/{normalized_username}/.local/share/neurochip-pynq-agent"
+
+
+def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
+    host = str(raw.get("host") or "").strip()
+    port = raw.get("port", DEFAULT_AKIDA_HOST_PORT)
+    if not isinstance(port, int):
+        port = DEFAULT_AKIDA_HOST_PORT
+    base_url = _normalize_base_url(raw.get("baseUrl"))
+    if not base_url and host:
+        base_url = _default_akida_base_url(host, port)
+    parsed_base_url = urlparse(base_url) if base_url else None
+    if parsed_base_url is not None and parsed_base_url.hostname:
+        host = host or parsed_base_url.hostname
+        if not isinstance(raw.get("port"), int) and parsed_base_url.port is not None:
+            port = parsed_base_url.port
+
+    return {
+        "id": str(raw.get("id") or uuid4()),
+        "displayName": str(raw.get("displayName") or host or "Akida Host").strip(),
+        "host": host,
+        "port": port,
+        "baseUrl": base_url,
+        "credentialRef": str(raw.get("credentialRef") or "").strip(),
+        "state": _normalize_akida_host_state(raw.get("state")),
+        "lastPreflightStatus": str(raw.get("lastPreflightStatus") or "").strip(),
+        "lastPreflightMessage": str(raw.get("lastPreflightMessage") or "").strip(),
+        "lastSdkStatus": str(raw.get("lastSdkStatus") or "").strip(),
+        "lastRuntimeTarget": str(raw.get("lastRuntimeTarget") or "").strip(),
+        "lastStatus": raw.get("lastStatus")
+        if isinstance(raw.get("lastStatus"), dict)
+        else None,
+    }
 
 
 def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
@@ -331,6 +372,12 @@ def _serialize_pynq_board(board: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _serialize_akida_host(host: dict[str, Any]) -> dict[str, Any]:
+    payload = dict(host)
+    payload["baseUrl"] = _resolved_akida_base_url(host)
+    return payload
+
+
 def _ssh_failure_message(stdout_lines: list[str], stderr_lines: list[str]) -> str:
     non_benign_stderr = [
         line for line in stderr_lines if not _is_benign_ssh_warning_line(line)
@@ -347,6 +394,68 @@ def _resolved_pynq_runtime_api_url(board: dict[str, Any]) -> str:
         str(board.get("host") or "").strip(),
         str(board.get("runtimeApiUrlOverride") or "").strip(),
     )
+
+
+def _resolved_akida_base_url(host: dict[str, Any]) -> str:
+    base_url = _normalize_base_url(host.get("baseUrl"))
+    if base_url:
+        return base_url
+    normalized_host = str(host.get("host") or "").strip()
+    if not normalized_host:
+        return ""
+    port = host.get("port", DEFAULT_AKIDA_HOST_PORT)
+    if not isinstance(port, int):
+        port = DEFAULT_AKIDA_HOST_PORT
+    return _default_akida_base_url(normalized_host, port)
+
+
+def _describe_akida_preflight(verification: dict[str, Any]) -> str:
+    sdk_status = str(verification.get("sdk_status") or "").strip().lower()
+    sdk_available = bool(verification.get("sdk_available"))
+    sdk_issue_detail = str(verification.get("sdk_issue_detail") or "").strip()
+    raw_sdk_issues = verification.get("sdk_issues", [])
+    if not isinstance(raw_sdk_issues, list):
+        raw_sdk_issues = []
+    sdk_issues = [
+        str(issue).strip()
+        for issue in raw_sdk_issues
+        if str(issue).strip()
+    ]
+    if sdk_available and sdk_status == "deployable":
+        return "Akida SDK verification ready."
+    if sdk_issue_detail:
+        return sdk_issue_detail
+    if sdk_issues:
+        return "Optional capability unavailable: " + ", ".join(sdk_issues)
+    if sdk_status:
+        return f"Optional capability unavailable: {sdk_status}"
+    return "Optional capability unavailable on remote Akida host."
+
+
+def _preflight_status_for_akida_verification(verification: dict[str, Any]) -> str:
+    sdk_status = str(verification.get("sdk_status") or "").strip().lower()
+    if bool(verification.get("sdk_available")) and sdk_status == "deployable":
+        return PREFLIGHT_OK
+    return PREFLIGHT_DEGRADED
+
+
+def _akida_host_state_for_status(
+    host: dict[str, Any],
+    status: dict[str, Any],
+) -> str:
+    job_state = str(status.get("state") or "").strip().lower()
+    last_preflight_status = str(host.get("lastPreflightStatus") or "").strip().lower()
+    if job_state in {"running", "mapped", "constructed"}:
+        return "ready"
+    if job_state == "failed":
+        return "error"
+    if job_state in {"sdk_loading", "model_mapping"}:
+        return "reachable"
+    if last_preflight_status == PREFLIGHT_OK:
+        return "ready"
+    if last_preflight_status == PREFLIGHT_DEGRADED:
+        return "degraded_optional_capability"
+    return "reachable"
 
 
 def _module_root(module: dict[str, Any]) -> Path:
@@ -1030,6 +1139,7 @@ class LauncherControlState:
             "logLevel": DEFAULT_CONTROL_LOG_LEVEL,
             "mujocoAvailable": _mujoco_available(),
             "pythonAvailable": True,
+            "akidaHosts": [],
             "pynqBoards": [],
             "akidaHosts": [],
             "selectedAkidaHostId": None,
@@ -1054,6 +1164,11 @@ class LauncherControlState:
                 "logLevel": stored.get("logLevel", DEFAULT_CONTROL_LOG_LEVEL),
                 "mujocoAvailable": _mujoco_available(),
                 "pythonAvailable": True,
+                "akidaHosts": [
+                    _normalize_akida_host(host)
+                    for host in stored.get("akidaHosts", [])
+                    if isinstance(host, dict)
+                ],
                 "pynqBoards": [
                     _normalize_pynq_board(board)
                     for board in stored.get("pynqBoards", [])
@@ -1086,6 +1201,10 @@ class LauncherControlState:
                 "logLevel": self._settings["logLevel"],
                 "mujocoAvailable": self._settings["mujocoAvailable"],
                 "pythonAvailable": self._settings["pythonAvailable"],
+                "akidaHosts": [
+                    _serialize_akida_host(host)
+                    for host in self._settings["akidaHosts"]
+                ],
                 "pynqBoards": [
                     _serialize_pynq_board(board)
                     for board in self._settings["pynqBoards"]
@@ -1173,6 +1292,80 @@ class LauncherControlState:
         with self._lock:
             boards = self._settings.get("pynqBoards", [])
             return [_serialize_pynq_board(board) for board in boards]
+
+    def list_akida_hosts(self) -> list[dict[str, Any]]:
+        with self._lock:
+            hosts = self._settings.get("akidaHosts", [])
+            return [_serialize_akida_host(host) for host in hosts]
+
+    def get_akida_host(self, host_id: str) -> dict[str, Any]:
+        with self._lock:
+            host = self._get_akida_host(host_id)
+            return _serialize_akida_host(host)
+
+    def create_akida_host(self, payload: dict[str, Any]) -> dict[str, Any]:
+        host = _normalize_akida_host(payload)
+        if not host["baseUrl"]:
+            raise ValueError("Akida host baseUrl is required")
+        with self._lock:
+            hosts = self._settings["akidaHosts"]
+            if any(existing["id"] == host["id"] for existing in hosts):
+                raise ValueError(f"Akida host '{host['id']}' already exists")
+            hosts.append(host)
+            self._persist_settings()
+            return _serialize_akida_host(host)
+
+    def update_akida_host(
+        self, host_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        with self._lock:
+            host = self._get_akida_host(host_id)
+            normalized = self._normalize_updated_akida_host(
+                host, {"id": host_id, **payload}
+            )
+            host.clear()
+            host.update(normalized)
+            self._persist_settings()
+            return _serialize_akida_host(host)
+
+    def delete_akida_host(self, host_id: str) -> None:
+        with self._lock:
+            hosts = self._settings["akidaHosts"]
+            next_hosts = [host for host in hosts if host["id"] != host_id]
+            if len(next_hosts) == len(hosts):
+                raise KeyError(f"Unknown Akida host '{host_id}'")
+            self._settings["akidaHosts"] = next_hosts
+            self._persist_settings()
+
+    def _get_akida_host(self, host_id: str) -> dict[str, Any]:
+        for host in self._settings.get("akidaHosts", []):
+            if host["id"] == host_id:
+                return host
+        raise KeyError(f"Unknown Akida host '{host_id}'")
+
+    def _update_akida_host_fields(self, host_id: str, **fields: Any) -> dict[str, Any]:
+        with self._lock:
+            host = self._get_akida_host(host_id)
+            normalized = self._normalize_updated_akida_host(
+                host, {"id": host_id, **fields}
+            )
+            host.clear()
+            host.update(normalized)
+            self._persist_settings()
+            return dict(host)
+
+    def _normalize_updated_akida_host(
+        self,
+        host: dict[str, Any],
+        updates: dict[str, Any],
+    ) -> dict[str, Any]:
+        merged = dict(host)
+        merged.update(updates)
+        if "baseUrl" in updates and "host" not in updates:
+            merged["host"] = ""
+        if "baseUrl" in updates and "port" not in updates:
+            merged["port"] = ""
+        return _normalize_akida_host(merged)
 
     def get_pynq_board(self, board_id: str) -> dict[str, Any]:
         with self._lock:
@@ -2066,6 +2259,151 @@ class LauncherControlState:
         board = self._get_pynq_board(board_id)
         return self._runtime_json_request(board, "GET", "/hardware/pynq/status")
 
+    def _emit_akida_terminal_log(
+        self, host: dict[str, Any], message: str, *, stderr: bool = False
+    ) -> None:
+        stream = sys.stderr if stderr else sys.stdout
+        host_label = str(
+            host.get("displayName") or host.get("host") or host.get("id") or "akida"
+        )
+        print(f"[akida:{host_label}] {message}", file=stream, flush=True)
+
+    def _akida_json_request(
+        self,
+        host: dict[str, Any],
+        method: str,
+        path: str,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        base_url = _resolved_akida_base_url(host).rstrip("/")
+        if not base_url:
+            raise RuntimeError("Akida host baseUrl is not configured")
+        url = f"{base_url}{path}"
+        headers = {"Content-Type": "application/json"}
+        credential_ref = str(host.get("credentialRef") or "").strip()
+        if credential_ref:
+            headers["X-API-Key"] = credential_ref
+        data = json.dumps(payload).encode("utf-8") if payload is not None else None
+        request = urllib.request.Request(
+            url,
+            data=data,
+            headers=headers,
+            method=method,
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=15.0) as response:
+                body = response.read().decode("utf-8")
+                decoded = json.loads(body) if body else {}
+                if not isinstance(decoded, dict):
+                    raise RuntimeError(f"Unexpected runtime response from {url}")
+                return decoded
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            self._emit_akida_terminal_log(
+                host,
+                (
+                    f"runtime request failed: {method} {url} returned HTTP {exc.code}"
+                    + (f" with body: {error_body}" if error_body else "")
+                ),
+                stderr=True,
+            )
+            raise RuntimeError(
+                f"Runtime request failed for {method} {url}: HTTP {exc.code}"
+                + (f" — {error_body}" if error_body else "")
+            ) from exc
+        except urllib.error.URLError as exc:
+            self._emit_akida_terminal_log(
+                host,
+                f"runtime request failed: {method} {url} could not be reached: {exc}",
+                stderr=True,
+            )
+            raise RuntimeError(
+                f"Runtime request failed for {method} {url}: {exc}"
+            ) from exc
+
+    def test_akida_host_connection(self, host_id: str) -> dict[str, Any]:
+        host = self._get_akida_host(host_id)
+        self._emit_akida_terminal_log(host, "testing HTTP connectivity")
+        health = self._akida_json_request(host, "GET", "/health")
+        health_status = str(health.get("status") or "ok").strip() or "ok"
+        self._emit_akida_terminal_log(host, "HTTP connectivity succeeded")
+        return _serialize_akida_host(
+            self._update_akida_host_fields(
+                host_id,
+                state="reachable",
+                lastPreflightMessage=f"Health reachable: {health_status}",
+            )
+        )
+
+    def fetch_akida_host_preflight(self, host_id: str) -> dict[str, Any]:
+        host = self._get_akida_host(host_id)
+        self._emit_akida_terminal_log(host, "requesting runtime preflight")
+        try:
+            verification = self._akida_json_request(
+                host, "POST", "/api/neurochip/akida/verify"
+            )
+            preflight_status = _preflight_status_for_akida_verification(verification)
+            preflight_message = _describe_akida_preflight(verification)
+            host_state = (
+                "ready"
+                if preflight_status == PREFLIGHT_OK
+                else "degraded_optional_capability"
+            )
+        except Exception as exc:  # noqa: BLE001
+            preflight_status = PREFLIGHT_FAILED
+            preflight_message = str(exc)
+            verification = {}
+            host_state = "preflight_failed"
+        self._emit_akida_terminal_log(
+            host, f"preflight {preflight_status}: {preflight_message}"
+        )
+        updated = self._update_akida_host_fields(
+            host_id,
+            state=host_state,
+            lastPreflightStatus=preflight_status,
+            lastPreflightMessage=preflight_message,
+            lastSdkStatus=str(verification.get("sdk_status") or "").strip(),
+            lastRuntimeTarget=str(verification.get("runtime_target") or "").strip(),
+        )
+        raw_sdk_issues = verification.get("sdk_issues", [])
+        if not isinstance(raw_sdk_issues, list):
+            raw_sdk_issues = []
+        sdk_issues = [
+            str(issue).strip()
+            for issue in raw_sdk_issues
+            if str(issue).strip()
+        ]
+        preflight = {
+            "preflight_status": preflight_status,
+            "preflight_message": preflight_message,
+            "sdk_status": str(verification.get("sdk_status") or "").strip(),
+            "runtime_target": str(verification.get("runtime_target") or "").strip(),
+            "sdk_available": bool(verification.get("sdk_available")),
+            "sdk_issues": sdk_issues,
+            "sdk_issue_detail": str(
+                verification.get("sdk_issue_detail") or ""
+            ).strip(),
+            "environment_checks": verification.get("environment_checks")
+            if isinstance(verification.get("environment_checks"), dict)
+            else None,
+            "sdk_verification": verification if verification else None,
+        }
+        return {
+            "host": _serialize_akida_host(updated),
+            "preflight": preflight,
+        }
+
+    def fetch_akida_host_status(self, host_id: str) -> dict[str, Any]:
+        host = self._get_akida_host(host_id)
+        self._emit_akida_terminal_log(host, "requesting runtime status")
+        status = self._akida_json_request(host, "GET", "/api/neurochip/akida/status")
+        updated = self._update_akida_host_fields(
+            host_id,
+            state=_akida_host_state_for_status(host, status),
+            lastStatus=status,
+        )
+        return {"host": _serialize_akida_host(updated), "status": status}
+
     def update_module_settings(
         self, module_id: str, payload: dict[str, Any]
     ) -> dict[str, Any]:
@@ -2901,6 +3239,7 @@ class LauncherControlState:
 
     def doctor_report(self) -> dict[str, Any]:
         modules: list[dict[str, Any]] = []
+        akida_hosts: list[dict[str, Any]] = []
         pynq_boards: list[dict[str, Any]] = []
         akida_hosts: list[dict[str, Any]] = []
         global_checks = _global_preflight_checks()
@@ -2963,12 +3302,38 @@ class LauncherControlState:
             )
 
         with self._lock:
+            akida_host_snapshot = [
+                dict(host) for host in self._settings.get("akidaHosts", [])
+            ]
             board_snapshot = [
                 dict(board) for board in self._settings.get("pynqBoards", [])
             ]
             akida_host_snapshot = [
                 dict(host) for host in self._settings.get("akidaHosts", [])
             ]
+
+        for host in akida_host_snapshot:
+            state = _normalize_akida_host_state(host.get("state"))
+            if state == "ready":
+                ok_count += 1
+            elif state == "degraded_optional_capability":
+                degraded_count += 1
+            elif state in {"preflight_failed", "error"}:
+                fatal_count += 1
+
+            akida_hosts.append(
+                {
+                    "id": host["id"],
+                    "displayName": host["displayName"],
+                    "host": host["host"],
+                    "baseUrl": _resolved_akida_base_url(host),
+                    "state": state,
+                    "lastPreflightStatus": host.get("lastPreflightStatus"),
+                    "lastPreflightMessage": host.get("lastPreflightMessage"),
+                    "lastSdkStatus": host.get("lastSdkStatus"),
+                    "lastRuntimeTarget": host.get("lastRuntimeTarget"),
+                }
+            )
 
         for board in board_snapshot:
             state = _normalize_pynq_board_state(board.get("state"))
@@ -3027,6 +3392,7 @@ class LauncherControlState:
             "okCount": ok_count,
             "globalChecks": global_checks,
             "modules": modules,
+            "akidaHosts": akida_hosts,
             "pynqBoards": pynq_boards,
             "akidaHosts": akida_hosts,
         }
@@ -3189,6 +3555,32 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 if len(segments) == 5 and method == "DELETE":
                     self.server.state.delete_akida_host(host_id)
                     self._send_json(HTTPStatus.NO_CONTENT, {})
+                    return
+                if (
+                    len(segments) == 6
+                    and segments[5] == "connectivity-test"
+                    and method == "POST"
+                ):
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.test_akida_host_connection(host_id),
+                    )
+                    return
+                if (
+                    len(segments) == 6
+                    and segments[5] == "preflight"
+                    and method == "GET"
+                ):
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.fetch_akida_host_preflight(host_id),
+                    )
+                    return
+                if len(segments) == 6 and segments[5] == "status" and method == "GET":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.fetch_akida_host_status(host_id),
+                    )
                     return
 
             if len(segments) >= 5 and segments[:4] == [
