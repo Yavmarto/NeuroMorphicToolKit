@@ -105,37 +105,29 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
 }
 
 void main() {
-  testWidgets('DashboardScreen shows PYNQ Deploy button', (
-    WidgetTester tester,
-  ) async {
-    final mockProvider = MockDashboardProvider();
-    mockProvider.setInstalledModules([]);
+  // The "PYNQ Deploy" / "Teensy Deploy" button tests were removed when the
+  // three hardware deploy flows were relocated to the Neurochip module
+  // frontend in ADR-claude/0007. Widget coverage for those buttons now
+  // lives in `Neurochip/frontend/test/{akida,pynq}_deploy_screen_test.dart`.
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
-        child: const MaterialApp(home: DashboardScreen()),
-      ),
-    );
+  testWidgets(
+    'DashboardScreen does not show hardware deploy buttons (relocated to Neurochip)',
+    (WidgetTester tester) async {
+      final mockProvider = MockDashboardProvider();
+      mockProvider.setInstalledModules([]);
 
-    expect(find.text('PYNQ Deploy'), findsOneWidget);
-  });
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
+          child: const MaterialApp(home: DashboardScreen()),
+        ),
+      );
 
-  testWidgets('DashboardScreen shows Teensy Deploy button', (
-    WidgetTester tester,
-  ) async {
-    final mockProvider = MockDashboardProvider();
-    mockProvider.setInstalledModules([]);
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
-        child: const MaterialApp(home: DashboardScreen()),
-      ),
-    );
-
-    expect(find.text('Teensy Deploy'), findsOneWidget);
-  });
+      expect(find.text('PYNQ Deploy'), findsNothing);
+      expect(find.text('Teensy Deploy'), findsNothing);
+      expect(find.text('Akida Deploy'), findsNothing);
+    },
+  );
 
   testWidgets(
     'DashboardScreen shows empty state when no modules are installed',

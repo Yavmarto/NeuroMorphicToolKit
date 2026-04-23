@@ -8,9 +8,6 @@ import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/onboarding.dart';
-import 'package:neuro_toolkit/screens/teensy_deploy_screen.dart';
-import 'package:neuro_toolkit/screens/pynq_deploy_screen.dart';
-import 'package:neuro_toolkit/screens/akida_deploy_screen.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/app_provider.dart';
@@ -58,21 +55,10 @@ GoRouter createGoRouter(AppProvider appProvider) {
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
           ),
-          GoRoute(
-            path: '/deploy/teensy',
-            name: 'teensy-deploy',
-            builder: (context, state) => const TeensyDeployScreen(),
-          ),
-          GoRoute(
-            path: '/deploy/pynq',
-            name: 'pynq-deploy',
-            builder: (context, state) => const PynqDeployScreen(),
-          ),
-          GoRoute(
-            path: '/deploy/akida',
-            name: 'akida-deploy',
-            builder: (context, state) => const AkidaDeployScreen(),
-          ),
+          // Hardware deploy routes (/deploy/akida, /deploy/pynq,
+          // /deploy/teensy) were removed when the deploy UIs were relocated
+          // to the Neurochip module frontend in ADR-claude/0007. Reach them
+          // by opening the Neurochip module workspace.
         ],
       ),
     ],

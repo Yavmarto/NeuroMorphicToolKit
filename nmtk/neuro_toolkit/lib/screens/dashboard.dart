@@ -7,6 +7,10 @@ import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+// NOTE: The three hardware deploy flows (Akida, PYNQ, Teensy) were relocated
+// to the Neurochip module frontend in ADR-claude/0007. They are no longer
+// exposed from the launcher dashboard; users reach them by opening the
+// Neurochip module workspace.
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -42,36 +46,6 @@ class DashboardScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          NmtkSurfaceCard(
-            title: 'Deployment Workflows',
-            subtitle:
-                'Jump into hardware-specific deployment flows from the launcher.',
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _buildDeployButton(
-                  context: context,
-                  route: '/deploy/akida',
-                  icon: Icons.architecture,
-                  label: 'Akida Deploy',
-                ),
-                _buildDeployButton(
-                  context: context,
-                  route: '/deploy/pynq',
-                  icon: Icons.developer_board,
-                  label: 'PYNQ Deploy',
-                ),
-                _buildDeployButton(
-                  context: context,
-                  route: '/deploy/teensy',
-                  icon: Icons.memory,
-                  label: 'Teensy Deploy',
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
           Text(
             'Installed Modules',
             style: theme.textTheme.titleLarge?.copyWith(
@@ -110,19 +84,6 @@ class DashboardScreen extends ConsumerWidget {
   static bool _hasUpdateAvailable(Module module) {
     return !module.versionPinned &&
         UpdateService.isNewerVersion(module.version, module.remoteVersion);
-  }
-
-  Widget _buildDeployButton({
-    required BuildContext context,
-    required String route,
-    required IconData icon,
-    required String label,
-  }) {
-    return NmtkPrimaryButton(
-      onPressed: () => context.go(route),
-      icon: icon,
-      label: label,
-    );
   }
 
   void _showLauncherUpdateDialog(

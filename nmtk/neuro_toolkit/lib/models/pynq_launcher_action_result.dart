@@ -1,5 +1,12 @@
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
+// NOTE: This file is also duplicated in `Neurochip/frontend/lib/models/`. The
+// launcher retains it so `control_api_service.dart` — which is still consumed
+// by the launcher's `ModuleProvider` for module lifecycle calls — continues
+// to compile. The PYNQ-board endpoints of `ControlApiService` are now only
+// exercised by the Neurochip frontend (see ADR-claude/0007); the launcher
+// copy is kept because excising those methods is a separate slim-down change.
+
 String? _normalizedWarning(Object? value) {
   final text = (value as String?)?.trim() ?? '';
   return text.isEmpty ? null : text;
