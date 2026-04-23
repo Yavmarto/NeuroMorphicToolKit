@@ -12,6 +12,152 @@
 
 import 'package:flutter/material.dart';
 
+enum AkidaRuntimeMode {
+  localSdk,
+  remoteSdk,
+  simulatorOnly,
+  unknown;
+
+  static AkidaRuntimeMode fromString(String? value) {
+    switch (value) {
+      case 'local_sdk':
+        return AkidaRuntimeMode.localSdk;
+      case 'remote_sdk':
+      case 'remote_host':
+        return AkidaRuntimeMode.remoteSdk;
+      case 'simulator_only':
+      case 'software_fallback':
+        return AkidaRuntimeMode.simulatorOnly;
+      default:
+        return AkidaRuntimeMode.unknown;
+    }
+  }
+
+  String get apiValue {
+    switch (this) {
+      case AkidaRuntimeMode.localSdk:
+        return 'local_sdk';
+      case AkidaRuntimeMode.remoteSdk:
+        return 'remote_sdk';
+      case AkidaRuntimeMode.simulatorOnly:
+        return 'simulator_only';
+      case AkidaRuntimeMode.unknown:
+        return 'unknown';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case AkidaRuntimeMode.localSdk:
+        return 'Local SDK';
+      case AkidaRuntimeMode.remoteSdk:
+        return 'Remote SDK Host';
+      case AkidaRuntimeMode.simulatorOnly:
+        return 'Simulator Only';
+      case AkidaRuntimeMode.unknown:
+        return 'Unknown';
+    }
+  }
+}
+
+enum AkidaHostAuthMode {
+  none,
+  basic,
+  bearerToken;
+
+  static AkidaHostAuthMode fromString(String? value) {
+    switch (value) {
+      case 'basic':
+        return AkidaHostAuthMode.basic;
+      case 'bearer_token':
+      case 'token':
+        return AkidaHostAuthMode.bearerToken;
+      case 'none':
+      default:
+        return AkidaHostAuthMode.none;
+    }
+  }
+
+  String get apiValue {
+    switch (this) {
+      case AkidaHostAuthMode.none:
+        return 'none';
+      case AkidaHostAuthMode.basic:
+        return 'basic';
+      case AkidaHostAuthMode.bearerToken:
+        return 'bearer_token';
+    }
+  }
+}
+
+enum AkidaPairedHostState {
+  unknown,
+  pending,
+  ready,
+  degraded,
+  simulatorOnly,
+  blocked,
+  error;
+
+  static AkidaPairedHostState fromString(String? value) {
+    switch (value) {
+      case 'pending':
+        return AkidaPairedHostState.pending;
+      case 'ready':
+        return AkidaPairedHostState.ready;
+      case 'degraded':
+        return AkidaPairedHostState.degraded;
+      case 'simulator_only':
+        return AkidaPairedHostState.simulatorOnly;
+      case 'blocked':
+        return AkidaPairedHostState.blocked;
+      case 'error':
+        return AkidaPairedHostState.error;
+      case 'unknown':
+      default:
+        return AkidaPairedHostState.unknown;
+    }
+  }
+
+  String get apiValue {
+    switch (this) {
+      case AkidaPairedHostState.unknown:
+        return 'unknown';
+      case AkidaPairedHostState.pending:
+        return 'pending';
+      case AkidaPairedHostState.ready:
+        return 'ready';
+      case AkidaPairedHostState.degraded:
+        return 'degraded';
+      case AkidaPairedHostState.simulatorOnly:
+        return 'simulator_only';
+      case AkidaPairedHostState.blocked:
+        return 'blocked';
+      case AkidaPairedHostState.error:
+        return 'error';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case AkidaPairedHostState.unknown:
+        return 'Unknown';
+      case AkidaPairedHostState.pending:
+        return 'Pending';
+      case AkidaPairedHostState.ready:
+        return 'Ready';
+      case AkidaPairedHostState.degraded:
+        return 'Degraded';
+      case AkidaPairedHostState.simulatorOnly:
+        return 'Simulator Only';
+      case AkidaPairedHostState.blocked:
+        return 'Blocked';
+      case AkidaPairedHostState.error:
+        return 'Error';
+    }
+  }
+}
+
 /// Support state for BrainChip Akida target.
 ///
 /// Export-time scaffold states come from NeuroCNL.
@@ -168,13 +314,45 @@ class AkidaEnvironmentChecks {
 
   factory AkidaEnvironmentChecks.fromJson(Map<String, dynamic> json) {
     return AkidaEnvironmentChecks(
-      hostSupported: json['host_supported'] as bool? ?? false,
-      pythonSupported: json['python_supported'] as bool? ?? false,
-      tensorflowAvailable: json['tensorflow_available'] as bool? ?? false,
-      cnn2snnAvailable: json['cnn2snn_available'] as bool? ?? false,
-      akidaModelsAvailable: json['akida_models_available'] as bool? ?? false,
-      recommendedRuntime: json['recommended_runtime'] as String? ?? 'local_sdk',
+      hostSupported:
+          json['hostSupported'] as bool? ??
+          json['host_supported'] as bool? ??
+          false,
+      pythonSupported:
+          json['pythonSupported'] as bool? ??
+          json['python_supported'] as bool? ??
+          false,
+      tensorflowAvailable:
+          json['tensorflowAvailable'] as bool? ??
+          json['tensorflow_available'] as bool? ??
+          false,
+      cnn2snnAvailable:
+          json['cnn2snnAvailable'] as bool? ??
+          json['cnn2snn_available'] as bool? ??
+          false,
+      akidaModelsAvailable:
+          json['akidaModelsAvailable'] as bool? ??
+          json['akida_models_available'] as bool? ??
+          false,
+      recommendedRuntime:
+          json['recommendedRuntime'] as String? ??
+          json['recommended_runtime'] as String? ??
+          'local_sdk',
     );
+  }
+
+  AkidaRuntimeMode get recommendedRuntimeMode =>
+      AkidaRuntimeMode.fromString(recommendedRuntime);
+
+  Map<String, dynamic> toJson() {
+    return {
+      'hostSupported': hostSupported,
+      'pythonSupported': pythonSupported,
+      'tensorflowAvailable': tensorflowAvailable,
+      'cnn2snnAvailable': cnn2snnAvailable,
+      'akidaModelsAvailable': akidaModelsAvailable,
+      'recommendedRuntime': recommendedRuntime,
+    };
   }
 }
 
@@ -222,6 +400,136 @@ class AkidaSdkVerification {
   }
 
   bool get isDeployable => sdkStatus == 'deployable';
+
+  AkidaRuntimeMode get runtimeMode =>
+      AkidaRuntimeMode.fromString(runtimeTarget);
+}
+
+class AkidaPairedHost {
+  final String id;
+  final String displayName;
+  final String runtimeApiUrl;
+  final AkidaHostAuthMode authMode;
+  final String credentialRef;
+  final String hostOs;
+  final String pythonVersion;
+  final AkidaRuntimeMode runtimeMode;
+  final AkidaPairedHostState state;
+  final String lastReadinessMessage;
+  final String lastVerifiedAt;
+  final AkidaEnvironmentChecks? capabilitySnapshot;
+
+  const AkidaPairedHost({
+    required this.id,
+    required this.displayName,
+    required this.runtimeApiUrl,
+    required this.authMode,
+    required this.credentialRef,
+    required this.hostOs,
+    required this.pythonVersion,
+    required this.runtimeMode,
+    required this.state,
+    required this.lastReadinessMessage,
+    required this.lastVerifiedAt,
+    this.capabilitySnapshot,
+  });
+
+  bool get isReady => state == AkidaPairedHostState.ready;
+
+  factory AkidaPairedHost.fromJson(Map<String, dynamic> json) {
+    return AkidaPairedHost(
+      id: json['id'] as String? ?? '',
+      displayName:
+          json['displayName'] as String? ??
+          json['display_name'] as String? ??
+          'Akida Host',
+      runtimeApiUrl:
+          json['runtimeApiUrl'] as String? ??
+          json['runtime_api_url'] as String? ??
+          '',
+      authMode: AkidaHostAuthMode.fromString(
+        json['authMode'] as String? ?? json['auth_mode'] as String?,
+      ),
+      credentialRef:
+          json['credentialRef'] as String? ??
+          json['credential_ref'] as String? ??
+          '',
+      hostOs: json['hostOs'] as String? ?? json['host_os'] as String? ?? '',
+      pythonVersion:
+          json['pythonVersion'] as String? ??
+          json['python_version'] as String? ??
+          '',
+      runtimeMode: AkidaRuntimeMode.fromString(
+        json['runtimeMode'] as String? ?? json['runtime_mode'] as String?,
+      ),
+      state: AkidaPairedHostState.fromString(json['state'] as String?),
+      lastReadinessMessage:
+          json['lastReadinessMessage'] as String? ??
+          json['last_readiness_message'] as String? ??
+          '',
+      lastVerifiedAt:
+          json['lastVerifiedAt'] as String? ??
+          json['last_verified_at'] as String? ??
+          '',
+      capabilitySnapshot: json['capabilitySnapshot'] is Map<String, dynamic>
+          ? AkidaEnvironmentChecks.fromJson(
+              json['capabilitySnapshot'] as Map<String, dynamic>,
+            )
+          : json['capability_snapshot'] is Map<String, dynamic>
+          ? AkidaEnvironmentChecks.fromJson(
+              json['capability_snapshot'] as Map<String, dynamic>,
+            )
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'displayName': displayName,
+      'runtimeApiUrl': runtimeApiUrl,
+      'authMode': authMode.apiValue,
+      'credentialRef': credentialRef,
+      'hostOs': hostOs,
+      'pythonVersion': pythonVersion,
+      'runtimeMode': runtimeMode.apiValue,
+      'state': state.apiValue,
+      'lastReadinessMessage': lastReadinessMessage,
+      'lastVerifiedAt': lastVerifiedAt,
+      if (capabilitySnapshot != null)
+        'capabilitySnapshot': capabilitySnapshot!.toJson(),
+    };
+  }
+
+  AkidaPairedHost copyWith({
+    String? id,
+    String? displayName,
+    String? runtimeApiUrl,
+    AkidaHostAuthMode? authMode,
+    String? credentialRef,
+    String? hostOs,
+    String? pythonVersion,
+    AkidaRuntimeMode? runtimeMode,
+    AkidaPairedHostState? state,
+    String? lastReadinessMessage,
+    String? lastVerifiedAt,
+    AkidaEnvironmentChecks? capabilitySnapshot,
+  }) {
+    return AkidaPairedHost(
+      id: id ?? this.id,
+      displayName: displayName ?? this.displayName,
+      runtimeApiUrl: runtimeApiUrl ?? this.runtimeApiUrl,
+      authMode: authMode ?? this.authMode,
+      credentialRef: credentialRef ?? this.credentialRef,
+      hostOs: hostOs ?? this.hostOs,
+      pythonVersion: pythonVersion ?? this.pythonVersion,
+      runtimeMode: runtimeMode ?? this.runtimeMode,
+      state: state ?? this.state,
+      lastReadinessMessage: lastReadinessMessage ?? this.lastReadinessMessage,
+      lastVerifiedAt: lastVerifiedAt ?? this.lastVerifiedAt,
+      capabilitySnapshot: capabilitySnapshot ?? this.capabilitySnapshot,
+    );
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:neuro_toolkit/models/akida_remote_host.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
@@ -56,9 +55,9 @@ class AkidaDeployProvider with ChangeNotifier {
     AkidaDeployService? service,
     ControlApiService? controlApiService,
     TargetPlatform? platformOverride,
-  }) : _service = service ?? AkidaDeployService(),
-       _controlApiService = controlApiService ?? ControlApiService(),
-       _platformOverride = platformOverride;
+  })  : _service = service ?? AkidaDeployService(),
+        _controlApiService = controlApiService ?? ControlApiService(),
+        _platformOverride = platformOverride;
 
   final AkidaDeployService _service;
   final ControlApiService _controlApiService;
@@ -112,14 +111,14 @@ class AkidaDeployProvider with ChangeNotifier {
   String? _runtimeSetupError;
   String? get runtimeSetupError => _runtimeSetupError;
 
-  List<AkidaRemoteHost> _remoteHosts = <AkidaRemoteHost>[];
-  List<AkidaRemoteHost> get remoteHosts =>
-      List<AkidaRemoteHost>.unmodifiable(_remoteHosts);
+  List<AkidaPairedHost> _remoteHosts = <AkidaPairedHost>[];
+  List<AkidaPairedHost> get remoteHosts =>
+      List<AkidaPairedHost>.unmodifiable(_remoteHosts);
 
   String? _selectedRemoteHostId;
   String? get selectedRemoteHostId => _selectedRemoteHostId;
 
-  AkidaRemoteHost? get selectedRemoteHost {
+  AkidaPairedHost? get selectedRemoteHost {
     final selectedRemoteHostId = _selectedRemoteHostId;
     if (selectedRemoteHostId == null) {
       return null;
@@ -134,7 +133,7 @@ class AkidaDeployProvider with ChangeNotifier {
 
   String get selectedRuntimeBaseUrl {
     if (isRemoteSdkMode && selectedRemoteHost != null) {
-      return selectedRemoteHost!.baseUrl;
+      return selectedRemoteHost!.runtimeApiUrl;
     }
     return _service.localNeurochipBaseUrl;
   }
@@ -172,13 +171,7 @@ class AkidaDeployProvider with ChangeNotifier {
 
     try {
       _neurochipModule = await _controlApiService.fetchModule('Neurochip');
-      _remoteHosts = await _controlApiService.fetchAkidaHosts();
-      if (_selectedRemoteHostId == null ||
-          !_remoteHosts.any((host) => host.id == _selectedRemoteHostId)) {
-        _selectedRemoteHostId = _remoteHosts.isEmpty
-            ? null
-            : _remoteHosts.first.id;
-      }
+      _applySettings(await _controlApiService.fetchSettings());
       _applyDefaultRuntimeMode();
     } catch (e) {
       _runtimeSetupError = e.toString();
@@ -208,7 +201,7 @@ class AkidaDeployProvider with ChangeNotifier {
   Future<void> saveRemoteHost({
     String? hostId,
     required String displayName,
-    required String baseUrl,
+    required String runtimeApiUrl,
   }) async {
     _isLoadingRuntimeSetup = true;
     _runtimeSetupError = null;
@@ -217,11 +210,12 @@ class AkidaDeployProvider with ChangeNotifier {
     try {
       final payload = <String, dynamic>{
         'displayName': displayName,
-        'baseUrl': baseUrl,
+        'runtimeApiUrl': runtimeApiUrl,
       };
       final host = hostId == null || hostId.isEmpty
           ? await _controlApiService.createAkidaHost(payload)
           : await _controlApiService.updateAkidaHost(hostId, payload);
+      await _controlApiService.updateSettings(selectedAkidaHostId: host.id);
       _upsertRemoteHost(host);
       _selectedRemoteHostId = host.id;
       _runtimeMode = AkidaRuntimeMode.remoteSdk;
@@ -245,12 +239,7 @@ class AkidaDeployProvider with ChangeNotifier {
 
     try {
       await _controlApiService.deleteAkidaHost(hostId);
-      _remoteHosts = _remoteHosts
-          .where((host) => host.id != hostId)
-          .toList(growable: false);
-      _selectedRemoteHostId = _remoteHosts.isEmpty
-          ? null
-          : _remoteHosts.first.id;
+      _applySettings(await _controlApiService.fetchSettings());
       if (isRemoteSdkMode && _selectedRemoteHostId == null) {
         _runtimeMode = localRuntimeSupported
             ? AkidaRuntimeMode.localSdk
@@ -278,6 +267,7 @@ class AkidaDeployProvider with ChangeNotifier {
     _selectedRemoteHostId = hostId;
     if (hostId != null) {
       _runtimeMode = AkidaRuntimeMode.remoteSdk;
+      unawaited(_persistSelectedRemoteHost(hostId));
     }
     notifyListeners();
   }
@@ -483,12 +473,32 @@ class AkidaDeployProvider with ChangeNotifier {
     }
   }
 
-  void _upsertRemoteHost(AkidaRemoteHost host) {
+  void _applySettings(LauncherControlSettings settings) {
+    _remoteHosts = settings.akidaHosts;
+    final selectedRemoteHostId = settings.selectedAkidaHostId;
+    if (selectedRemoteHostId != null &&
+        _remoteHosts.any((host) => host.id == selectedRemoteHostId)) {
+      _selectedRemoteHostId = selectedRemoteHostId;
+      return;
+    }
+    _selectedRemoteHostId = _remoteHosts.isEmpty ? null : _remoteHosts.first.id;
+  }
+
+  Future<void> _persistSelectedRemoteHost(String hostId) async {
+    try {
+      await _controlApiService.updateSettings(selectedAkidaHostId: hostId);
+    } catch (e) {
+      _runtimeSetupError = e.toString();
+      notifyListeners();
+    }
+  }
+
+  void _upsertRemoteHost(AkidaPairedHost host) {
     final index = _remoteHosts.indexWhere((item) => item.id == host.id);
     if (index == -1) {
-      _remoteHosts = <AkidaRemoteHost>[..._remoteHosts, host];
+      _remoteHosts = <AkidaPairedHost>[..._remoteHosts, host];
     } else {
-      final updated = List<AkidaRemoteHost>.from(_remoteHosts);
+      final updated = List<AkidaPairedHost>.from(_remoteHosts);
       updated[index] = host;
       _remoteHosts = updated;
     }

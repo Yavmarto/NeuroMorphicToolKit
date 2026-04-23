@@ -340,9 +340,77 @@ void main() {
       expect(verification.environmentChecks, isNotNull);
       expect(verification.environmentChecks!.hostSupported, isFalse);
       expect(
+        verification.environmentChecks!.recommendedRuntimeMode,
+        AkidaRuntimeMode.simulatorOnly,
+      );
+      expect(verification.runtimeMode, AkidaRuntimeMode.simulatorOnly);
+      expect(
         verification.environmentChecks!.recommendedRuntime,
         'simulator_only',
       );
+    });
+  });
+
+  group('AkidaPairedHost', () {
+    test('fromJson parses remote host metadata and capability snapshot', () {
+      final host = AkidaPairedHost.fromJson({
+        'id': 'akida-host-1',
+        'displayName': 'Linux Akida Host',
+        'runtimeApiUrl': 'http://192.168.1.60:8002',
+        'authMode': 'bearer_token',
+        'credentialRef': 'akida-token',
+        'hostOs': 'linux',
+        'pythonVersion': '3.11.8',
+        'runtimeMode': 'remote_sdk',
+        'state': 'ready',
+        'lastReadinessMessage': 'Remote SDK ready',
+        'lastVerifiedAt': '2026-04-23T09:00:00Z',
+        'capabilitySnapshot': {
+          'hostSupported': true,
+          'pythonSupported': true,
+          'tensorflowAvailable': true,
+          'cnn2snnAvailable': true,
+          'akidaModelsAvailable': true,
+          'recommendedRuntime': 'remote_sdk',
+        },
+      });
+
+      expect(host.id, 'akida-host-1');
+      expect(host.authMode, AkidaHostAuthMode.bearerToken);
+      expect(host.runtimeMode, AkidaRuntimeMode.remoteSdk);
+      expect(host.state, AkidaPairedHostState.ready);
+      expect(host.isReady, isTrue);
+      expect(
+        host.capabilitySnapshot?.recommendedRuntimeMode,
+        AkidaRuntimeMode.remoteSdk,
+      );
+    });
+
+    test('toJson and copyWith preserve simulator-only runtime state', () {
+      const host = AkidaPairedHost(
+        id: 'akida-host-1',
+        displayName: 'Linux Akida Host',
+        runtimeApiUrl: 'http://192.168.1.60:8002',
+        authMode: AkidaHostAuthMode.none,
+        credentialRef: '',
+        hostOs: 'linux',
+        pythonVersion: '3.11.8',
+        runtimeMode: AkidaRuntimeMode.remoteSdk,
+        state: AkidaPairedHostState.ready,
+        lastReadinessMessage: 'Remote SDK ready',
+        lastVerifiedAt: '2026-04-23T09:00:00Z',
+      );
+
+      final updated = host.copyWith(
+        runtimeMode: AkidaRuntimeMode.simulatorOnly,
+        state: AkidaPairedHostState.simulatorOnly,
+      );
+      final payload = updated.toJson();
+
+      expect(updated.runtimeMode, AkidaRuntimeMode.simulatorOnly);
+      expect(updated.state, AkidaPairedHostState.simulatorOnly);
+      expect(payload['runtimeMode'], 'simulator_only');
+      expect(payload['state'], 'simulator_only');
     });
   });
 }

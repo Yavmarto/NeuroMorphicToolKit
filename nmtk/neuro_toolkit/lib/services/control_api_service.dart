@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:neuro_toolkit/models/akida_remote_host.dart';
 import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
@@ -13,12 +12,16 @@ class LauncherControlSettings {
     required this.mujocoAvailable,
     required this.pythonAvailable,
     required this.pynqBoards,
+    required this.akidaHosts,
+    required this.selectedAkidaHostId,
   });
 
   final String logLevel;
   final bool mujocoAvailable;
   final bool pythonAvailable;
   final List<PynqPairedBoard> pynqBoards;
+  final List<AkidaPairedHost> akidaHosts;
+  final String? selectedAkidaHostId;
 
   factory LauncherControlSettings.fromJson(Map<String, dynamic> json) {
     return LauncherControlSettings(
@@ -29,7 +32,25 @@ class LauncherControlSettings {
           .whereType<Map<String, dynamic>>()
           .map(PynqPairedBoard.fromJson)
           .toList(growable: false),
+      akidaHosts: (json['akidaHosts'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .map(AkidaPairedHost.fromJson)
+          .toList(growable: false),
+      selectedAkidaHostId: json['selectedAkidaHostId'] as String?,
     );
+  }
+
+  AkidaPairedHost? get selectedAkidaHost {
+    final selectedId = selectedAkidaHostId;
+    if (selectedId == null) {
+      return null;
+    }
+    for (final host in akidaHosts) {
+      if (host.id == selectedId) {
+        return host;
+      }
+    }
+    return null;
   }
 }
 
@@ -132,11 +153,18 @@ class ControlApiService {
     return LauncherControlSettings.fromJson(await _readJsonResponse(response));
   }
 
-  Future<void> updateSettings({String? logLevel}) async {
+  Future<void> updateSettings({
+    String? logLevel,
+    String? selectedAkidaHostId,
+  }) async {
     final response = await _client.put(
       _uri('/api/launcher/settings'),
       headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({if (logLevel != null) 'logLevel': logLevel}),
+      body: jsonEncode({
+        if (logLevel != null) 'logLevel': logLevel,
+        if (selectedAkidaHostId != null)
+          'selectedAkidaHostId': selectedAkidaHostId,
+      }),
     );
     await _ensureSuccess(response);
   }
@@ -149,46 +177,6 @@ class ControlApiService {
         .whereType<Map<String, dynamic>>()
         .map(PynqPairedBoard.fromJson)
         .toList(growable: false);
-  }
-
-  Future<List<AkidaRemoteHost>> fetchAkidaHosts() async {
-    final response = await _client.get(_uri('/api/launcher/akida/hosts'));
-    await _ensureSuccess(response);
-    final decoded = await _readJsonList(response);
-    return decoded
-        .whereType<Map<String, dynamic>>()
-        .map(AkidaRemoteHost.fromJson)
-        .toList(growable: false);
-  }
-
-  Future<AkidaRemoteHost> createAkidaHost(Map<String, dynamic> payload) async {
-    final response = await _client.post(
-      _uri('/api/launcher/akida/hosts'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    );
-    await _ensureSuccess(response);
-    return AkidaRemoteHost.fromJson(await _readJsonResponse(response));
-  }
-
-  Future<AkidaRemoteHost> updateAkidaHost(
-    String hostId,
-    Map<String, dynamic> payload,
-  ) async {
-    final response = await _client.put(
-      _uri('/api/launcher/akida/hosts/$hostId'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    );
-    await _ensureSuccess(response);
-    return AkidaRemoteHost.fromJson(await _readJsonResponse(response));
-  }
-
-  Future<void> deleteAkidaHost(String hostId) async {
-    final response = await _client.delete(
-      _uri('/api/launcher/akida/hosts/$hostId'),
-    );
-    await _ensureSuccess(response);
   }
 
   Future<PynqPairedBoard> createPynqBoard(Map<String, dynamic> payload) async {
@@ -299,6 +287,46 @@ class ControlApiService {
     );
     await _ensureSuccess(response);
     return PynqSitlVerifyResult.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<List<AkidaPairedHost>> fetchAkidaHosts() async {
+    final response = await _client.get(_uri('/api/launcher/akida/hosts'));
+    await _ensureSuccess(response);
+    final decoded = await _readJsonList(response);
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(AkidaPairedHost.fromJson)
+        .toList(growable: false);
+  }
+
+  Future<AkidaPairedHost> createAkidaHost(Map<String, dynamic> payload) async {
+    final response = await _client.post(
+      _uri('/api/launcher/akida/hosts'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return AkidaPairedHost.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<AkidaPairedHost> updateAkidaHost(
+    String hostId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _client.put(
+      _uri('/api/launcher/akida/hosts/$hostId'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return AkidaPairedHost.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<void> deleteAkidaHost(String hostId) async {
+    final response = await _client.delete(
+      _uri('/api/launcher/akida/hosts/$hostId'),
+    );
+    await _ensureSuccess(response);
   }
 
   Future<Module> installModule(String moduleId) async {

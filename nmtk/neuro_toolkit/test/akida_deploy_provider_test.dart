@@ -2,11 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
-import 'package:neuro_toolkit/models/akida_remote_host.dart';
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/providers/akida_deploy_provider.dart';
 import 'package:neuro_toolkit/services/akida_deploy_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/providers/akida_deploy_provider.dart'
+    as deploy_provider;
 
 class _RecordingAkidaDeployService extends AkidaDeployService {
   _RecordingAkidaDeployService({required this.verificationResponse});
@@ -59,17 +59,35 @@ class _RecordingAkidaDeployService extends AkidaDeployService {
 class _ProviderControlApiService extends ControlApiService {
   _ProviderControlApiService({
     required this.module,
-    this.remoteHosts = const <AkidaRemoteHost>[],
+    this.remoteHosts = const <AkidaPairedHost>[],
+    this.selectedAkidaHostId,
   });
 
   final Module module;
-  final List<AkidaRemoteHost> remoteHosts;
+  final List<AkidaPairedHost> remoteHosts;
+  String? selectedAkidaHostId;
 
   @override
   Future<Module> fetchModule(String moduleId) async => module;
 
   @override
-  Future<List<AkidaRemoteHost>> fetchAkidaHosts() async => remoteHosts;
+  Future<LauncherControlSettings> fetchSettings() async =>
+      LauncherControlSettings(
+        logLevel: 'info',
+        mujocoAvailable: false,
+        pythonAvailable: true,
+        pynqBoards: const <PynqPairedBoard>[],
+        akidaHosts: remoteHosts,
+        selectedAkidaHostId: selectedAkidaHostId,
+      );
+
+  @override
+  Future<void> updateSettings({
+    String? logLevel,
+    String? selectedAkidaHostId,
+  }) async {
+    this.selectedAkidaHostId = selectedAkidaHostId ?? this.selectedAkidaHostId;
+  }
 }
 
 void main() {
@@ -109,23 +127,32 @@ void main() {
           runtimeTarget: 'akd1000_simulator',
         ),
       );
-      final provider = AkidaDeployProvider(
+      final provider = deploy_provider.AkidaDeployProvider(
         service: service,
         controlApiService: _ProviderControlApiService(
           module: neurochipModule,
-          remoteHosts: const <AkidaRemoteHost>[
-            AkidaRemoteHost(
+          remoteHosts: const <AkidaPairedHost>[
+            AkidaPairedHost(
               id: 'remote-akida-1',
               displayName: 'Remote Akida Linux',
-              baseUrl: 'http://akida-linux:8002',
+              runtimeApiUrl: 'http://akida-linux:8002',
+              authMode: AkidaHostAuthMode.none,
+              credentialRef: '',
+              hostOs: 'linux',
+              pythonVersion: '3.11.8',
+              runtimeMode: AkidaRuntimeMode.remoteSdk,
+              state: AkidaPairedHostState.ready,
+              lastReadinessMessage: 'Remote SDK ready',
+              lastVerifiedAt: '',
             ),
           ],
+          selectedAkidaHostId: 'remote-akida-1',
         ),
         platformOverride: TargetPlatform.windows,
       );
 
       await provider.refreshRuntimeSetup();
-      provider.setRuntimeMode(AkidaRuntimeMode.remoteSdk);
+      provider.setRuntimeMode(deploy_provider.AkidaRuntimeMode.remoteSdk);
       provider.selectRemoteHost('remote-akida-1');
       await provider.checkExportability(
         spec: 'The sensory neuron MUST fire.',
@@ -139,7 +166,7 @@ void main() {
 
       expect(service.lastDownloadBaseUrl, 'http://akida-linux:8002');
       expect(service.lastVerifyBaseUrl, 'http://akida-linux:8002');
-      expect(provider.currentStep, AkidaDeployStep.done);
+      expect(provider.currentStep, deploy_provider.AkidaDeployStep.done);
     },
   );
 
@@ -155,7 +182,7 @@ void main() {
           runtimeTarget: 'software_fallback',
         ),
       );
-      final provider = AkidaDeployProvider(
+      final provider = deploy_provider.AkidaDeployProvider(
         service: service,
         controlApiService: _ProviderControlApiService(module: neurochipModule),
         platformOverride: TargetPlatform.android,
@@ -172,11 +199,14 @@ void main() {
         outputDir: '/tmp',
       );
 
-      expect(provider.runtimeMode, AkidaRuntimeMode.localSimulator);
+      expect(
+        provider.runtimeMode,
+        deploy_provider.AkidaRuntimeMode.localSimulator,
+      );
       expect(service.lastDownloadBaseUrl, 'http://localhost:8002');
       expect(service.lastVerifyBaseUrl, 'http://localhost:8002');
       expect(provider.isExpectedLocalSimulatorOutcome, isTrue);
-      expect(provider.currentStep, AkidaDeployStep.done);
+      expect(provider.currentStep, deploy_provider.AkidaDeployStep.done);
     },
   );
 }

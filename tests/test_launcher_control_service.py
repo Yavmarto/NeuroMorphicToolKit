@@ -4,8 +4,10 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
+import urllib.request
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -265,6 +267,76 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertTrue(commands[1][0].endswith("/dummy_module/venv/bin/python"))
         self.assertIn("akida==2.19.1", commands[1])
 
+    def test_modules_endpoint_restores_saved_akida_runtime_state(self) -> None:
+        state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"
+        state_file.write_text(
+            json.dumps(
+                {
+                    "dummy": {
+                        "id": "dummy",
+                        "status": launcher_server.STATUS_INDEX["installed"],
+                        "installProgress": 1.0,
+                        "akidaRuntimeState": {
+                            "status": "unsupported_python",
+                            "message": (
+                                "Akida SDK installation requires Python >=3.10,<3.13; "
+                                "current module env is 3.9.18. Keep scaffold export "
+                                "local, then verify through a Linux or Windows "
+                                "Neurochip host running Python 3.10-3.12."
+                            ),
+                            "preparedAt": None,
+                        },
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        reloaded = launcher_server.LauncherControlState()
+        self.addCleanup(reloaded.shutdown)
+
+        payload = reloaded.serialize_module("dummy")
+        self.assertEqual(payload["akidaRuntimeState"]["status"], "unsupported_python")
+        self.assertIn(
+            "Linux or Windows Neurochip host",
+            payload["akidaRuntimeState"]["message"],
+        )
+
+    def test_prepare_akida_runtime_http_endpoint_returns_remote_host_guidance(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+
+        with (
+            mock.patch.object(
+                server.state,
+                "_preflight_module",
+                return_value=launcher_server.PreflightResult(
+                    status=launcher_server.PREFLIGHT_OK,
+                    message="ok",
+                ),
+            ),
+            mock.patch.object(launcher_server, "_current_platform_key", return_value="macos"),
+        ):
+            request = urllib.request.Request(
+                (
+                    f"http://127.0.0.1:{server.server_address[1]}"
+                    "/api/launcher/modules/dummy/akida-runtime/prepare"
+                ),
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+
+        self.assertEqual(payload["akidaRuntimeState"]["status"], "unsupported_host")
+        self.assertIn(
+            "Linux or Windows Neurochip host",
+            payload["akidaRuntimeState"]["message"],
+        )
+
     def test_missing_environment_normalizes_stale_installed_state(self) -> None:
         state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"
         state_file.write_text(
@@ -311,6 +383,77 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertFalse(persisted["dummy"]["isEnabled"])
         self.assertTrue(persisted["dummy"]["versionPinned"])
 
+    def test_akida_host_round_trip_updates_settings_file(self) -> None:
+        created = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "akida-box.local:8002",
+                "credentialRef": "launcher-secret",
+            }
+        )
+
+        self.assertEqual(created["displayName"], "Lab Akida")
+        self.assertEqual(created["host"], "akida-box.local")
+        self.assertEqual(created["port"], 8002)
+        self.assertEqual(created["baseUrl"], "http://akida-box.local:8002")
+        self.assertEqual(created["state"], "unpaired")
+        self.assertEqual(self.state.get_akida_host(created["id"])["id"], created["id"])
+        self.assertEqual(len(self.state.list_akida_hosts()), 1)
+
+        persisted = json.loads(
+            (
+                self.repo_root
+                / "nmtk"
+                / "neuro_toolkit"
+                / "launcher_settings.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(len(persisted["akidaHosts"]), 1)
+        self.assertEqual(persisted["akidaHosts"][0]["baseUrl"], "http://akida-box.local:8002")
+        self.assertEqual(
+            persisted["akidaHosts"][0]["credentialRef"],
+            "launcher-secret",
+        )
+
+    def test_akida_host_update_rewrites_host_from_base_url(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+
+        updated = self.state.update_akida_host(
+            host["id"],
+            {
+                "baseUrl": "https://gpu-node.internal:9443",
+            },
+        )
+
+        self.assertEqual(updated["host"], "gpu-node.internal")
+        self.assertEqual(updated["port"], 9443)
+        self.assertEqual(updated["baseUrl"], "https://gpu-node.internal:9443")
+
+    def test_delete_akida_host_removes_entry_from_settings_file(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+
+        self.state.delete_akida_host(host["id"])
+
+        persisted = json.loads(
+            (
+                self.repo_root
+                / "nmtk"
+                / "neuro_toolkit"
+                / "launcher_settings.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(persisted["akidaHosts"], [])
+
     def test_pynq_board_round_trip_updates_settings_file(self) -> None:
         created = self.state.create_pynq_board(
             {
@@ -350,24 +493,30 @@ class LauncherControlServiceTest(unittest.TestCase):
     def test_akida_host_round_trip_updates_settings_file(self) -> None:
         created = self.state.create_akida_host(
             {
-                "displayName": "Akida Linux Host",
-                "baseUrl": "akida-linux:8002",
+                "displayName": "Linux Akida Host",
+                "runtimeApiUrl": "http://192.168.1.60:8002",
+                "authMode": "bearer_token",
+                "credentialRef": "akida-token",
+                "hostOs": "linux",
+                "pythonVersion": "3.11.8",
+                "runtimeMode": "remote_sdk",
+                "state": "ready",
+                "lastReadinessMessage": "Remote SDK ready",
+                "capabilitySnapshot": {
+                    "hostSupported": True,
+                    "pythonSupported": True,
+                    "tensorflowAvailable": True,
+                    "cnn2snnAvailable": True,
+                    "akidaModelsAvailable": True,
+                    "recommendedRuntime": "remote_sdk",
+                },
             }
         )
 
-        self.assertEqual(created["displayName"], "Akida Linux Host")
-        self.assertEqual(created["baseUrl"], "http://akida-linux:8002")
-
-        updated = self.state.update_akida_host(
-            created["id"],
-            {
-                "displayName": "Akida Windows Host",
-                "baseUrl": "https://akida-win.example.com:8443/",
-            },
-        )
-
-        self.assertEqual(updated["displayName"], "Akida Windows Host")
-        self.assertEqual(updated["baseUrl"], "https://akida-win.example.com:8443")
+        self.assertEqual(created["displayName"], "Linux Akida Host")
+        self.assertEqual(created["state"], "ready")
+        self.assertEqual(created["runtimeMode"], "remote_sdk")
+        self.assertEqual(created["capabilitySnapshot"]["recommendedRuntime"], "remote_sdk")
 
         persisted = json.loads(
             (
@@ -379,13 +528,58 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
         self.assertEqual(len(persisted["akidaHosts"]), 1)
         self.assertEqual(
-            persisted["akidaHosts"][0]["displayName"],
-            "Akida Windows Host",
+            persisted["akidaHosts"][0]["runtimeApiUrl"],
+            "http://192.168.1.60:8002",
         )
-        self.assertEqual(
-            persisted["akidaHosts"][0]["baseUrl"],
-            "https://akida-win.example.com:8443",
+        self.assertEqual(persisted["selectedAkidaHostId"], created["id"])
+
+        reloaded = launcher_server.LauncherControlState()
+        self.addCleanup(reloaded.shutdown)
+
+        settings = reloaded.get_settings()
+        self.assertEqual(settings["selectedAkidaHostId"], created["id"])
+        self.assertEqual(settings["akidaHosts"][0]["hostOs"], "linux")
+        self.assertEqual(settings["akidaHosts"][0]["pythonVersion"], "3.11.8")
+
+    def test_akida_host_update_delete_and_selection_round_trip(self) -> None:
+        primary = self.state.create_akida_host(
+            {
+                "displayName": "Primary Host",
+                "runtimeApiUrl": "http://192.168.1.60:8002",
+            }
         )
+        secondary = self.state.create_akida_host(
+            {
+                "displayName": "Secondary Host",
+                "runtimeApiUrl": "http://192.168.1.61:8002",
+                "state": "pending",
+            }
+        )
+
+        settings = self.state.update_settings(
+            {"selectedAkidaHostId": secondary["id"]}
+        )
+        self.assertEqual(settings["selectedAkidaHostId"], secondary["id"])
+
+        updated = self.state.update_akida_host(
+            secondary["id"],
+            {
+                "state": "simulator_only",
+                "runtimeMode": "simulator_only",
+                "hostOs": "macos",
+                "pythonVersion": "3.12.1",
+            },
+        )
+        self.assertEqual(updated["state"], "simulator_only")
+        self.assertEqual(updated["runtimeMode"], "simulator_only")
+        self.assertEqual(updated["hostOs"], "macos")
+        self.assertEqual(updated["pythonVersion"], "3.12.1")
+
+        self.state.delete_akida_host(secondary["id"])
+        remaining = self.state.get_settings()
+        self.assertEqual(len(remaining["akidaHosts"]), 1)
+        self.assertEqual(remaining["akidaHosts"][0]["id"], primary["id"])
+        self.assertEqual(remaining["selectedAkidaHostId"], primary["id"])
 
     def test_pynq_board_normalization_migrates_legacy_opt_paths(self) -> None:
         created = self.state.create_pynq_board(
@@ -708,6 +902,156 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertIn("nohup sh -c", remote_command)
         self.assertNotIn("nohup env", remote_command)
 
+    def test_akida_host_connectivity_marks_host_reachable(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={"status": "ok"},
+        ) as request:
+            updated = self.state.test_akida_host_connection(host["id"])
+
+        self.assertEqual(updated["state"], "reachable")
+        self.assertEqual(updated["lastPreflightMessage"], "Health reachable: ok")
+        request.assert_called_once()
+
+    def test_akida_host_preflight_reports_degraded_optional_capability(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={
+                "sdk_available": False,
+                "sdk_status": "sdk_unavailable",
+                "sdk_issues": ["sdk_not_available", "unsupported_os"],
+                "sdk_issue_detail": "BrainChip SDK missing on remote host",
+                "runtime_target": "local_sdk",
+                "environment_checks": {
+                    "host_supported": False,
+                    "python_supported": True,
+                    "tensorflow_available": False,
+                    "cnn2snn_available": False,
+                    "akida_models_available": False,
+                    "recommended_runtime": "local_sdk",
+                },
+            },
+        ):
+            result = self.state.fetch_akida_host_preflight(host["id"])
+
+        self.assertEqual(
+            result["host"]["state"],
+            "degraded_optional_capability",
+        )
+        self.assertEqual(
+            result["preflight"]["preflight_status"],
+            launcher_server.PREFLIGHT_DEGRADED,
+        )
+        self.assertEqual(
+            result["preflight"]["preflight_message"],
+            "BrainChip SDK missing on remote host",
+        )
+        self.assertEqual(result["host"]["lastSdkStatus"], "sdk_unavailable")
+
+    def test_akida_host_preflight_reports_failed_when_runtime_request_errors(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            side_effect=RuntimeError("remote verify exploded"),
+        ):
+            result = self.state.fetch_akida_host_preflight(host["id"])
+
+        self.assertEqual(result["host"]["state"], "preflight_failed")
+        self.assertEqual(
+            result["preflight"]["preflight_status"],
+            launcher_server.PREFLIGHT_FAILED,
+        )
+        self.assertIn("remote verify exploded", result["preflight"]["preflight_message"])
+
+    def test_akida_host_status_marks_mapped_host_ready(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+                "lastPreflightStatus": launcher_server.PREFLIGHT_OK,
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={"state": "mapped", "device_info": "AKD1000"},
+        ):
+            result = self.state.fetch_akida_host_status(host["id"])
+
+        self.assertEqual(result["host"]["state"], "ready")
+        self.assertEqual(result["status"]["state"], "mapped")
+
+    def test_akida_host_status_marks_failed_host_error(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={"state": "failed"},
+        ):
+            result = self.state.fetch_akida_host_status(host["id"])
+
+        self.assertEqual(result["host"]["state"], "error")
+        self.assertEqual(result["status"]["state"], "failed")
+
+    def test_doctor_report_includes_akida_hosts(self) -> None:
+        self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+                "state": "degraded_optional_capability",
+                "lastPreflightStatus": launcher_server.PREFLIGHT_DEGRADED,
+                "lastPreflightMessage": "BrainChip SDK missing on remote host",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_preflight_module",
+            return_value=launcher_server.PreflightResult(
+                status=launcher_server.PREFLIGHT_OK,
+                message="ok",
+                environment_fingerprint="fingerprint-4",
+            ),
+        ):
+            report = self.state.doctor_report()
+
+        self.assertIn("akidaHosts", report)
+        self.assertEqual(
+            report["akidaHosts"][0]["state"],
+            "degraded_optional_capability",
+        )
+        self.assertGreaterEqual(report["degradedCount"], 1)
+
     def test_doctor_report_includes_pynq_boards(self) -> None:
         self.state.create_pynq_board(
             {
@@ -731,6 +1075,31 @@ class LauncherControlServiceTest(unittest.TestCase):
 
         self.assertIn("pynqBoards", report)
         self.assertEqual(report["pynqBoards"][0]["state"], "ready")
+
+    def test_doctor_report_includes_akida_hosts(self) -> None:
+        self.state.create_akida_host(
+            {
+                "displayName": "Linux Akida Host",
+                "runtimeApiUrl": "http://192.168.1.60:8002",
+                "runtimeMode": "remote_sdk",
+                "state": "ready",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_preflight_module",
+            return_value=launcher_server.PreflightResult(
+                status=launcher_server.PREFLIGHT_OK,
+                message="ok",
+                environment_fingerprint="fingerprint-3",
+            ),
+        ):
+            report = self.state.doctor_report()
+
+        self.assertIn("akidaHosts", report)
+        self.assertEqual(report["akidaHosts"][0]["runtimeMode"], "remote_sdk")
+        self.assertEqual(report["akidaHosts"][0]["state"], "ready")
 
     def test_read_remote_pynq_install_status_decodes_machine_readable_result(self) -> None:
         board = self.state.create_pynq_board(

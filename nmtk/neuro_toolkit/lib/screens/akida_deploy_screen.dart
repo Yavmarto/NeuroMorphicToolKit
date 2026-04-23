@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/providers/akida_deploy_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+
+import 'package:neuro_toolkit/providers/akida_deploy_provider.dart'
+    as deploy_provider;
+
+typedef AkidaDeployProvider = deploy_provider.AkidaDeployProvider;
+typedef AkidaDeployStep = deploy_provider.AkidaDeployStep;
+typedef DeployRuntimeMode = deploy_provider.AkidaRuntimeMode;
 
 /// BrainChip Akida scaffold export and runtime verification screen.
 ///
@@ -55,7 +61,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
         selectedRemoteHost != null) {
       _remoteHostFormId = selectedRemoteHost.id;
       _remoteHostNameController.text = selectedRemoteHost.displayName;
-      _remoteHostUrlController.text = selectedRemoteHost.baseUrl;
+      _remoteHostUrlController.text = selectedRemoteHost.runtimeApiUrl;
     } else if (selectedRemoteHost == null && _remoteHostFormId != null) {
       _remoteHostFormId = null;
       _remoteHostNameController.clear();
@@ -284,7 +290,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
       case 'deployable':
         return provider.runtimeMode.label;
       case 'not_available':
-        return provider.runtimeMode == AkidaRuntimeMode.remoteSdk
+        return provider.runtimeMode == DeployRuntimeMode.remoteSdk
             ? 'remote SDK unavailable'
             : 'SDK unavailable';
       case 'mapping_failed':
@@ -427,15 +433,19 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     final module = provider.neurochipModule;
     final runtimeConfig = module?.akidaRuntime;
     final runtimeState = module?.akidaRuntimeState;
+    final checks = provider.sdkVerification?.environmentChecks;
     final platformKey = _currentPlatformKey(context);
     final hostSupported =
         runtimeConfig?.supportedPlatforms.contains(platformKey) ?? false;
     final simulatorOnly =
         !hostSupported && runtimeConfig?.localModeFallback == 'simulator_only';
+    final requiresRemoteRuntime = checks?.recommendedRuntime == 'remote_sdk' ||
+        runtimeState?.status == 'unsupported_python';
     final showPrepareButton = provider.isLocalSdkMode &&
         runtimeConfig != null &&
         hostSupported &&
         !provider.isPreparingRuntime &&
+        !requiresRemoteRuntime &&
         runtimeState?.status != 'ready';
 
     return Card(
@@ -457,7 +467,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: AkidaRuntimeMode.values
+              children: DeployRuntimeMode.values
                   .map(
                     (mode) => ChoiceChip(
                       label: Text(mode.label),
@@ -470,11 +480,15 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
             const SizedBox(height: 16),
             if (provider.isLoadingRuntimeSetup)
               const LinearProgressIndicator()
-            else if (provider.runtimeMode == AkidaRuntimeMode.localSimulator)
+            else if (provider.runtimeMode == DeployRuntimeMode.localSimulator)
               Text(
                 'Use the local Neurochip module in simulator-only mode. Scaffold generation stays local, and runtime checks remain truthful about the absence of a local BrainChip SDK.',
               )
-            else if (provider.runtimeMode == AkidaRuntimeMode.localSdk)
+            else if (requiresRemoteRuntime)
+              const Text(
+                'This Neurochip environment does not satisfy the local Akida SDK requirements. Keep scaffold export local, then verify through a Linux or Windows Neurochip host running Python 3.10-3.12.',
+              )
+            else if (provider.runtimeMode == DeployRuntimeMode.localSdk)
               _buildLocalRuntimeSection(
                 context,
                 provider,
@@ -626,7 +640,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                 controller: _remoteHostUrlController,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),
-                  labelText: 'Neurochip base URL',
+                  labelText: 'Neurochip runtime URL',
                   helperText: 'Example: http://akida-linux:8002',
                 ),
               ),
@@ -647,7 +661,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                             _remoteHostNameController.text.trim().isEmpty
                                 ? _remoteHostUrlController.text.trim()
                                 : _remoteHostNameController.text.trim(),
-                        baseUrl: _remoteHostUrlController.text.trim(),
+                        runtimeApiUrl: _remoteHostUrlController.text.trim(),
                       ),
               icon: const Icon(Icons.cloud_done_outlined),
               label: Text(
@@ -667,7 +681,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
         if (selectedRemoteHost != null) ...[
           const SizedBox(height: 12),
           Text(
-            'Selected runtime: ${selectedRemoteHost.displayName} • ${selectedRemoteHost.baseUrl}',
+            'Selected runtime: ${selectedRemoteHost.displayName} • ${selectedRemoteHost.runtimeApiUrl}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -767,11 +781,11 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
 
   String _deployCardDescription(AkidaDeployProvider provider) {
     switch (provider.runtimeMode) {
-      case AkidaRuntimeMode.localSimulator:
+      case DeployRuntimeMode.localSimulator:
         return 'Generate the scaffold package through the local Neurochip module, then confirm the launcher remains in local simulator mode without claiming SDK-backed execution.';
-      case AkidaRuntimeMode.localSdk:
+      case DeployRuntimeMode.localSdk:
         return 'Generate the scaffold package locally, then let the local Neurochip module verify whether the same mapped payload is deployable via the Akida SDK.';
-      case AkidaRuntimeMode.remoteSdk:
+      case DeployRuntimeMode.remoteSdk:
         final selectedRemoteHost = provider.selectedRemoteHost;
         if (selectedRemoteHost == null) {
           return 'Select a remote Neurochip runtime before sending scaffold generation and runtime verification requests to a remote SDK host.';
@@ -782,16 +796,16 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
 
   String _selectedRuntimeSummary(AkidaDeployProvider provider) {
     switch (provider.runtimeMode) {
-      case AkidaRuntimeMode.localSimulator:
+      case DeployRuntimeMode.localSimulator:
         return 'Local Neurochip module • simulator-only mode';
-      case AkidaRuntimeMode.localSdk:
+      case DeployRuntimeMode.localSdk:
         return 'Local Neurochip module • SDK runtime';
-      case AkidaRuntimeMode.remoteSdk:
+      case DeployRuntimeMode.remoteSdk:
         final selectedRemoteHost = provider.selectedRemoteHost;
         if (selectedRemoteHost == null) {
           return 'Remote SDK host not configured';
         }
-        return '${selectedRemoteHost.displayName} • ${selectedRemoteHost.baseUrl}';
+        return '${selectedRemoteHost.displayName} • ${selectedRemoteHost.runtimeApiUrl}';
     }
   }
 
@@ -1045,7 +1059,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     final checks = verification.environmentChecks;
     if (verification.sdkStatus == 'not_available' && checks != null) {
       if (!checks.hostSupported) {
-        return provider.runtimeMode == AkidaRuntimeMode.remoteSdk
+        return provider.runtimeMode == DeployRuntimeMode.remoteSdk
             ? 'Selected remote SDK host does not support Akida'
             : 'Local SDK install unsupported on this host';
       }
