@@ -109,10 +109,7 @@ class DashboardScreen extends ConsumerWidget {
 
   static bool _hasUpdateAvailable(Module module) {
     return !module.versionPinned &&
-        UpdateService.isNewerVersion(
-          module.version,
-          module.remoteVersion,
-        );
+        UpdateService.isNewerVersion(module.version, module.remoteVersion);
   }
 
   Widget _buildDeployButton({
