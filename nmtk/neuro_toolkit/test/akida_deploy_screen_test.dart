@@ -16,6 +16,10 @@ import 'package:neuro_toolkit/providers/akida_deploy_provider.dart'
 // ---------------------------------------------------------------------------
 
 class _NopAkidaDeployService extends AkidaDeployService {
+  _NopAkidaDeployService({this.runtimeStatus});
+
+  final AkidaSdkVerification? runtimeStatus;
+
   @override
   Future<AkidaNetworkResponse> checkExportability({
     required String spec,
@@ -45,6 +49,14 @@ class _NopAkidaDeployService extends AkidaDeployService {
       const AkidaDeployJob(status: AkidaDeployJobStatus.notInitialised);
 
   @override
+  Future<AkidaSdkVerification> getRuntimeStatus() async {
+    if (runtimeStatus == null) {
+      throw const AkidaDeployException(error: 'runtime_status_unavailable');
+    }
+    return runtimeStatus!;
+  }
+
+  @override
   Future<String> runNeurobenchJob({
     required String benchmarkId,
     required String networkPath,
@@ -59,6 +71,33 @@ class _NopAkidaDeployService extends AkidaDeployService {
 
   @override
   void dispose() {}
+}
+
+class _RemoteHostAkidaDeployService extends _NopAkidaDeployService {
+  @override
+  Future<AkidaSdkVerification> verifySdk({
+    Map<String, dynamic>? mappedNetwork,
+    int bitWidth = 4,
+    String? neurochipBaseUrl,
+  }) async {
+    return const AkidaSdkVerification(
+      sdkAvailable: false,
+      sdkStatus: 'not_available',
+      sdkIssues: ['unsupported_python', 'sdk_not_available'],
+      state: 'constructed',
+      runtimeTarget: 'unknown',
+      sdkIssueDetail:
+          'Akida SDK installation requires Python 3.10 to 3.12. This Neurochip backend is running Python 3.9.18; use a Linux or Windows Neurochip host running Python 3.10-3.12 for SDK verification.',
+      environmentChecks: AkidaEnvironmentChecks(
+        hostSupported: true,
+        pythonSupported: false,
+        tensorflowAvailable: true,
+        cnn2snnAvailable: true,
+        akidaModelsAvailable: true,
+        recommendedRuntime: 'remote_sdk',
+      ),
+    );
+  }
 }
 
 class _FakeControlApiService extends ControlApiService {
@@ -337,5 +376,164 @@ void main() {
         findsOneWidget,
       );
     });
+    testWidgets('shows connected runtime hardware diagnostics', (tester) async {
+      final provider = deploy_provider.AkidaDeployProvider(
+        service: _NopAkidaDeployService(
+          runtimeStatus: const AkidaSdkVerification(
+            sdkAvailable: true,
+            sdkStatus: 'unknown',
+            sdkIssues: [],
+            state: 'not_initialised',
+            runtimeTarget: 'hardware',
+            deviceInfo: 'AKD2000 PCIe',
+          ),
+        ),
+        controlApiService: _FakeControlApiService(module: neurochipModule),
+      );
+      await provider.checkExportability(
+        spec: 'The sensory neuron MUST fire.',
+        weightBitWidth: 4,
+      );
+
+      await tester.pumpWidget(_buildTestApp(provider));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Connected Neurochip runtime reports attached Akida hardware.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Runtime target: hardware'), findsOneWidget);
+      expect(find.text('Device: AKD2000 PCIe'), findsOneWidget);
+    });
+
+    testWidgets('shows connected runtime simulator fallback diagnostics', (
+      tester,
+    ) async {
+      final provider = deploy_provider.AkidaDeployProvider(
+        service: _NopAkidaDeployService(
+          runtimeStatus: const AkidaSdkVerification(
+            sdkAvailable: true,
+            sdkStatus: 'unknown',
+            sdkIssues: [],
+            state: 'not_initialised',
+            runtimeTarget: 'akd1000_simulator',
+            deviceInfo: 'AKD1000',
+          ),
+        ),
+        controlApiService: _FakeControlApiService(module: neurochipModule),
+      );
+      await provider.checkExportability(
+        spec: 'The sensory neuron MUST fire.',
+        weightBitWidth: 4,
+      );
+
+      await tester.pumpWidget(_buildTestApp(provider));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('AKD1000 simulator; no physical Akida device'),
+        findsOneWidget,
+      );
+      expect(find.text('Runtime target: AKD1000 simulator'), findsOneWidget);
+      expect(find.text('Device: AKD1000'), findsOneWidget);
+    });
+
+    testWidgets('shows actionable runtime issue codes from connected runtime', (
+      tester,
+    ) async {
+      final provider = deploy_provider.AkidaDeployProvider(
+        service: _NopAkidaDeployService(
+          runtimeStatus: const AkidaSdkVerification(
+            sdkAvailable: false,
+            sdkStatus: 'not_available',
+            sdkIssues: ['unsupported_python', 'sdk_not_available'],
+            state: 'not_initialised',
+            runtimeTarget: 'software_fallback',
+            deviceInfo: 'AkidaSimulator',
+            sdkIssueDetail:
+                'Akida SDK installation requires Python 3.10 to 3.12.',
+            environmentChecks: AkidaEnvironmentChecks(
+              hostSupported: true,
+              pythonSupported: false,
+              tensorflowAvailable: true,
+              cnn2snnAvailable: true,
+              akidaModelsAvailable: true,
+              recommendedRuntime: 'remote_sdk',
+            ),
+          ),
+        ),
+        controlApiService: _FakeControlApiService(module: neurochipModule),
+      );
+      await provider.checkExportability(
+        spec: 'The sensory neuron MUST fire.',
+        weightBitWidth: 4,
+      );
+
+      await tester.pumpWidget(_buildTestApp(provider));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining(
+          'software fallback only; real SDK mapping is not available',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Runtime issues: unsupported_python, sdk_not_available'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Akida SDK installation requires Python 3.10 to 3.12.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+      'steers unsupported local Python toward a remote Neurochip host',
+      (tester) async {
+        final provider = deploy_provider.AkidaDeployProvider(
+          service: _RemoteHostAkidaDeployService(),
+          controlApiService: _FakeControlApiService(module: neurochipModule),
+          platformOverride: TargetPlatform.windows,
+        );
+        await provider.refreshRuntimeSetup();
+        await provider.checkExportability(
+          spec: 'The sensory neuron MUST fire.',
+          weightBitWidth: 4,
+        );
+        await provider.startDeploy(
+          mappedNetwork: const {
+            'network_summary': {'n_populations': 2},
+            'populations': [],
+            'connections': [],
+          },
+          bitWidth: 4,
+          outputDir: '/tmp',
+        );
+
+        await tester.pumpWidget(
+          _buildTestApp(provider, platform: TargetPlatform.windows),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.textContaining(
+            'does not satisfy the local Akida SDK requirements',
+          ),
+          findsWidgets,
+        );
+        expect(find.text('Prepare Akida Runtime'), findsNothing);
+        expect(
+          find.text('SDK verification blocked: unsupported Python runtime'),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('Linux or Windows Neurochip host'),
+          findsWidgets,
+        );
+      },
+    );
   });
 }

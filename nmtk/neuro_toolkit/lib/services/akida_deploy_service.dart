@@ -19,13 +19,13 @@ class AkidaDeployService {
     String? neurochipBaseUrl,
     String? neurobenchBaseUrl,
     String? controlApiBaseUrl,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000',
-        _neurochipBaseUrl = resolveNeurochipBaseUrl(
-          explicitBaseUrl: neurochipBaseUrl,
-          controlApiBaseUrl: controlApiBaseUrl,
-        ),
-        _neurobenchBaseUrl = neurobenchBaseUrl ?? 'http://localhost:8003';
+  }) : _httpClient = httpClient ?? http.Client(),
+       _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000',
+       _neurochipBaseUrl = resolveNeurochipBaseUrl(
+         explicitBaseUrl: neurochipBaseUrl,
+         controlApiBaseUrl: controlApiBaseUrl,
+       ),
+       _neurobenchBaseUrl = neurobenchBaseUrl ?? 'http://localhost:8003';
 
   final http.Client _httpClient;
   final String _neurocnlBaseUrl;
@@ -59,10 +59,12 @@ class AkidaDeployService {
     );
     if (normalizedControl != null) {
       final controlUri = Uri.parse(normalizedControl);
-      final scheme =
-          controlUri.scheme.trim().isEmpty ? 'http' : controlUri.scheme;
-      final host =
-          controlUri.host.trim().isEmpty ? 'localhost' : controlUri.host;
+      final scheme = controlUri.scheme.trim().isEmpty
+          ? 'http'
+          : controlUri.scheme;
+      final host = controlUri.host.trim().isEmpty
+          ? 'localhost'
+          : controlUri.host;
       return Uri(scheme: scheme, host: host, port: 8002).toString();
     }
 
@@ -193,6 +195,28 @@ class AkidaDeployService {
     );
   }
 
+  /// Fetch runtime diagnostics for the current Neurochip Akida host.
+  ///
+  /// Calls GET /api/neurochip/akida/status and returns the full runtime
+  /// payload so launcher surfaces can distinguish hardware, simulator, and
+  /// broken-runtime states before deployment.
+  Future<AkidaSdkVerification> getRuntimeStatus() async {
+    final uri = Uri.parse('$_neurochipBaseUrl/api/neurochip/akida/status');
+    final response = await _httpClient.get(uri);
+
+    if (response.statusCode == 200) {
+      return AkidaSdkVerification.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+
+    final detail = _parseErrorDetail(response.body);
+    throw AkidaDeployException(
+      error: detail['error'] as String? ?? 'runtime_status_failed',
+      messages: _extractMessages(detail),
+    );
+  }
+
   /// Verify that the mapped network is deployable in the current Neurochip runtime.
   ///
   /// Calls POST /api/neurochip/akida/verify. When [mappedNetwork] is supplied
@@ -212,8 +236,9 @@ class AkidaDeployService {
     try {
       response = await _httpClient.post(
         uri,
-        headers:
-            mappedNetwork == null ? null : {'Content-Type': 'application/json'},
+        headers: mappedNetwork == null
+            ? null
+            : {'Content-Type': 'application/json'},
         body: mappedNetwork == null ? null : jsonEncode(mappedNetwork),
       );
     } on http.ClientException catch (e) {

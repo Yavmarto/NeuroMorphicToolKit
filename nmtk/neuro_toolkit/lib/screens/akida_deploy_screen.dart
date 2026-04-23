@@ -332,7 +332,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
               controller: _specController,
               maxLines: 8,
               decoration: const InputDecoration(
-                hintText: 'Enter your NeuroCNL specification…\n'
+                hintText:
+                    'Enter your NeuroCNL specification…\n'
                     'Example: The sensory neuron MUST fire ONLY IF '
                     'membrane potential exceeds 1.0.',
                 border: OutlineInputBorder(),
@@ -389,10 +390,10 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   onPressed: isChecking || _specController.text.trim().isEmpty
                       ? null
                       : () => provider.checkExportability(
-                            spec: _specController.text,
-                            weightBitWidth: _weightBitWidth,
-                            akidaVersion: _akidaVersion,
-                          ),
+                          spec: _specController.text,
+                          weightBitWidth: _weightBitWidth,
+                          akidaVersion: _akidaVersion,
+                        ),
                   icon: isChecking
                       ? const SizedBox(
                           width: 16,
@@ -431,6 +432,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     AkidaDeployProvider provider,
   ) {
     final module = provider.neurochipModule;
+    final runtimeStatus = provider.runtimeStatus;
     final runtimeConfig = module?.akidaRuntime;
     final runtimeState = module?.akidaRuntimeState;
     final checks = provider.sdkVerification?.environmentChecks;
@@ -439,9 +441,13 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
         runtimeConfig?.supportedPlatforms.contains(platformKey) ?? false;
     final simulatorOnly =
         !hostSupported && runtimeConfig?.localModeFallback == 'simulator_only';
-    final requiresRemoteRuntime = checks?.recommendedRuntime == 'remote_sdk' ||
+    final connectedChecks = runtimeStatus?.environmentChecks;
+    final requiresRemoteRuntime =
+        checks?.recommendedRuntime == 'remote_sdk' ||
+        connectedChecks?.recommendedRuntime == 'remote_sdk' ||
         runtimeState?.status == 'unsupported_python';
-    final showPrepareButton = provider.isLocalSdkMode &&
+    final showPrepareButton =
+        provider.isLocalSdkMode &&
         runtimeConfig != null &&
         hostSupported &&
         !provider.isPreparingRuntime &&
@@ -480,26 +486,32 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
             const SizedBox(height: 16),
             if (provider.isLoadingRuntimeSetup)
               const LinearProgressIndicator()
-            else if (provider.runtimeMode == DeployRuntimeMode.localSimulator)
-              Text(
-                'Use the local Neurochip module in simulator-only mode. Scaffold generation stays local, and runtime checks remain truthful about the absence of a local BrainChip SDK.',
-              )
-            else if (requiresRemoteRuntime)
-              const Text(
-                'This Neurochip environment does not satisfy the local Akida SDK requirements. Keep scaffold export local, then verify through a Linux or Windows Neurochip host running Python 3.10-3.12.',
-              )
-            else if (provider.runtimeMode == DeployRuntimeMode.localSdk)
-              _buildLocalRuntimeSection(
-                context,
-                provider,
-                runtimeConfig: runtimeConfig,
-                runtimeState: runtimeState,
-                platformKey: platformKey,
-                simulatorOnly: simulatorOnly,
-                showPrepareButton: showPrepareButton,
-              )
-            else
-              _buildRemoteRuntimeSection(context, provider),
+            else ...[
+              if (runtimeStatus != null) ...[
+                _buildRuntimeDiagnostics(context, runtimeStatus),
+                const SizedBox(height: 12),
+              ],
+              if (provider.runtimeMode == DeployRuntimeMode.localSimulator)
+                Text(
+                  'Use the local Neurochip module in simulator-only mode. Scaffold generation stays local, and runtime checks remain truthful about the absence of a local BrainChip SDK.',
+                )
+              else if (requiresRemoteRuntime)
+                const Text(
+                  'This Neurochip environment does not satisfy the local Akida SDK requirements. Keep scaffold export local, then verify through a Linux or Windows Neurochip host running Python 3.10-3.12.',
+                )
+              else if (provider.runtimeMode == DeployRuntimeMode.localSdk)
+                _buildLocalRuntimeSection(
+                  context,
+                  provider,
+                  runtimeConfig: runtimeConfig,
+                  runtimeState: runtimeState,
+                  platformKey: platformKey,
+                  simulatorOnly: simulatorOnly,
+                  showPrepareButton: showPrepareButton,
+                )
+              else
+                _buildRemoteRuntimeSection(context, provider),
+            ],
             if (provider.runtimeSetupError != null) ...[
               const SizedBox(height: 12),
               Text(
@@ -510,6 +522,44 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRuntimeDiagnostics(
+    BuildContext context,
+    AkidaSdkVerification runtimeStatus,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(_runtimeStatusHeadline(runtimeStatus)),
+        const SizedBox(height: 8),
+        Text(
+          'Runtime target: ${_runtimeTargetLabel(runtimeStatus.runtimeTarget)}',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (runtimeStatus.deviceInfo != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Device: ${runtimeStatus.deviceInfo}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+        if (runtimeStatus.sdkIssues.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Runtime issues: ${runtimeStatus.sdkIssues.join(", ")}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+        if (runtimeStatus.sdkIssueDetail != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            runtimeStatus.sdkIssueDetail!,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ],
     );
   }
 
@@ -656,13 +706,12 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
               onPressed: provider.isLoadingRuntimeSetup
                   ? null
                   : () => provider.saveRemoteHost(
-                        hostId: selectedRemoteHost?.id,
-                        displayName:
-                            _remoteHostNameController.text.trim().isEmpty
-                                ? _remoteHostUrlController.text.trim()
-                                : _remoteHostNameController.text.trim(),
-                        runtimeApiUrl: _remoteHostUrlController.text.trim(),
-                      ),
+                      hostId: selectedRemoteHost?.id,
+                      displayName: _remoteHostNameController.text.trim().isEmpty
+                          ? _remoteHostUrlController.text.trim()
+                          : _remoteHostNameController.text.trim(),
+                      runtimeApiUrl: _remoteHostUrlController.text.trim(),
+                    ),
               icon: const Icon(Icons.cloud_done_outlined),
               label: Text(
                 selectedRemoteHost == null ? 'Save Host' : 'Update Host',
@@ -671,8 +720,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
             OutlinedButton.icon(
               onPressed:
                   selectedRemoteHost == null || provider.isLoadingRuntimeSetup
-                      ? null
-                      : () => provider.deleteSelectedRemoteHost(),
+                  ? null
+                  : () => provider.deleteSelectedRemoteHost(),
               icon: const Icon(Icons.delete_outline),
               label: const Text('Remove Host'),
             ),
@@ -693,9 +742,11 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     BuildContext context,
     AkidaDeployProvider provider,
   ) {
-    final isDeploying = provider.currentStep == AkidaDeployStep.deploying ||
+    final isDeploying =
+        provider.currentStep == AkidaDeployStep.deploying ||
         provider.currentStep == AkidaDeployStep.polling;
-    final canStartDeploy = provider.exportResult?.mappedNetwork != null &&
+    final canStartDeploy =
+        provider.exportResult?.mappedNetwork != null &&
         provider.canDeployToSelectedRuntime;
 
     return Card(
@@ -819,11 +870,13 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     final sdkVerification = provider.sdkVerification;
     final savedPath = provider.savedPackagePath;
     final isPolling = provider.currentStep == AkidaDeployStep.polling;
-    final isDone = provider.currentStep == AkidaDeployStep.done ||
+    final isDone =
+        provider.currentStep == AkidaDeployStep.done ||
         provider.currentStep == AkidaDeployStep.verifying;
 
-    final progressValue =
-        isPolling ? null : (savedPath != null || isDone ? 1.0 : null);
+    final progressValue = isPolling
+        ? null
+        : (savedPath != null || isDone ? 1.0 : null);
 
     return Card(
       child: Padding(
@@ -904,14 +957,30 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
+              if (sdkVerification.sdkIssues.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Runtime issues: ${sdkVerification.sdkIssues.join(", ")}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               if (sdkVerification.sdkIssueDetail != null) ...[
                 const SizedBox(height: 4),
                 Text(
                   sdkVerification.sdkIssueDetail!,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+              ],
+              if (sdkVerification.environmentChecks?.recommendedRuntime ==
+                  'remote_sdk') ...[
+                const SizedBox(height: 4),
+                Text(
+                  'This Neurochip environment does not satisfy the local Akida SDK requirements. Re-run SDK verification through a Linux or Windows Neurochip host with Python 3.10-3.12.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ] else if (sdkVerification
-                      .environmentChecks?.recommendedRuntime ==
+                      .environmentChecks
+                      ?.recommendedRuntime ==
                   'simulator_only') ...[
                 const SizedBox(height: 4),
                 Text(
@@ -1088,6 +1157,29 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     }
   }
 
+  String _runtimeStatusHeadline(AkidaSdkVerification verification) {
+    switch (verification.runtimeTarget) {
+      case 'hardware':
+        return 'Connected Neurochip runtime reports attached Akida hardware.';
+      case 'akd1000_simulator':
+        return 'Connected Neurochip runtime is using the AKD1000 simulator; no physical Akida device is attached.';
+      case 'software_fallback':
+        if (verification.sdkStatus == 'not_available') {
+          return 'Connected Neurochip runtime is in software fallback only; real SDK mapping is not available on this host.';
+        }
+        return 'Connected Neurochip runtime is using software fallback only.';
+      default:
+        if (verification.sdkStatus == 'mapping_failed') {
+          return 'Connected Neurochip runtime reached the SDK, but model mapping failed.';
+        }
+        if (verification.sdkIssues.isNotEmpty ||
+            verification.sdkIssueDetail != null) {
+          return 'Connected Neurochip runtime is reachable, but Akida runtime diagnostics report configuration problems.';
+        }
+        return 'Connected Neurochip runtime diagnostics are available, but no Akida target has been verified yet.';
+    }
+  }
+
   String _runtimeTargetLabel(String runtimeTarget) {
     switch (runtimeTarget) {
       case 'hardware':
@@ -1095,7 +1187,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
       case 'akd1000_simulator':
         return 'AKD1000 simulator';
       case 'software_fallback':
-        return 'local software fallback';
+        return 'software fallback';
       default:
         return 'unknown';
     }
@@ -1129,8 +1221,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
       color: isCompleted
           ? Colors.green.withValues(alpha: 0.08)
           : isFailed
-              ? Colors.red.withValues(alpha: 0.08)
-              : null,
+          ? Colors.red.withValues(alpha: 0.08)
+          : null,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -1142,13 +1234,13 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   isCompleted
                       ? Icons.verified
                       : isFailed
-                          ? Icons.error
-                          : Icons.hourglass_top,
+                      ? Icons.error
+                      : Icons.hourglass_top,
                   color: isCompleted
                       ? Colors.green
                       : isFailed
-                          ? Colors.red
-                          : Colors.blue,
+                      ? Colors.red
+                      : Colors.blue,
                   size: 28,
                 ),
                 const SizedBox(width: 8),
