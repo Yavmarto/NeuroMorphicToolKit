@@ -5,6 +5,7 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -107,8 +108,8 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   static bool _hasUpdateAvailable(Module module) {
-    return module.remoteVersion != '0.0.0' &&
-        module.remoteVersion != module.version;
+    return !module.versionPinned &&
+        UpdateService.isNewerVersion(module.version, module.remoteVersion);
   }
 
   Widget _buildDeployButton({
@@ -129,6 +130,9 @@ class DashboardScreen extends ConsumerWidget {
     ModuleProvider provider,
   ) {
     final update = provider.pendingLauncherUpdate!;
+    final releaseNotes = update.releaseNotes.trim().isEmpty
+        ? 'No published release notes were found for this version.'
+        : update.releaseNotes;
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -146,7 +150,7 @@ class DashboardScreen extends ConsumerWidget {
               'Release Notes:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            Text(update.releaseNotes),
+            Text(releaseNotes),
           ],
         ),
         actions: [

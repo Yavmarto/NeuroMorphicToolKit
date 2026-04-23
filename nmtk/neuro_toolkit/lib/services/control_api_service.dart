@@ -131,8 +131,14 @@ class ControlApiService {
     }
   }
 
-  Future<List<Module>> fetchModules() async {
-    final response = await _client.get(_uri('/api/launcher/modules'));
+  Future<List<Module>> fetchModules({bool refreshUpdates = false}) async {
+    final response = await _client.get(
+      _uri('/api/launcher/modules').replace(
+        queryParameters: refreshUpdates
+            ? const <String, String>{'refreshUpdates': 'true'}
+            : null,
+      ),
+    );
     await _ensureSuccess(response);
     final decoded = await _readJsonList(response);
     return decoded

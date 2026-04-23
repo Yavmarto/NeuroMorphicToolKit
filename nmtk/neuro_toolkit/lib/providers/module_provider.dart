@@ -49,8 +49,9 @@ class ModuleProvider with ChangeNotifier {
     try {
       if (_legacyProcessManager != null) {
         _legacyProcessManager!.statusUpdates.listen((updatedModule) {
-          final index =
-              _modules.indexWhere((module) => module.id == updatedModule.id);
+          final index = _modules.indexWhere(
+            (module) => module.id == updatedModule.id,
+          );
           if (index != -1) {
             _modules[index] = updatedModule;
             notifyListeners();
@@ -106,8 +107,9 @@ class ModuleProvider with ChangeNotifier {
   List<String> get activeModuleIds => _activeModuleIds;
 
   List<Module> get activeModules => _activeModuleIds
-      .map((String id) =>
-          _modules.firstWhere((Module module) => module.id == id))
+      .map(
+        (String id) => _modules.firstWhere((Module module) => module.id == id),
+      )
       .toList();
 
   bool isMuJoCoAvailable() => _mujocoAvailable;
@@ -280,6 +282,13 @@ class ModuleProvider with ChangeNotifier {
     if (index == -1) {
       return;
     }
+    if (_modules[index].versionPinned ||
+        !UpdateService.isNewerVersion(
+          _modules[index].version,
+          _modules[index].remoteVersion,
+        )) {
+      return;
+    }
 
     _modules[index] = _modules[index].copyWith(
       status: ModuleStatus.updating,
@@ -387,7 +396,9 @@ class ModuleProvider with ChangeNotifier {
     required bool includeLauncherUpdate,
   }) async {
     final settings = await _controlApiService.fetchSettings();
-    final fetchedModules = await _controlApiService.fetchModules();
+    final fetchedModules = await _controlApiService.fetchModules(
+      refreshUpdates: includeLauncherUpdate,
+    );
 
     _pythonAvailable = settings.pythonAvailable;
     _mujocoAvailable = settings.mujocoAvailable;

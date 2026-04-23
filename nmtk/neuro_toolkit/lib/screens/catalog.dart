@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
 
 class CatalogScreen extends ConsumerWidget {
   const CatalogScreen({super.key});
@@ -154,8 +155,11 @@ class CatalogScreen extends ConsumerWidget {
                             spacing: 10,
                             runSpacing: 10,
                             children: [
-                              if (module.remoteVersion != '0.0.0' &&
-                                  module.remoteVersion != module.version)
+                              if (!module.versionPinned &&
+                                  UpdateService.isNewerVersion(
+                                    module.version,
+                                    module.remoteVersion,
+                                  ))
                                 NmtkPrimaryButton(
                                   onPressed: () {
                                     unawaited(provider.updateModule(module.id));

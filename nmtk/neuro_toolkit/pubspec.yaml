@@ -37,4 +37,3 @@ flutter:
 
   assets:
     - assets/modules.json
-    - assets/remote_modules.json
