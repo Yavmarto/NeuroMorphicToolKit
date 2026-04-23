@@ -1961,7 +1961,9 @@ class LauncherControlState:
                     "message": (
                         "Akida SDK installation requires Python "
                         f"{runtime['pythonRange']}; current module env is "
-                        f"{python_version or 'unknown'}."
+                        f"{python_version or 'unknown'}. Keep scaffold export "
+                        "local, then verify through a Linux or Windows "
+                        "Neurochip host running Python 3.10-3.12."
                     ),
                     "preparedAt": None,
                 },
