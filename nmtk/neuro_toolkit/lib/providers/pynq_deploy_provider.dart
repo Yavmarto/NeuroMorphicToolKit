@@ -312,6 +312,10 @@ class PynqDeployProvider with ChangeNotifier {
           'Runtime provisioning finished. Runtime is installed; install overlay assets next.',
         PynqBoardState.degradedOptionalCapability =>
           'Runtime provisioning finished in degraded mode. Review the readiness message below for the next step.',
+        PynqBoardState.preflightFailed => updated
+                .lastPreflightMessage.isNotEmpty
+            ? updated.lastPreflightMessage
+            : 'Runtime provisioning finished, but the readiness probe still failed. Review the board message below before retrying.',
         _ =>
           'Runtime provisioning finished. Check the board state and readiness message below.',
       };
@@ -350,6 +354,10 @@ class PynqDeployProvider with ChangeNotifier {
               : 'Overlay assets were uploaded, but runtime recovery still needs manual action before readiness can pass.',
         PynqBoardState.degradedOptionalCapability =>
           'Overlay installation finished in degraded mode. Review the readiness message below before retrying.',
+        PynqBoardState.preflightFailed => updated
+                .lastPreflightMessage.isNotEmpty
+            ? updated.lastPreflightMessage
+            : 'Overlay assets were uploaded, but the readiness probe still failed. Review the board message below before retrying.',
         _ => 'Overlay installation finished. Run readiness again if needed.',
       };
       _finishBoardOperation(completionMessage);
@@ -377,9 +385,15 @@ class PynqDeployProvider with ChangeNotifier {
       final updated = await _service.refreshBoardPreflight(boardId: board.id);
       _upsertBoard(updated);
       _errorMessage = null;
-      _finishBoardOperation(
-        'Readiness check completed. Review the board state and preflight message below.',
-      );
+      final completionMessage = switch (updated.state) {
+        PynqBoardState.preflightFailed => updated
+                .lastPreflightMessage.isNotEmpty
+            ? updated.lastPreflightMessage
+            : 'Readiness check completed, but the runtime probe still failed.',
+        _ =>
+          'Readiness check completed. Review the board state and preflight message below.',
+      };
+      _finishBoardOperation(completionMessage);
     } on PynqDeployException catch (e) {
       _errorMessage = e.toString();
       _failBoardOperation(

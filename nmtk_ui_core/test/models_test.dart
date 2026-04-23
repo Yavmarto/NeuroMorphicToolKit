@@ -103,7 +103,7 @@ void main() {
             'control_reg_offset': 0,
             'status_reg_offset': 4,
             'neuron_base_offset': 256,
-            'weight_base_offset': 65536,
+            'weight_base_offset': 4096,
             'dma_channel': 'axi_dma_0',
             'input_buffer_addr': 0,
             'output_buffer_addr': 0,
@@ -159,7 +159,7 @@ void main() {
           'weights': [1, 2, 3],
           'config': {'bit_width': 4},
           'bitstream_path': 'snn_overlay.bit',
-          'register_map': {'weight_base_offset': 65536},
+          'register_map': {'weight_base_offset': 4096},
         },
       };
       final response = PynqNetworkResponse.fromJson(json);
@@ -167,7 +167,7 @@ void main() {
       expect(response.deployPayload, isNotNull);
       expect(response.deployPayload!.weights, [1.0, 2.0, 3.0]);
       expect(response.deployPayload!.config.bitWidth, 4);
-      expect(response.deployPayload!.registerMap.weightBaseOffset, 65536);
+      expect(response.deployPayload!.registerMap.weightBaseOffset, 4096);
     });
   });
 
@@ -275,6 +275,31 @@ void main() {
       expect(updated.runtimeApiUrlOverride, isEmpty);
       expect(payload['runtimeApiUrlOverride'], 'http://192.168.1.60:8002');
       expect(payload.containsKey('runtimeApiUrl'), isFalse);
+    });
+
+    test('fromJson parses preflight_failed board state', () {
+      final json = {
+        'id': 'board-1',
+        'displayName': 'Lab PYNQ',
+        'host': '192.168.1.50',
+        'sshPort': 22,
+        'username': 'xilinx',
+        'authMode': 'password',
+        'credentialRef': '',
+        'runtimeApiUrl': 'http://192.168.1.50:8002',
+        'overlayVersion': '',
+        'state': 'preflight_failed',
+        'lastPreflightStatus': 'failed',
+        'lastPreflightMessage': 'Runtime probe failed.',
+        'lastRuntimeMode': 'hardware',
+        'hasPassword': true,
+        'sshKeyPath': '',
+      };
+      final board = PynqPairedBoard.fromJson(json);
+
+      expect(board.state, PynqBoardState.preflightFailed);
+      expect(board.state.apiValue, 'preflight_failed');
+      expect(board.state.label, 'Preflight Failed');
     });
   });
 

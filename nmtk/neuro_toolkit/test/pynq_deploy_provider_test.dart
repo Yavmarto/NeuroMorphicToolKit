@@ -125,7 +125,7 @@ class MockPynqDeployService extends PynqDeployService {
               controlRegOffset: 0x00,
               statusRegOffset: 0x04,
               neuronBaseOffset: 0x100,
-              weightBaseOffset: 0x10000,
+              weightBaseOffset: 0x1000,
               dmaChannel: 'axi_dma_0',
               inputBufferAddr: 0,
               outputBufferAddr: 0,
@@ -482,6 +482,44 @@ void main() {
         provider.selectedBoard?.state,
         PynqBoardState.degradedOptionalCapability,
       );
+    });
+
+    test(
+        'installOverlayForSelectedBoard keeps upload success distinct from preflight failure',
+        () async {
+      final service = MockPynqDeployService(
+        installOverlayResult: const PynqOverlayInstallResult(
+          board: PynqPairedBoard(
+            id: 'board-1',
+            displayName: 'Desk PYNQ',
+            host: '192.168.1.50',
+            sshPort: 22,
+            username: 'xilinx',
+            authMode: PynqBoardAuthMode.password,
+            credentialRef: '',
+            runtimeApiUrl: 'http://192.168.1.50:8002',
+            overlayVersion: '',
+            state: PynqBoardState.preflightFailed,
+            lastPreflightStatus: 'failed',
+            lastPreflightMessage: 'Runtime probe failed: No Devices Found.',
+            lastRuntimeMode: 'hardware',
+            hasPassword: true,
+            sshKeyPath: '',
+          ),
+        ),
+      );
+      final provider = PynqDeployProvider(service: service);
+      await Future<void>.delayed(Duration.zero);
+
+      await provider.installOverlayForSelectedBoard();
+
+      expect(provider.boardOperationInProgress, isFalse);
+      expect(
+        provider.boardFeedbackMessage,
+        contains('Runtime probe failed: No Devices Found.'),
+      );
+      expect(provider.errorMessage, isNull);
+      expect(provider.selectedBoard?.state, PynqBoardState.preflightFailed);
     });
 
     test('restartSelectedBoardRuntime surfaces manual recovery warning',

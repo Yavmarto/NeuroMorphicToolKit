@@ -178,7 +178,7 @@ class PynqRegisterMap {
       controlRegOffset: json['control_reg_offset'] as int? ?? 0x00,
       statusRegOffset: json['status_reg_offset'] as int? ?? 0x04,
       neuronBaseOffset: json['neuron_base_offset'] as int? ?? 0x100,
-      weightBaseOffset: json['weight_base_offset'] as int? ?? 0x10000,
+      weightBaseOffset: json['weight_base_offset'] as int? ?? 0x1000,
       dmaChannel: json['dma_channel'] as String? ?? 'axi_dma_0',
       inputBufferAddr: json['input_buffer_addr'] as int? ?? 0,
       outputBufferAddr: json['output_buffer_addr'] as int? ?? 0,
@@ -311,6 +311,7 @@ enum PynqBoardState {
   overlayMissing,
   ready,
   degradedOptionalCapability,
+  preflightFailed,
   error;
 
   static PynqBoardState fromString(String? value) {
@@ -329,6 +330,8 @@ enum PynqBoardState {
         return PynqBoardState.ready;
       case 'degraded_optional_capability':
         return PynqBoardState.degradedOptionalCapability;
+      case 'preflight_failed':
+        return PynqBoardState.preflightFailed;
       case 'error':
         return PynqBoardState.error;
       case 'unpaired':
@@ -355,6 +358,8 @@ enum PynqBoardState {
         return 'ready';
       case PynqBoardState.degradedOptionalCapability:
         return 'degraded_optional_capability';
+      case PynqBoardState.preflightFailed:
+        return 'preflight_failed';
       case PynqBoardState.error:
         return 'error';
     }
@@ -378,6 +383,8 @@ enum PynqBoardState {
         return 'Ready';
       case PynqBoardState.degradedOptionalCapability:
         return 'Degraded Optional Capability';
+      case PynqBoardState.preflightFailed:
+        return 'Preflight Failed';
       case PynqBoardState.error:
         return 'Error';
     }

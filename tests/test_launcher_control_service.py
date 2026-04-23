@@ -44,7 +44,7 @@ def _stage_overlay_package(staging_dir: Path) -> None:
                     "timestep_count_offset": 20,
                     "threshold_base_offset": 256,
                     "neuron_base_offset": 256,
-                    "weight_base_offset": 65536,
+                    "weight_base_offset": 4096,
                     "dma_channel": "axi_dma_0",
                     "input_buffer_addr": 0,
                     "output_buffer_addr": 0,
@@ -53,7 +53,7 @@ def _stage_overlay_package(staging_dir: Path) -> None:
                 "weight_layout": {
                     "format": "int8_dense_row_major",
                     "storage": "mmio",
-                    "base_offset": 65536,
+                    "base_offset": 4096,
                     "stride_bytes": 1,
                     "max_entries": 65536,
                 },
@@ -1221,7 +1221,10 @@ class LauncherControlServiceTest(unittest.TestCase):
             result = self.state.restart_pynq_runtime(board["id"])
 
         wait_for_health.assert_called_once()
-        fetch_preflight.assert_called_once_with(board["id"])
+        fetch_preflight.assert_called_once_with(
+            board["id"],
+            request_timeout=launcher_server.DEFAULT_PYNQ_PREFLIGHT_TIMEOUT_SECONDS,
+        )
         self.assertEqual(events, ["ssh", "wait", "preflight"])
         self.assertEqual(result["board"]["state"], "ready")
 
@@ -1601,6 +1604,42 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(result["board"]["state"], "overlay_missing")
         self.assertNotIn("overlayRestartWarning", result)
 
+    def test_install_pynq_overlay_assets_preserves_explicit_preflight_failure(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+        staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        _stage_overlay_package(staging_dir)
+
+        with (
+            mock.patch.object(self.state, "_run_ssh"),
+            mock.patch.object(self.state, "_run_scp"),
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "systemd"},
+            ),
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                return_value={
+                    "board": {
+                        "state": "preflight_failed",
+                        "lastPreflightStatus": "failed",
+                        "lastPreflightMessage": "Runtime probe failed: No Devices Found.",
+                    }
+                },
+            ),
+        ):
+            result = self.state.install_pynq_overlay_assets(board["id"])
+
+        self.assertEqual(result["board"]["state"], "preflight_failed")
+        self.assertNotIn("overlayRestartWarning", result)
+
     def test_resolve_pynq_agent_health_timeout_respects_env_and_bounds(self) -> None:
         cases = {
             "": launcher_server.DEFAULT_PYNQ_AGENT_HEALTH_TIMEOUT_SECONDS,
@@ -1618,6 +1657,105 @@ class LauncherControlServiceTest(unittest.TestCase):
                 self.assertEqual(
                     launcher_server._resolve_pynq_agent_health_timeout(), expected, raw
                 )
+
+    def test_resolve_pynq_preflight_timeout_respects_env_and_bounds(self) -> None:
+        cases = {
+            "": launcher_server.DEFAULT_PYNQ_PREFLIGHT_TIMEOUT_SECONDS,
+            "60": 60.0,
+            "1": launcher_server.PYNQ_PREFLIGHT_TIMEOUT_BOUNDS[0],
+            "9999": launcher_server.PYNQ_PREFLIGHT_TIMEOUT_BOUNDS[1],
+            "not-a-number": launcher_server.DEFAULT_PYNQ_PREFLIGHT_TIMEOUT_SECONDS,
+        }
+        for raw, expected in cases.items():
+            with mock.patch.dict(
+                os.environ,
+                {"NEUROCHIP_PYNQ_PREFLIGHT_TIMEOUT_SECONDS": raw},
+                clear=False,
+            ):
+                self.assertEqual(
+                    launcher_server._resolve_pynq_preflight_timeout(),
+                    expected,
+                    raw,
+                )
+
+    def test_provision_pynq_board_retries_preflight_timeout(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with (
+            mock.patch.object(self.state, "_build_local_pynq_bundle"),
+            mock.patch.object(self.state, "_run_ssh"),
+            mock.patch.object(self.state, "_run_scp"),
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "systemd"},
+            ),
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                side_effect=[
+                    launcher_server.RuntimeRequestError(
+                        "Runtime request timed out for GET http://192.168.1.50:8002/hardware/pynq/preflight after 45s",
+                        kind="timeout",
+                        url="http://192.168.1.50:8002/hardware/pynq/preflight",
+                    ),
+                    {"board": {"state": "ready"}},
+                ],
+            ) as fetch_preflight,
+            mock.patch("nmtk.launcher_control.server.time.sleep", return_value=None),
+        ):
+            result = self.state.provision_pynq_board(board["id"])
+
+        self.assertEqual(result["board"]["state"], "ready")
+        self.assertEqual(fetch_preflight.call_count, 2)
+
+    def test_restart_pynq_runtime_rechecks_health_when_preflight_is_unreachable(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with (
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "systemd"},
+            ),
+            mock.patch.object(self.state, "_run_ssh"),
+            mock.patch.object(
+                self.state,
+                "_wait_for_board_agent_health",
+            ) as wait_for_health,
+            mock.patch.object(
+                self.state,
+                "fetch_pynq_board_preflight",
+                side_effect=[
+                    launcher_server.RuntimeRequestError(
+                        "Runtime request failed for GET http://192.168.1.50:8002/hardware/pynq/preflight: could not be reached: connection refused",
+                        kind="unreachable",
+                        url="http://192.168.1.50:8002/hardware/pynq/preflight",
+                    ),
+                    {"board": {"state": "ready"}},
+                ],
+            ) as fetch_preflight,
+            mock.patch("nmtk.launcher_control.server.time.sleep", return_value=None),
+        ):
+            result = self.state.restart_pynq_runtime(board["id"])
+
+        self.assertEqual(result["board"]["state"], "ready")
+        self.assertEqual(wait_for_health.call_count, 2)
+        self.assertEqual(fetch_preflight.call_count, 2)
 
     def test_fetch_pynq_board_preflight_marks_overlay_missing_when_assets_are_missing(self) -> None:
         board = self.state.create_pynq_board(
@@ -1641,6 +1779,31 @@ class LauncherControlServiceTest(unittest.TestCase):
             result = self.state.fetch_pynq_board_preflight(board["id"])
 
         self.assertEqual(result["board"]["state"], "overlay_missing")
+
+    def test_fetch_pynq_board_preflight_marks_ready_asset_failures_as_preflight_failed(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_runtime_json_request",
+            return_value={
+                "preflight_status": "failed",
+                "preflight_message": "Runtime probe failed: No Devices Found.",
+                "runtime_mode": "hardware",
+                "overlay_assets": {"ready_for_hardware": True},
+            },
+        ):
+            result = self.state.fetch_pynq_board_preflight(board["id"])
+
+        self.assertEqual(result["board"]["state"], "preflight_failed")
 
     def test_doctor_report_skips_not_installed_module_preflight(self) -> None:
         module = self.state._get_module("dummy")
@@ -1862,6 +2025,34 @@ class LauncherControlServiceTest(unittest.TestCase):
             report["modules"][0]["capabilityWarnings"],
             ["Optional capability unavailable: lava.magma.core.run_conditions"],
         )
+
+    def test_doctor_report_handles_akida_hosts_without_cached_host_field(self) -> None:
+        self.state._settings["akidaHosts"] = [
+            {
+                "id": "akida-1",
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+                "state": "ready",
+                "lastPreflightStatus": launcher_server.PREFLIGHT_OK,
+            }
+        ]
+        with (
+            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(
+                self.state,
+                "_preflight_module",
+                return_value=launcher_server.PreflightResult(
+                    status=launcher_server.PREFLIGHT_OK,
+                    message="ready",
+                    environment_fingerprint="fingerprint-ok",
+                ),
+            ),
+        ):
+            report = self.state.doctor_report()
+
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(report["akidaHosts"][0]["host"], "akida-box.local")
+        self.assertEqual(report["akidaHosts"][0]["baseUrl"], "http://akida-box.local:8002")
 
     def test_render_doctor_report_uses_explicit_policy_terms(self) -> None:
         report = {

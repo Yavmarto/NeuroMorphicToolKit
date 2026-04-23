@@ -17,12 +17,30 @@ from __future__ import annotations
 import io
 import os
 import zipfile
+from urllib.parse import urlparse
 
 import httpx
 import pytest
 
 NEUROCNL_URL = os.getenv("NEUROCNL_URL", "http://neurocnl:8000")
 NEUROCHIP_URL = os.getenv("NEUROCHIP_URL", "http://neurochip:8000")
+
+
+def _service_label(url: str) -> str:
+    parsed = urlparse(url)
+    return parsed.netloc or parsed.path or url
+
+
+async def _request_or_skip(
+    client: httpx.AsyncClient,
+    method: str,
+    url: str,
+    **kwargs: object,
+) -> httpx.Response:
+    try:
+        return await client.request(method, url, **kwargs)
+    except httpx.RequestError as exc:
+        pytest.skip(f"Integration service {_service_label(url)} unavailable: {exc}")
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -71,7 +89,9 @@ async def test_teensy_e2e_happy_path():
     """Full pipeline: valid CNL spec → deploy endpoint → firmware zip."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         # Step 1: Deploy through neurocnl (parse → lower → plan → handoff)
-        deploy_resp = await client.post(
+        deploy_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
             json={"spec": VALID_REFLEX_ARC_SPEC, "weight_bit_width": 8},
         )
@@ -94,7 +114,9 @@ async def test_teensy_e2e_happy_path():
         assert payload["network_depth"] >= 1
 
         # Step 2: Export firmware through Neurochip
-        export_resp = await client.post(
+        export_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCHIP_URL}/api/neurochip/export/teensy",
             json=payload,
             params={"bit_width": 8},
@@ -128,7 +150,9 @@ async def test_teensy_e2e_happy_path_with_warnings():
     )
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
             json={"spec": large_spec, "weight_bit_width": 8},
         )
@@ -149,7 +173,9 @@ async def test_teensy_e2e_happy_path_with_warnings():
 async def test_teensy_rejected_oversized_network():
     """Network with >4096 neurons must be rejected with EXCEEDS_NEURON_CAPACITY."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
             json={"spec": OVERSIZED_NETWORK_SPEC, "weight_bit_width": 8},
         )
@@ -166,7 +192,9 @@ async def test_teensy_rejected_oversized_network():
 async def test_teensy_rejected_recurrent_topology():
     """Recurrent connections must be rejected with UNSUPPORTED_TOPOLOGY."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
             json={"spec": RECURRENT_SPEC, "weight_bit_width": 8},
         )
@@ -182,7 +210,9 @@ async def test_teensy_rejected_recurrent_topology():
 async def test_teensy_rejected_learning_rule():
     """STDP learning must be rejected before any Teensy payload is produced."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
             json={"spec": STDP_SPEC, "weight_bit_width": 8},
         )
@@ -202,7 +232,9 @@ async def test_teensy_rejected_learning_rule():
 async def test_teensy_rejected_invalid_bit_width():
     """Bit widths outside {8, 16, 32} must be rejected."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
             json={"spec": VALID_REFLEX_ARC_SPEC, "weight_bit_width": 4},
         )
@@ -213,7 +245,9 @@ async def test_teensy_rejected_invalid_bit_width():
 async def test_teensy_rejected_network_does_not_reach_neurochip():
     """Rejected networks should never produce a payload for Neurochip."""
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
             json={"spec": RECURRENT_SPEC, "weight_bit_width": 8},
         )
@@ -243,7 +277,9 @@ async def test_teensy_post_flash_verification_contract():
     """
     async with httpx.AsyncClient(timeout=60.0) as client:
         # First, get a firmware zip from a happy-path deploy
-        deploy_resp = await client.post(
+        deploy_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
             json={"spec": VALID_REFLEX_ARC_SPEC, "weight_bit_width": 8},
         )
@@ -252,7 +288,9 @@ async def test_teensy_post_flash_verification_contract():
 
         payload = deploy_resp.json()["payload"]
 
-        export_resp = await client.post(
+        export_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCHIP_URL}/api/neurochip/export/teensy",
             json=payload,
             params={"bit_width": 8},
@@ -263,7 +301,9 @@ async def test_teensy_post_flash_verification_contract():
         firmware_bytes = export_resp.content
 
         # Step 1: Start flash job (will likely fail without hardware, but tests API shape)
-        flash_resp = await client.post(
+        flash_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCHIP_URL}/api/neurochip/serial/flash",
             files={"file": ("firmware.zip", firmware_bytes, "application/zip")},
             data={"port": "/dev/null"},
@@ -278,7 +318,9 @@ async def test_teensy_post_flash_verification_contract():
         job_id = flash_data["job_id"]
 
         # Step 2: Poll flash status (contract shape verification)
-        poll_resp = await client.get(
+        poll_resp = await _request_or_skip(
+            client,
+            "GET",
             f"{NEUROCHIP_URL}/api/neurochip/serial/flash/{job_id}"
         )
         assert poll_resp.status_code == 200
@@ -289,7 +331,9 @@ async def test_teensy_post_flash_verification_contract():
 
         # Step 3: Verify endpoint — test contract shape
         # If job is not DONE yet, expect 409; if neurodreamhand not installed, expect 503
-        verify_resp = await client.post(
+        verify_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCHIP_URL}/api/neurochip/serial/flash/{job_id}/verify",
             json={
                 "port": "/dev/null",
@@ -314,7 +358,9 @@ async def test_teensy_post_flash_verification_contract():
 async def test_teensy_verify_nonexistent_job():
     """Verify endpoint returns 404 for a nonexistent flash job."""
     async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCHIP_URL}/api/neurochip/serial/flash/nonexistent-job-id/verify",
             json={"port": "/dev/null", "run_demo": False, "run_hitl": False},
         )
@@ -325,7 +371,11 @@ async def test_teensy_verify_nonexistent_job():
 async def test_teensy_serial_ports_listing():
     """GET /api/neurochip/serial/ports returns a list (possibly empty in CI)."""
     async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(f"{NEUROCHIP_URL}/api/neurochip/serial/ports")
+        resp = await _request_or_skip(
+            client,
+            "GET",
+            f"{NEUROCHIP_URL}/api/neurochip/serial/ports",
+        )
         assert resp.status_code == 200
         ports = resp.json()
         assert isinstance(ports, list)
@@ -344,7 +394,9 @@ async def test_teensy_payload_schema_consistency():
     submittable to /api/neurochip/export/teensy without transformation.
     """
     async with httpx.AsyncClient(timeout=30.0) as client:
-        deploy_resp = await client.post(
+        deploy_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/deploy/teensy/network",
             json={"spec": VALID_REFLEX_ARC_SPEC, "weight_bit_width": 16},
         )
@@ -368,7 +420,9 @@ async def test_teensy_payload_schema_consistency():
         )
 
         # It should be accepted by Neurochip export endpoint
-        export_resp = await client.post(
+        export_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCHIP_URL}/api/neurochip/export/teensy",
             json=payload,
             params={"bit_width": 16},

@@ -102,7 +102,7 @@ class _NopPynqDeployService extends PynqDeployService {
           controlRegOffset: 0x00,
           statusRegOffset: 0x04,
           neuronBaseOffset: 0x100,
-          weightBaseOffset: 0x10000,
+          weightBaseOffset: 0x1000,
           dmaChannel: 'axi_dma_0',
           inputBufferAddr: 0,
           outputBufferAddr: 0,

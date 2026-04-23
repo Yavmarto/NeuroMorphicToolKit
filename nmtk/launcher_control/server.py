@@ -67,6 +67,10 @@ DEFAULT_PYNQ_BOARD_SSH_PORT = 22
 DEFAULT_PYNQ_AGENT_HEALTH_TIMEOUT_SECONDS = 120.0
 PYNQ_AGENT_HEALTH_TIMEOUT_BOUNDS = (5.0, 600.0)
 PYNQ_AGENT_HEALTH_HEARTBEAT_AFTER_SECONDS = 15.0
+DEFAULT_PYNQ_PREFLIGHT_TIMEOUT_SECONDS = 45.0
+PYNQ_PREFLIGHT_TIMEOUT_BOUNDS = (5.0, 300.0)
+PYNQ_PREFLIGHT_RETRY_COUNT = 3
+PYNQ_PREFLIGHT_RETRY_DELAY_SECONDS = 2.0
 PYNQ_RUNTIME_LOG_TAIL_LINES = 80
 DEFAULT_PYNQ_BOARD_USERNAME = "xilinx"
 DEFAULT_PYNQ_BOARD_STATE = "unpaired"
@@ -121,13 +125,19 @@ PYNQ_BOARD_STATES = {
     "overlay_missing",
     "ready",
     "degraded_optional_capability",
+    "preflight_failed",
     "error",
 }
 AKIDA_HOST_STATES = {
+    "unknown",
     "unpaired",
+    "pending",
     "reachable",
     "ready",
+    "degraded",
     "degraded_optional_capability",
+    "simulator_only",
+    "blocked",
     "preflight_failed",
     "error",
 }
@@ -463,6 +473,18 @@ def _resolve_pynq_agent_health_timeout() -> float:
     return max(lower, min(upper, parsed))
 
 
+def _resolve_pynq_preflight_timeout() -> float:
+    raw = os.getenv("NEUROCHIP_PYNQ_PREFLIGHT_TIMEOUT_SECONDS", "").strip()
+    if not raw:
+        return DEFAULT_PYNQ_PREFLIGHT_TIMEOUT_SECONDS
+    try:
+        parsed = float(raw)
+    except ValueError:
+        return DEFAULT_PYNQ_PREFLIGHT_TIMEOUT_SECONDS
+    lower, upper = PYNQ_PREFLIGHT_TIMEOUT_BOUNDS
+    return max(lower, min(upper, parsed))
+
+
 def _default_pynq_remote_install_root(username: str) -> str:
     normalized_username = username.strip() or DEFAULT_PYNQ_BOARD_USERNAME
     return f"/home/{normalized_username}/.local/share/neurochip-pynq-agent"
@@ -611,6 +633,31 @@ def _resolved_akida_base_url(host: dict[str, Any]) -> str:
     if not isinstance(port, int):
         port = DEFAULT_AKIDA_HOST_PORT
     return _default_akida_base_url(normalized_host, port)
+
+
+class RuntimeRequestError(RuntimeError):
+    def __init__(
+        self,
+        message: str,
+        *,
+        kind: str,
+        url: str,
+        status_code: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.kind = kind
+        self.url = url
+        self.status_code = status_code
+
+
+def _runtime_request_error_kind(exc: Exception) -> str:
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return "timeout"
+    if isinstance(exc, urllib.error.URLError) and isinstance(
+        exc.reason, (TimeoutError, socket.timeout)
+    ):
+        return "timeout"
+    return "unreachable"
 
 
 def _describe_akida_preflight(verification: dict[str, Any]) -> str:
@@ -897,7 +944,27 @@ def _default_akida_host_display_name(runtime_api_url: str) -> str:
 
 
 def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
-    runtime_api_url = str(raw.get("runtimeApiUrl") or "").strip()
+    runtime_api_url = _normalize_base_url(raw.get("runtimeApiUrl"))
+    base_url = _normalize_base_url(raw.get("baseUrl"))
+    host = str(raw.get("host") or "").strip()
+    port = raw.get("port", DEFAULT_AKIDA_HOST_PORT)
+    if not isinstance(port, int):
+        port = DEFAULT_AKIDA_HOST_PORT
+    if not base_url and runtime_api_url:
+        base_url = runtime_api_url
+    if not runtime_api_url and base_url:
+        runtime_api_url = base_url
+    parsed_base_url = urlparse(base_url) if base_url else None
+    if parsed_base_url is not None and parsed_base_url.hostname:
+        if raw.get("baseUrl") is not None:
+            host = parsed_base_url.hostname
+        else:
+            host = host or parsed_base_url.hostname
+        if not isinstance(raw.get("port"), int) and parsed_base_url.port is not None:
+            port = parsed_base_url.port
+    elif host and not base_url:
+        base_url = _default_akida_base_url(host, port)
+        runtime_api_url = runtime_api_url or base_url
     capability_snapshot = _normalize_akida_capability_snapshot(
         raw.get("capabilitySnapshot", raw.get("capability_snapshot"))
     )
@@ -908,8 +975,12 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": str(raw.get("id") or uuid4()),
         "displayName": str(
-            raw.get("displayName") or _default_akida_host_display_name(runtime_api_url)
+            raw.get("displayName")
+            or _default_akida_host_display_name(runtime_api_url or base_url)
         ).strip(),
+        "host": host,
+        "port": port,
+        "baseUrl": base_url,
         "runtimeApiUrl": runtime_api_url,
         "authMode": _normalize_akida_host_auth_mode(raw.get("authMode")),
         "credentialRef": str(raw.get("credentialRef") or "").strip(),
@@ -917,6 +988,13 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         "pythonVersion": str(raw.get("pythonVersion") or "").strip(),
         "runtimeMode": runtime_mode,
         "state": _normalize_akida_host_state(raw.get("state")),
+        "lastPreflightStatus": str(raw.get("lastPreflightStatus") or "").strip(),
+        "lastPreflightMessage": str(raw.get("lastPreflightMessage") or "").strip(),
+        "lastSdkStatus": str(raw.get("lastSdkStatus") or "").strip(),
+        "lastRuntimeTarget": str(raw.get("lastRuntimeTarget") or "").strip(),
+        "lastStatus": raw.get("lastStatus")
+        if isinstance(raw.get("lastStatus"), dict)
+        else None,
         "lastReadinessMessage": str(raw.get("lastReadinessMessage") or "").strip(),
         "lastVerifiedAt": str(raw.get("lastVerifiedAt") or "").strip(),
         "capabilitySnapshot": capability_snapshot,
@@ -929,6 +1007,13 @@ def _serialize_akida_host(host: dict[str, Any]) -> dict[str, Any]:
     payload["capabilitySnapshot"] = (
         dict(capability_snapshot) if isinstance(capability_snapshot, dict) else None
     )
+    payload["baseUrl"] = _resolved_akida_base_url(payload)
+    payload["runtimeApiUrl"] = str(
+        payload.get("runtimeApiUrl") or _resolved_akida_base_url(payload)
+    ).strip()
+    payload["host"] = str(
+        payload.get("host") or urlparse(payload["baseUrl"]).hostname or ""
+    ).strip()
     return payload
 
 
@@ -1385,7 +1470,6 @@ class LauncherControlState:
             "pythonAvailable": True,
             "akidaHosts": [],
             "pynqBoards": [],
-            "akidaHosts": [],
             "selectedAkidaHostId": None,
         }
         stored = _read_json_file(SETTINGS_FILE, {})
@@ -1418,7 +1502,6 @@ class LauncherControlState:
                     for board in stored.get("pynqBoards", [])
                     if isinstance(board, dict)
                 ],
-                "akidaHosts": akida_hosts,
                 "selectedAkidaHostId": selected_akida_host_id or None,
             }
         )
@@ -1447,10 +1530,6 @@ class LauncherControlState:
                 "logLevel": self._settings["logLevel"],
                 "mujocoAvailable": self._settings["mujocoAvailable"],
                 "pythonAvailable": self._settings["pythonAvailable"],
-                "akidaHosts": [
-                    _serialize_akida_host(host)
-                    for host in self._settings["akidaHosts"]
-                ],
                 "pynqBoards": [
                     _serialize_pynq_board(board)
                     for board in self._settings["pynqBoards"]
@@ -1498,7 +1577,7 @@ class LauncherControlState:
 
     def create_akida_host(self, payload: dict[str, Any]) -> dict[str, Any]:
         host = _normalize_akida_host(payload)
-        if not host["runtimeApiUrl"]:
+        if not _resolved_akida_base_url(host):
             raise ValueError("Akida host runtimeApiUrl is required")
         with self._lock:
             hosts = self._settings["akidaHosts"]
@@ -1634,6 +1713,10 @@ class LauncherControlState:
     ) -> dict[str, Any]:
         merged = dict(host)
         merged.update(updates)
+        if "baseUrl" in updates and "runtimeApiUrl" not in updates:
+            merged.pop("runtimeApiUrl", None)
+        if "baseUrl" in updates and "port" not in updates:
+            merged.pop("port", None)
         return _normalize_akida_host(merged)
 
     def _emit_pynq_terminal_log(
@@ -2028,6 +2111,8 @@ class LauncherControlState:
         method: str,
         path: str,
         payload: dict[str, Any] | None = None,
+        *,
+        timeout: float = 15.0,
     ) -> dict[str, Any]:
         base_url = _resolved_pynq_runtime_api_url(board).rstrip("/")
         url = f"{base_url}{path}"
@@ -2043,7 +2128,7 @@ class LauncherControlState:
             method=method,
         )
         try:
-            with urllib.request.urlopen(request, timeout=15.0) as response:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
                 body = response.read().decode("utf-8")
                 decoded = json.loads(body) if body else {}
                 if not isinstance(decoded, dict):
@@ -2063,14 +2148,25 @@ class LauncherControlState:
                 f"Runtime request failed for {method} {url}: HTTP {exc.code}"
                 + (f" — {error_body}" if error_body else "")
             ) from exc
-        except urllib.error.URLError as exc:
+        except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
+            kind = _runtime_request_error_kind(exc)
+            if kind == "timeout":
+                detail = f"timed out after {timeout:.0f}s"
+            else:
+                detail = f"could not be reached: {exc}"
             self._emit_pynq_terminal_log(
                 board,
-                f"runtime request failed: {method} {url} could not be reached: {exc}",
+                f"runtime request failed: {method} {url} {detail}",
                 stderr=True,
             )
-            raise RuntimeError(
-                f"Runtime request failed for {method} {url}: {exc}"
+            raise RuntimeRequestError(
+                (
+                    f"Runtime request failed for {method} {url}: {detail}"
+                    if kind != "timeout"
+                    else f"Runtime request timed out for {method} {url} after {timeout:.0f}s"
+                ),
+                kind=kind,
+                url=url,
             ) from exc
 
     def _apply_preflight_to_board(
@@ -2089,10 +2185,13 @@ class LauncherControlState:
             board_state = "ready"
         elif status == PREFLIGHT_DEGRADED:
             board_state = "degraded_optional_capability"
-        elif isinstance(overlay_assets, dict) and not overlay_assets.get(
-            "ready_for_hardware", False
-        ):
-            board_state = "overlay_missing"
+        elif status == PREFLIGHT_FAILED:
+            if isinstance(overlay_assets, dict) and not overlay_assets.get(
+                "ready_for_hardware", False
+            ):
+                board_state = "overlay_missing"
+            else:
+                board_state = "preflight_failed"
         return self._update_pynq_board_fields(
             board_id,
             state=board_state,
@@ -2112,10 +2211,24 @@ class LauncherControlState:
             )
         )
 
-    def fetch_pynq_board_preflight(self, board_id: str) -> dict[str, Any]:
+    def fetch_pynq_board_preflight(
+        self,
+        board_id: str,
+        *,
+        request_timeout: float | None = None,
+    ) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
         self._emit_pynq_terminal_log(board, "requesting runtime preflight")
-        preflight = self._runtime_json_request(board, "GET", "/hardware/pynq/preflight")
+        preflight = self._runtime_json_request(
+            board,
+            "GET",
+            "/hardware/pynq/preflight",
+            timeout=(
+                _resolve_pynq_preflight_timeout()
+                if request_timeout is None
+                else float(request_timeout)
+            ),
+        )
         self._emit_pynq_terminal_log(
             board,
             _describe_pynq_preflight(preflight),
@@ -2125,6 +2238,57 @@ class LauncherControlState:
             "board": _serialize_pynq_board(updated),
             "preflight": preflight,
         }
+
+    def _refresh_pynq_board_preflight(self, board_id: str, *, stage: str) -> dict[str, Any]:
+        board = self._get_pynq_board(board_id)
+        request_timeout = _resolve_pynq_preflight_timeout()
+        last_error: RuntimeRequestError | None = None
+        for attempt in range(1, PYNQ_PREFLIGHT_RETRY_COUNT + 1):
+            try:
+                return self.fetch_pynq_board_preflight(
+                    board_id,
+                    request_timeout=request_timeout,
+                )
+            except RuntimeRequestError as exc:
+                last_error = exc
+                if exc.kind not in {"timeout", "unreachable"}:
+                    raise
+                if attempt >= PYNQ_PREFLIGHT_RETRY_COUNT:
+                    break
+                if exc.kind == "timeout":
+                    self._emit_pynq_terminal_log(
+                        board,
+                        (
+                            f"runtime preflight is still running after {request_timeout:.0f}s "
+                            f"during {stage}; retrying ({attempt + 1}/{PYNQ_PREFLIGHT_RETRY_COUNT})"
+                        ),
+                    )
+                else:
+                    self._emit_pynq_terminal_log(
+                        board,
+                        (
+                            f"runtime preflight could not reach the agent during {stage}; "
+                            f"rechecking /health before retry ({attempt + 1}/{PYNQ_PREFLIGHT_RETRY_COUNT})"
+                        ),
+                    )
+                    try:
+                        self._wait_for_board_agent_health(
+                            board,
+                            timeout=min(
+                                _resolve_pynq_agent_health_timeout(),
+                                request_timeout,
+                            ),
+                        )
+                    except RuntimeError as health_exc:
+                        self._emit_pynq_terminal_log(
+                            board,
+                            f"/health was not stable during {stage}: {health_exc}",
+                            stderr=True,
+                        )
+                time.sleep(PYNQ_PREFLIGHT_RETRY_DELAY_SECONDS)
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError(f"Runtime preflight refresh failed during {stage}")
 
     def fetch_pynq_board_status(self, board_id: str) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
@@ -2233,7 +2397,10 @@ class LauncherControlState:
             self._emit_pynq_terminal_log(
                 board, "runtime install finished; fetching preflight"
             )
-            result = self.fetch_pynq_board_preflight(board_id)
+            result = self._refresh_pynq_board_preflight(
+                board_id,
+                stage="runtime provisioning",
+            )
             board_state = str(result.get("board", {}).get("state") or "").strip()
             if board_state == "overlay_missing":
                 self._emit_pynq_terminal_log(
@@ -2348,7 +2515,10 @@ class LauncherControlState:
                 )
         self._emit_pynq_terminal_log(board, "fetching preflight")
         try:
-            result = self.fetch_pynq_board_preflight(board_id)
+            result = self._refresh_pynq_board_preflight(
+                board_id,
+                stage="overlay install",
+            )
         except Exception as exc:
             if install_mode != "user-space":
                 raise
@@ -2417,7 +2587,7 @@ class LauncherControlState:
         self._emit_pynq_terminal_log(
             board, "runtime restart completed; fetching preflight"
         )
-        result = self.fetch_pynq_board_preflight(board_id)
+        result = self._refresh_pynq_board_preflight(board_id, stage="runtime restart")
         result["installStatus"] = install_status
         return result
 
@@ -3501,30 +3671,42 @@ class LauncherControlState:
             board_snapshot = [
                 dict(board) for board in self._settings.get("pynqBoards", [])
             ]
-            akida_host_snapshot = [
-                dict(host) for host in self._settings.get("akidaHosts", [])
-            ]
 
         for host in akida_host_snapshot:
             state = _normalize_akida_host_state(host.get("state"))
             if state == "ready":
                 ok_count += 1
-            elif state == "degraded_optional_capability":
+            elif state in {"degraded_optional_capability", "degraded", "simulator_only"}:
                 degraded_count += 1
-            elif state in {"preflight_failed", "error"}:
+            elif state in {"preflight_failed", "blocked", "error"}:
                 fatal_count += 1
 
             akida_hosts.append(
                 {
                     "id": host["id"],
                     "displayName": host["displayName"],
-                    "host": host["host"],
+                    "host": str(
+                        host.get("host")
+                        or urlparse(_resolved_akida_base_url(host)).hostname
+                        or ""
+                    ),
                     "baseUrl": _resolved_akida_base_url(host),
+                    "runtimeApiUrl": str(
+                        host.get("runtimeApiUrl") or _resolved_akida_base_url(host)
+                    ).strip(),
+                    "runtimeMode": _normalize_akida_runtime_mode(
+                        host.get("runtimeMode")
+                    ),
                     "state": state,
+                    "hostOs": str(host.get("hostOs") or "").strip(),
+                    "pythonVersion": str(host.get("pythonVersion") or "").strip(),
                     "lastPreflightStatus": host.get("lastPreflightStatus"),
                     "lastPreflightMessage": host.get("lastPreflightMessage"),
                     "lastSdkStatus": host.get("lastSdkStatus"),
                     "lastRuntimeTarget": host.get("lastRuntimeTarget"),
+                    "lastReadinessMessage": str(
+                        host.get("lastReadinessMessage") or ""
+                    ).strip(),
                 }
             )
 
@@ -3534,7 +3716,7 @@ class LauncherControlState:
                 ok_count += 1
             elif state == "degraded_optional_capability":
                 degraded_count += 1
-            elif state in {"provision_failed", "overlay_missing", "error"}:
+            elif state in {"provision_failed", "overlay_missing", "preflight_failed", "error"}:
                 fatal_count += 1
 
             pynq_boards.append(
@@ -3552,32 +3734,6 @@ class LauncherControlState:
                 }
             )
 
-        for host in akida_host_snapshot:
-            state = _normalize_akida_host_state(host.get("state"))
-            if state == "ready":
-                ok_count += 1
-            elif state in {"degraded", "simulator_only"}:
-                degraded_count += 1
-            elif state in {"blocked", "error"}:
-                fatal_count += 1
-
-            akida_hosts.append(
-                {
-                    "id": host["id"],
-                    "displayName": host["displayName"],
-                    "runtimeApiUrl": host["runtimeApiUrl"],
-                    "runtimeMode": _normalize_akida_runtime_mode(
-                        host.get("runtimeMode")
-                    ),
-                    "state": state,
-                    "hostOs": str(host.get("hostOs") or "").strip(),
-                    "pythonVersion": str(host.get("pythonVersion") or "").strip(),
-                    "lastReadinessMessage": str(
-                        host.get("lastReadinessMessage") or ""
-                    ).strip(),
-                }
-            )
-
         return {
             "status": "ok" if fatal_count == 0 else "error",
             "fatalCount": fatal_count,
@@ -3587,7 +3743,6 @@ class LauncherControlState:
             "modules": modules,
             "akidaHosts": akida_hosts,
             "pynqBoards": pynq_boards,
-            "akidaHosts": akida_hosts,
         }
 
     def _set_error(self, module_id: str, message: str) -> None:

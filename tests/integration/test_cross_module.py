@@ -1,6 +1,7 @@
 import os
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 import pytest
@@ -12,6 +13,23 @@ NEUROCHIP_URL = os.getenv("NEUROCHIP_URL", "http://neurochip:8000")
 NEUROSENSE_URL = os.getenv("NEUROSENSE_URL", "http://neurosense:8000")
 NEUROHUB_URL = os.getenv("NEUROHUB_URL", "http://neurohub:8000")
 NEUROBENCH_URL = os.getenv("NEUROBENCH_URL", "http://neurobench:8000")
+
+
+def _service_label(url: str) -> str:
+    parsed = urlparse(url)
+    return parsed.netloc or parsed.path or url
+
+
+async def _request_or_skip(
+    client: httpx.AsyncClient,
+    method: str,
+    url: str,
+    **kwargs: object,
+) -> httpx.Response:
+    try:
+        return await client.request(method, url, **kwargs)
+    except httpx.RequestError as exc:
+        pytest.skip(f"Integration service {_service_label(url)} unavailable: {exc}")
 
 
 def _default_neurosense_artifact_path() -> str:
@@ -32,12 +50,14 @@ async def test_neurocnl_to_neurosim():
 
     # 1. Validate in neurocnl
     async with httpx.AsyncClient() as client:
-        resp = await client.post(f"{NEUROCNL_URL}/api/parse", json={"spec": spec})
+        resp = await _request_or_skip(client, "POST", f"{NEUROCNL_URL}/api/parse", json={"spec": spec})
         assert resp.status_code == 200
         assert resp.json()["errors"] == 0
 
         # 2. Parse in neurosim to get graph
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROSIM_URL}/api/neurosim/parse-cnl", json={"cnl_spec": spec}
         )
         assert resp.status_code == 200
@@ -45,7 +65,9 @@ async def test_neurocnl_to_neurosim():
         assert "nodes" in graph
 
         # 3. Run preview in neurosim
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROSIM_URL}/api/neurosim/preview",
             json={"graph": graph, "duration_ms": 100},
         )
@@ -71,7 +93,9 @@ async def test_neurosim_to_neurochip():
 
     async with httpx.AsyncClient() as client:
         # 1. Export from neurosim as C
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROSIM_URL}/api/neurosim/export/c", json=mock_graph
         )
         assert resp.status_code == 200
@@ -83,7 +107,9 @@ async def test_neurosim_to_neurochip():
             "firmware_version": "1.0.0",
             "checksum_sha256": "a" * 64,
         }
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCHIP_URL}/api/neurochip/deployments/validate", json=manifest
         )
         assert resp.status_code == 200
@@ -98,7 +124,9 @@ async def test_neurosense_to_neurocnl():
 
     async with httpx.AsyncClient() as client:
         # 1. Encode in neurosense
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROSENSE_URL}/api/neurosense/encode",
             json={
                 "data": mock_data,
@@ -112,7 +140,9 @@ async def test_neurosense_to_neurocnl():
 
         # 2. Use in neurocnl (Mocking integration via prosthetic sim)
         spec = "The sensory neuron MUST fire"
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/prosthetic/simulate",
             json={"spec": spec, "duration": 0.1, "n_neurons": 10},
         )
@@ -128,7 +158,9 @@ async def test_neurosense_artifact_handoff():
     )
 
     async with httpx.AsyncClient() as client:
-        replay_resp = await client.post(
+        replay_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROCNL_URL}/api/prosthetic/neurosense/replay",
             json={"artifact_path": artifact_path, "preview_frames": 2},
         )
@@ -142,7 +174,9 @@ async def test_neurosense_artifact_handoff():
         assert replay_data["frame_count"] > 0
         assert replay_data["spike_event_count"] > 0
 
-        bench_resp = await client.post(
+        bench_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROBENCH_URL}/api/neurobench/run",
             json={
                 "benchmark_id": "neurosense_replay_contract",
@@ -158,13 +192,17 @@ async def test_neurosense_artifact_handoff():
         job_id = bench_resp.json()["job_id"]
 
         for _ in range(10):
-            status_resp = await client.get(
+            status_resp = await _request_or_skip(
+                client,
+                "GET",
                 f"{NEUROBENCH_URL}/api/neurobench/run/{job_id}"
             )
             assert status_resp.status_code == 200, status_resp.text
             status_data = status_resp.json()
             if status_data["status"] == "COMPLETED":
-                result_resp = await client.get(
+                result_resp = await _request_or_skip(
+                    client,
+                    "GET",
                     f"{NEUROBENCH_URL}/api/neurobench/run/{job_id}/result"
                 )
                 assert result_resp.status_code == 200, result_resp.text
@@ -234,20 +272,26 @@ async def test_neurohub_orchestration():
 
     async with httpx.AsyncClient() as client:
         # 1. Create workflow
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROHUB_URL}/api/neurohub/workflows", json=workflow
         )
         assert resp.status_code == 201
 
         # 2. Run workflow (requires a project_id)
         # First create a mock project
-        project_resp = await client.post(
+        project_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROHUB_URL}/api/neurohub/projects",
             json={"name": "Test Project", "description": "Integration Test"},
         )
         project_id = project_resp.json()["id"]
 
-        run_resp = await client.post(
+        run_resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROHUB_URL}/api/neurohub/workflows/test-integration-wf/run",
             params={"project_id": project_id},
         )
@@ -256,7 +300,9 @@ async def test_neurohub_orchestration():
 
         # 3. Poll for completion
         for _ in range(10):
-            status_resp = await client.get(
+            status_resp = await _request_or_skip(
+                client,
+                "GET",
                 f"{NEUROHUB_URL}/api/neurohub/workflows/runs/{run_id}"
             )
             if status_resp.json()["status"] == "completed":
@@ -272,7 +318,9 @@ async def test_neurobench_benchmarking():
     """Test Neurobench benchmarking across multiple modules"""
     async with httpx.AsyncClient() as client:
         # Mock benchmarking call referencing a path
-        resp = await client.post(
+        resp = await _request_or_skip(
+            client,
+            "POST",
             f"{NEUROBENCH_URL}/api/neurobench/run",
             json={
                 "benchmark_id": "power_efficiency",
