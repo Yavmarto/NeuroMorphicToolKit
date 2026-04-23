@@ -27,8 +27,6 @@ jobs:
         flutter_channel: [stable, beta]
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - uses: subosito/flutter-action@v2
         with:
@@ -47,7 +45,7 @@ jobs:
 
       - name: Format check
         run: |
-          dart format nmtk_ui_core nmtk/neuro_toolkit
+          dart format --output=none --set-exit-if-changed nmtk_ui_core nmtk/neuro_toolkit
 
       - name: Analyze (nmtk_ui_core)
         run: |
