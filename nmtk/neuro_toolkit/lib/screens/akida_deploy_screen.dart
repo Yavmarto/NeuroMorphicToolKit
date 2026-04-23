@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/akida_deploy_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:path_provider/path_provider.dart';
@@ -25,8 +26,11 @@ class AkidaDeployScreen extends ConsumerStatefulWidget {
 
 class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   final _specController = TextEditingController();
+  final _remoteHostNameController = TextEditingController();
+  final _remoteHostUrlController = TextEditingController();
   int _weightBitWidth = 4;
   String _akidaVersion = 'akida1';
+  String? _remoteHostFormId;
 
   @override
   void initState() {
@@ -40,7 +44,23 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   @override
   void dispose() {
     _specController.dispose();
+    _remoteHostNameController.dispose();
+    _remoteHostUrlController.dispose();
     super.dispose();
+  }
+
+  void _syncRemoteHostControllers(AkidaDeployProvider provider) {
+    final selectedRemoteHost = provider.selectedRemoteHost;
+    if (_remoteHostFormId != selectedRemoteHost?.id &&
+        selectedRemoteHost != null) {
+      _remoteHostFormId = selectedRemoteHost.id;
+      _remoteHostNameController.text = selectedRemoteHost.displayName;
+      _remoteHostUrlController.text = selectedRemoteHost.baseUrl;
+    } else if (selectedRemoteHost == null && _remoteHostFormId != null) {
+      _remoteHostFormId = null;
+      _remoteHostNameController.clear();
+      _remoteHostUrlController.clear();
+    }
   }
 
   @override
@@ -59,6 +79,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
       body: Builder(
         builder: (context) {
           final provider = ref.watch(akidaDeployStateProvider);
+          _syncRemoteHostControllers(provider);
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -76,7 +97,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                       ],
                       if (_canShowDeployCard(provider)) ...[
                         const SizedBox(height: 16),
-                        _buildRuntimeSetupCard(context, provider),
+                        _buildRuntimeTargetCard(context, provider),
                         const SizedBox(height: 16),
                         _buildDeployConfigCard(context, provider),
                       ],
@@ -112,46 +133,44 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
 
     NmtkStepStatus readinessStatus;
     NmtkStepStatus scaffoldStatus;
-    NmtkStepStatus sdkStatus;
+    NmtkStepStatus runtimeStatus;
     NmtkStepStatus verifyStatus;
 
     switch (step) {
       case AkidaDeployStep.idle:
         readinessStatus = NmtkStepStatus.idle;
         scaffoldStatus = NmtkStepStatus.idle;
-        sdkStatus = NmtkStepStatus.idle;
+        runtimeStatus = NmtkStepStatus.idle;
         verifyStatus = NmtkStepStatus.idle;
       case AkidaDeployStep.checking:
         readinessStatus = NmtkStepStatus.running;
         scaffoldStatus = NmtkStepStatus.idle;
-        sdkStatus = NmtkStepStatus.idle;
+        runtimeStatus = NmtkStepStatus.idle;
         verifyStatus = NmtkStepStatus.idle;
       case AkidaDeployStep.checked:
         readinessStatus = NmtkStepStatus.success;
         scaffoldStatus = NmtkStepStatus.idle;
-        sdkStatus = NmtkStepStatus.idle;
+        runtimeStatus = NmtkStepStatus.idle;
         verifyStatus = NmtkStepStatus.idle;
       case AkidaDeployStep.deploying:
         readinessStatus = NmtkStepStatus.success;
         scaffoldStatus = NmtkStepStatus.running;
-        sdkStatus = NmtkStepStatus.idle;
+        runtimeStatus = NmtkStepStatus.idle;
         verifyStatus = NmtkStepStatus.idle;
       case AkidaDeployStep.polling:
         readinessStatus = NmtkStepStatus.success;
         scaffoldStatus = NmtkStepStatus.success;
-        sdkStatus = NmtkStepStatus.running;
+        runtimeStatus = NmtkStepStatus.running;
         verifyStatus = NmtkStepStatus.idle;
       case AkidaDeployStep.verifying:
         readinessStatus = NmtkStepStatus.success;
         scaffoldStatus = NmtkStepStatus.success;
-        sdkStatus = provider.sdkVerification?.isDeployable == true
-            ? NmtkStepStatus.success
-            : NmtkStepStatus.error;
+        runtimeStatus = _runtimeStepStatus(provider);
         verifyStatus = NmtkStepStatus.running;
       case AkidaDeployStep.done:
         readinessStatus = NmtkStepStatus.success;
         scaffoldStatus = NmtkStepStatus.success;
-        sdkStatus = _sdkStepStatus(provider);
+        runtimeStatus = _runtimeStepStatus(provider);
         verifyStatus = provider.neurobenchResult != null
             ? NmtkStepStatus.success
             : NmtkStepStatus.idle;
@@ -159,22 +178,22 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
         if (provider.exportResult == null) {
           readinessStatus = NmtkStepStatus.error;
           scaffoldStatus = NmtkStepStatus.idle;
-          sdkStatus = NmtkStepStatus.idle;
+          runtimeStatus = NmtkStepStatus.idle;
           verifyStatus = NmtkStepStatus.idle;
         } else if (provider.savedPackagePath == null) {
           readinessStatus = NmtkStepStatus.success;
           scaffoldStatus = NmtkStepStatus.error;
-          sdkStatus = NmtkStepStatus.idle;
+          runtimeStatus = NmtkStepStatus.idle;
           verifyStatus = NmtkStepStatus.idle;
         } else if (provider.neurobenchJobId == null) {
           readinessStatus = NmtkStepStatus.success;
           scaffoldStatus = NmtkStepStatus.success;
-          sdkStatus = NmtkStepStatus.error;
+          runtimeStatus = _runtimeStepStatus(provider);
           verifyStatus = NmtkStepStatus.idle;
         } else {
           readinessStatus = NmtkStepStatus.success;
           scaffoldStatus = NmtkStepStatus.success;
-          sdkStatus = NmtkStepStatus.success;
+          runtimeStatus = _runtimeStepStatus(provider);
           verifyStatus = NmtkStepStatus.error;
         }
     }
@@ -193,9 +212,9 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
         icon: Icons.architecture_outlined,
       ),
       NmtkPipelineStepData(
-        label: 'SDK',
-        status: sdkStatus,
-        detail: _sdkDetail(provider),
+        label: 'Runtime',
+        status: runtimeStatus,
+        detail: _runtimeDetail(provider),
         icon: Icons.memory_outlined,
       ),
       NmtkPipelineStepData(
@@ -231,36 +250,47 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     return status.isNotEmpty ? status : null;
   }
 
-  NmtkStepStatus _sdkStepStatus(AkidaDeployProvider provider) {
+  NmtkStepStatus _runtimeStepStatus(AkidaDeployProvider provider) {
     final verification = provider.sdkVerification;
     if (verification == null) {
       return provider.currentStep == AkidaDeployStep.polling
           ? NmtkStepStatus.running
           : NmtkStepStatus.idle;
     }
+    if (provider.isExpectedLocalSimulatorOutcome) {
+      return NmtkStepStatus.success;
+    }
     return verification.isDeployable
         ? NmtkStepStatus.success
         : NmtkStepStatus.error;
   }
 
-  String? _sdkDetail(AkidaDeployProvider provider) {
+  String? _runtimeDetail(AkidaDeployProvider provider) {
     if (provider.currentStep == AkidaDeployStep.polling &&
         provider.sdkVerification == null) {
-      return 'verifying…';
+      return provider.runtimeMode.label.toLowerCase();
     }
 
     final verification = provider.sdkVerification;
-    if (verification == null) return null;
+    if (verification == null) {
+      return provider.exportResult == null ? null : provider.runtimeMode.label;
+    }
+
+    if (provider.isExpectedLocalSimulatorOutcome) {
+      return 'local simulator';
+    }
 
     switch (verification.sdkStatus) {
       case 'deployable':
-        return _runtimeTargetLabel(verification.runtimeTarget);
+        return provider.runtimeMode.label;
       case 'not_available':
-        return 'sdk unavailable';
+        return provider.runtimeMode == AkidaRuntimeMode.remoteSdk
+            ? 'remote SDK unavailable'
+            : 'SDK unavailable';
       case 'mapping_failed':
         return 'mapping failed';
       default:
-        return 'not verified';
+        return provider.runtimeMode.label;
     }
   }
 
@@ -276,7 +306,9 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   // ---------- Step 1: CNL Input ----------
 
   Widget _buildCnlInputCard(
-      BuildContext context, AkidaDeployProvider provider) {
+    BuildContext context,
+    AkidaDeployProvider provider,
+  ) {
     final isChecking = provider.currentStep == AkidaDeployStep.checking;
 
     return Card(
@@ -388,33 +420,20 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
 
   // ---------- Step 3: Deploy Config ----------
 
-  Widget _buildRuntimeSetupCard(
+  Widget _buildRuntimeTargetCard(
     BuildContext context,
     AkidaDeployProvider provider,
   ) {
     final module = provider.neurochipModule;
     final runtimeConfig = module?.akidaRuntime;
     final runtimeState = module?.akidaRuntimeState;
-    final checks = provider.sdkVerification?.environmentChecks;
-
-    if (runtimeConfig == null && !provider.isLoadingRuntimeSetup) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            provider.runtimeSetupError ??
-                'Launcher runtime metadata is unavailable. Akida deploy can still generate scaffold packages.',
-          ),
-        ),
-      );
-    }
-
     final platformKey = _currentPlatformKey(context);
     final hostSupported =
         runtimeConfig?.supportedPlatforms.contains(platformKey) ?? false;
     final simulatorOnly =
         !hostSupported && runtimeConfig?.localModeFallback == 'simulator_only';
-    final showPrepareButton = runtimeConfig != null &&
+    final showPrepareButton = provider.isLocalSdkMode &&
+        runtimeConfig != null &&
         hostSupported &&
         !provider.isPreparingRuntime &&
         runtimeState?.status != 'ready';
@@ -426,84 +445,244 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Local Runtime Setup',
+              'Runtime Target',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
+            Text(
+              'Deploy and runtime verification requests follow the mode you choose here.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: AkidaRuntimeMode.values
+                  .map(
+                    (mode) => ChoiceChip(
+                      label: Text(mode.label),
+                      selected: provider.runtimeMode == mode,
+                      onSelected: (_) => provider.setRuntimeMode(mode),
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+            const SizedBox(height: 16),
             if (provider.isLoadingRuntimeSetup)
               const LinearProgressIndicator()
-            else if (simulatorOnly)
+            else if (provider.runtimeMode == AkidaRuntimeMode.localSimulator)
               Text(
-                'This launcher host is running on $platformKey. Local Akida SDK install is simulator-only here; use a Linux or Windows Neurochip host for SDK verification.',
+                'Use the local Neurochip module in simulator-only mode. Scaffold generation stays local, and runtime checks remain truthful about the absence of a local BrainChip SDK.',
               )
-            else if (checks != null &&
-                checks.recommendedRuntime == 'local_sdk' &&
-                runtimeState?.status == 'ready')
-              const Text(
-                'Local Neurochip runtime is prepared for Akida SDK verification.',
+            else if (provider.runtimeMode == AkidaRuntimeMode.localSdk)
+              _buildLocalRuntimeSection(
+                context,
+                provider,
+                runtimeConfig: runtimeConfig,
+                runtimeState: runtimeState,
+                platformKey: platformKey,
+                simulatorOnly: simulatorOnly,
+                showPrepareButton: showPrepareButton,
               )
             else
-              Text(
-                'Install the BrainChip MetaTF runtime into the Neurochip environment only when you need local SDK verification. Base Neurochip install stays lean by default.',
-              ),
-            if (runtimeConfig != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Target profile: ${runtimeConfig.pythonRange} • ${runtimeConfig.requiredPackages.join(", ")}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-            if (runtimeState?.message != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                runtimeState!.message!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-            if (runtimeState?.preparedAt != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Prepared: ${runtimeState!.preparedAt}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
+              _buildRemoteRuntimeSection(context, provider),
             if (provider.runtimeSetupError != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Text(
                 provider.runtimeSetupError!,
                 style: const TextStyle(color: Colors.red),
               ),
             ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                if (showPrepareButton)
-                  FilledButton.icon(
-                    onPressed: () => provider.prepareLocalRuntime(),
-                    icon: const Icon(Icons.download_for_offline_outlined),
-                    label: const Text('Prepare Akida Runtime'),
-                  )
-                else if (provider.isPreparingRuntime)
-                  const Expanded(child: LinearProgressIndicator()),
-                const Spacer(),
-                if (runtimeConfig != null && runtimeConfig.docsUrl.isNotEmpty)
-                  TextButton.icon(
-                    onPressed: () => _openUrl(runtimeConfig.docsUrl),
-                    icon: const Icon(Icons.open_in_new, size: 16),
-                    label: const Text('BrainChip Install Docs'),
-                  ),
-              ],
-            ),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildLocalRuntimeSection(
+    BuildContext context,
+    AkidaDeployProvider provider, {
+    required AkidaRuntimeConfig? runtimeConfig,
+    required AkidaRuntimeState? runtimeState,
+    required String platformKey,
+    required bool simulatorOnly,
+    required bool showPrepareButton,
+  }) {
+    if (runtimeConfig == null) {
+      return Text(
+        'Launcher runtime metadata is unavailable. Akida deploy can still generate scaffold packages.',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (simulatorOnly)
+          Text(
+            'This launcher host is running on $platformKey. Local Akida SDK install is simulator-only here; use a Linux or Windows Neurochip host for SDK verification.',
+          )
+        else if (runtimeState?.status == 'ready')
+          const Text(
+            'Local Neurochip runtime is prepared for Akida SDK verification.',
+          )
+        else
+          Text(
+            'Install the BrainChip MetaTF runtime into the Neurochip environment only when you need local SDK verification. Base Neurochip install stays lean by default.',
+          ),
+        const SizedBox(height: 8),
+        Text(
+          'Target profile: ${runtimeConfig.pythonRange} • ${runtimeConfig.requiredPackages.join(", ")}',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        if (runtimeState?.message != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            runtimeState!.message!,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+        if (runtimeState?.preparedAt != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Prepared: ${runtimeState!.preparedAt}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            if (showPrepareButton)
+              FilledButton.icon(
+                onPressed: () => provider.prepareLocalRuntime(),
+                icon: const Icon(Icons.download_for_offline_outlined),
+                label: const Text('Prepare Akida Runtime'),
+              )
+            else if (provider.isPreparingRuntime)
+              const Expanded(child: LinearProgressIndicator()),
+            const Spacer(),
+            if (runtimeConfig.docsUrl.isNotEmpty)
+              TextButton.icon(
+                onPressed: () => _openUrl(runtimeConfig.docsUrl),
+                icon: const Icon(Icons.open_in_new, size: 16),
+                label: const Text('BrainChip Install Docs'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRemoteRuntimeSection(
+    BuildContext context,
+    AkidaDeployProvider provider,
+  ) {
+    final selectedRemoteHost = provider.selectedRemoteHost;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Choose a Linux or Windows Neurochip runtime that already has the BrainChip SDK installed. The launcher will send scaffold generation and runtime verification requests to that host.',
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: provider.selectedRemoteHostId,
+          isExpanded: true,
+          hint: const Text('Create new remote host...'),
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            labelText: 'Remembered remote host',
+          ),
+          items: provider.remoteHosts
+              .map(
+                (host) => DropdownMenuItem<String>(
+                  value: host.id,
+                  child: Text(
+                    host.displayName,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(growable: false),
+          onChanged: provider.selectRemoteHost,
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: 240,
+              child: TextField(
+                controller: _remoteHostNameController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Display name',
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 340,
+              child: TextField(
+                controller: _remoteHostUrlController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  labelText: 'Neurochip base URL',
+                  helperText: 'Example: http://akida-linux:8002',
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.icon(
+              onPressed: provider.isLoadingRuntimeSetup
+                  ? null
+                  : () => provider.saveRemoteHost(
+                        hostId: selectedRemoteHost?.id,
+                        displayName:
+                            _remoteHostNameController.text.trim().isEmpty
+                                ? _remoteHostUrlController.text.trim()
+                                : _remoteHostNameController.text.trim(),
+                        baseUrl: _remoteHostUrlController.text.trim(),
+                      ),
+              icon: const Icon(Icons.cloud_done_outlined),
+              label: Text(
+                selectedRemoteHost == null ? 'Save Host' : 'Update Host',
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed:
+                  selectedRemoteHost == null || provider.isLoadingRuntimeSetup
+                      ? null
+                      : () => provider.deleteSelectedRemoteHost(),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Remove Host'),
+            ),
+          ],
+        ),
+        if (selectedRemoteHost != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Selected runtime: ${selectedRemoteHost.displayName} • ${selectedRemoteHost.baseUrl}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildDeployConfigCard(
-      BuildContext context, AkidaDeployProvider provider) {
+    BuildContext context,
+    AkidaDeployProvider provider,
+  ) {
     final isDeploying = provider.currentStep == AkidaDeployStep.deploying ||
         provider.currentStep == AkidaDeployStep.polling;
+    final canStartDeploy = provider.exportResult?.mappedNetwork != null &&
+        provider.canDeployToSelectedRuntime;
 
     return Card(
       child: Padding(
@@ -512,18 +691,20 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Scaffold Package + SDK Verify',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(color: const Color(0xFF5C6BC0)),
+              'Scaffold Package + Runtime Verify',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: const Color(0xFF5C6BC0)),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Generate the scaffold package first, then let Neurochip verify '
-              'whether the same mapped payload is deployable via the Akida SDK '
-              'in the current runtime environment.',
-              style: TextStyle(fontStyle: FontStyle.italic),
+            Text(
+              _deployCardDescription(provider),
+              style: const TextStyle(fontStyle: FontStyle.italic),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Selected target: ${_selectedRuntimeSummary(provider)}',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
             Row(
@@ -537,9 +718,20 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   child: Text('Run Neurobench verification after deploy'),
                 ),
                 const Spacer(),
+                if (!provider.canDeployToSelectedRuntime) ...[
+                  Flexible(
+                    child: Text(
+                      'Save a remote SDK host before sending deploy and verification requests away from the local Neurochip module.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.red),
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
                 FilledButton.icon(
-                  onPressed: isDeploying ||
-                          provider.exportResult?.mappedNetwork == null
+                  onPressed: isDeploying || !canStartDeploy
                       ? null
                       : () => _startDeploy(provider),
                   icon: isDeploying
@@ -573,10 +765,42 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     );
   }
 
+  String _deployCardDescription(AkidaDeployProvider provider) {
+    switch (provider.runtimeMode) {
+      case AkidaRuntimeMode.localSimulator:
+        return 'Generate the scaffold package through the local Neurochip module, then confirm the launcher remains in local simulator mode without claiming SDK-backed execution.';
+      case AkidaRuntimeMode.localSdk:
+        return 'Generate the scaffold package locally, then let the local Neurochip module verify whether the same mapped payload is deployable via the Akida SDK.';
+      case AkidaRuntimeMode.remoteSdk:
+        final selectedRemoteHost = provider.selectedRemoteHost;
+        if (selectedRemoteHost == null) {
+          return 'Select a remote Neurochip runtime before sending scaffold generation and runtime verification requests to a remote SDK host.';
+        }
+        return 'Send scaffold generation and runtime verification requests to ${selectedRemoteHost.displayName} so the remote Neurochip host decides whether the mapped payload is SDK-deployable.';
+    }
+  }
+
+  String _selectedRuntimeSummary(AkidaDeployProvider provider) {
+    switch (provider.runtimeMode) {
+      case AkidaRuntimeMode.localSimulator:
+        return 'Local Neurochip module • simulator-only mode';
+      case AkidaRuntimeMode.localSdk:
+        return 'Local Neurochip module • SDK runtime';
+      case AkidaRuntimeMode.remoteSdk:
+        final selectedRemoteHost = provider.selectedRemoteHost;
+        if (selectedRemoteHost == null) {
+          return 'Remote SDK host not configured';
+        }
+        return '${selectedRemoteHost.displayName} • ${selectedRemoteHost.baseUrl}';
+    }
+  }
+
   // ---------- Step 4: Deployment Status ----------
 
   Widget _buildDeployStatusCard(
-      BuildContext context, AkidaDeployProvider provider) {
+    BuildContext context,
+    AkidaDeployProvider provider,
+  ) {
     final job = provider.deployJob;
     final sdkVerification = provider.sdkVerification;
     final savedPath = provider.savedPackagePath;
@@ -600,7 +824,12 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
             const SizedBox(height: 12),
             LinearProgressIndicator(value: progressValue),
             const SizedBox(height: 8),
+            Text(
+              'Selected target: ${_selectedRuntimeSummary(provider)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             if (savedPath != null) ...[
+              const SizedBox(height: 8),
               Row(
                 children: [
                   const Icon(Icons.check_circle, color: Colors.green),
@@ -639,19 +868,19 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
               Row(
                 children: [
                   Icon(
-                    _sdkIcon(sdkVerification),
-                    color: _sdkColor(sdkVerification),
+                    _runtimeIcon(provider, sdkVerification),
+                    color: _runtimeColor(provider, sdkVerification),
                     size: 18,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(_sdkStatusLabel(sdkVerification)),
+                    child: Text(_runtimeStatusLabel(provider, sdkVerification)),
                   ),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
-                'Runtime target: ${_runtimeTargetLabel(sdkVerification.runtimeTarget)}',
+                'Backend outcome: ${_runtimeTargetLabel(sdkVerification.runtimeTarget)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (sdkVerification.deviceInfo != null) ...[
@@ -768,7 +997,13 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     }
   }
 
-  IconData _sdkIcon(AkidaSdkVerification verification) {
+  IconData _runtimeIcon(
+    AkidaDeployProvider provider,
+    AkidaSdkVerification verification,
+  ) {
+    if (provider.isExpectedLocalSimulatorOutcome) {
+      return Icons.memory_outlined;
+    }
     switch (verification.sdkStatus) {
       case 'deployable':
         return Icons.check_circle;
@@ -781,7 +1016,13 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     }
   }
 
-  Color _sdkColor(AkidaSdkVerification verification) {
+  Color _runtimeColor(
+    AkidaDeployProvider provider,
+    AkidaSdkVerification verification,
+  ) {
+    if (provider.isExpectedLocalSimulatorOutcome) {
+      return Colors.blue;
+    }
     switch (verification.sdkStatus) {
       case 'deployable':
         return Colors.green;
@@ -793,11 +1034,20 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     }
   }
 
-  String _sdkStatusLabel(AkidaSdkVerification verification) {
+  String _runtimeStatusLabel(
+    AkidaDeployProvider provider,
+    AkidaSdkVerification verification,
+  ) {
+    if (provider.isExpectedLocalSimulatorOutcome) {
+      return 'Local simulator mode selected';
+    }
+
     final checks = verification.environmentChecks;
     if (verification.sdkStatus == 'not_available' && checks != null) {
       if (!checks.hostSupported) {
-        return 'Local SDK install unsupported on this host';
+        return provider.runtimeMode == AkidaRuntimeMode.remoteSdk
+            ? 'Selected remote SDK host does not support Akida'
+            : 'Local SDK install unsupported on this host';
       }
       if (!checks.pythonSupported) {
         return 'SDK verification blocked: unsupported Python runtime';
@@ -831,7 +1081,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
       case 'akd1000_simulator':
         return 'AKD1000 simulator';
       case 'software_fallback':
-        return 'software fallback';
+        return 'local software fallback';
       default:
         return 'unknown';
     }
@@ -853,7 +1103,9 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   // ---------- Step 5: Neurobench Verification ----------
 
   Widget _buildNeurobenchResultCard(
-      BuildContext context, AkidaDeployProvider provider) {
+    BuildContext context,
+    AkidaDeployProvider provider,
+  ) {
     final result = provider.neurobenchResult!;
     final status = result['status'] as String? ?? '';
     final isCompleted = status == 'completed';

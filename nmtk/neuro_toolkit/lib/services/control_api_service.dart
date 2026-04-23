@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:neuro_toolkit/models/akida_remote_host.dart';
 import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
@@ -34,26 +35,31 @@ class LauncherControlSettings {
 
 class ControlApiService {
   ControlApiService({http.Client? client, Uri? baseUri})
-      : _client = client ?? http.Client(),
-        _baseUri = baseUri ?? _resolveBaseUri();
+    : _client = client ?? http.Client(),
+      _baseUri = baseUri ?? _resolveBaseUri();
 
   final http.Client _client;
   final Uri _baseUri;
 
   static Uri _resolveBaseUri() {
-    const configuredBaseUrl =
-        String.fromEnvironment('NMTK_CONTROL_API_BASE_URL', defaultValue: '');
+    const configuredBaseUrl = String.fromEnvironment(
+      'NMTK_CONTROL_API_BASE_URL',
+      defaultValue: '',
+    );
     if (configuredBaseUrl.isNotEmpty) {
       return Uri.parse(configuredBaseUrl);
     }
 
-    const configuredPort =
-        int.fromEnvironment('NMTK_CONTROL_API_PORT', defaultValue: 8090);
+    const configuredPort = int.fromEnvironment(
+      'NMTK_CONTROL_API_PORT',
+      defaultValue: 8090,
+    );
 
     if (kIsWeb) {
       final baseHost = Uri.base.host.trim();
-      final host =
-          baseHost.isEmpty || baseHost == '0.0.0.0' ? 'localhost' : baseHost;
+      final host = baseHost.isEmpty || baseHost == '0.0.0.0'
+          ? 'localhost'
+          : baseHost;
       final scheme = Uri.base.scheme.trim().isEmpty ? 'http' : Uri.base.scheme;
       return Uri(scheme: scheme, host: host, port: configuredPort);
     }
@@ -115,9 +121,7 @@ class ControlApiService {
   }
 
   Future<Module> fetchModule(String moduleId) async {
-    final response = await _client.get(
-      _uri('/api/launcher/modules/$moduleId'),
-    );
+    final response = await _client.get(_uri('/api/launcher/modules/$moduleId'));
     await _ensureSuccess(response);
     return Module.fromJson(await _readJsonResponse(response));
   }
@@ -132,9 +136,7 @@ class ControlApiService {
     final response = await _client.put(
       _uri('/api/launcher/settings'),
       headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        if (logLevel != null) 'logLevel': logLevel,
-      }),
+      body: jsonEncode({if (logLevel != null) 'logLevel': logLevel}),
     );
     await _ensureSuccess(response);
   }
@@ -149,9 +151,47 @@ class ControlApiService {
         .toList(growable: false);
   }
 
-  Future<PynqPairedBoard> createPynqBoard(
+  Future<List<AkidaRemoteHost>> fetchAkidaHosts() async {
+    final response = await _client.get(_uri('/api/launcher/akida/hosts'));
+    await _ensureSuccess(response);
+    final decoded = await _readJsonList(response);
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(AkidaRemoteHost.fromJson)
+        .toList(growable: false);
+  }
+
+  Future<AkidaRemoteHost> createAkidaHost(Map<String, dynamic> payload) async {
+    final response = await _client.post(
+      _uri('/api/launcher/akida/hosts'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return AkidaRemoteHost.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<AkidaRemoteHost> updateAkidaHost(
+    String hostId,
     Map<String, dynamic> payload,
   ) async {
+    final response = await _client.put(
+      _uri('/api/launcher/akida/hosts/$hostId'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return AkidaRemoteHost.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<void> deleteAkidaHost(String hostId) async {
+    final response = await _client.delete(
+      _uri('/api/launcher/akida/hosts/$hostId'),
+    );
+    await _ensureSuccess(response);
+  }
+
+  Future<PynqPairedBoard> createPynqBoard(Map<String, dynamic> payload) async {
     final response = await _client.post(
       _uri('/api/launcher/pynq/boards'),
       headers: const {'Content-Type': 'application/json'},
@@ -175,8 +215,9 @@ class ControlApiService {
   }
 
   Future<void> deletePynqBoard(String boardId) async {
-    final response =
-        await _client.delete(_uri('/api/launcher/pynq/boards/$boardId'));
+    final response = await _client.delete(
+      _uri('/api/launcher/pynq/boards/$boardId'),
+    );
     await _ensureSuccess(response);
   }
 

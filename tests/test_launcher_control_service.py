@@ -347,6 +347,46 @@ class LauncherControlServiceTest(unittest.TestCase):
             "/home/xilinx/.local/share/neurochip-pynq-agent",
         )
 
+    def test_akida_host_round_trip_updates_settings_file(self) -> None:
+        created = self.state.create_akida_host(
+            {
+                "displayName": "Akida Linux Host",
+                "baseUrl": "akida-linux:8002",
+            }
+        )
+
+        self.assertEqual(created["displayName"], "Akida Linux Host")
+        self.assertEqual(created["baseUrl"], "http://akida-linux:8002")
+
+        updated = self.state.update_akida_host(
+            created["id"],
+            {
+                "displayName": "Akida Windows Host",
+                "baseUrl": "https://akida-win.example.com:8443/",
+            },
+        )
+
+        self.assertEqual(updated["displayName"], "Akida Windows Host")
+        self.assertEqual(updated["baseUrl"], "https://akida-win.example.com:8443")
+
+        persisted = json.loads(
+            (
+                self.repo_root
+                / "nmtk"
+                / "neuro_toolkit"
+                / "launcher_settings.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(len(persisted["akidaHosts"]), 1)
+        self.assertEqual(
+            persisted["akidaHosts"][0]["displayName"],
+            "Akida Windows Host",
+        )
+        self.assertEqual(
+            persisted["akidaHosts"][0]["baseUrl"],
+            "https://akida-win.example.com:8443",
+        )
+
     def test_pynq_board_normalization_migrates_legacy_opt_paths(self) -> None:
         created = self.state.create_pynq_board(
             {

@@ -288,6 +288,46 @@ def _serialize_pynq_board(board: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _normalize_akida_host_url(value: Any) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+
+    parsed = urlparse(raw if "://" in raw else f"http://{raw}")
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("Akida host URL must use http or https")
+    if not parsed.netloc:
+        raise ValueError("Akida host URL must include a host")
+
+    normalized = parsed._replace(
+        path=parsed.path.rstrip("/"),
+        params="",
+        query="",
+        fragment="",
+    ).geturl()
+    return normalized.rstrip("/")
+
+
+def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
+    base_url = _normalize_akida_host_url(
+        raw.get("baseUrl") or raw.get("runtimeApiUrl") or raw.get("url")
+    )
+    display_name = str(raw.get("displayName") or raw.get("name") or "").strip()
+    if not display_name and base_url:
+        parsed = urlparse(base_url)
+        display_name = parsed.hostname or base_url
+
+    return {
+        "id": str(raw.get("id") or uuid4()),
+        "displayName": display_name or "Remote Akida Host",
+        "baseUrl": base_url,
+    }
+
+
+def _serialize_akida_host(host: dict[str, Any]) -> dict[str, Any]:
+    return dict(host)
+
+
 def _ssh_failure_message(stdout_lines: list[str], stderr_lines: list[str]) -> str:
     non_benign_stderr = [
         line for line in stderr_lines if not _is_benign_ssh_warning_line(line)
@@ -921,6 +961,7 @@ class LauncherControlState:
             "mujocoAvailable": _mujoco_available(),
             "pythonAvailable": True,
             "pynqBoards": [],
+            "akidaHosts": [],
         }
         stored = _read_json_file(SETTINGS_FILE, {})
         if not isinstance(stored, dict):
@@ -934,6 +975,11 @@ class LauncherControlState:
                     _normalize_pynq_board(board)
                     for board in stored.get("pynqBoards", [])
                     if isinstance(board, dict)
+                ],
+                "akidaHosts": [
+                    _normalize_akida_host(host)
+                    for host in stored.get("akidaHosts", [])
+                    if isinstance(host, dict)
                 ],
             }
         )
@@ -964,6 +1010,10 @@ class LauncherControlState:
                     _serialize_pynq_board(board)
                     for board in self._settings["pynqBoards"]
                 ],
+                "akidaHosts": [
+                    _serialize_akida_host(host)
+                    for host in self._settings["akidaHosts"]
+                ],
             }
 
     def update_settings(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -976,6 +1026,66 @@ class LauncherControlState:
 
     def _persist_settings(self) -> None:
         _write_json_file(SETTINGS_FILE, self._settings)
+
+    def list_akida_hosts(self) -> list[dict[str, Any]]:
+        with self._lock:
+            hosts = self._settings.get("akidaHosts", [])
+            return [_serialize_akida_host(host) for host in hosts]
+
+    def get_akida_host(self, host_id: str) -> dict[str, Any]:
+        with self._lock:
+            host = self._get_akida_host(host_id)
+            return _serialize_akida_host(host)
+
+    def create_akida_host(self, payload: dict[str, Any]) -> dict[str, Any]:
+        host = _normalize_akida_host(payload)
+        if not host["baseUrl"]:
+            raise ValueError("Akida host base URL is required")
+        with self._lock:
+            hosts = self._settings["akidaHosts"]
+            if any(existing["id"] == host["id"] for existing in hosts):
+                raise ValueError(f"Akida host '{host['id']}' already exists")
+            hosts.append(host)
+            self._persist_settings()
+            return _serialize_akida_host(host)
+
+    def update_akida_host(
+        self, host_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        with self._lock:
+            host = self._get_akida_host(host_id)
+            normalized = self._normalize_updated_akida_host(
+                host,
+                {"id": host_id, **payload},
+            )
+            host.clear()
+            host.update(normalized)
+            self._persist_settings()
+            return _serialize_akida_host(host)
+
+    def delete_akida_host(self, host_id: str) -> None:
+        with self._lock:
+            hosts = self._settings["akidaHosts"]
+            next_hosts = [host for host in hosts if host["id"] != host_id]
+            if len(next_hosts) == len(hosts):
+                raise KeyError(f"Unknown Akida host '{host_id}'")
+            self._settings["akidaHosts"] = next_hosts
+            self._persist_settings()
+
+    def _get_akida_host(self, host_id: str) -> dict[str, Any]:
+        for host in self._settings.get("akidaHosts", []):
+            if host["id"] == host_id:
+                return host
+        raise KeyError(f"Unknown Akida host '{host_id}'")
+
+    def _normalize_updated_akida_host(
+        self,
+        host: dict[str, Any],
+        updates: dict[str, Any],
+    ) -> dict[str, Any]:
+        merged = dict(host)
+        merged.update(updates)
+        return _normalize_akida_host(merged)
 
     def list_pynq_boards(self) -> list[dict[str, Any]]:
         with self._lock:
@@ -2693,6 +2803,7 @@ class LauncherControlState:
     def doctor_report(self) -> dict[str, Any]:
         modules: list[dict[str, Any]] = []
         pynq_boards: list[dict[str, Any]] = []
+        akida_hosts: list[dict[str, Any]] = []
         global_checks = _global_preflight_checks()
         fatal_count = 0
         degraded_count = 0
@@ -2756,6 +2867,9 @@ class LauncherControlState:
             board_snapshot = [
                 dict(board) for board in self._settings.get("pynqBoards", [])
             ]
+            akida_host_snapshot = [
+                dict(host) for host in self._settings.get("akidaHosts", [])
+            ]
 
         for board in board_snapshot:
             state = _normalize_pynq_board_state(board.get("state"))
@@ -2781,6 +2895,15 @@ class LauncherControlState:
                 }
             )
 
+        for host in akida_host_snapshot:
+            akida_hosts.append(
+                {
+                    "id": host["id"],
+                    "displayName": host["displayName"],
+                    "baseUrl": host["baseUrl"],
+                }
+            )
+
         return {
             "status": "ok" if fatal_count == 0 else "error",
             "fatalCount": fatal_count,
@@ -2789,6 +2912,7 @@ class LauncherControlState:
             "globalChecks": global_checks,
             "modules": modules,
             "pynqBoards": pynq_boards,
+            "akidaHosts": akida_hosts,
         }
 
     def _set_error(self, module_id: str, message: str) -> None:
@@ -2917,6 +3041,40 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 return
 
             segments = [segment for segment in path.split("/") if segment]
+            if len(segments) >= 5 and segments[:4] == [
+                "api",
+                "launcher",
+                "akida",
+                "hosts",
+            ]:
+                host_id = segments[4]
+                if len(segments) == 5 and method == "GET":
+                    self._send_json(
+                        HTTPStatus.OK, self.server.state.get_akida_host(host_id)
+                    )
+                    return
+                if len(segments) == 5 and method == "PUT":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.update_akida_host(host_id, body or {}),
+                    )
+                    return
+                if len(segments) == 5 and method == "DELETE":
+                    self.server.state.delete_akida_host(host_id)
+                    self._send_json(HTTPStatus.NO_CONTENT, {})
+                    return
+
+            if method == "GET" and path == "/api/launcher/akida/hosts":
+                self._send_json(HTTPStatus.OK, self.server.state.list_akida_hosts())
+                return
+
+            if method == "POST" and path == "/api/launcher/akida/hosts":
+                self._send_json(
+                    HTTPStatus.CREATED,
+                    self.server.state.create_akida_host(body or {}),
+                )
+                return
+
             if len(segments) >= 5 and segments[:4] == [
                 "api",
                 "launcher",
