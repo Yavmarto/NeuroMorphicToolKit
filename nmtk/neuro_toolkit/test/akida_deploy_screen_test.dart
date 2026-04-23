@@ -15,6 +15,10 @@ import 'package:neuro_toolkit/services/control_api_service.dart';
 // ---------------------------------------------------------------------------
 
 class _NopAkidaDeployService extends AkidaDeployService {
+  _NopAkidaDeployService({this.runtimeStatus});
+
+  final AkidaSdkVerification? runtimeStatus;
+
   @override
   Future<AkidaNetworkResponse> checkExportability({
     required String spec,
@@ -35,24 +39,31 @@ class _NopAkidaDeployService extends AkidaDeployService {
     required Map<String, dynamic> mappedNetwork,
     required int bitWidth,
     required String outputDir,
-  }) async =>
-      '/tmp/akida_deploy.zip';
+  }) async => '/tmp/akida_deploy.zip';
 
   @override
   Future<AkidaDeployJob> getStatus() async =>
       const AkidaDeployJob(status: AkidaDeployJobStatus.notInitialised);
 
   @override
+  Future<AkidaSdkVerification> getRuntimeStatus() async {
+    if (runtimeStatus == null) {
+      throw const AkidaDeployException(error: 'runtime_status_unavailable');
+    }
+    return runtimeStatus!;
+  }
+
+  @override
   Future<String> runNeurobenchJob({
     required String benchmarkId,
     required String networkPath,
     String target = 'simulation',
-  }) async =>
-      'job-001';
+  }) async => 'job-001';
 
   @override
-  Future<Map<String, dynamic>> getNeurobenchJobStatus(String jobId) async =>
-      {'status': 'complete'};
+  Future<Map<String, dynamic>> getNeurobenchJobStatus(String jobId) async => {
+    'status': 'complete',
+  };
 
   @override
   void dispose() {}
@@ -92,9 +103,7 @@ Widget _buildTestApp(
   return MaterialApp(
     theme: ThemeData(platform: platform),
     home: ProviderScope(
-      overrides: [
-        akidaDeployStateProvider.overrideWith((ref) => provider),
-      ],
+      overrides: [akidaDeployStateProvider.overrideWith((ref) => provider)],
       child: const AkidaDeployScreen(),
     ),
   );
@@ -130,8 +139,9 @@ void main() {
   });
 
   group('AkidaDeployScreen — Neurobench toggle', () {
-    testWidgets('deploy config card shows enabled Neurobench switch',
-        (tester) async {
+    testWidgets('deploy config card shows enabled Neurobench switch', (
+      tester,
+    ) async {
       final provider = AkidaDeployProvider(
         service: _NopAkidaDeployService(),
         controlApiService: _FakeControlApiService(module: neurochipModule),
@@ -153,8 +163,9 @@ void main() {
       );
     });
 
-    testWidgets('Neurobench switch is interactive (not hard-disabled)',
-        (tester) async {
+    testWidgets('Neurobench switch is interactive (not hard-disabled)', (
+      tester,
+    ) async {
       final provider = AkidaDeployProvider(
         service: _NopAkidaDeployService(),
         controlApiService: _FakeControlApiService(module: neurochipModule),
@@ -171,40 +182,39 @@ void main() {
     });
 
     testWidgets(
-        'setRunNeurobench toggles provider state and Switch reflects it',
-        (tester) async {
-      final controlApi = _FakeControlApiService(module: neurochipModule);
-      final provider = AkidaDeployProvider(
-        service: _NopAkidaDeployService(),
-        controlApiService: controlApi,
-      );
-      await provider.checkExportability(
-        spec: 'The sensory neuron MUST fire.',
-        weightBitWidth: 8,
-      );
-      expect(provider.runNeurobench, isFalse);
+      'setRunNeurobench toggles provider state and Switch reflects it',
+      (tester) async {
+        final controlApi = _FakeControlApiService(module: neurochipModule);
+        final provider = AkidaDeployProvider(
+          service: _NopAkidaDeployService(),
+          controlApiService: controlApi,
+        );
+        await provider.checkExportability(
+          spec: 'The sensory neuron MUST fire.',
+          weightBitWidth: 8,
+        );
+        expect(provider.runNeurobench, isFalse);
 
-      await tester.pumpWidget(_buildTestApp(provider));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(_buildTestApp(provider));
+        await tester.pumpAndSettle();
 
-      // Verify initial switch value is false.
-      final switchWidget =
-          tester.widgetList<Switch>(find.byType(Switch)).firstWhere(
-                (s) => s.onChanged != null,
-              );
-      expect(switchWidget.value, isFalse);
+        // Verify initial switch value is false.
+        final switchWidget = tester
+            .widgetList<Switch>(find.byType(Switch))
+            .firstWhere((s) => s.onChanged != null);
+        expect(switchWidget.value, isFalse);
 
-      // Toggle via provider (same path the Switch.onChanged calls).
-      provider.setRunNeurobench(true);
-      await tester.pump();
+        // Toggle via provider (same path the Switch.onChanged calls).
+        provider.setRunNeurobench(true);
+        await tester.pump();
 
-      expect(provider.runNeurobench, isTrue);
-      final switchWidgetAfter =
-          tester.widgetList<Switch>(find.byType(Switch)).firstWhere(
-                (s) => s.onChanged != null,
-              );
-      expect(switchWidgetAfter.value, isTrue);
-    });
+        expect(provider.runNeurobench, isTrue);
+        final switchWidgetAfter = tester
+            .widgetList<Switch>(find.byType(Switch))
+            .firstWhere((s) => s.onChanged != null);
+        expect(switchWidgetAfter.value, isTrue);
+      },
+    );
 
     testWidgets('shows simulator-only guidance on macOS hosts', (tester) async {
       final provider = AkidaDeployProvider(
@@ -228,8 +238,9 @@ void main() {
       expect(find.text('Prepare Akida Runtime'), findsNothing);
     });
 
-    testWidgets('offers local runtime preparation on supported hosts',
-        (tester) async {
+    testWidgets('offers local runtime preparation on supported hosts', (
+      tester,
+    ) async {
       final controlApi = _FakeControlApiService(module: neurochipModule);
       final provider = AkidaDeployProvider(
         service: _NopAkidaDeployService(),
@@ -253,6 +264,120 @@ void main() {
       expect(controlApi.prepareCalls, 1);
       expect(
         find.text('Akida runtime is prepared for local SDK verification.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows connected runtime hardware diagnostics', (tester) async {
+      final provider = AkidaDeployProvider(
+        service: _NopAkidaDeployService(
+          runtimeStatus: const AkidaSdkVerification(
+            sdkAvailable: true,
+            sdkStatus: 'unknown',
+            sdkIssues: [],
+            state: 'not_initialised',
+            runtimeTarget: 'hardware',
+            deviceInfo: 'AKD2000 PCIe',
+          ),
+        ),
+        controlApiService: _FakeControlApiService(module: neurochipModule),
+      );
+      await provider.checkExportability(
+        spec: 'The sensory neuron MUST fire.',
+        weightBitWidth: 4,
+      );
+
+      await tester.pumpWidget(_buildTestApp(provider));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Connected Neurochip runtime reports attached Akida hardware.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Runtime target: hardware'), findsOneWidget);
+      expect(find.text('Device: AKD2000 PCIe'), findsOneWidget);
+    });
+
+    testWidgets('shows connected runtime simulator fallback diagnostics', (
+      tester,
+    ) async {
+      final provider = AkidaDeployProvider(
+        service: _NopAkidaDeployService(
+          runtimeStatus: const AkidaSdkVerification(
+            sdkAvailable: true,
+            sdkStatus: 'unknown',
+            sdkIssues: [],
+            state: 'not_initialised',
+            runtimeTarget: 'akd1000_simulator',
+            deviceInfo: 'AKD1000',
+          ),
+        ),
+        controlApiService: _FakeControlApiService(module: neurochipModule),
+      );
+      await provider.checkExportability(
+        spec: 'The sensory neuron MUST fire.',
+        weightBitWidth: 4,
+      );
+
+      await tester.pumpWidget(_buildTestApp(provider));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('AKD1000 simulator; no physical Akida device'),
+        findsOneWidget,
+      );
+      expect(find.text('Runtime target: AKD1000 simulator'), findsOneWidget);
+      expect(find.text('Device: AKD1000'), findsOneWidget);
+    });
+
+    testWidgets('shows actionable runtime issue codes from connected runtime', (
+      tester,
+    ) async {
+      final provider = AkidaDeployProvider(
+        service: _NopAkidaDeployService(
+          runtimeStatus: const AkidaSdkVerification(
+            sdkAvailable: false,
+            sdkStatus: 'not_available',
+            sdkIssues: ['unsupported_python', 'sdk_not_available'],
+            state: 'not_initialised',
+            runtimeTarget: 'software_fallback',
+            deviceInfo: 'AkidaSimulator',
+            sdkIssueDetail:
+                'Akida SDK installation requires Python 3.10 to 3.12.',
+            environmentChecks: AkidaEnvironmentChecks(
+              hostSupported: true,
+              pythonSupported: false,
+              tensorflowAvailable: true,
+              cnn2snnAvailable: true,
+              akidaModelsAvailable: true,
+              recommendedRuntime: 'remote_sdk',
+            ),
+          ),
+        ),
+        controlApiService: _FakeControlApiService(module: neurochipModule),
+      );
+      await provider.checkExportability(
+        spec: 'The sensory neuron MUST fire.',
+        weightBitWidth: 4,
+      );
+
+      await tester.pumpWidget(_buildTestApp(provider));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining(
+          'software fallback only; real SDK mapping is not available',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Runtime issues: unsupported_python, sdk_not_available'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Akida SDK installation requires Python 3.10 to 3.12.'),
         findsOneWidget,
       );
     });

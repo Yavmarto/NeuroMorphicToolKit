@@ -39,8 +39,8 @@ class AkidaDeployProvider with ChangeNotifier {
   AkidaDeployProvider({
     AkidaDeployService? service,
     ControlApiService? controlApiService,
-  })  : _service = service ?? AkidaDeployService(),
-        _controlApiService = controlApiService ?? ControlApiService();
+  }) : _service = service ?? AkidaDeployService(),
+       _controlApiService = controlApiService ?? ControlApiService();
 
   final AkidaDeployService _service;
   final ControlApiService _controlApiService;
@@ -55,6 +55,9 @@ class AkidaDeployProvider with ChangeNotifier {
 
   AkidaDeployJob? _deployJob;
   AkidaDeployJob? get deployJob => _deployJob;
+
+  AkidaSdkVerification? _runtimeStatus;
+  AkidaSdkVerification? get runtimeStatus => _runtimeStatus;
 
   AkidaSdkVerification? _sdkVerification;
   AkidaSdkVerification? get sdkVerification => _sdkVerification;
@@ -103,6 +106,13 @@ class AkidaDeployProvider with ChangeNotifier {
       _neurochipModule = await _controlApiService.fetchModule('Neurochip');
     } catch (e) {
       _runtimeSetupError = e.toString();
+    }
+
+    try {
+      _runtimeStatus = await _service.getRuntimeStatus();
+    } catch (_) {
+      // Runtime diagnostics are best-effort here; launcher module metadata
+      // still needs to load even when the Neurochip backend is offline.
     } finally {
       _isLoadingRuntimeSetup = false;
       notifyListeners();
@@ -121,6 +131,11 @@ class AkidaDeployProvider with ChangeNotifier {
     } catch (e) {
       _runtimeSetupError = e.toString();
     } finally {
+      try {
+        _runtimeStatus = await _service.getRuntimeStatus();
+      } catch (_) {
+        // Ignore refresh failures; prepare action state is still useful on its own.
+      }
       _isPreparingRuntime = false;
       notifyListeners();
     }
@@ -198,6 +213,7 @@ class AkidaDeployProvider with ChangeNotifier {
         mappedNetwork: mappedNetwork,
         bitWidth: bitWidth,
       );
+      _runtimeStatus = _sdkVerification;
       _deployJob = AkidaDeployJob.fromVerification(_sdkVerification!);
       notifyListeners();
 
@@ -221,9 +237,7 @@ class AkidaDeployProvider with ChangeNotifier {
   }
 
   /// Submit a Neurobench verification job for the deployed package.
-  Future<void> runVerification({
-    String benchmarkId = 'akida_default',
-  }) async {
+  Future<void> runVerification({String benchmarkId = 'akida_default'}) async {
     if (_sdkVerification?.isDeployable != true) {
       _errorMessage =
           'Neurobench verification is blocked until Akida SDK verification succeeds.';
@@ -248,8 +262,9 @@ class AkidaDeployProvider with ChangeNotifier {
       _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
         if (_neurobenchJobId == null) return;
         try {
-          final result =
-              await _service.getNeurobenchJobStatus(_neurobenchJobId!);
+          final result = await _service.getNeurobenchJobStatus(
+            _neurobenchJobId!,
+          );
           _neurobenchResult = result;
           notifyListeners();
 

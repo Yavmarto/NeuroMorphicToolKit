@@ -276,7 +276,9 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   // ---------- Step 1: CNL Input ----------
 
   Widget _buildCnlInputCard(
-      BuildContext context, AkidaDeployProvider provider) {
+    BuildContext context,
+    AkidaDeployProvider provider,
+  ) {
     final isChecking = provider.currentStep == AkidaDeployStep.checking;
 
     return Card(
@@ -294,7 +296,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
               controller: _specController,
               maxLines: 8,
               decoration: const InputDecoration(
-                hintText: 'Enter your NeuroCNL specification…\n'
+                hintText:
+                    'Enter your NeuroCNL specification…\n'
                     'Example: The sensory neuron MUST fire ONLY IF '
                     'membrane potential exceeds 1.0.',
                 border: OutlineInputBorder(),
@@ -351,10 +354,10 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   onPressed: isChecking || _specController.text.trim().isEmpty
                       ? null
                       : () => provider.checkExportability(
-                            spec: _specController.text,
-                            weightBitWidth: _weightBitWidth,
-                            akidaVersion: _akidaVersion,
-                          ),
+                          spec: _specController.text,
+                          weightBitWidth: _weightBitWidth,
+                          akidaVersion: _akidaVersion,
+                        ),
                   icon: isChecking
                       ? const SizedBox(
                           width: 16,
@@ -393,11 +396,14 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     AkidaDeployProvider provider,
   ) {
     final module = provider.neurochipModule;
+    final runtimeStatus = provider.runtimeStatus;
     final runtimeConfig = module?.akidaRuntime;
     final runtimeState = module?.akidaRuntimeState;
     final checks = provider.sdkVerification?.environmentChecks;
 
-    if (runtimeConfig == null && !provider.isLoadingRuntimeSetup) {
+    if (runtimeConfig == null &&
+        runtimeStatus == null &&
+        !provider.isLoadingRuntimeSetup) {
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -414,7 +420,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
         runtimeConfig?.supportedPlatforms.contains(platformKey) ?? false;
     final simulatorOnly =
         !hostSupported && runtimeConfig?.localModeFallback == 'simulator_only';
-    final showPrepareButton = runtimeConfig != null &&
+    final showPrepareButton =
+        runtimeConfig != null &&
         hostSupported &&
         !provider.isPreparingRuntime &&
         runtimeState?.status != 'ready';
@@ -426,13 +433,41 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Local Runtime Setup',
+              'Runtime Setup And Diagnostics',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
             if (provider.isLoadingRuntimeSetup)
               const LinearProgressIndicator()
-            else if (simulatorOnly)
+            else if (runtimeStatus != null) ...[
+              Text(_runtimeStatusHeadline(runtimeStatus)),
+              const SizedBox(height: 8),
+              Text(
+                'Runtime target: ${_runtimeTargetLabel(runtimeStatus.runtimeTarget)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (runtimeStatus.deviceInfo != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Device: ${runtimeStatus.deviceInfo}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+              if (runtimeStatus.sdkIssues.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Runtime issues: ${runtimeStatus.sdkIssues.join(", ")}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+              if (runtimeStatus.sdkIssueDetail != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  runtimeStatus.sdkIssueDetail!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ] else if (simulatorOnly)
               Text(
                 'This launcher host is running on $platformKey. Local Akida SDK install is simulator-only here; use a Linux or Windows Neurochip host for SDK verification.',
               )
@@ -501,8 +536,11 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   }
 
   Widget _buildDeployConfigCard(
-      BuildContext context, AkidaDeployProvider provider) {
-    final isDeploying = provider.currentStep == AkidaDeployStep.deploying ||
+    BuildContext context,
+    AkidaDeployProvider provider,
+  ) {
+    final isDeploying =
+        provider.currentStep == AkidaDeployStep.deploying ||
         provider.currentStep == AkidaDeployStep.polling;
 
     return Card(
@@ -513,10 +551,9 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
           children: [
             Text(
               'Scaffold Package + SDK Verify',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(color: const Color(0xFF5C6BC0)),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: const Color(0xFF5C6BC0)),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -538,7 +575,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                 ),
                 const Spacer(),
                 FilledButton.icon(
-                  onPressed: isDeploying ||
+                  onPressed:
+                      isDeploying ||
                           provider.exportResult?.mappedNetwork == null
                       ? null
                       : () => _startDeploy(provider),
@@ -576,16 +614,20 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   // ---------- Step 4: Deployment Status ----------
 
   Widget _buildDeployStatusCard(
-      BuildContext context, AkidaDeployProvider provider) {
+    BuildContext context,
+    AkidaDeployProvider provider,
+  ) {
     final job = provider.deployJob;
     final sdkVerification = provider.sdkVerification;
     final savedPath = provider.savedPackagePath;
     final isPolling = provider.currentStep == AkidaDeployStep.polling;
-    final isDone = provider.currentStep == AkidaDeployStep.done ||
+    final isDone =
+        provider.currentStep == AkidaDeployStep.done ||
         provider.currentStep == AkidaDeployStep.verifying;
 
-    final progressValue =
-        isPolling ? null : (savedPath != null || isDone ? 1.0 : null);
+    final progressValue = isPolling
+        ? null
+        : (savedPath != null || isDone ? 1.0 : null);
 
     return Card(
       child: Padding(
@@ -644,9 +686,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                     size: 18,
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(_sdkStatusLabel(sdkVerification)),
-                  ),
+                  Expanded(child: Text(_sdkStatusLabel(sdkVerification))),
                 ],
               ),
               const SizedBox(height: 4),
@@ -661,6 +701,13 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
+              if (sdkVerification.sdkIssues.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Runtime issues: ${sdkVerification.sdkIssues.join(", ")}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               if (sdkVerification.sdkIssueDetail != null) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -668,7 +715,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ] else if (sdkVerification
-                      .environmentChecks?.recommendedRuntime ==
+                      .environmentChecks
+                      ?.recommendedRuntime ==
                   'simulator_only') ...[
                 const SizedBox(height: 4),
                 Text(
@@ -824,6 +872,29 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     }
   }
 
+  String _runtimeStatusHeadline(AkidaSdkVerification verification) {
+    switch (verification.runtimeTarget) {
+      case 'hardware':
+        return 'Connected Neurochip runtime reports attached Akida hardware.';
+      case 'akd1000_simulator':
+        return 'Connected Neurochip runtime is using the AKD1000 simulator; no physical Akida device is attached.';
+      case 'software_fallback':
+        if (verification.sdkStatus == 'not_available') {
+          return 'Connected Neurochip runtime is in software fallback only; real SDK mapping is not available on this host.';
+        }
+        return 'Connected Neurochip runtime is using software fallback only.';
+      default:
+        if (verification.sdkStatus == 'mapping_failed') {
+          return 'Connected Neurochip runtime reached the SDK, but model mapping failed.';
+        }
+        if (verification.sdkIssues.isNotEmpty ||
+            verification.sdkIssueDetail != null) {
+          return 'Connected Neurochip runtime is reachable, but Akida runtime diagnostics report configuration problems.';
+        }
+        return 'Connected Neurochip runtime diagnostics are available, but no Akida target has been verified yet.';
+    }
+  }
+
   String _runtimeTargetLabel(String runtimeTarget) {
     switch (runtimeTarget) {
       case 'hardware':
@@ -853,7 +924,9 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
   // ---------- Step 5: Neurobench Verification ----------
 
   Widget _buildNeurobenchResultCard(
-      BuildContext context, AkidaDeployProvider provider) {
+    BuildContext context,
+    AkidaDeployProvider provider,
+  ) {
     final result = provider.neurobenchResult!;
     final status = result['status'] as String? ?? '';
     final isCompleted = status == 'completed';
@@ -863,8 +936,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
       color: isCompleted
           ? Colors.green.withValues(alpha: 0.08)
           : isFailed
-              ? Colors.red.withValues(alpha: 0.08)
-              : null,
+          ? Colors.red.withValues(alpha: 0.08)
+          : null,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -876,13 +949,13 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   isCompleted
                       ? Icons.verified
                       : isFailed
-                          ? Icons.error
-                          : Icons.hourglass_top,
+                      ? Icons.error
+                      : Icons.hourglass_top,
                   color: isCompleted
                       ? Colors.green
                       : isFailed
-                          ? Colors.red
-                          : Colors.blue,
+                      ? Colors.red
+                      : Colors.blue,
                   size: 28,
                 ),
                 const SizedBox(width: 8),

@@ -17,10 +17,10 @@ class AkidaDeployService {
     String? neurocnlBaseUrl,
     String? neurochipBaseUrl,
     String? neurobenchBaseUrl,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000',
-        _neurochipBaseUrl = neurochipBaseUrl ?? 'http://localhost:8002',
-        _neurobenchBaseUrl = neurobenchBaseUrl ?? 'http://localhost:8003';
+  }) : _httpClient = httpClient ?? http.Client(),
+       _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000',
+       _neurochipBaseUrl = neurochipBaseUrl ?? 'http://localhost:8002',
+       _neurobenchBaseUrl = neurobenchBaseUrl ?? 'http://localhost:8003';
 
   final http.Client _httpClient;
   final String _neurocnlBaseUrl;
@@ -113,6 +113,28 @@ class AkidaDeployService {
     );
   }
 
+  /// Fetch runtime diagnostics for the current Neurochip Akida host.
+  ///
+  /// Calls GET /api/neurochip/akida/status and returns the full runtime
+  /// payload so launcher surfaces can distinguish hardware, simulator, and
+  /// broken-runtime states before deployment.
+  Future<AkidaSdkVerification> getRuntimeStatus() async {
+    final uri = Uri.parse('$_neurochipBaseUrl/api/neurochip/akida/status');
+    final response = await _httpClient.get(uri);
+
+    if (response.statusCode == 200) {
+      return AkidaSdkVerification.fromJson(
+        jsonDecode(response.body) as Map<String, dynamic>,
+      );
+    }
+
+    final detail = _parseErrorDetail(response.body);
+    throw AkidaDeployException(
+      error: detail['error'] as String? ?? 'runtime_status_failed',
+      messages: _extractMessages(detail),
+    );
+  }
+
   /// Verify that the mapped network is deployable in the current Neurochip runtime.
   ///
   /// Calls POST /api/neurochip/akida/verify. When [mappedNetwork] is supplied
@@ -123,11 +145,13 @@ class AkidaDeployService {
     int bitWidth = 4,
   }) async {
     final uri = Uri.parse(
-        '$_neurochipBaseUrl/api/neurochip/akida/verify?bit_width=$bitWidth');
+      '$_neurochipBaseUrl/api/neurochip/akida/verify?bit_width=$bitWidth',
+    );
     final response = await _httpClient.post(
       uri,
-      headers:
-          mappedNetwork == null ? null : {'Content-Type': 'application/json'},
+      headers: mappedNetwork == null
+          ? null
+          : {'Content-Type': 'application/json'},
       body: mappedNetwork == null ? null : jsonEncode(mappedNetwork),
     );
 
@@ -220,10 +244,7 @@ class AkidaDeployException implements Exception {
   final String error;
   final List<String> messages;
 
-  const AkidaDeployException({
-    required this.error,
-    this.messages = const [],
-  });
+  const AkidaDeployException({required this.error, this.messages = const []});
 
   @override
   String toString() {
