@@ -296,8 +296,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
               controller: _specController,
               maxLines: 8,
               decoration: const InputDecoration(
-                hintText:
-                    'Enter your NeuroCNL specification…\n'
+                hintText: 'Enter your NeuroCNL specification…\n'
                     'Example: The sensory neuron MUST fire ONLY IF '
                     'membrane potential exceeds 1.0.',
                 border: OutlineInputBorder(),
@@ -354,10 +353,10 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   onPressed: isChecking || _specController.text.trim().isEmpty
                       ? null
                       : () => provider.checkExportability(
-                          spec: _specController.text,
-                          weightBitWidth: _weightBitWidth,
-                          akidaVersion: _akidaVersion,
-                        ),
+                            spec: _specController.text,
+                            weightBitWidth: _weightBitWidth,
+                            akidaVersion: _akidaVersion,
+                          ),
                   icon: isChecking
                       ? const SizedBox(
                           width: 16,
@@ -420,10 +419,14 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
         runtimeConfig?.supportedPlatforms.contains(platformKey) ?? false;
     final simulatorOnly =
         !hostSupported && runtimeConfig?.localModeFallback == 'simulator_only';
-    final showPrepareButton =
-        runtimeConfig != null &&
+    final connectedChecks = runtimeStatus?.environmentChecks;
+    final requiresRemoteRuntime = checks?.recommendedRuntime == 'remote_sdk' ||
+        connectedChecks?.recommendedRuntime == 'remote_sdk' ||
+        runtimeState?.status == 'unsupported_python';
+    final showPrepareButton = runtimeConfig != null &&
         hostSupported &&
         !provider.isPreparingRuntime &&
+        !requiresRemoteRuntime &&
         runtimeState?.status != 'ready';
 
     return Card(
@@ -470,6 +473,10 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
             ] else if (simulatorOnly)
               Text(
                 'This launcher host is running on $platformKey. Local Akida SDK install is simulator-only here; use a Linux or Windows Neurochip host for SDK verification.',
+              )
+            else if (requiresRemoteRuntime)
+              const Text(
+                'This Neurochip environment does not satisfy the local Akida SDK requirements. Keep scaffold export local, then verify through a Linux or Windows Neurochip host running Python 3.10-3.12.',
               )
             else if (checks != null &&
                 checks.recommendedRuntime == 'local_sdk' &&
@@ -539,8 +546,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     BuildContext context,
     AkidaDeployProvider provider,
   ) {
-    final isDeploying =
-        provider.currentStep == AkidaDeployStep.deploying ||
+    final isDeploying = provider.currentStep == AkidaDeployStep.deploying ||
         provider.currentStep == AkidaDeployStep.polling;
 
     return Card(
@@ -575,8 +581,7 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                 ),
                 const Spacer(),
                 FilledButton.icon(
-                  onPressed:
-                      isDeploying ||
+                  onPressed: isDeploying ||
                           provider.exportResult?.mappedNetwork == null
                       ? null
                       : () => _startDeploy(provider),
@@ -621,13 +626,11 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
     final sdkVerification = provider.sdkVerification;
     final savedPath = provider.savedPackagePath;
     final isPolling = provider.currentStep == AkidaDeployStep.polling;
-    final isDone =
-        provider.currentStep == AkidaDeployStep.done ||
+    final isDone = provider.currentStep == AkidaDeployStep.done ||
         provider.currentStep == AkidaDeployStep.verifying;
 
-    final progressValue = isPolling
-        ? null
-        : (savedPath != null || isDone ? 1.0 : null);
+    final progressValue =
+        isPolling ? null : (savedPath != null || isDone ? 1.0 : null);
 
     return Card(
       child: Padding(
@@ -714,9 +717,16 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   sdkVerification.sdkIssueDetail!,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+              ],
+              if (sdkVerification.environmentChecks?.recommendedRuntime ==
+                  'remote_sdk') ...[
+                const SizedBox(height: 4),
+                Text(
+                  'This Neurochip environment does not satisfy the local Akida SDK requirements. Re-run SDK verification through a Linux or Windows Neurochip host with Python 3.10-3.12.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ] else if (sdkVerification
-                      .environmentChecks
-                      ?.recommendedRuntime ==
+                      .environmentChecks?.recommendedRuntime ==
                   'simulator_only') ...[
                 const SizedBox(height: 4),
                 Text(
@@ -936,8 +946,8 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
       color: isCompleted
           ? Colors.green.withValues(alpha: 0.08)
           : isFailed
-          ? Colors.red.withValues(alpha: 0.08)
-          : null,
+              ? Colors.red.withValues(alpha: 0.08)
+              : null,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -949,13 +959,13 @@ class _AkidaDeployScreenState extends ConsumerState<AkidaDeployScreen> {
                   isCompleted
                       ? Icons.verified
                       : isFailed
-                      ? Icons.error
-                      : Icons.hourglass_top,
+                          ? Icons.error
+                          : Icons.hourglass_top,
                   color: isCompleted
                       ? Colors.green
                       : isFailed
-                      ? Colors.red
-                      : Colors.blue,
+                          ? Colors.red
+                          : Colors.blue,
                   size: 28,
                 ),
                 const SizedBox(width: 8),

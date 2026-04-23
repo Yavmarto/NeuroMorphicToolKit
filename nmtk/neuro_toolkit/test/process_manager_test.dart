@@ -103,7 +103,11 @@ class MockProcessRunner implements ProcessRunner {
     // Special case for lsof to avoid hanging if ProcessManager calls it
     if (executable == 'lsof') {
       return ProcessResult(
-          0, 1, '', ''); // Return 1 to indicate no process found
+        0,
+        1,
+        '',
+        '',
+      ); // Return 1 to indicate no process found
     }
 
     return runResult ?? ProcessResult(0, 0, 'success', '');
@@ -125,8 +129,9 @@ class InvocationRecord {
 }
 
 void main() {
-  const MethodChannel channel =
-      MethodChannel('plugins.flutter.io/path_provider');
+  const MethodChannel channel = MethodChannel(
+    'plugins.flutter.io/path_provider',
+  );
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late ProcessManager processManager;
@@ -135,19 +140,21 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-      return '.';
-    });
+          return '.';
+        });
 
     mockRunner = MockProcessRunner();
     processManager = ProcessManager(
       processRunner: mockRunner,
-      httpClient:
-          MockClient((request) async => http.Response('{"status":"ok"}', 200)),
+      httpClient: MockClient(
+        (request) async => http.Response('{"status":"ok"}', 200),
+      ),
     );
     processManager.resetForTesting();
     processManager.startupHealthGracePeriod = Duration.zero;
-    processManager.startupHealthProbeInterval =
-        const Duration(milliseconds: 10);
+    processManager.startupHealthProbeInterval = const Duration(
+      milliseconds: 10,
+    );
     processManager.platformOverride = null;
   });
 
@@ -188,59 +195,118 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  test('prepareAkidaRuntime installs configured package set on supported hosts',
-      () async {
-    final tempDir =
-        Directory.systemTemp.createTempSync('nmtk_test_prepare_akida');
-    final installDir = tempDir.path;
-    final venvPath = p.join(installDir, 'venv');
-    Directory(venvPath).createSync(recursive: true);
-    final pythonExe = Platform.isWindows
-        ? p.join(venvPath, 'Scripts', 'python.exe')
-        : p.join(venvPath, 'bin', 'python');
-    final pipExe = Platform.isWindows
-        ? p.join(venvPath, 'Scripts', 'pip.exe')
-        : p.join(venvPath, 'bin', 'pip');
-    File(pythonExe).createSync(recursive: true);
-    File(pipExe).createSync(recursive: true);
+  test(
+    'prepareAkidaRuntime installs configured package set on supported hosts',
+    () async {
+      final tempDir = Directory.systemTemp.createTempSync(
+        'nmtk_test_prepare_akida',
+      );
+      final installDir = tempDir.path;
+      final venvPath = p.join(installDir, 'venv');
+      Directory(venvPath).createSync(recursive: true);
+      final pythonExe = Platform.isWindows
+          ? p.join(venvPath, 'Scripts', 'python.exe')
+          : p.join(venvPath, 'bin', 'python');
+      final pipExe = Platform.isWindows
+          ? p.join(venvPath, 'Scripts', 'pip.exe')
+          : p.join(venvPath, 'bin', 'pip');
+      File(pythonExe).createSync(recursive: true);
+      File(pipExe).createSync(recursive: true);
 
-    mockRunner.runResult = ProcessResult(0, 0, '3.11.8\n', '');
-    processManager.platformOverride = 'linux';
+      mockRunner.runResult = ProcessResult(0, 0, '3.11.8\n', '');
+      processManager.platformOverride = 'linux';
 
-    final module = Module(
-      id: 'Neurochip',
-      name: 'Neurochip',
-      description: 'Hardware deployment',
-      directory: installDir,
-      sourcePath: '.',
-      akidaRuntime: const AkidaRuntimeConfig(
-        supportedPlatforms: ['linux', 'windows'],
-        pythonRange: '>=3.10,<3.13',
-        requiredPackages: [
-          'tensorflow==2.19.*',
-          'akida==2.19.1',
-          'cnn2snn==2.19.1',
-          'akida-models==1.13.1',
-        ],
-        docsUrl: 'https://doc.brainchipinc.com/installation.html',
-      ),
-    );
+      final module = Module(
+        id: 'Neurochip',
+        name: 'Neurochip',
+        description: 'Hardware deployment',
+        directory: installDir,
+        sourcePath: '.',
+        akidaRuntime: const AkidaRuntimeConfig(
+          supportedPlatforms: ['linux', 'windows'],
+          pythonRange: '>=3.10,<3.13',
+          requiredPackages: [
+            'tensorflow==2.19.*',
+            'akida==2.19.1',
+            'cnn2snn==2.19.1',
+            'akida-models==1.13.1',
+          ],
+          docsUrl: 'https://doc.brainchipinc.com/installation.html',
+        ),
+      );
 
-    final updatedModule = await processManager.prepareAkidaRuntime(module);
+      final updatedModule = await processManager.prepareAkidaRuntime(module);
 
-    expect(updatedModule.akidaRuntimeState?.status, 'ready');
-    expect(
-      mockRunner.calls.any(
-        (call) =>
-            call.arguments.contains('install') &&
-            call.arguments.contains('akida==2.19.1') &&
-            call.arguments.contains('akida-models==1.13.1'),
-      ),
-      isTrue,
-    );
+      expect(updatedModule.akidaRuntimeState?.status, 'ready');
+      expect(
+        mockRunner.calls.any(
+          (call) =>
+              call.arguments.contains('install') &&
+              call.arguments.contains('akida==2.19.1') &&
+              call.arguments.contains('akida-models==1.13.1'),
+        ),
+        isTrue,
+      );
 
-    tempDir.deleteSync(recursive: true);
-  });
+      tempDir.deleteSync(recursive: true);
+    },
+  );
+
+  test(
+    'prepareAkidaRuntime reports remote host guidance for unsupported Python',
+    () async {
+      final tempDir = Directory.systemTemp.createTempSync(
+        'nmtk_test_prepare_akida_py',
+      );
+      final installDir = tempDir.path;
+      final venvPath = p.join(installDir, 'venv');
+      Directory(venvPath).createSync(recursive: true);
+      final pythonExe = Platform.isWindows
+          ? p.join(venvPath, 'Scripts', 'python.exe')
+          : p.join(venvPath, 'bin', 'python');
+      final pipExe = Platform.isWindows
+          ? p.join(venvPath, 'Scripts', 'pip.exe')
+          : p.join(venvPath, 'bin', 'pip');
+      File(pythonExe).createSync(recursive: true);
+      File(pipExe).createSync(recursive: true);
+
+      mockRunner.runResult = ProcessResult(0, 0, '3.9.18\n', '');
+      processManager.platformOverride = 'linux';
+
+      final module = Module(
+        id: 'Neurochip',
+        name: 'Neurochip',
+        description: 'Hardware deployment',
+        directory: installDir,
+        sourcePath: '.',
+        akidaRuntime: const AkidaRuntimeConfig(
+          supportedPlatforms: ['linux', 'windows'],
+          pythonRange: '>=3.10,<3.13',
+          requiredPackages: [
+            'tensorflow==2.19.*',
+            'akida==2.19.1',
+            'cnn2snn==2.19.1',
+            'akida-models==1.13.1',
+          ],
+          docsUrl: 'https://doc.brainchipinc.com/installation.html',
+        ),
+      );
+
+      final updatedModule = await processManager.prepareAkidaRuntime(module);
+
+      expect(updatedModule.akidaRuntimeState?.status, 'unsupported_python');
+      expect(
+        updatedModule.akidaRuntimeState?.message,
+        contains('Linux or Windows Neurochip host'),
+      );
+      expect(
+        mockRunner.calls.where((call) => call.arguments.contains('install')),
+        isEmpty,
+      );
+
+      tempDir.deleteSync(recursive: true);
+    },
+  );
 
   test('startModule starts uvicorn and updates status', () async {
     final tempDir = Directory.systemTemp.createTempSync('nmtk_test_start');
@@ -277,8 +343,9 @@ void main() {
 
     await processManager.startModule(module);
 
-    final updatedModule =
-        await completer.future.timeout(const Duration(seconds: 10));
+    final updatedModule = await completer.future.timeout(
+      const Duration(seconds: 10),
+    );
     expect(updatedModule.status, ModuleStatus.starting);
 
     expect(
@@ -415,52 +482,56 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  test('single transport failure followed by success does not restart module',
-      () async {
-    final tempDir =
-        Directory.systemTemp.createTempSync('nmtk_test_health_single');
-    final runDir = tempDir.path;
-    final venvPath = p.join(runDir, 'venv');
-    Directory(venvPath).createSync(recursive: true);
-    final pythonExe = Platform.isWindows
-        ? p.join(venvPath, 'Scripts', 'python.exe')
-        : p.join(venvPath, 'bin', 'python');
-    File(pythonExe).createSync(recursive: true);
+  test(
+    'single transport failure followed by success does not restart module',
+    () async {
+      final tempDir = Directory.systemTemp.createTempSync(
+        'nmtk_test_health_single',
+      );
+      final runDir = tempDir.path;
+      final venvPath = p.join(runDir, 'venv');
+      Directory(venvPath).createSync(recursive: true);
+      final pythonExe = Platform.isWindows
+          ? p.join(venvPath, 'Scripts', 'python.exe')
+          : p.join(venvPath, 'bin', 'python');
+      File(pythonExe).createSync(recursive: true);
 
-    final module = Module(
-      id: 'health_single',
-      name: 'Health Single',
-      description: 'Desc',
-      directory: runDir,
-      port: 8003,
-      status: ModuleStatus.installed,
-    );
+      final module = Module(
+        id: 'health_single',
+        name: 'Health Single',
+        description: 'Desc',
+        directory: runDir,
+        port: 8003,
+        status: ModuleStatus.installed,
+      );
 
-    await processManager.init([module]);
+      await processManager.init([module]);
 
-    var requestCount = 0;
-    processManager.httpClient = MockClient((request) async {
-      requestCount++;
-      if (requestCount == 1) {
-        throw http.ClientException('Connection reset by peer', request.url);
-      }
-      return http.Response('{"status":"ok"}', 200);
-    });
-    mockRunner.mockProcesses[pythonExe] = MockProcess();
+      var requestCount = 0;
+      processManager.httpClient = MockClient((request) async {
+        requestCount++;
+        if (requestCount == 1) {
+          throw http.ClientException('Connection reset by peer', request.url);
+        }
+        return http.Response('{"status":"ok"}', 200);
+      });
+      mockRunner.mockProcesses[pythonExe] = MockProcess();
 
-    await processManager.startModule(module);
+      await processManager.startModule(module);
 
-    final updatedModule = processManager.moduleStateForTesting(module.id)!;
-    expect(updatedModule.status, ModuleStatus.running);
-    expect(processManager.consecutiveHealthFailuresFor(module.id), 0);
-    expect(processManager.hasScheduledRetryFor(module.id), isFalse);
+      final updatedModule = processManager.moduleStateForTesting(module.id)!;
+      expect(updatedModule.status, ModuleStatus.running);
+      expect(processManager.consecutiveHealthFailuresFor(module.id), 0);
+      expect(processManager.hasScheduledRetryFor(module.id), isFalse);
 
-    tempDir.deleteSync(recursive: true);
-  });
+      tempDir.deleteSync(recursive: true);
+    },
+  );
 
   test('startup grace allows a slow backend to become healthy', () async {
-    final tempDir =
-        Directory.systemTemp.createTempSync('nmtk_test_health_grace');
+    final tempDir = Directory.systemTemp.createTempSync(
+      'nmtk_test_health_grace',
+    );
     final runDir = tempDir.path;
     final venvPath = p.join(runDir, 'venv');
     Directory(venvPath).createSync(recursive: true);
@@ -480,8 +551,9 @@ void main() {
 
     await processManager.init([module]);
     processManager.startupHealthGracePeriod = const Duration(seconds: 1);
-    processManager.startupHealthProbeInterval =
-        const Duration(milliseconds: 10);
+    processManager.startupHealthProbeInterval = const Duration(
+      milliseconds: 10,
+    );
 
     var requestCount = 0;
     processManager.httpClient = MockClient((request) async {
@@ -502,48 +574,51 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
-  test('two consecutive failed probe cycles trigger failure handling and retry',
-      () async {
-    final tempDir =
-        Directory.systemTemp.createTempSync('nmtk_test_health_retry');
-    final runDir = tempDir.path;
-    final venvPath = p.join(runDir, 'venv');
-    Directory(venvPath).createSync(recursive: true);
-    final pythonExe = Platform.isWindows
-        ? p.join(venvPath, 'Scripts', 'python.exe')
-        : p.join(venvPath, 'bin', 'python');
-    File(pythonExe).createSync(recursive: true);
+  test(
+    'two consecutive failed probe cycles trigger failure handling and retry',
+    () async {
+      final tempDir = Directory.systemTemp.createTempSync(
+        'nmtk_test_health_retry',
+      );
+      final runDir = tempDir.path;
+      final venvPath = p.join(runDir, 'venv');
+      Directory(venvPath).createSync(recursive: true);
+      final pythonExe = Platform.isWindows
+          ? p.join(venvPath, 'Scripts', 'python.exe')
+          : p.join(venvPath, 'bin', 'python');
+      File(pythonExe).createSync(recursive: true);
 
-    final module = Module(
-      id: 'health_retry',
-      name: 'Health Retry',
-      description: 'Desc',
-      directory: runDir,
-      port: 8004,
-      status: ModuleStatus.installed,
-    );
+      final module = Module(
+        id: 'health_retry',
+        name: 'Health Retry',
+        description: 'Desc',
+        directory: runDir,
+        port: 8004,
+        status: ModuleStatus.installed,
+      );
 
-    await processManager.init([module]);
+      await processManager.init([module]);
 
-    processManager.httpClient = MockClient((request) async {
-      throw http.ClientException('Connection reset by peer', request.url);
-    });
-    mockRunner.mockProcesses[pythonExe] = MockProcess();
+      processManager.httpClient = MockClient((request) async {
+        throw http.ClientException('Connection reset by peer', request.url);
+      });
+      mockRunner.mockProcesses[pythonExe] = MockProcess();
 
-    await processManager.startModule(module);
-    expect(processManager.consecutiveHealthFailuresFor(module.id), 1);
+      await processManager.startModule(module);
+      expect(processManager.consecutiveHealthFailuresFor(module.id), 1);
 
-    await processManager.checkHealthForTesting(module);
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+      await processManager.checkHealthForTesting(module);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-    final updatedModule = processManager.moduleStateForTesting(module.id)!;
-    expect(updatedModule.status, ModuleStatus.error);
-    expect(updatedModule.healthStatus, contains('Retrying in'));
-    expect(processManager.hasScheduledRetryFor(module.id), isTrue);
-    expect(processManager.consecutiveHealthFailuresFor(module.id), 0);
+      final updatedModule = processManager.moduleStateForTesting(module.id)!;
+      expect(updatedModule.status, ModuleStatus.error);
+      expect(updatedModule.healthStatus, contains('Retrying in'));
+      expect(processManager.hasScheduledRetryFor(module.id), isTrue);
+      expect(processManager.consecutiveHealthFailuresFor(module.id), 0);
 
-    tempDir.deleteSync(recursive: true);
-  });
+      tempDir.deleteSync(recursive: true);
+    },
+  );
 
   test('successful probe resets consecutive failure counter', () async {
     final module = Module(
@@ -557,16 +632,18 @@ void main() {
 
     await processManager.init([module]);
 
-    processManager.httpClient =
-        MockClient((_) async => http.Response('Error', 500));
+    processManager.httpClient = MockClient(
+      (_) async => http.Response('Error', 500),
+    );
     await processManager.checkHealthForTesting(module);
 
     final afterFailure = processManager.moduleStateForTesting(module.id)!;
     expect(afterFailure.status, ModuleStatus.degraded);
     expect(processManager.consecutiveHealthFailuresFor(module.id), 1);
 
-    processManager.httpClient =
-        MockClient((_) async => http.Response('{"status":"ok"}', 200));
+    processManager.httpClient = MockClient(
+      (_) async => http.Response('{"status":"ok"}', 200),
+    );
     await processManager.checkHealthForTesting(module);
 
     final afterRecovery = processManager.moduleStateForTesting(module.id)!;
@@ -575,35 +652,38 @@ void main() {
   });
 
   test('health responses preserve 200, 404, and 503 semantics', () async {
-    final scenarios = <({
-      String id,
-      int statusCode,
-      String body,
-      ModuleStatus expectedStatus,
-      bool expectedHealthy,
-    })>[
-      (
-        id: 'health_200',
-        statusCode: 200,
-        body: '{"status":"ok"}',
-        expectedStatus: ModuleStatus.running,
-        expectedHealthy: true,
-      ),
-      (
-        id: 'health_404',
-        statusCode: 404,
-        body: 'Not Found',
-        expectedStatus: ModuleStatus.running,
-        expectedHealthy: true,
-      ),
-      (
-        id: 'health_503',
-        statusCode: 503,
-        body: '{"status":"degraded"}',
-        expectedStatus: ModuleStatus.degraded,
-        expectedHealthy: false,
-      ),
-    ];
+    final scenarios =
+        <
+          ({
+            String id,
+            int statusCode,
+            String body,
+            ModuleStatus expectedStatus,
+            bool expectedHealthy,
+          })
+        >[
+          (
+            id: 'health_200',
+            statusCode: 200,
+            body: '{"status":"ok"}',
+            expectedStatus: ModuleStatus.running,
+            expectedHealthy: true,
+          ),
+          (
+            id: 'health_404',
+            statusCode: 404,
+            body: 'Not Found',
+            expectedStatus: ModuleStatus.running,
+            expectedHealthy: true,
+          ),
+          (
+            id: 'health_503',
+            statusCode: 503,
+            body: '{"status":"degraded"}',
+            expectedStatus: ModuleStatus.degraded,
+            expectedHealthy: false,
+          ),
+        ];
 
     for (final scenario in scenarios) {
       final module = Module(
@@ -658,13 +738,15 @@ void main() {
       await processManager.init(modules);
 
       // Start all
-      final futures =
-          modules.map((m) => processManager.startModule(m)).toList();
+      final futures = modules
+          .map((m) => processManager.startModule(m))
+          .toList();
       await Future.wait(futures);
 
       // Stop all
-      final stopFutures =
-          modules.map((m) => processManager.stopModule(m.id)).toList();
+      final stopFutures = modules
+          .map((m) => processManager.stopModule(m.id))
+          .toList();
       await Future.wait(stopFutures);
 
       // Verify all started

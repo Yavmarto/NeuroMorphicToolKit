@@ -54,6 +54,17 @@ The Akida deploy flow can generate a scaffold package, but Neurochip reports tha
 *   **Solution**:
     *   On supported Linux or Windows hosts, use **Prepare Akida Runtime** from the Akida deploy flow to install the full BrainChip package set into the Neurochip environment.
     *   On macOS, continue using scaffold export and local simulator fallback, but point SDK verification at a Neurochip instance running on Linux or Windows.
+    *   Use the [Akida remote host runbook](./akida_remote_host.md) if you need to pair NMTK with a separate Linux or Windows Akida host.
+
+### 6. Akida Remote Host Pairing Does Not Reach Neurochip
+The launcher can read the remote control API, but the Akida deploy screen still behaves as if Neurochip is local-only.
+
+*   **Check the control API host**: `NMTK_CONTROL_API_BASE_URL` should point at the remote launcher control service, usually `http://<host>:8090`.
+*   **Check the Neurochip host**: if the Akida backend is not reachable on `http://<host>:8002`, also set `NMTK_NEUROCHIP_BASE_URL` explicitly.
+*   **Check the remote services**:
+    *   `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090`
+    *   `poetry run uvicorn neurochip.app.main:app --host 0.0.0.0 --port 8002`
+*   **Next step**: use the [Akida remote host runbook](./akida_remote_host.md) to verify the expected port wiring and startup commands.
 
 ---
 

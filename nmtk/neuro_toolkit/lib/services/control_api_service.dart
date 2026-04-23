@@ -12,12 +12,16 @@ class LauncherControlSettings {
     required this.mujocoAvailable,
     required this.pythonAvailable,
     required this.pynqBoards,
+    required this.akidaHosts,
+    required this.selectedAkidaHostId,
   });
 
   final String logLevel;
   final bool mujocoAvailable;
   final bool pythonAvailable;
   final List<PynqPairedBoard> pynqBoards;
+  final List<AkidaPairedHost> akidaHosts;
+  final String? selectedAkidaHostId;
 
   factory LauncherControlSettings.fromJson(Map<String, dynamic> json) {
     return LauncherControlSettings(
@@ -28,32 +32,55 @@ class LauncherControlSettings {
           .whereType<Map<String, dynamic>>()
           .map(PynqPairedBoard.fromJson)
           .toList(growable: false),
+      akidaHosts: (json['akidaHosts'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map<String, dynamic>>()
+          .map(AkidaPairedHost.fromJson)
+          .toList(growable: false),
+      selectedAkidaHostId: json['selectedAkidaHostId'] as String?,
     );
+  }
+
+  AkidaPairedHost? get selectedAkidaHost {
+    final selectedId = selectedAkidaHostId;
+    if (selectedId == null) {
+      return null;
+    }
+    for (final host in akidaHosts) {
+      if (host.id == selectedId) {
+        return host;
+      }
+    }
+    return null;
   }
 }
 
 class ControlApiService {
   ControlApiService({http.Client? client, Uri? baseUri})
-      : _client = client ?? http.Client(),
-        _baseUri = baseUri ?? _resolveBaseUri();
+    : _client = client ?? http.Client(),
+      _baseUri = baseUri ?? _resolveBaseUri();
 
   final http.Client _client;
   final Uri _baseUri;
 
   static Uri _resolveBaseUri() {
-    const configuredBaseUrl =
-        String.fromEnvironment('NMTK_CONTROL_API_BASE_URL', defaultValue: '');
+    const configuredBaseUrl = String.fromEnvironment(
+      'NMTK_CONTROL_API_BASE_URL',
+      defaultValue: '',
+    );
     if (configuredBaseUrl.isNotEmpty) {
       return Uri.parse(configuredBaseUrl);
     }
 
-    const configuredPort =
-        int.fromEnvironment('NMTK_CONTROL_API_PORT', defaultValue: 8090);
+    const configuredPort = int.fromEnvironment(
+      'NMTK_CONTROL_API_PORT',
+      defaultValue: 8090,
+    );
 
     if (kIsWeb) {
       final baseHost = Uri.base.host.trim();
-      final host =
-          baseHost.isEmpty || baseHost == '0.0.0.0' ? 'localhost' : baseHost;
+      final host = baseHost.isEmpty || baseHost == '0.0.0.0'
+          ? 'localhost'
+          : baseHost;
       final scheme = Uri.base.scheme.trim().isEmpty ? 'http' : Uri.base.scheme;
       return Uri(scheme: scheme, host: host, port: configuredPort);
     }
@@ -115,9 +142,7 @@ class ControlApiService {
   }
 
   Future<Module> fetchModule(String moduleId) async {
-    final response = await _client.get(
-      _uri('/api/launcher/modules/$moduleId'),
-    );
+    final response = await _client.get(_uri('/api/launcher/modules/$moduleId'));
     await _ensureSuccess(response);
     return Module.fromJson(await _readJsonResponse(response));
   }
@@ -128,12 +153,17 @@ class ControlApiService {
     return LauncherControlSettings.fromJson(await _readJsonResponse(response));
   }
 
-  Future<void> updateSettings({String? logLevel}) async {
+  Future<void> updateSettings({
+    String? logLevel,
+    String? selectedAkidaHostId,
+  }) async {
     final response = await _client.put(
       _uri('/api/launcher/settings'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({
         if (logLevel != null) 'logLevel': logLevel,
+        if (selectedAkidaHostId != null)
+          'selectedAkidaHostId': selectedAkidaHostId,
       }),
     );
     await _ensureSuccess(response);
@@ -149,9 +179,7 @@ class ControlApiService {
         .toList(growable: false);
   }
 
-  Future<PynqPairedBoard> createPynqBoard(
-    Map<String, dynamic> payload,
-  ) async {
+  Future<PynqPairedBoard> createPynqBoard(Map<String, dynamic> payload) async {
     final response = await _client.post(
       _uri('/api/launcher/pynq/boards'),
       headers: const {'Content-Type': 'application/json'},
@@ -175,8 +203,9 @@ class ControlApiService {
   }
 
   Future<void> deletePynqBoard(String boardId) async {
-    final response =
-        await _client.delete(_uri('/api/launcher/pynq/boards/$boardId'));
+    final response = await _client.delete(
+      _uri('/api/launcher/pynq/boards/$boardId'),
+    );
     await _ensureSuccess(response);
   }
 
@@ -258,6 +287,46 @@ class ControlApiService {
     );
     await _ensureSuccess(response);
     return PynqSitlVerifyResult.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<List<AkidaPairedHost>> fetchAkidaHosts() async {
+    final response = await _client.get(_uri('/api/launcher/akida/hosts'));
+    await _ensureSuccess(response);
+    final decoded = await _readJsonList(response);
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(AkidaPairedHost.fromJson)
+        .toList(growable: false);
+  }
+
+  Future<AkidaPairedHost> createAkidaHost(Map<String, dynamic> payload) async {
+    final response = await _client.post(
+      _uri('/api/launcher/akida/hosts'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return AkidaPairedHost.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<AkidaPairedHost> updateAkidaHost(
+    String hostId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _client.put(
+      _uri('/api/launcher/akida/hosts/$hostId'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return AkidaPairedHost.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<void> deleteAkidaHost(String hostId) async {
+    final response = await _client.delete(
+      _uri('/api/launcher/akida/hosts/$hostId'),
+    );
+    await _ensureSuccess(response);
   }
 
   Future<Module> installModule(String moduleId) async {

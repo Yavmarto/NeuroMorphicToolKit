@@ -17,15 +17,64 @@ class AkidaDeployService {
     String? neurocnlBaseUrl,
     String? neurochipBaseUrl,
     String? neurobenchBaseUrl,
-  }) : _httpClient = httpClient ?? http.Client(),
-       _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000',
-       _neurochipBaseUrl = neurochipBaseUrl ?? 'http://localhost:8002',
-       _neurobenchBaseUrl = neurobenchBaseUrl ?? 'http://localhost:8003';
+    String? controlApiBaseUrl,
+  })  : _httpClient = httpClient ?? http.Client(),
+        _neurocnlBaseUrl = neurocnlBaseUrl ?? 'http://localhost:8000',
+        _neurochipBaseUrl = resolveNeurochipBaseUrl(
+          explicitBaseUrl: neurochipBaseUrl,
+          controlApiBaseUrl: controlApiBaseUrl,
+        ),
+        _neurobenchBaseUrl = neurobenchBaseUrl ?? 'http://localhost:8003';
 
   final http.Client _httpClient;
   final String _neurocnlBaseUrl;
   final String _neurochipBaseUrl;
   final String _neurobenchBaseUrl;
+
+  static String resolveNeurochipBaseUrl({
+    String? explicitBaseUrl,
+    String? controlApiBaseUrl,
+  }) {
+    final normalizedExplicit = _normalizeBaseUrl(explicitBaseUrl);
+    if (normalizedExplicit != null) {
+      return normalizedExplicit;
+    }
+
+    final normalizedConfigured = _normalizeBaseUrl(
+      const String.fromEnvironment('NMTK_NEUROCHIP_BASE_URL', defaultValue: ''),
+    );
+    if (normalizedConfigured != null) {
+      return normalizedConfigured;
+    }
+
+    final normalizedControl = _normalizeBaseUrl(
+      controlApiBaseUrl ??
+          const String.fromEnvironment(
+            'NMTK_CONTROL_API_BASE_URL',
+            defaultValue: '',
+          ),
+    );
+    if (normalizedControl != null) {
+      final controlUri = Uri.parse(normalizedControl);
+      final scheme =
+          controlUri.scheme.trim().isEmpty ? 'http' : controlUri.scheme;
+      final host =
+          controlUri.host.trim().isEmpty ? 'localhost' : controlUri.host;
+      return Uri(scheme: scheme, host: host, port: 8002).toString();
+    }
+
+    return 'http://localhost:8002';
+  }
+
+  static String? _normalizeBaseUrl(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed.endsWith('/')
+        ? trimmed.substring(0, trimmed.length - 1)
+        : trimmed;
+  }
 
   /// Check Akida exportability for a CNL spec.
   ///
@@ -149,9 +198,8 @@ class AkidaDeployService {
     );
     final response = await _httpClient.post(
       uri,
-      headers: mappedNetwork == null
-          ? null
-          : {'Content-Type': 'application/json'},
+      headers:
+          mappedNetwork == null ? null : {'Content-Type': 'application/json'},
       body: mappedNetwork == null ? null : jsonEncode(mappedNetwork),
     );
 
