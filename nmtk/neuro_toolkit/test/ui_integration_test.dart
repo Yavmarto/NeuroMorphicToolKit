@@ -1,199 +1,169 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:neuro_toolkit/services/update_service.dart';
-import 'package:neuro_toolkit/models/module.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 
-class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
-  final List<Module> _modules = [
-    Module(
-      id: 'm1',
-      name: 'Module 1',
-      description: 'Desc 1',
-      directory: '/tmp/m1',
-      port: 8001,
-      hasFrontend: true,
-      status: ModuleStatus.running,
-    ),
-    Module(
-      id: 'm2',
-      name: 'Module 2',
-      description: 'Desc 2',
-      directory: '/tmp/m2',
-      port: 8002,
-      hasFrontend: true,
-      status: ModuleStatus.running,
-    ),
-  ];
+class _MockProcessManager implements ProcessManager {
+  @override
+  Stream<Module> get statusUpdates => const Stream<Module>.empty();
 
   @override
-  List<Module> get modules => _modules;
-  @override
-  set modules(List<Module> val) {}
-  @override
-  List<Module> modulesForTesting = [];
-
-  final List<String> _activeModuleIds = [];
-  @override
-  List<String> get activeModuleIds => _activeModuleIds;
+  Future<void> init(List<Module> modules, [dynamic logLevel]) async {}
 
   @override
-  List<Module> get activeModules => _activeModuleIds
-      .map((id) => _modules.firstWhere((m) => m.id == id))
-      .toList();
+  Future<void> installModule(
+    Module module, {
+    void Function(double progress)? onProgress,
+  }) async {}
 
   @override
-  bool get isLoading => false;
-  @override
-  bool get pythonAvailable => true;
-  @override
-  String? get error => null;
-  @override
-  List<Module> get installedModules => _modules;
+  Future<void> startModule(Module module, {bool isRetry = false}) async {}
 
   @override
-  void dismissLauncherUpdate() {}
+  Future<void> stopModule(String moduleId, {bool isFailure = false}) async {}
 
   @override
-  void setUpdateChannel(UpdateChannel channel) {}
+  void dispose() {}
 
   @override
-  Future<void> setVersionPinned(String moduleId, bool pinned) async {}
+  Stream<String>? getOutput(String moduleId) => null;
 
   @override
-  LauncherUpdate? get pendingLauncherUpdate => null;
+  Future<void> saveModuleState(Module module) async {}
 
   @override
-  UpdateChannel get currentChannel => UpdateChannel.stable;
-  @override
-  List<Module> get availableModules => [];
+  set processRunner(ProcessRunner runner) {}
 
   @override
-  Future<void> recheckPython() async {}
-  @override
-  bool isMuJoCoAvailable() => false;
-  @override
-  Future<void> installModule(String moduleId) async {}
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeWorkspaceControlApiService extends ControlApiService {
+  _FakeWorkspaceControlApiService()
+      : super(baseUri: Uri.parse('http://127.0.0.1:8090'));
+
+  WorkspaceSnapshot _snapshot = const WorkspaceSnapshot(
+    sessions: <WorkspaceSession>[],
+    focusedModuleId: null,
+  );
 
   @override
-  Future<void> launchModule(String moduleId) async {
-    if (!_activeModuleIds.contains(moduleId)) {
-      _activeModuleIds.add(moduleId);
-    }
-    notifyListeners();
+  Future<WorkspaceSnapshot> fetchWorkspace() async => _snapshot;
+
+  @override
+  Future<WorkspaceSnapshot> createWorkspaceSession({
+    required String moduleId,
+    required String surfaceMode,
+    String? deepLink,
+    Map<String, dynamic> restoreState = const <String, dynamic>{},
+    String readinessState = 'opening',
+  }) async {
+    final sessions = _snapshot.sessions
+        .where((session) => session.moduleId != moduleId)
+        .toList(growable: true)
+      ..add(
+        WorkspaceSession(
+          moduleId: moduleId,
+          surfaceMode: surfaceMode,
+          deepLink: deepLink,
+          restoreState: restoreState,
+          readinessState: readinessState,
+        ),
+      );
+    _snapshot = WorkspaceSnapshot(
+      sessions: sessions,
+      focusedModuleId: moduleId,
+    );
+    return _snapshot;
   }
 
   @override
-  Future<void> stopModule(String moduleId) async {
-    _activeModuleIds.remove(moduleId);
-    notifyListeners();
+  Future<WorkspaceSnapshot> updateWorkspace({
+    required List<WorkspaceSession> sessions,
+    required String? focusedModuleId,
+  }) async {
+    _snapshot = WorkspaceSnapshot(
+      sessions: List<WorkspaceSession>.from(sessions),
+      focusedModuleId: focusedModuleId,
+    );
+    return _snapshot;
   }
 
   @override
-  Future<void> uninstallModule(String moduleId) async {}
-
-  @override
-  Future<void> updateModule(String moduleId) async {}
-
-  @override
-  Future<void> updateModuleSettings(String moduleId,
-      {bool? isEnabled, int? customPort}) async {}
-
-  @override
-  void updateSettingsProvider(settingsProvider) {}
-
-  @override
-  Future<void> checkForUpdates() async {}
-
-  @override
-  void closeTab(String moduleId) {
-    _activeModuleIds.remove(moduleId);
-    notifyListeners();
+  Future<WorkspaceSnapshot> deleteWorkspaceSession(String moduleId) async {
+    final sessions = _snapshot.sessions
+        .where((session) => session.moduleId != moduleId)
+        .toList(growable: false);
+    _snapshot = WorkspaceSnapshot(
+      sessions: sessions,
+      focusedModuleId: sessions.isEmpty ? null : sessions.last.moduleId,
+    );
+    return _snapshot;
   }
-
-  @override
-  Stream<String>? getModuleOutput(String moduleId) => null;
 }
 
 void main() {
-  testWidgets('ToolViewScreen tab management test',
+  testWidgets('ToolViewScreen shows persisted workspace tabs',
       (WidgetTester tester) async {
-    final mockProvider = MockModuleProvider();
-
-    // Initial launch of m1
-    await mockProvider.launchModule('m1');
+    final moduleProvider =
+        ModuleProvider(processManager: _MockProcessManager());
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(),
+    );
+    moduleProvider.modules = [
+      Module(
+        id: 'm1',
+        name: 'Module 1',
+        description: 'Desc 1',
+        directory: '/tmp/m1',
+        port: 8001,
+        hasFrontend: true,
+        status: ModuleStatus.running,
+      ),
+      Module(
+        id: 'm2',
+        name: 'Module 2',
+        description: 'Desc 2',
+        directory: '/tmp/m2',
+        port: 8002,
+        hasFrontend: true,
+        status: ModuleStatus.running,
+      ),
+    ];
+    await workspaceProvider.openSession(
+      'm1',
+      surfaceMode: 'embedded',
+      readinessState: 'opening',
+    );
+    await workspaceProvider.openSession(
+      'm2',
+      surfaceMode: 'embedded',
+      readinessState: 'opening',
+    );
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          moduleStateProvider.overrideWith((ref) => mockProvider),
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
         child: const MaterialApp(
-          home: ToolViewScreen(initialModuleId: 'm1'),
+          home: ToolViewScreen(),
         ),
       ),
     );
 
     await tester.pump();
-
-    // Verify m1 is active
-    expect(find.text('Module 1'), findsWidgets);
     expect(find.byType(ModuleTabBar), findsOneWidget);
-
-    // Launch m2
-    await mockProvider.launchModule('m2');
-    await tester.pump();
-
-    // Verify both tabs exist in the tab bar
     expect(find.text('Module 1'), findsWidgets);
     expect(find.text('Module 2'), findsWidgets);
-
-    // Switch to m2 tab (tap the InkWell containing 'Module 2')
-    await tester.tap(find.text('Module 2').last);
-    await tester.pump();
-
-    // Close m1 tab
-    final closeButtonM1 = find.descendant(
-      of: find.ancestor(
-          of: find.text('Module 1').last, matching: find.byType(Row)),
-      matching: find.byIcon(Icons.close),
-    );
-
-    await tester.tap(closeButtonM1);
-    await tester.pump();
-
-    // Verify m1 tab is gone
-    expect(find.text('Module 1'), findsNothing);
-    expect(find.text('Module 2'), findsWidgets);
-  });
-
-  testWidgets('Fallback to browser button exists', (WidgetTester tester) async {
-    final mockProvider = MockModuleProvider();
-    await mockProvider.launchModule('m1');
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          moduleStateProvider.overrideWith((ref) => mockProvider),
-        ],
-        child: const MaterialApp(
-          home: ToolViewScreen(initialModuleId: 'm1'),
-        ),
-      ),
-    );
-
-    await tester.pump();
-
-    // Verify "Open in System Browser" icon button exists.
-    // Use find.byTooltip to be more specific if possible, or just expect it to be there.
-    expect(find.byIcon(Icons.open_in_browser), findsWidgets);
-
-    // Verify wait screen elements (since it's not ready in the mock polling)
-    expect(find.textContaining('Waiting for Module 1'), findsOneWidget);
-    expect(find.text('Open in Browser instead'), findsOneWidget);
   });
 }

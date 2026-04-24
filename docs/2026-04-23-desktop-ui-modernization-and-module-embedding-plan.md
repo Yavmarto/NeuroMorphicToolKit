@@ -18,6 +18,20 @@ This plan assumes the current accepted architecture remains the starting point:
 - design-contract documentation inspired by `google-labs-code/design.md`
 - workstation-oriented product framing informed by the attached `UI_UX_INSPIRATION_ANALYSIS.md` and `UI_UX_REDESIGN_PLAN.md`
 
+## Canonical contract
+
+`DESIGN.md` is the authoritative shell contract for this migration.
+
+This document should describe implementation direction and sequencing, but it
+should not redefine:
+
+- top app bar versus top workspace bar responsibilities
+- command, studio, and instrument mode assignments
+- desktop-first and mobile-portable rules
+- shell-visible readiness states
+- `preflight failed` versus `degraded optional capability` wording
+- utility-panel semantics
+
 ## Current Problems
 
 ### 1. Desktop navigation feels oversized and low-value
@@ -91,6 +105,9 @@ Move from a launcher-with-tabs model to a desktop workspace model with two top b
 
 The shell should feel closer to Linear, Notion Calendar, Arc, or modern IDE workspace patterns than to a legacy admin dashboard.
 
+The ownership split between the two top bars is fixed in `DESIGN.md` and
+should be implemented consistently across `nmtk` and `nmtk_ui_core`.
+
 The attached inspiration analysis adds a useful refinement:
 
 - the shell should behave like mission control
@@ -124,6 +141,9 @@ Relevant adjustment from the attached redesign plan:
 - `Catalog` should no longer be the primary identity of the shell
 - install/discovery should live under `Modules`
 - a dedicated `System` surface should exist for Python, ports, runtime health, logs, and repair actions
+
+That `System` surface is distinct from the contextual utility panel. `System`
+is a primary destination; the utility panel is in-workspace support chrome.
 
 ## UI Redesign Plan
 
@@ -208,7 +228,8 @@ The attached redesign plan also suggests a useful suite-level visual taxonomy:
 - studio mode for neurocnl and Neurosim
 - instrument mode for Neurosense, Neurochip, and the data-heavy parts of Neurobench
 
-That idea is relevant and should be carried into `DESIGN.md` and `nmtk_ui_core`, while still preserving one product family.
+That taxonomy is now frozen by `DESIGN.md`, including current module-family
+assignments, and should be consumed rather than re-decided here.
 
 Recommended shell characteristics:
 
@@ -405,7 +426,8 @@ Optional extended states:
 3. `loading_model`
 4. `restoring_session`
 
-These states should be backed by typed contracts, not ad-hoc text strings.
+These states should be backed by typed contracts, not ad-hoc text strings. The
+canonical shell-visible meanings and operator wording live in `DESIGN.md`.
 
 ### Performance strategy
 
@@ -572,6 +594,11 @@ Target: reduce integration friction and improve reliability.
 2. Add shell-visible capability metadata for each module.
 3. Add module deep-link support for workspace restoration.
 4. Add state recovery overlays instead of blank reloads.
+
+The shell-adapter baseline for this track is now documented in:
+
+- [Shell Adapter Contract And Package Conventions](./2026-04-24-shell-adapter-contract-and-package-conventions.md)
+- [ADR 0017: Desktop Shell Adapter Contract](./ADR-claude/0017-desktop-shell-adapter-contract.md)
 
 Expected difficulty: Moderate  
 Expected impact: High

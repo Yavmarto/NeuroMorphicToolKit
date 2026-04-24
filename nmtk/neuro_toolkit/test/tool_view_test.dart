@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 
 class _NoopProcessManager implements ProcessManager {
@@ -48,13 +51,81 @@ class _NoopProcessManager implements ProcessManager {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _FakeWorkspaceControlApiService extends ControlApiService {
+  _FakeWorkspaceControlApiService()
+      : super(baseUri: Uri.parse('http://127.0.0.1:8090'));
+
+  WorkspaceSnapshot _snapshot = const WorkspaceSnapshot(
+    sessions: <WorkspaceSession>[],
+    focusedModuleId: null,
+  );
+
+  @override
+  Future<WorkspaceSnapshot> fetchWorkspace() async => _snapshot;
+
+  @override
+  Future<WorkspaceSnapshot> createWorkspaceSession({
+    required String moduleId,
+    required String surfaceMode,
+    String? deepLink,
+    Map<String, dynamic> restoreState = const <String, dynamic>{},
+    String readinessState = 'opening',
+  }) async {
+    final sessions = _snapshot.sessions
+        .where((session) => session.moduleId != moduleId)
+        .toList(growable: true)
+      ..add(
+        WorkspaceSession(
+          moduleId: moduleId,
+          surfaceMode: surfaceMode,
+          deepLink: deepLink,
+          restoreState: restoreState,
+          readinessState: readinessState,
+        ),
+      );
+    _snapshot = WorkspaceSnapshot(
+      sessions: sessions,
+      focusedModuleId: moduleId,
+    );
+    return _snapshot;
+  }
+
+  @override
+  Future<WorkspaceSnapshot> updateWorkspace({
+    required List<WorkspaceSession> sessions,
+    required String? focusedModuleId,
+  }) async {
+    _snapshot = WorkspaceSnapshot(
+      sessions: List<WorkspaceSession>.from(sessions),
+      focusedModuleId: focusedModuleId,
+    );
+    return _snapshot;
+  }
+
+  @override
+  Future<WorkspaceSnapshot> deleteWorkspaceSession(String moduleId) async {
+    final sessions = _snapshot.sessions
+        .where((session) => session.moduleId != moduleId)
+        .toList(growable: false);
+    _snapshot = WorkspaceSnapshot(
+      sessions: sessions,
+      focusedModuleId: sessions.isEmpty ? null : sessions.last.moduleId,
+    );
+    return _snapshot;
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('ToolView shows launcher preflight error instead of polling',
       (WidgetTester tester) async {
-    final provider = ModuleProvider(processManager: _NoopProcessManager());
-    provider.modules = [
+    final moduleProvider =
+        ModuleProvider(processManager: _NoopProcessManager());
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(),
+    );
+    moduleProvider.modules = [
       Module(
         id: 'neurobench',
         name: 'NeuroBench',
@@ -67,12 +138,17 @@ void main() {
             'Missing required dependency: fastapi (needed by app.main)',
       ),
     ];
-    provider.activeModuleIds.add('neurobench');
+    await workspaceProvider.openSession(
+      'neurobench',
+      surfaceMode: 'embedded',
+      readinessState: 'error',
+    );
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          moduleStateProvider.overrideWith((ref) => provider),
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
         child: const MaterialApp(
           home: ToolViewScreen(initialModuleId: 'neurobench'),

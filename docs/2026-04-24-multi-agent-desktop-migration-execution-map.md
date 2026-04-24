@@ -24,6 +24,11 @@ It should be parallelized as:
 
 The migration is safe in parallel only after the shared shell contracts are stable enough.
 
+The canonical source of truth for Gate 1 is now:
+
+- [Shell Adapter Contract And Package Conventions](./2026-04-24-shell-adapter-contract-and-package-conventions.md)
+- [ADR 0017: Desktop Shell Adapter Contract](./ADR-claude/0017-desktop-shell-adapter-contract.md)
+
 ## Parallelization model
 
 Use a hub-and-spoke model.
@@ -120,6 +125,9 @@ They should consume:
 - an already-written shell adapter spec
 - an already-written `DESIGN.md`
 - an already-stabilized set of shell and token expectations
+
+For the shell adapter spec, use the root contract document above rather than
+creating repo-local variants.
 
 ## Rule for Jules-like agents
 
@@ -276,6 +284,12 @@ Responsibilities:
 - define desktop entrypoints
 - define restoration and deep-link hooks
 - define capability and degradation reporting
+
+Primary artifacts:
+
+- `docs/2026-04-24-shell-adapter-contract-and-package-conventions.md`
+- `docs/ADR-claude/0017-desktop-shell-adapter-contract.md`
+- module-specific packets under `docs/agents/`
 
 This role unlocks the module lanes.
 

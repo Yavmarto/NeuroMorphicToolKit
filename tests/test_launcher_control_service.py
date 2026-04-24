@@ -134,6 +134,11 @@ class LauncherControlServiceTest(unittest.TestCase):
                 "SETTINGS_FILE",
                 self.repo_root / "nmtk" / "neuro_toolkit" / "launcher_settings.json",
             ),
+            mock.patch.object(
+                launcher_server,
+                "WORKSPACE_FILE",
+                self.repo_root / "nmtk" / "neuro_toolkit" / "workspace_state.json",
+            ),
         ]
         for patcher in self._patches:
             patcher.start()
@@ -478,6 +483,76 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(persisted["dummy"]["customPort"], 9001)
         self.assertFalse(persisted["dummy"]["isEnabled"])
         self.assertTrue(persisted["dummy"]["versionPinned"])
+
+    def test_workspace_session_round_trip_updates_workspace_file(self) -> None:
+        created = self.state.create_workspace_session(
+            {
+                "moduleId": "dummy",
+                "surfaceMode": "native",
+                "deepLink": "/deploy",
+                "restoreState": {"panel": "validation"},
+                "readinessState": "restoring_session",
+            }
+        )
+
+        self.assertEqual(created["focusedModuleId"], "dummy")
+        self.assertEqual(len(created["sessions"]), 1)
+        self.assertEqual(created["sessions"][0]["surfaceMode"], "native")
+        self.assertEqual(created["sessions"][0]["deepLink"], "/deploy")
+
+        persisted = json.loads(
+            (
+                self.repo_root
+                / "nmtk"
+                / "neuro_toolkit"
+                / "workspace_state.json"
+            ).read_text(encoding="utf-8")
+        )
+        self.assertEqual(persisted["focusedModuleId"], "dummy")
+        self.assertEqual(persisted["sessions"][0]["restoreState"]["panel"], "validation")
+
+    def test_workspace_update_normalizes_missing_focus(self) -> None:
+        self.state.create_workspace_session({"moduleId": "dummy"})
+
+        updated = self.state.update_workspace(
+            {
+                "sessions": [],
+                "focusedModuleId": None,
+            }
+        )
+
+        self.assertEqual(updated["sessions"], [])
+        self.assertIsNone(updated["focusedModuleId"])
+
+    def test_workspace_reload_restores_saved_sessions(self) -> None:
+        workspace_file = self.repo_root / "nmtk" / "neuro_toolkit" / "workspace_state.json"
+        workspace_file.write_text(
+            json.dumps(
+                {
+                    "sessions": [
+                        {
+                            "moduleId": "dummy",
+                            "surfaceMode": "native",
+                            "deepLink": "/analysis",
+                            "restoreState": {"tab": "energy"},
+                            "readinessState": "ready",
+                        }
+                    ],
+                    "focusedModuleId": "dummy",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        reloaded = launcher_server.LauncherControlState(
+            remote_version_resolver=self._resolve_remote_version
+        )
+        self.addCleanup(reloaded.shutdown)
+
+        workspace = reloaded.get_workspace()
+        self.assertEqual(workspace["focusedModuleId"], "dummy")
+        self.assertEqual(workspace["sessions"][0]["deepLink"], "/analysis")
+        self.assertEqual(workspace["sessions"][0]["restoreState"]["tab"], "energy")
 
     def test_akida_host_round_trip_updates_settings_file(self) -> None:
         created = self.state.create_akida_host(

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 class LauncherControlSettings {
@@ -172,6 +173,58 @@ class ControlApiService {
       }),
     );
     await _ensureSuccess(response);
+  }
+
+  Future<WorkspaceSnapshot> fetchWorkspace() async {
+    final response = await _client.get(_uri('/api/launcher/workspace'));
+    await _ensureSuccess(response);
+    return WorkspaceSnapshot.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<WorkspaceSnapshot> updateWorkspace({
+    required List<WorkspaceSession> sessions,
+    required String? focusedModuleId,
+  }) async {
+    final response = await _client.put(
+      _uri('/api/launcher/workspace'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'sessions': sessions.map((session) => session.toJson()).toList(),
+        'focusedModuleId': focusedModuleId,
+      }),
+    );
+    await _ensureSuccess(response);
+    return WorkspaceSnapshot.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<WorkspaceSnapshot> createWorkspaceSession({
+    required String moduleId,
+    required String surfaceMode,
+    String? deepLink,
+    Map<String, dynamic> restoreState = const <String, dynamic>{},
+    String readinessState = 'opening',
+  }) async {
+    final response = await _client.post(
+      _uri('/api/launcher/workspace/sessions'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'moduleId': moduleId,
+        'surfaceMode': surfaceMode,
+        'deepLink': deepLink,
+        'restoreState': restoreState,
+        'readinessState': readinessState,
+      }),
+    );
+    await _ensureSuccess(response);
+    return WorkspaceSnapshot.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<WorkspaceSnapshot> deleteWorkspaceSession(String moduleId) async {
+    final response = await _client.delete(
+      _uri('/api/launcher/workspace/sessions/$moduleId'),
+    );
+    await _ensureSuccess(response);
+    return WorkspaceSnapshot.fromJson(await _readJsonResponse(response));
   }
 
   Future<List<PynqPairedBoard>> fetchPynqBoards() async {

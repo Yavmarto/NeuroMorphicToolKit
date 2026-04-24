@@ -17,6 +17,20 @@ It also adds one important constraint:
 
 - the migration should stay flexible enough to support a future mobile port where that makes product sense
 
+## Canonical contract
+
+This document is a module-lane execution guide. `DESIGN.md` remains the
+canonical source for shared shell behavior, shell status language, and
+desktop-first/mobile-portable rules.
+
+Module teams should consume the shell contract rather than reinterpret it
+locally.
+
+The shell integration baseline for every module lane is:
+
+- [Shell Adapter Contract And Package Conventions](./2026-04-24-shell-adapter-contract-and-package-conventions.md)
+- [ADR 0017: Desktop Shell Adapter Contract](./ADR-claude/0017-desktop-shell-adapter-contract.md)
+
 ## Core strategy
 
 Each module should move toward the same structure:
@@ -35,6 +49,9 @@ The attached UI analysis adds an important product framing that should drive eve
 - each module is a specialized workbench
 - live and analytical surfaces should feel like instrument panels where appropriate
 
+Current mode assignments are fixed by `DESIGN.md` and should be treated as part
+of the adapter contract baseline.
+
 ## Mobile-flexibility rules
 
 These rules apply to every module during desktop migration:
@@ -49,6 +66,10 @@ These rules apply to every module during desktop migration:
    - lightweight review client
    - setup companion
    rather than forcing full local execution.
+
+These rules are normative for downstream module work. Repo-local briefs should
+reference them instead of rewriting shell portability expectations from
+scratch.
 
 ## Platform layers
 
@@ -255,7 +276,7 @@ Current role:
 
 Workbench mode:
 
-- instrument mode for data-heavy surfaces, with lighter studio-style composition for experiment setup
+- instrument mode
 
 Desktop target:
 
@@ -392,7 +413,7 @@ Current role:
 
 Workbench mode:
 
-- instrument mode for telemetry and live operation, with studio-like experiment setup surfaces
+- instrument mode
 
 Desktop target:
 
@@ -485,3 +506,7 @@ A module is considered migrated when:
 3. A desktop migration backlog for each repository.
 4. A mobile posture matrix across all modules.
 5. A cross-module ADR for native package integration.
+
+The first two deliverables are now covered by the root shell adapter contract
+document and ADR above. Future module briefs should link to those files instead
+of restating shell semantics locally.

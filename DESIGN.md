@@ -15,6 +15,20 @@ This file should guide:
 
 This file is intentionally desktop-first.
 
+## Contract status
+
+`DESIGN.md` is the canonical suite-shell design contract for the desktop
+rewrite.
+
+When this file conflicts with exploratory or execution-oriented language in
+other root docs, this file wins for:
+
+- shell layout and chrome ownership
+- mode semantics
+- readiness and degraded/error language
+- desktop-first and mobile-portable rules
+- shell-visible status and utility-panel behavior
+
 ## Product intent
 
 NMTK should feel like one professional desktop suite for technical work, not like a launcher wrapping unrelated apps.
@@ -75,6 +89,23 @@ This second bar is for:
 
 This bar should not look like legacy square tabs.
 
+The two top bars should remain distinct.
+
+The top app bar owns:
+
+- global destinations
+- search
+- suite-level status
+- suite-wide actions
+- settings and operator controls
+
+The top workspace bar owns:
+
+- open and pinned modules
+- active workspace switching
+- module running state
+- close and restore affordances
+
 ### 3. The content canvas must dominate
 
 The module workspace should own most of the screen.
@@ -98,6 +129,23 @@ The default desktop shell should have:
 2. Top workspace switcher bar
 3. Main workspace canvas
 4. Optional contextual utility panel
+
+The utility panel is contextual support chrome, not a second navigation system.
+
+It may contain:
+
+- logs
+- diagnostics
+- background jobs
+- contextual inspectors
+- degraded-state detail
+- recovery actions
+
+It should not contain:
+
+- primary app navigation
+- duplicate module-local navigation
+- shell destinations already present in the top app bar
 
 Primary shell destinations should be:
 
@@ -126,6 +174,13 @@ The suite should share one family identity, but it should support three operatin
 - instrument mode
 
 These are not separate brands. They are controlled variations within one suite.
+
+The current migration uses this fixed mode mapping:
+
+- command mode: shell chrome and `Neurohub`
+- studio mode: `neurocnl` and `Neurosim`
+- instrument mode: `Neurosense`, `Neurochip`, `Neurobench`, and
+  `Neuro-Dream-Hand`
 
 #### Command mode
 
@@ -232,6 +287,25 @@ The shell should also distinguish between:
 
 Switching between already-open modules should not feel like startup.
 
+## Desktop-first, mobile-portable rules
+
+The suite shell is desktop-first. Future mobile work should reuse contracts and
+state models where practical, but mobile should not force the desktop shell to
+adopt mobile-first layout or interaction assumptions.
+
+Required rules:
+
+- Keep shell, module, and workflow state machines independent from desktop
+  widget trees where practical.
+- Keep business logic, readiness contracts, and capability reporting portable
+  across hosts.
+- Treat mobile as a future composition target, not the optimization target for
+  shell chrome.
+- Hardware-heavy workflows may degrade on mobile to monitoring, review, setup,
+  or companion flows instead of full local control.
+- Dense authoring, deployment, and live instrument surfaces may remain
+  desktop-primary even when lighter mobile views exist later.
+
 ## Readiness model
 
 Long startup should be represented as staged readiness, not as a blank or resetting UI.
@@ -252,6 +326,32 @@ Optional module-specific readiness states:
 - loading model
 
 The user should see the module shell immediately, even if the deepest feature surface is still warming.
+
+These shell-visible states are normative. Implementations may map them to typed
+enum values or transport names such as `warming_up`, but operator-facing
+wording should preserve the meanings above.
+
+## Status language
+
+Shell-visible status language must be short, stable, and operationally honest.
+
+Required distinctions:
+
+- `preflight failed`: a required dependency, manifest, runtime, or startup
+  condition is blocking normal operation
+- `degraded optional capability`: the suite or module can still run, but an
+  optional runtime, hardware path, or advanced feature is unavailable
+- `degraded`: the module or workspace is available with reduced function,
+  impaired connectivity, or a recoverable runtime problem
+- `error`: the current workflow cannot continue without intervention or restart
+
+Rules:
+
+- Do not collapse `preflight failed` and `degraded optional capability` into
+  the same user-facing label.
+- Prefer actionable language over generic failure wording.
+- Keep degraded messaging tied to the affected capability or workflow.
+- Show recovery actions in-place when the shell can offer them.
 
 ## Typography
 
@@ -332,11 +432,27 @@ shell:
     - "System"
     - "Settings"
   product_framing: "mission_control"
+  utility_panel_role: "contextual_support_only"
+  status_language:
+    preflight_blocker: "preflight failed"
+    optional_capability: "degraded optional capability"
 
 mode_variants:
   command: true
   studio: true
   instrument: true
+  assignments:
+    command:
+      - "shell"
+      - "Neurohub"
+    studio:
+      - "neurocnl"
+      - "Neurosim"
+    instrument:
+      - "Neurosense"
+      - "Neurochip"
+      - "Neurobench"
+      - "Neuro-Dream-Hand"
 ```
 
 ## Component priorities
@@ -376,5 +492,4 @@ For the current redesign effort:
 - elevation scale
 - spacing scale
 - workspace chip interaction states
-- contextual utility panel behavior
 - iconography rules

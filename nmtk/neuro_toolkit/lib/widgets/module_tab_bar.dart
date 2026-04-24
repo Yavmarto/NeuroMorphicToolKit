@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 
 class ModuleTabBar extends ConsumerWidget {
@@ -16,8 +17,19 @@ class ModuleTabBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final provider = ref.watch(moduleStateProvider);
-    final activeModules = provider.activeModules;
+    final workspace = ref.watch(workspaceStateProvider);
+    final modules = ref.watch(moduleStateProvider).modules;
+    final activeModules = workspace.sessions
+        .map((session) {
+          for (final module in modules) {
+            if (module.id == session.moduleId) {
+              return module;
+            }
+          }
+          return null;
+        })
+        .whereType<Module>()
+        .toList(growable: false);
 
     if (activeModules.isEmpty) {
       return const SizedBox.shrink();

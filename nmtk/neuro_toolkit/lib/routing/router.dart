@@ -9,8 +9,8 @@ import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/onboarding.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/app_provider.dart';
+import 'package:neuro_toolkit/providers/workspace_provider.dart';
 
 GoRouter createGoRouter(AppProvider appProvider) {
   return GoRouter(
@@ -43,11 +43,18 @@ GoRouter createGoRouter(AppProvider appProvider) {
             builder: (context, state) => const CatalogScreen(),
           ),
           GoRoute(
-            path: '/tool/:moduleId',
-            name: 'tool',
+            path: '/workspace',
+            name: 'workspace',
             builder: (context, state) {
-              final moduleId = state.pathParameters['moduleId']!;
+              final moduleId = state.uri.queryParameters['moduleId'];
               return ToolViewScreen(initialModuleId: moduleId);
+            },
+          ),
+          GoRoute(
+            path: '/tool/:moduleId',
+            redirect: (context, state) {
+              final moduleId = state.pathParameters['moduleId']!;
+              return '/workspace?moduleId=$moduleId';
             },
           ),
           GoRoute(
@@ -69,7 +76,8 @@ class MainScreen extends ConsumerWidget {
   final Widget child;
   const MainScreen({super.key, required this.child});
 
-  List<NavigationDestinationData> _getDestinations(ModuleProvider provider) {
+  List<NavigationDestinationData> _getDestinations(
+      WorkspaceProvider workspace) {
     return [
       const NavigationDestinationData(
         icon: Icons.dashboard_outlined,
@@ -81,7 +89,7 @@ class MainScreen extends ConsumerWidget {
         selectedIcon: Icons.store,
         label: 'Catalog',
       ),
-      if (provider.activeModuleIds.isNotEmpty)
+      if (workspace.hasSessions)
         const NavigationDestinationData(
           icon: Icons.laptop_outlined,
           selectedIcon: Icons.laptop,
@@ -95,11 +103,13 @@ class MainScreen extends ConsumerWidget {
     ];
   }
 
-  int _selectedIndex(BuildContext context, ModuleProvider provider) {
+  int _selectedIndex(BuildContext context, WorkspaceProvider workspace) {
     final location = GoRouterState.of(context).uri.toString();
-    final hasWorkspace = provider.activeModuleIds.isNotEmpty;
+    final hasWorkspace = workspace.hasSessions;
     if (location.startsWith('/catalog')) return 1;
-    if (location.startsWith('/tool/')) return hasWorkspace ? 2 : 1;
+    if (location.startsWith('/workspace') || location.startsWith('/tool/')) {
+      return hasWorkspace ? 2 : 1;
+    }
     if (location.startsWith('/settings')) return hasWorkspace ? 3 : 2;
     return 0;
   }
@@ -107,15 +117,17 @@ class MainScreen extends ConsumerWidget {
   void _onItemTapped(
     BuildContext context,
     int index,
-    ModuleProvider provider,
+    WorkspaceProvider workspace,
   ) {
     if (index == 0) {
       context.go('/');
     } else if (index == 1) {
       context.go('/catalog');
     } else if (index == 2) {
-      if (provider.activeModuleIds.isNotEmpty) {
-        context.go('/tool/${provider.activeModuleIds.last}');
+      if (workspace.hasSessions) {
+        final focused =
+            workspace.focusedModuleId ?? workspace.sessions.last.moduleId;
+        context.go('/workspace?moduleId=$focused');
       } else {
         // No workspace tab, index 2 = settings
         context.go('/settings');
@@ -129,6 +141,7 @@ class MainScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = ref.watch(moduleStateProvider);
+    final workspace = ref.watch(workspaceStateProvider);
 
     // If Python is not available, show setup screen instead of normal UI
     if (!provider.pythonAvailable && !provider.isLoading) {
@@ -136,10 +149,10 @@ class MainScreen extends ConsumerWidget {
     }
 
     return ResponsiveScaffold(
-      currentIndex: _selectedIndex(context, provider),
+      currentIndex: _selectedIndex(context, workspace),
       onNavigationTargetSelected: (index) =>
-          _onItemTapped(context, index, provider),
-      destinations: _getDestinations(provider),
+          _onItemTapped(context, index, workspace),
+      destinations: _getDestinations(workspace),
       body: child,
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/nmtk_navigation_rail.dart';
 
 /// ----------------------------------------------------------------------------
@@ -295,7 +296,10 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundLight,
       textTheme: _buildTextTheme(ThemeData.light().textTheme),
-      extensions: [_suiteExtension(colorScheme, Brightness.light, variant)],
+      extensions: [
+        _suiteExtension(colorScheme, Brightness.light, variant),
+        NmtkShellTokens.fromColorScheme(colorScheme, Brightness.light),
+      ],
       cardTheme: CardThemeData(
         shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.cardShape),
         elevation: 0,
@@ -337,7 +341,10 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundDark,
       textTheme: _buildTextTheme(ThemeData.dark().textTheme),
-      extensions: [_suiteExtension(colorScheme, Brightness.dark, variant)],
+      extensions: [
+        _suiteExtension(colorScheme, Brightness.dark, variant),
+        NmtkShellTokens.fromColorScheme(colorScheme, Brightness.dark),
+      ],
       cardTheme: CardThemeData(
         color: colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(
@@ -402,7 +409,10 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkNeurocnlTokens.background,
       textTheme: _buildInterTextTheme(ThemeData.dark().textTheme),
-      extensions: [_neurocnlExtension(Brightness.dark, colorScheme)],
+      extensions: [
+        _neurocnlExtension(Brightness.dark, colorScheme),
+        NmtkShellTokens.fromColorScheme(colorScheme, Brightness.dark),
+      ],
       cardTheme: CardThemeData(
         color: NmtkNeurocnlTokens.surface,
         shape: RoundedRectangleBorder(
@@ -512,7 +522,10 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: background,
       textTheme: _buildInterTextTheme(ThemeData.light().textTheme),
-      extensions: [_neurocnlExtension(Brightness.light, colorScheme)],
+      extensions: [
+        _neurocnlExtension(Brightness.light, colorScheme),
+        NmtkShellTokens.fromColorScheme(colorScheme, Brightness.light),
+      ],
       cardTheme: CardThemeData(
         color: surface,
         shape: RoundedRectangleBorder(

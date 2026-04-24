@@ -45,6 +45,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MODULES_MANIFEST = REPO_ROOT / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
 STATE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "module_states.json"
 SETTINGS_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "launcher_settings.json"
+WORKSPACE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "workspace_state.json"
 
 DEFAULT_CONTROL_LOG_LEVEL = "info"
 HEALTH_POLL_SECONDS = 5.0
@@ -1421,6 +1422,7 @@ class LauncherControlState:
         )
         self._tasks: dict[str, threading.Thread] = {}
         self._settings = self._load_settings()
+        self._workspace = self._load_workspace()
         self._shutdown = threading.Event()
         self._health_thread = threading.Thread(
             target=self._health_poll_loop,
@@ -1577,6 +1579,152 @@ class LauncherControlState:
             }
         )
         return defaults
+
+    def _load_workspace(self) -> dict[str, Any]:
+        defaults = {
+            "sessions": [],
+            "focusedModuleId": None,
+        }
+        stored = _read_json_file(WORKSPACE_FILE, {})
+        if not isinstance(stored, dict):
+            return defaults
+        sessions = [
+            self._normalize_workspace_session(session)
+            for session in stored.get("sessions", [])
+            if isinstance(session, dict)
+        ]
+        sessions = self._dedupe_workspace_sessions(sessions)
+        focused_module_id = str(stored.get("focusedModuleId") or "").strip() or None
+        if focused_module_id and not any(
+            session["moduleId"] == focused_module_id for session in sessions
+        ):
+            focused_module_id = sessions[-1]["moduleId"] if sessions else None
+        return {
+            "sessions": sessions,
+            "focusedModuleId": focused_module_id,
+        }
+
+    def _normalize_workspace_session(self, payload: dict[str, Any]) -> dict[str, Any]:
+        module_id = str(payload.get("moduleId") or "").strip()
+        if not module_id:
+            raise ValueError("Workspace session moduleId is required")
+        if module_id not in self._modules:
+            raise KeyError(f"Unknown module '{module_id}'")
+        surface_mode = str(payload.get("surfaceMode") or "embedded").strip().lower()
+        if surface_mode not in {"embedded", "native"}:
+            surface_mode = "embedded"
+        readiness_state = str(payload.get("readinessState") or "opening").strip().lower()
+        if readiness_state not in {
+            "opening",
+            "warming_up",
+            "ready",
+            "degraded",
+            "error",
+            "restoring_session",
+        }:
+            readiness_state = "opening"
+        deep_link = payload.get("deepLink")
+        if deep_link is not None:
+            deep_link = str(deep_link).strip() or None
+        restore_state = payload.get("restoreState")
+        if not isinstance(restore_state, dict):
+            restore_state = {}
+        return {
+            "moduleId": module_id,
+            "surfaceMode": surface_mode,
+            "deepLink": deep_link,
+            "restoreState": restore_state,
+            "readinessState": readiness_state,
+        }
+
+    def _dedupe_workspace_sessions(
+        self, sessions: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        deduped: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for session in sessions:
+            module_id = session["moduleId"]
+            if module_id in seen:
+                continue
+            deduped.append(session)
+            seen.add(module_id)
+        return deduped
+
+    def _persist_workspace(self) -> None:
+        _write_json_file(WORKSPACE_FILE, self._workspace)
+
+    def get_workspace(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "sessions": [dict(session) for session in self._workspace["sessions"]],
+                "focusedModuleId": self._workspace["focusedModuleId"],
+            }
+
+    def update_workspace(self, payload: dict[str, Any]) -> dict[str, Any]:
+        with self._lock:
+            sessions = self._workspace["sessions"]
+            if "sessions" in payload:
+                raw_sessions = payload.get("sessions")
+                if not isinstance(raw_sessions, list):
+                    raise ValueError("Workspace sessions payload must be a list")
+                sessions = self._dedupe_workspace_sessions(
+                    [
+                        self._normalize_workspace_session(session)
+                        for session in raw_sessions
+                        if isinstance(session, dict)
+                    ]
+                )
+                self._workspace["sessions"] = sessions
+            if "focusedModuleId" in payload:
+                focused_module_id = str(payload.get("focusedModuleId") or "").strip() or None
+                if focused_module_id and not any(
+                    session["moduleId"] == focused_module_id for session in sessions
+                ):
+                    raise KeyError(f"Unknown workspace session '{focused_module_id}'")
+                self._workspace["focusedModuleId"] = focused_module_id
+            elif (
+                self._workspace["focusedModuleId"] is not None
+                and not any(
+                    session["moduleId"] == self._workspace["focusedModuleId"]
+                    for session in sessions
+                )
+            ):
+                self._workspace["focusedModuleId"] = (
+                    sessions[-1]["moduleId"] if sessions else None
+                )
+            self._persist_workspace()
+            return self.get_workspace()
+
+    def create_workspace_session(self, payload: dict[str, Any]) -> dict[str, Any]:
+        with self._lock:
+            session = self._normalize_workspace_session(payload)
+            sessions = [
+                existing
+                for existing in self._workspace["sessions"]
+                if existing["moduleId"] != session["moduleId"]
+            ]
+            sessions.append(session)
+            self._workspace["sessions"] = sessions
+            self._workspace["focusedModuleId"] = session["moduleId"]
+            self._persist_workspace()
+            return self.get_workspace()
+
+    def delete_workspace_session(self, module_id: str) -> dict[str, Any]:
+        with self._lock:
+            sessions = [
+                session
+                for session in self._workspace["sessions"]
+                if session["moduleId"] != module_id
+            ]
+            if len(sessions) == len(self._workspace["sessions"]):
+                raise KeyError(f"Unknown workspace session '{module_id}'")
+            self._workspace["sessions"] = sessions
+            if self._workspace["focusedModuleId"] == module_id:
+                self._workspace["focusedModuleId"] = (
+                    sessions[-1]["moduleId"] if sessions else None
+                )
+            self._persist_workspace()
+            return self.get_workspace()
 
     def serialize_modules(self, *, refresh_updates: bool = False) -> list[dict[str, Any]]:
         if refresh_updates:
@@ -4434,6 +4582,24 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 )
                 return
 
+            if method == "GET" and path == "/api/launcher/workspace":
+                self._send_json(HTTPStatus.OK, self.server.state.get_workspace())
+                return
+
+            if method == "PUT" and path == "/api/launcher/workspace":
+                self._send_json(
+                    HTTPStatus.OK,
+                    self.server.state.update_workspace(body or {}),
+                )
+                return
+
+            if method == "POST" and path == "/api/launcher/workspace/sessions":
+                self._send_json(
+                    HTTPStatus.CREATED,
+                    self.server.state.create_workspace_session(body or {}),
+                )
+                return
+
             if method == "GET" and path == "/api/launcher/akida/hosts":
                 self._send_json(HTTPStatus.OK, self.server.state.list_akida_hosts())
                 return
@@ -4626,6 +4792,20 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.proxy_pynq_runtime_status(board_id),
+                    )
+                    return
+
+            if len(segments) == 5 and segments[:4] == [
+                "api",
+                "launcher",
+                "workspace",
+                "sessions",
+            ]:
+                module_id = segments[4]
+                if method == "DELETE":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.delete_workspace_session(module_id),
                     )
                     return
 

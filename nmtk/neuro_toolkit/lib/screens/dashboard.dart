@@ -67,7 +67,7 @@ class DashboardScreen extends ConsumerWidget {
                 child: _ModuleSummaryCard(
                   module: module,
                   onLaunch: () => controller.launchModule(module.id),
-                  onOpen: () => context.go('/tool/${module.id}'),
+                  onOpen: () => context.go('/workspace?moduleId=${module.id}'),
                   onStop: () => controller.stopModule(module.id),
                   onUninstall: () => controller.uninstallModule(module.id),
                   onUpdate: _hasUpdateAvailable(module)
@@ -190,8 +190,8 @@ class _ModuleSummaryCard extends StatelessWidget {
               tone: module.status == ModuleStatus.error
                   ? NmtkTone.danger
                   : module.status == ModuleStatus.degraded
-                  ? NmtkTone.warning
-                  : NmtkTone.info,
+                      ? NmtkTone.warning
+                      : NmtkTone.info,
               padding: const EdgeInsets.all(14),
               child: Text(
                 module.statusMessage!,
