@@ -25,7 +25,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingStep(
       title: 'Modular Ecosystem',
       description:
-          'Browse the Catalog to install specialized modules for simulation, hardware deployment, and more.',
+          'Browse the home catalog to install specialized modules for simulation, hardware deployment, and more.',
       icon: Icons.extension,
     ),
     OnboardingStep(
@@ -37,7 +37,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingStep(
       title: 'Ready to Explore?',
       description:
-          'Start by installing a module from the Catalog or check your Dashboard for status.',
+          'Start by installing a module from Home, then manage status and launches from the same place.',
       icon: Icons.rocket_launch,
     ),
   ];
@@ -63,11 +63,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final theme = Theme.of(context);
     final brandGradient =
         theme.extension<NmtkThemeExtension>()?.brandGradient ??
-        const LinearGradient(
-          colors: [Color(0xFFF6F6F8), Color(0xFFE9EEF8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
+            const LinearGradient(
+              colors: [Color(0xFFF6F6F8), Color(0xFFE9EEF8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            );
 
     return Scaffold(
       body: DecoratedBox(

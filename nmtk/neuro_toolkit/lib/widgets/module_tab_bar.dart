@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 
@@ -19,6 +20,9 @@ class ModuleTabBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final tokens = NmtkShellTokens.of(context);
     final workspace = ref.watch(workspaceStateProvider);
     final modules = ref.watch(moduleStateProvider).modules;
     final activeModules = workspace.sessions
@@ -39,17 +43,16 @@ class ModuleTabBar extends ConsumerWidget {
 
     return Container(
       height: 48,
-      padding:
-          trailing == null ? EdgeInsets.zero : const EdgeInsets.only(right: 8),
+      padding: EdgeInsets.fromLTRB(
+        tokens.compactGap,
+        6,
+        trailing == null ? tokens.compactGap : 8,
+        6,
+      ),
       decoration: BoxDecoration(
-        color: Theme.of(context)
-            .colorScheme
-            .surfaceContainerHighest
-            .withValues(alpha: 0.5),
+        color: tokens.workspaceBarBackground,
         border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-          ),
+          bottom: BorderSide(color: tokens.chromeBorder),
         ),
       ),
       child: Row(
@@ -61,58 +64,75 @@ class ModuleTabBar extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final module = activeModules[index];
                 final isActive = module.id == activeModuleId;
+                final foregroundColor = isActive
+                    ? colorScheme.onSurface
+                    : colorScheme.onSurfaceVariant;
+                final backgroundColor = isActive
+                    ? colorScheme.surface
+                    : colorScheme.surface.withValues(alpha: 0.18);
+                final borderColor = isActive
+                    ? colorScheme.primary.withValues(alpha: 0.4)
+                    : colorScheme.outlineVariant.withValues(alpha: 0.22);
 
-                return InkWell(
-                  onTap: () => onTabSelected(module.id),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? Theme.of(context).colorScheme.surface
-                          : Colors.transparent,
-                      border: Border(
-                        right: BorderSide(
-                          color: Theme.of(context).dividerColor,
+                return Padding(
+                  padding: EdgeInsets.only(
+                    right: index == activeModules.length - 1
+                        ? 0
+                        : tokens.compactGap,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(tokens.radiusMd),
+                      onTap: () => onTabSelected(module.id),
+                      child: Ink(
+                        key: ValueKey<String>('module-tab-${module.id}'),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 9,
                         ),
-                        bottom: isActive
-                            ? BorderSide(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 2,
-                              )
-                            : BorderSide.none,
+                        decoration: BoxDecoration(
+                          color: backgroundColor,
+                          borderRadius: BorderRadius.circular(tokens.radiusMd),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              module.hasFrontend ? Icons.web : Icons.api,
+                              size: 16,
+                              color: foregroundColor,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              module.name,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: isActive
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                color: foregroundColor,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            IconButton(
+                              icon: Icon(
+                                Icons.close_rounded,
+                                size: 16,
+                                color: foregroundColor,
+                              ),
+                              onPressed: () => onTabClosed(module.id),
+                              tooltip: 'Close ${module.name}',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 18,
+                                height: 18,
+                              ),
+                              splashRadius: 16,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          module.hasFrontend ? Icons.web : Icons.api,
-                          size: 16,
-                          color: isActive
-                              ? Theme.of(context).colorScheme.primary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          module.name,
-                          style: TextStyle(
-                            fontWeight:
-                                isActive ? FontWeight.bold : FontWeight.normal,
-                            color: isActive
-                                ? Theme.of(context).colorScheme.primary
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.close, size: 14),
-                          onPressed: () => onTabClosed(module.id),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          splashRadius: 16,
-                        ),
-                      ],
                     ),
                   ),
                 );

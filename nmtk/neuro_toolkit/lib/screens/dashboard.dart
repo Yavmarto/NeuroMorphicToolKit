@@ -5,6 +5,7 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/screens/catalog.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 // NOTE: The three hardware deploy flows (Akida, PYNQ, Teensy) were relocated
@@ -32,8 +33,22 @@ class DashboardScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           Text(
-            'Installed Modules',
+            'Home',
             style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Manage installed modules and browse the full toolkit catalog from one view.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Installed Modules',
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -42,7 +57,7 @@ class DashboardScreen extends ConsumerWidget {
             const NmtkEmptyState(
               title: 'No Modules Installed',
               message:
-                  'No modules installed yet. Go to the Catalog to install modules.',
+                  'No modules installed yet. Install a module from the catalog below to get started.',
               icon: Icons.widgets_outlined,
             )
           else
@@ -61,6 +76,8 @@ class DashboardScreen extends ConsumerWidget {
                 ),
               ),
             ),
+          const SizedBox(height: 20),
+          const CatalogModuleSection(),
         ],
       ),
     );

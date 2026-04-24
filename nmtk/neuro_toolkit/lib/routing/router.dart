@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/screens/dashboard.dart';
-import 'package:neuro_toolkit/screens/catalog.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
@@ -41,7 +40,7 @@ GoRouter createGoRouter(AppProvider appProvider) {
           GoRoute(
             path: '/catalog',
             name: 'catalog',
-            builder: (context, state) => const CatalogScreen(),
+            redirect: (context, state) => '/',
           ),
           GoRoute(
             path: '/workspace',
@@ -83,12 +82,7 @@ class MainScreen extends ConsumerWidget {
       const NavigationDestinationData(
         icon: Icons.dashboard_outlined,
         selectedIcon: Icons.dashboard,
-        label: 'Dashboard',
-      ),
-      const NavigationDestinationData(
-        icon: Icons.store_outlined,
-        selectedIcon: Icons.store,
-        label: 'Catalog',
+        label: 'Home',
       ),
       if (workspace.hasSessions)
         const NavigationDestinationData(
@@ -107,11 +101,10 @@ class MainScreen extends ConsumerWidget {
   int _selectedIndex(BuildContext context, WorkspaceProvider workspace) {
     final location = GoRouterState.of(context).uri.toString();
     final hasWorkspace = workspace.hasSessions;
-    if (location.startsWith('/catalog')) return 1;
     if (location.startsWith('/workspace') || location.startsWith('/tool/')) {
-      return hasWorkspace ? 2 : 1;
+      return hasWorkspace ? 1 : 0;
     }
-    if (location.startsWith('/settings')) return hasWorkspace ? 3 : 2;
+    if (location.startsWith('/settings')) return hasWorkspace ? 2 : 1;
     return 0;
   }
 
@@ -123,17 +116,15 @@ class MainScreen extends ConsumerWidget {
     if (index == 0) {
       context.go('/');
     } else if (index == 1) {
-      context.go('/catalog');
-    } else if (index == 2) {
       if (workspace.hasSessions) {
         final focused =
             workspace.focusedModuleId ?? workspace.sessions.last.moduleId;
         context.go('/workspace?moduleId=$focused');
       } else {
-        // No workspace tab, index 2 = settings
+        // No workspace tab, index 1 = settings
         context.go('/settings');
       }
-    } else if (index == 3) {
+    } else if (index == 2) {
       // Only reachable when workspace tab is present
       context.go('/settings');
     }

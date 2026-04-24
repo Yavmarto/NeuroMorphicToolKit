@@ -144,10 +144,11 @@ void main() {
 
       expect(
         find.text(
-          'No modules installed yet. Go to the Catalog to install modules.',
+          'No modules installed yet. Install a module from the catalog below to get started.',
         ),
         findsOneWidget,
       );
+      expect(find.text('No Modules Available'), findsOneWidget);
     },
   );
 
@@ -171,8 +172,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Test Module'), findsOneWidget);
-      expect(find.text('Test description'), findsOneWidget);
+      expect(find.text('Test Module'), findsWidgets);
+      expect(find.text('Test description'), findsWidgets);
 
       // Find the Start button
       final startButton = find.text('Start');
@@ -255,5 +256,31 @@ void main() {
     );
 
     expect(find.text('Update to 0.5.0'), findsNothing);
+  });
+
+  testWidgets('DashboardScreen shows catalog modules and install actions', (
+    WidgetTester tester,
+  ) async {
+    final mockProvider = MockDashboardProvider();
+    mockProvider.modules = [
+      Module(
+        id: 'neurocnl',
+        name: 'CNL Studio',
+        description: 'CNL parser',
+        directory: 'neurocnl/',
+        status: ModuleStatus.notInstalled,
+        icon: 'code',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [moduleStateProvider.overrideWith((ref) => mockProvider)],
+        child: const MaterialApp(home: DashboardScreen()),
+      ),
+    );
+
+    expect(find.text('CNL Studio'), findsWidgets);
+    expect(find.text('Install'), findsOneWidget);
   });
 }
