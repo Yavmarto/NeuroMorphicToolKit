@@ -10,6 +10,13 @@
     },
     {
       "deepLink": null,
+      "moduleId": "neurocnl",
+      "readinessState": "ready",
+      "restoreState": {},
+      "surfaceMode": "native"
+    },
+    {
+      "deepLink": null,
       "moduleId": "Neurochip",
       "readinessState": "ready",
       "restoreState": {},
