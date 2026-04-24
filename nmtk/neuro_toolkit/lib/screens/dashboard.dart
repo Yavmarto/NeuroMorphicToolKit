@@ -28,21 +28,6 @@ class DashboardScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => controller.checkForUpdates(),
-            tooltip: 'Check for Updates',
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => context.go('/settings'),
-            tooltip: 'Settings',
-          ),
-        ],
-      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

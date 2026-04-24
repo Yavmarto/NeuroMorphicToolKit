@@ -37,7 +37,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final analytics = ref.watch(analyticsServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -211,8 +210,7 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
   void initState() {
     super.initState();
     _portController = TextEditingController(
-      text:
-          widget.module.customPort?.toString() ??
+      text: widget.module.customPort?.toString() ??
           widget.module.port?.toString() ??
           '',
     );
@@ -223,8 +221,7 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.module.customPort != widget.module.customPort ||
         oldWidget.module.port != widget.module.port) {
-      _portController.text =
-          widget.module.customPort?.toString() ??
+      _portController.text = widget.module.customPort?.toString() ??
           widget.module.port?.toString() ??
           '';
     }

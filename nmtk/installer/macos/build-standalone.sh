@@ -95,6 +95,14 @@ if [ -d "$PREV_APP/Contents/Resources/modules" ]; then
   echo "==> Cleaning previous bundled modules from build output..."
   rm -rf "$PREV_APP/Contents/Resources/modules"
 fi
+if [ -d "$PREV_APP/Contents/Resources/scripts" ]; then
+  echo "==> Cleaning previous bundled launcher scripts from build output..."
+  rm -rf "$PREV_APP/Contents/Resources/scripts"
+fi
+if [ -d "$PREV_APP/Contents/Resources/nmtk" ]; then
+  echo "==> Cleaning previous bundled launcher package from build output..."
+  rm -rf "$PREV_APP/Contents/Resources/nmtk"
+fi
 
 # --- Build Flutter app ---
 if [ "$SKIP_FLUTTER" = false ]; then
@@ -180,6 +188,19 @@ for mod in "${MODULES[@]}"; do
     --exclude='frontend/.dart_tool' \
     "$SRC/" "$DEST/"
 done
+
+# --- Bundle launcher control entrypoints ---
+echo "==> Bundling launcher control service..."
+mkdir -p "$APP_PATH/Contents/Resources/scripts"
+cp "$REPO_ROOT/scripts/launcher_control_service.py" \
+  "$APP_PATH/Contents/Resources/scripts/launcher_control_service.py"
+
+mkdir -p "$APP_PATH/Contents/Resources/nmtk"
+rsync -a \
+  --exclude='__pycache__' \
+  --exclude='*.pyc' \
+  "$REPO_ROOT/nmtk/launcher_control/" \
+  "$APP_PATH/Contents/Resources/nmtk/launcher_control/"
 
 # --- Report bundle size ---
 echo "==> Bundle contents:"

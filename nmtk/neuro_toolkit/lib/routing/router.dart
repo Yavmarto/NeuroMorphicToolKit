@@ -11,6 +11,7 @@ import 'package:neuro_toolkit/screens/onboarding.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/app_provider.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
+import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 GoRouter createGoRouter(AppProvider appProvider) {
   return GoRouter(
@@ -142,10 +143,29 @@ class MainScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = ref.watch(moduleStateProvider);
     final workspace = ref.watch(workspaceStateProvider);
+    final bootstrapState = ref.watch(launcherBootstrapStateProvider);
 
     // If Python is not available, show setup screen instead of normal UI
     if (!provider.pythonAvailable && !provider.isLoading) {
       return const PythonSetupScreen();
+    }
+    if (bootstrapState.status == LauncherBootstrapStatus.preflightFailed) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('NeuroToolkit')),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: NmtkShellReadinessStateView.fromState(
+                NmtkShellReadinessState.error,
+                message: bootstrapState.message ??
+                    'Preflight failed: launcher control API could not start.',
+              ),
+            ),
+          ),
+        ),
+      );
     }
 
     return ResponsiveScaffold(
@@ -153,6 +173,14 @@ class MainScreen extends ConsumerWidget {
       onNavigationTargetSelected: (index) =>
           _onItemTapped(context, index, workspace),
       destinations: _getDestinations(workspace),
+      appBarActions: [
+        NmtkTopAppBarAction(
+          icon: Icons.refresh_rounded,
+          label: 'Check Updates',
+          tooltip: 'Check for Updates',
+          onPressed: () => provider.checkForUpdates(),
+        ),
+      ],
       body: child,
     );
   }

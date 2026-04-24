@@ -99,7 +99,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify that the Dashboard is shown.
-    expect(find.text('Dashboard'), findsWidgets);
+    // Verify that the dashboard content is shown.
+    expect(find.text('Installed Modules'), findsOneWidget);
   });
 }

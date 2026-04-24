@@ -58,34 +58,41 @@ class LauncherControlSettings {
 class ControlApiService {
   ControlApiService({http.Client? client, Uri? baseUri})
       : _client = client ?? http.Client(),
-        _baseUri = baseUri ?? _resolveBaseUri();
+        _baseUri = baseUri ?? resolveBaseUri();
 
   final http.Client _client;
   final Uri _baseUri;
 
-  static Uri _resolveBaseUri() {
-    const configuredBaseUrl = String.fromEnvironment(
-      'NMTK_CONTROL_API_BASE_URL',
-      defaultValue: '',
-    );
+  static String get configuredBaseUrl => const String.fromEnvironment(
+        'NMTK_CONTROL_API_BASE_URL',
+        defaultValue: '',
+      );
+
+  static int get configuredPort => const int.fromEnvironment(
+        'NMTK_CONTROL_API_PORT',
+        defaultValue: 8090,
+      );
+
+  static Uri resolveBaseUri({Uri? fallbackBaseUri}) {
+    final configuredBaseUrl = ControlApiService.configuredBaseUrl;
     if (configuredBaseUrl.isNotEmpty) {
       return Uri.parse(configuredBaseUrl);
     }
 
-    const configuredPort = int.fromEnvironment(
-      'NMTK_CONTROL_API_PORT',
-      defaultValue: 8090,
-    );
+    if (fallbackBaseUri != null) {
+      return fallbackBaseUri;
+    }
 
     if (kIsWeb) {
       final baseHost = Uri.base.host.trim();
       final host =
           baseHost.isEmpty || baseHost == '0.0.0.0' ? 'localhost' : baseHost;
       final scheme = Uri.base.scheme.trim().isEmpty ? 'http' : Uri.base.scheme;
-      return Uri(scheme: scheme, host: host, port: configuredPort);
+      return Uri(
+          scheme: scheme, host: host, port: ControlApiService.configuredPort);
     }
 
-    return Uri.parse('http://127.0.0.1:$configuredPort');
+    return Uri.parse('http://127.0.0.1:${ControlApiService.configuredPort}');
   }
 
   Uri _uri(String path) {

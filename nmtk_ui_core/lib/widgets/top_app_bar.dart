@@ -28,7 +28,7 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(60);
+  Size get preferredSize => const Size.fromHeight(52);
 
   @override
   Widget build(BuildContext context) {
@@ -40,14 +40,14 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
       color: tokens.topBarBackground,
       child: Container(
         height: tokens.topAppBarHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: tokens.topBarBackground,
           border: Border(bottom: BorderSide(color: tokens.chromeBorder)),
         ),
         child: Row(
           children: [
-            if (leading != null) ...[leading!, const SizedBox(width: 12)],
+            if (leading != null) ...[leading!, const SizedBox(width: 10)],
             if (title != null)
               DefaultTextStyle(
                 style: theme.textTheme.titleMedium!.copyWith(
@@ -55,7 +55,7 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
                 child: title!,
               ),
-            if (title != null) const SizedBox(width: 20),
+            if (title != null) const SizedBox(width: 14),
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -101,19 +101,48 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                   child: Semantics(
                     label: action.semanticsLabel ?? action.tooltip,
                     button: true,
-                    child: IconButton(
-                      tooltip: action.tooltip,
-                      style: IconButton.styleFrom(
-                        backgroundColor: isSelected
-                            ? palette.accentContainer
-                            : Colors.transparent,
-                        foregroundColor: isSelected
-                            ? palette.accentForeground
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                      onPressed: action.onPressed,
-                      icon: Icon(action.icon),
-                    ),
+                    child: action.label == null
+                        ? IconButton(
+                            tooltip: action.tooltip,
+                            style: IconButton.styleFrom(
+                              backgroundColor: isSelected
+                                  ? palette.accentContainer
+                                  : Colors.transparent,
+                              foregroundColor: isSelected
+                                  ? palette.accentForeground
+                                  : theme.colorScheme.onSurfaceVariant,
+                              padding: const EdgeInsets.all(10),
+                              minimumSize: const Size(40, 40),
+                            ),
+                            onPressed: action.onPressed,
+                            icon: Icon(action.icon, size: 18),
+                          )
+                        : OutlinedButton.icon(
+                            onPressed: action.onPressed,
+                            icon: Icon(action.icon, size: 16),
+                            label: Text(action.label!),
+                            style: OutlinedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              minimumSize: const Size(0, 36),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? palette.accent.withValues(alpha: 0.35)
+                                    : tokens.subtleBorder,
+                              ),
+                              backgroundColor: isSelected
+                                  ? palette.accentContainer
+                                  : theme.colorScheme.surface.withValues(
+                                      alpha: 0.6,
+                                    ),
+                              foregroundColor: isSelected
+                                  ? palette.accentForeground
+                                  : theme.colorScheme.onSurfaceVariant,
+                              shape: const StadiumBorder(),
+                            ),
+                          ),
                   ),
                 );
               }),
@@ -155,14 +184,16 @@ class _DestinationChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(tokens.radiusChip),
         onTap: onTap,
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? accentContainer : Colors.transparent,
+            color: isSelected
+                ? accentContainer
+                : theme.colorScheme.surface.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(tokens.radiusChip),
             border: Border.all(
               color: isSelected
                   ? accentColor.withValues(alpha: 0.4)
-                  : Colors.transparent,
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.22),
             ),
           ),
           child: Row(
@@ -170,12 +201,12 @@ class _DestinationChip extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 18,
+                size: 17,
                 color: isSelected
                     ? accentForeground
                     : theme.colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Text(
                 label,
                 style: theme.textTheme.bodyMedium?.copyWith(

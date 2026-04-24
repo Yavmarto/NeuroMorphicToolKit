@@ -7,6 +7,8 @@ import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/routing/router.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   throw UnimplementedError(
@@ -20,17 +22,34 @@ final settingsStateProvider = ChangeNotifierProvider<SettingsProvider>((ref) {
   );
 });
 
+final launcherBootstrapStateProvider = Provider<LauncherBootstrapState>((ref) {
+  return LauncherBootstrapState.ready(ControlApiService.resolveBaseUri());
+});
+
+final controlApiServiceProvider = Provider<ControlApiService>((ref) {
+  final bootstrapState = ref.watch(launcherBootstrapStateProvider);
+  return ControlApiService(baseUri: bootstrapState.baseUri);
+});
+
 final appStateProvider = ChangeNotifierProvider<AppProvider>((ref) {
   return AppProvider();
 });
 
 final moduleStateProvider = ChangeNotifierProvider<ModuleProvider>((ref) {
   final settings = ref.read(settingsStateProvider);
-  return ModuleProvider()..updateSettingsProvider(settings);
+  final controlApiService = ref.read(controlApiServiceProvider);
+  final bootstrapState = ref.read(launcherBootstrapStateProvider);
+  return ModuleProvider(
+    controlApiService: controlApiService,
+    bootstrapState: bootstrapState,
+  )..updateSettingsProvider(settings);
 });
 
 final workspaceStateProvider = ChangeNotifierProvider<WorkspaceProvider>((ref) {
-  return WorkspaceProvider();
+  return WorkspaceProvider(
+    controlApiService: ref.read(controlApiServiceProvider),
+    bootstrapState: ref.read(launcherBootstrapStateProvider),
+  );
 });
 
 // The Teensy / PYNQ / Akida deploy providers were relocated to the Neurochip

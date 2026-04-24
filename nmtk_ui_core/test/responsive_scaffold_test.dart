@@ -36,25 +36,30 @@ void main() {
 
       expect(find.byType(NavigationBar), findsOneWidget);
       expect(find.byType(NmtkNavigationRail), findsNothing);
+      expect(find.byType(NmtkTopAppBar), findsNothing);
       expect(find.text('Main Content'), findsOneWidget);
     });
 
-    testWidgets(
-      'renders Tablet layout (600px <= w < 1240px) with NmtkNavigationRail',
-      (tester) async {
-        tester.view.physicalSize = const Size(800, 800);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.resetPhysicalSize);
+    testWidgets('renders Tablet layout (>= 600px) with top navigation', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
 
-        await tester.pumpWidget(buildScaffold(const Size(800, 800)));
+      await tester.pumpWidget(buildScaffold(const Size(800, 800)));
 
-        expect(find.byType(NavigationBar), findsNothing);
-        expect(find.byType(NmtkNavigationRail), findsOneWidget);
-        expect(find.text('Main Content'), findsOneWidget);
-      },
-    );
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(NmtkNavigationRail), findsNothing);
+      expect(find.byType(NmtkTopAppBar), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('responsive-topnav-brand')),
+        findsOneWidget,
+      );
+      expect(find.text('Main Content'), findsOneWidget);
+    });
 
-    testWidgets('renders Desktop layout (>= 1240px) with Custom Drawer', (
+    testWidgets('renders Desktop layout (>= 1240px) with top navigation', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1300, 800);
@@ -65,45 +70,20 @@ void main() {
 
       expect(find.byType(NavigationBar), findsNothing);
       expect(find.byType(NmtkNavigationRail), findsNothing);
-      expect(find.text('NMTK Hub'), findsOneWidget); // Header in custom drawer
+      expect(find.byType(NmtkTopAppBar), findsOneWidget);
+      expect(find.text('NMTK Hub'), findsOneWidget);
       expect(find.text('Main Content'), findsOneWidget);
 
-      // Verify list items in custom drawer
-      expect(find.text('Dashboard'), findsOneWidget);
-      expect(find.text('Settings'), findsOneWidget);
-    });
-
-    testWidgets('desktop sidebar can collapse and expand', (tester) async {
-      tester.view.physicalSize = const Size(1300, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-
-      await tester.pumpWidget(buildScaffold(const Size(1300, 800)));
-
-      final sidebarFinder = find.byKey(
-        const ValueKey('responsive-desktop-sidebar'),
+      expect(find.text('Dashboard'), findsWidgets);
+      expect(find.text('Settings'), findsWidgets);
+      expect(
+        find.byKey(const ValueKey('responsive-desktop-sidebar')),
+        findsNothing,
       );
-
-      expect(find.byTooltip('Collapse sidebar'), findsOneWidget);
-      expect(find.text('NMTK Hub'), findsOneWidget);
-      expect(find.text('Dashboard'), findsOneWidget);
-      expect(tester.getSize(sidebarFinder).width, 256);
-
-      await tester.tap(find.byKey(const ValueKey('responsive-sidebar-toggle')));
-      await tester.pumpAndSettle();
-
-      expect(find.byTooltip('Expand sidebar'), findsOneWidget);
-      expect(find.text('NMTK Hub'), findsNothing);
-      expect(find.text('Dashboard'), findsNothing);
-      expect(tester.getSize(sidebarFinder).width, 88);
-
-      await tester.tap(find.byKey(const ValueKey('responsive-sidebar-toggle')));
-      await tester.pumpAndSettle();
-
-      expect(find.byTooltip('Collapse sidebar'), findsOneWidget);
-      expect(find.text('NMTK Hub'), findsOneWidget);
-      expect(find.text('Dashboard'), findsOneWidget);
-      expect(tester.getSize(sidebarFinder).width, 256);
+      expect(
+        find.byKey(const ValueKey('responsive-sidebar-toggle')),
+        findsNothing,
+      );
     });
   });
 }

@@ -320,7 +320,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     if (sessions.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Workspace')),
         body: const NmtkEmptyState(
           title: 'No Active Workspace',
           message: 'Launch a module from the Dashboard to open it here.',
@@ -345,7 +344,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         .toList(growable: false);
     if (sessionEntries.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Workspace')),
         body: const NmtkEmptyState(
           title: 'Workspace Unavailable',
           message:
@@ -357,11 +355,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Workspace'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: ModuleTabBar(
+      body: Column(
+        children: [
+          ModuleTabBar(
             activeModuleId: _activeModuleId,
             onTabSelected: (String id) async {
               setState(() {
@@ -378,111 +374,121 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                 context.go('/');
               }
             },
-          ),
-        ),
-        actions: [
-          Semantics(
-            label: 'Open module in system browser',
-            button: true,
-            child: IconButton(
-              icon: const Icon(Icons.open_in_browser),
-              onPressed: () {
-                final active = sessionEntries.firstWhere(
-                  (entry) => entry.$1.moduleId == _activeModuleId,
-                );
-                _launchInBrowser(active.$2);
-              },
-              tooltip: 'Open in System Browser',
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Semantics(
+                  label: 'Open module in system browser',
+                  button: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.open_in_browser),
+                    onPressed: () {
+                      final active = sessionEntries.firstWhere(
+                        (entry) => entry.$1.moduleId == _activeModuleId,
+                      );
+                      _launchInBrowser(active.$2);
+                    },
+                    tooltip: 'Open in System Browser',
+                  ),
+                ),
+                Semantics(
+                  label: 'Stop currently active module',
+                  button: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.stop_circle, color: Colors.red),
+                    onPressed: () {
+                      final idToStop = _activeModuleId;
+                      unawaited(moduleProvider.stopModule(idToStop));
+                      _pollTimers[idToStop]?.cancel();
+                      _pollTimers.remove(idToStop);
+                    },
+                    tooltip: 'Stop Module',
+                  ),
+                ),
+              ],
             ),
           ),
-          Semantics(
-            label: 'Stop currently active module',
-            button: true,
-            child: IconButton(
-              icon: const Icon(Icons.stop_circle, color: Colors.red),
-              onPressed: () {
-                final idToStop = _activeModuleId;
-                unawaited(moduleProvider.stopModule(idToStop));
-                _pollTimers[idToStop]?.cancel();
-                _pollTimers.remove(idToStop);
-              },
-              tooltip: 'Stop Module',
+          Expanded(
+            child: IndexedStack(
+              key: const ValueKey('WorkspaceStack'),
+              index: sessionEntries
+                  .indexWhere((entry) => entry.$1.moduleId == _activeModuleId),
+              children: sessionEntries.map((entry) {
+                final session = entry.$1;
+                final module = entry.$2;
+                final isReady =
+                    _readyStatus[module.id] ?? session.surfaceMode == 'native';
+                final supported = _isWebViewSupported();
+                final launchBlocked = module.isPreflightFailed ||
+                    module.status == ModuleStatus.error;
+
+                return Container(
+                  key: ValueKey(module.id),
+                  child: launchBlocked
+                      ? NmtkEmptyState(
+                          title: '${module.name} Could Not Start',
+                          message: [
+                            module.statusMessage ??
+                                'This module could not be started.',
+                            if (module.capabilityWarnings.isNotEmpty)
+                              module.capabilityWarnings.join('\n'),
+                          ].join('\n\n'),
+                          icon: Icons.error_outline,
+                          tone: NmtkTone.danger,
+                          action: NmtkPrimaryButton(
+                            onPressed: () => moduleProvider.launchModule(
+                              module.id,
+                            ),
+                            icon: Icons.refresh,
+                            label: 'Retry Start',
+                            tone: NmtkTone.danger,
+                          ),
+                        )
+                      : !isReady
+                          ? NmtkEmptyState(
+                              title: 'Waiting for ${module.name}',
+                              message: [
+                                if (module.statusMessage != null)
+                                  module.statusMessage!,
+                                if (session.surfaceMode == 'embedded')
+                                  'Checking ${_moduleUri(module, healthCheck: true)}'
+                                else
+                                  'Restoring native workspace session',
+                              ].join('\n\n'),
+                              icon: Icons.sync,
+                              tone: NmtkTone.info,
+                              action: NmtkOutlinedButton(
+                                onPressed: () => _launchInBrowser(module),
+                                icon: Icons.open_in_browser,
+                                label: 'Open in Browser instead',
+                                tone: NmtkTone.info,
+                              ),
+                            )
+                          : session.surfaceMode == 'native'
+                              ? NativeSurfaceRegistry.build(module.id, session)
+                              : supported
+                                  ? WebViewWidget(
+                                      controller: _getController(module),
+                                    )
+                                  : NmtkEmptyState(
+                                      title: 'WebView Not Supported',
+                                      message:
+                                          'Open ${module.name} in your system browser on this platform.',
+                                      icon: Icons.warning_amber_rounded,
+                                      tone: NmtkTone.warning,
+                                      action: NmtkPrimaryButton(
+                                        onPressed: () =>
+                                            _launchInBrowser(module),
+                                        icon: Icons.open_in_browser,
+                                        label: 'Open in System Browser',
+                                        tone: NmtkTone.warning,
+                                      ),
+                                    ),
+                );
+              }).toList(),
             ),
           ),
         ],
-      ),
-      body: IndexedStack(
-        key: const ValueKey('WorkspaceStack'),
-        index: sessionEntries
-            .indexWhere((entry) => entry.$1.moduleId == _activeModuleId),
-        children: sessionEntries.map((entry) {
-          final session = entry.$1;
-          final module = entry.$2;
-          final isReady =
-              _readyStatus[module.id] ?? session.surfaceMode == 'native';
-          final supported = _isWebViewSupported();
-          final launchBlocked =
-              module.isPreflightFailed || module.status == ModuleStatus.error;
-
-          return Container(
-            key: ValueKey(module.id),
-            child: launchBlocked
-                ? NmtkEmptyState(
-                    title: '${module.name} Could Not Start',
-                    message: [
-                      module.statusMessage ??
-                          'This module could not be started.',
-                      if (module.capabilityWarnings.isNotEmpty)
-                        module.capabilityWarnings.join('\n'),
-                    ].join('\n\n'),
-                    icon: Icons.error_outline,
-                    tone: NmtkTone.danger,
-                    action: NmtkPrimaryButton(
-                      onPressed: () => moduleProvider.launchModule(module.id),
-                      icon: Icons.refresh,
-                      label: 'Retry Start',
-                      tone: NmtkTone.danger,
-                    ),
-                  )
-                : !isReady
-                    ? NmtkEmptyState(
-                        title: 'Waiting for ${module.name}',
-                        message: [
-                          if (module.statusMessage != null)
-                            module.statusMessage!,
-                          if (session.surfaceMode == 'embedded')
-                            'Checking ${_moduleUri(module, healthCheck: true)}'
-                          else
-                            'Restoring native workspace session',
-                        ].join('\n\n'),
-                        icon: Icons.sync,
-                        tone: NmtkTone.info,
-                        action: NmtkOutlinedButton(
-                          onPressed: () => _launchInBrowser(module),
-                          icon: Icons.open_in_browser,
-                          label: 'Open in Browser instead',
-                          tone: NmtkTone.info,
-                        ),
-                      )
-                    : session.surfaceMode == 'native'
-                        ? NativeSurfaceRegistry.build(module.id, session)
-                        : supported
-                            ? WebViewWidget(controller: _getController(module))
-                            : NmtkEmptyState(
-                                title: 'WebView Not Supported',
-                                message:
-                                    'Open ${module.name} in your system browser on this platform.',
-                                icon: Icons.warning_amber_rounded,
-                                tone: NmtkTone.warning,
-                                action: NmtkPrimaryButton(
-                                  onPressed: () => _launchInBrowser(module),
-                                  icon: Icons.open_in_browser,
-                                  label: 'Open in System Browser',
-                                  tone: NmtkTone.warning,
-                                ),
-                              ),
-          );
-        }).toList(),
       ),
     );
   }

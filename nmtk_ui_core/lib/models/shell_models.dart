@@ -100,6 +100,7 @@ class NmtkWorkspaceChipData {
 
 class NmtkTopAppBarAction {
   final IconData icon;
+  final String? label;
   final String tooltip;
   final String? semanticsLabel;
   final bool selected;
@@ -107,6 +108,7 @@ class NmtkTopAppBarAction {
 
   const NmtkTopAppBarAction({
     required this.icon,
+    this.label,
     required this.tooltip,
     required this.onPressed,
     this.semanticsLabel,

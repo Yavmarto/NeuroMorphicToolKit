@@ -84,7 +84,7 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
   ) {
     final isDark = brightness == Brightness.dark;
     return NmtkShellTokens(
-      topAppBarHeight: 60,
+      topAppBarHeight: 52,
       workspaceBarHeight: 48,
       utilityPanelWidth: 320,
       compactGap: 8,

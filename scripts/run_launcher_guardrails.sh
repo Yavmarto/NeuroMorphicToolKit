@@ -87,15 +87,42 @@ require_cmd() {
   fi
 }
 
+# Resolve a Python 3 interpreter: tries python3, python, then the active conda
+# prefix.  Prints the resolved command name/path on success.
+find_python3() {
+  local cmd
+  for cmd in python3 python; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      if "$cmd" -c "import sys; exit(0 if sys.version_info.major == 3 else 1)" 2>/dev/null; then
+        printf '%s\n' "$cmd"
+        return 0
+      fi
+    fi
+  done
+  # Conda fallback: CONDA_PREFIX is set when a conda env is active.
+  if [ -n "${CONDA_PREFIX:-}" ] && [ -x "${CONDA_PREFIX}/bin/python" ]; then
+    if "${CONDA_PREFIX}/bin/python" -c "import sys; exit(0 if sys.version_info.major == 3 else 1)" 2>/dev/null; then
+      printf '%s\n' "${CONDA_PREFIX}/bin/python"
+      return 0
+    fi
+  fi
+  return 1
+}
+
 print_header "Launcher Guardrails"
 echo "Root: $ROOT_DIR"
 
 STATUS=0
 
 print_header "Environment Readiness"
-if ! require_cmd python3 "Install or expose python3 on PATH before running launcher guardrails."; then
+PYTHON3=""
+if PYTHON3="$(find_python3)"; then
+  echo "Found Python 3: $PYTHON3"
+else
+  echo "Missing required tool: python3 (or python 3.x)" >&2
+  echo "Install Python 3 or activate a conda/virtual environment that provides it." >&2
   FAIL_NAMES+=("environment_readiness")
-  FAIL_OUTPUTS+=("Missing required tool: python3"$'\n'"Install or expose python3 on PATH before running launcher guardrails.")
+  FAIL_OUTPUTS+=("Missing required tool: python3 (or python 3.x)"$'\n'"Install Python 3 or activate a conda environment that provides it.")
   STATUS=1
 fi
 if ! require_cmd flutter "Install Flutter or add it to PATH before running launcher guardrails."; then
@@ -114,7 +141,7 @@ if [[ "$STATUS" -ne 0 ]]; then
 fi
 
 print_header "Launcher Doctor"
-if ! capture_stage "launcher_doctor" python3 scripts/launcher_control_service.py --doctor --json; then
+if ! capture_stage "launcher_doctor" "$PYTHON3" scripts/launcher_control_service.py --doctor --json; then
   STATUS=1
   echo "Launcher guardrails blocked by fatal launcher doctor findings." >&2
   write_failure_report
@@ -126,7 +153,7 @@ if ! capture_stage "launcher_doctor" python3 scripts/launcher_control_service.py
 fi
 
 print_header "Launcher Unit Tests"
-capture_stage "launcher_unit_tests" python3 -m unittest tests.test_launcher_control_service || STATUS=1
+capture_stage "launcher_unit_tests" "$PYTHON3" -m unittest tests.test_launcher_control_service || STATUS=1
 
 print_header "Launcher Flutter Tests"
 capture_stage "launcher_flutter_tests" bash -lc "
@@ -136,7 +163,7 @@ flutter test
 
 if [[ "$RUN_INTEGRATION" == true ]]; then
   print_header "Root Integration Tests"
-  capture_stage "root_integration_tests" python3 -m pytest tests/integration/test_cross_module.py tests/integration/test_teensy_e2e.py || STATUS=1
+  capture_stage "root_integration_tests" "$PYTHON3" -m pytest tests/integration/test_cross_module.py tests/integration/test_teensy_e2e.py || STATUS=1
 fi
 
 write_failure_report

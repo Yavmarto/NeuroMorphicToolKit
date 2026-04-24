@@ -15,7 +15,6 @@ class CatalogScreen extends ConsumerWidget {
     final provider = ref.watch(moduleStateProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Module Catalog')),
       body: Builder(
         builder: (context) {
           if (provider.isLoading) {

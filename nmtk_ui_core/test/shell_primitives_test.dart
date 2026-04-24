@@ -9,7 +9,7 @@ void main() {
       final tokens = theme.extension<NmtkShellTokens>();
 
       expect(tokens, isNotNull);
-      expect(tokens!.topAppBarHeight, 60);
+      expect(tokens!.topAppBarHeight, 52);
       expect(tokens.workspaceBarHeight, 48);
       expect(
         tokens.paletteForMode(NmtkShellMode.command).accent,
@@ -61,6 +61,7 @@ void main() {
               actions: [
                 NmtkTopAppBarAction(
                   icon: Icons.settings_outlined,
+                  label: 'Settings',
                   tooltip: 'Settings',
                   onPressed: () {
                     actionTapped = true;
@@ -82,7 +83,7 @@ void main() {
       await tester.pump();
       expect(selectedIndex, 1);
 
-      await tester.tap(find.byTooltip('Settings'));
+      await tester.tap(find.text('Settings'));
       await tester.pump();
       expect(actionTapped, isTrue);
     });

@@ -26,11 +26,18 @@ header() { echo -e "\n${BOLD}${CYAN}── $1 ──${RESET}"; }
 if [[ "$MODULES_ONLY" != "--modules-only" ]]; then
   header "Creating virtual environment (.venv-verify)"
 
-  # Find python 3.11+
+  # Find python 3.11+.  Tries explicit version names first, then the generic
+  # 'python3' and 'python' commands (common in conda environments where the
+  # active env exposes only 'python'), then falls back to CONDA_PREFIX if a
+  # conda env is active but its bin/ directory is not on PATH yet.
   PYTHON=""
-  for candidate in python3.12 python3.11 python3; do
-    if command -v "$candidate" &>/dev/null; then
-      version=$("$candidate" -c "import sys; print(sys.version_info[:2])")
+  _python_candidates=(python3.12 python3.11 python3 python)
+  if [[ -n "${CONDA_PREFIX:-}" && -x "${CONDA_PREFIX}/bin/python" ]]; then
+    _python_candidates+=("${CONDA_PREFIX}/bin/python")
+  fi
+
+  for candidate in "${_python_candidates[@]}"; do
+    if command -v "$candidate" &>/dev/null || [[ -x "$candidate" ]]; then
       if "$candidate" -c "import sys; sys.exit(0 if sys.version_info >= (3,11) else 1)" 2>/dev/null; then
         PYTHON="$candidate"
         break
@@ -39,8 +46,13 @@ if [[ "$MODULES_ONLY" != "--modules-only" ]]; then
   done
 
   if [[ -z "$PYTHON" ]]; then
-    echo "ERROR: Python 3.11+ not found. Install it via:"
-    echo "  conda install python=3.11  OR  brew install python@3.11"
+    echo "ERROR: Python 3.11+ not found."
+    echo "Tried: ${_python_candidates[*]}"
+    echo ""
+    echo "Fix options:"
+    echo "  conda install python=3.12   # inside your active conda env"
+    echo "  conda activate <env-with-python311>"
+    echo "  brew install python@3.12    # macOS fallback"
     exit 1
   fi
 

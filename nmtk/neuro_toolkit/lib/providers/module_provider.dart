@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 
@@ -12,15 +13,19 @@ class ModuleProvider with ChangeNotifier {
     ProcessManager? processManager,
     UpdateService? updateService,
     ControlApiService? controlApiService,
+    LauncherBootstrapState? bootstrapState,
   }) {
     _updateService = updateService ?? UpdateService();
     _controlApiService = controlApiService ?? ControlApiService();
+    _bootstrapState = bootstrapState ??
+        LauncherBootstrapState.ready(ControlApiService.resolveBaseUri());
     _legacyProcessManager = processManager;
     _init();
   }
 
   late final UpdateService _updateService;
   late final ControlApiService _controlApiService;
+  late final LauncherBootstrapState _bootstrapState;
   ProcessManager? _legacyProcessManager;
   LauncherUpdate? _pendingLauncherUpdate;
   Timer? _refreshTimer;
@@ -59,14 +64,25 @@ class ModuleProvider with ChangeNotifier {
         });
         return;
       }
+      if (!_bootstrapState.canUseControlApi) {
+        _error = _bootstrapState.message ??
+            'Preflight failed: launcher control API is unavailable.';
+        return;
+      }
       await _reloadFromControlApi(includeLauncherUpdate: true);
-      _startRefreshTimer();
     } catch (e) {
+      // A connection failure (e.g. control API not yet running) does not mean
+      // Python is absent — do not set _pythonAvailable = false here.
       _error = 'Failed to load modules: $e';
-      _pythonAvailable = false;
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+    // Start the refresh timer whether or not the first load succeeded so the
+    // app picks up the control API automatically once it becomes reachable
+    // (e.g. after `make dev` finishes starting the backend).
+    if (_bootstrapState.canUseControlApi) {
+      _startRefreshTimer();
     }
   }
 
@@ -123,11 +139,18 @@ class ModuleProvider with ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (!_bootstrapState.canUseControlApi) {
+      _error = _bootstrapState.message ??
+          'Preflight failed: launcher control API is unavailable.';
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
     try {
       await _reloadFromControlApi(includeLauncherUpdate: false);
     } catch (e) {
+      // Connection failure ≠ Python missing; don't set _pythonAvailable = false.
       _error = 'Failed to load modules: $e';
-      _pythonAvailable = false;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -395,6 +418,9 @@ class ModuleProvider with ChangeNotifier {
   Future<void> _reloadFromControlApi({
     required bool includeLauncherUpdate,
   }) async {
+    if (!_bootstrapState.canUseControlApi) {
+      return;
+    }
     final settings = await _controlApiService.fetchSettings();
     final fetchedModules = await _controlApiService.fetchModules(
       refreshUpdates: includeLauncherUpdate,
@@ -425,7 +451,7 @@ class ModuleProvider with ChangeNotifier {
   }
 
   Future<void> _syncServerSettings() async {
-    if (_settingsProvider == null) {
+    if (_settingsProvider == null || !_bootstrapState.canUseControlApi) {
       return;
     }
     try {

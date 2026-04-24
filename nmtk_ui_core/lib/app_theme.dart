@@ -1,9 +1,8 @@
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
-import 'package:nmtk_ui_core/widgets/nmtk_navigation_rail.dart';
+import 'package:nmtk_ui_core/widgets/top_app_bar.dart';
 
 /// ----------------------------------------------------------------------------
 /// NMTK BRAND TOKENS & EXPRESSIVE SHAPES
@@ -674,12 +673,13 @@ class AppTheme {
 /// ADAPTIVE LAYOUT
 /// ----------------------------------------------------------------------------
 
-class ResponsiveScaffold extends StatefulWidget {
+class ResponsiveScaffold extends StatelessWidget {
   final Widget body;
   final int currentIndex;
   final ValueChanged<int> onNavigationTargetSelected;
   final List<NavigationDestinationData> destinations;
   final Widget? floatingActionButton;
+  final List<NmtkTopAppBarAction> appBarActions;
 
   const ResponsiveScaffold({
     super.key,
@@ -688,30 +688,8 @@ class ResponsiveScaffold extends StatefulWidget {
     required this.onNavigationTargetSelected,
     required this.destinations,
     this.floatingActionButton,
+    this.appBarActions = const <NmtkTopAppBarAction>[],
   });
-
-  @override
-  State<ResponsiveScaffold> createState() => _ResponsiveScaffoldState();
-}
-
-class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
-  static const double _expandedSidebarWidth = 256;
-  static const double _collapsedSidebarWidth = 88;
-
-  bool _isSidebarCollapsed = false;
-
-  bool get _isDesktopContext {
-    if (kIsWeb) {
-      return true;
-    }
-
-    return switch (defaultTargetPlatform) {
-      TargetPlatform.macOS ||
-      TargetPlatform.windows ||
-      TargetPlatform.linux => true,
-      _ => false,
-    };
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -721,12 +699,12 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
 
         if (screenWidth < 600) {
           return Scaffold(
-            body: widget.body,
-            floatingActionButton: widget.floatingActionButton,
+            body: body,
+            floatingActionButton: floatingActionButton,
             bottomNavigationBar: NavigationBar(
-              selectedIndex: widget.currentIndex,
-              onDestinationSelected: widget.onNavigationTargetSelected,
-              destinations: widget.destinations.map((destination) {
+              selectedIndex: currentIndex,
+              onDestinationSelected: onNavigationTargetSelected,
+              destinations: destinations.map((destination) {
                 return NavigationDestination(
                   icon: Icon(destination.icon),
                   selectedIcon: Icon(
@@ -739,195 +717,12 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           );
         }
 
-        if (screenWidth < 1240) {
-          return Scaffold(
-            floatingActionButton: widget.floatingActionButton,
-            body: Row(
-              children: [
-                NmtkNavigationRail(
-                  selectedIndex: widget.currentIndex,
-                  onDestinationSelected: widget.onNavigationTargetSelected,
-                  destinations: widget.destinations,
-                  leading: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.memory,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                ),
-                const VerticalDivider(thickness: 1, width: 1),
-                Expanded(child: widget.body),
-              ],
-            ),
-          );
-        }
-
         return Scaffold(
-          floatingActionButton: widget.floatingActionButton,
-          body: Row(
-            children: [
-              Container(
-                key: const ValueKey('responsive-desktop-sidebar'),
-                width: _isSidebarCollapsed
-                    ? _collapsedSidebarWidth
-                    : _expandedSidebarWidth,
-                color: Theme.of(context).colorScheme.surface,
-                child: Column(
-                  children: [
-                    _buildDesktopBrandHeader(),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 16,
-                        ),
-                        itemCount: widget.destinations.length,
-                        itemBuilder: (context, index) {
-                          final isSelected = widget.currentIndex == index;
-                          final destination = widget.destinations[index];
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Tooltip(
-                              message: destination.label,
-                              waitDuration: const Duration(milliseconds: 300),
-                              child: Material(
-                                color: Colors.transparent,
-                                borderRadius: NmtkDesignTokens.buttonShape,
-                                child: InkWell(
-                                  borderRadius: NmtkDesignTokens.buttonShape,
-                                  hoverColor: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.08),
-                                  onTap: () =>
-                                      widget.onNavigationTargetSelected(index),
-                                  child: Container(
-                                    padding: _isSidebarCollapsed
-                                        ? const EdgeInsets.symmetric(
-                                            vertical: 12,
-                                          )
-                                        : const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 12,
-                                          ),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? Theme.of(context)
-                                                .colorScheme
-                                                .primaryContainer
-                                                .withValues(
-                                                  alpha: _isDesktopContext
-                                                      ? 0.8
-                                                      : 1,
-                                                )
-                                          : Colors.transparent,
-                                      borderRadius:
-                                          NmtkDesignTokens.buttonShape,
-                                    ),
-                                    child: _isSidebarCollapsed
-                                        ? Center(
-                                            child: Icon(
-                                              isSelected
-                                                  ? (destination.selectedIcon ??
-                                                        destination.icon)
-                                                  : destination.icon,
-                                              color: isSelected
-                                                  ? Theme.of(context)
-                                                        .colorScheme
-                                                        .onPrimaryContainer
-                                                  : Theme.of(context)
-                                                        .colorScheme
-                                                        .onSurfaceVariant,
-                                            ),
-                                          )
-                                        : Row(
-                                            children: [
-                                              Icon(
-                                                isSelected
-                                                    ? (destination
-                                                              .selectedIcon ??
-                                                          destination.icon)
-                                                    : destination.icon,
-                                                color: isSelected
-                                                    ? Theme.of(context)
-                                                          .colorScheme
-                                                          .onPrimaryContainer
-                                                    : Theme.of(context)
-                                                          .colorScheme
-                                                          .onSurfaceVariant,
-                                              ),
-                                              const SizedBox(width: 16),
-                                              Flexible(
-                                                child: Text(
-                                                  destination.label,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    fontWeight: isSelected
-                                                        ? FontWeight.w600
-                                                        : FontWeight.w500,
-                                                    color: isSelected
-                                                        ? Theme.of(context)
-                                                              .colorScheme
-                                                              .onPrimaryContainer
-                                                        : Theme.of(context)
-                                                              .colorScheme
-                                                              .onSurfaceVariant,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const VerticalDivider(thickness: 1, width: 1),
-              Expanded(child: widget.body),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDesktopBrandHeader() {
-    final toggleButton = IconButton(
-      key: const ValueKey('responsive-sidebar-toggle'),
-      tooltip: _isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar',
-      onPressed: () {
-        setState(() {
-          _isSidebarCollapsed = !_isSidebarCollapsed;
-        });
-      },
-      icon: Icon(
-        _isSidebarCollapsed ? Icons.chevron_right : Icons.chevron_left,
-      ),
-    );
-
-    if (_isSidebarCollapsed) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 24, 12, 12),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
+          appBar: NmtkTopAppBar(
+            leading: Container(
+              key: const ValueKey('responsive-topnav-brand'),
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
@@ -937,53 +732,16 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 12),
-            toggleButton,
-          ],
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.memory,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+            title: const Text('NMTK Hub'),
+            destinations: destinations,
+            selectedIndex: currentIndex,
+            onDestinationSelected: onNavigationTargetSelected,
+            actions: appBarActions,
           ),
-          if (!_isSidebarCollapsed) ...[
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'NMTK Hub',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Neuromorphic Toolkit',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          toggleButton,
-        ],
-      ),
+          floatingActionButton: floatingActionButton,
+          body: body,
+        );
+      },
     );
   }
 }

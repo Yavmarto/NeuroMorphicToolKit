@@ -2,6 +2,37 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# ---------------------------------------------------------------------------
+# Resolve a Python 3 interpreter.  On conda-managed machines the interpreter
+# is often named 'python' (not 'python3').  Try explicit names first, then
+# fall back to the active conda prefix when PATH doesn't expose either name.
+# ---------------------------------------------------------------------------
+find_python3() {
+  local cmd
+  for cmd in python3 python; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+      if "$cmd" -c "import sys; exit(0 if sys.version_info.major == 3 else 1)" 2>/dev/null; then
+        printf '%s\n' "$cmd"
+        return 0
+      fi
+    fi
+  done
+  if [ -n "${CONDA_PREFIX:-}" ] && [ -x "${CONDA_PREFIX}/bin/python" ]; then
+    if "${CONDA_PREFIX}/bin/python" -c "import sys; exit(0 if sys.version_info.major == 3 else 1)" 2>/dev/null; then
+      printf '%s\n' "${CONDA_PREFIX}/bin/python"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+PYTHON3=""
+if ! PYTHON3="$(find_python3)"; then
+  echo "ERROR: Python 3 not found. Install Python 3 or activate a conda environment that provides it." >&2
+  exit 1
+fi
+
 FLUTTER_DEVICE=""
 WITH_WEB=0
 WEB_PORT="${NMTK_WEB_PORT:-8088}"
@@ -174,7 +205,7 @@ start_control_api() {
 
   local control_api_pythonpath="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
   local -a control_api_cmd=(
-    python3
+    "$PYTHON3"
     "$REPO_ROOT/scripts/launcher_control_service.py"
     --host "$host"
     --port "$CONTROL_API_PORT"
@@ -215,7 +246,7 @@ start_launcher_web_server() {
 
   (
     cd "$REPO_ROOT/nmtk/neuro_toolkit/build/web"
-    python3 -m http.server "$WEB_PORT" --bind 0.0.0.0
+    "$PYTHON3" -m http.server "$WEB_PORT" --bind 0.0.0.0
   ) &
   WEB_PID=$!
 

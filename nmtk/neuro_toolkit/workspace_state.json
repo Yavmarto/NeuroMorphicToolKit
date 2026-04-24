@@ -1,0 +1,19 @@
+{
+  "focusedModuleId": "Neurochip",
+  "sessions": [
+    {
+      "deepLink": null,
+      "moduleId": "Neurosim",
+      "readinessState": "ready",
+      "restoreState": {},
+      "surfaceMode": "native"
+    },
+    {
+      "deepLink": null,
+      "moduleId": "Neurochip",
+      "readinessState": "ready",
+      "restoreState": {},
+      "surfaceMode": "native"
+    }
+  ]
+}

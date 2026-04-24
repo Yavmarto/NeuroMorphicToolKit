@@ -1,14 +1,20 @@
 import 'package:flutter/foundation.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 class WorkspaceProvider with ChangeNotifier {
-  WorkspaceProvider({ControlApiService? controlApiService})
-      : _controlApiService = controlApiService ?? ControlApiService() {
+  WorkspaceProvider({
+    ControlApiService? controlApiService,
+    LauncherBootstrapState? bootstrapState,
+  })  : _controlApiService = controlApiService ?? ControlApiService(),
+        _bootstrapState = bootstrapState ??
+            LauncherBootstrapState.ready(ControlApiService.resolveBaseUri()) {
     _init();
   }
 
   final ControlApiService _controlApiService;
+  final LauncherBootstrapState _bootstrapState;
   List<WorkspaceSession> _sessions = <WorkspaceSession>[];
   String? _focusedModuleId;
   bool _isLoading = true;
@@ -21,6 +27,11 @@ class WorkspaceProvider with ChangeNotifier {
 
   Future<void> _init() async {
     try {
+      if (!_bootstrapState.canUseControlApi) {
+        _sessions = <WorkspaceSession>[];
+        _focusedModuleId = null;
+        return;
+      }
       await refresh();
     } catch (_) {
       _sessions = <WorkspaceSession>[];
@@ -32,6 +43,12 @@ class WorkspaceProvider with ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    if (!_bootstrapState.canUseControlApi) {
+      _sessions = <WorkspaceSession>[];
+      _focusedModuleId = null;
+      notifyListeners();
+      return;
+    }
     final snapshot = await _controlApiService.fetchWorkspace();
     _sessions = List<WorkspaceSession>.from(snapshot.sessions);
     _focusedModuleId = snapshot.focusedModuleId;
