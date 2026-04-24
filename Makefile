@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-web build-submodules rebuild-submodules build-interactive clean-all build-all bump-version ci
+.PHONY: release help dev dev-web dev-native build-submodules rebuild-submodules build-interactive clean-all build-all bump-version ci
 
 MODULES = neurocnl Neurosim Neurochip Neurobench Neurosense Neurohub
 PORT_neurocnl = 8000
@@ -26,6 +26,7 @@ help:
 	@echo ""
 	@echo "Usage:"
 	@echo "  make dev                      - Build all submodules and run the launcher"
+	@echo "  make dev-native               - Run launcher in fully native mode (no web builds)"
 	@echo "  make dev -w                  - Also build/serve the launcher web app on your LAN"
 	@echo "  make dev-web                 - Same as 'make dev -w'"
 	@echo "  make build-submodules         - Build all submodule web frontends (only if changed)"
@@ -70,6 +71,13 @@ dev:
 dev-web:
 	@chmod +x scripts/build_module.sh scripts/run_dev.sh
 	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" --with-web
+
+dev-native:
+	@echo "▶ Launching NMTK in fully native desktop mode (no web builds)..."
+	@echo "  All 6 modules run as native Flutter surfaces via shell adapters."
+	@echo "  Start Python backends separately if you need live API data."
+	@echo ""
+	@cd nmtk/neuro_toolkit && flutter pub get && flutter run -d $(FLUTTER_DEVICE)
 
 ci:
 	@chmod +x scripts/run_ci_local.sh

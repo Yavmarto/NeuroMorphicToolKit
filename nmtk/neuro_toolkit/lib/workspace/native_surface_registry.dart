@@ -1,6 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neurocnl_studio/shell_adapter.dart';
+import 'package:Neurosim_shell_adapter/Neurosim_shell_adapter.dart';
+import 'package:neurohub_shell_adapter/neurohub_shell_adapter.dart';
+import 'package:neurosense_shell_adapter/neurosense_shell_adapter.dart';
+import 'package:neurochip/shell_adapter.dart';
+import 'package:neurobench_frontend/shell_adapter.dart';
 
 typedef NativeSurfaceBuilder = Widget Function(WorkspaceSession session);
 
@@ -9,6 +14,34 @@ class NativeSurfaceRegistry {
       <String, NativeSurfaceBuilder>{
     'neurocnl': (WorkspaceSession session) {
       return NeurocnlShellAdapter(
+        initialLocation: session.deepLink ?? '/',
+      );
+    },
+    'Neurosim': (WorkspaceSession session) {
+      return NeuroSimShellAdapter(
+        initialLocation: session.deepLink ?? '/',
+      );
+    },
+    'Neurohub': (WorkspaceSession session) {
+      return NeurohubShellAdapter(
+        initialLocation: session.deepLink ?? '/',
+      );
+    },
+    'Neurosense': (WorkspaceSession session) {
+      return NeurosenseShellAdapter(
+        initialLocation: session.deepLink ?? '/',
+      );
+    },
+    'Neurochip': (WorkspaceSession session) {
+      return NeurochipShellAdapter(
+        initialDeepLink: session.deepLink,
+        restorationSnapshot: session.restoreState.isEmpty
+            ? null
+            : session.restoreState,
+      );
+    },
+    'Neurobench': (WorkspaceSession session) {
+      return NeurobenchShellAdapter(
         initialLocation: session.deepLink ?? '/',
       );
     },
