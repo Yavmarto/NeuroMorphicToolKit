@@ -1,0 +1,18 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+    method: GET
+    uri: http://localhost:8001/api/test
+  response:
+    body:
+      string: '{"result": "ok"}'
+    headers:
+      Content-Type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+version: 1

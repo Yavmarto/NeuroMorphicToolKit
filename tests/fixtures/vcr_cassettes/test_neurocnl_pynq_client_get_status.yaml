@@ -1,0 +1,73 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - application/json
+      Connection:
+      - close
+      Host:
+      - jsonplaceholder.typicode.com
+      User-Agent:
+      - Python-urllib/3.11
+    method: GET
+    uri: https://jsonplaceholder.typicode.com/todos/1
+  response:
+    body:
+      string: "{\n  \"userId\": 1,\n  \"id\": 1,\n  \"title\": \"delectus aut autem\",\n
+        \ \"completed\": false\n}"
+    headers:
+      Accept-Ranges:
+      - bytes
+      Age:
+      - '15257'
+      CF-RAY:
+      - 9f1b32b5695820ec-AMS
+      Cache-Control:
+      - max-age=43200
+      Connection:
+      - close
+      Content-Length:
+      - '83'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sat, 25 Apr 2026 06:12:47 GMT
+      Server:
+      - cloudflare
+      access-control-allow-credentials:
+      - 'true'
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - HIT
+      etag:
+      - W/"53-hfEnumeNh6YirfjyjaujcOPPT+s"
+      expires:
+      - '-1'
+      nel:
+      - '{"report_to":"heroku-nel","response_headers":["Via"],"max_age":3600,"success_fraction":0.01,"failure_fraction":0.1}'
+      pragma:
+      - no-cache
+      report-to:
+      - '{"group":"heroku-nel","endpoints":[{"url":"https://nel.heroku.com/reports?s=Iw0JC8rIKAJwHSPInLC3NbMfAyzWfNxuyfn8atD37yE%3D\u0026sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d\u0026ts=1752022215"}],"max_age":3600}'
+      reporting-endpoints:
+      - heroku-nel="https://nel.heroku.com/reports?s=Iw0JC8rIKAJwHSPInLC3NbMfAyzWfNxuyfn8atD37yE%3D&sid=e11707d5-02a7-43ef-b45e-2cf4d2036f7d&ts=1752022215"
+      vary:
+      - Origin, Accept-Encoding
+      via:
+      - 2.0 heroku-router
+      x-content-type-options:
+      - nosniff
+      x-powered-by:
+      - Express
+      x-ratelimit-limit:
+      - '1000'
+      x-ratelimit-remaining:
+      - '999'
+      x-ratelimit-reset:
+      - '1752022235'
+    status:
+      code: 200
+      message: OK
+version: 1

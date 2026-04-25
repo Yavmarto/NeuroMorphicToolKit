@@ -1,0 +1,18 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Content-Type:
+      - application/json
+    method: POST
+    uri: http://localhost:8001/api/test
+  response:
+    body:
+      string: '{"created": true}'
+    headers:
+      Content-Type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+version: 1

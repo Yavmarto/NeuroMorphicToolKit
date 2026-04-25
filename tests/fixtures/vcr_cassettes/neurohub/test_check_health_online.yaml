@@ -1,0 +1,18 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+    method: GET
+    uri: http://localhost:8001/health
+  response:
+    body:
+      string: '{"status": "ok", "version": "1.0.0"}'
+    headers:
+      Content-Type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,19 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Content-Type:
+      - application/json
+    method: POST
+    uri: http://neurosim-backend:8001/execute
+  response:
+    body:
+      string: '{"assertions_passed": 5, "assertions_failed": 0, "latency_ms": 5.5,
+        "energy_uj": 1.2, "accuracy": 0.95, "mujoco_steps": 100}'
+    headers:
+      Content-Type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+version: 1

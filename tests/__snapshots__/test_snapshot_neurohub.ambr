@@ -1,0 +1,43 @@
+# serializer version: 1
+# name: test_create_project_stable_fields_snapshot
+  dict({
+    'description': 'Drop-test benchmark suite',
+    'name': 'SNN Prosthetic Study',
+    'owner': 'test-user',
+    'status': 'in_progress',
+    'tags': list([
+      'snn',
+      'prosthetic',
+    ]),
+  })
+# ---
+# name: test_get_default_config_snapshot
+  dict({
+    'default_project_settings': dict({
+    }),
+    'neurobench_url': 'http://localhost:8003',
+    'neurochip_url': 'http://localhost:8002',
+    'neurocnl_url': 'http://localhost:8000',
+    'neurosense_url': 'http://localhost:8004',
+    'neurosim_url': 'http://localhost:8001',
+    'shared_storage_path': './shared_assets',
+  })
+# ---
+# name: test_get_projects_empty_snapshot
+  list([
+  ])
+# ---
+# name: test_update_and_get_config_snapshot
+  dict({
+    'default_project_settings': dict({
+      'auto_save': True,
+      'theme': 'dark',
+    }),
+    'neurobench_url': 'http://neurobench.internal:8003',
+    'neurochip_url': 'http://neurochip.internal:8002',
+    'neurocnl_url': 'http://neurocnl.internal:8000',
+    'neurosense_url': 'http://neurosense.internal:8004',
+    'neurosim_url': 'http://neurosim.internal:8001',
+    'shared_storage_path': '/mnt/shared',
+  })
+# ---

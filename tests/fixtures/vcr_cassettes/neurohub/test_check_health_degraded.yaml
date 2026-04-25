@@ -1,0 +1,18 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+    method: GET
+    uri: http://localhost:8001/health
+  response:
+    body:
+      string: '{"detail": "Internal Server Error"}'
+    headers:
+      Content-Type:
+      - application/json
+    status:
+      code: 500
+      message: Internal Server Error
+version: 1
