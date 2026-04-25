@@ -57,7 +57,17 @@ class NmtkWorkspaceShell extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [leftPane, const SizedBox(height: 16), rightPane],
+                  children: [
+                    KeyedSubtree(
+                      key: Key('$layoutId-left-pane'),
+                      child: leftPane,
+                    ),
+                    const SizedBox(height: 16),
+                    KeyedSubtree(
+                      key: Key('$layoutId-right-pane'),
+                      child: rightPane,
+                    ),
+                  ],
                 ),
               );
             },
