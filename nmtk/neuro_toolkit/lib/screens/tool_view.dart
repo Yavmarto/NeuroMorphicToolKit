@@ -15,6 +15,7 @@ import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
+import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 
@@ -266,6 +267,17 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
   }
 
+  void _showModulePicker(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.72,
+        child: const ModulePickerPanel(),
+      ),
+    );
+  }
+
   Future<bool> _handleCrossModuleNavigation(
     Module currentModule,
     Uri requestUri,
@@ -319,13 +331,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final sessions = workspaceProvider.sessions;
 
     if (sessions.isEmpty) {
-      return Scaffold(
-        body: const NmtkEmptyState(
-          title: 'No Active Workspace',
-          message: 'Launch a module from the Dashboard to open it here.',
-          icon: Icons.laptop_outlined,
-        ),
-      );
+      return const Scaffold(body: ModulePickerPanel());
     }
 
     final focusedModuleId = workspaceProvider.focusedModuleId;
@@ -370,13 +376,21 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               _pollTimers[id]?.cancel();
               _pollTimers.remove(id);
               await workspaceProvider.closeSession(id);
-              if (workspaceProvider.sessions.isEmpty && mounted) {
-                context.go('/');
-              }
+              // When the last tab is closed the ToolViewScreen empty-state
+              // (ModulePickerPanel) is shown automatically — no navigation needed.
             },
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Semantics(
+                  label: 'Open a module',
+                  button: true,
+                  child: IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () => _showModulePicker(context),
+                    tooltip: 'Open a Module',
+                  ),
+                ),
                 Semantics(
                   label: 'Open module in system browser',
                   button: true,

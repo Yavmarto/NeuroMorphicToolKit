@@ -70,6 +70,7 @@ class ModuleProvider with ChangeNotifier {
         return;
       }
       await _reloadFromControlApi(includeLauncherUpdate: true);
+      await _launchOnStartModules();
     } catch (e) {
       // A connection failure (e.g. control API not yet running) does not mean
       // Python is absent — do not set _pythonAvailable = false here.
@@ -84,6 +85,24 @@ class ModuleProvider with ChangeNotifier {
     if (_bootstrapState.canUseControlApi) {
       _startRefreshTimer();
     }
+  }
+
+  /// Starts all installed modules that have [Module.startOnLaunch] enabled.
+  /// Modules are started concurrently to minimise wall-clock startup time.
+  Future<void> _launchOnStartModules() async {
+    final toLaunch = _modules
+        .where(
+          (module) =>
+              module.startOnLaunch &&
+              module.isEnabled &&
+              module.status == ModuleStatus.installed,
+        )
+        .map((module) => module.id)
+        .toList(growable: false);
+    if (toLaunch.isEmpty) {
+      return;
+    }
+    await Future.wait(toLaunch.map(launchModule));
   }
 
   List<Module> get modules => _modules;
@@ -161,6 +180,7 @@ class ModuleProvider with ChangeNotifier {
     String moduleId, {
     bool? isEnabled,
     int? customPort,
+    bool? startOnLaunch,
   }) async {
     final index = _modules.indexWhere((module) => module.id == moduleId);
     if (index == -1) {
@@ -170,6 +190,7 @@ class ModuleProvider with ChangeNotifier {
     _modules[index] = _modules[index].copyWith(
       isEnabled: isEnabled,
       customPort: customPort,
+      startOnLaunch: startOnLaunch,
     );
     notifyListeners();
 
@@ -180,6 +201,9 @@ class ModuleProvider with ChangeNotifier {
       }
       if (customPort != null) {
         settingsToSave['customPort'] = customPort;
+      }
+      if (startOnLaunch != null) {
+        settingsToSave['startOnLaunch'] = startOnLaunch;
       }
       await _settingsProvider!.updateModuleSettings(moduleId, settingsToSave);
     }
@@ -193,6 +217,7 @@ class ModuleProvider with ChangeNotifier {
         moduleId,
         isEnabled: isEnabled,
         customPort: customPort,
+        startOnLaunch: startOnLaunch,
       );
       notifyListeners();
     } catch (e) {

@@ -505,6 +505,7 @@ class ControlApiService {
     bool? isEnabled,
     int? customPort,
     bool? versionPinned,
+    bool? startOnLaunch,
   }) async {
     final response = await _client.put(
       _uri('/api/launcher/modules/$moduleId/settings'),
@@ -513,6 +514,7 @@ class ControlApiService {
         if (isEnabled != null) 'isEnabled': isEnabled,
         'customPort': customPort,
         if (versionPinned != null) 'versionPinned': versionPinned,
+        if (startOnLaunch != null) 'startOnLaunch': startOnLaunch,
       }),
     );
     await _ensureSuccess(response);

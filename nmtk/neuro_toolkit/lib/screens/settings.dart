@@ -263,6 +263,21 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                       );
                     },
                   ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Start on Launch'),
+                    subtitle: const Text(
+                      'Automatically start this module when the app opens '
+                      '(adds ~3–8 s to startup if cold).',
+                    ),
+                    value: widget.module.startOnLaunch,
+                    onChanged: (bool value) {
+                      moduleProvider.updateModuleSettings(
+                        widget.module.id,
+                        startOnLaunch: value,
+                      );
+                    },
+                  ),
                   if (widget.module.port != null)
                     TextField(
                       controller: _portController,

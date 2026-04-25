@@ -7,8 +7,8 @@ import 'package:neuro_toolkit/models/module.dart';
 import 'package:go_router/go_router.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/screens/dashboard.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
+import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 
 class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
@@ -52,8 +52,12 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> updateModule(String moduleId) async {}
 
   @override
-  Future<void> updateModuleSettings(String moduleId,
-      {bool? isEnabled, int? customPort}) async {}
+  Future<void> updateModuleSettings(
+    String moduleId, {
+    bool? isEnabled,
+    int? customPort,
+    bool? startOnLaunch,
+  }) async {}
 
   @override
   void updateSettingsProvider(settingsProvider) {}
@@ -87,7 +91,9 @@ void main() {
               routes: [
                 GoRoute(
                   path: '/',
-                  builder: (context, state) => const DashboardScreen(),
+                  builder: (context, state) => const Scaffold(
+                    body: ModulePickerPanel(),
+                  ),
                 ),
               ],
             );
@@ -99,7 +105,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify that the dashboard content is shown.
-    expect(find.text('Installed Modules'), findsOneWidget);
+    // Verify that the module picker is shown (empty state).
+    expect(find.text('No Modules Available'), findsOneWidget);
   });
 }

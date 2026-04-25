@@ -98,8 +98,12 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> updateModule(String moduleId) async {}
 
   @override
-  Future<void> updateModuleSettings(String moduleId,
-      {bool? isEnabled, int? customPort}) async {}
+  Future<void> updateModuleSettings(
+    String moduleId, {
+    bool? isEnabled,
+    int? customPort,
+    bool? startOnLaunch,
+  }) async {}
 
   @override
   void updateSettingsProvider(dynamic settingsProvider) {}

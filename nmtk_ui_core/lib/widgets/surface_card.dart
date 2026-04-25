@@ -12,6 +12,13 @@ class NmtkSurfaceCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final NmtkTone tone;
 
+  /// When true the child is wrapped in [Expanded] so that a [Spacer] or
+  /// [Flexible] inside the child can distribute leftover space.  Requires the
+  /// card to be placed inside a parent that provides a bounded height (e.g. a
+  /// [SizedBox] with an explicit height).  Defaults to false for backward
+  /// compatibility.
+  final bool expandChild;
+
   const NmtkSurfaceCard({
     super.key,
     required this.child,
@@ -20,8 +27,9 @@ class NmtkSurfaceCard extends StatelessWidget {
     this.leading,
     this.trailing,
     this.margin = EdgeInsets.zero,
-    this.padding = const EdgeInsets.all(20),
+    this.padding = const EdgeInsets.all(14),
     this.tone = NmtkTone.neutral,
+    this.expandChild = false,
   });
 
   @override
@@ -89,8 +97,8 @@ class NmtkSurfaceCard extends StatelessWidget {
                 subtitle != null ||
                 leading != null ||
                 trailing != null)
-              const SizedBox(height: 16),
-            child,
+              const SizedBox(height: 10),
+            if (expandChild) Expanded(child: child) else child,
           ],
         ),
       ),

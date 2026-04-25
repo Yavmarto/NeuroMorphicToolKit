@@ -1,101 +1,103 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
-import 'package:url_launcher/url_launcher.dart';
-// NOTE: The three hardware deploy flows (Akida, PYNQ, Teensy) were relocated
-// to the Neurochip module frontend in ADR-claude/0007. They are no longer
-// exposed from the launcher dashboard; users reach them by opening the
-// Neurochip module workspace.
 
-class DashboardScreen extends ConsumerWidget {
-  const DashboardScreen({super.key});
+/// A scrollable grid of module cards.
+///
+/// Used as the [ToolViewScreen] empty state (full-screen) and as a bottom
+/// sheet when the user taps "+" in the workspace tab bar. The panel is
+/// stateless — all lifecycle actions delegate to [moduleStateProvider].
+class ModulePickerPanel extends ConsumerWidget {
+  const ModulePickerPanel({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.read(moduleStateProvider);
     final moduleState = ref.watch(moduleStateProvider);
+    final controller = ref.read(moduleStateProvider);
     final theme = Theme.of(context);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (controller.pendingLauncherUpdate != null) {
-        _showLauncherUpdateDialog(context, controller);
-      }
-    });
-
     if (moduleState.isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (moduleState.error != null) {
-      return Scaffold(
-        body: NmtkEmptyState(
-          title: 'Catalog Unavailable',
-          message: moduleState.error!,
-          icon: Icons.cloud_off,
-          tone: NmtkTone.danger,
-        ),
+      return NmtkEmptyState(
+        title: 'Catalog Unavailable',
+        message: moduleState.error!,
+        icon: Icons.cloud_off,
+        tone: NmtkTone.danger,
       );
     }
 
     final modules = moduleState.modules;
 
-    return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Home',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(
+          'Modules',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Browse, install, and manage all toolkit modules from one view.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Browse, install, and launch toolkit modules.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
-          const SizedBox(height: 24),
-          if (modules.isEmpty)
-            const NmtkEmptyState(
-              title: 'No Modules Available',
-              message: 'The launcher did not load any modules.',
-              icon: Icons.inventory_2_outlined,
-            )
-          else
-            ...modules.map((module) {
-              final isMuJoCoUnavailable =
-                  module.requiresMuJoCo && !moduleState.isMuJoCoAvailable();
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _ModuleCard(
-                  module: module,
-                  isMuJoCoUnavailable: isMuJoCoUnavailable,
-                  onInstall: () =>
-                      unawaited(controller.installModule(module.id)),
-                  onLaunch: () => controller.launchModule(module.id),
-                  onOpen: () =>
-                      context.go('/workspace?moduleId=${module.id}'),
-                  onStop: () => controller.stopModule(module.id),
-                  onUninstall: () => controller.uninstallModule(module.id),
-                  onUpdate: _hasUpdateAvailable(module)
-                      ? () => unawaited(controller.updateModule(module.id))
-                      : null,
-                ),
+        ),
+        const SizedBox(height: 24),
+        if (modules.isEmpty)
+          const NmtkEmptyState(
+            title: 'No Modules Available',
+            message: 'The launcher did not load any modules.',
+            icon: Icons.inventory_2_outlined,
+          )
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const crossAxisCount = 3;
+              const spacing = 12.0;
+              // Guard against cards becoming too narrow on small windows.
+              final cardWidth = math.max(
+                240.0,
+                (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
+                    crossAxisCount,
               );
-            }),
-        ],
-      ),
+              return Wrap(
+                spacing: spacing,
+                runSpacing: spacing,
+                children: modules.map((module) {
+                  final isMuJoCoUnavailable =
+                      module.requiresMuJoCo && !moduleState.isMuJoCoAvailable();
+                  return SizedBox(
+                    width: cardWidth,
+                    child: _ModuleCard(
+                      module: module,
+                      isMuJoCoUnavailable: isMuJoCoUnavailable,
+                      onInstall: () => controller.installModule(module.id),
+                      onLaunch: () => controller.launchModule(module.id),
+                      onOpen: () =>
+                          context.go('/workspace?moduleId=${module.id}'),
+                      onStop: () => controller.stopModule(module.id),
+                      onUpdate: _hasUpdateAvailable(module)
+                          ? () => unawaited(controller.updateModule(module.id))
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+      ],
     );
   }
 
@@ -103,57 +105,11 @@ class DashboardScreen extends ConsumerWidget {
     return !module.versionPinned &&
         UpdateService.isNewerVersion(module.version, module.remoteVersion);
   }
-
-  void _showLauncherUpdateDialog(
-    BuildContext context,
-    ModuleProvider provider,
-  ) {
-    final update = provider.pendingLauncherUpdate!;
-    final releaseNotes = update.releaseNotes.trim().isEmpty
-        ? 'No published release notes were found for this version.'
-        : update.releaseNotes;
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Launcher Update Available'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'A new version of NeuroToolkit (${update.version}) is available.',
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Release Notes:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            Text(releaseNotes),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              provider.dismissLauncherUpdate();
-              Navigator.of(context).pop();
-            },
-            child: const Text('Later'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final url = Uri.parse(update.url);
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url);
-              }
-            },
-            child: const Text('Download Now'),
-          ),
-        ],
-      ),
-    );
-  }
 }
+
+// ---------------------------------------------------------------------------
+// Module card
+// ---------------------------------------------------------------------------
 
 class _ModuleCard extends StatelessWidget {
   final Module module;
@@ -162,7 +118,6 @@ class _ModuleCard extends StatelessWidget {
   final VoidCallback onLaunch;
   final VoidCallback onOpen;
   final VoidCallback onStop;
-  final VoidCallback onUninstall;
   final VoidCallback? onUpdate;
 
   const _ModuleCard({
@@ -172,7 +127,6 @@ class _ModuleCard extends StatelessWidget {
     required this.onLaunch,
     required this.onOpen,
     required this.onStop,
-    required this.onUninstall,
     required this.onUpdate,
   });
 
@@ -180,12 +134,18 @@ class _ModuleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final statusTone = module.status == ModuleStatus.error
+        ? NmtkTone.danger
+        : module.status == ModuleStatus.degraded
+            ? NmtkTone.warning
+            : NmtkTone.info;
+
     return Opacity(
       opacity: isMuJoCoUnavailable ? 0.55 : 1.0,
       child: NmtkSurfaceCard(
         title: module.name,
         subtitle: module.description,
-        leading: Icon(_getIconData(module.icon), size: 28),
+        leading: Icon(_iconDataFor(module.icon), size: 28),
         trailing: _buildStatusBadge(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,23 +171,14 @@ class _ModuleCard extends StatelessWidget {
               ],
             ),
             if (module.statusMessage != null) ...[
-              const SizedBox(height: 12),
-              NmtkSurfaceCard(
-                tone: module.status == ModuleStatus.error
-                    ? NmtkTone.danger
-                    : module.status == ModuleStatus.degraded
-                        ? NmtkTone.warning
-                        : NmtkTone.info,
-                padding: const EdgeInsets.all(14),
-                child: Text(
-                  module.statusMessage!,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
-                ),
+              const SizedBox(height: 8),
+              _StatusMessageBar(
+                message: module.statusMessage!,
+                tone: statusTone,
+                moduleName: module.name,
               ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildActionArea(),
           ],
         ),
@@ -239,8 +190,7 @@ class _ModuleCard extends StatelessWidget {
     switch (module.status) {
       case ModuleStatus.installing:
         return _ModuleProgressState(
-          label:
-              'Installing... ${(module.installProgress * 100).toInt()}%',
+          label: 'Installing... ${(module.installProgress * 100).toInt()}%',
           progress: module.installProgress,
         );
 
@@ -261,16 +211,13 @@ class _ModuleCard extends StatelessWidget {
         );
 
       case ModuleStatus.notInstalled:
-        return Align(
-          alignment: Alignment.centerRight,
-          child: Semantics(
-            label: 'Install ${module.name}',
-            button: true,
-            child: NmtkPrimaryButton(
-              onPressed: isMuJoCoUnavailable ? null : onInstall,
-              icon: Icons.download,
-              label: 'Install',
-            ),
+        return Semantics(
+          label: 'Install ${module.name}',
+          button: true,
+          child: NmtkPrimaryButton(
+            onPressed: onInstall,
+            icon: Icons.download_outlined,
+            label: 'Install',
           ),
         );
 
@@ -293,16 +240,6 @@ class _ModuleCard extends StatelessWidget {
                 onPressed: onLaunch,
                 icon: Icons.play_arrow,
                 label: 'Start',
-              ),
-            ),
-            Semantics(
-              label: 'Uninstall ${module.name}',
-              button: true,
-              child: NmtkOutlinedButton(
-                onPressed: onUninstall,
-                icon: Icons.delete,
-                label: 'Uninstall',
-                tone: NmtkTone.danger,
               ),
             ),
           ],
@@ -340,44 +277,18 @@ class _ModuleCard extends StatelessWidget {
                 tone: NmtkTone.warning,
               ),
             ),
-            Semantics(
-              label: 'Uninstall ${module.name}',
-              button: true,
-              child: NmtkOutlinedButton(
-                onPressed: onUninstall,
-                icon: Icons.delete,
-                label: 'Uninstall',
-                tone: NmtkTone.danger,
-              ),
-            ),
           ],
         );
 
       case ModuleStatus.error:
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            Semantics(
-              label: 'Start ${module.name}',
-              button: true,
-              child: NmtkPrimaryButton(
-                onPressed: onLaunch,
-                icon: Icons.play_arrow,
-                label: 'Start',
-              ),
-            ),
-            Semantics(
-              label: 'Uninstall ${module.name}',
-              button: true,
-              child: NmtkOutlinedButton(
-                onPressed: onUninstall,
-                icon: Icons.delete,
-                label: 'Uninstall',
-                tone: NmtkTone.danger,
-              ),
-            ),
-          ],
+        return Semantics(
+          label: 'Retry starting ${module.name}',
+          button: true,
+          child: NmtkPrimaryButton(
+            onPressed: onLaunch,
+            icon: Icons.play_arrow,
+            label: 'Start',
+          ),
         );
     }
   }
@@ -456,7 +367,7 @@ class _ModuleCard extends StatelessWidget {
     }
   }
 
-  IconData _getIconData(String iconName) {
+  static IconData _iconDataFor(String iconName) {
     switch (iconName) {
       case 'code':
         return Icons.code;
@@ -477,6 +388,103 @@ class _ModuleCard extends StatelessWidget {
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Status message bar
+// ---------------------------------------------------------------------------
+
+class _StatusMessageBar extends StatelessWidget {
+  final String message;
+  final NmtkTone tone;
+  final String moduleName;
+
+  const _StatusMessageBar({
+    required this.message,
+    required this.tone,
+    required this.moduleName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = resolveNmtkTonePalette(context, tone);
+    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: palette.foreground,
+        );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.background,
+        border: Border.all(color: palette.border),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: [
+            Icon(_toneIcon(tone), size: 12, color: palette.foreground),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Text(
+                message,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: labelStyle,
+              ),
+            ),
+            const SizedBox(width: 4),
+            InkWell(
+              borderRadius: BorderRadius.circular(4),
+              onTap: () => _showInfoDialog(context),
+              child: Padding(
+                padding: const EdgeInsets.all(2),
+                child: Icon(
+                  Icons.info_outline,
+                  size: 13,
+                  color: palette.foreground,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showInfoDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('$moduleName — Status'),
+        content: SingleChildScrollView(child: Text(message)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static IconData _toneIcon(NmtkTone tone) {
+    switch (tone) {
+      case NmtkTone.danger:
+        return Icons.error_outline;
+      case NmtkTone.warning:
+        return Icons.warning_amber_rounded;
+      case NmtkTone.info:
+        return Icons.info_outline;
+      case NmtkTone.success:
+        return Icons.check_circle_outline;
+      case NmtkTone.neutral:
+        return Icons.circle_outlined;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Progress / activity states
+// ---------------------------------------------------------------------------
 
 class _ModuleProgressState extends StatelessWidget {
   final String label;

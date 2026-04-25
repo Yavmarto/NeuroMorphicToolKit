@@ -3,13 +3,6 @@
   "sessions": [
     {
       "deepLink": null,
-      "moduleId": "Neurochip",
-      "readinessState": "ready",
-      "restoreState": {},
-      "surfaceMode": "native"
-    },
-    {
-      "deepLink": null,
       "moduleId": "Neurobench",
       "readinessState": "ready",
       "restoreState": {},
@@ -25,6 +18,13 @@
     {
       "deepLink": null,
       "moduleId": "neurocnl",
+      "readinessState": "ready",
+      "restoreState": {},
+      "surfaceMode": "native"
+    },
+    {
+      "deepLink": null,
+      "moduleId": "Neurochip",
       "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"

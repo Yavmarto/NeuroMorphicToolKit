@@ -73,11 +73,8 @@ dev-web:
 	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" --with-web
 
 dev-native:
-	@echo "▶ Launching NMTK in fully native desktop mode (no web builds)..."
-	@echo "  All 6 modules run as native Flutter surfaces via shell adapters."
-	@echo "  Start Python backends separately if you need live API data."
-	@echo ""
-	@cd nmtk/neuro_toolkit && flutter pub get && flutter run -d $(FLUTTER_DEVICE)
+	@chmod +x scripts/run_dev.sh
+	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" --native-only
 
 ci:
 	@chmod +x scripts/run_ci_local.sh

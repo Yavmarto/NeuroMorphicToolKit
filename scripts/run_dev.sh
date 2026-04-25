@@ -35,6 +35,7 @@ fi
 
 FLUTTER_DEVICE=""
 WITH_WEB=0
+NATIVE_ONLY=0
 WEB_PORT="${NMTK_WEB_PORT:-8088}"
 WEB_PID=""
 CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-8090}"
@@ -51,11 +52,13 @@ MODULE_LIST=(
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/run_dev.sh --flutter-device <device> [--with-web]
+Usage: ./scripts/run_dev.sh --flutter-device <device> [--with-web] [--native-only]
 
 Options:
   --flutter-device <device>  Desktop Flutter target to run.
   --with-web                 Also build and serve the launcher web app on the LAN.
+  --native-only              Skip all web/submodule builds; start the control API
+                             and run Flutter natively (fastest startup).
 EOF
 }
 
@@ -267,6 +270,10 @@ while [ "$#" -gt 0 ]; do
       WITH_WEB=1
       shift
       ;;
+    --native-only)
+      NATIVE_ONLY=1
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -300,6 +307,9 @@ if [ "$WITH_WEB" -eq 1 ]; then
   build_launcher_web "$WEB_CONTROL_API_URL"
   start_launcher_web_server "$LAN_HOST"
   export NMTK_UVICORN_HOST=0.0.0.0
+elif [ "$NATIVE_ONLY" -eq 1 ]; then
+  start_control_api "$CONTROL_API_BIND_HOST"
+  DESKTOP_CONTROL_API_URL="http://127.0.0.1:$CONTROL_API_PORT"
 else
   start_control_api "$CONTROL_API_BIND_HOST"
   DESKTOP_CONTROL_API_URL="http://127.0.0.1:$CONTROL_API_PORT"

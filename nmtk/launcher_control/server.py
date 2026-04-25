@@ -1464,6 +1464,7 @@ class LauncherControlState:
             )
             module["isEnabled"] = bool(saved.get("isEnabled", True))
             module["customPort"] = saved.get("customPort")
+            module["startOnLaunch"] = bool(saved.get("startOnLaunch", False))
             status_index = saved.get("status", STATUS_INDEX["notInstalled"])
             if status_index in (
                 STATUS_INDEX["running"],
@@ -3473,6 +3474,8 @@ class LauncherControlState:
                 module["versionPinned"] = bool(payload["versionPinned"])
                 if module["versionPinned"]:
                     module["remoteVersion"] = str(module.get("version", "0.0.0"))
+            if "startOnLaunch" in payload:
+                module["startOnLaunch"] = bool(payload["startOnLaunch"])
             self._persist_states()
             return self._serialize_module(module)
 
@@ -4486,6 +4489,7 @@ class LauncherControlState:
                 "versionPinned": bool(module.get("versionPinned", False)),
                 "isEnabled": bool(module.get("isEnabled", True)),
                 "customPort": module.get("customPort"),
+                "startOnLaunch": bool(module.get("startOnLaunch", False)),
                 "status": module.get("status", STATUS_INDEX["notInstalled"]),
                 "installProgress": float(module.get("installProgress", 0.0)),
                 "healthStatus": module.get("healthStatus"),

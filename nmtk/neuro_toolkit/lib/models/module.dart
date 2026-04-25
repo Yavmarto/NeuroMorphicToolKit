@@ -97,6 +97,7 @@ class Module {
   final String? remoteUrl;
   final bool isEnabled;
   final int? customPort;
+  final bool startOnLaunch;
   final List<String> requiredImports;
   final List<String> optionalImports;
   final String installStrategy;
@@ -131,6 +132,7 @@ class Module {
     this.remoteUrl,
     this.isEnabled = true,
     this.customPort,
+    this.startOnLaunch = false,
     this.requiredImports = const [],
     this.optionalImports = const [],
     this.installStrategy = 'pip',
@@ -170,6 +172,7 @@ class Module {
       remoteUrl: json['remoteUrl'] as String?,
       isEnabled: json['isEnabled'] as bool? ?? true,
       customPort: json['customPort'] as int?,
+      startOnLaunch: json['startOnLaunch'] as bool? ?? false,
       requiredImports:
           (json['requiredImports'] as List<dynamic>?)?.cast<String>() ??
               const [],
@@ -222,6 +225,7 @@ class Module {
     Object? remoteUrl = const Object(),
     bool? isEnabled,
     Object? customPort = const Object(),
+    bool? startOnLaunch,
     List<String>? requiredImports,
     List<String>? optionalImports,
     String? installStrategy,
@@ -256,6 +260,7 @@ class Module {
       remoteUrl: remoteUrl is String? ? remoteUrl : this.remoteUrl,
       isEnabled: isEnabled ?? this.isEnabled,
       customPort: customPort is int? ? customPort : this.customPort,
+      startOnLaunch: startOnLaunch ?? this.startOnLaunch,
       requiredImports: requiredImports ?? this.requiredImports,
       optionalImports: optionalImports ?? this.optionalImports,
       installStrategy: installStrategy ?? this.installStrategy,
@@ -315,6 +320,7 @@ class Module {
         'remoteUrl': remoteUrl,
         'isEnabled': isEnabled,
         'customPort': customPort,
+        'startOnLaunch': startOnLaunch,
         'requiredImports': requiredImports,
         'optionalImports': optionalImports,
         'installStrategy': installStrategy,
