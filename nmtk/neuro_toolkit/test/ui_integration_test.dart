@@ -120,8 +120,8 @@ void main() {
     );
     moduleProvider.modules = [
       Module(
-        id: 'm1',
-        name: 'Module 1',
+        id: 'neurocnl',
+        name: 'CNL Studio',
         description: 'Desc 1',
         directory: '/tmp/m1',
         port: 8001,
@@ -129,8 +129,8 @@ void main() {
         status: ModuleStatus.running,
       ),
       Module(
-        id: 'm2',
-        name: 'Module 2',
+        id: 'Neurochip',
+        name: 'NeuroChip',
         description: 'Desc 2',
         directory: '/tmp/m2',
         port: 8002,
@@ -139,13 +139,13 @@ void main() {
       ),
     ];
     await workspaceProvider.openSession(
-      'm1',
-      surfaceMode: 'embedded',
+      'neurocnl',
+      surfaceMode: 'native',
       readinessState: 'opening',
     );
     await workspaceProvider.openSession(
-      'm2',
-      surfaceMode: 'embedded',
+      'Neurochip',
+      surfaceMode: 'native',
       readinessState: 'opening',
     );
 
@@ -163,7 +163,7 @@ void main() {
 
     await tester.pump();
     expect(find.byType(ModuleTabBar), findsOneWidget);
-    expect(find.text('Module 1'), findsWidgets);
-    expect(find.text('Module 2'), findsWidgets);
+    expect(find.text('CNL Studio'), findsWidgets);
+    expect(find.text('NeuroChip'), findsWidgets);
   });
 }

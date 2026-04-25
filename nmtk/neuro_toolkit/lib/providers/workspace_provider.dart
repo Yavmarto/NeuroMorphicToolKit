@@ -18,6 +18,7 @@ class WorkspaceProvider with ChangeNotifier {
   List<WorkspaceSession> _sessions = <WorkspaceSession>[];
   String? _focusedModuleId;
   bool _isLoading = true;
+  bool _defaultSessionsEnsured = false;
 
   List<WorkspaceSession> get sessions =>
       List<WorkspaceSession>.unmodifiable(_sessions);
@@ -50,6 +51,26 @@ class WorkspaceProvider with ChangeNotifier {
       return;
     }
     final snapshot = await _controlApiService.fetchWorkspace();
+    _sessions = List<WorkspaceSession>.from(snapshot.sessions);
+    _focusedModuleId = snapshot.focusedModuleId;
+    notifyListeners();
+  }
+
+  Future<void> ensureDefaultSessionsOnce({
+    required List<WorkspaceSession> sessions,
+    required String? focusedModuleId,
+  }) async {
+    if (_defaultSessionsEnsured) {
+      return;
+    }
+    _defaultSessionsEnsured = true;
+    if (_workspaceMatches(sessions, focusedModuleId)) {
+      return;
+    }
+    final snapshot = await _controlApiService.updateWorkspace(
+      sessions: sessions,
+      focusedModuleId: focusedModuleId,
+    );
     _sessions = List<WorkspaceSession>.from(snapshot.sessions);
     _focusedModuleId = snapshot.focusedModuleId;
     notifyListeners();
@@ -120,5 +141,27 @@ class WorkspaceProvider with ChangeNotifier {
     _sessions = List<WorkspaceSession>.from(snapshot.sessions);
     _focusedModuleId = snapshot.focusedModuleId;
     notifyListeners();
+  }
+
+  bool _workspaceMatches(
+    List<WorkspaceSession> sessions,
+    String? focusedModuleId,
+  ) {
+    if (_focusedModuleId != focusedModuleId ||
+        _sessions.length != sessions.length) {
+      return false;
+    }
+    for (var index = 0; index < sessions.length; index += 1) {
+      final current = _sessions[index];
+      final desired = sessions[index];
+      if (current.moduleId != desired.moduleId ||
+          current.surfaceMode != desired.surfaceMode ||
+          current.deepLink != desired.deepLink ||
+          !mapEquals(current.restoreState, desired.restoreState) ||
+          current.readinessState != desired.readinessState) {
+        return false;
+      }
+    }
+    return true;
   }
 }

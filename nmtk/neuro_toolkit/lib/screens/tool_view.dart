@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -14,6 +13,7 @@ import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
@@ -31,15 +31,15 @@ class ToolViewScreen extends ConsumerStatefulWidget {
 class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   final Map<String, WebViewController> _controllers =
       <String, WebViewController>{};
-  final Map<String, bool> _readyStatus = <String, bool>{};
-  final Map<String, Timer> _pollTimers = <String, Timer>{};
   final Map<String, Uri> _pendingModuleRequests = <String, Uri>{};
 
   String _activeModuleId = '';
-  bool _handledInitialModule = false;
+  bool _workspaceInitialized = false;
 
   String _serviceHost() {
-    if (!kIsWeb) return 'localhost';
+    if (!kIsWeb) {
+      return 'localhost';
+    }
     final host = Uri.base.host.trim();
     if (host.isEmpty || host == '0.0.0.0') {
       return 'localhost';
@@ -48,7 +48,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   String _serviceScheme() {
-    if (!kIsWeb) return 'http';
+    if (!kIsWeb) {
+      return 'http';
+    }
     final scheme = Uri.base.scheme.trim();
     return scheme.isEmpty ? 'http' : scheme;
   }
@@ -74,8 +76,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     super.initState();
     _activeModuleId = widget.initialModuleId ?? '';
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _ensureInitialSession();
-      _startPollingForWorkspaceSessions();
+      await _initializeWorkspace();
     });
   }
 
@@ -83,32 +84,117 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   void didUpdateWidget(ToolViewScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialModuleId != oldWidget.initialModuleId) {
-      _handledInitialModule = false;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _ensureInitialSession();
-        _startPollingForWorkspaceSessions();
+        await _initializeWorkspace(forceFocus: true);
       });
     }
   }
 
-  @override
-  void dispose() {
-    for (final timer in _pollTimers.values) {
-      timer.cancel();
+  Future<void> _initializeWorkspace({bool forceFocus = false}) async {
+    final moduleProvider = ref.read(moduleStateProvider);
+    final workspaceProvider = ref.read(workspaceStateProvider);
+    if (moduleProvider.isLoading || workspaceProvider.isLoading) {
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await _initializeWorkspace(forceFocus: forceFocus);
+        });
+      }
+      return;
     }
-    super.dispose();
+
+    final eligibleModules =
+        moduleProvider.modules.where(_shouldOpenModule).toList(growable: false);
+    if (eligibleModules.isEmpty) {
+      return;
+    }
+
+    final existingSessions = <String, WorkspaceSession>{
+      for (final session in workspaceProvider.sessions)
+        session.moduleId: session,
+    };
+    final desiredSessions = eligibleModules
+        .map(
+          (module) =>
+              (existingSessions[module.id] ?? _defaultSessionFor(module))
+                  .copyWith(
+            surfaceMode: _surfaceModeForModule(module.id),
+            readinessState: _readinessStateForModule(module),
+          ),
+        )
+        .toList(growable: false);
+    final targetModuleId =
+        _preferredModuleId(eligibleModules, workspaceProvider, forceFocus) ??
+            eligibleModules.first.id;
+
+    await workspaceProvider.ensureDefaultSessionsOnce(
+      sessions: desiredSessions,
+      focusedModuleId: targetModuleId,
+    );
+
+    _workspaceInitialized = true;
+    await _activateModule(targetModuleId, requestFocus: true);
   }
 
-  Future<void> _ensureInitialSession() async {
-    if (_handledInitialModule) {
-      return;
-    }
-    _handledInitialModule = true;
-    final moduleId = widget.initialModuleId;
-    if (moduleId == null || moduleId.isEmpty) {
-      return;
-    }
+  WorkspaceSession _defaultSessionFor(Module module) {
+    return WorkspaceSession(
+      moduleId: module.id,
+      surfaceMode: _surfaceModeForModule(module.id),
+      restoreState: const <String, dynamic>{},
+      readinessState: _readinessStateForModule(module),
+    );
+  }
 
+  String? _preferredModuleId(
+    List<Module> eligibleModules,
+    WorkspaceProvider workspaceProvider,
+    bool forceFocus,
+  ) {
+    final eligibleIds = eligibleModules.map((module) => module.id).toSet();
+    final requestedModuleId = widget.initialModuleId;
+    if (requestedModuleId != null && eligibleIds.contains(requestedModuleId)) {
+      return requestedModuleId;
+    }
+    final focusedModuleId = workspaceProvider.focusedModuleId;
+    if (!forceFocus &&
+        focusedModuleId != null &&
+        eligibleIds.contains(focusedModuleId)) {
+      return focusedModuleId;
+    }
+    if (!forceFocus && eligibleIds.contains(_activeModuleId)) {
+      return _activeModuleId;
+    }
+    return null;
+  }
+
+  bool _shouldOpenModule(Module module) {
+    if (!module.isEnabled || module.startStrategy == 'none') {
+      return false;
+    }
+    return module.hasFrontend ||
+        NativeSurfaceRegistry.supportsModule(module.id);
+  }
+
+  String _readinessStateForModule(Module module) {
+    if (module.isPreflightFailed || module.status == ModuleStatus.error) {
+      return 'error';
+    }
+    if (module.status == ModuleStatus.degraded) {
+      return 'degraded';
+    }
+    if (module.status == ModuleStatus.running) {
+      return 'ready';
+    }
+    if (module.status == ModuleStatus.starting ||
+        module.status == ModuleStatus.stopping) {
+      return 'warming_up';
+    }
+    return 'opening';
+  }
+
+  Future<void> _activateModule(
+    String moduleId, {
+    required bool requestFocus,
+  }) async {
     final moduleProvider = ref.read(moduleStateProvider);
     final workspaceProvider = ref.read(workspaceStateProvider);
     final module = _findModule(moduleProvider, moduleId);
@@ -116,21 +202,39 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       return;
     }
 
-    if (module.status != ModuleStatus.running &&
-        module.status != ModuleStatus.degraded) {
-      await moduleProvider.launchModule(moduleId);
+    if (requestFocus) {
+      await workspaceProvider.focusSession(moduleId);
     }
-    await workspaceProvider.openSession(
-      moduleId,
-      surfaceMode: _surfaceModeForModule(moduleId),
-      deepLink: null,
-      readinessState:
-          _surfaceModeForModule(moduleId) == 'native' ? 'ready' : 'opening',
-    );
     if (mounted) {
       setState(() {
         _activeModuleId = moduleId;
       });
+    }
+
+    WorkspaceSession? currentSession;
+    for (final session in workspaceProvider.sessions) {
+      if (session.moduleId == moduleId) {
+        currentSession = session;
+        break;
+      }
+    }
+    final desiredReadiness = _readinessStateForModule(module);
+    if (currentSession != null &&
+        currentSession.readinessState != desiredReadiness) {
+      await workspaceProvider.updateSession(
+        moduleId,
+        readinessState: desiredReadiness,
+      );
+    }
+
+    if (module.status != ModuleStatus.running &&
+        module.status != ModuleStatus.degraded &&
+        module.status != ModuleStatus.starting) {
+      await workspaceProvider.updateSession(
+        moduleId,
+        readinessState: 'warming_up',
+      );
+      await moduleProvider.launchModule(moduleId);
     }
   }
 
@@ -141,81 +245,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       }
     }
     return null;
-  }
-
-  void _startPollingForWorkspaceSessions() {
-    final moduleProvider = ref.read(moduleStateProvider);
-    final workspaceProvider = ref.read(workspaceStateProvider);
-    for (final session in workspaceProvider.sessions) {
-      if (session.surfaceMode == 'native') {
-        _readyStatus[session.moduleId] = true;
-        unawaited(
-          workspaceProvider.updateSession(
-            session.moduleId,
-            readinessState: 'ready',
-          ),
-        );
-        continue;
-      }
-      final module = _findModule(moduleProvider, session.moduleId);
-      if (module == null) {
-        continue;
-      }
-      if (module.isPreflightFailed || module.status == ModuleStatus.error) {
-        _pollTimers[module.id]?.cancel();
-        _pollTimers.remove(module.id);
-        unawaited(
-          workspaceProvider.updateSession(
-            module.id,
-            readinessState: 'error',
-          ),
-        );
-        continue;
-      }
-      if (!(_readyStatus[module.id] ?? false) &&
-          !_pollTimers.containsKey(module.id)) {
-        _pollModuleHealth(module);
-      }
-    }
-  }
-
-  void _pollModuleHealth(Module module) {
-    final workspaceProvider = ref.read(workspaceStateProvider);
-    _pollTimers[module.id] = Timer.periodic(const Duration(seconds: 2), (
-      timer,
-    ) async {
-      try {
-        if (module.effectivePort == null ||
-            module.isPreflightFailed ||
-            module.status == ModuleStatus.error) {
-          timer.cancel();
-          _pollTimers.remove(module.id);
-          await workspaceProvider.updateSession(
-            module.id,
-            readinessState: 'error',
-          );
-          return;
-        }
-        final healthUri = _moduleUri(module, healthCheck: true);
-        final response =
-            await http.get(healthUri).timeout(const Duration(seconds: 1));
-        if (response.statusCode == 200) {
-          if (mounted) {
-            setState(() {
-              _readyStatus[module.id] = true;
-            });
-          }
-          timer.cancel();
-          _pollTimers.remove(module.id);
-          await workspaceProvider.updateSession(
-            module.id,
-            readinessState: 'ready',
-          );
-        }
-      } catch (e) {
-        debugPrint('Polling health for ${module.name} failed: $e');
-      }
-    });
   }
 
   WebViewController _getController(Module module) {
@@ -240,7 +269,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           },
           onWebResourceError: (WebResourceError error) {
             debugPrint(
-                'WebView error for ${module.name}: ${error.description}');
+              'WebView error for ${module.name}: ${error.description}',
+            );
           },
         ),
       )
@@ -263,7 +293,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   bool _isWebViewSupported() {
-    if (kIsWeb) return false;
+    if (kIsWeb) {
+      return false;
+    }
     return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
   }
 
@@ -296,18 +328,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final targetModule = navigation.targetModule;
     _pendingModuleRequests[targetModule.id] = navigation.targetUri;
 
-    if (targetModule.status != ModuleStatus.running &&
-        targetModule.status != ModuleStatus.degraded) {
-      await moduleProvider.launchModule(targetModule.id);
-    }
-
     await workspaceProvider.openSession(
       targetModule.id,
       surfaceMode: _surfaceModeForModule(targetModule.id),
       deepLink: navigation.targetUri.path,
-      readinessState: _surfaceModeForModule(targetModule.id) == 'native'
-          ? 'ready'
-          : 'opening',
+      readinessState: 'opening',
     );
 
     if (_controllers.containsKey(targetModule.id)) {
@@ -315,13 +340,29 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       await _controllers[targetModule.id]!.loadRequest(navigation.targetUri);
     }
 
-    if (mounted) {
-      setState(() {
-        _activeModuleId = targetModule.id;
-      });
-    }
-    await workspaceProvider.focusSession(targetModule.id);
+    await _activateModule(targetModule.id, requestFocus: true);
     return true;
+  }
+
+  Widget _buildLoadingState(Module module) {
+    return NmtkEmptyState(
+      title: 'Waiting for ${module.name}',
+      message: [
+        if (module.statusMessage != null) module.statusMessage!,
+        if (module.status == ModuleStatus.starting)
+          'Starting backend at ${_moduleUri(module, healthCheck: true)}'
+        else
+          'Starting ${module.name} backend for this tab',
+      ].join('\n\n'),
+      icon: Icons.sync,
+      tone: NmtkTone.info,
+      action: NmtkOutlinedButton(
+        onPressed: () => _launchInBrowser(module),
+        icon: Icons.open_in_browser,
+        label: 'Open in Browser instead',
+        tone: NmtkTone.info,
+      ),
+    );
   }
 
   @override
@@ -329,6 +370,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final moduleProvider = ref.watch(moduleStateProvider);
     final workspaceProvider = ref.watch(workspaceStateProvider);
     final sessions = workspaceProvider.sessions;
+
+    if (!_workspaceInitialized &&
+        !moduleProvider.isLoading &&
+        !workspaceProvider.isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _initializeWorkspace();
+      });
+    }
 
     if (sessions.isEmpty) {
       return const Scaffold(body: ModulePickerPanel());
@@ -366,18 +415,10 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           ModuleTabBar(
             activeModuleId: _activeModuleId,
             onTabSelected: (String id) async {
-              setState(() {
-                _activeModuleId = id;
-              });
-              await workspaceProvider.focusSession(id);
-              _startPollingForWorkspaceSessions();
+              await _activateModule(id, requestFocus: true);
             },
             onTabClosed: (String id) async {
-              _pollTimers[id]?.cancel();
-              _pollTimers.remove(id);
               await workspaceProvider.closeSession(id);
-              // When the last tab is closed the ToolViewScreen empty-state
-              // (ModulePickerPanel) is shown automatically — no navigation needed.
             },
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -411,10 +452,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                   child: IconButton(
                     icon: const Icon(Icons.stop_circle, color: Colors.red),
                     onPressed: () {
-                      final idToStop = _activeModuleId;
-                      unawaited(moduleProvider.stopModule(idToStop));
-                      _pollTimers[idToStop]?.cancel();
-                      _pollTimers.remove(idToStop);
+                      unawaited(moduleProvider.stopModule(_activeModuleId));
                     },
                     tooltip: 'Stop Module',
                   ),
@@ -430,11 +468,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               children: sessionEntries.map((entry) {
                 final session = entry.$1;
                 final module = entry.$2;
-                final isReady =
-                    _readyStatus[module.id] ?? session.surfaceMode == 'native';
                 final supported = _isWebViewSupported();
                 final launchBlocked = module.isPreflightFailed ||
                     module.status == ModuleStatus.error;
+                final isReady = module.status == ModuleStatus.running ||
+                    module.status == ModuleStatus.degraded;
 
                 return Container(
                   key: ValueKey(module.id),
@@ -450,8 +488,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                           icon: Icons.error_outline,
                           tone: NmtkTone.danger,
                           action: NmtkPrimaryButton(
-                            onPressed: () => moduleProvider.launchModule(
+                            onPressed: () => _activateModule(
                               module.id,
+                              requestFocus: false,
                             ),
                             icon: Icons.refresh,
                             label: 'Retry Start',
@@ -459,25 +498,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                           ),
                         )
                       : !isReady
-                          ? NmtkEmptyState(
-                              title: 'Waiting for ${module.name}',
-                              message: [
-                                if (module.statusMessage != null)
-                                  module.statusMessage!,
-                                if (session.surfaceMode == 'embedded')
-                                  'Checking ${_moduleUri(module, healthCheck: true)}'
-                                else
-                                  'Restoring native workspace session',
-                              ].join('\n\n'),
-                              icon: Icons.sync,
-                              tone: NmtkTone.info,
-                              action: NmtkOutlinedButton(
-                                onPressed: () => _launchInBrowser(module),
-                                icon: Icons.open_in_browser,
-                                label: 'Open in Browser instead',
-                                tone: NmtkTone.info,
-                              ),
-                            )
+                          ? _buildLoadingState(module)
                           : session.surfaceMode == 'native'
                               ? NativeSurfaceRegistry.build(module.id, session)
                               : supported

@@ -1,17 +1,17 @@
 {
-  "focusedModuleId": "neurocnl",
+  "focusedModuleId": "Neurochip",
   "sessions": [
     {
       "deepLink": null,
       "moduleId": "Neurobench",
-      "readinessState": "ready",
+      "readinessState": "warming_up",
       "restoreState": {},
       "surfaceMode": "native"
     },
     {
       "deepLink": null,
       "moduleId": "Neurosim",
-      "readinessState": "ready",
+      "readinessState": "warming_up",
       "restoreState": {},
       "surfaceMode": "native"
     },
@@ -25,7 +25,7 @@
     {
       "deepLink": null,
       "moduleId": "Neurochip",
-      "readinessState": "ready",
+      "readinessState": "degraded",
       "restoreState": {},
       "surfaceMode": "native"
     }

@@ -11,6 +11,7 @@ import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
+import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 
 class _NoopProcessManager implements ProcessManager {
   final _statusController = StreamController<Module>.broadcast();
@@ -49,6 +50,27 @@ class _NoopProcessManager implements ProcessManager {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _TrackingModuleProvider extends ModuleProvider {
+  _TrackingModuleProvider() : super(processManager: _NoopProcessManager());
+
+  final List<String> launchedModuleIds = <String>[];
+
+  @override
+  Future<void> launchModule(String moduleId) async {
+    launchedModuleIds.add(moduleId);
+    final index = modules.indexWhere((module) => module.id == moduleId);
+    if (index == -1) {
+      return;
+    }
+    final nextModules = List<Module>.from(modules);
+    nextModules[index] = nextModules[index].copyWith(
+      status: ModuleStatus.starting,
+      healthStatus: null,
+    );
+    modules = nextModules;
+  }
 }
 
 class _FakeWorkspaceControlApiService extends ControlApiService {
@@ -117,6 +139,115 @@ class _FakeWorkspaceControlApiService extends ControlApiService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('ToolView seeds all launcher tabs on startup',
+      (WidgetTester tester) async {
+    final moduleProvider = _TrackingModuleProvider();
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(),
+    );
+    moduleProvider.modules = [
+      Module(
+        id: 'm1',
+        name: 'Module 1',
+        description: 'Desc 1',
+        directory: '/tmp/m1',
+        port: 8001,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+      Module(
+        id: 'm2',
+        name: 'Module 2',
+        description: 'Desc 2',
+        directory: '/tmp/m2',
+        port: 8002,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+      Module(
+        id: 'ndh',
+        name: 'NDH',
+        description: 'CLI only',
+        directory: '/tmp/ndh',
+        startStrategy: 'none',
+        status: ModuleStatus.installed,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+        ],
+        child: const MaterialApp(home: ToolViewScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(ModuleTabBar), findsOneWidget);
+    expect(find.text('Module 1'), findsWidgets);
+    expect(find.text('Module 2'), findsWidgets);
+    expect(find.text('NDH'), findsNothing);
+    expect(workspaceProvider.sessions.map((session) => session.moduleId), [
+      'm1',
+      'm2',
+    ]);
+  });
+
+  testWidgets('selecting a tab starts its backend and shows loading state',
+      (WidgetTester tester) async {
+    final moduleProvider = _TrackingModuleProvider();
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(),
+    );
+    moduleProvider.modules = [
+      Module(
+        id: 'm1',
+        name: 'Module 1',
+        description: 'Desc 1',
+        directory: '/tmp/m1',
+        port: 8001,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+      Module(
+        id: 'm2',
+        name: 'Module 2',
+        description: 'Desc 2',
+        directory: '/tmp/m2',
+        port: 8002,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+        ],
+        child: const MaterialApp(home: ToolViewScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(moduleProvider.launchedModuleIds, contains('m1'));
+
+    await tester.tap(find.byKey(const ValueKey<String>('module-tab-m2')));
+    await tester.pump();
+
+    expect(moduleProvider.launchedModuleIds, contains('m2'));
+    expect(find.text('Waiting for Module 2'), findsOneWidget);
+  });
 
   testWidgets('ToolView shows launcher preflight error instead of polling',
       (WidgetTester tester) async {
