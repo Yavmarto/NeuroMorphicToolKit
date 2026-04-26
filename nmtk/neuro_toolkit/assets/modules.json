@@ -2,7 +2,7 @@
   {
     "id": "neurocnl",
     "name": "CNL Studio",
-    "description": "CNL parser, SNN generator, and simulation engine",
+    "description": "Author and validate neuromorphic network specs in CNL Studio",
     "icon": "code",
     "port": 8000,
     "version": "1.0.0",
@@ -22,7 +22,7 @@
   {
     "id": "Neurosim",
     "name": "NeuroSim",
-    "description": "Visual drag-and-drop SNN design canvas",
+    "description": "Visual canvas for assembling, inspecting, and simulating designs from CNL Studio",
     "icon": "architecture",
     "port": 8001,
     "version": "1.0.0",

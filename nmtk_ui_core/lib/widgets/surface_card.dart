@@ -60,38 +60,62 @@ class NmtkSurfaceCard extends StatelessWidget {
                 subtitle != null ||
                 leading != null ||
                 trailing != null)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (leading != null) ...[leading!, const SizedBox(width: 12)],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (title != null)
-                          Text(
-                            title!,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stackTrailing =
+                      trailing != null && constraints.maxWidth < 280;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (leading != null) ...[
+                            leading!,
+                            const SizedBox(width: 12),
+                          ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (title != null)
+                                  Text(
+                                    title!,
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                if (subtitle != null) ...[
+                                  if (title != null) const SizedBox(height: 4),
+                                  Text(
+                                    subtitle!,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                        if (subtitle != null) ...[
-                          if (title != null) const SizedBox(height: 4),
-                          Text(
-                            subtitle!,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
+                          if (trailing != null && !stackTrailing) ...[
+                            const SizedBox(width: 12),
+                            trailing!,
+                          ],
                         ],
+                      ),
+                      if (stackTrailing) ...[
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: trailing!,
+                        ),
                       ],
-                    ),
-                  ),
-                  if (trailing != null) ...[
-                    const SizedBox(width: 12),
-                    trailing!,
-                  ],
-                ],
+                    ],
+                  );
+                },
               ),
             if (title != null ||
                 subtitle != null ||

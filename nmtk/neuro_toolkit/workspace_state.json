@@ -1,10 +1,10 @@
 {
-  "focusedModuleId": "Neurosim",
+  "focusedModuleId": "Neurochip",
   "sessions": [
     {
       "deepLink": null,
       "moduleId": "Neurobench",
-      "readinessState": "ready",
+      "readinessState": "warming_up",
       "restoreState": {},
       "surfaceMode": "native"
     },

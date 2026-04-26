@@ -391,15 +391,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   Widget _buildLoadingState(Module module) {
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
-    final palette = resolveNmtkTonePalette(context, NmtkTone.info);
-    final message = [
-      if (module.statusMessage != null) module.statusMessage!,
-      if (module.status == ModuleStatus.starting)
-        'Starting backend at ${_moduleUri(module, healthCheck: true)}'
-      else
-        'Starting ${module.name} backend for this tab',
-      'Some modules take a little longer to warm up before health checks settle.',
-    ].join('\n\n');
 
     return Center(
       child: ConstrainedBox(
@@ -410,24 +401,18 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: palette.foreground.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(tokens.radiusMd),
-                ),
-                alignment: Alignment.center,
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.4,
-                    color: palette.foreground,
+              if (kDebugMode)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: NmtkStatusBadge(
+                      label: 'Debug',
+                      tone: NmtkTone.warning,
+                      icon: Icons.bug_report_outlined,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
               Text(
                 'Waiting for ${module.name}',
                 textAlign: TextAlign.center,
@@ -435,20 +420,29 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Text(
-                message,
+                kDebugMode
+                    ? [
+                        if (module.statusMessage != null) module.statusMessage!,
+                        if (module.status == ModuleStatus.starting)
+                          'Backend: ${_moduleUri(module, healthCheck: true)}'
+                        else
+                          'Starting ${module.name} backend for this tab',
+                        'Some modules take a little longer to warm up.',
+                      ].join('\n\n')
+                    : 'Starting up, this may take a moment.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               ClipRRect(
                 borderRadius: BorderRadius.circular(tokens.radiusSm),
                 child: const LinearProgressIndicator(),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               NmtkOutlinedButton(
                 onPressed: () => _launchInBrowser(module),
                 icon: Icons.open_in_browser,
