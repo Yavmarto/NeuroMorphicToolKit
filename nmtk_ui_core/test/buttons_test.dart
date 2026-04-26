@@ -42,14 +42,35 @@ void main() {
       expect(find.byIcon(Icons.add), findsOneWidget);
     });
 
-    testWidgets('respects null onPressed (disabled state)', (WidgetTester tester) async {
+    testWidgets('renders custom leading widget when provided', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NmtkPrimaryButton(
+              label: 'Loading',
+              leading: const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              onPressed: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('respects null onPressed (disabled state)', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: NmtkPrimaryButton(
-              label: 'Test Button',
-              onPressed: null,
-            ),
+            body: NmtkPrimaryButton(label: 'Test Button', onPressed: null),
           ),
         ),
       );
@@ -98,14 +119,35 @@ void main() {
       expect(find.byIcon(Icons.close), findsOneWidget);
     });
 
-    testWidgets('respects null onPressed (disabled state)', (WidgetTester tester) async {
+    testWidgets('renders custom leading widget when provided', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NmtkOutlinedButton(
+              label: 'Stopping',
+              leading: const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              onPressed: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('respects null onPressed (disabled state)', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: NmtkOutlinedButton(
-              label: 'Outline',
-              onPressed: null,
-            ),
+            body: NmtkOutlinedButton(label: 'Outline', onPressed: null),
           ),
         ),
       );

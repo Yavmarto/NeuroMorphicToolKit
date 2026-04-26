@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
@@ -256,8 +257,12 @@ void main() {
         overrides: [
           moduleStateProvider.overrideWith((ref) => provider),
         ],
-        child: const MaterialApp(
-          home: CatalogScreen(),
+        child: ShadApp(
+          theme: NmtkShadTheme.light,
+          darkTheme: NmtkShadTheme.dark,
+          themeMode: ThemeMode.dark,
+          materialThemeBuilder: (_, __) => AppTheme.darkTheme,
+          home: const CatalogScreen(),
         ),
       ),
     );
@@ -288,8 +293,12 @@ void main() {
         overrides: [
           moduleStateProvider.overrideWith((ref) => provider),
         ],
-        child: const MaterialApp(
-          home: CatalogScreen(),
+        child: ShadApp(
+          theme: NmtkShadTheme.light,
+          darkTheme: NmtkShadTheme.dark,
+          themeMode: ThemeMode.dark,
+          materialThemeBuilder: (_, __) => AppTheme.darkTheme,
+          home: const CatalogScreen(),
         ),
       ),
     );

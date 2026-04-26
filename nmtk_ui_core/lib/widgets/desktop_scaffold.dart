@@ -9,17 +9,17 @@ import 'package:nmtk_ui_core/models/shell_models.dart';
 // LAYOUT CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-const double _kSidebarExpandedWidth  = 220.0;
+const double _kSidebarExpandedWidth = 220.0;
 const double _kSidebarCollapsedWidth = 56.0;
-const double _kBrandRowHeight        = 52.0; // matches header height
-const double _kHeaderHeight          = 52.0;
-const double _kNavItemHeight         = 36.0;
-const double _kNavItemRadius         = 8.0;  // tighter than global 12 px inside sidebar
-const double _kNavItemHPad           = 8.0;
-const double _kNavItemVPad           = 1.0;
+const double _kBrandRowHeight = 52.0; // matches header height
+const double _kHeaderHeight = 52.0;
+const double _kNavItemHeight = 36.0;
+const double _kNavItemRadius = 8.0; // tighter than global 12 px inside sidebar
+const double _kNavItemHPad = 8.0;
+const double _kNavItemVPad = 1.0;
 
 const Duration _kSideAnimDuration = Duration(milliseconds: 200);
-const Curve    _kSideAnimCurve    = Curves.easeInOut;
+const Curve _kSideAnimCurve = Curves.easeInOut;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA MODELS
@@ -62,11 +62,11 @@ class NmtkUserProfileAction {
 
   /// Creates a visual divider row (label and onPressed are ignored).
   const NmtkUserProfileAction.divider()
-      : label        = null,
-        icon         = null,
-        onPressed    = null,
-        isDestructive = false,
-        isDivider    = true;
+    : label = null,
+      icon = null,
+      onPressed = null,
+      isDestructive = false,
+      isDivider = true;
 
   final String? label;
   final IconData? icon;
@@ -258,14 +258,14 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
         children: [
           // ── Left sidebar ───────────────────────────────────────────────
           _NmtkSidebarColumn(
-            items:            widget.navItems,
-            footerItems:      widget.footerNavItems,
-            selectedIndex:    widget.selectedIndex,
-            isExpanded:       _expanded,
-            onItemSelected:   widget.onNavItemSelected,
+            items: widget.navItems,
+            footerItems: widget.footerNavItems,
+            selectedIndex: widget.selectedIndex,
+            isExpanded: _expanded,
+            onItemSelected: widget.onNavItemSelected,
             onFooterSelected: widget.onFooterNavItemSelected,
-            onToggle:         () => setState(() => _expanded = !_expanded),
-            brand:            widget.sidebarBrand,
+            onToggle: () => setState(() => _expanded = !_expanded),
+            brand: widget.sidebarBrand,
           ),
           // ── Right column: header + content ─────────────────────────────
           Expanded(
@@ -273,9 +273,9 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _NmtkDesktopHeader(
-                  pageTitle:     widget.pageTitle,
+                  pageTitle: widget.pageTitle,
                   headerActions: widget.headerActions,
-                  userProfile:   widget.userProfile,
+                  userProfile: widget.userProfile,
                 ),
                 Expanded(
                   child: ColoredBox(
@@ -345,17 +345,17 @@ class _NmtkSidebarColumn extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                 horizontal: _kNavItemHPad,
-                vertical:   6,
+                vertical: 6,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var i = 0; i < items.length; i++)
                     _SidebarNavItem(
-                      item:       items[i],
+                      item: items[i],
                       isSelected: i == selectedIndex,
                       isExpanded: isExpanded,
-                      onTap:      () => onItemSelected?.call(i),
+                      onTap: () => onItemSelected?.call(i),
                     ),
                 ],
               ),
@@ -368,17 +368,17 @@ class _NmtkSidebarColumn extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: _kNavItemHPad,
-                vertical:   6,
+                vertical: 6,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var i = 0; i < footerItems.length; i++)
                     _SidebarNavItem(
-                      item:       footerItems[i],
+                      item: footerItems[i],
                       isSelected: false,
                       isExpanded: isExpanded,
-                      onTap:      () => onFooterSelected?.call(i),
+                      onTap: () => onFooterSelected?.call(i),
                     ),
                 ],
               ),
@@ -412,8 +412,7 @@ class _SidebarBrandRow extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: _kNavItemHPad + 2),
           child: Align(
-            alignment:
-                isExpanded ? Alignment.centerLeft : Alignment.center,
+            alignment: isExpanded ? Alignment.centerLeft : Alignment.center,
             child: brand!,
           ),
         ),
@@ -432,16 +431,16 @@ class _SidebarBrandRow extends StatelessWidget {
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color:        scheme.primary,
+                color: scheme.primary,
                 borderRadius: BorderRadius.circular(6),
               ),
               alignment: Alignment.center,
               child: Text(
                 'N',
                 style: TextStyle(
-                  color:       scheme.primaryForeground,
-                  fontSize:    14,
-                  fontWeight:  FontWeight.w800,
+                  color: scheme.primaryForeground,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
                 ),
               ),
@@ -452,9 +451,9 @@ class _SidebarBrandRow extends StatelessWidget {
               Text(
                 'NMTK',
                 style: TextStyle(
-                  color:        scheme.foreground,
-                  fontSize:     15,
-                  fontWeight:   FontWeight.w800,
+                  color: scheme.foreground,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.3,
                 ),
               ),
@@ -490,8 +489,8 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme     = ShadTheme.of(context).colorScheme;
-    final item       = widget.item;
+    final scheme = ShadTheme.of(context).colorScheme;
+    final item = widget.item;
     final isSelected = widget.isSelected;
     final isExpanded = widget.isExpanded;
 
@@ -500,8 +499,8 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
     final bgColor = isSelected
         ? scheme.primary.withValues(alpha: 0.10)
         : _hovered
-            ? scheme.muted
-            : null;
+        ? scheme.muted
+        : null;
 
     final iconColor = isSelected
         ? scheme.primary
@@ -509,16 +508,17 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 
     final textColor = isSelected ? scheme.primary : scheme.foreground;
 
-    final effectiveIcon =
-        isSelected ? (item.selectedIcon ?? item.icon) : item.icon;
+    final effectiveIcon = isSelected
+        ? (item.selectedIcon ?? item.icon)
+        : item.icon;
 
     // ── Inner content ────────────────────────────────────────────────────
     Widget inner = AnimatedContainer(
       duration: _kSideAnimDuration,
-      height:   _kNavItemHeight,
-      padding:  const EdgeInsets.symmetric(horizontal: 6),
+      height: _kNavItemHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
-        color:        bgColor,
+        color: bgColor,
         borderRadius: BorderRadius.circular(_kNavItemRadius),
       ),
       child: Row(
@@ -529,11 +529,11 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
             Expanded(
               child: Text(
                 item.label,
-                maxLines:  1,
-                overflow:  TextOverflow.ellipsis,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color:      textColor,
-                  fontSize:   13,
+                  color: textColor,
+                  fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
@@ -552,26 +552,23 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 
     // Tooltip only when collapsed — label is already visible when expanded.
     if (!isExpanded) {
-      inner = ShadTooltip(
-        builder: (ctx) => Text(item.label),
-        child:   inner,
-      );
+      inner = ShadTooltip(builder: (ctx) => Text(item.label), child: inner);
     }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: _kNavItemVPad),
       child: Semantics(
-        label:    item.label,
+        label: item.label,
         selected: isSelected,
-        button:   true,
+        button: true,
         child: MouseRegion(
-          cursor:  SystemMouseCursors.click,
+          cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _hovered = true),
-          onExit:  (_) => setState(() => _hovered = false),
+          onExit: (_) => setState(() => _hovered = false),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap:    widget.onTap,
-            child:    inner,
+            onTap: widget.onTap,
+            child: inner,
           ),
         ),
       ),
@@ -596,33 +593,33 @@ class _SidebarToggleState extends State<_SidebarToggle> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme  = ShadTheme.of(context).colorScheme;
-    final icon    = widget.isExpanded
+    final scheme = ShadTheme.of(context).colorScheme;
+    final icon = widget.isExpanded
         ? Icons.chevron_left_rounded
         : Icons.chevron_right_rounded;
     final tooltip = widget.isExpanded ? 'Collapse sidebar' : 'Expand sidebar';
 
     return Semantics(
-      label:  tooltip,
+      label: tooltip,
       button: true,
       child: ShadTooltip(
         builder: (ctx) => Text(tooltip),
         child: MouseRegion(
-          cursor:  SystemMouseCursors.click,
+          cursor: SystemMouseCursors.click,
           onEnter: (_) => setState(() => _hovered = true),
-          onExit:  (_) => setState(() => _hovered = false),
+          onExit: (_) => setState(() => _hovered = false),
           child: GestureDetector(
             onTap: widget.onTap,
             child: AnimatedContainer(
               duration: _kSideAnimDuration,
-              height:   44,
-              padding:  const EdgeInsets.symmetric(horizontal: 14),
-              color:    _hovered ? scheme.muted : null,
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              color: _hovered ? scheme.muted : null,
               child: Row(
                 children: [
                   Icon(
                     icon,
-                    size:  18,
+                    size: 18,
                     color: scheme.foreground.withValues(alpha: 0.45),
                   ),
                   if (widget.isExpanded) ...[
@@ -631,7 +628,7 @@ class _SidebarToggleState extends State<_SidebarToggle> {
                       'Collapse',
                       style: TextStyle(
                         fontSize: 12,
-                        color:    scheme.foreground.withValues(alpha: 0.45),
+                        color: scheme.foreground.withValues(alpha: 0.45),
                       ),
                     ),
                   ],
@@ -666,7 +663,7 @@ class _NmtkDesktopHeader extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color:  scheme.card,
+        color: scheme.card,
         border: Border(bottom: BorderSide(color: scheme.border)),
       ),
       child: SizedBox(
@@ -679,12 +676,12 @@ class _NmtkDesktopHeader extends StatelessWidget {
               Expanded(
                 child: Text(
                   pageTitle,
-                  maxLines:  1,
-                  overflow:  TextOverflow.ellipsis,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color:        scheme.foreground,
-                    fontSize:     15,
-                    fontWeight:   FontWeight.w700,
+                    color: scheme.foreground,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -740,17 +737,15 @@ class _UserProfileButtonState extends State<_UserProfileButton> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme  = ShadTheme.of(context).colorScheme;
+    final scheme = ShadTheme.of(context).colorScheme;
     final profile = widget.profile;
 
     return ShadPopover(
       controller: _popover,
-      popover: (ctx) => _ProfilePopover(
-        profile: profile,
-        onClose: _popover.hide,
-      ),
+      popover: (ctx) =>
+          _ProfilePopover(profile: profile, onClose: _popover.hide),
       child: Semantics(
-        label:  'User profile: ${profile.displayName}',
+        label: 'User profile: ${profile.displayName}',
         button: true,
         child: MouseRegion(
           cursor: SystemMouseCursors.click,
@@ -760,27 +755,27 @@ class _UserProfileButtonState extends State<_UserProfileButton> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 ShadAvatar(
-                  src: profile.avatarUrl,
-                  child: Text(
+                  profile.avatarUrl,
+                  placeholder: Text(
                     _initials(profile),
                     style: TextStyle(
-                      fontSize:   11,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color:      scheme.primaryForeground,
+                      color: scheme.primaryForeground,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Column(
-                  mainAxisAlignment:  MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       profile.displayName,
                       style: TextStyle(
-                        fontSize:   13,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color:      scheme.foreground,
+                        color: scheme.foreground,
                       ),
                     ),
                     if (profile.email != null)
@@ -788,7 +783,7 @@ class _UserProfileButtonState extends State<_UserProfileButton> {
                         profile.email!,
                         style: TextStyle(
                           fontSize: 11,
-                          color:    scheme.mutedForeground,
+                          color: scheme.mutedForeground,
                         ),
                       ),
                   ],
@@ -796,7 +791,7 @@ class _UserProfileButtonState extends State<_UserProfileButton> {
                 const SizedBox(width: 6),
                 Icon(
                   Icons.unfold_more_rounded,
-                  size:  14,
+                  size: 14,
                   color: scheme.mutedForeground,
                 ),
               ],
@@ -816,7 +811,7 @@ class _ProfilePopover extends StatelessWidget {
   const _ProfilePopover({required this.profile, required this.onClose});
 
   final NmtkUserProfile profile;
-  final VoidCallback    onClose;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -825,7 +820,7 @@ class _ProfilePopover extends StatelessWidget {
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 200, maxWidth: 240),
       child: Column(
-        mainAxisSize:       MainAxisSize.min,
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ── Profile header ─────────────────────────────────────────────
@@ -837,16 +832,19 @@ class _ProfilePopover extends StatelessWidget {
                 Text(
                   profile.displayName,
                   style: TextStyle(
-                    fontSize:   13,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color:      scheme.foreground,
+                    color: scheme.foreground,
                   ),
                 ),
                 if (profile.email != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     profile.email!,
-                    style: TextStyle(fontSize: 12, color: scheme.mutedForeground),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.mutedForeground,
+                    ),
                   ),
                 ],
               ],
@@ -858,7 +856,7 @@ class _ProfilePopover extends StatelessWidget {
             if (action.isDivider)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 4),
-                child:   ShadSeparator.horizontal(),
+                child: ShadSeparator.horizontal(),
               )
             else
               _ProfileActionRow(action: action, onClose: onClose),
@@ -873,7 +871,7 @@ class _ProfileActionRow extends StatefulWidget {
   const _ProfileActionRow({required this.action, required this.onClose});
 
   final NmtkUserProfileAction action;
-  final VoidCallback          onClose;
+  final VoidCallback onClose;
 
   @override
   State<_ProfileActionRow> createState() => _ProfileActionRowState();
@@ -884,19 +882,19 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme  = ShadTheme.of(context).colorScheme;
-    final action  = widget.action;
+    final scheme = ShadTheme.of(context).colorScheme;
+    final action = widget.action;
     final fgColor = action.isDestructive
         ? scheme.destructive
         : scheme.foreground;
 
     return Semantics(
-      label:  action.label,
+      label: action.label,
       button: true,
       child: MouseRegion(
-        cursor:  SystemMouseCursors.click,
+        cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hovered = true),
-        onExit:  (_) => setState(() => _hovered = false),
+        onExit: (_) => setState(() => _hovered = false),
         child: GestureDetector(
           onTap: () {
             widget.onClose();
@@ -904,16 +902,14 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 100),
-            padding:  const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            color:    _hovered
-                ? scheme.accent.withValues(alpha: 0.12)
-                : null,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            color: _hovered ? scheme.accent.withValues(alpha: 0.12) : null,
             child: Row(
               children: [
                 if (action.icon != null) ...[
                   Icon(
                     action.icon,
-                    size:  15,
+                    size: 15,
                     color: fgColor.withValues(alpha: 0.80),
                   ),
                   const SizedBox(width: 10),
@@ -921,8 +917,8 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
                 Text(
                   action.label ?? '',
                   style: TextStyle(
-                    fontSize:   13,
-                    color:      fgColor,
+                    fontSize: 13,
+                    color: fgColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),

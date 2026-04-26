@@ -5,6 +5,7 @@ class NmtkPrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
+  final Widget? leading;
   final NmtkTone tone;
 
   const NmtkPrimaryButton({
@@ -12,8 +13,12 @@ class NmtkPrimaryButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
+    this.leading,
     this.tone = NmtkTone.info,
-  });
+  }) : assert(
+         icon == null || leading == null,
+         'Provide either icon or leading, not both.',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -34,10 +39,13 @@ class NmtkPrimaryButton extends StatelessWidget {
       foregroundColor: foregroundColor,
     );
 
-    if (icon != null) {
+    final leadingWidget =
+        leading ?? (icon != null ? Icon(icon, size: 18) : null);
+
+    if (leadingWidget != null) {
       return ElevatedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, size: 18),
+        icon: leadingWidget,
         label: Text(label),
         style: style,
       );
@@ -54,6 +62,7 @@ class NmtkOutlinedButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
+  final Widget? leading;
   final NmtkTone tone;
 
   const NmtkOutlinedButton({
@@ -61,8 +70,12 @@ class NmtkOutlinedButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
+    this.leading,
     this.tone = NmtkTone.neutral,
-  });
+  }) : assert(
+         icon == null || leading == null,
+         'Provide either icon or leading, not both.',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -73,10 +86,13 @@ class NmtkOutlinedButton extends StatelessWidget {
       backgroundColor: palette.background.withValues(alpha: 0.18),
     );
 
-    if (icon != null) {
+    final leadingWidget =
+        leading ?? (icon != null ? Icon(icon, size: 18) : null);
+
+    if (leadingWidget != null) {
       return OutlinedButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, size: 18),
+        icon: leadingWidget,
         label: Text(label),
         style: style,
       );

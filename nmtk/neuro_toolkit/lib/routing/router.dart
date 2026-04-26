@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
@@ -11,7 +12,6 @@ import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/app_provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
-import 'package:neuro_toolkit/services/update_service.dart';
 
 GoRouter createGoRouter(AppProvider appProvider) {
   return GoRouter(
@@ -73,9 +73,10 @@ GoRouter createGoRouter(AppProvider appProvider) {
 }
 
 // ---------------------------------------------------------------------------
-// MainScreen — shell wrapper providing the app bar with settings + updates.
-// Navigation rail/bar is intentionally absent: the workspace is always the
-// primary body and settings is reached via the top-right icon button.
+// MainScreen — thin shell wrapper that gates the app on Python / bootstrap
+// readiness. Navigation chrome is provided by NmtkDesktopScaffold inside
+// ToolViewScreen; this widget only renders its own Scaffold for error/gate
+// states that appear before the workspace is reachable.
 // ---------------------------------------------------------------------------
 
 class MainScreen extends ConsumerStatefulWidget {
@@ -110,10 +111,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       _updateDialogQueued = false;
     }
 
+    // Gate: Python not detected — show full-screen setup guide (own Scaffold).
     if (!provider.pythonAvailable && !provider.isLoading) {
       return const PythonSetupScreen();
     }
 
+    // Gate: launcher control API could not start — show error Scaffold.
     if (bootstrapState.status == LauncherBootstrapStatus.preflightFailed) {
       return Scaffold(
         appBar: AppBar(title: const Text('NeuroToolkit')),
@@ -133,39 +136,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       );
     }
 
-    final location = GoRouterState.of(context).uri.toString();
-    final isOnSettings = location.startsWith('/settings');
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('NeuroToolkit'),
-        actions: [
-          Semantics(
-            label: isOnSettings ? 'Close Settings' : 'Open Settings',
-            button: true,
-            child: IconButton(
-              icon: Icon(
-                isOnSettings ? Icons.close : Icons.settings_outlined,
-              ),
-              tooltip: isOnSettings ? 'Close Settings' : 'Settings',
-              onPressed: () =>
-                  isOnSettings ? context.go('/workspace') : context.go('/settings'),
-            ),
-          ),
-          Semantics(
-            label: 'Check for Updates',
-            button: true,
-            child: IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              tooltip: 'Check for Updates',
-              onPressed: () => provider.checkForUpdates(),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: widget.child,
-    );
+    // Normal operation: the child route provides its own chrome via
+    // NmtkDesktopScaffold (ToolViewScreen) or is a content-only widget
+    // (SettingsScreen). No extra Scaffold wrapper here.
+    return widget.child;
   }
 
   void _showLauncherUpdateDialog(
@@ -177,12 +151,30 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final releaseNotes = update.releaseNotes.trim().isEmpty
         ? 'No published release notes were found for this version.'
         : update.releaseNotes;
-    showDialog<void>(
+    showShadDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => ShadDialog(
         title: const Text('Launcher Update Available'),
-        content: Column(
+        actions: [
+          ShadButton.ghost(
+            onPressed: () {
+              provider.dismissLauncherUpdate();
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Later'),
+          ),
+          ShadButton(
+            onPressed: () async {
+              final url = Uri.parse(update.url);
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url);
+              }
+            },
+            child: const Text('Download Now'),
+          ),
+        ],
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -197,24 +189,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             Text(releaseNotes),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              provider.dismissLauncherUpdate();
-              Navigator.of(context).pop();
-            },
-            child: const Text('Later'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final url = Uri.parse(update.url);
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url);
-              }
-            },
-            child: const Text('Download Now'),
-          ),
-        ],
       ),
     );
   }

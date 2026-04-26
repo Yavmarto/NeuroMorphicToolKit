@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/top_app_bar.dart';
@@ -20,6 +19,14 @@ class NmtkDesignTokens {
   static final BorderRadius inputShape = BorderRadius.circular(12.0);
 }
 
+class NmtkFontFamilies {
+  NmtkFontFamilies._();
+
+  static const String package = 'nmtk_ui_core';
+  static const String ui = 'Space Grotesk';
+  static const String monospace = 'JetBrains Mono';
+}
+
 /// ----------------------------------------------------------------------------
 /// NEUROCNL MODULE TOKENS
 /// ----------------------------------------------------------------------------
@@ -34,6 +41,20 @@ class NmtkNeurocnlTokens {
   static const Color primary = Color(0xFF9B7FFF);
   static const Color primaryDim = Color(0xFF7B5FDF);
 
+  /// CNL **syntax-diagnostic colours only** (Dracula-derived palette).
+  ///
+  /// These colours are used exclusively by:
+  ///   - CNL editor syntax highlighting (`synKeyword`, `synSubject`, etc.)
+  ///   - CNL compiler diagnostic overlays shown inside the editor pane
+  ///   - Node/edge colour vocabulary in the network graph canvas
+  ///
+  /// For any module-level status UI — run buttons, pipeline step states,
+  /// health badges, toast notifications, status strips — use the shared
+  /// semantic palette from [NmtkShellTokens] instead:
+  ///   - [NmtkShellTokens.healthyColor]  for success / healthy state
+  ///   - [NmtkShellTokens.errorColor]    for error / failure state
+  ///   - [NmtkShellTokens.warningColor]  for warning / caution state
+  ///   - [NmtkShellTokens.runningColor]  for active / in-progress state
   static const Color success = Color(0xFF4ADE80);
   static const Color error = Color(0xFFFF5C7A);
   static const Color warning = Color(0xFFFFB347);
@@ -233,7 +254,7 @@ Color _seedForVariant(NmtkThemeVariant variant) {
     case NmtkThemeVariant.neurohub:
       return const Color(0xFF0D9488);
     case NmtkThemeVariant.neurochip:
-      return const Color(0xFFD97706);
+      return const Color(0xFF0891B2);
     case NmtkThemeVariant.neurobench:
       return const Color(0xFF16A34A);
     case NmtkThemeVariant.neurosim:
@@ -252,14 +273,11 @@ class AppTheme {
 
   static TextTheme _buildTextTheme(TextTheme base) {
     return base.apply(
-      fontFamily: 'Space Grotesk',
+      fontFamily: NmtkFontFamilies.ui,
+      package: NmtkFontFamilies.package,
       displayColor: base.titleLarge?.color,
       bodyColor: base.bodyLarge?.color,
     );
-  }
-
-  static TextTheme _buildInterTextTheme(TextTheme base) {
-    return GoogleFonts.interTextTheme(base);
   }
 
   static ThemeData get lightTheme =>
@@ -407,7 +425,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkNeurocnlTokens.background,
-      textTheme: _buildInterTextTheme(ThemeData.dark().textTheme),
+      textTheme: _buildTextTheme(ThemeData.dark().textTheme),
       extensions: [
         _neurocnlExtension(Brightness.dark, colorScheme),
         NmtkShellTokens.fromColorScheme(colorScheme, Brightness.dark),
@@ -420,11 +438,13 @@ class AppTheme {
         ),
         elevation: 0,
       ),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: NmtkNeurocnlTokens.surface,
         foregroundColor: NmtkNeurocnlTokens.textPrimary,
         elevation: 0,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(
+          fontFamily: NmtkFontFamilies.ui,
+          package: NmtkFontFamilies.package,
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: NmtkNeurocnlTokens.textPrimary,
@@ -475,7 +495,9 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: NmtkNeurocnlTokens.surfaceVariant,
-        labelStyle: GoogleFonts.inter(
+        labelStyle: const TextStyle(
+          fontFamily: NmtkFontFamilies.ui,
+          package: NmtkFontFamilies.package,
           fontSize: 12,
           color: NmtkNeurocnlTokens.textSecondary,
         ),
@@ -520,7 +542,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: background,
-      textTheme: _buildInterTextTheme(ThemeData.light().textTheme),
+      textTheme: _buildTextTheme(ThemeData.light().textTheme),
       extensions: [
         _neurocnlExtension(Brightness.light, colorScheme),
         NmtkShellTokens.fromColorScheme(colorScheme, Brightness.light),
@@ -533,11 +555,13 @@ class AppTheme {
         ),
         elevation: 0,
       ),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: surface,
         foregroundColor: textPrimary,
         elevation: 0,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(
+          fontFamily: NmtkFontFamilies.ui,
+          package: NmtkFontFamilies.package,
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: textPrimary,
@@ -585,7 +609,12 @@ class AppTheme {
       dividerTheme: const DividerThemeData(color: border, thickness: 1),
       chipTheme: ChipThemeData(
         backgroundColor: surfaceVariant,
-        labelStyle: GoogleFonts.inter(fontSize: 12, color: textSecondary),
+        labelStyle: const TextStyle(
+          fontFamily: NmtkFontFamilies.ui,
+          package: NmtkFontFamilies.package,
+          fontSize: 12,
+          color: textSecondary,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
           side: const BorderSide(color: border),

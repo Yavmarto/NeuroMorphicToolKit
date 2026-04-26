@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
@@ -50,22 +51,25 @@ class NeuroToolkitApp extends ConsumerWidget {
     final settings = ref.watch(settingsStateProvider);
     final router = ref.watch(goRouterProvider);
 
-    return MaterialApp.router(
+    return ShadApp.router(
       title: 'NeuroToolkit',
-      themeMode: settings.themeMode,
-      theme: settings.isHighContrast
-          ? AppTheme.highContrastLightTheme
-          : AppTheme.lightTheme,
-      darkTheme: settings.isHighContrast
+      // Shadcn layer — controls Shadcn components suite-wide.
+      theme: NmtkShadTheme.light,
+      darkTheme: NmtkShadTheme.dark,
+      // Material 3 layer — controls native Flutter widgets.
+      materialThemeBuilder: (_, __) => settings.isHighContrast
           ? AppTheme.highContrastDarkTheme
           : AppTheme.darkTheme,
+      themeMode: settings.themeMode,
       routerConfig: router,
-      builder: (context, child) {
+      builder: (BuildContext ctx, Widget? child) {
+        // Apply font scaling and inject ShadToaster so NmtkToasts can find it
+        // in the widget tree via ShadToaster.of(context).
         return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
+          data: MediaQuery.of(ctx).copyWith(
             textScaler: TextScaler.linear(settings.fontSizeFactor),
           ),
-          child: child!,
+          child: ShadToaster(child: child!),
         );
       },
     );

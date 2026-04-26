@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
@@ -9,7 +10,6 @@ import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
-import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 
 class _MockProcessManager implements ProcessManager {
   @override
@@ -111,7 +111,7 @@ class _FakeWorkspaceControlApiService extends ControlApiService {
 }
 
 void main() {
-  testWidgets('ToolViewScreen shows persisted workspace tabs',
+  testWidgets('ToolViewScreen shows persisted workspace sidebar items',
       (WidgetTester tester) async {
     final moduleProvider =
         ModuleProvider(processManager: _MockProcessManager());
@@ -126,7 +126,9 @@ void main() {
         directory: '/tmp/m1',
         port: 8001,
         hasFrontend: true,
-        status: ModuleStatus.running,
+        // starting → shows loading state; avoids rendering the native surface
+        // adapter which requires module-specific Riverpod provider scopes.
+        status: ModuleStatus.starting,
       ),
       Module(
         id: 'Neurochip',
@@ -135,7 +137,7 @@ void main() {
         directory: '/tmp/m2',
         port: 8002,
         hasFrontend: true,
-        status: ModuleStatus.running,
+        status: ModuleStatus.starting,
       ),
     ];
     await workspaceProvider.openSession(
@@ -155,14 +157,19 @@ void main() {
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
-        child: const MaterialApp(
-          home: ToolViewScreen(),
+        child: ShadApp(
+          theme: NmtkShadTheme.light,
+          darkTheme: NmtkShadTheme.dark,
+          themeMode: ThemeMode.dark,
+          materialThemeBuilder: (_, __) => AppTheme.darkTheme,
+          home: const ToolViewScreen(),
         ),
       ),
     );
 
     await tester.pump();
-    expect(find.byType(ModuleTabBar), findsOneWidget);
+    // NmtkDesktopScaffold replaces ModuleTabBar: modules appear as sidebar items.
+    expect(find.byType(NmtkDesktopScaffold), findsOneWidget);
     expect(find.text('CNL Studio'), findsWidgets);
     expect(find.text('NeuroChip'), findsWidgets);
   });

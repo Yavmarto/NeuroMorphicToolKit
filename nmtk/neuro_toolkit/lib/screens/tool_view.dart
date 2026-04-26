@@ -16,7 +16,6 @@ import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
-import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 
 class ToolViewScreen extends ConsumerStatefulWidget {
@@ -285,9 +284,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final url = uri.toString();
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not launch $url')));
+        NmtkToasts.error(context, 'Could not launch $url');
       }
     }
   }
@@ -365,6 +362,113 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 
+  /// Maps a module icon name string to a MaterialIcon for the sidebar.
+  IconData _iconForModule(Module module) {
+    switch (module.icon) {
+      case 'code':
+        return Icons.code_outlined;
+      case 'architecture':
+        return Icons.architecture_outlined;
+      case 'memory':
+        return Icons.memory_outlined;
+      case 'speed':
+        return Icons.speed_outlined;
+      case 'sensors':
+        return Icons.sensors_outlined;
+      case 'hub':
+        return Icons.hub_outlined;
+      case 'precision_manufacturing':
+        return Icons.precision_manufacturing_outlined;
+      default:
+        return module.hasFrontend ? Icons.web_outlined : Icons.api_outlined;
+    }
+  }
+
+  /// Filled variant for the active/selected sidebar item.
+  IconData _iconForModuleSelected(Module module) {
+    switch (module.icon) {
+      case 'code':
+        return Icons.code_rounded;
+      case 'architecture':
+        return Icons.architecture;
+      case 'memory':
+        return Icons.memory_rounded;
+      case 'speed':
+        return Icons.speed_rounded;
+      case 'sensors':
+        return Icons.sensors_rounded;
+      case 'hub':
+        return Icons.hub_rounded;
+      case 'precision_manufacturing':
+        return Icons.precision_manufacturing;
+      default:
+        return module.hasFrontend ? Icons.web_rounded : Icons.api_rounded;
+    }
+  }
+
+  Widget _buildHeaderActions(
+    BuildContext context,
+    ModuleProvider moduleProvider,
+    List<(WorkspaceSession, Module)> sessionEntries,
+  ) {
+    final hasActive =
+        sessionEntries.any((e) => e.$1.moduleId == _activeModuleId);
+    final activeModule = hasActive
+        ? sessionEntries
+            .firstWhere((e) => e.$1.moduleId == _activeModuleId)
+            .$2
+        : null;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Semantics(
+          label: 'Open a module',
+          button: true,
+          child: IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => _showModulePicker(context),
+            tooltip: 'Open a Module',
+          ),
+        ),
+        Semantics(
+          label: 'Open module in system browser',
+          button: true,
+          child: IconButton(
+            icon: const Icon(Icons.open_in_browser),
+            onPressed: activeModule != null
+                ? () => _launchInBrowser(activeModule)
+                : null,
+            tooltip: 'Open in System Browser',
+          ),
+        ),
+        Semantics(
+          label: 'Stop currently active module',
+          button: true,
+          child: IconButton(
+            icon: Icon(
+              Icons.stop_circle,
+              color: ShadTheme.of(context).colorScheme.destructive,
+            ),
+            onPressed: () {
+              unawaited(moduleProvider.stopModule(_activeModuleId));
+            },
+            tooltip: 'Stop Module',
+          ),
+        ),
+        Semantics(
+          label: 'Check for Updates',
+          button: true,
+          child: IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => moduleProvider.checkForUpdates(),
+            tooltip: 'Check for Updates',
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final moduleProvider = ref.watch(moduleStateProvider);
@@ -379,8 +483,42 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       });
     }
 
+    // Build sidebar nav items from open sessions.
+    final navItems = sessions
+        .map((session) => _findModule(moduleProvider, session.moduleId))
+        .whereType<Module>()
+        .map(
+          (module) => NmtkSidebarItem(
+            id: module.id,
+            label: module.name,
+            icon: _iconForModule(module),
+            selectedIcon: _iconForModuleSelected(module),
+          ),
+        )
+        .toList(growable: false);
+
+    final selectedIndex =
+        navItems.indexWhere((item) => item.id == _activeModuleId);
+    final clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+
+    // ── Empty workspace: no sessions yet ────────────────────────────────────
     if (sessions.isEmpty) {
-      return const Scaffold(body: ModulePickerPanel());
+      return NmtkDesktopScaffold(
+        pageTitle: 'NeuroToolkit',
+        navItems: const [],
+        selectedIndex: 0,
+        mode: NmtkShellMode.command,
+        footerNavItems: const [
+          NmtkSidebarItem(
+            id: 'settings',
+            label: 'Settings',
+            icon: Icons.settings_outlined,
+            selectedIcon: Icons.settings_rounded,
+          ),
+        ],
+        onFooterNavItemSelected: (_) => context.go('/settings'),
+        child: const ModulePickerPanel(),
+      );
     }
 
     final focusedModuleId = workspaceProvider.focusedModuleId;
@@ -397,9 +535,24 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         .where((entry) => entry.$2 != null)
         .map((entry) => (entry.$1, entry.$2!))
         .toList(growable: false);
+
+    // ── No valid modules found for existing sessions ─────────────────────
     if (sessionEntries.isEmpty) {
-      return Scaffold(
-        body: const NmtkEmptyState(
+      return NmtkDesktopScaffold(
+        pageTitle: 'NeuroToolkit',
+        navItems: const [],
+        selectedIndex: 0,
+        mode: NmtkShellMode.command,
+        footerNavItems: const [
+          NmtkSidebarItem(
+            id: 'settings',
+            label: 'Settings',
+            icon: Icons.settings_outlined,
+            selectedIcon: Icons.settings_rounded,
+          ),
+        ],
+        onFooterNavItemSelected: (_) => context.go('/settings'),
+        child: const NmtkEmptyState(
           title: 'Workspace Unavailable',
           message:
               'The saved workspace refers to modules that are not available.',
@@ -409,121 +562,90 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       );
     }
 
-    return Scaffold(
-      body: Column(
-        children: [
-          ModuleTabBar(
-            activeModuleId: _activeModuleId,
-            onTabSelected: (String id) async {
-              await _activateModule(id, requestFocus: true);
-            },
-            onTabClosed: (String id) async {
-              await workspaceProvider.closeSession(id);
-            },
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Semantics(
-                  label: 'Open a module',
-                  button: true,
-                  child: IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () => _showModulePicker(context),
-                    tooltip: 'Open a Module',
-                  ),
-                ),
-                Semantics(
-                  label: 'Open module in system browser',
-                  button: true,
-                  child: IconButton(
-                    icon: const Icon(Icons.open_in_browser),
-                    onPressed: () {
-                      final active = sessionEntries.firstWhere(
-                        (entry) => entry.$1.moduleId == _activeModuleId,
-                      );
-                      _launchInBrowser(active.$2);
-                    },
-                    tooltip: 'Open in System Browser',
-                  ),
-                ),
-                Semantics(
-                  label: 'Stop currently active module',
-                  button: true,
-                  child: IconButton(
-                    icon: const Icon(Icons.stop_circle, color: Colors.red),
-                    onPressed: () {
-                      unawaited(moduleProvider.stopModule(_activeModuleId));
-                    },
-                    tooltip: 'Stop Module',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: IndexedStack(
-              key: const ValueKey('WorkspaceStack'),
-              index: sessionEntries
-                  .indexWhere((entry) => entry.$1.moduleId == _activeModuleId),
-              children: sessionEntries.map((entry) {
-                final session = entry.$1;
-                final module = entry.$2;
-                final supported = _isWebViewSupported();
-                final launchBlocked = module.isPreflightFailed ||
-                    module.status == ModuleStatus.error;
-                final isReady = module.status == ModuleStatus.running ||
-                    module.status == ModuleStatus.degraded;
+    // Page title: active module name.
+    final activeModuleEntry = sessionEntries.firstWhere(
+      (e) => e.$2.id == _activeModuleId,
+      orElse: () => sessionEntries.first,
+    );
 
-                return Container(
-                  key: ValueKey(module.id),
-                  child: launchBlocked
-                      ? NmtkEmptyState(
-                          title: '${module.name} Could Not Start',
-                          message: [
-                            module.statusMessage ??
-                                'This module could not be started.',
-                            if (module.capabilityWarnings.isNotEmpty)
-                              module.capabilityWarnings.join('\n'),
-                          ].join('\n\n'),
-                          icon: Icons.error_outline,
-                          tone: NmtkTone.danger,
-                          action: NmtkPrimaryButton(
-                            onPressed: () => _activateModule(
-                              module.id,
-                              requestFocus: false,
-                            ),
-                            icon: Icons.refresh,
-                            label: 'Retry Start',
-                            tone: NmtkTone.danger,
-                          ),
-                        )
-                      : !isReady
-                          ? _buildLoadingState(module)
-                          : session.surfaceMode == 'native'
-                              ? NativeSurfaceRegistry.build(module.id, session)
-                              : supported
-                                  ? WebViewWidget(
-                                      controller: _getController(module),
-                                    )
-                                  : NmtkEmptyState(
-                                      title: 'WebView Not Supported',
-                                      message:
-                                          'Open ${module.name} in your system browser on this platform.',
-                                      icon: Icons.warning_amber_rounded,
-                                      tone: NmtkTone.warning,
-                                      action: NmtkPrimaryButton(
-                                        onPressed: () =>
-                                            _launchInBrowser(module),
-                                        icon: Icons.open_in_browser,
-                                        label: 'Open in System Browser',
-                                        tone: NmtkTone.warning,
-                                      ),
-                                    ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
+    // ── Normal workspace ─────────────────────────────────────────────────────
+    return NmtkDesktopScaffold(
+      pageTitle: activeModuleEntry.$2.name,
+      navItems: navItems,
+      selectedIndex: clampedIndex,
+      onNavItemSelected: (i) async {
+        await _activateModule(navItems[i].id, requestFocus: true);
+      },
+      footerNavItems: const [
+        NmtkSidebarItem(
+          id: 'settings',
+          label: 'Settings',
+          icon: Icons.settings_outlined,
+          selectedIcon: Icons.settings_rounded,
+        ),
+      ],
+      onFooterNavItemSelected: (_) => context.go('/settings'),
+      headerActions: _buildHeaderActions(context, moduleProvider, sessionEntries),
+      mode: NmtkShellMode.command,
+      child: IndexedStack(
+        key: const ValueKey('WorkspaceStack'),
+        index: sessionEntries
+            .indexWhere((entry) => entry.$1.moduleId == _activeModuleId),
+        children: sessionEntries.map((entry) {
+          final session = entry.$1;
+          final module = entry.$2;
+          final supported = _isWebViewSupported();
+          final launchBlocked = module.isPreflightFailed ||
+              module.status == ModuleStatus.error;
+          final isReady = module.status == ModuleStatus.running ||
+              module.status == ModuleStatus.degraded;
+
+          return Container(
+            key: ValueKey(module.id),
+            child: launchBlocked
+                ? NmtkEmptyState(
+                    title: '${module.name} Could Not Start',
+                    message: [
+                      module.statusMessage ??
+                          'This module could not be started.',
+                      if (module.capabilityWarnings.isNotEmpty)
+                        module.capabilityWarnings.join('\n'),
+                    ].join('\n\n'),
+                    icon: Icons.error_outline,
+                    tone: NmtkTone.danger,
+                    action: NmtkPrimaryButton(
+                      onPressed: () => _activateModule(
+                        module.id,
+                        requestFocus: false,
+                      ),
+                      icon: Icons.refresh,
+                      label: 'Retry Start',
+                      tone: NmtkTone.danger,
+                    ),
+                  )
+                : !isReady
+                    ? _buildLoadingState(module)
+                    : session.surfaceMode == 'native'
+                        ? NativeSurfaceRegistry.build(module.id, session)
+                        : supported
+                            ? WebViewWidget(
+                                controller: _getController(module),
+                              )
+                            : NmtkEmptyState(
+                                title: 'WebView Not Supported',
+                                message:
+                                    'Open ${module.name} in your system browser on this platform.',
+                                icon: Icons.warning_amber_rounded,
+                                tone: NmtkTone.warning,
+                                action: NmtkPrimaryButton(
+                                  onPressed: () => _launchInBrowser(module),
+                                  icon: Icons.open_in_browser,
+                                  label: 'Open in System Browser',
+                                  tone: NmtkTone.warning,
+                                ),
+                              ),
+          );
+        }).toList(),
       ),
     );
   }

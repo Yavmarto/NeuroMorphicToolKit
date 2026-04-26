@@ -29,3 +29,9 @@ Do NOT:
 - Treat optional hardware or framework dependencies as fatal unless the manifest explicitly declares them required.
 - Duplicate `nmtk_ui_core` widgets inside the launcher.
 - Point launcher code at machine-local absolute paths or one-off developer ports.
+
+## Shell mode
+
+The launcher uses `NmtkShellMode.command`. Pass `mode: NmtkShellMode.command` to `NmtkDesktopScaffold`. This is the default, but always pass it explicitly for clarity.
+
+The sidebar `navItems` list is dynamic — it is built from the installed module manifest at runtime. Module-specific product UI must not live in the launcher; it belongs in `nmtk_ui_core` or the owning module's frontend.

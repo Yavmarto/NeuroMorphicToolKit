@@ -2,23 +2,24 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 
+/// Catalog screen — content-only widget (no Scaffold; chrome is provided by
+/// NmtkDesktopScaffold in the calling screen or the ShellRoute wrapper).
 class CatalogScreen extends ConsumerWidget {
   const CatalogScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: const [
-          CatalogModuleSection(),
-        ],
-      ),
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: const [
+        CatalogModuleSection(),
+      ],
     );
   }
 }
@@ -30,9 +31,10 @@ class CatalogModuleSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = ref.watch(moduleStateProvider);
     final theme = Theme.of(context);
+    final shadScheme = ShadTheme.of(context).colorScheme;
 
     if (provider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: ShadProgress());
     }
 
     if (provider.error != null) {
@@ -108,8 +110,7 @@ class CatalogModuleSection extends ConsumerWidget {
                     const SizedBox(height: 16),
                     if (module.status == ModuleStatus.installing ||
                         module.status == ModuleStatus.updating)
-                      NmtkSurfaceCard(
-                        tone: NmtkTone.info,
+                      ShadCard(
                         padding: const EdgeInsets.all(14),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,24 +119,22 @@ class CatalogModuleSection extends ConsumerWidget {
                               '${module.status == ModuleStatus.installing ? "Installing" : "Updating"}... ${(module.installProgress * 100).toInt()}%',
                             ),
                             const SizedBox(height: 10),
-                            LinearProgressIndicator(
-                              value: module.installProgress,
-                            ),
+                            ShadProgress(value: module.installProgress),
                           ],
                         ),
                       )
                     else if (module.status == ModuleStatus.error)
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.error_outline,
-                            color: Colors.red,
+                            color: shadScheme.destructive,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Installation failed: ${module.healthStatus ?? 'Unknown error'}',
-                              style: const TextStyle(color: Colors.red),
+                              style: TextStyle(color: shadScheme.destructive),
                             ),
                           ),
                           Semantics(
