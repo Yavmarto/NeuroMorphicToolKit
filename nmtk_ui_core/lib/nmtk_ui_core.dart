@@ -1,4 +1,5 @@
 export 'app_theme.dart';
+export 'shad_theme.dart'; // NmtkShadTheme + re-exports: ShadApp, ShadTheme, ShadThemeData, ShadColorScheme
 export 'models/shell_models.dart';
 export 'models/energy_report.dart';
 export 'models/quantization_report.dart';
@@ -33,5 +34,6 @@ export 'widgets/workflow_step_row.dart';
 export 'widgets/shell_status_badge.dart';
 export 'widgets/shell_readiness_state_view.dart';
 export 'widgets/status_badge.dart';
+export 'widgets/desktop_scaffold.dart'; // NmtkDesktopScaffold, NmtkSidebarItem, NmtkUserProfile, NmtkUserProfileAction
 export 'widgets/surface_card.dart';
 export 'widgets/tone.dart';

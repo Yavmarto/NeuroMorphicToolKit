@@ -10,6 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
   google_fonts: ^6.1.0
+  # Shadcn/UI Flutter port — provides ShadApp, ShadThemeData, ShadColorScheme,
+  # and the full Shadcn component library. Pin with ^ so minor updates are
+  # picked up automatically; bump the major when the team is ready for a
+  # breaking-change migration. Run `flutter pub upgrade shadcn_ui` to refresh.
+  shadcn_ui: ^0.21.0
 
 dev_dependencies:
   flutter_lints: ^5.0.0
