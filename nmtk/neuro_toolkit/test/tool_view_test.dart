@@ -11,7 +11,7 @@ import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
-import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 class _NoopProcessManager implements ProcessManager {
   final _statusController = StreamController<Module>.broadcast();
@@ -74,13 +74,15 @@ class _TrackingModuleProvider extends ModuleProvider {
 }
 
 class _FakeWorkspaceControlApiService extends ControlApiService {
-  _FakeWorkspaceControlApiService()
-      : super(baseUri: Uri.parse('http://127.0.0.1:8090'));
+  _FakeWorkspaceControlApiService({
+    WorkspaceSnapshot initialSnapshot = const WorkspaceSnapshot(
+      sessions: <WorkspaceSession>[],
+      focusedModuleId: null,
+    ),
+  })  : _snapshot = initialSnapshot,
+        super(baseUri: Uri.parse('http://127.0.0.1:8090'));
 
-  WorkspaceSnapshot _snapshot = const WorkspaceSnapshot(
-    sessions: <WorkspaceSession>[],
-    focusedModuleId: null,
-  );
+  WorkspaceSnapshot _snapshot;
 
   @override
   Future<WorkspaceSnapshot> fetchWorkspace() async => _snapshot;
@@ -183,19 +185,89 @@ void main() {
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
-        child: const MaterialApp(home: ToolViewScreen()),
+        child: _buildTestShell(const ToolViewScreen()),
       ),
     );
     await tester.pump();
     await tester.pump();
 
-    expect(find.byType(ModuleTabBar), findsOneWidget);
+    expect(find.byType(NmtkDesktopScaffold), findsOneWidget);
     expect(find.text('Module 1'), findsWidgets);
     expect(find.text('Module 2'), findsWidgets);
     expect(find.text('NDH'), findsNothing);
     expect(workspaceProvider.sessions.map((session) => session.moduleId), [
       'm1',
       'm2',
+    ]);
+  });
+
+  testWidgets(
+      'ToolView reconciles missing persisted sessions for eligible modules',
+      (WidgetTester tester) async {
+    final moduleProvider = _TrackingModuleProvider();
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(
+        initialSnapshot: const WorkspaceSnapshot(
+          sessions: <WorkspaceSession>[
+            WorkspaceSession(
+              moduleId: 'm1',
+              surfaceMode: 'embedded',
+              readinessState: 'warming_up',
+            ),
+          ],
+          focusedModuleId: 'm1',
+        ),
+      ),
+    );
+    moduleProvider.modules = [
+      Module(
+        id: 'm1',
+        name: 'Module 1',
+        description: 'Desc 1',
+        directory: '/tmp/m1',
+        port: 8001,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.starting,
+      ),
+      Module(
+        id: 'm2',
+        name: 'Module 2',
+        description: 'Desc 2',
+        directory: '/tmp/m2',
+        port: 8002,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+      Module(
+        id: 'm3',
+        name: 'Module 3',
+        description: 'Desc 3',
+        directory: '/tmp/m3',
+        port: 8003,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+        ],
+        child: _buildTestShell(const ToolViewScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(workspaceProvider.sessions.map((session) => session.moduleId), [
+      'm1',
+      'm2',
+      'm3',
     ]);
   });
 
@@ -234,7 +306,7 @@ void main() {
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
-        child: const MaterialApp(home: ToolViewScreen()),
+        child: _buildTestShell(const ToolViewScreen()),
       ),
     );
     await tester.pump();
@@ -242,7 +314,7 @@ void main() {
 
     expect(moduleProvider.launchedModuleIds, contains('m1'));
 
-    await tester.tap(find.byKey(const ValueKey<String>('module-tab-m2')));
+    await tester.tap(find.text('Module 2').first);
     await tester.pump();
 
     expect(moduleProvider.launchedModuleIds, contains('m2'));
@@ -258,11 +330,12 @@ void main() {
     );
     moduleProvider.modules = [
       Module(
-        id: 'neurobench',
+        id: 'Neurobench',
         name: 'NeuroBench',
         description: 'Benchmarking',
         directory: 'Neurobench',
         port: 8003,
+        hasFrontend: true,
         status: ModuleStatus.error,
         preflightStatus: 'failed',
         preflightMessage:
@@ -270,7 +343,7 @@ void main() {
       ),
     ];
     await workspaceProvider.openSession(
-      'neurobench',
+      'Neurobench',
       surfaceMode: 'embedded',
       readinessState: 'error',
     );
@@ -281,8 +354,8 @@ void main() {
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
-        child: const MaterialApp(
-          home: ToolViewScreen(initialModuleId: 'neurobench'),
+        child: _buildTestShell(
+          const ToolViewScreen(initialModuleId: 'Neurobench'),
         ),
       ),
     );
@@ -295,4 +368,14 @@ void main() {
     expect(find.text('Retry Start'), findsOneWidget);
     expect(find.textContaining('Checking http'), findsNothing);
   });
+}
+
+Widget _buildTestShell(Widget home) {
+  return ShadApp(
+    theme: NmtkShadTheme.light,
+    darkTheme: NmtkShadTheme.dark,
+    themeMode: ThemeMode.dark,
+    materialThemeBuilder: (_, __) => AppTheme.darkTheme,
+    home: home,
+  );
 }

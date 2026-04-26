@@ -201,15 +201,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       return;
     }
 
-    if (requestFocus) {
-      await workspaceProvider.focusSession(moduleId);
-    }
-    if (mounted) {
-      setState(() {
-        _activeModuleId = moduleId;
-      });
-    }
-
     WorkspaceSession? currentSession;
     for (final session in workspaceProvider.sessions) {
       if (session.moduleId == moduleId) {
@@ -218,6 +209,21 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       }
     }
     final desiredReadiness = _readinessStateForModule(module);
+    if (currentSession == null) {
+      await workspaceProvider.openSession(
+        moduleId,
+        surfaceMode: _surfaceModeForModule(moduleId),
+        readinessState: desiredReadiness,
+      );
+    } else if (requestFocus) {
+      await workspaceProvider.focusSession(moduleId);
+    }
+    if (mounted) {
+      setState(() {
+        _activeModuleId = moduleId;
+      });
+    }
+
     if (currentSession != null &&
         currentSession.readinessState != desiredReadiness) {
       await workspaceProvider.updateSession(
@@ -409,16 +415,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   Widget _buildHeaderActions(
     BuildContext context,
     ModuleProvider moduleProvider,
-    List<(WorkspaceSession, Module)> sessionEntries,
+    Module? activeModule,
   ) {
-    final hasActive =
-        sessionEntries.any((e) => e.$1.moduleId == _activeModuleId);
-    final activeModule = hasActive
-        ? sessionEntries
-            .firstWhere((e) => e.$1.moduleId == _activeModuleId)
-            .$2
-        : null;
-
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -450,9 +448,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               Icons.stop_circle,
               color: ShadTheme.of(context).colorScheme.destructive,
             ),
-            onPressed: () {
-              unawaited(moduleProvider.stopModule(_activeModuleId));
-            },
+            onPressed: activeModule == null
+                ? null
+                : () {
+                    unawaited(moduleProvider.stopModule(activeModule.id));
+                  },
             tooltip: 'Stop Module',
           ),
         ),
@@ -474,6 +474,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final moduleProvider = ref.watch(moduleStateProvider);
     final workspaceProvider = ref.watch(workspaceStateProvider);
     final sessions = workspaceProvider.sessions;
+    final eligibleModules =
+        moduleProvider.modules.where(_shouldOpenModule).toList(growable: false);
 
     if (!_workspaceInitialized &&
         !moduleProvider.isLoading &&
@@ -483,10 +485,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       });
     }
 
-    // Build sidebar nav items from open sessions.
-    final navItems = sessions
-        .map((session) => _findModule(moduleProvider, session.moduleId))
-        .whereType<Module>()
+    // Build sidebar nav items from the eligible module manifest, not only the
+    // currently open workspace sessions.
+    final navItems = eligibleModules
         .map(
           (module) => NmtkSidebarItem(
             id: module.id,
@@ -501,8 +502,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         navItems.indexWhere((item) => item.id == _activeModuleId);
     final clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
 
-    // ── Empty workspace: no sessions yet ────────────────────────────────────
-    if (sessions.isEmpty) {
+    if (eligibleModules.isEmpty) {
       return NmtkDesktopScaffold(
         pageTitle: 'NeuroToolkit',
         navItems: const [],
@@ -521,56 +521,31 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       );
     }
 
+    final eligibleModuleIds = eligibleModules
+        .map((module) => module.id)
+        .toSet();
     final focusedModuleId = workspaceProvider.focusedModuleId;
-    if (focusedModuleId != null && focusedModuleId != _activeModuleId) {
+    if (focusedModuleId != null &&
+        eligibleModuleIds.contains(focusedModuleId) &&
+        focusedModuleId != _activeModuleId) {
       _activeModuleId = focusedModuleId;
     }
-    if (!sessions.any((session) => session.moduleId == _activeModuleId)) {
-      _activeModuleId = sessions.last.moduleId;
+    if (!eligibleModuleIds.contains(_activeModuleId)) {
+      _activeModuleId = eligibleModules.first.id;
     }
 
-    final sessionEntries = sessions
-        .map((session) =>
-            (session, _findModule(moduleProvider, session.moduleId)))
-        .where((entry) => entry.$2 != null)
-        .map((entry) => (entry.$1, entry.$2!))
-        .toList(growable: false);
+    final sessionsByModuleId = <String, WorkspaceSession>{
+      for (final session in sessions) session.moduleId: session,
+    };
 
-    // ── No valid modules found for existing sessions ─────────────────────
-    if (sessionEntries.isEmpty) {
-      return NmtkDesktopScaffold(
-        pageTitle: 'NeuroToolkit',
-        navItems: const [],
-        selectedIndex: 0,
-        mode: NmtkShellMode.command,
-        footerNavItems: const [
-          NmtkSidebarItem(
-            id: 'settings',
-            label: 'Settings',
-            icon: Icons.settings_outlined,
-            selectedIcon: Icons.settings_rounded,
-          ),
-        ],
-        onFooterNavItemSelected: (_) => context.go('/settings'),
-        child: const NmtkEmptyState(
-          title: 'Workspace Unavailable',
-          message:
-              'The saved workspace refers to modules that are not available.',
-          icon: Icons.error_outline,
-          tone: NmtkTone.warning,
-        ),
-      );
-    }
-
-    // Page title: active module name.
-    final activeModuleEntry = sessionEntries.firstWhere(
-      (e) => e.$2.id == _activeModuleId,
-      orElse: () => sessionEntries.first,
+    final activeModule = eligibleModules.firstWhere(
+      (module) => module.id == _activeModuleId,
+      orElse: () => eligibleModules.first,
     );
 
     // ── Normal workspace ─────────────────────────────────────────────────────
     return NmtkDesktopScaffold(
-      pageTitle: activeModuleEntry.$2.name,
+      pageTitle: activeModule.name,
       navItems: navItems,
       selectedIndex: clampedIndex,
       onNavItemSelected: (i) async {
@@ -585,15 +560,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         ),
       ],
       onFooterNavItemSelected: (_) => context.go('/settings'),
-      headerActions: _buildHeaderActions(context, moduleProvider, sessionEntries),
+      headerActions: _buildHeaderActions(context, moduleProvider, activeModule),
       mode: NmtkShellMode.command,
       child: IndexedStack(
         key: const ValueKey('WorkspaceStack'),
-        index: sessionEntries
-            .indexWhere((entry) => entry.$1.moduleId == _activeModuleId),
-        children: sessionEntries.map((entry) {
-          final session = entry.$1;
-          final module = entry.$2;
+        index: clampedIndex,
+        children: eligibleModules.map((module) {
+          final session = sessionsByModuleId[module.id];
           final supported = _isWebViewSupported();
           final launchBlocked = module.isPreflightFailed ||
               module.status == ModuleStatus.error;
@@ -623,7 +596,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                       tone: NmtkTone.danger,
                     ),
                   )
-                : !isReady
+                : session == null || !isReady
                     ? _buildLoadingState(module)
                     : session.surfaceMode == 'native'
                         ? NativeSurfaceRegistry.build(module.id, session)
