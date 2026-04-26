@@ -43,4 +43,12 @@ void main() {
 
     expect(navigation, isNull);
   });
+
+  test('launcherDeepLinkFromUri preserves query and fragment', () {
+    final deepLink = launcherDeepLinkFromUri(
+      Uri.parse('http://localhost:8002/handoff?import_network=abc123#dock'),
+    );
+
+    expect(deepLink, '/handoff?import_network=abc123#dock');
+  });
 }

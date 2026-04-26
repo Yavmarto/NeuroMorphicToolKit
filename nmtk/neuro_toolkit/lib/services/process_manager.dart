@@ -92,7 +92,7 @@ class _HealthProbeResponse {
 class ProcessManager {
   static const int _maxConsecutiveHealthFailures = 2;
   static const Duration _defaultStartupHealthGracePeriod = Duration(
-    seconds: 12,
+    seconds: 25,
   );
   static const Duration _defaultStartupHealthProbeInterval = Duration(
     milliseconds: 500,

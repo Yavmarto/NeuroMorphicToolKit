@@ -137,7 +137,7 @@ class LauncherControlBootstrapService {
   LauncherControlBootstrapService({
     LauncherControlBootstrapEnvironment? environment,
     http.Client? client,
-    this.startupTimeout = const Duration(seconds: 12),
+    this.startupTimeout = const Duration(seconds: 20),
     this.pollInterval = const Duration(milliseconds: 300),
     Uri? explicitBaseUriOverride,
   })  : _environment =

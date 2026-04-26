@@ -10,6 +10,21 @@ class CrossModuleNavigation {
   final Uri targetUri;
 }
 
+String launcherDeepLinkFromUri(Uri targetUri) {
+  final buffer = StringBuffer(targetUri.path.isEmpty ? '/' : targetUri.path);
+  if (targetUri.hasQuery) {
+    buffer
+      ..write('?')
+      ..write(targetUri.query);
+  }
+  if (targetUri.hasFragment) {
+    buffer
+      ..write('#')
+      ..write(targetUri.fragment);
+  }
+  return buffer.toString();
+}
+
 CrossModuleNavigation? resolveCrossModuleNavigation({
   required Uri targetUri,
   required List<Module> modules,

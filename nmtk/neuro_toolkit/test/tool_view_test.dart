@@ -319,6 +319,12 @@ void main() {
 
     expect(moduleProvider.launchedModuleIds, contains('m2'));
     expect(find.text('Waiting for Module 2'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(
+      find.textContaining('warm up before health checks settle'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('ToolView shows launcher preflight error instead of polling',

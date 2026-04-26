@@ -334,7 +334,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     await workspaceProvider.openSession(
       targetModule.id,
       surfaceMode: _surfaceModeForModule(targetModule.id),
-      deepLink: navigation.targetUri.path,
+      deepLink: launcherDeepLinkFromUri(navigation.targetUri),
       readinessState: 'opening',
     );
 
@@ -347,23 +347,117 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return true;
   }
 
+  Future<bool> _handleHostedModuleNavigationRequest(
+    NmtkHostNavigationRequest request,
+  ) async {
+    final moduleProvider = ref.read(moduleStateProvider);
+    final workspaceProvider = ref.read(workspaceStateProvider);
+    final targetModule = _findModule(moduleProvider, request.moduleId);
+    if (targetModule == null || !_shouldOpenModule(targetModule)) {
+      return false;
+    }
+
+    final existingSession = workspaceProvider.sessions
+        .where((session) => session.moduleId == targetModule.id)
+        .cast<WorkspaceSession?>()
+        .firstWhere(
+          (session) => session != null,
+          orElse: () => null,
+        );
+    final restoreState = Map<String, dynamic>.from(request.restoreState);
+    final readinessState = _readinessStateForModule(targetModule);
+
+    if (existingSession == null) {
+      await workspaceProvider.openSession(
+        targetModule.id,
+        surfaceMode: _surfaceModeForModule(targetModule.id),
+        deepLink: request.deepLink,
+        restoreState: restoreState,
+        readinessState: readinessState,
+      );
+    } else {
+      await workspaceProvider.updateSession(
+        targetModule.id,
+        deepLink: request.deepLink,
+        restoreState: restoreState,
+        readinessState: readinessState,
+      );
+    }
+
+    await _activateModule(targetModule.id, requestFocus: true);
+    return true;
+  }
+
   Widget _buildLoadingState(Module module) {
-    return NmtkEmptyState(
-      title: 'Waiting for ${module.name}',
-      message: [
-        if (module.statusMessage != null) module.statusMessage!,
-        if (module.status == ModuleStatus.starting)
-          'Starting backend at ${_moduleUri(module, healthCheck: true)}'
-        else
-          'Starting ${module.name} backend for this tab',
-      ].join('\n\n'),
-      icon: Icons.sync,
-      tone: NmtkTone.info,
-      action: NmtkOutlinedButton(
-        onPressed: () => _launchInBrowser(module),
-        icon: Icons.open_in_browser,
-        label: 'Open in Browser instead',
-        tone: NmtkTone.info,
+    final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
+    final palette = resolveNmtkTonePalette(context, NmtkTone.info);
+    final message = [
+      if (module.statusMessage != null) module.statusMessage!,
+      if (module.status == ModuleStatus.starting)
+        'Starting backend at ${_moduleUri(module, healthCheck: true)}'
+      else
+        'Starting ${module.name} backend for this tab',
+      'Some modules take a little longer to warm up before health checks settle.',
+    ].join('\n\n');
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: NmtkSurfaceCard(
+          tone: NmtkTone.info,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: palette.foreground.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(tokens.radiusMd),
+                ),
+                alignment: Alignment.center,
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: palette.foreground,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Waiting for ${module.name}',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(tokens.radiusSm),
+                child: const LinearProgressIndicator(),
+              ),
+              const SizedBox(height: 16),
+              NmtkOutlinedButton(
+                onPressed: () => _launchInBrowser(module),
+                icon: Icons.open_in_browser,
+                label: 'Open in Browser instead',
+                tone: NmtkTone.info,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -521,9 +615,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       );
     }
 
-    final eligibleModuleIds = eligibleModules
-        .map((module) => module.id)
-        .toSet();
+    final eligibleModuleIds =
+        eligibleModules.map((module) => module.id).toSet();
     final focusedModuleId = workspaceProvider.focusedModuleId;
     if (focusedModuleId != null &&
         eligibleModuleIds.contains(focusedModuleId) &&
@@ -568,8 +661,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         children: eligibleModules.map((module) {
           final session = sessionsByModuleId[module.id];
           final supported = _isWebViewSupported();
-          final launchBlocked = module.isPreflightFailed ||
-              module.status == ModuleStatus.error;
+          final launchBlocked =
+              module.isPreflightFailed || module.status == ModuleStatus.error;
           final isReady = module.status == ModuleStatus.running ||
               module.status == ModuleStatus.degraded;
 
@@ -599,7 +692,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                 : session == null || !isReady
                     ? _buildLoadingState(module)
                     : session.surfaceMode == 'native'
-                        ? NativeSurfaceRegistry.build(module.id, session)
+                        ? NmtkHostNavigationScope(
+                            navigator: _handleHostedModuleNavigationRequest,
+                            child: NativeSurfaceRegistry.build(
+                              module.id,
+                              session,
+                            ),
+                          )
                         : supported
                             ? WebViewWidget(
                                 controller: _getController(module),
