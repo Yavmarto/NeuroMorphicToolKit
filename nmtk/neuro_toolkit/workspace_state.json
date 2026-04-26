@@ -1,5 +1,5 @@
 {
-  "focusedModuleId": "Neurochip",
+  "focusedModuleId": "neurocnl",
   "sessions": [
     {
       "deepLink": null,
@@ -23,7 +23,7 @@
       "surfaceMode": "native"
     },
     {
-      "deepLink": "/?import_network=eyJudW1fbmV1cm9ucyI6MTAwLCJudW1fc3luYXBzZXMiOjI1MDAsIm5ldXJvbl9tb2RlbCI6IkxJRiIsInBvcHVsYXRpb25zIjpbeyJuYW1lIjoibW90b3IgbmV1cm9uIiwic2l6ZSI6NTB9LHsibmFtZSI6InNlbnNvcnkgbmV1cm9uIiwic2l6ZSI6NTB9XSwiY29ubmVjdGlvbnMiOlt7InByZSI6InNlbnNvcnkgbmV1cm9uIiwicG9zdCI6Im1vdG9yIG5ldXJvbiIsIndlaWdodF9jb3VudCI6MjUwMH1dLCJ3ZWlnaHRfYml0X3dpZHRoIjo4LCJuZXR3b3JrX2RlcHRoIjoyfQ",
+      "deepLink": null,
       "moduleId": "Neurochip",
       "readinessState": "degraded",
       "restoreState": {},
