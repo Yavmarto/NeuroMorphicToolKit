@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
+// Legacy shell adapter imports (kept for backward-compat with /workspace?moduleId= route)
 import 'package:neurocnl_studio/shell_adapter.dart';
 import 'package:Neurosim_shell_adapter/Neurosim_shell_adapter.dart';
 import 'package:neurohub_shell_adapter/neurohub_shell_adapter.dart';

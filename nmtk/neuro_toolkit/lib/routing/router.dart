@@ -13,6 +13,14 @@ import 'package:neuro_toolkit/providers/app_provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
+// Phase 3: native feature package shell imports
+import 'package:neurocnl_feature/neurocnl_feature.dart';
+import 'package:neurosim_feature/neurosim_feature.dart';
+import 'package:neurochip_feature/neurochip_feature.dart';
+import 'package:neurobench_feature/neurobench_feature.dart';
+import 'package:neurosense_feature/neurosense_feature.dart';
+import 'package:neurohub_feature/neurohub_feature.dart';
+
 GoRouter createGoRouter(AppProvider appProvider) {
   return GoRouter(
     initialLocation: '/workspace',
@@ -61,6 +69,40 @@ GoRouter createGoRouter(AppProvider appProvider) {
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          // Phase 3: native module routes via feature packages.
+          // These routes are the canonical way to navigate to a module screen.
+          // The legacy /workspace?moduleId= route continues to work during
+          // migration; Phase 5 removes it.
+          GoRoute(
+            path: '/module/neurocnl',
+            name: 'module-neurocnl',
+            builder: (context, state) => const NeurocnlShell(),
+          ),
+          GoRoute(
+            path: '/module/neurosim',
+            name: 'module-neurosim',
+            builder: (context, state) => const NeurosimShell(),
+          ),
+          GoRoute(
+            path: '/module/neurochip',
+            name: 'module-neurochip',
+            builder: (context, state) => const NeurochipShell(),
+          ),
+          GoRoute(
+            path: '/module/neurobench',
+            name: 'module-neurobench',
+            builder: (context, state) => const NeurobenchShell(),
+          ),
+          GoRoute(
+            path: '/module/neurosense',
+            name: 'module-neurosense',
+            builder: (context, state) => const NeurosenseShell(),
+          ),
+          GoRoute(
+            path: '/module/neurohub',
+            name: 'module-neurohub',
+            builder: (context, state) => const NeurohubShell(),
           ),
           // Hardware deploy routes (/deploy/akida, /deploy/pynq,
           // /deploy/teensy) were removed when the deploy UIs were relocated
