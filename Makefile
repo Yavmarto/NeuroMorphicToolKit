@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-web dev-native build-submodules rebuild-submodules build-interactive clean-all build-all bump-version ci
+.PHONY: release help dev dev-web dev-native build-submodules rebuild-submodules build-interactive clean-all build-all bump-version ci suite_api_dev
 
 MODULES = neurocnl Neurosim Neurochip Neurobench Neurosense Neurohub
 PORT_neurocnl = 8000
@@ -29,6 +29,7 @@ help:
 	@echo "  make dev-native               - Run launcher in fully native mode (no web builds)"
 	@echo "  make dev -w                  - Also build/serve the launcher web app on your LAN"
 	@echo "  make dev-web                 - Same as 'make dev -w'"
+	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make build-submodules         - Build all submodule web frontends (only if changed)"
 	@echo "  make rebuild-submodules       - Force rebuild all submodule web frontends"
 	@echo "  make build-interactive        - Interactively select modules to build"
@@ -75,6 +76,9 @@ dev-web:
 dev-native:
 	@chmod +x scripts/run_dev.sh
 	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" --native-only
+
+suite_api_dev:
+	uvicorn suite_api.main:app --port 9000 --reload
 
 ci:
 	@chmod +x scripts/run_ci_local.sh
