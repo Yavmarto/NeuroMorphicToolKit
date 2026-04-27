@@ -1,15 +1,22 @@
 """Mount Neurochip domain routes in suite_api.
 
-Neurochip routers already carry their full /api/neurochip/ prefix, so the
-domain router is created without an additional prefix.
+Non-hardware analysis routes (targets, analysis, quantization, faults,
+estimation, export, spinnaker2, deployments) are served in-process.
 
-Optional hardware routers (akida, lava, pynq, spinnaker2) are guarded with
-try/except — suite_api starts cleanly on machines without hardware SDKs.
+Hardware routes (akida, lava, pynq, serial) are proxied to the
+neurochip-hw-worker (port 8002, Docker profile: hardware). When the worker
+is not running, those routes return HTTP 503.
+
+Suite_api starts cleanly on machines without Akida/PYNQ/Lava installed
+(the hardware routes simply 503 when the worker is not running).
 """
 import logging
+import importlib
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from fastapi.responses import Response
+
 from neurochip.app.routers import (
     analysis,
     deployments,
@@ -17,30 +24,26 @@ from neurochip.app.routers import (
     export,
     faults,
     quantization,
-    serial,
     targets,
 )
 
+from suite_api.config import settings
+from suite_api.proxy import proxy_to_worker
+
 logger = logging.getLogger("suite_api.neurochip")
 
-# Optional hardware routers
-_optional_routers = []
-for _name, _module in [
-    ("akida",      "neurochip.app.routers.akida"),
-    ("lava",       "neurochip.app.routers.lava"),
-    ("pynq",       "neurochip.app.routers.pynq"),
-    ("spinnaker2", "neurochip.app.routers.spinnaker2"),
-]:
-    try:
-        import importlib
-        _mod = importlib.import_module(_module)
-        _optional_routers.append(_mod.router)
-    except ImportError as exc:
-        logger.warning("neurochip: %s router unavailable: %s", _name, exc)
+# Optional in-process: spinnaker2 (software simulation, not hardware)
+_spinnaker2_router = None
+try:
+    _spinnaker2_mod = importlib.import_module("neurochip.app.routers.spinnaker2")
+    _spinnaker2_router = _spinnaker2_mod.router
+except ImportError as exc:
+    logger.warning("neurochip: spinnaker2 router unavailable: %s", exc)
 
 # Neurochip routers already contain their full prefix
 router = APIRouter()
 
+# ── In-process: non-hardware routes ──────────────────────────────────────────
 for _r in [
     targets.router,
     analysis.router,
@@ -48,16 +51,55 @@ for _r in [
     faults.router,
     estimation.router,
     export.router,
-    serial.router,
     deployments.router,
 ]:
     router.include_router(_r)
 
-for _r in _optional_routers:
-    router.include_router(_r)
+if _spinnaker2_router is not None:
+    router.include_router(_spinnaker2_router)
+
+
+# ── Proxied: hardware routes → neurochip-hw-worker (port 8002) ───────────────
+# These routes return 503 when the hardware worker is not running.
+
+@router.api_route(
+    "/api/neurochip/akida/{path:path}",
+    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
+)
+async def proxy_neurochip_akida(request: Request, path: str) -> Response:
+    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
+
+
+@router.api_route(
+    "/api/neurochip/hardware/lava/{path:path}",
+    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
+)
+async def proxy_neurochip_lava(request: Request, path: str) -> Response:
+    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
+
+
+@router.api_route(
+    "/hardware/pynq/{path:path}",
+    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
+)
+async def proxy_neurochip_pynq(request: Request, path: str) -> Response:
+    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
+
+
+@router.api_route(
+    "/api/neurochip/serial/{path:path}",
+    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
+)
+async def proxy_neurochip_serial(request: Request, path: str) -> Response:
+    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
 
 
 @router.get("/api/neurochip/health")
 async def neurochip_health() -> dict[str, Any]:
-    """Health check for the Neurochip domain (matches original 'healthy' status)."""
-    return {"status": "healthy", "service": "neurochip"}
+    """Health check for the Neurochip domain."""
+    return {
+        "status": "healthy",
+        "service": "neurochip",
+        "hardware_worker": settings.neurochip_hw_worker_url,
+        "note": "Hardware routes (akida/lava/pynq/serial) proxied to hardware worker",
+    }
