@@ -1,18 +1,24 @@
 """Mount Neurobench domain routes in suite_api.
 
-Neurobench routers carry no prefix themselves — the original main.py applies
-prefixes at include_router time. We replicate that same prefix assignment here.
+Result-storage and reporting routes (baselines, benchmarks, comparison, faults,
+perturbation, regression, reports, results, synsense) are served in-process.
 
-The runner router handles long-running jobs; its job-dispatch logic is
-unchanged — only the HTTP surface moves (Phase 4B will formalize as a worker).
+Job-dispatch routes (runner, pynq hardware, spinnaker2) are proxied to the
+neurobench-runner-worker (port 8003, Docker profile: jobs). When the worker
+is not running, those routes return HTTP 503.
+
+The runner router handles long-running compute jobs; isolating it prevents the
+main API from blocking during benchmark execution.
 """
 import logging
 import importlib
 from typing import Any
 
+from fastapi import APIRouter, Request
+from fastapi.responses import Response
+
 import suite_api.domains.neurobench  # noqa: F401 (side-effect: env isolation + sys.path)
 
-from fastapi import APIRouter
 from app.routers import (
     baselines,
     benchmarks,
@@ -22,42 +28,80 @@ from app.routers import (
     regression,
     reports,
     results,
-    runner,
 )
+
+from suite_api.config import settings
+from suite_api.proxy import proxy_to_worker
 
 logger = logging.getLogger("suite_api.neurobench")
 
-# Optional hardware / simulation routers
-_optional: list[tuple[Any, str]] = []
-for _name, _module, _prefix in [
-    ("pynq",       "app.routers.pynq",       "/api/neurobench/pynq"),
-    ("spinnaker2", "app.routers.spinnaker2",  "/bench/spinnaker2"),
-    ("synsense",   "app.routers.synsense",    "/bench/synsense"),
-]:
-    try:
-        _mod = importlib.import_module(_module)
-        _optional.append((_mod.router, _prefix))
-    except ImportError as exc:
-        logger.warning("neurobench: %s router unavailable: %s", _name, exc)
+# Optional in-process: synsense (simulation results, not execution)
+_synsense_router = None
+try:
+    _synsense_mod = importlib.import_module("app.routers.synsense")
+    _synsense_router = _synsense_mod.router
+except ImportError as exc:
+    logger.warning("neurobench: synsense router unavailable: %s", exc)
 
 router = APIRouter()
 
-# Core routers with their original prefixes (mirroring Neurobench's main.py)
-router.include_router(benchmarks.router, prefix="/api/neurobench/benchmarks")
-router.include_router(runner.router,     prefix="/api/neurobench/run")
-router.include_router(comparison.router, prefix="/api/neurobench/compare")
-router.include_router(faults.router,     prefix="/api/neurobench/faults")
+# ── In-process: result storage and reporting routes ───────────────────────────
+router.include_router(benchmarks.router,   prefix="/api/neurobench/benchmarks")
+router.include_router(comparison.router,   prefix="/api/neurobench/compare")
+router.include_router(faults.router,       prefix="/api/neurobench/faults")
 router.include_router(perturbation.router, prefix="/api/neurobench/perturbation")
-router.include_router(baselines.router,  prefix="/api/neurobench/baselines")
-router.include_router(results.router,    prefix="/api/neurobench/results")
-router.include_router(regression.router, prefix="/api/neurobench/regression")
-router.include_router(reports.router,    prefix="/api/neurobench/report")
+router.include_router(baselines.router,    prefix="/api/neurobench/baselines")
+router.include_router(results.router,      prefix="/api/neurobench/results")
+router.include_router(regression.router,   prefix="/api/neurobench/regression")
+router.include_router(reports.router,      prefix="/api/neurobench/report")
 
-for _r, _pfx in _optional:
-    router.include_router(_r, prefix=_pfx)
+if _synsense_router is not None:
+    router.include_router(_synsense_router, prefix="/bench/synsense")
+
+
+# ── Proxied: job-dispatch routes → neurobench-runner-worker (port 8003) ───────
+# These routes return 503 when the runner worker is not running.
+
+@router.api_route(
+    "/api/neurobench/run",
+    methods=["GET", "POST"],
+)
+async def proxy_neurobench_run_root(request: Request) -> Response:
+    return await proxy_to_worker(request, settings.neurobench_runner_url)
+
+
+@router.api_route(
+    "/api/neurobench/run/{path:path}",
+    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
+)
+async def proxy_neurobench_run(request: Request, path: str) -> Response:
+    return await proxy_to_worker(request, settings.neurobench_runner_url)
+
+
+@router.api_route(
+    "/api/neurobench/pynq/{path:path}",
+    methods=["GET", "POST"],
+)
+async def proxy_neurobench_pynq(request: Request, path: str) -> Response:
+    """Proxy PYNQ hardware execution routes to the runner worker."""
+    return await proxy_to_worker(request, settings.neurobench_runner_url)
+
+
+@router.api_route(
+    "/bench/spinnaker2/{path:path}",
+    methods=["GET", "POST"],
+)
+async def proxy_neurobench_spinnaker2(request: Request, path: str) -> Response:
+    """Proxy SpiNNaker2 execution routes to the runner worker."""
+    return await proxy_to_worker(request, settings.neurobench_runner_url)
 
 
 @router.get("/api/neurobench/health")
 async def neurobench_health() -> dict[str, Any]:
-    """Health check for the Neurobench domain."""
-    return {"status": "ok", "service": "neurobench"}
+    """Health check for the Neurobench domain (in-process result-storage routes)."""
+    return {
+        "status": "ok",
+        "service": "neurobench",
+        "runner_worker": settings.neurobench_runner_url,
+        "note": "Job-dispatch routes (/run, /pynq, /bench/spinnaker2) proxied to runner worker",
+    }

@@ -185,6 +185,88 @@ services:
       neurochip:
         condition: service_healthy
 
+  # ── Phase 4 workers — started only with the matching Docker Compose profile ──
+
+  neurosense-hw-worker:
+    build:
+      context: ./workers/neurosense_hw
+    ports:
+      - "${NEUROSENSE_PORT:-8004}:8004"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/repo:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend-net
+    profiles:
+      - hardware
+
+  neurobench-runner-worker:
+    build:
+      context: ./workers/neurobench_runner
+    ports:
+      - "${NEUROBENCH_PORT:-8003}:8003"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/repo:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend-net
+    profiles:
+      - jobs
+
+  neurochip-hw-worker:
+    build:
+      context: ./workers/neurochip_hw
+    ports:
+      - "${NEUROCHIP_PORT:-8002}:8002"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/repo:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend-net
+    profiles:
+      - hardware
+
+  neurocnl-physics-worker:
+    build:
+      context: ./workers/neurocnl_physics
+    ports:
+      - "${NEUROCNL_PHYSICS_PORT:-8006}:8006"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/repo:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend-net
+    profiles:
+      - physics
+
   prometheus:
     image: prom/prometheus:v2.44.0
     container_name: prometheus

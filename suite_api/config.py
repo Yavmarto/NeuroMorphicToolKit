@@ -19,6 +19,12 @@ class Settings(BaseSettings):
     # Neurohub database — default points to the Neurohub submodule's SQLite DB
     neurohub_db_url: str = "sqlite:///./Neurohub/neurohub.db"
 
+    # Phase 4: optional worker URLs (started only with the matching Docker profile)
+    neurosense_hw_worker_url: str = "http://localhost:8004"   # profile: hardware
+    neurobench_runner_url: str = "http://localhost:8003"       # profile: jobs
+    neurochip_hw_worker_url: str = "http://localhost:8002"    # profile: hardware
+    neurocnl_physics_worker_url: str = "http://localhost:8006" # profile: physics
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
