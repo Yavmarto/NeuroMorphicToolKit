@@ -1,7 +1,14 @@
 # ADR 0009: Makefile Port Allocation
 
 ## Status
-Accepted
+Superseded by ADR 0018 (suite_api unified backend)
+
+## Supersession note
+Ports 8000–8005 were the per-module port assignments under the old
+module-as-app architecture. After Phase 2 of the consolidation plan,
+all modules are served by suite_api on port 9000. The legacy ports are
+retained only for optional hardware/compute workers (Phase 4). This ADR
+remains for historical reference.
 
 ## Context
 The NMTK desktop launcher starts 6 backend services simultaneously on the same machine. Each service needs a unique, predictable port for the launcher to connect to and for inter-service communication (e.g., Neurohub health-checking all other services).
