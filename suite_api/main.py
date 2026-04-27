@@ -25,3 +25,6 @@ app.include_router(neurosim_router)
 
 from suite_api.domains.neurochip.router import router as neurochip_router
 app.include_router(neurochip_router)
+
+from suite_api.domains.neurobench.router import router as neurobench_router
+app.include_router(neurobench_router)
