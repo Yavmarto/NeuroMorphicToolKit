@@ -2,15 +2,28 @@
 
 Start with: uvicorn suite_api.main:app --port 9000 --reload
 """
+from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
+
 from fastapi import FastAPI
 from suite_api.config import settings
 from suite_api.middleware import attach_middleware
 from suite_api.routers import health
+from suite_api.domains.neurohub.lifespan import neurohub_startup, neurohub_shutdown
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    await neurohub_startup()
+    yield
+    await neurohub_shutdown()
+
 
 app = FastAPI(
     title="NeuroMorphicToolKit Suite API",
     version="0.1.0",
     description="Unified backend for the NMTK suite.",
+    lifespan=lifespan,
 )
 
 attach_middleware(app)
@@ -31,3 +44,6 @@ app.include_router(neurobench_router)
 
 from suite_api.domains.neurosense.router import router as neurosense_router
 app.include_router(neurosense_router)
+
+from suite_api.domains.neurohub.router import router as neurohub_router
+app.include_router(neurohub_router)
