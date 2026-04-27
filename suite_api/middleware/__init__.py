@@ -7,6 +7,7 @@ import logging
 
 from fastapi import FastAPI, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 
 logger = logging.getLogger("suite_api")
 
@@ -30,5 +31,12 @@ class ResponseTimeMiddleware(BaseHTTPMiddleware):
 
 
 def attach_middleware(app: FastAPI) -> None:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(ResponseTimeMiddleware)

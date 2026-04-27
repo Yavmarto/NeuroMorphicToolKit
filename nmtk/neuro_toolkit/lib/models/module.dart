@@ -124,7 +124,7 @@ class Module {
     this.requiresMuJoCo = false,
     this.sourcePath = '.',
     this.runPath = '.',
-    this.uvicornTarget = 'app.main:app',
+    this.uvicornTarget = '',
     this.localDeps = const [],
     this.version = '0.0.0',
     this.remoteVersion = '0.0.0',
@@ -136,7 +136,7 @@ class Module {
     this.requiredImports = const [],
     this.optionalImports = const [],
     this.installStrategy = 'pip',
-    this.startStrategy = 'uvicorn',
+    this.startStrategy = 'none',
     this.akidaRuntime,
     this.akidaRuntimeState,
     this.preflightStatus = 'ok',
@@ -163,7 +163,7 @@ class Module {
       sourcePath: json['sourcePath'] as String? ?? '.',
       runPath:
           json['runPath'] as String? ?? json['sourcePath'] as String? ?? '.',
-      uvicornTarget: json['uvicornTarget'] as String? ?? 'app.main:app',
+      uvicornTarget: json['uvicornTarget'] as String? ?? '',
       localDeps:
           (json['localDeps'] as List<dynamic>?)?.cast<String>() ?? const [],
       version: json['version'] as String? ?? '0.0.0',
@@ -180,7 +180,7 @@ class Module {
           (json['optionalImports'] as List<dynamic>?)?.cast<String>() ??
               const [],
       installStrategy: json['installStrategy'] as String? ?? 'pip',
-      startStrategy: json['startStrategy'] as String? ?? 'uvicorn',
+      startStrategy: json['startStrategy'] as String? ?? 'none',
       akidaRuntime: json['akidaRuntime'] is Map<String, dynamic>
           ? AkidaRuntimeConfig.fromJson(
               json['akidaRuntime'] as Map<String, dynamic>,

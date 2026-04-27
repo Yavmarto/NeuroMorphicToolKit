@@ -55,6 +55,27 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Uri _moduleUri(Module module, {bool healthCheck = false}) {
+    final String moduleId = module.id.toLowerCase();
+
+    // If it's on the monolith port (9000), we use path-based routing.
+    if (module.effectivePort == 9000) {
+      if (healthCheck) {
+        return Uri(
+          scheme: _serviceScheme(),
+          host: _serviceHost(),
+          port: 9000,
+          path: '/api/$moduleId/health',
+        );
+      }
+      return Uri(
+        scheme: _serviceScheme(),
+        host: _serviceHost(),
+        port: 9000,
+        path: '/$moduleId/',
+      );
+    }
+
+    // Legacy fallback for standalone modules
     final path = healthCheck ? '/health' : (module.hasFrontend ? '' : '/docs');
     return Uri(
       scheme: _serviceScheme(),
@@ -166,7 +187,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   bool _shouldOpenModule(Module module) {
-    if (!module.isEnabled || module.startStrategy == 'none') {
+    if (!module.isEnabled) {
       return false;
     }
     return module.hasFrontend ||

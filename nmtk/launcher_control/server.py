@@ -48,6 +48,7 @@ SETTINGS_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "launcher_settings.json"
 WORKSPACE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "workspace_state.json"
 
 DEFAULT_CONTROL_LOG_LEVEL = "info"
+DEFAULT_SUITE_API_PORT = 9000
 HEALTH_POLL_SECONDS = 5.0
 STARTUP_GRACE_SECONDS = 12.0
 LOG_LINE_LIMIT = 400
@@ -4060,9 +4061,14 @@ class LauncherControlState:
         module = self._get_module(module_id)
         start_strategy = _module_start_strategy(module)
         if start_strategy == "none":
-            raise RuntimeError(
-                f"Module '{module_id}' does not define a runnable backend"
+            # Native feature modules are handled by the suite_api monolith.
+            # We treat them as 'running' immediately if they are enabled.
+            self._update_module_fields(
+                module_id,
+                status=STATUS_INDEX["running"],
+                healthStatus="Managed by suite_api",
             )
+            return
         if start_strategy not in SUPPORTED_START_STRATEGIES:
             raise RuntimeError(
                 f"Unsupported start strategy '{start_strategy}' for {module_id}"
@@ -4186,7 +4192,14 @@ class LauncherControlState:
         port = _effective_port(module)
         if port is None:
             return False, 0, None
-        url = f"http://127.0.0.1:{port}/health"
+
+        start_strategy = _module_start_strategy(module)
+        if start_strategy == "none":
+            # Native feature modules in the monolith have their own health path
+            # All mounted domain prefixes in suite_api are lowercase.
+            url = f"http://127.0.0.1:{port}/api/{module['id'].lower()}/health"
+        else:
+            url = f"http://127.0.0.1:{port}/health"
         try:
             with urllib.request.urlopen(url, timeout=2.0) as response:
                 body = response.read().decode("utf-8", errors="replace")

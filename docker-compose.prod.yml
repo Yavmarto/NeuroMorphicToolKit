@@ -1,22 +1,5 @@
 services:
-  neurocnl:
-    restart: always
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /run
-    environment:
-      - PYTHONOPTIMIZE=1
-      - PYTHONUNBUFFERED=1
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    networks:
-      - frontend-net
-      - monitoring-net
-
-  neurosim:
+  suite_api:
     restart: always
     read_only: true
     tmpfs:
@@ -33,45 +16,7 @@ services:
       - backend-net
       - monitoring-net
 
-  neurochip:
-    restart: always
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /run
-    volumes:
-      - neurochip-data:/app/data
-    environment:
-      - PYTHONOPTIMIZE=1
-      - PYTHONUNBUFFERED=1
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    networks:
-      - backend-net
-      - monitoring-net
-
-  neurobench:
-    restart: always
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /run
-    volumes:
-      - neurobench-data:/app/data
-    environment:
-      - PYTHONOPTIMIZE=1
-      - PYTHONUNBUFFERED=1
-    security_opt:
-      - no-new-privileges:true
-    cap_drop:
-      - ALL
-    networks:
-      - backend-net
-      - monitoring-net
-
-  neurosense:
+  neurosense-hw-worker:
     restart: always
     read_only: true
     tmpfs:
@@ -86,18 +31,15 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    networks:
-      - backend-net
-      - monitoring-net
 
-  neurohub:
+  neurobench-runner-worker:
     restart: always
     read_only: true
     tmpfs:
       - /tmp
       - /run
     volumes:
-      - neurohub-data:/app/data
+      - neurobench-data:/app/data
     environment:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1
@@ -105,12 +47,24 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    networks:
-      - frontend-net
-      - backend-net
-      - monitoring-net
 
-  neurocnl-physics:
+  neurochip-hw-worker:
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    volumes:
+      - neurochip-data:/app/data
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurocnl-physics-worker:
     restart: always
     read_only: true
     tmpfs:
@@ -123,17 +77,12 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    networks:
-      - backend-net
-      - monitoring-net
 
 networks:
-  frontend-net:
   backend-net:
   monitoring-net:
 
 volumes:
-  neurohub-data:
   neurobench-data:
   neurochip-data:
   neurosense-recordings:

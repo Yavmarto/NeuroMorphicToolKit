@@ -11,6 +11,9 @@ from suite_api.middleware import attach_middleware
 from suite_api.routers import health
 from suite_api.domains.neurohub.lifespan import neurohub_startup, neurohub_shutdown
 
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -47,3 +50,26 @@ app.include_router(neurosense_router)
 
 from suite_api.domains.neurohub.router import router as neurohub_router
 app.include_router(neurohub_router)
+
+
+# ── Static Frontend Mounting ────────────────────────────────────────────────
+# Each module frontend is mounted at /{module_id}/.
+# These expect to find build/web/ index.html and assets in their submodules.
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+for module_id, path in [
+    ("neurocnl", "neurocnl/frontend/build/web"),
+    ("neurosim", "Neurosim/frontend/build/web"),
+    ("neurochip", "Neurochip/frontend/build/web"),
+    ("neurobench", "Neurobench/frontend/build/web"),
+    ("neurosense", "Neurosense/frontend/build/web"),
+    ("neurohub", "Neurohub/frontend/build/web"),
+]:
+    full_path = REPO_ROOT / path
+    if full_path.exists():
+        app.mount(
+            f"/{module_id}",
+            StaticFiles(directory=str(full_path), html=True),
+            name=module_id,
+        )
