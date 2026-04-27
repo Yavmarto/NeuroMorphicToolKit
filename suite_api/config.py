@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     neurosense_url: str = "http://localhost:8004"
     neurohub_url: str = "http://localhost:8005"
 
+    # Neurohub database — default points to the Neurohub submodule's SQLite DB
+    neurohub_db_url: str = "sqlite:///./Neurohub/neurohub.db"
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
