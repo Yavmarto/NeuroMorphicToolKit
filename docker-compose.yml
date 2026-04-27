@@ -129,6 +129,7 @@ services:
       - NEUROBENCH_URL=${NEUROBENCH_URL:-http://neurobench:8000}
       - NEUROSENSE_URL=${NEUROSENSE_URL:-http://neurosense:8000}
       - NEUROCNL_URL=${NEUROCNL_URL:-http://neurocnl:8000}
+      - SUITE_API_URL=${SUITE_API_URL:-http://suite_api:9000}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/neurohub/health')"]
       interval: 10s

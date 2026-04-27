@@ -16,3 +16,6 @@ app = FastAPI(
 attach_middleware(app)
 
 app.include_router(health.router, prefix="/api/suite", tags=["health"])
+
+from suite_api.domains.neurocnl.router import router as neurocnl_router
+app.include_router(neurocnl_router)
