@@ -1,6 +1,6 @@
 # Architecture Consolidation — Implementation Plan
 
-**Source analysis**: `docs/architecture-consolidation-analysis.md`  
+**Source analysis**: `docs/architecture-consolidation-analysis.md`
 **Target**: Modular monolith — one suite backend (`suite_api/`), one suite frontend (`nmtk/`), optional hardware/compute workers, domain code as internal packages.
 
 ---
@@ -26,25 +26,25 @@ nmtk/packages/      Flutter feature packages, one per domain (created Phase 3)
 
 ## Port table (current → target)
 
-| Service | Current port | Target state |
-|---|---|---|
-| neurocnl | 8000 | Worker (Phase 4) then decommissioned (Phase 5) |
-| Neurosim | 8001 | Worker (Phase 4) then decommissioned (Phase 5) |
-| Neurochip | 8002 | Partial worker for hardware only (Phase 4) |
-| Neurobench | 8003 | Worker for long-running jobs only (Phase 4) |
-| Neurosense | 8004 | Worker for hardware I/O only (Phase 4) |
-| Neurohub | 8005 | Absorbed into suite_api (Phase 2F) |
-| suite_api | **9000** | Primary backend (created Phase 1) |
-| neurocnl-physics | 8006 | Worker for MuJoCo simulation (Phase 4) |
+| Service          | Current port   | Target state                                   |
+| ---------------- | -------------- | ---------------------------------------------- |
+| neurocnl         | 8000           | Worker (Phase 4) then decommissioned (Phase 5) |
+| Neurosim         | 8001           | Worker (Phase 4) then decommissioned (Phase 5) |
+| Neurochip        | 8002           | Partial worker for hardware only (Phase 4)     |
+| Neurobench       | 8003           | Worker for long-running jobs only (Phase 4)    |
+| Neurosense       | 8004           | Worker for hardware I/O only (Phase 4)         |
+| Neurohub         | 8005           | Absorbed into suite_api (Phase 2F)             |
+| suite_api        | **9000** | Primary backend (created Phase 1)              |
+| neurocnl-physics | 8006           | Worker for MuJoCo simulation (Phase 4)         |
 
 ---
 
 ## Repo structure
 
-This is **not** a single monorepo. It is a **git submodule parent** (`Yavmarto/NeuroMorphicToolKit`) that references 7 independent sibling repositories.
+This is **not** a single monorepo. It is a **git submodule parent** (`Completed-Spoon-6/NeuroMorphicToolKit`) that references 7 independent sibling repositories.
 
 ```
-github.com/Yavmarto/NeuroMorphicToolKit   ← parent repo (suite infra, docs, scripts, CI)
+github.com/`Completed-Spoon-6`/NeuroMorphicToolKit   ← parent repo (suite infra, docs, scripts, CI)
   .gitmodules references (relative URLs, sibling repos):
   github.com/Completed-Spoon-6/neurocnl
   github.com/Completed-Spoon-6/Neurosim
@@ -97,14 +97,14 @@ main
 
 Create a `consolidation` branch in each submodule's own repo only when that module's Phase 2 sub-phase begins. The parent repo then pins the submodule pointer to the HEAD of this branch.
 
-| Submodule repo | Branch to create | Phase that creates it |
-|---|---|---|
-| `Completed-Spoon-6/neurocnl` | `consolidation` | Phase 2A |
-| `Completed-Spoon-6/Neurosim` | `consolidation` | Phase 2B |
-| `Completed-Spoon-6/Neurochip` | `consolidation` | Phase 2C |
-| `Completed-Spoon-6/Neurobench` | `consolidation` | Phase 2D |
-| `Completed-Spoon-6/Neurosense` | `consolidation` | Phase 2E |
-| `Completed-Spoon-6/Neurohub` | `consolidation` | Phase 2F |
+| Submodule repo                   | Branch to create  | Phase that creates it |
+| -------------------------------- | ----------------- | --------------------- |
+| `Completed-Spoon-6/neurocnl`   | `consolidation` | Phase 2A              |
+| `Completed-Spoon-6/Neurosim`   | `consolidation` | Phase 2B              |
+| `Completed-Spoon-6/Neurochip`  | `consolidation` | Phase 2C              |
+| `Completed-Spoon-6/Neurobench` | `consolidation` | Phase 2D              |
+| `Completed-Spoon-6/Neurosense` | `consolidation` | Phase 2E              |
+| `Completed-Spoon-6/Neurohub`   | `consolidation` | Phase 2F              |
 
 ### Auto-merge CI rules
 
@@ -331,7 +331,7 @@ git push origin consolidation-phase-0-done
 
 Then capture the following thought to OpenBrain memory using the `mcp__open-brain__capture_thought` tool with this exact content:
 
-> NMTK architecture consolidation started (Phase 0 complete). Target: migrate from module-as-app (7 FastAPI services + 6 Flutter web frontends + WebView launcher) to module-as-domain (suite_api on port 9000, one Flutter desktop app, optional hardware workers). Contract snapshots saved to docs/api/contracts/. Repo is a git submodule parent (Yavmarto/NeuroMorphicToolKit) with 7 sibling submodule repos under Completed-Spoon-6. Long-running integration branch: consolidation. Source analysis: docs/architecture-consolidation-analysis.md.
+> NMTK architecture consolidation started (Phase 0 complete). Target: migrate from module-as-app (7 FastAPI services + 6 Flutter web frontends + WebView launcher) to module-as-domain (suite_api on port 9000, one Flutter desktop app, optional hardware workers). Contract snapshots saved to docs/api/contracts/. Repo is a git submodule parent (`Completed-Spoon-6`/NeuroMorphicToolKit) with 7 sibling submodule repos under Completed-Spoon-6. Long-running integration branch: consolidation. Source analysis: docs/architecture-consolidation-analysis.md.
 
 ---
 
@@ -738,6 +738,7 @@ git push origin consolidation-phase-1-done
 **Goal**: Move each module's API into suite_api as a mounted internal router. Replace cross-module HTTP calls inside Neurohub with direct in-process calls.
 
 **Migration order** (dependency order, do not change):
+
 1. neurocnl (no upstream dependencies within the suite)
 2. Neurosim (consumes neurocnl exports)
 3. Neurochip (consumes neurocnl exports)
@@ -913,18 +914,18 @@ Read `Neurosim/AGENTS.md` before touching any file in `Neurosim/`.
 
 Follow the same pattern as Phase 2A with these specifics:
 
-| Item | Value |
-|---|---|
-| Module dir | `Neurosim/` |
-| Backend entry point | `Neurosim/neurosim/app/main.py` |
-| Router files | `components, export, generation, preview, projects, simulation_ws, spinnaker2, sweep, templates, validation` |
-| Original port | `8001` |
-| suite_api prefix | `/api/neurosim` |
-| Domain dir | `suite_api/domains/neurosim/` |
-| sys.path insert | `Neurosim/neurosim` (so `from app.routers import ...` resolves) |
-| Neurohub suite_client key | `"neurosim"` |
-| Contract file | `docs/api/contracts/neurosim-openapi.json` |
-| Parity test file | `tests/integration/test_phase2b_neurosim_parity.py` |
+| Item                      | Value                                                                                                          |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Module dir                | `Neurosim/`                                                                                                  |
+| Backend entry point       | `Neurosim/neurosim/app/main.py`                                                                              |
+| Router files              | `components, export, generation, preview, projects, simulation_ws, spinnaker2, sweep, templates, validation` |
+| Original port             | `8001`                                                                                                       |
+| suite_api prefix          | `/api/neurosim`                                                                                              |
+| Domain dir                | `suite_api/domains/neurosim/`                                                                                |
+| sys.path insert           | `Neurosim/neurosim` (so `from app.routers import ...` resolves)                                            |
+| Neurohub suite_client key | `"neurosim"`                                                                                                 |
+| Contract file             | `docs/api/contracts/neurosim-openapi.json`                                                                   |
+| Parity test file          | `tests/integration/test_phase2b_neurosim_parity.py`                                                          |
 
 Note: `simulation_ws` is a WebSocket router. Include it in the mount; WebSocket routes are forwarded correctly by FastAPI's include_router.
 
@@ -936,18 +937,18 @@ Note: `simulation_ws` is a WebSocket router. Include it in the mount; WebSocket 
 
 Read `Neurochip/AGENTS.md` before touching any file in `Neurochip/`.
 
-| Item | Value |
-|---|---|
-| Module dir | `Neurochip/` |
-| Backend entry point | `Neurochip/neurochip/app/main.py` |
-| Router files | `akida, analysis, deployments, estimation, export, faults, lava, pynq, quantization, serial, spinnaker2, targets` |
-| Original port | `8002` |
-| suite_api prefix | `/api/neurochip` |
-| Domain dir | `suite_api/domains/neurochip/` |
-| sys.path insert | `Neurochip/neurochip` |
-| Neurohub suite_client key | `"neurochip"` |
-| Contract file | `docs/api/contracts/neurochip-openapi.json` |
-| Parity test file | `tests/integration/test_phase2c_neurochip_parity.py` |
+| Item                      | Value                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Module dir                | `Neurochip/`                                                                                                      |
+| Backend entry point       | `Neurochip/neurochip/app/main.py`                                                                                 |
+| Router files              | `akida, analysis, deployments, estimation, export, faults, lava, pynq, quantization, serial, spinnaker2, targets` |
+| Original port             | `8002`                                                                                                            |
+| suite_api prefix          | `/api/neurochip`                                                                                                  |
+| Domain dir                | `suite_api/domains/neurochip/`                                                                                    |
+| sys.path insert           | `Neurochip/neurochip`                                                                                             |
+| Neurohub suite_client key | `"neurochip"`                                                                                                     |
+| Contract file             | `docs/api/contracts/neurochip-openapi.json`                                                                       |
+| Parity test file          | `tests/integration/test_phase2c_neurochip_parity.py`                                                              |
 
 **Important**: Neurochip has optional hardware imports (Akida, Lava, PYNQ). The existing `app/main.py` already guards these with try/except. Verify that the suite_api import of Neurochip's routers does not raise ImportError on machines without those packages. If it does, wrap the router include in a try/except that skips optional routers with a logged warning.
 
@@ -959,18 +960,18 @@ Read `Neurochip/AGENTS.md` before touching any file in `Neurochip/`.
 
 Read `Neurobench/AGENTS.md` before touching any file in `Neurobench/`.
 
-| Item | Value |
-|---|---|
-| Module dir | `Neurobench/` |
-| Backend entry point | `Neurobench/neurobench/app/main.py` |
-| Router files | `baselines, benchmarks, comparison, faults, perturbation, pynq, regression, reports, results, runner, spinnaker2, synsense` |
-| Original port | `8003` |
-| suite_api prefix | `/api/neurobench` |
-| Domain dir | `suite_api/domains/neurobench/` |
-| sys.path insert | `Neurobench/neurobench` |
-| Neurohub suite_client key | `"neurobench"` |
-| Contract file | `docs/api/contracts/neurobench-openapi.json` |
-| Parity test file | `tests/integration/test_phase2d_neurobench_parity.py` |
+| Item                      | Value                                                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Module dir                | `Neurobench/`                                                                                                               |
+| Backend entry point       | `Neurobench/neurobench/app/main.py`                                                                                         |
+| Router files              | `baselines, benchmarks, comparison, faults, perturbation, pynq, regression, reports, results, runner, spinnaker2, synsense` |
+| Original port             | `8003`                                                                                                                      |
+| suite_api prefix          | `/api/neurobench`                                                                                                           |
+| Domain dir                | `suite_api/domains/neurobench/`                                                                                             |
+| sys.path insert           | `Neurobench/neurobench`                                                                                                     |
+| Neurohub suite_client key | `"neurobench"`                                                                                                              |
+| Contract file             | `docs/api/contracts/neurobench-openapi.json`                                                                                |
+| Parity test file          | `tests/integration/test_phase2d_neurobench_parity.py`                                                                       |
 
 **Important**: Neurobench's `runner` router triggers long-running jobs. Do not change the runner's job-dispatch logic. The runner continues to enqueue jobs the same way; only the HTTP surface moves. Phase 4B will formalize the runner as a worker process.
 
@@ -982,18 +983,18 @@ Read `Neurobench/AGENTS.md` before touching any file in `Neurobench/`.
 
 Read `Neurosense/AGENTS.md` before touching any file in `Neurosense/`.
 
-| Item | Value |
-|---|---|
-| Module dir | `Neurosense/` |
-| Backend entry point | `Neurosense/neurosense/app/main.py` |
-| Router files | `devices, presets, stream, encoding, recording, sessions, export, nir, quality, prophesee, pynq` |
-| Original port | `8004` |
-| suite_api prefix | `/api/neurosense` |
-| Domain dir | `suite_api/domains/neurosense/` |
-| sys.path insert | `Neurosense/neurosense` |
-| Neurohub suite_client key | `"neurosense"` |
-| Contract file | `docs/api/contracts/neurosense-openapi.json` |
-| Parity test file | `tests/integration/test_phase2e_neurosense_parity.py` |
+| Item                      | Value                                                                                              |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| Module dir                | `Neurosense/`                                                                                    |
+| Backend entry point       | `Neurosense/neurosense/app/main.py`                                                              |
+| Router files              | `devices, presets, stream, encoding, recording, sessions, export, nir, quality, prophesee, pynq` |
+| Original port             | `8004`                                                                                           |
+| suite_api prefix          | `/api/neurosense`                                                                                |
+| Domain dir                | `suite_api/domains/neurosense/`                                                                  |
+| sys.path insert           | `Neurosense/neurosense`                                                                          |
+| Neurohub suite_client key | `"neurosense"`                                                                                   |
+| Contract file             | `docs/api/contracts/neurosense-openapi.json`                                                     |
+| Parity test file          | `tests/integration/test_phase2e_neurosense_parity.py`                                            |
 
 **Important**: Neurosense has a streaming WebSocket route and real-time hardware I/O via BrainFlow. Mount the router as-is. Hardware routes that require physical devices will return 503 when hardware is absent; this is the existing behaviour and must not change.
 
@@ -1007,23 +1008,24 @@ Read `Neurohub/AGENTS.md` before touching any file in `Neurohub/`.
 
 Neurohub is last because it orchestrates the others. By Phase 2F, the suite_client routes for all other modules already point to suite_api. Neurohub's own API is now absorbed.
 
-| Item | Value |
-|---|---|
-| Module dir | `Neurohub/` |
-| Backend entry point | `Neurohub/neurohub/app/main.py` |
-| Router files | `activity, assets, auth, config, dashboard, health, members, milestones, notes, projects, workflows` |
-| Original port | `8005` |
-| suite_api prefix | `/api/neurohub` |
-| Domain dir | `suite_api/domains/neurohub/` |
-| sys.path insert | `Neurohub/neurohub` |
-| Contract file | `docs/api/contracts/neurohub-openapi.json` |
-| Parity test file | `tests/integration/test_phase2f_neurohub_parity.py` |
+| Item                | Value                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| Module dir          | `Neurohub/`                                                                                          |
+| Backend entry point | `Neurohub/neurohub/app/main.py`                                                                      |
+| Router files        | `activity, assets, auth, config, dashboard, health, members, milestones, notes, projects, workflows` |
+| Original port       | `8005`                                                                                               |
+| suite_api prefix    | `/api/neurohub`                                                                                      |
+| Domain dir          | `suite_api/domains/neurohub/`                                                                        |
+| sys.path insert     | `Neurohub/neurohub`                                                                                  |
+| Contract file       | `docs/api/contracts/neurohub-openapi.json`                                                           |
+| Parity test file    | `tests/integration/test_phase2f_neurohub_parity.py`                                                  |
 
 **Neurohub-specific steps**:
 
 1. **Database lifespan**: Neurohub's `app/main.py` runs Alembic migrations and a workflow worker loop in its lifespan. Move these to suite_api's lifespan:
 
    In `suite_api/main.py`, add a lifespan context manager:
+
    ```python
    from contextlib import asynccontextmanager
    from suite_api.domains.neurohub.lifespan import neurohub_startup, neurohub_shutdown
@@ -1038,14 +1040,14 @@ Neurohub is last because it orchestrates the others. By Phase 2F, the suite_clie
    ```
 
    Create `suite_api/domains/neurohub/lifespan.py` that imports and calls the Alembic migration runner and workflow worker from `Neurohub/neurohub/app/main.py`'s lifespan.
-
 2. **suite_client self-reference**: After mounting Neurohub in suite_api, Neurohub's suite_client no longer needs to call localhost:8005 for its own health. Update `suite_client.py` to remove the self-reference and use in-process health from suite_api's health module.
-
 3. **Health endpoint path**: Neurohub uses `/api/neurohub/health` (not `/health`). When mounting under prefix `/api/neurohub`, the effective path becomes `/api/neurohub/api/neurohub/health` which is wrong. Fix by adding an explicit route alias in the domain router:
+
    ```python
    @router.get("/health")
    async def neurohub_health(): ...
    ```
+
    This overrides the prefix collision.
 
 **Acceptance gate**:
@@ -1132,6 +1134,7 @@ flutter create --template=package neurocnl_feature
 ```
 
 Edit `nmtk/packages/neurocnl_feature/pubspec.yaml`:
+
 - Add `flutter_riverpod`, `go_router`, `http` to dependencies.
 - Add `nmtk_ui_core: { path: ../../.. /nmtk_ui_core }` to dependencies (three levels up to `nmtk_ui_core/`).
 - Remove `flutter_test` from dev_dependencies if not needed.
@@ -1181,6 +1184,7 @@ GoRoute(
 where `NeurocnlShell` is the top-level screen exported from `neurocnl_feature`.
 
 Add the import:
+
 ```dart
 import 'package:neurocnl_feature/neurocnl_feature.dart';
 ```
@@ -1214,6 +1218,7 @@ flutter build macos \
 ```
 
 Run the launcher and manually navigate to the neurocnl module. Verify:
+
 1. The screen renders without blank content or overflow errors.
 2. The API calls reach `http://localhost:9000/api/neurocnl/` (check network tab or backend logs).
 3. Core workflow (parse CNL → validate → view result) completes without error.
@@ -1238,17 +1243,17 @@ Read `Neurosim/AGENTS.md` before referencing any Neurosim frontend code.
 
 Follow the same pattern as Phase 3A with:
 
-| Item | Value |
-|---|---|
-| Source screens | `Neurosim/frontend/lib/screens/` |
-| Source models | `Neurosim/frontend/lib/models/` |
-| Feature package dir | `nmtk/packages/neurosim_feature/` |
-| Package name | `neurosim_feature` |
-| GoRouter path | `/module/neurosim` |
-| Top-level screen export | `NeurosimShell` |
-| API base path prefix | `/api/neurosim` |
-| Dart-define flag | `NATIVE_NEUROSIM` |
-| Original port default | `8001` |
+| Item                    | Value                               |
+| ----------------------- | ----------------------------------- |
+| Source screens          | `Neurosim/frontend/lib/screens/`  |
+| Source models           | `Neurosim/frontend/lib/models/`   |
+| Feature package dir     | `nmtk/packages/neurosim_feature/` |
+| Package name            | `neurosim_feature`                |
+| GoRouter path           | `/module/neurosim`                |
+| Top-level screen export | `NeurosimShell`                   |
+| API base path prefix    | `/api/neurosim`                   |
+| Dart-define flag        | `NATIVE_NEUROSIM`                 |
+| Original port default   | `8001`                            |
 
 **Note for canvas**: Neurosim has an interactive canvas (`screens/` likely includes a canvas screen using custom painters or a graph rendering library). If the canvas uses a JavaScript interop (js_util, dart:html) because it was built as a Flutter web app, those imports must be replaced with Flutter desktop-compatible equivalents. Check `Neurosim/frontend/lib/` for any `import 'dart:html'` or `import 'dart:js'` and replace with conditional imports or platform-aware packages before migrating.
 
@@ -1260,16 +1265,16 @@ Follow the same pattern as Phase 3A with:
 
 Read `Neurochip/AGENTS.md` before referencing any Neurochip frontend code.
 
-| Item | Value |
-|---|---|
-| Source screens | `Neurochip/frontend/lib/screens/` |
-| Feature package dir | `nmtk/packages/neurochip_feature/` |
-| Package name | `neurochip_feature` |
-| GoRouter path | `/module/neurochip` |
-| Top-level screen export | `NeurochipShell` |
-| API base path prefix | `/api/neurochip` |
-| Dart-define flag | `NATIVE_NEUROCHIP` |
-| Shell mode | `NmtkShellMode.instrument` (cyan) |
+| Item                    | Value                                |
+| ----------------------- | ------------------------------------ |
+| Source screens          | `Neurochip/frontend/lib/screens/`  |
+| Feature package dir     | `nmtk/packages/neurochip_feature/` |
+| Package name            | `neurochip_feature`                |
+| GoRouter path           | `/module/neurochip`                |
+| Top-level screen export | `NeurochipShell`                   |
+| API base path prefix    | `/api/neurochip`                   |
+| Dart-define flag        | `NATIVE_NEUROCHIP`                 |
+| Shell mode              | `NmtkShellMode.instrument` (cyan)  |
 
 **Acceptance gate**: `flutter analyze nmtk/packages/neurochip_feature/` exits 0. The live deployment log screen renders and polls `/api/neurochip/deployments` via suite_api.
 
@@ -1279,16 +1284,16 @@ Read `Neurochip/AGENTS.md` before referencing any Neurochip frontend code.
 
 Read `Neurobench/AGENTS.md` before referencing any Neurobench frontend code.
 
-| Item | Value |
-|---|---|
-| Source screens | `Neurobench/frontend/lib/screens/` |
-| Feature package dir | `nmtk/packages/neurobench_feature/` |
-| Package name | `neurobench_feature` |
-| GoRouter path | `/module/neurobench` |
-| Top-level screen export | `NeurobenchShell` |
-| API base path prefix | `/api/neurobench` |
-| Dart-define flag | `NATIVE_NEUROBENCH` |
-| Router pattern | GoRouter Pattern B (from AGENTS.md) — preserve this pattern |
+| Item                    | Value                                                        |
+| ----------------------- | ------------------------------------------------------------ |
+| Source screens          | `Neurobench/frontend/lib/screens/`                         |
+| Feature package dir     | `nmtk/packages/neurobench_feature/`                        |
+| Package name            | `neurobench_feature`                                       |
+| GoRouter path           | `/module/neurobench`                                       |
+| Top-level screen export | `NeurobenchShell`                                          |
+| API base path prefix    | `/api/neurobench`                                          |
+| Dart-define flag        | `NATIVE_NEUROBENCH`                                        |
+| Router pattern          | GoRouter Pattern B (from AGENTS.md) — preserve this pattern |
 
 **Acceptance gate**: `flutter analyze nmtk/packages/neurobench_feature/` exits 0.
 
@@ -1298,16 +1303,16 @@ Read `Neurobench/AGENTS.md` before referencing any Neurobench frontend code.
 
 Read `Neurosense/AGENTS.md` before referencing any Neurosense frontend code.
 
-| Item | Value |
-|---|---|
-| Source screens | `Neurosense/frontend/lib/screens/` |
-| Feature package dir | `nmtk/packages/neurosense_feature/` |
-| Package name | `neurosense_feature` |
-| GoRouter path | `/module/neurosense` |
-| Top-level screen export | `NeurosenseShell` |
-| API base path prefix | `/api/neurosense` |
-| Dart-define flag | `NATIVE_NEUROSENSE` |
-| Shell mode | `NmtkShellMode.instrument` (cyan) |
+| Item                    | Value                                 |
+| ----------------------- | ------------------------------------- |
+| Source screens          | `Neurosense/frontend/lib/screens/`  |
+| Feature package dir     | `nmtk/packages/neurosense_feature/` |
+| Package name            | `neurosense_feature`                |
+| GoRouter path           | `/module/neurosense`                |
+| Top-level screen export | `NeurosenseShell`                   |
+| API base path prefix    | `/api/neurosense`                   |
+| Dart-define flag        | `NATIVE_NEUROSENSE`                 |
+| Shell mode              | `NmtkShellMode.instrument` (cyan)   |
 
 **WebSocket note**: Neurosense uses `web_socket_channel` for live signal streaming. The `web_socket_channel` package works on both Flutter web and Flutter desktop. No changes needed to WebSocket usage.
 
@@ -1319,16 +1324,16 @@ Read `Neurosense/AGENTS.md` before referencing any Neurosense frontend code.
 
 Read `Neurohub/AGENTS.md` before referencing any Neurohub frontend code.
 
-| Item | Value |
-|---|---|
-| Source screens | `Neurohub/frontend/lib/screens/` |
-| Source view_models | `Neurohub/frontend/lib/view_models/` |
-| Feature package dir | `nmtk/packages/neurohub_feature/` |
-| Package name | `neurohub_feature` |
-| GoRouter path | `/module/neurohub` |
-| Top-level screen export | `NeurohubShell` |
-| API base path prefix | `/api/neurohub` |
-| Dart-define flag | `NATIVE_NEUROHUB` |
+| Item                    | Value                                  |
+| ----------------------- | -------------------------------------- |
+| Source screens          | `Neurohub/frontend/lib/screens/`     |
+| Source view_models      | `Neurohub/frontend/lib/view_models/` |
+| Feature package dir     | `nmtk/packages/neurohub_feature/`    |
+| Package name            | `neurohub_feature`                   |
+| GoRouter path           | `/module/neurohub`                   |
+| Top-level screen export | `NeurohubShell`                      |
+| API base path prefix    | `/api/neurohub`                      |
+| Dart-define flag        | `NATIVE_NEUROHUB`                    |
 
 **Neurohub-specific**: Neurohub is also the likely new home for the unified dashboard (suite health, project overview). After completing Phase 3F, update the nmtk launcher's root route (`/`) to render the Neurohub dashboard screen from `neurohub_feature` instead of (or in addition to) the existing launcher dashboard.
 
@@ -1475,6 +1480,7 @@ git push origin consolidation-phase-3-done
 **Goal**: Extract the four categories of justified separate processes into dedicated worker packages. These workers are started on-demand, not as default services.
 
 Criteria for remaining a worker (from the analysis):
+
 - Hardware-facing drivers that require physical devices
 - Long-running jobs (benchmark runs)
 - Heavy optional compute (MuJoCo)
@@ -1487,12 +1493,14 @@ Criteria for remaining a worker (from the analysis):
 **Justification**: BrainFlow hardware I/O requires a physical EEG/biosignal device. The acquisition loop is real-time and isolated from the main API.
 
 **What moves to worker**:
+
 - Neurosense's `devices` router (hardware enumeration and connection management)
 - Neurosense's `stream` router (real-time data acquisition)
 - Neurosense's `prophesee` router (event-based camera I/O)
 - Neurosense's `pynq` router (PYNQ hardware in neurosense context)
 
 **What stays in suite_api**:
+
 - `presets`, `encoding`, `recording`, `sessions`, `export`, `nir`, `quality` (data processing, not hardware I/O)
 
 #### Step 4A.1 — Create worker package
@@ -1601,13 +1609,13 @@ In `docker-compose.yml`, add:
 
 Follow the same pattern as Phase 4A:
 
-| Item | Value |
-|---|---|
-| Worker dir | `workers/neurobench_runner/` |
-| Worker port | `8003` (existing) |
-| Moved routers | `runner`, `pynq` (hardware execution), `spinnaker2` |
-| Docker profile | `jobs` |
-| Config key | `neurobench_runner_url` |
+| Item           | Value                                                     |
+| -------------- | --------------------------------------------------------- |
+| Worker dir     | `workers/neurobench_runner/`                            |
+| Worker port    | `8003` (existing)                                       |
+| Moved routers  | `runner`, `pynq` (hardware execution), `spinnaker2` |
+| Docker profile | `jobs`                                                  |
+| Config key     | `neurobench_runner_url`                                 |
 
 **Acceptance gate**: `docker compose --profile jobs up neurobench-runner-worker` starts. POST to `/api/neurobench/runner/start` proxies to the worker. GET to `/api/neurobench/results` resolves in suite_api without the worker running.
 
@@ -1621,13 +1629,13 @@ Follow the same pattern as Phase 4A:
 
 **What stays in suite_api**: `analysis`, `deployments`, `estimation`, `export`, `faults`, `quantization`, `spinnaker2`, `targets`
 
-| Item | Value |
-|---|---|
-| Worker dir | `workers/neurochip_hw/` |
-| Worker port | `8002` (existing) |
-| Moved routers | `akida, lava, pynq, serial` |
-| Docker profile | `hardware` |
-| Config key | `neurochip_hw_worker_url` |
+| Item           | Value                         |
+| -------------- | ----------------------------- |
+| Worker dir     | `workers/neurochip_hw/`     |
+| Worker port    | `8002` (existing)           |
+| Moved routers  | `akida, lava, pynq, serial` |
+| Docker profile | `hardware`                  |
+| Config key     | `neurochip_hw_worker_url`   |
 
 **Acceptance gate**: Suite API returns the hardware routers' responses proxied from the worker. On machines without Akida installed, `workers/neurochip_hw/main.py` starts cleanly (hardware routers skipped with logged warning).
 
@@ -1641,13 +1649,13 @@ Follow the same pattern as Phase 4A:
 
 **What stays in suite_api**: Standard CNL parse/validate/generate/simulate (non-physics)
 
-| Item | Value |
-|---|---|
-| Worker dir | `workers/neurocnl_physics/` |
-| Worker port | `8006` (existing physics port) |
-| Moved routers | prosthetic simulation sub-routes that call `mujoco.*` |
-| Docker profile | `physics` |
-| Config key | `neurocnl_physics_worker_url` |
+| Item           | Value                                                   |
+| -------------- | ------------------------------------------------------- |
+| Worker dir     | `workers/neurocnl_physics/`                           |
+| Worker port    | `8006` (existing physics port)                        |
+| Moved routers  | prosthetic simulation sub-routes that call `mujoco.*` |
+| Docker profile | `physics`                                             |
+| Config key     | `neurocnl_physics_worker_url`                         |
 
 **Acceptance gate**: Standard neurocnl routes work without MuJoCo installed. Physics routes return 503 when the worker is not running, not ImportError.
 
@@ -1687,6 +1695,7 @@ All pass.
 ### Step 5.1 — Remove standalone module services from docker-compose.yml
 
 From `docker-compose.yml`, remove the top-level service blocks for:
+
 - `neurocnl`
 - `neurosim`
 - `neurochip`
@@ -1696,6 +1705,7 @@ From `docker-compose.yml`, remove the top-level service blocks for:
 - `neurocnl-physics`
 
 Keep:
+
 - `suite_api`
 - `neurosense-hw-worker` (added Phase 4A, profile: hardware)
 - `neurobench-runner-worker` (added Phase 4B, profile: jobs)
@@ -1721,6 +1731,7 @@ Both exit 0.
 Read `nmtk/AGENTS.md` before editing `modules.json`.
 
 In `nmtk/neuro_toolkit/assets/modules.json`, for each of the six modules:
+
 - Remove `"startStrategy": "uvicorn"` and the corresponding `"uvicornTarget"` field.
 - Change `"startStrategy"` to `"none"` (module is now served by suite_api).
 - Keep all other fields unchanged (id, name, port for legacy references, installPath, hasFrontend, etc.).
@@ -1767,6 +1778,7 @@ Keep `dev-native`, `clean-all`, `bump-version`, `ci`, and `release` targets.
 ### Step 5.4 — Archive per-module web frontend build scripts
 
 Move the following scripts to `scripts/archive/`:
+
 - `scripts/build_module.sh`
 - `scripts/build_all_frontends.sh`
 - `scripts/select_modules.sh`
@@ -1793,13 +1805,13 @@ Remove all per-module `uvicorn` commands from the setup guide. Keep hardware wor
 
 Update the Port Reference Table to:
 
-| Service | Port | Notes |
-|---|---|---|
-| suite_api | 9000 | Always running |
-| neurosense-hw-worker | 8004 | Only with hardware |
+| Service                  | Port | Notes               |
+| ------------------------ | ---- | ------------------- |
+| suite_api                | 9000 | Always running      |
+| neurosense-hw-worker     | 8004 | Only with hardware  |
 | neurobench-runner-worker | 8003 | Only for benchmarks |
-| neurochip-hw-worker | 8002 | Only with hardware |
-| neurocnl-physics-worker | 8006 | Only with MuJoCo |
+| neurochip-hw-worker      | 8002 | Only with hardware  |
+| neurocnl-physics-worker  | 8006 | Only with MuJoCo    |
 
 **Acceptance gate**: `grep -c 'uvicorn' SETUP_GUIDE.md` returns a count equal only to the suite_api and worker start commands (no per-module uvicorn calls remain in standard setup paths).
 
@@ -1867,17 +1879,17 @@ All pass. `fatalCount` is 0.
 
 ## Summary table
 
-| Phase | Parent repo branch | Submodule branches | What changes | ADR actions | OpenBrain capture | Rollback path |
-|---|---|---|---|---|---|---|
-| 0 | `consolidation/phase-0` | none | Test files, JSON snapshots, empty directories | none | Yes (Step 0.6) | Delete added files |
-| 1 | `consolidation/phase-1` | none | New `suite_api/` service, docker-compose addition | Write ADR 0018 | Yes (Step 1.8) | Remove suite_api service block, delete `suite_api/` |
-| 2A | `consolidation/phase-2a-neurocnl` | `neurocnl:consolidation` | Mount neurocnl router, update suite_client | none | — | Revert include_router + suite_client URL |
-| 2B–2E | `consolidation/phase-2{b-e}-{module}` | one per module | Mount module router, update suite_client | none | — | Same pattern |
-| 2F | `consolidation/phase-2f-neurohub` | `Neurohub:consolidation` | Mount Neurohub, lifespan migration | Amend ADR 0009, 0014 | Yes (Phase 2 completion) | Revert include_router + lifespan |
-| 3A–3F | `consolidation/phase-3{a-f}-{module}` | none | Flutter feature packages, GoRouter routes | (see 3F) | — | Remove feature package, revert pubspec + routing |
-| 3F done | — | none | Phase 3 final gate | Write ADR 0019; amend 0010, 0017; supersede nmtk/0004 | Yes (Phase 3 completion) | Revert ADR files |
-| 4A–4D | `consolidation/phase-4-workers` | none | Four worker processes | none | Yes (Phase 4 completion) | Remove worker, restore in-process router |
-| 5 | `consolidation/phase-5-decommission` | none | Remove old services, scripts, compose entries | Amend ADR 0008 | Yes (Step 5.6, final) | Git revert Phase 5 commits |
-| Final | PR: `consolidation → main` | none | Merge to production | — | — | Revert merge |
+| Phase   | Parent repo branch                      | Submodule branches         | What changes                                        | ADR actions                                           | OpenBrain capture        | Rollback path                                         |
+| ------- | --------------------------------------- | -------------------------- | --------------------------------------------------- | ----------------------------------------------------- | ------------------------ | ----------------------------------------------------- |
+| 0       | `consolidation/phase-0`               | none                       | Test files, JSON snapshots, empty directories       | none                                                  | Yes (Step 0.6)           | Delete added files                                    |
+| 1       | `consolidation/phase-1`               | none                       | New `suite_api/` service, docker-compose addition | Write ADR 0018                                        | Yes (Step 1.8)           | Remove suite_api service block, delete `suite_api/` |
+| 2A      | `consolidation/phase-2a-neurocnl`     | `neurocnl:consolidation` | Mount neurocnl router, update suite_client          | none                                                  | —                       | Revert include_router + suite_client URL              |
+| 2B–2E  | `consolidation/phase-2{b-e}-{module}` | one per module             | Mount module router, update suite_client            | none                                                  | —                       | Same pattern                                          |
+| 2F      | `consolidation/phase-2f-neurohub`     | `Neurohub:consolidation` | Mount Neurohub, lifespan migration                  | Amend ADR 0009, 0014                                  | Yes (Phase 2 completion) | Revert include_router + lifespan                      |
+| 3A–3F  | `consolidation/phase-3{a-f}-{module}` | none                       | Flutter feature packages, GoRouter routes           | (see 3F)                                              | —                       | Remove feature package, revert pubspec + routing      |
+| 3F done | —                                      | none                       | Phase 3 final gate                                  | Write ADR 0019; amend 0010, 0017; supersede nmtk/0004 | Yes (Phase 3 completion) | Revert ADR files                                      |
+| 4A–4D  | `consolidation/phase-4-workers`       | none                       | Four worker processes                               | none                                                  | Yes (Phase 4 completion) | Remove worker, restore in-process router              |
+| 5       | `consolidation/phase-5-decommission`  | none                       | Remove old services, scripts, compose entries       | Amend ADR 0008                                        | Yes (Step 5.6, final)    | Git revert Phase 5 commits                            |
+| Final   | PR:`consolidation → main`            | none                       | Merge to production                                 | —                                                    | —                       | Revert merge                                          |
 
 Each phase boundary is a stable, deployable state. Never start a phase until all prior acceptance gates pass. Never merge `consolidation → main` without human review — the auto-merge CI workflow will block it correctly.
