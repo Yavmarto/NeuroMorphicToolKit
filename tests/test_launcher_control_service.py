@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
+import nmtk.launcher_control.provisioning_helpers as provisioning_helpers
 import nmtk.launcher_control.server as launcher_server
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -661,6 +662,62 @@ class LauncherControlServiceTest(unittest.TestCase):
             "/home/xilinx/.local/share/neurochip-pynq-agent",
         )
 
+    def test_pynq_board_defaults_can_come_from_neurochip_manifest_contract(self) -> None:
+        manifest_path = self.repo_root / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest.append(
+            {
+                "id": "Neurochip",
+                "name": "NeuroChip",
+                "description": "Hardware runtime",
+                "installPath": "Neurochip",
+                "launcherRuntime": {
+                    "pynq": {
+                        "runtimePort": 9102,
+                        "sshPort": 2222,
+                        "defaultUsername": "operator",
+                        "defaultState": "reachable",
+                        "defaultAuthMode": "ssh_key",
+                        "legacyInstallRoot": "/opt/legacy-agent",
+                        "installRootTemplate": "/srv/pynq/{username}",
+                        "agentVenvDirName": "agent-env",
+                        "runtimeVenvDirName": "runtime-env",
+                        "overlayDirName": "bitfiles",
+                        "serviceName": "custom-pynq-service",
+                        "agentExecutableName": "custom-pynq-agent",
+                        "installStatusFilename": "status.json",
+                        "runtimeLogFilename": "agent.log",
+                    }
+                },
+            }
+        )
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        self.state.shutdown()
+        self.state = launcher_server.LauncherControlState(
+            remote_version_resolver=self._resolve_remote_version
+        )
+
+        created = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+            }
+        )
+
+        self.assertEqual(created["sshPort"], 2222)
+        self.assertEqual(created["username"], "operator")
+        self.assertEqual(created["authMode"], "ssh_key")
+        self.assertEqual(created["state"], "reachable")
+        self.assertEqual(created["runtimeApiUrl"], "http://192.168.1.50:9102")
+        self.assertEqual(created["remoteInstallRoot"], "/srv/pynq/operator")
+        self.assertEqual(created["remoteVenvPath"], "/srv/pynq/operator/agent-env")
+        self.assertEqual(created["remotePynqVenvPath"], "/srv/pynq/operator/runtime-env")
+        self.assertEqual(created["remoteOverlayDir"], "/srv/pynq/operator/bitfiles")
+        self.assertEqual(created["remoteInstallStatusPath"], "/srv/pynq/operator/status.json")
+        self.assertEqual(created["remoteRuntimeLogPath"], "/srv/pynq/operator/agent.log")
+        self.assertEqual(created["remoteServiceName"], "custom-pynq-service")
+        self.assertEqual(created["agentExecutableName"], "custom-pynq-agent")
+
     def test_akida_host_round_trip_updates_settings_file(self) -> None:
         created = self.state.create_akida_host(
             {
@@ -711,6 +768,62 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(settings["selectedAkidaHostId"], created["id"])
         self.assertEqual(settings["akidaHosts"][0]["hostOs"], "linux")
         self.assertEqual(settings["akidaHosts"][0]["pythonVersion"], "3.11.8")
+
+    def test_akida_host_defaults_can_come_from_neurochip_manifest_contract(self) -> None:
+        manifest_path = self.repo_root / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest.append(
+            {
+                "id": "Neurochip",
+                "name": "NeuroChip",
+                "description": "Hardware runtime",
+                "installPath": "Neurochip",
+                "launcherRuntime": {
+                    "akida": {
+                        "runtimePort": 9102,
+                        "controlPort": 9190,
+                        "sshPort": 2200,
+                        "defaultState": "pending",
+                        "defaultAuthMode": "ssh_key",
+                        "installRoot": "/srv/akida-host",
+                        "serviceUser": "runtime-user",
+                        "venvDirName": "akida-venv",
+                        "runtimeServiceName": "akida-runtime",
+                        "controlServiceName": "akida-control",
+                        "tokenRelativePath": "secrets/token.txt",
+                        "installStatusRelativePath": "state/install.json",
+                    }
+                },
+            }
+        )
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        self.state.shutdown()
+        self.state = launcher_server.LauncherControlState(
+            remote_version_resolver=self._resolve_remote_version
+        )
+
+        created = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "akida-box.local",
+            }
+        )
+
+        self.assertEqual(created["port"], 9102)
+        self.assertEqual(created["controlPort"], 9190)
+        self.assertEqual(created["sshPort"], 2200)
+        self.assertEqual(created["authMode"], "ssh_key")
+        self.assertEqual(created["state"], "pending")
+        self.assertEqual(created["baseUrl"], "http://akida-box.local:9102")
+        self.assertEqual(created["runtimeApiUrl"], "http://akida-box.local:9102")
+        self.assertEqual(created["controlApiUrl"], "http://akida-box.local:9190")
+        self.assertEqual(created["remoteInstallRoot"], "/srv/akida-host")
+        self.assertEqual(created["remoteVenvPath"], "/srv/akida-host/akida-venv")
+        self.assertEqual(created["serviceUser"], "runtime-user")
+        self.assertEqual(created["runtimeServiceName"], "akida-runtime")
+        self.assertEqual(created["controlServiceName"], "akida-control")
+        self.assertEqual(created["tokenPath"], "/srv/akida-host/secrets/token.txt")
+        self.assertEqual(created["installStatusPath"], "/srv/akida-host/state/install.json")
 
     def test_akida_host_update_delete_and_selection_round_trip(self) -> None:
         primary = self.state.create_akida_host(
@@ -1156,6 +1269,82 @@ class LauncherControlServiceTest(unittest.TestCase):
             launcher_server.PREFLIGHT_FAILED,
         )
         self.assertIn("remote verify exploded", result["preflight"]["preflight_message"])
+
+    def test_akida_host_preflight_fallback_logs_single_high_level_message(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+                "controlApiUrl": "http://akida-box.local:8090",
+            }
+        )
+
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(
+                self.state,
+                "_akida_control_json_request",
+                side_effect=RuntimeError("Control request failed for GET http://akida-box.local:8090/api/remote-akida/doctor: offline"),
+            ),
+            mock.patch.object(
+                self.state,
+                "_akida_json_request",
+                return_value={
+                    "sdk_available": False,
+                    "sdk_status": "sdk_unavailable",
+                    "sdk_issues": ["sdk_not_available"],
+                    "sdk_issue_detail": "BrainChip SDK missing on remote host",
+                    "runtime_target": "local_sdk",
+                    "environment_checks": {
+                        "host_supported": False,
+                        "python_supported": True,
+                        "tensorflow_available": False,
+                        "cnn2snn_available": False,
+                        "akida_models_available": False,
+                        "recommended_runtime": "local_sdk",
+                    },
+                },
+            ),
+            mock.patch.object(sys, "stderr", stderr),
+        ):
+            self.state.fetch_akida_host_preflight(host["id"])
+
+        log_output = stderr.getvalue()
+        self.assertIn("remote control API unavailable during preflight", log_output)
+        self.assertNotIn("control request failed:", log_output)
+
+    def test_akida_host_status_fallback_logs_single_high_level_message(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+                "controlApiUrl": "http://akida-box.local:8090",
+                "lastPreflightStatus": launcher_server.PREFLIGHT_OK,
+            }
+        )
+
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(
+                self.state,
+                "_akida_control_json_request",
+                side_effect=RuntimeError(
+                    "Control request failed for GET http://akida-box.local:8090/api/remote-akida/doctor: offline"
+                ),
+            ),
+            mock.patch.object(
+                self.state,
+                "_akida_json_request",
+                return_value={"state": "mapped", "device_info": "AKD1000"},
+            ),
+            mock.patch.object(sys, "stderr", stderr),
+        ):
+            result = self.state.fetch_akida_host_status(host["id"])
+
+        self.assertEqual(result["host"]["state"], "ready")
+        log_output = stderr.getvalue()
+        self.assertIn("remote control API unavailable during status poll", log_output)
+        self.assertNotIn("control request failed:", log_output)
 
     def test_akida_host_status_marks_mapped_host_ready(self) -> None:
         host = self.state.create_akida_host(
@@ -1691,6 +1880,11 @@ class LauncherControlServiceTest(unittest.TestCase):
         staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
         _stage_overlay_package(staging_dir)
 
+        emissions: list[tuple[str, bool]] = []
+
+        def record_emit(_board: Any, message: str, *, stderr: bool = False) -> None:
+            emissions.append((message, stderr))
+
         with (
             mock.patch.object(self.state, "_run_ssh"),
             mock.patch.object(self.state, "_run_scp"),
@@ -1709,6 +1903,7 @@ class LauncherControlServiceTest(unittest.TestCase):
                 "fetch_pynq_board_preflight",
                 side_effect=RuntimeError("connection refused"),
             ),
+            mock.patch.object(self.state, "_emit_pynq_terminal_log", side_effect=record_emit),
         ):
             result = self.state.install_pynq_overlay_assets(board["id"])
 
@@ -1720,6 +1915,14 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
         self.assertIn("overlayRestartWarning", result)
         self.assertIn("agent did not become healthy", result["overlayRestartWarning"])
+        duplicate_refresh_messages = [
+            msg for msg, _stderr in emissions if "readiness refresh after overlay upload did not complete" in msg
+        ]
+        self.assertEqual(
+            duplicate_refresh_messages,
+            [],
+            "restart failure should remain the single summary line for this recovery path",
+        )
 
     def test_install_pynq_overlay_assets_preserves_explicit_overlay_missing_preflight(self) -> None:
         board = self.state.create_pynq_board(
@@ -1792,6 +1995,342 @@ class LauncherControlServiceTest(unittest.TestCase):
 
         self.assertEqual(result["board"]["state"], "preflight_failed")
         self.assertNotIn("overlayRestartWarning", result)
+
+    def test_inspect_local_pynq_overlay_package_validates_manifest_without_importing_neurochip(
+        self,
+    ) -> None:
+        staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        _stage_overlay_package(staging_dir)
+        manifest_path = staging_dir / "overlay_manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["weight_layout"]["stride_bytes"] = 8
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+        status = self.state._inspect_local_pynq_overlay_package()
+
+        self.assertFalse(status["ready"])
+        self.assertFalse(status["manifestValid"])
+        self.assertIn(
+            "weight_layout.stride_bytes must match overlay-v1 word-MMIO stride",
+            "\n".join(status["issues"]),
+        )
+
+    def test_build_remote_pynq_user_space_launch_command_is_launcher_owned(
+        self,
+    ) -> None:
+        command = self.state._build_remote_pynq_user_space_launch_command(
+            agent_venv_path="/opt/agent",
+            pynq_venv_path="/opt/pynq",
+            install_status_path="/tmp/install-status.json",
+            overlay_dir="/srv/overlay",
+            runtime_log_path="/tmp/runtime.log",
+            agent_executable_name="custom-agent",
+        )
+
+        self.assertIn("NEUROCHIP_PYNQ_OVERLAY_DIR=/srv/overlay", command)
+        self.assertIn("/tmp/runtime.log", command)
+        self.assertNotIn("Neurochip/neurochip/provisioning", command)
+
+    def test_build_remote_pynq_user_space_launch_command_does_not_depend_on_neurochip_files(
+        self,
+    ) -> None:
+        original_exists = Path.exists
+
+        def fake_exists(path: Path) -> bool:
+            if "Neurochip/neurochip/provisioning" in str(path):
+                return False
+            return original_exists(path)
+
+        with mock.patch.object(Path, "exists", autospec=True, side_effect=fake_exists):
+            command = self.state._build_remote_pynq_user_space_launch_command(
+                agent_venv_path="/opt/agent",
+                pynq_venv_path="/opt/pynq",
+                install_status_path="/tmp/install-status.json",
+                overlay_dir="/srv/overlay",
+                runtime_log_path="/tmp/runtime.log",
+                agent_executable_name="custom-agent",
+            )
+
+        self.assertIn("NEUROCHIP_PYNQ_OVERLAY_DIR=/srv/overlay", command)
+
+    def test_build_local_pynq_bundle_is_launcher_owned(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+                "overlayVersion": "2026.04",
+            }
+        )
+        bundle_dir = self.repo_root / "tmp-pynq-bundle"
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+        wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-test.whl"
+        wheel_path.parent.mkdir(parents=True, exist_ok=True)
+        wheel_path.write_text("wheel", encoding="utf-8")
+
+        with mock.patch.object(
+            provisioning_helpers,
+            "ensure_agent_wheel",
+            return_value=wheel_path,
+        ):
+            result = self.state._build_local_pynq_bundle(board, bundle_dir)
+
+        manifest = json.loads(
+            (bundle_dir / "bundle-manifest.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(manifest["overlay"]["overlayVersion"], "2026.04")
+        self.assertEqual(result["wheelName"], "neurochip-test.whl")
+        self.assertTrue((bundle_dir / "install-pynq-agent.sh").exists())
+
+    def test_build_local_pynq_bundle_does_not_depend_on_neurochip_provisioning_tree(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+                "overlayVersion": "2026.04",
+            }
+        )
+        bundle_dir = self.repo_root / "tmp-pynq-bundle"
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+        wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-test.whl"
+        wheel_path.parent.mkdir(parents=True, exist_ok=True)
+        wheel_path.write_text("wheel", encoding="utf-8")
+        original_exists = Path.exists
+
+        def fake_exists(path: Path) -> bool:
+            if "Neurochip/neurochip/provisioning" in str(path):
+                return False
+            return original_exists(path)
+
+        with (
+            mock.patch.object(
+                provisioning_helpers,
+                "ensure_agent_wheel",
+                return_value=wheel_path,
+            ),
+            mock.patch.object(Path, "exists", autospec=True, side_effect=fake_exists),
+        ):
+            result = self.state._build_local_pynq_bundle(board, bundle_dir)
+
+        self.assertEqual(result["wheelName"], "neurochip-test.whl")
+
+    def test_build_local_akida_bundle_is_launcher_owned(
+        self,
+    ) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+        bundle_dir = self.repo_root / "tmp-akida-bundle"
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+        wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-test.whl"
+        wheel_path.parent.mkdir(parents=True, exist_ok=True)
+        wheel_path.write_text("wheel", encoding="utf-8")
+
+        with (
+            mock.patch.object(
+                provisioning_helpers,
+                "ensure_agent_wheel",
+                return_value=wheel_path,
+            ),
+            mock.patch.object(
+                self.state,
+                "_get_module",
+                return_value={
+                    "akidaRuntime": {
+                        "requiredPackages": [
+                            "tensorflow==2.19.*",
+                            "akida==2.19.1",
+                            "cnn2snn==2.19.1",
+                            "akida-models==1.13.1",
+                        ]
+                    }
+                },
+            ),
+        ):
+            result = self.state._build_local_akida_bundle(host, bundle_dir)
+
+        self.assertEqual(
+            result["requiredPackages"],
+            [
+                "tensorflow==2.19.*",
+                "akida==2.19.1",
+                "cnn2snn==2.19.1",
+                "akida-models==1.13.1",
+            ],
+        )
+        # Control port should come from the typed contract, not a raw constant.
+        self.assertEqual(
+            result["controlPort"],
+            launcher_server.AkidaLauncherRuntimeContract().control_port,
+        )
+        self.assertIn(
+            "tensorflow==2.19.*",
+            (bundle_dir / "bundle-manifest.json").read_text(encoding="utf-8"),
+        )
+        self.assertTrue((bundle_dir / "install-akida-host.sh").exists())
+        self.assertTrue((bundle_dir / "wheels" / "neurochip-test.whl").exists())
+
+    def test_build_local_akida_bundle_does_not_depend_on_neurochip_provisioning_tree(
+        self,
+    ) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+        bundle_dir = self.repo_root / "tmp-akida-bundle"
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+        wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-test.whl"
+        wheel_path.parent.mkdir(parents=True, exist_ok=True)
+        wheel_path.write_text("wheel", encoding="utf-8")
+        original_exists = Path.exists
+
+        def fake_exists(path: Path) -> bool:
+            if "Neurochip/neurochip/provisioning" in str(path):
+                return False
+            return original_exists(path)
+
+        with (
+            mock.patch.object(
+                provisioning_helpers,
+                "ensure_agent_wheel",
+                return_value=wheel_path,
+            ),
+            mock.patch.object(
+                self.state,
+                "_get_module",
+                return_value={
+                    "akidaRuntime": {
+                        "requiredPackages": [
+                            "tensorflow==2.19.*",
+                            "akida==2.19.1",
+                            "cnn2snn==2.19.1",
+                            "akida-models==1.13.1",
+                        ]
+                    }
+                },
+            ),
+            mock.patch.object(Path, "exists", autospec=True, side_effect=fake_exists),
+        ):
+            result = self.state._build_local_akida_bundle(host, bundle_dir)
+
+        self.assertEqual(result["requiredPackages"][0], "tensorflow==2.19.*")
+        self.assertTrue((bundle_dir / "wheels" / "neurochip-test.whl").exists())
+
+    def test_pynq_ssh_invocation_uses_contract_ssh_port_as_fallback(self) -> None:
+        """SSH command uses the manifest-owned pynq.sshPort when none is stored."""
+        manifest_path = (
+            self.repo_root / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+        )
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest.append(
+            {
+                "id": "Neurochip",
+                "name": "NeuroChip",
+                "installPath": "Neurochip",
+                "launcherRuntime": {
+                    "pynq": {"sshPort": 2300},
+                },
+            }
+        )
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        # Board dict with no sshPort key — simulates absent or pre-normalization state.
+        board = {"authMode": "ssh_key", "sshKeyPath": "/tmp/fake-pynq-key"}
+        command, _env, _cleanup = self.state._prepare_ssh_invocation(board)
+
+        # SSH non-copy-mode uses "-p" followed by the port argument.
+        port_index = command.index("-p") + 1
+        self.assertEqual(command[port_index], "2300")
+
+    def test_akida_ssh_invocation_uses_contract_ssh_port_as_fallback(self) -> None:
+        """SSH command uses the manifest-owned akida.sshPort when none is stored."""
+        manifest_path = (
+            self.repo_root / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+        )
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest.append(
+            {
+                "id": "Neurochip",
+                "name": "NeuroChip",
+                "installPath": "Neurochip",
+                "launcherRuntime": {
+                    "akida": {"sshPort": 2400},
+                },
+            }
+        )
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        host = {"authMode": "ssh_key", "sshKeyPath": "/tmp/fake-akida-key"}
+        command, _env, _cleanup = self.state._prepare_akida_ssh_invocation(host)
+
+        port_index = command.index("-p") + 1
+        self.assertEqual(command[port_index], "2400")
+
+    def test_build_local_akida_bundle_uses_contract_ports_as_fallback(self) -> None:
+        """Bundle assembly uses manifest-owned akida runtime/control ports when absent."""
+        manifest_path = (
+            self.repo_root / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+        )
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest.append(
+            {
+                "id": "Neurochip",
+                "name": "NeuroChip",
+                "installPath": "Neurochip",
+                "launcherRuntime": {
+                    "akida": {"runtimePort": 9200, "controlPort": 9290},
+                },
+            }
+        )
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        # Host dict without port/controlPort — forces the contract fallback path.
+        host = {
+            "id": "test-akida",
+            "remoteInstallRoot": "/opt/neurochip-akida-host",
+            "serviceUser": "neurochip",
+            "remoteVenvPath": "/opt/neurochip-akida-host/venv",
+            "runtimeServiceName": "neurochip",
+            "controlServiceName": "neurochip-akida-control",
+            "tokenPath": "/opt/neurochip-akida-host/credentials/api-token",
+            "installStatusPath": "/opt/neurochip-akida-host/install-status.json",
+        }
+        bundle_dir = self.repo_root / "tmp-contract-akida-bundle"
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+        wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-contract-test.whl"
+        wheel_path.parent.mkdir(parents=True, exist_ok=True)
+        wheel_path.write_text("wheel", encoding="utf-8")
+
+        with (
+            mock.patch.object(
+                provisioning_helpers,
+                "ensure_agent_wheel",
+                return_value=wheel_path,
+            ),
+            mock.patch.object(
+                self.state,
+                "_get_module",
+                return_value={
+                    "akidaRuntime": {
+                        "requiredPackages": ["akida==2.19.1"],
+                    }
+                },
+            ),
+        ):
+            result = self.state._build_local_akida_bundle(host, bundle_dir)
+
+        self.assertEqual(result["runtimePort"], 9200)
+        self.assertEqual(result["controlPort"], 9290)
 
     def test_resolve_pynq_agent_health_timeout_respects_env_and_bounds(self) -> None:
         cases = {
