@@ -13,13 +13,17 @@ from suite_api.config import settings
 
 router = APIRouter()
 
+# Probe suite_api's own in-process domain health endpoints.
+# After consolidation the standalone module services no longer exist;
+# all domains run inside suite_api itself.
+_SELF = f"http://localhost:{settings.suite_api_port}"
 MODULE_URLS: dict[str, str] = {
-    "neurocnl":   f"{settings.neurocnl_url}/health",
-    "neurosim":   f"{settings.neurosim_url}/health",
-    "neurochip":  f"{settings.neurochip_url}/health",
-    "neurobench": f"{settings.neurobench_url}/health",
-    "neurosense": f"{settings.neurosense_url}/health",
-    "neurohub":   f"{settings.neurohub_url}/api/neurohub/health",
+    "neurocnl":   f"{_SELF}/api/neurocnl/health",
+    "neurosim":   f"{_SELF}/api/neurosim/health",
+    "neurochip":  f"{_SELF}/api/neurochip/health",
+    "neurobench": f"{_SELF}/api/neurobench/health",
+    "neurosense": f"{_SELF}/api/neurosense/health",
+    "neurohub":   f"{_SELF}/api/neurohub/health",
 }
 
 

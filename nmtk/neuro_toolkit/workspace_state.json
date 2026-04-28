@@ -1,10 +1,10 @@
 {
-  "focusedModuleId": "neurocnl",
+  "focusedModuleId": "Neurosim",
   "sessions": [
     {
       "deepLink": null,
       "moduleId": "neurocnl",
-      "readinessState": "warming_up",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     },

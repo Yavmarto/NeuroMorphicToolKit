@@ -118,4 +118,5 @@ async def proxy_neurocnl_prosthetic_simulate(request: Request) -> Response:
     return await proxy_to_worker(
         request,
         settings.neurocnl_physics_worker_url,
+        profile_hint="physics",
     )

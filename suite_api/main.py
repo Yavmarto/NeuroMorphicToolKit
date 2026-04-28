@@ -10,6 +10,7 @@ from suite_api.config import settings
 from suite_api.middleware import attach_middleware
 from suite_api.routers import health
 from suite_api.domains.neurohub.lifespan import neurohub_startup, neurohub_shutdown
+from suite_api.domains.neurocnl.lifespan import neurocnl_startup, neurocnl_shutdown
 
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -18,7 +19,9 @@ from pathlib import Path
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await neurohub_startup()
+    await neurocnl_startup(app)
     yield
+    await neurocnl_shutdown()
     await neurohub_shutdown()
 
 
