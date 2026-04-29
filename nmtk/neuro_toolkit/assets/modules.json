@@ -144,7 +144,7 @@
   {
     "id": "Neurohub",
     "name": "NeuroHub",
-    "description": "Suite dashboard and project orchestrator",
+    "description": "Project registry and workflow metadata",
     "icon": "hub",
     "port": 9000,
     "version": "1.0.0",

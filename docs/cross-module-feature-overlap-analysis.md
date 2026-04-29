@@ -248,12 +248,12 @@ This is the biggest cross-module boundary problem.
 - health polling
 - launcher shell behavior
 
-`Neurohub` is inconsistent:
+`Neurohub` was inconsistent before the 2026-04-29 consolidation pass:
 
-- launcher manifest describes it as **suite dashboard and project orchestrator**
-- `Neurohub/AGENTS.md` describes it as **orchestrator and registry**
-- `Neurohub/README.md` and `Neurohub/neurohub_spec.md` describe it as **community registry only**, explicitly saying orchestration belongs to `NeuroDash`
-- actual code implements projects, workflows, assets, dashboard, and suite client behavior
+- launcher manifest described it as **suite dashboard and project orchestrator**
+- `Neurohub/AGENTS.md` described it as **orchestrator and registry**
+- `Neurohub/README.md` and `Neurohub/neurohub_spec.md` described it as a registry and metadata layer
+- actual code implemented projects, workflows, assets, dashboard, and suite client behavior
 
 **Why this must be resolved**
 
@@ -269,17 +269,12 @@ That ambiguity encourages duplicated project/workflow/orchestration behavior acr
 
 Centralize runtime/module lifecycle orchestration in `nmtk`.
 
-Then choose one of these paths for `Neurohub`:
-
-1. **Registry-first path**: narrow `Neurohub` to artifact registry and remove/rebrand suite orchestration/project behavior.
-2. **Project-hub path**: keep projects/workflows/assets, but stop calling it a pure registry and update manifest/docs accordingly.
-
-Given the current suite layout, the cleaner choice is:
+The resolved direction is:
 
 - `nmtk` = launcher/control plane
-- `Neurohub` = registry/distribution layer
+- `Neurohub` = registry plus project/workflow metadata layer
 
-If project/workflow collaboration is still required, it should either be renamed clearly or split out rather than left ambiguous.
+Project and workflow collaboration can remain in NeuroHub as metadata views, but runtime control must stay in `nmtk`.
 
 ### 7. `nmtk_ui_core` shared UI overlap
 
@@ -323,10 +318,10 @@ It should never invent a second registry or incompatible command model.
 
 | Source | What it says |
 |---|---|
-| `nmtk/neuro_toolkit/assets/modules.json` | Neurohub is the suite dashboard and project orchestrator |
-| `Neurohub/AGENTS.md` | Neurohub is an orchestrator and registry |
-| `Neurohub/README.md` | Neurohub is a community registry; orchestration belongs to NeuroDash |
-| `Neurohub/neurohub_spec.md` | Neurohub is a registry and explicitly not the project/orchestration layer |
+| `nmtk/neuro_toolkit/assets/modules.json` | NeuroHub is project registry and workflow metadata |
+| `Neurohub/AGENTS.md` | NeuroHub is a registry and metadata layer; `nmtk` owns runtime control |
+| `Neurohub/README.md` | NeuroHub is a community registry plus suite metadata layer |
+| `Neurohub/neurohub_spec.md` | NeuroHub is a registry and explicitly not the suite launcher |
 | `Neurohub/neurohub/app/main.py` | Actual code exposes auth, dashboard, projects, workflows, assets, members, notes, config |
 
 This contradiction must be resolved before long-term overlap cleanup will stick.

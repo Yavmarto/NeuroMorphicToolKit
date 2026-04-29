@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
@@ -41,6 +42,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        NmtkSurfaceCard(
+          title: 'Launcher Settings',
+          subtitle:
+              'Secondary pages use an explicit return action so you can always get back to the workspace.',
+          trailing: NmtkOutlinedButton(
+            onPressed: () => context.go('/workspace'),
+            icon: Icons.arrow_back_rounded,
+            label: 'Back to Workspace',
+          ),
+          child: Text(
+            'Adjust shell behavior, logging, telemetry, and per-module overrides here.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
         // ── Appearance ──────────────────────────────────────────────────────
         NmtkSurfaceCard(
           title: 'Appearance',

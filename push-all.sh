@@ -2,12 +2,18 @@
 # push-all.sh — Stage, commit, and push changes in all submodules and the root repo.
 # Usage: ./push-all.sh [commit message] [branch]
 #   commit message  — quoted message (default: prompt user)
-#   branch          — branch to push to (default: current branch)
+#   branch          — branch to push to (default: current branch, except main)
 
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "dev")
+CURRENT_BRANCH="$(git branch --show-current 2>/dev/null || true)"
+
+if [[ -z "$CURRENT_BRANCH" ]]; then
+  echo "Error: could not determine the current branch. Specify one explicitly."
+  echo "Usage: ./push-all.sh [commit message] [branch]"
+  exit 1
+fi
 
 if [[ $# -eq 0 ]]; then
   echo -n "Enter commit message [chore: update]: "
@@ -17,6 +23,11 @@ if [[ $# -eq 0 ]]; then
 else
   MESSAGE="$1"
   BRANCH="${2:-$CURRENT_BRANCH}"
+fi
+
+if [[ "$BRANCH" == "main" ]]; then
+  echo "Error: push-all.sh will not run on 'main'. Use a non-main branch."
+  exit 1
 fi
 
 push_repo() {

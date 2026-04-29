@@ -183,7 +183,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
       {
         'id': 'Neurohub',
         'name': 'NeuroHub',
-        'description': 'Dashboard',
+        'description': 'Project registry and workflow metadata',
         'icon': 'hub',
         'port': 8005,
         'installPath': 'Neurohub/',

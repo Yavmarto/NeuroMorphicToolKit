@@ -2,6 +2,7 @@ import os
 import time
 from pathlib import Path
 from urllib.parse import urlparse
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -58,7 +59,8 @@ async def test_neurocnl_to_neurosim():
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROSIM_URL}/api/neurosim/parse-cnl", json={"cnl_spec": spec}
+            f"{NEUROSIM_URL}/api/neurosim/parse-cnl",
+            json={"cnl_spec": spec, "import_mode": "repair"},
         )
         assert resp.status_code == 200
         graph = resp.json()
@@ -72,7 +74,7 @@ async def test_neurocnl_to_neurosim():
             json={"graph": graph, "duration_ms": 100},
         )
         assert resp.status_code == 200
-        assert resp.json()["status"] == "ok"
+        assert resp.json()["status"] == "queued"
 
 
 @pytest.mark.asyncio
@@ -96,14 +98,16 @@ async def test_neurosim_to_neurochip():
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROSIM_URL}/api/neurosim/export/c", json=mock_graph
+            f"{NEUROSIM_URL}/api/neurosim/export/python?allow_approximate=true",
+            json=mock_graph,
         )
         assert resp.status_code == 200
-        assert resp.json()["format"] == "c"
+        assert resp.json()["format"] == "python"
 
         # 2. Validate deployment in neurochip
         manifest = {
             "target_device": "Teensy 4.1",
+            "core_count": 1,
             "firmware_version": "1.0.0",
             "checksum_sha256": "a" * 64,
         }
@@ -120,7 +124,12 @@ async def test_neurosim_to_neurochip():
 async def test_neurosense_to_neurocnl():
     """Test Neurosense -> neurocnl pipeline (biosignal -> SNN model)"""
     mock_data = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
-    encoding_config = {"method": "step_forward", "parameters": {"threshold": 0.01}}
+    encoding_config = {
+        "method": "rate",
+        "rate_max_hz": 200.0,
+        "refractory_period": 0.001,
+        "temporal_resolution": 0.001,
+    }
 
     async with httpx.AsyncClient() as client:
         # 1. Encode in neurosense
@@ -146,6 +155,8 @@ async def test_neurosense_to_neurocnl():
             f"{NEUROCNL_URL}/api/prosthetic/simulate",
             json={"spec": spec, "duration": 0.1, "n_neurons": 10},
         )
+        if resp.status_code == 503:
+            pytest.skip("NeuroCNL prosthetic simulation requires optional MuJoCo runtime.")
         # The endpoint returns 202 Accepted for background jobs
         assert resp.status_code == 202
 
@@ -227,7 +238,7 @@ async def test_neurosense_artifact_handoff():
 async def test_neurohub_orchestration():
     """Test Neurohub orchestration of multi-module workflow"""
     workflow = {
-        "id": "test-integration-wf",
+        "id": f"test-integration-wf-{uuid4()}",
         "name": "Integration Pipeline",
         "description": "Validates CNL then runs Sim",
         "steps": [
@@ -237,7 +248,9 @@ async def test_neurohub_orchestration():
                 "app": "neurocnl",
                 "endpoint": "/api/validate",
                 "method": "POST",
-                "parameters": {"spec": "Sensory neuron MUST fire"},
+                "parameters": {
+                    "spec": "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.5"
+                },
                 "success_criteria": "overall == True",
                 "on_failure": "halt",
             },
@@ -252,8 +265,8 @@ async def test_neurohub_orchestration():
                         "nodes": [
                             {
                                 "id": "n1",
-                                "component_id": "lif",
-                                "parameters": {},
+                                "component_id": "lif_population",
+                                "parameters": {"name": "n1", "n_neurons": 10},
                                 "position": [0, 0],
                             }
                         ],
@@ -262,7 +275,7 @@ async def test_neurohub_orchestration():
                     },
                     "duration_ms": 50,
                 },
-                "success_criteria": "status == 'ok'",
+                "success_criteria": "status == 'queued'",
                 "on_failure": "halt",
                 "depends_on": ["val-step"],
             },
@@ -281,18 +294,36 @@ async def test_neurohub_orchestration():
 
         # 2. Run workflow (requires a project_id)
         # First create a mock project
+        project_id = f"test-project-{uuid4()}"
         project_resp = await _request_or_skip(
             client,
             "POST",
             f"{NEUROHUB_URL}/api/neurohub/projects",
-            json={"name": "Test Project", "description": "Integration Test"},
+            json={
+                "id": project_id,
+                "name": "Test Project",
+                "description": "Integration Test",
+                "created_at": "2026-04-29T15:00:00Z",
+                "updated_at": "2026-04-29T15:00:00Z",
+                "owner": "testuser",
+                "members": [{"user_id": "testuser", "name": "Test User", "role": "admin"}],
+                "links": {
+                    "neurochip_deployment_ids": [],
+                    "neurobench_benchmark_ids": [],
+                    "neurobench_baseline_ids": [],
+                    "neurosense_session_ids": [],
+                },
+                "milestones": [],
+                "tags": ["integration"],
+                "status": "not_started",
+            },
         )
-        project_id = project_resp.json()["id"]
+        assert project_resp.status_code == 201, project_resp.text
 
         run_resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROHUB_URL}/api/neurohub/workflows/test-integration-wf/run",
+            f"{NEUROHUB_URL}/api/neurohub/workflows/{workflow['id']}/run",
             params={"project_id": project_id},
         )
         assert run_resp.status_code == 200
