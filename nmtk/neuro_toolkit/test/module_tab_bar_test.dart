@@ -108,7 +108,7 @@ void main() {
       Module(
         id: 'Neurochip',
         name: 'NeuroChip',
-        description: 'Hardware deployment',
+        description: 'Execution, flashing, and diagnostics',
         directory: 'Neurochip',
         hasFrontend: true,
       ),

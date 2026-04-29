@@ -51,7 +51,7 @@ class _MockProcessManager implements ProcessManager {
 
 class _FakeWorkspaceControlApiService extends ControlApiService {
   _FakeWorkspaceControlApiService()
-    : super(baseUri: Uri.parse('http://127.0.0.1:8090'));
+      : super(baseUri: Uri.parse('http://127.0.0.1:8090'));
 
   WorkspaceSnapshot _snapshot = const WorkspaceSnapshot(
     sessions: <WorkspaceSession>[],
@@ -151,7 +151,7 @@ void main() {
       Module(
         id: 'Neurochip',
         name: 'NeuroChip',
-        description: 'Hardware deployment workspace',
+        description: 'Execution, flashing, and diagnostics workspace',
         directory: '/tmp/neurochip',
         port: 8002,
         hasFrontend: true,
@@ -180,8 +180,8 @@ void main() {
     final robot = AppRobot(tester);
     await robot.assertTextExists('NeuroChip');
     await robot.tap('NeuroChip');
-    await robot.assertTextExists('Deploy Status');
-    await robot.tap('Deploy Status');
-    await robot.assertTextExists('Neurochip deploy workspace');
+    await robot.assertTextExists('Execution Status');
+    await robot.tap('Execution Status');
+    await robot.assertTextExists('Neurochip execution workspace');
   });
 }

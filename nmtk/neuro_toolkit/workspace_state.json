@@ -1,5 +1,5 @@
 {
-  "focusedModuleId": "Neurosim",
+  "focusedModuleId": "neurocnl",
   "sessions": [
     {
       "deepLink": null,
@@ -9,7 +9,7 @@
       "surfaceMode": "native"
     },
     {
-      "deepLink": null,
+      "deepLink": "/?import_cnl=Q3JlYXRlIGEgcG9wdWxhdGlvbiAnc2Vuc29yeScgb2YgNTAgTElGIG5ldXJvbnMgd2l0aCB0YXVfcmM9MC4wMiBhbmQgdGF1X3JlZj0wLjAwMi4KQ3JlYXRlIGEgcG9wdWxhdGlvbiAnbW90b3InIG9mIDUwIExJRiBuZXVyb25zIHdpdGggdGF1X3JjPTAuMDIgYW5kIHRhdV9yZWY9MC4wMDIuCkNvbm5lY3QgJ3NlbnNvcnknIHRvICdtb3Rvcicgd2l0aCBhIHN0YXRpYyBzeW5hcHNlIG9mIHdlaWdodCAxIGFuZCBkZWxheSAwLjAwMS4KVGhlIHNlbnNvcnkgbmV1cm9uIE1VU1QgZmlyZSBPTkxZIElGIG1lbWJyYW5lIHBvdGVudGlhbCBleGNlZWRzIDEuMApUaGUgbW90b3IgbmV1cm9uIE1VU1QgZW1pdCBhIHNwaWtlIE9OTFkgSUYgbWVtYnJhbmUgcG90ZW50aWFsIGV4Y2VlZHMgMC44ClRoZSBzZW5zb3J5IG5ldXJvbiBNVVNUIE5PVCBmaXJlIERVUklORyB0aGUgcmVmcmFjdG9yeSBwZXJpb2Qgb2YgMC4wMDIgc2Vjb25kcwpUaGUgbW90b3IgbmV1cm9uIE1VU1QgTk9UIGZpcmUgRFVSSU5HIHRoZSByZWZyYWN0b3J5IHBlcmlvZCBvZiAwLjAwMiBzZWNvbmRzClRoZSBzZW5zb3J5IG5ldXJvbiBtZW1icmFuZSBwb3RlbnRpYWwgTVVTVCBkZWNheSBXSVRIIHRpbWUgY29uc3RhbnQgb2YgMC4wMiBzZWNvbmRzClRoZSBtb3RvciBuZXVyb24gbWVtYnJhbmUgcG90ZW50aWFsIE1VU1QgZGVjYXkgV0lUSCB0aW1lIGNvbnN0YW50IG9mIDAuMDIgc2Vjb25kcwpUaGUgY29ubmVjdGlvbiBmcm9tIHNlbnNvcnkgbmV1cm9uIHRvIG1vdG9yIG5ldXJvbiBNVVNUIGhhdmUgV0lUSCBzeW5hcHRpYyB3ZWlnaHQgb2YgMS4w",
       "moduleId": "Neurosim",
       "readinessState": "ready",
       "restoreState": {},
@@ -25,14 +25,14 @@
     {
       "deepLink": null,
       "moduleId": "Neurobench",
-      "readinessState": "warming_up",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     },
     {
       "deepLink": null,
       "moduleId": "Neurosense",
-      "readinessState": "warming_up",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     },

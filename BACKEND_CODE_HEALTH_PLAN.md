@@ -1,6 +1,32 @@
 # Backend Code Health Plan
 
 Date: 2026-04-26
+Reviewed: 2026-04-28
+
+## Review Status
+
+Status: keep this document, but treat it as partially stale.
+
+What still holds after rechecking on 2026-04-28:
+
+- `neurocnl` `ruff` still reports 4 issues
+- `Neurosim` `ruff` still reports 8 issues
+- `Neurochip` still has 1 `mypy` error
+- `Neurobench/neurobench` still has 63 `mypy` errors
+- `Neuro-Dream-Hand` still has 3 `mypy` errors
+- `Neurohub` still has 35 `mypy` errors
+- `Neurosense` still passes `ruff`
+
+What is stale:
+
+- the verification commands for `neurocnl`, `Neurosim`, and `Neurosense` are no longer dependable as written
+- local environment drift means the old `venv` and `.venv` assumptions do not consistently produce a valid `mypy` run for those modules
+- because of that, the original `mypy` status for `neurocnl`, `Neurosim`, and `Neurosense` should be treated as historical until their module-local Python environments are repaired or standardized
+
+Recommendation:
+
+- keep the remediation priorities in this document
+- update the execution guidance before using this file as an active work tracker
 
 ## Scope
 
@@ -241,13 +267,27 @@ Expected outcome:
 
 ## Verification Commands For Follow-up Work
 
-- `cd neurocnl && uvx ruff check . && venv/bin/python -m mypy .`
-- `cd Neurosim && uvx ruff check . && venv/bin/python -m mypy .`
+Reliable today:
+
 - `cd Neurochip && poetry run ruff check . && poetry run mypy .`
 - `cd Neurobench/neurobench && poetry run ruff check . && poetry run mypy .`
 - `cd Neuro-Dream-Hand && uv run --with ruff ruff check . && uv run --with mypy mypy .`
-- `cd Neurosense && uvx ruff check . && venv/bin/python -m mypy .`
 - `cd Neurohub && uv run ruff check . && uv run mypy .`
+- `cd neurocnl && uvx ruff check .`
+- `cd Neurosim && uvx ruff check .`
+- `cd Neurosense && uvx ruff check .`
+
+Needs environment repair or standardization first:
+
+- `neurocnl` `mypy`
+- `Neurosim` `mypy`
+- `Neurosense` `mypy`
+
+Observed drift on 2026-04-28:
+
+- `venv/bin/python` is no longer a reliable launcher in those three modules
+- `.venv` exists but does not contain a usable project dependency set for `mypy`
+- running `uvx mypy` against those incomplete interpreters produces misleading `BaseModel` and decorator noise
 
 ## Bottom Line
 

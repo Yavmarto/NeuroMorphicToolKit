@@ -224,7 +224,7 @@ void main() {
     final module = Module.fromJson({
       'id': 'Neurochip',
       'name': 'NeuroChip',
-      'description': 'Hardware deployment',
+      'description': 'Execution, flashing, and hardware diagnostics',
       'installPath': 'Neurochip/',
       'akidaRuntime': {
         'supportedPlatforms': ['linux', 'windows'],
@@ -232,6 +232,18 @@ void main() {
         'requiredPackages': ['akida==2.19.1'],
         'docsUrl': 'https://doc.brainchipinc.com/installation.html',
         'localModeFallback': 'simulator_only',
+      },
+      'launcherRuntime': {
+        'pynq': {
+          'defaultUsername': 'xilinx',
+          'serviceName': 'neurochip-pynq-agent',
+          'overlayStagingSubdir': 'overlay_staging/pynq_z2',
+        },
+        'akida': {
+          'installRoot': '/opt/neurochip-akida-host',
+          'runtimeServiceName': 'neurochip',
+          'controlServiceName': 'neurochip-akida-control',
+        },
       },
       'akidaRuntimeState': {
         'status': 'ready',
@@ -242,6 +254,12 @@ void main() {
 
     expect(module.akidaRuntime, isNotNull);
     expect(module.akidaRuntime!.supportedPlatforms, ['linux', 'windows']);
+    expect(module.launcherRuntime, isNotNull);
+    expect(module.launcherRuntime!.pynq?.defaultUsername, 'xilinx');
+    expect(
+      module.launcherRuntime!.akida?.controlServiceName,
+      'neurochip-akida-control',
+    );
     expect(module.akidaRuntimeState?.status, 'ready');
   });
 

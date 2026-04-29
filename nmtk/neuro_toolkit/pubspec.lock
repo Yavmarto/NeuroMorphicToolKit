@@ -477,6 +477,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  nmtk_module_contracts:
+    dependency: "direct main"
+    description:
+      path: "../../nmtk_module_contracts"
+      relative: true
+    source: path
+    version: "0.1.0"
   nmtk_ui_core:
     dependency: "direct main"
     description:

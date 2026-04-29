@@ -42,6 +42,8 @@ dependencies:
     path: ../packages/neurosense_feature
   neurohub_feature:
     path: ../packages/neurohub_feature
+  nmtk_module_contracts:
+    path: ../../nmtk_module_contracts
   package_info_plus: ^10.1.0
   path: ^1.9.0
   path_provider: ^2.1.2

@@ -140,8 +140,8 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-          return '.';
-        });
+      return '.';
+    });
 
     mockRunner = MockProcessRunner();
     processManager = ProcessManager(
@@ -219,7 +219,7 @@ void main() {
       final module = Module(
         id: 'Neurochip',
         name: 'Neurochip',
-        description: 'Hardware deployment',
+        description: 'Execution, flashing, and diagnostics',
         directory: installDir,
         sourcePath: '.',
         akidaRuntime: const AkidaRuntimeConfig(
@@ -276,7 +276,7 @@ void main() {
       final module = Module(
         id: 'Neurochip',
         name: 'Neurochip',
-        description: 'Hardware deployment',
+        description: 'Execution, flashing, and diagnostics',
         directory: installDir,
         sourcePath: '.',
         akidaRuntime: const AkidaRuntimeConfig(
@@ -652,38 +652,35 @@ void main() {
   });
 
   test('health responses preserve 200, 404, and 503 semantics', () async {
-    final scenarios =
-        <
-          ({
-            String id,
-            int statusCode,
-            String body,
-            ModuleStatus expectedStatus,
-            bool expectedHealthy,
-          })
-        >[
-          (
-            id: 'health_200',
-            statusCode: 200,
-            body: '{"status":"ok"}',
-            expectedStatus: ModuleStatus.running,
-            expectedHealthy: true,
-          ),
-          (
-            id: 'health_404',
-            statusCode: 404,
-            body: 'Not Found',
-            expectedStatus: ModuleStatus.running,
-            expectedHealthy: true,
-          ),
-          (
-            id: 'health_503',
-            statusCode: 503,
-            body: '{"status":"degraded"}',
-            expectedStatus: ModuleStatus.degraded,
-            expectedHealthy: false,
-          ),
-        ];
+    final scenarios = <({
+      String id,
+      int statusCode,
+      String body,
+      ModuleStatus expectedStatus,
+      bool expectedHealthy,
+    })>[
+      (
+        id: 'health_200',
+        statusCode: 200,
+        body: '{"status":"ok"}',
+        expectedStatus: ModuleStatus.running,
+        expectedHealthy: true,
+      ),
+      (
+        id: 'health_404',
+        statusCode: 404,
+        body: 'Not Found',
+        expectedStatus: ModuleStatus.running,
+        expectedHealthy: true,
+      ),
+      (
+        id: 'health_503',
+        statusCode: 503,
+        body: '{"status":"degraded"}',
+        expectedStatus: ModuleStatus.degraded,
+        expectedHealthy: false,
+      ),
+    ];
 
     for (final scenario in scenarios) {
       final module = Module(
@@ -738,15 +735,13 @@ void main() {
       await processManager.init(modules);
 
       // Start all
-      final futures = modules
-          .map((m) => processManager.startModule(m))
-          .toList();
+      final futures =
+          modules.map((m) => processManager.startModule(m)).toList();
       await Future.wait(futures);
 
       // Stop all
-      final stopFutures = modules
-          .map((m) => processManager.stopModule(m.id))
-          .toList();
+      final stopFutures =
+          modules.map((m) => processManager.stopModule(m.id)).toList();
       await Future.wait(stopFutures);
 
       // Verify all started

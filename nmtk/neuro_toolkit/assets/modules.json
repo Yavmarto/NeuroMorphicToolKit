@@ -22,7 +22,7 @@
   {
     "id": "Neurosim",
     "name": "NeuroSim",
-    "description": "Visual canvas for assembling, inspecting, and simulating designs from CNL Studio",
+    "description": "Visual editing, topology inspection, and simulation for designs handed off from CNL Studio",
     "icon": "architecture",
     "port": 9000,
     "version": "1.0.0",
@@ -41,7 +41,7 @@
   {
     "id": "Neurochip",
     "name": "NeuroChip",
-    "description": "Hardware deployment and firmware generation",
+    "description": "Execution, flashing, and hardware diagnostics for prepared neuromorphic networks",
     "icon": "memory",
     "port": 9000,
     "version": "1.0.0",
@@ -63,6 +63,39 @@
       ],
       "docsUrl": "https://doc.brainchipinc.com/installation.html",
       "localModeFallback": "simulator_only"
+    },
+    "launcherRuntime": {
+      "pynq": {
+        "runtimePort": 8002,
+        "sshPort": 22,
+        "defaultUsername": "xilinx",
+        "defaultState": "unpaired",
+        "defaultAuthMode": "password",
+        "legacyInstallRoot": "/opt/neurochip-pynq-agent",
+        "installRootTemplate": "/home/{username}/.local/share/neurochip-pynq-agent",
+        "agentVenvDirName": "venv",
+        "runtimeVenvDirName": "pynq-venv",
+        "overlayDirName": "overlays",
+        "serviceName": "neurochip-pynq-agent",
+        "agentExecutableName": "neurochip-pynq-agent",
+        "installStatusFilename": "install-status.json",
+        "runtimeLogFilename": "runtime.log",
+        "overlayStagingSubdir": "overlay_staging/pynq_z2"
+      },
+      "akida": {
+        "runtimePort": 8002,
+        "controlPort": 8090,
+        "sshPort": 22,
+        "defaultState": "unknown",
+        "defaultAuthMode": "password",
+        "installRoot": "/opt/neurochip-akida-host",
+        "serviceUser": "neurochip",
+        "venvDirName": "venv",
+        "runtimeServiceName": "neurochip",
+        "controlServiceName": "neurochip-akida-control",
+        "tokenRelativePath": "credentials/api-token",
+        "installStatusRelativePath": "install-status.json"
+      }
     },
     "hasFrontend": true,
     "frontendStatus": "Yes",
