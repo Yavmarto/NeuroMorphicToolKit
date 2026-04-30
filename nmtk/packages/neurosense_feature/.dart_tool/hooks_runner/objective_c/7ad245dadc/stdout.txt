@@ -1,0 +1,63 @@
+Running `(cd /Users/yoshimartodihardjo/.pub-cache/hosted/pub.dev/objective_c-9.3.0/; TMPDIR=/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/ PATH=/Users/yoshimartodihardjo/.omnara/bin:/Users/yoshimartodihardjo/.nvm/versions/node/v22.18.0/bin:/Users/yoshimartodihardjo/.local/bin:/Users/yoshimartodihardjo/miniconda3/bin:/Users/yoshimartodihardjo/miniconda3/condabin:/Users/yoshimartodihardjo/flutter/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pkg/env/active/bin:/opt/pmk/env/global/bin:/Library/Apple/usr/bin:/Library/TeX/texbin:/Applications/VMware Fusion.app/Contents/Public:/usr/local/share/dotnet:~/.dotnet/tools:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/Users/yoshimartodihardjo/.omnara/bin:/usr/local/bin:/Users/yoshimartodihardjo/.lmstudio/bin:/Users/yoshimartodihardjo/.claude/plugins/cache/claude-plugins-official/swift-lsp/1.0.0/bin:/Users/yoshimartodihardjo/.claude/plugins/cache/understand-anything/understand-anything/1.1.1/bin HOME=/Users/yoshimartodihardjo /Users/yoshimartodihardjo/flutter/bin/cache/dart-sdk/bin/dart --packages=/Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/package_config.json /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/objective_c/7ad245dadc/hook.dill --config=/Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/objective_c/7ad245dadc/input.json )`.
+INFO: 2026-04-27 16:56:47.671775: Running `/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang --version`.
+
+INFO: 2026-04-27 16:56:47.687795: Running `/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang --version`.
+
+INFO: 2026-04-27 16:56:47.704214: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk -target arm64-apple-darwin -mmacos-version-min=13 -c /Users/yoshimartodihardjo/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/include/dart_api_dl.c -fpic -I src -o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/include/dart_api_dl.c.o
+
+INFO: 2026-04-27 16:56:47.704848: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk -target arm64-apple-darwin -mmacos-version-min=13 -c /Users/yoshimartodihardjo/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/objective_c.c -fpic -I src -o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/objective_c.c.o
+
+INFO: 2026-04-27 16:56:47.705157: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk -target arm64-apple-darwin -mmacos-version-min=13 -c /Users/yoshimartodihardjo/.pub-cache/hosted/pub.dev/objective_c-9.3.0/test/util.c -fpic -I src -o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/test/util.c.o
+
+INFO: 2026-04-27 16:56:47.705490: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk -target arm64-apple-darwin -mmacos-version-min=13 -x objective-c -fobjc-arc -c /Users/yoshimartodihardjo/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/observer.m -fpic -I src -o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/observer.m.o
+
+put_stream_adapter.m.o
+INFO: 2026-04-27 16:56:47.705384: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk -target arm64-apple-darwin -mmacos-version-min=13 -x objective-c -fobjc-arc -c /Users/yoshimartodihardjo/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/objective_c.m -fpic -I src -o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/objective_c.m.o
+
+INFO: 2026-04-27 16:56:47.705693: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk -target arm64-apple-darwin -mmacos-version-min=13 -x objective-c -fobjc-arc -c /Users/yoshimartodihardjo/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/protocol.m -fpic -I src -o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/protocol.m.o
+
+
+
+INFO: 2026-04-27 16:56:47.705796: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk -target arm64-apple-darwin -mmacos-version-min=13 -x objective-c -fobjc-arc -c /Users/yoshimartodihardjo/.pub-cache/hosted/pub.dev/objective_c-9.3.0/src/objective_c_bindings_generated.m -fpic -I src -o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/objective_c_bindings_generated.m.o
+
+INFO: 2026-04-27 16:56:47.754948: 
+INFO: 2026-04-27 16:56:47.755126: 
+INFO: 2026-04-27 16:56:47.755175: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/include/dart_api_dl.c.o
+INFO: 2026-04-27 16:56:47.755387: 
+INFO: 2026-04-27 16:56:47.755398: 
+INFO: 2026-04-27 16:56:47.755407: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/objective_c.c.o
+
+INFO: 2026-04-27 16:56:47.774982: 
+INFO: 2026-04-27 16:56:47.775033: 
+INFO: 2026-04-27 16:56:47.775043: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/test/util.c.o
+
+INFO: 2026-04-27 16:56:47.775986: 
+INFO: 2026-04-27 16:56:47.776012: 
+INFO: 2026-04-27 16:56:47.776023: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/observer.m.o
+
+INFO: 2026-04-27 16:56:47.777433: 
+INFO: 2026-04-27 16:56:47.777457: 
+INFO: 2026-04-27 16:56:47.777467: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/protocol.m.o
+
+INFO: 2026-04-27 16:56:47.977626: 
+INFO: 2026-04-27 16:56:47.977665: 
+INFO: 2026-04-27 16:56:47.977676: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/ns_number.m.o
+
+INFO: 2026-04-27 16:56:47.981884: 
+INFO: 2026-04-27 16:56:47.981924: 
+INFO: 2026-04-27 16:56:47.981935: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/objective_c.m.o
+
+INFO: 2026-04-27 16:56:47.984227: 
+INFO: 2026-04-27 16:56:47.984254: 
+INFO: 2026-04-27 16:56:47.984265: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/input_stream_adapter.m.o
+
+INFO: 2026-04-27 16:56:48.006772: 
+INFO: 2026-04-27 16:56:48.006814: 
+INFO: 2026-04-27 16:56:48.006825: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/objective_c_bindings_generated.m.o
+
+INFO: 2026-04-27 16:56:48.007157: Running: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -shared -Wl,-encryptable -undefined dynamic_lookup -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk -target arm64-apple-darwin -mmacos-version-min=13 /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/include/dart_api_dl.c.o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/objective_c.c.o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/test/util.c.o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/input_stream_adapter.m.o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/objective_c.m.o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/observer.m.o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/ns_number.m.o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/protocol.m.o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/obj/src/objective_c_bindings_generated.m.o -o /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/objective_c.dylib
+
+INFO: 2026-04-27 16:56:48.046994: 
+INFO: 2026-04-27 16:56:48.047061: 
+INFO: 2026-04-27 16:56:48.047073: Generated /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/packages/neurosense_feature/.dart_tool/hooks_runner/shared/objective_c/build/7ad245dadc/objective_c.dylib
+
