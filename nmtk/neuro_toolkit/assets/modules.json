@@ -51,6 +51,7 @@
     "installStrategy": "pip",
     "startStrategy": "none",
     "uvicornTarget": "",
+    "showInLauncherNav": false,
     "optionalImports": ["lava.magma.core.run_conditions"],
     "akidaRuntime": {
       "supportedPlatforms": ["linux", "windows"],

@@ -11,7 +11,7 @@
     {
       "deepLink": null,
       "moduleId": "Neurosim",
-      "readinessState": "warming_up",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     },
@@ -25,14 +25,14 @@
     {
       "deepLink": null,
       "moduleId": "Neurobench",
-      "readinessState": "warming_up",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     },
     {
       "deepLink": null,
       "moduleId": "Neurosense",
-      "readinessState": "warming_up",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     },

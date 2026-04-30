@@ -187,7 +187,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   bool _shouldOpenModule(Module module) {
-    if (!module.isEnabled) {
+    if (!module.isEnabled || !module.showInLauncherNav) {
       return false;
     }
     return module.hasFrontend ||

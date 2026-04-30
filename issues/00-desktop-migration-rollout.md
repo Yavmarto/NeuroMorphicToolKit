@@ -1,57 +1,65 @@
 # Desktop Migration Rollout
 
-This backlog splits the desktop migration into a small foundation lane plus module lanes.
+This document tracks the status of the desktop migration across all phases.
 
-## Ordering
+> **Status as of 2026-04-30**: Phases A, B, and C are **complete and archived**.
+> Active work is in the UX overhaul and feature phases (see `docs/execution-order.md`).
 
-1. `issues/01-suite-design-contract-and-module-brief.md`
-2. `issues/02-shell-adapter-contract-and-package-conventions.md`
-3. `nmtk_ui_core/issues/01-shell-tokens-top-bars-and-status-primitives.md`
-4. `issues/03-launcher-workspace-host-and-persistent-sessions.md`
-5. `issues/04-launcher-modules-surface-and-install-start-semantics.md`
+## Completed and Archived
 
-After those gates are stable enough, the module lanes can fan out.
+All issues below have been verified as implemented and moved to their respective
+`issues-archive/` directories.
 
-## Parallel waves
+### Phase A — Foundation ✅
 
-### Phase A: foundation
+| Issue | Archived to |
+|-------|-------------|
+| `issues/01-suite-design-contract-and-module-brief.md` | `issues-archive/` |
+| `issues/02-shell-adapter-contract-and-package-conventions.md` | `issues-archive/` |
+| `nmtk_ui_core/issues/01-shell-tokens-top-bars-and-status-primitives.md` | `nmtk_ui_core/issues-archive/` |
+| `nmtk_ui_core/issues/02-modules-surface-cards-and-utility-panel-patterns.md` | `nmtk_ui_core/issues-archive/` |
+| `issues/03-launcher-workspace-host-and-persistent-sessions.md` | `issues-archive/` |
+| `issues/04-launcher-modules-surface-and-install-start-semantics.md` | `issues-archive/` |
 
-- `F1` Full-workspace local agent: `issues/01-suite-design-contract-and-module-brief.md`
-- `F4` Full-workspace local agent: `issues/02-shell-adapter-contract-and-package-conventions.md`
-- `F2` Full-workspace local agent: `nmtk_ui_core/issues/01-shell-tokens-top-bars-and-status-primitives.md`
-- `F3` Full-workspace local agent: `issues/03-launcher-workspace-host-and-persistent-sessions.md`
-- `F3` Full-workspace local agent: `issues/04-launcher-modules-surface-and-install-start-semantics.md`
-- `C1` Full-workspace local agent: `neurocli/issues/01-cli-contracts-for-shell-actions.md`
+### Phase B — First module lanes ✅
 
-### Phase B: first safe fan-out
+| Issue | Archived to |
+|-------|-------------|
+| `neurocnl/issues/10-*` | `neurocnl/issues-archive/` |
+| `neurocnl/issues/11-*` | `neurocnl/issues-archive/` |
+| `neurocnl/issues/12-*` | `neurocnl/issues-archive/` |
+| `Neurohub/issues/10-*` | `Neurohub/issues-archive/` |
+| `Neurohub/issues/11-*` | `Neurohub/issues-archive/` |
+| `Neurohub/issues/12-*` | `Neurohub/issues-archive/` |
+| `Neurobench/issues/10-*` | `Neurobench/issues-archive/` |
+| `Neurobench/issues/11-*` | `Neurobench/issues-archive/` |
+| `Neurobench/issues/12-*` | `Neurobench/issues-archive/` |
 
-- `M1` `Neurohub`: all `Neurohub/issues/*.md`
-- `M2` `neurocnl`: all `neurocnl/issues/10-*.md`
-- `M3` `Neurobench`: all `Neurobench/issues/10-*.md`
+### Phase C — Interaction-heavy modules ✅
 
-These three lanes can run in parallel once Issues 01-04 and `nmtk_ui_core/issues/01-02` are ready enough.
+| Issue | Archived to |
+|-------|-------------|
+| `Neurosim/issues/10-*` | `Neurosim/issues-archive/` |
+| `Neurosim/issues/11-*` | `Neurosim/issues-archive/` |
+| `Neurosim/issues/12-*` | `Neurosim/issues-archive/` |
+| `Neurosense/issues/10-*` | `Neurosense/issues-archive/` |
+| `Neurosense/issues/11-*` | `Neurosense/issues-archive/` |
+| `Neurosense/issues/12-*` | `Neurosense/issues-archive/` |
 
-### Phase C: interaction-heavy modules
+## Now Active
 
-- `M4` `Neurosim`: all `Neurosim/issues/*.md`
-- `M5` `Neurosense`: all `Neurosense/issues/*.md`
+For current active issues and their execution order, see:
 
-These can run in parallel after the workspace host, restoration hooks, and shell panel patterns are proven in Phase B.
+- [`docs/execution-order.md`](../docs/execution-order.md) — full dependency graph
+- `issues/05-neurohub-reposition-as-sharing-space.md`
+- `issues/06-integrate-hub-sim-bench-in-launcher.md`
+- `nmtk_ui_core/issues/03-*` through `07-*` (UX overhaul batch)
+- `neurocnl/issues/13-*` and `14-*` (NeuroStudio features)
+- `Neurosense/issues/13-*` (relevance decision)
 
-### Phase D: hardware-sensitive modules
+## Phase D — Hardware modules (pending)
 
-- `M6` `Neurochip`: all `Neurochip/issues/10-*.md`
-- `M7` `Neuro-Dream-Hand`: all `Neuro-Dream-Hand/issues/*.md`
+- `Neurochip/issues/10-*.md` — not yet started
+- `Neuro-Dream-Hand/issues/*.md` — not yet started
 
-These can overlap with each other, but they should start after capability reporting, degraded-state UX, and long-running job patterns are already working.
-
-## Independent side lane
-
-- Hardware and runtime validation can proceed in parallel with all UI work as long as it does not depend on unfinished shell widgets.
-- Keep Akida, PYNQ Z2, service diagnostics, and capability reporting in a separate review lane.
-
-## Rule of thumb
-
-- Almost all module migrations can run in parallel.
-- The shared shell contracts cannot.
-- One owner each for design, adapter contracts, shared UI core, and launcher host is required to avoid drift.
+These start after the current UX overhaul batch settles.

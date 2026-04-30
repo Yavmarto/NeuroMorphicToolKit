@@ -320,7 +320,8 @@ void main() {
     expect(moduleProvider.launchedModuleIds, contains('m2'));
     expect(find.text('Waiting for Module 2'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    expect(find.textContaining('take a little longer to warm up'), findsOneWidget);
+    expect(
+        find.textContaining('take a little longer to warm up'), findsOneWidget);
   });
 
   testWidgets('ToolView shows launcher preflight error instead of polling',
@@ -369,6 +370,86 @@ void main() {
     );
     expect(find.text('Retry Start'), findsOneWidget);
     expect(find.textContaining('Checking http'), findsNothing);
+  });
+
+  testWidgets(
+      'ToolView hides launcher-nav-disabled modules and falls back focus',
+      (WidgetTester tester) async {
+    final moduleProvider = _TrackingModuleProvider();
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(
+        initialSnapshot: const WorkspaceSnapshot(
+          sessions: <WorkspaceSession>[
+            WorkspaceSession(
+              moduleId: 'neurocnl',
+              surfaceMode: 'embedded',
+              readinessState: 'warming_up',
+            ),
+            WorkspaceSession(
+              moduleId: 'Neurochip',
+              surfaceMode: 'embedded',
+              readinessState: 'warming_up',
+            ),
+          ],
+          focusedModuleId: 'Neurochip',
+        ),
+      ),
+    );
+    moduleProvider.modules = [
+      Module(
+        id: 'neurocnl',
+        name: 'CNL Studio',
+        description: 'Studio',
+        directory: '/tmp/neurocnl',
+        port: 8000,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+      Module(
+        id: 'Neurochip',
+        name: 'NeuroChip',
+        description: 'Hardware runtime',
+        directory: '/tmp/neurochip',
+        port: 8002,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+        showInLauncherNav: false,
+      ),
+      Module(
+        id: 'Neurobench',
+        name: 'NeuroBench',
+        description: 'Bench',
+        directory: '/tmp/neurobench',
+        port: 8003,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+        ],
+        child: _buildTestShell(const ToolViewScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('CNL Studio'), findsWidgets);
+    expect(find.text('NeuroBench'), findsWidgets);
+    expect(find.text('NeuroChip'), findsNothing);
+    expect(workspaceProvider.focusedModuleId, 'neurocnl');
+    expect(workspaceProvider.sessions.map((session) => session.moduleId), [
+      'neurocnl',
+      'Neurobench',
+    ]);
+    expect(moduleProvider.launchedModuleIds, contains('neurocnl'));
   });
 }
 

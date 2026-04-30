@@ -4971,6 +4971,7 @@ class LauncherControlState:
                 "directory": module["directory"],
                 "port": module.get("port"),
                 "hasFrontend": bool(module.get("hasFrontend", False)),
+                "showInLauncherNav": bool(module.get("showInLauncherNav", True)),
                 "frontendStatus": module.get("frontendStatus", "No"),
                 "requiresMuJoCo": bool(module.get("requiresMuJoCo", False)),
                 "sourcePath": module.get("sourcePath", "."),

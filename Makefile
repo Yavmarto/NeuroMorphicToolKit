@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-native clean-all bump-version ci suite_api_dev
+.PHONY: release help dev dev-a dev-i dev-native clean-all bump-version ci suite_api_dev
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -16,6 +16,8 @@ help:
 	@echo ""
 	@echo "Usage:"
 	@echo "  make dev                      - Run suite_api and the native launcher"
+	@echo "  make dev-a                    - Run suite_api and the launcher on Android"
+	@echo "  make dev-i                    - Run suite_api and the launcher on iOS"
 	@echo "  make dev-native               - Run the native launcher control API and Flutter app"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
@@ -30,6 +32,22 @@ dev:
 	SUITE_API_PID=$$!; \
 	trap 'kill $$SUITE_API_PID 2>/dev/null || true' EXIT INT TERM; \
 	./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
+
+dev-a:
+	@echo "==> Ensuring port 9000 is free..."
+	@lsof -ti:9000 | xargs kill -9 2>/dev/null || true
+	@uvicorn suite_api.main:app --port 9000 --reload & \
+	SUITE_API_PID=$$!; \
+	trap 'kill $$SUITE_API_PID 2>/dev/null || true' EXIT INT TERM; \
+	./scripts/run_dev.sh --flutter-device "android"
+
+dev-i:
+	@echo "==> Ensuring port 9000 is free..."
+	@lsof -ti:9000 | xargs kill -9 2>/dev/null || true
+	@uvicorn suite_api.main:app --port 9000 --reload & \
+	SUITE_API_PID=$$!; \
+	trap 'kill $$SUITE_API_PID 2>/dev/null || true' EXIT INT TERM; \
+	./scripts/run_dev.sh --flutter-device "ios"
 
 dev-native:
 	@chmod +x scripts/run_dev.sh
@@ -60,4 +78,3 @@ bump-version:
 	fi
 	@chmod +x scripts/bump_all.py
 	@python3 scripts/bump_all.py $(VERSION)
-

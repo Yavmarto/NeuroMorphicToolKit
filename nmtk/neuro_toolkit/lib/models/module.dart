@@ -197,8 +197,7 @@ class AkidaLauncherRuntimeConfig {
           json['installRoot'] as String? ?? '/opt/neurochip-akida-host',
       serviceUser: json['serviceUser'] as String? ?? 'neurochip',
       venvDirName: json['venvDirName'] as String? ?? 'venv',
-      runtimeServiceName:
-          json['runtimeServiceName'] as String? ?? 'neurochip',
+      runtimeServiceName: json['runtimeServiceName'] as String? ?? 'neurochip',
       controlServiceName:
           json['controlServiceName'] as String? ?? 'neurochip-akida-control',
       tokenRelativePath:
@@ -262,6 +261,7 @@ class Module {
   final String directory;
   final int? port;
   final bool hasFrontend;
+  final bool showInLauncherNav;
   final String frontendStatus;
   final bool requiresMuJoCo;
   final String sourcePath;
@@ -298,6 +298,7 @@ class Module {
     required this.directory,
     this.port,
     this.hasFrontend = false,
+    this.showInLauncherNav = true,
     this.frontendStatus = 'No',
     this.requiresMuJoCo = false,
     this.sourcePath = '.',
@@ -337,6 +338,7 @@ class Module {
           json['installPath'] as String? ?? json['directory'] as String? ?? '',
       port: json['port'] as int?,
       hasFrontend: json['hasFrontend'] as bool? ?? false,
+      showInLauncherNav: json['showInLauncherNav'] as bool? ?? true,
       frontendStatus: json['frontendStatus'] as String? ?? 'No',
       requiresMuJoCo: json['requiresMuJoCo'] as bool? ?? false,
       sourcePath: json['sourcePath'] as String? ?? '.',
@@ -397,6 +399,7 @@ class Module {
     String? directory,
     int? port,
     bool? hasFrontend,
+    bool? showInLauncherNav,
     String? frontendStatus,
     bool? requiresMuJoCo,
     String? sourcePath,
@@ -433,6 +436,7 @@ class Module {
       directory: directory ?? this.directory,
       port: port ?? this.port,
       hasFrontend: hasFrontend ?? this.hasFrontend,
+      showInLauncherNav: showInLauncherNav ?? this.showInLauncherNav,
       frontendStatus: frontendStatus ?? this.frontendStatus,
       requiresMuJoCo: requiresMuJoCo ?? this.requiresMuJoCo,
       sourcePath: sourcePath ?? this.sourcePath,
@@ -497,6 +501,7 @@ class Module {
         'directory': directory,
         'port': port,
         'hasFrontend': hasFrontend,
+        'showInLauncherNav': showInLauncherNav,
         'frontendStatus': frontendStatus,
         'requiresMuJoCo': requiresMuJoCo,
         'sourcePath': sourcePath,

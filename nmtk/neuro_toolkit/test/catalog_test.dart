@@ -263,6 +263,28 @@ void main() {
     expect(module.akidaRuntimeState?.status, 'ready');
   });
 
+  test('Module.fromJson defaults showInLauncherNav to true and parses false',
+      () {
+    final visibleByDefault = Module.fromJson({
+      'id': 'neurocnl',
+      'name': 'CNL Studio',
+      'description': 'Studio',
+      'installPath': 'neurocnl/',
+      'hasFrontend': true,
+    });
+    final hiddenModule = Module.fromJson({
+      'id': 'Neurochip',
+      'name': 'NeuroChip',
+      'description': 'Hardware runtime',
+      'installPath': 'Neurochip/',
+      'hasFrontend': true,
+      'showInLauncherNav': false,
+    });
+
+    expect(visibleByDefault.showInLauncherNav, isTrue);
+    expect(hiddenModule.showInLauncherNav, isFalse);
+  });
+
   testWidgets('CatalogScreen shows all 7 modules', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1920, 2000);
     tester.view.devicePixelRatio = 1.0;
