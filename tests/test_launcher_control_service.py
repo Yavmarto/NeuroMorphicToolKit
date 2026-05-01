@@ -445,6 +445,54 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
         self.assertIn("OVERLAY_REGISTER_MAP_MISMATCH", payload["runtimeBody"])
 
+    def test_pynq_deploy_http_endpoint_reports_unreachable_runtime_as_bad_gateway(
+        self,
+    ) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+        board = server.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.2.51",
+                "username": "xilinx",
+                "password": "xilinx",
+            }
+        )
+
+        with mock.patch.object(
+            server.state,
+            "_runtime_json_request",
+            side_effect=launcher_server.RuntimeRequestError(
+                (
+                    "Runtime request failed for POST "
+                    "http://192.168.2.51:8002/hardware/pynq/deploy: "
+                    "could not be reached: <urlopen error [Errno 61] Connection refused>"
+                ),
+                kind="unreachable",
+                url="http://192.168.2.51:8002/hardware/pynq/deploy",
+            ),
+        ):
+            request = urllib.request.Request(
+                (
+                    f"http://127.0.0.1:{server.server_address[1]}"
+                    f"/api/launcher/pynq/boards/{board['id']}/deploy"
+                ),
+                data=json.dumps({"weights": [1.0]}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with self.assertRaises(urllib.error.HTTPError) as exc_info:
+                urllib.request.urlopen(request, timeout=5)
+
+        self.assertEqual(exc_info.exception.code, 502)
+        payload = json.loads(exc_info.exception.read().decode("utf-8"))
+        self.assertIn("192.168.2.51:8002", payload["error"])
+        self.assertIn("Connection refused", payload["error"])
+
     def test_missing_environment_normalizes_stale_installed_state(self) -> None:
         state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"
         state_file.write_text(
@@ -734,6 +782,58 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(updated["host"], "gpu-node.internal")
         self.assertEqual(updated["port"], 9443)
         self.assertEqual(updated["baseUrl"], "https://gpu-node.internal:9443")
+
+    def test_akida_host_update_keeps_stored_password_when_omitted(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "akida-box.local",
+                "username": "operator",
+                "authMode": "password",
+                "password": "secret",
+            }
+        )
+
+        updated = self.state.update_akida_host(
+            host["id"],
+            {
+                "username": "operator-updated",
+            },
+        )
+
+        self.assertEqual(updated["username"], "operator-updated")
+        self.assertTrue(updated["hasPassword"])
+        self.assertEqual(
+            self.state._get_akida_host(host["id"])["password"],
+            "secret",
+        )
+
+    def test_akida_host_update_keeps_password_when_blank_and_coerces_ssh_auth(
+        self,
+    ) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "akida-box.local",
+                "username": "operator",
+                "authMode": "none",
+                "password": "secret",
+            }
+        )
+
+        updated = self.state.update_akida_host(
+            host["id"],
+            {
+                "username": "operator",
+                "password": "",
+            },
+        )
+
+        self.assertEqual(updated["authMode"], "password")
+        self.assertTrue(updated["hasPassword"])
+        stored = self.state._get_akida_host(host["id"])
+        self.assertEqual(stored["password"], "secret")
+        self.assertEqual(stored["authMode"], "password")
 
     def test_delete_akida_host_removes_entry_from_settings_file(self) -> None:
         host = self.state.create_akida_host(
@@ -1112,7 +1212,7 @@ class LauncherControlServiceTest(unittest.TestCase):
         run_ssh.assert_called_once()
         self.assertEqual(updated["state"], "reachable")
 
-    def test_run_ssh_password_auth_falls_back_to_askpass_without_sshpass(self) -> None:
+    def test_run_ssh_password_auth_uses_askpass_without_sshpass(self) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
@@ -1123,52 +1223,22 @@ class LauncherControlServiceTest(unittest.TestCase):
                 "password": "secret",
             }
         )
-        observed: dict[str, Any] = {}
+        with mock.patch.object(launcher_server.shutil, "which", return_value=None):
+            command, env, cleanup = self.state._prepare_ssh_invocation(
+                self.state._get_pynq_board(board["id"]),
+            )
 
-        class _FakeStream:
-            def __init__(self, lines: list[str]) -> None:
-                self._lines = [f"{line}\n" for line in lines]
-                self._index = 0
-
-            def readline(self) -> str:
-                if self._index >= len(self._lines):
-                    return ""
-                line = self._lines[self._index]
-                self._index += 1
-                return line
-
-            def close(self) -> None:
-                return None
-
-        class _FakeProcess:
-            def __init__(self, command: list[str], env: dict[str, str]) -> None:
-                self.command = command
-                self.env = env
-                self.stdout = _FakeStream(["Python 3.10.0"])
-                self.stderr = _FakeStream([])
-
-            def wait(self) -> int:
-                return 0
-
-        def _fake_popen(*args: Any, **kwargs: Any) -> _FakeProcess:
-            command = args[0]
-            env = kwargs.get("env")
-            self.assertNotIn("sshpass", command)
-            self.assertIn("PreferredAuthentications=password", command)
-            self.assertIsInstance(env, dict)
-            askpass_path = env["SSH_ASKPASS"]
-            self.assertTrue(Path(askpass_path).exists())
-            self.assertEqual(env["NMTK_PYNQ_PASSWORD"], "secret")
-            observed["askpass_path"] = askpass_path
-            return _FakeProcess(command, env)
-
-        with (
-            mock.patch.object(launcher_server.shutil, "which", return_value=None),
-            mock.patch.object(launcher_server.subprocess, "Popen", side_effect=_fake_popen),
-        ):
-            self.state._run_ssh(self.state._get_pynq_board(board["id"]), "python3 --version")
-
-        self.assertFalse(Path(observed["askpass_path"]).exists())
+        self.assertNotIn("sshpass", command)
+        self.assertIsNotNone(env)
+        assert env is not None
+        self.assertEqual(env["NMTK_PYNQ_PASSWORD"], "secret")
+        self.assertIn("SSH_ASKPASS", env)
+        askpass_path = Path(env["SSH_ASKPASS"])
+        self.assertTrue(askpass_path.exists())
+        self.assertIsNotNone(cleanup)
+        assert cleanup is not None
+        cleanup()
+        self.assertFalse(askpass_path.exists())
 
     def test_run_ssh_ignores_benign_known_host_warning_as_primary_failure_reason(
         self,
@@ -1222,7 +1292,7 @@ class LauncherControlServiceTest(unittest.TestCase):
                     "bash /tmp/install.sh",
                 )
 
-    def test_run_scp_password_auth_falls_back_to_askpass_without_sshpass(self) -> None:
+    def test_run_scp_password_auth_requires_sshpass(self) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
@@ -1235,30 +1305,16 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
         local_file = self.repo_root / "bundle.txt"
         local_file.write_text("bundle", encoding="utf-8")
-        observed: dict[str, Any] = {}
-
-        def _fake_run(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
-            command = args[0]
-            env = kwargs.get("env")
-            self.assertEqual(command[0], "scp")
-            self.assertIn("PreferredAuthentications=password", command)
-            self.assertIsInstance(env, dict)
-            askpass_path = env["SSH_ASKPASS"]
-            self.assertTrue(Path(askpass_path).exists())
-            observed["askpass_path"] = askpass_path
-            return subprocess.CompletedProcess(command, 0, "", "")
-
-        with (
-            mock.patch.object(launcher_server.shutil, "which", return_value=None),
-            mock.patch.object(launcher_server.subprocess, "run", side_effect=_fake_run),
-        ):
-            self.state._run_scp(
-                self.state._get_pynq_board(board["id"]),
-                local_file,
-                "/tmp/bundle.txt",
-            )
-
-        self.assertFalse(Path(observed["askpass_path"]).exists())
+        with mock.patch.object(launcher_server.shutil, "which", return_value=None):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "Password-auth SSH for this PYNQ board requires sshpass on the launcher host",
+            ):
+                self.state._run_scp(
+                    self.state._get_pynq_board(board["id"]),
+                    local_file,
+                    "/tmp/bundle.txt",
+                )
 
     def test_run_ssh_detached_ignores_benign_known_host_warning(self) -> None:
         board = self.state.create_pynq_board(
@@ -2304,7 +2360,13 @@ class LauncherControlServiceTest(unittest.TestCase):
             "tensorflow==2.19.*",
             (bundle_dir / "bundle-manifest.json").read_text(encoding="utf-8"),
         )
-        self.assertTrue((bundle_dir / "install-akida-host.sh").exists())
+        install_script = (bundle_dir / "install-akida-host.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("sudo_available()", install_script)
+        self.assertIn("NMTK_AKIDA_SUDO_PASSWORD", install_script)
+        self.assertIn("sudo_cmd apt-get update", install_script)
+        self.assertNotIn("sudo -n apt-get update", install_script)
         self.assertTrue((bundle_dir / "wheels" / "neurochip-test.whl").exists())
 
     def test_build_local_akida_bundle_does_not_depend_on_neurochip_provisioning_tree(
@@ -2405,6 +2467,66 @@ class LauncherControlServiceTest(unittest.TestCase):
         port_index = command.index("-p") + 1
         self.assertEqual(command[port_index], "2400")
 
+    def test_akida_ssh_password_auth_requires_stored_password(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "192.168.1.60",
+                "username": "operator",
+                "authMode": "password",
+            }
+        )
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "No SSH password is configured for this Akida host",
+        ):
+            self.state._prepare_akida_ssh_invocation(self.state._get_akida_host(host["id"]))
+
+    def test_akida_ssh_requires_supported_credential_mode(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "192.168.1.60",
+                "username": "operator",
+                "authMode": "none",
+            }
+        )
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "Akida host SSH operations require password or SSH-key authentication",
+        ):
+            self.state._prepare_akida_ssh_invocation(self.state._get_akida_host(host["id"]))
+
+    def test_akida_ssh_password_auth_uses_askpass_without_sshpass(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "192.168.1.60",
+                "username": "operator",
+                "authMode": "password",
+                "password": "secret",
+            }
+        )
+
+        with mock.patch.object(launcher_server.shutil, "which", return_value=None):
+            command, env, cleanup = self.state._prepare_akida_ssh_invocation(
+                self.state._get_akida_host(host["id"])
+            )
+
+        self.assertNotIn("sshpass", command)
+        self.assertIsNotNone(env)
+        assert env is not None
+        self.assertEqual(env["NMTK_AKIDA_PASSWORD"], "secret")
+        self.assertIn("SSH_ASKPASS", env)
+        askpass_path = Path(env["SSH_ASKPASS"])
+        self.assertTrue(askpass_path.exists())
+        self.assertIsNotNone(cleanup)
+        assert cleanup is not None
+        cleanup()
+        self.assertFalse(askpass_path.exists())
+
     def test_build_local_akida_bundle_uses_contract_ports_as_fallback(self) -> None:
         """Bundle assembly uses manifest-owned akida runtime/control ports when absent."""
         manifest_path = (
@@ -2460,6 +2582,198 @@ class LauncherControlServiceTest(unittest.TestCase):
 
         self.assertEqual(result["runtimePort"], 9200)
         self.assertEqual(result["controlPort"], 9290)
+
+    def test_apply_preflight_to_akida_host_marks_user_space_install_degraded(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "akida-box.local",
+                "username": "operator",
+            }
+        )
+
+        updated = self.state._apply_preflight_to_akida_host(
+            host["id"],
+            {
+                "preflight_status": launcher_server.PREFLIGHT_OK,
+                "preflight_message": "Akida hardware runtime is ready.",
+                "runtime_target": "hardware",
+                "sdk_status": "deployable",
+            },
+            install_status={"installMode": "user-space"},
+        )
+
+        self.assertEqual(updated["state"], "degraded_optional_capability")
+        self.assertIn("Runtime is installed in user space.", updated["lastPreflightMessage"])
+        self.assertIn("Enable passwordless sudo for 'operator'", updated["lastPreflightMessage"])
+
+    def test_restart_akida_host_services_returns_warning_for_user_space_install(
+        self,
+    ) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "akida-box.local",
+                "username": "operator",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_read_remote_akida_install_status",
+            return_value={"installMode": "user-space"},
+        ):
+            result = self.state.restart_akida_host_services(host["id"])
+
+        self.assertEqual(result["host"]["state"], "degraded_optional_capability")
+        self.assertIn("user space", result["warning"])
+        self.assertIn("Enable passwordless sudo for 'operator'", result["warning"])
+        self.assertIn("re-run Provision Runtime", result["warning"])
+
+    def test_provision_akida_host_updates_paths_from_user_space_install_status(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "akida-box.local",
+                "username": "operator",
+                "authMode": "ssh_key",
+                "sshKeyPath": "/tmp/fake-akida-key",
+            }
+        )
+        install_status = {
+            "installMode": "user-space",
+            "message": "Akida host installed in user space; auto-start requires privileged setup.",
+            "runtimeApiUrl": "http://akida-box.local:8002",
+            "controlApiUrl": "http://akida-box.local:8090",
+            "hostOs": "linux",
+            "pythonVersion": "3.11.8",
+            "serviceUser": "operator",
+            "venvPath": "/home/operator/.local/share/neurochip-akida-host/venv",
+            "installRoot": "/home/operator/.local/share/neurochip-akida-host",
+            "tokenPath": "/home/operator/.local/share/neurochip-akida-host/credentials/api-token",
+            "installStatusPath": "/home/operator/.local/share/neurochip-akida-host/install-status.json",
+            "autoStartSupported": False,
+        }
+        install_output = (
+            "[install-akida-host] done\n"
+            f"INSTALL_STATUS_JSON={json.dumps(install_status, sort_keys=True)}\n"
+        )
+
+        with (
+            mock.patch.object(self.state, "_build_local_akida_bundle"),
+            mock.patch.object(
+                self.state,
+                "_run_akida_ssh",
+                side_effect=["", install_output],
+            ),
+            mock.patch.object(self.state, "_run_akida_scp"),
+            mock.patch.object(self.state, "_read_remote_akida_token", return_value="token-123"),
+            mock.patch.object(
+                self.state,
+                "fetch_akida_host_preflight",
+                return_value={"host": {"state": "degraded_optional_capability"}},
+            ),
+        ):
+            result = self.state.provision_akida_host(host["id"])
+
+        updated = self.state.get_akida_host(host["id"])
+        self.assertEqual(result["installStatus"]["installMode"], "user-space")
+        self.assertEqual(
+            updated["remoteInstallRoot"],
+            "/home/operator/.local/share/neurochip-akida-host",
+        )
+        self.assertEqual(updated["serviceUser"], "operator")
+        self.assertEqual(
+            updated["tokenPath"],
+            "/home/operator/.local/share/neurochip-akida-host/credentials/api-token",
+        )
+        self.assertEqual(
+            updated["installStatusPath"],
+            "/home/operator/.local/share/neurochip-akida-host/install-status.json",
+        )
+        self.assertEqual(updated["credentialRef"], "token-123")
+
+    def test_provision_akida_host_passes_sudo_password_without_logging_it(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "akida-box.local",
+                "username": "operator",
+                "authMode": "password",
+                "password": "secret",
+            }
+        )
+        install_status = {
+            "installMode": "systemd",
+            "message": "Akida host installation completed.",
+            "runtimeApiUrl": "http://akida-box.local:8002",
+            "controlApiUrl": "http://akida-box.local:8090",
+            "hostOs": "linux",
+            "pythonVersion": "3.11.8",
+            "serviceUser": "neurochip",
+            "venvPath": "/opt/neurochip-akida-host/venv",
+            "installRoot": "/opt/neurochip-akida-host",
+            "tokenPath": "/opt/neurochip-akida-host/credentials/api-token",
+            "installStatusPath": "/opt/neurochip-akida-host/install-status.json",
+            "autoStartSupported": True,
+        }
+        install_output = (
+            "[install-akida-host] done\n"
+            f"INSTALL_STATUS_JSON={json.dumps(install_status, sort_keys=True)}\n"
+        )
+
+        with (
+            mock.patch.object(self.state, "_build_local_akida_bundle"),
+            mock.patch.object(
+                self.state,
+                "_run_akida_ssh",
+                side_effect=["", install_output],
+            ) as run_ssh,
+            mock.patch.object(self.state, "_run_akida_scp"),
+            mock.patch.object(self.state, "_read_remote_akida_token", return_value="token-123"),
+            mock.patch.object(
+                self.state,
+                "fetch_akida_host_preflight",
+                return_value={"host": {"state": "ready"}},
+            ),
+        ):
+            self.state.provision_akida_host(host["id"])
+
+        install_call = run_ssh.call_args_list[1]
+        remote_command = install_call.args[1]
+        display_command = install_call.kwargs["display_command"]
+        self.assertIn("NMTK_AKIDA_SUDO_PASSWORD=secret", remote_command)
+        self.assertIn("NMTK_AKIDA_SUDO_PASSWORD=<redacted>", display_command)
+        self.assertNotIn("secret", display_command)
+
+    def test_read_remote_akida_token_uses_sudo_password_without_logging_it(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "akida-box.local",
+                "username": "operator",
+                "authMode": "password",
+                "password": "secret",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_run_akida_ssh",
+            return_value="token-123\n",
+        ) as run_ssh:
+            token = self.state._read_remote_akida_token(
+                self.state._get_akida_host(host["id"]),
+                install_status={"installMode": "systemd"},
+            )
+
+        self.assertEqual(token, "token-123")
+        remote_command = run_ssh.call_args.args[1]
+        display_command = run_ssh.call_args.kwargs["display_command"]
+        self.assertIn("NMTK_AKIDA_SUDO_PASSWORD=secret", remote_command)
+        self.assertIn("sudo -S -p '' cat", remote_command)
+        self.assertIn("NMTK_AKIDA_SUDO_PASSWORD=<redacted>", display_command)
+        self.assertNotIn("secret", display_command)
 
     def test_resolve_pynq_agent_health_timeout_respects_env_and_bounds(self) -> None:
         cases = {

@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import socket
 import subprocess
@@ -64,6 +65,7 @@ PREFLIGHT_FAILED = "failed"
 SUPPORTED_INSTALL_STRATEGIES = {"pip"}
 SUPPORTED_START_STRATEGIES = {"uvicorn", "none"}
 PREFLIGHT_SENTINEL = "NMTK_PREFLIGHT_JSON="
+INSTALL_STATUS_SENTINEL = "INSTALL_STATUS_JSON="
 DEFAULT_AKIDA_HOST_PORT = 8002
 DEFAULT_AKIDA_CONTROL_PORT = 8090
 DEFAULT_AKIDA_HOST_SSH_PORT = 22
@@ -879,6 +881,15 @@ def _pynq_user_space_upgrade_message(username: str) -> str:
     )
 
 
+def _akida_user_space_upgrade_message(username: str) -> str:
+    normalized_username = username.strip() or "the configured SSH user"
+    return (
+        "Runtime is installed in user space. "
+        f"Enable passwordless sudo for '{normalized_username}', then re-run Provision "
+        "Runtime to upgrade the host to systemd auto-start and launcher-managed restarts."
+    )
+
+
 def _resolve_pynq_agent_health_timeout() -> float:
     raw = os.getenv("NEUROCHIP_PYNQ_HEALTH_TIMEOUT_SECONDS", "").strip()
     if not raw:
@@ -1021,6 +1032,49 @@ def _ssh_failure_message(stdout_lines: list[str], stderr_lines: list[str]) -> st
     if stdout_lines:
         return "\n".join(stdout_lines).strip()
     return "ssh command failed"
+
+
+def _extract_install_status_from_output(output: str) -> dict[str, Any] | None:
+    for line in reversed(output.splitlines()):
+        if not line.startswith(INSTALL_STATUS_SENTINEL):
+            continue
+        payload = json.loads(line.removeprefix(INSTALL_STATUS_SENTINEL).strip())
+        if not isinstance(payload, dict):
+            raise RuntimeError("Install status sentinel must decode to an object")
+        return payload
+    return None
+
+
+def _build_password_askpass_env(
+    *,
+    password: str,
+    env_key: str,
+    prefix: str,
+) -> tuple[dict[str, str], Callable[[], None]]:
+    askpass_handle = tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        prefix=prefix,
+        delete=False,
+    )
+    askpass_handle.write("#!/bin/sh\n")
+    askpass_handle.write(f"printf '%s\\n' \"${env_key}\"\n")
+    askpass_handle.close()
+    os.chmod(askpass_handle.name, 0o700)
+
+    env = os.environ.copy()
+    env[env_key] = password
+    env["SSH_ASKPASS"] = askpass_handle.name
+    env["SSH_ASKPASS_REQUIRE"] = "force"
+    env.setdefault("DISPLAY", "nmtk-launcher-control:0")
+
+    def _cleanup_askpass() -> None:
+        try:
+            os.unlink(askpass_handle.name)
+        except FileNotFoundError:
+            return None
+
+    return env, _cleanup_askpass
 
 
 def _resolved_pynq_runtime_api_url(board: dict[str, Any]) -> str:
@@ -1423,6 +1477,13 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         raw.get("runtimeMode")
         or (capability_snapshot or {}).get("recommendedRuntime")
     )
+    password = str(raw.get("password") or "")
+    auth_mode = _normalize_akida_host_auth_mode(
+        raw.get("authMode"),
+        contract.default_auth_mode,
+    )
+    if password and auth_mode not in {"password", "ssh_key"}:
+        auth_mode = "password"
     return {
         "id": str(raw.get("id") or uuid4()),
         "displayName": str(
@@ -1437,12 +1498,9 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         "baseUrl": base_url,
         "runtimeApiUrl": runtime_api_url,
         "controlApiUrl": control_api_url,
-        "authMode": _normalize_akida_host_auth_mode(
-            raw.get("authMode"),
-            contract.default_auth_mode,
-        ),
+        "authMode": auth_mode,
         "credentialRef": str(raw.get("credentialRef") or "").strip(),
-        "password": str(raw.get("password") or ""),
+        "password": password,
         "sshKeyPath": str(raw.get("sshKeyPath") or "").strip(),
         "remoteInstallRoot": remote_install_root,
         "remoteVenvPath": str(
@@ -2387,6 +2445,10 @@ class LauncherControlState:
     ) -> dict[str, Any]:
         merged = dict(host)
         merged.update(updates)
+        if "password" in updates and not str(updates.get("password") or ""):
+            merged["password"] = str(host.get("password") or "")
+        if str(merged.get("password") or "") and "authMode" not in updates:
+            merged["authMode"] = "password"
         if "baseUrl" in updates and "runtimeApiUrl" not in updates:
             merged.pop("runtimeApiUrl", None)
         if "baseUrl" in updates and "port" not in updates:
@@ -2408,46 +2470,25 @@ class LauncherControlState:
         *,
         copy_mode: bool = False,
     ) -> tuple[list[str], dict[str, str] | None, Callable[[], None] | None]:
+        prefix: list[str] = []
         env: dict[str, str] | None = None
         cleanup: Callable[[], None] | None = None
-        prefix: list[str] = []
         auth_mode = str(board.get("authMode", DEFAULT_PYNQ_AUTH_MODE))
         if auth_mode == "password":
             password = str(board.get("password") or "")
             if not password:
-                raise RuntimeError("Password authentication requires a stored password")
+                raise RuntimeError(
+                    "No SSH password is configured for this PYNQ board"
+                )
             sshpass = shutil.which("sshpass")
             if sshpass is not None:
                 prefix.extend([sshpass, "-p", password])
             else:
-                self._emit_pynq_terminal_log(
-                    board,
-                    "sshpass not found on host; falling back to SSH_ASKPASS for password authentication",
-                )
-                askpass_handle = tempfile.NamedTemporaryFile(
-                    mode="w",
-                    encoding="utf-8",
+                env, cleanup = _build_password_askpass_env(
+                    password=password,
+                    env_key="NMTK_PYNQ_PASSWORD",
                     prefix="nmtk-pynq-askpass-",
-                    delete=False,
                 )
-                askpass_handle.write("#!/bin/sh\n")
-                askpass_handle.write("printf '%s\\n' \"$NMTK_PYNQ_PASSWORD\"\n")
-                askpass_handle.close()
-                os.chmod(askpass_handle.name, 0o700)
-
-                env = os.environ.copy()
-                env["NMTK_PYNQ_PASSWORD"] = password
-                env["SSH_ASKPASS"] = askpass_handle.name
-                env["SSH_ASKPASS_REQUIRE"] = "force"
-                env.setdefault("DISPLAY", "nmtk-launcher-control:0")
-
-                def _cleanup_askpass() -> None:
-                    try:
-                        os.unlink(askpass_handle.name)
-                    except FileNotFoundError:
-                        return None
-
-                cleanup = _cleanup_askpass
         command = ["scp"] if copy_mode else ["ssh"]
         port_flag = "-P" if copy_mode else "-p"
         command.extend(
@@ -2493,6 +2534,7 @@ class LauncherControlState:
                 stderr=subprocess.PIPE,
                 text=True,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
             stdout_lines: list[str] = []
             stderr_lines: list[str] = []
@@ -2673,6 +2715,7 @@ class LauncherControlState:
                 timeout=ssh_timeout,
                 check=False,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
             if result.stdout.strip():
                 self._emit_pynq_terminal_log(board, result.stdout.strip())
@@ -2776,6 +2819,7 @@ class LauncherControlState:
                 text=True,
                 check=False,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
         finally:
             if cleanup is not None:
@@ -3308,46 +3352,29 @@ class LauncherControlState:
         *,
         copy_mode: bool = False,
     ) -> tuple[list[str], dict[str, str] | None, Callable[[], None] | None]:
+        prefix: list[str] = []
         env: dict[str, str] | None = None
         cleanup: Callable[[], None] | None = None
-        prefix: list[str] = []
         auth_mode = str(host.get("authMode", DEFAULT_AKIDA_AUTH_MODE))
+        if auth_mode not in {"password", "ssh_key"}:
+            raise RuntimeError(
+                "Akida host SSH operations require password or SSH-key authentication"
+            )
         if auth_mode == "password":
             password = str(host.get("password") or "")
             if not password:
-                raise RuntimeError("Password authentication requires a stored password")
+                raise RuntimeError(
+                    "No SSH password is configured for this Akida host"
+                )
             sshpass = shutil.which("sshpass")
             if sshpass is not None:
                 prefix.extend([sshpass, "-p", password])
             else:
-                self._emit_akida_terminal_log(
-                    host,
-                    "sshpass not found on host; falling back to SSH_ASKPASS for password authentication",
-                )
-                askpass_handle = tempfile.NamedTemporaryFile(
-                    mode="w",
-                    encoding="utf-8",
+                env, cleanup = _build_password_askpass_env(
+                    password=password,
+                    env_key="NMTK_AKIDA_PASSWORD",
                     prefix="nmtk-akida-askpass-",
-                    delete=False,
                 )
-                askpass_handle.write("#!/bin/sh\n")
-                askpass_handle.write("printf '%s\\n' \"$NMTK_AKIDA_PASSWORD\"\n")
-                askpass_handle.close()
-                os.chmod(askpass_handle.name, 0o700)
-
-                env = os.environ.copy()
-                env["NMTK_AKIDA_PASSWORD"] = password
-                env["SSH_ASKPASS"] = askpass_handle.name
-                env["SSH_ASKPASS_REQUIRE"] = "force"
-                env.setdefault("DISPLAY", "nmtk-launcher-control:0")
-
-                def _cleanup_askpass() -> None:
-                    try:
-                        os.unlink(askpass_handle.name)
-                    except FileNotFoundError:
-                        return None
-
-                cleanup = _cleanup_askpass
         command = ["scp"] if copy_mode else ["ssh"]
         port_flag = "-P" if copy_mode else "-p"
         command.extend(
@@ -3381,14 +3408,34 @@ class LauncherControlState:
             command.extend(["-i", ssh_key_path])
         return prefix + command, env, cleanup
 
-    def _run_akida_ssh(self, host: dict[str, Any], remote_command: str) -> str:
+    def _akida_remote_command_with_sudo_password(
+        self,
+        host: dict[str, Any],
+        remote_command: str,
+    ) -> tuple[str, str]:
+        password = str(host.get("password") or "")
+        if str(host.get("authMode") or "").strip() != "password" or not password:
+            return remote_command, remote_command
+        return (
+            f"NMTK_AKIDA_SUDO_PASSWORD={shlex.quote(password)} {remote_command}",
+            f"NMTK_AKIDA_SUDO_PASSWORD=<redacted> {remote_command}",
+        )
+
+    def _run_akida_ssh(
+        self,
+        host: dict[str, Any],
+        remote_command: str,
+        *,
+        display_command: str | None = None,
+    ) -> str:
         username = str(host.get("username") or "").strip()
         if not username:
             raise RuntimeError("Akida host username is required for SSH operations")
         target = f"{username}@{host['host']}"
         command, env, cleanup = self._prepare_akida_ssh_invocation(host)
         command.extend([target, remote_command])
-        self._emit_akida_terminal_log(host, f"ssh -> {target}: {remote_command}")
+        logged_command = display_command if display_command is not None else remote_command
+        self._emit_akida_terminal_log(host, f"ssh -> {target}: {logged_command}")
         try:
             process = subprocess.Popen(
                 command,
@@ -3396,6 +3443,7 @@ class LauncherControlState:
                 stderr=subprocess.PIPE,
                 text=True,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
             stdout_lines: list[str] = []
             stderr_lines: list[str] = []
@@ -3458,6 +3506,7 @@ class LauncherControlState:
                 text=True,
                 check=False,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
         finally:
             if cleanup is not None:
@@ -3515,19 +3564,31 @@ class LauncherControlState:
                     ),
                     stderr=True,
                 )
-            raise RuntimeError(
+            raise RuntimeRequestError(
                 f"Control request failed for {method} {url}: HTTP {exc.code}"
-                + (f" — {error_body}" if error_body else "")
+                + (f" — {error_body}" if error_body else ""),
+                kind="http",
+                url=url,
+                status_code=exc.code,
+                response_body=error_body,
             ) from exc
         except urllib.error.URLError as exc:
+            kind = _runtime_request_error_kind(exc)
+            detail = (
+                "timed out"
+                if kind == "timeout"
+                else f"could not be reached: {exc}"
+            )
             if emit_terminal_errors:
                 self._emit_akida_terminal_log(
                     host,
-                    f"control request failed: {method} {url} could not be reached: {exc}",
+                    f"control request failed: {method} {url} {detail}",
                     stderr=True,
                 )
-            raise RuntimeError(
-                f"Control request failed for {method} {url}: {exc}"
+            raise RuntimeRequestError(
+                f"Control request failed for {method} {url}: {detail}",
+                kind=kind,
+                url=url,
             ) from exc
 
     def _akida_json_request(
@@ -3569,18 +3630,30 @@ class LauncherControlState:
                 ),
                 stderr=True,
             )
-            raise RuntimeError(
+            raise RuntimeRequestError(
                 f"Runtime request failed for {method} {url}: HTTP {exc.code}"
-                + (f" — {error_body}" if error_body else "")
+                + (f" — {error_body}" if error_body else ""),
+                kind="http",
+                url=url,
+                status_code=exc.code,
+                response_body=error_body,
             ) from exc
         except urllib.error.URLError as exc:
+            kind = _runtime_request_error_kind(exc)
+            detail = (
+                "timed out"
+                if kind == "timeout"
+                else f"could not be reached: {exc}"
+            )
             self._emit_akida_terminal_log(
                 host,
-                f"runtime request failed: {method} {url} could not be reached: {exc}",
+                f"runtime request failed: {method} {url} {detail}",
                 stderr=True,
             )
-            raise RuntimeError(
-                f"Runtime request failed for {method} {url}: {exc}"
+            raise RuntimeRequestError(
+                f"Runtime request failed for {method} {url}: {detail}",
+                kind=kind,
+                url=url,
             ) from exc
 
     def test_akida_host_connection(self, host_id: str) -> dict[str, Any]:
@@ -3651,14 +3724,47 @@ class LauncherControlState:
             raise RuntimeError("Remote Akida install status must decode to an object")
         return decoded
 
-    def _read_remote_akida_token(self, host: dict[str, Any]) -> str:
+    def _read_remote_akida_token(
+        self,
+        host: dict[str, Any],
+        *,
+        install_status: dict[str, Any] | None = None,
+    ) -> str:
         token_path = str(
             host.get("tokenPath")
             or _load_neurochip_launcher_runtime_contract().akida.token_path_for(
                 str(host["remoteInstallRoot"])
             )
         ).strip()
-        return self._run_akida_ssh(host, f"sudo cat {token_path}").strip()
+        install_mode = str(
+            (install_status or host.get("lastInstallStatus") or {}).get("installMode")
+            or ""
+        ).strip()
+        username = str(host.get("username") or "").strip()
+        service_user = str(host.get("serviceUser") or "").strip()
+        command = f"cat {shlex.quote(token_path)}"
+        display_command = command
+        if install_mode != "user-space" and service_user and service_user != username:
+            if (
+                str(host.get("authMode") or "").strip() == "password"
+                and str(host.get("password") or "")
+            ):
+                command = (
+                    "printf '%s\\n' \"$NMTK_AKIDA_SUDO_PASSWORD\" "
+                    f"| sudo -S -p '' {command}"
+                )
+                command, display_command = self._akida_remote_command_with_sudo_password(
+                    host,
+                    command,
+                )
+            else:
+                command = f"sudo {command}"
+                display_command = command
+        return self._run_akida_ssh(
+            host,
+            command,
+            display_command=display_command,
+        ).strip()
 
     def _apply_preflight_to_akida_host(
         self,
@@ -3681,6 +3787,20 @@ class LauncherControlState:
                 if runtime_target in {"software_fallback", "akd1000_simulator"}
                 else "degraded_optional_capability"
             )
+        install_mode = str((install_status or {}).get("installMode") or "").strip()
+        if install_mode == "user-space":
+            message = " ".join(
+                part
+                for part in (
+                    message,
+                    _akida_user_space_upgrade_message(
+                        str(self._get_akida_host(host_id).get("username") or "")
+                    ),
+                )
+                if part
+            )
+            if state == "ready":
+                state = "degraded_optional_capability"
         return self._update_akida_host_fields(
             host_id,
             state=state,
@@ -3711,10 +3831,7 @@ class LauncherControlState:
                 remote_bundle_dir = f"{remote_bundle_parent}/{bundle_dir.name}"
                 self._run_akida_ssh(
                     host,
-                    (
-                        f"mkdir -p {host['remoteInstallRoot']} && "
-                        f"rm -rf {remote_bundle_dir}"
-                    ),
+                    f"rm -rf {remote_bundle_dir}",
                 )
                 self._emit_akida_terminal_log(host, "uploading provisioning bundle")
                 self._run_akida_scp(host, bundle_dir, remote_bundle_parent, recursive=True)
@@ -3724,24 +3841,57 @@ class LauncherControlState:
                     lastReadinessMessage="Running remote install script.",
                 )
                 self._emit_akida_terminal_log(host, "running remote install script")
-                self._run_akida_ssh(
-                    host,
-                    " ".join(
-                        [
-                            f"INSTALL_ROOT={host['remoteInstallRoot']}",
-                            f"SERVICE_USER={host['serviceUser']}",
-                            f"VENV_PATH={host['remoteVenvPath']}",
-                            f"RUNTIME_SERVICE_NAME={host['runtimeServiceName']}",
-                            f"CONTROL_SERVICE_NAME={host['controlServiceName']}",
-                            f"RUNTIME_PORT={host['port']}",
-                            f"CONTROL_PORT={host['controlPort']}",
-                            f"TOKEN_PATH={host['tokenPath']}",
-                            f"bash {remote_bundle_dir}/install-akida-host.sh",
-                        ]
-                    ),
+                install_command = " ".join(
+                    [
+                        f"INSTALL_ROOT={shlex.quote(str(host['remoteInstallRoot']))}",
+                        f"SERVICE_USER={shlex.quote(str(host['serviceUser']))}",
+                        f"VENV_PATH={shlex.quote(str(host['remoteVenvPath']))}",
+                        f"RUNTIME_SERVICE_NAME={shlex.quote(str(host['runtimeServiceName']))}",
+                        f"CONTROL_SERVICE_NAME={shlex.quote(str(host['controlServiceName']))}",
+                        f"RUNTIME_PORT={shlex.quote(str(host['port']))}",
+                        f"CONTROL_PORT={shlex.quote(str(host['controlPort']))}",
+                        f"TOKEN_PATH={shlex.quote(str(host['tokenPath']))}",
+                        f"bash {shlex.quote(remote_bundle_dir)}/install-akida-host.sh",
+                    ]
                 )
-                install_status = self._read_remote_akida_install_status(host)
-                token_value = self._read_remote_akida_token(host)
+                install_command, display_install_command = (
+                    self._akida_remote_command_with_sudo_password(
+                        host,
+                        install_command,
+                    )
+                )
+                install_output = self._run_akida_ssh(
+                    host,
+                    install_command,
+                    display_command=display_install_command,
+                )
+                install_status = _extract_install_status_from_output(install_output) or {}
+                if not install_status:
+                    install_status = self._read_remote_akida_install_status(host)
+                host = self._update_akida_host_fields(
+                    host_id,
+                    remoteInstallRoot=str(
+                        install_status.get("installRoot") or host["remoteInstallRoot"]
+                    ).strip(),
+                    remoteVenvPath=str(
+                        install_status.get("venvPath") or host["remoteVenvPath"]
+                    ).strip(),
+                    serviceUser=str(
+                        install_status.get("serviceUser") or host["serviceUser"]
+                    ).strip(),
+                    tokenPath=str(
+                        install_status.get("tokenPath") or host["tokenPath"]
+                    ).strip(),
+                    installStatusPath=str(
+                        install_status.get("installStatusPath")
+                        or host["installStatusPath"]
+                    ).strip(),
+                    lastInstallStatus=install_status,
+                )
+                token_value = self._read_remote_akida_token(
+                    host,
+                    install_status=install_status,
+                )
                 host = self._update_akida_host_fields(
                     host_id,
                     credentialRef=token_value,
@@ -3782,6 +3932,24 @@ class LauncherControlState:
 
     def restart_akida_host_services(self, host_id: str) -> dict[str, Any]:
         host = self._get_akida_host(host_id)
+        install_status = self._read_remote_akida_install_status(host)
+        install_mode = (
+            str(install_status.get("installMode") or "unknown").strip() or "unknown"
+        )
+        if install_mode == "user-space":
+            message = _akida_user_space_upgrade_message(str(host.get("username") or ""))
+            updated = self._update_akida_host_fields(
+                host_id,
+                state="degraded_optional_capability",
+                lastPreflightStatus=PREFLIGHT_DEGRADED,
+                lastPreflightMessage=message,
+            )
+            self._emit_akida_terminal_log(host, message)
+            return {
+                "host": _serialize_akida_host(updated),
+                "warning": message,
+                "installStatus": install_status,
+            }
         self._emit_akida_terminal_log(host, "restarting remote Akida services")
         self._run_akida_ssh(
             host,
@@ -3790,7 +3958,9 @@ class LauncherControlState:
                 f"{host['controlServiceName']}.service"
             ),
         )
-        return self.fetch_akida_host_preflight(host_id)
+        result = self.fetch_akida_host_preflight(host_id)
+        result["installStatus"] = install_status
+        return result
 
     def fetch_akida_host_preflight(self, host_id: str) -> dict[str, Any]:
         host = self._get_akida_host(host_id)
@@ -5381,7 +5551,11 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         except KeyError as exc:
             self._send_json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
         except RuntimeRequestError as exc:
-            status = HTTPStatus.INTERNAL_SERVER_ERROR
+            status = (
+                HTTPStatus.GATEWAY_TIMEOUT
+                if exc.kind == "timeout"
+                else HTTPStatus.BAD_GATEWAY
+            )
             if exc.status_code is not None:
                 try:
                     status = HTTPStatus(exc.status_code)
