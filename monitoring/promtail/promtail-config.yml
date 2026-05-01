@@ -18,5 +18,5 @@ scrape_configs:
         regex: '/(.*)'
         target_label: 'container'
       - source_labels: ['container']
-        regex: '.*(neurocnl|neurosim|neurochip|neurobench|neurosense|neurohub).*'
+        regex: '.*(neurocnl|neurochip|neurobench|neurosense|neurohub).*'
         action: keep

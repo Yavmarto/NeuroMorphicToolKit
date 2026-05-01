@@ -121,7 +121,7 @@ void main() {
     moduleProvider.modules = [
       Module(
         id: 'neurocnl',
-        name: 'CNL Studio',
+        name: 'NeuroStudio',
         description: 'Desc 1',
         directory: '/tmp/m1',
         port: 8001,
@@ -170,7 +170,9 @@ void main() {
     await tester.pump();
     // NmtkDesktopScaffold replaces ModuleTabBar: modules appear as sidebar items.
     expect(find.byType(NmtkDesktopScaffold), findsOneWidget);
-    expect(find.text('CNL Studio'), findsWidgets);
-    expect(find.text('NeuroChip'), findsWidgets);
+    expect(
+      workspaceProvider.sessions.map((session) => session.moduleId),
+      ['neurocnl', 'Neurochip'],
+    );
   });
 }

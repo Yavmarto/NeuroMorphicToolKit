@@ -41,3 +41,6 @@ export 'widgets/desktop_scaffold.dart'; // NmtkDesktopScaffold, NmtkSidebarItem,
 export 'widgets/host_navigation_scope.dart';
 export 'widgets/surface_card.dart';
 export 'widgets/tone.dart';
+export 'widgets/loading_screen.dart'; // NmtkLoadingScreen, NmtkReadinessState
+export 'widgets/validation_chip.dart'; // NmtkValidationChip, NmtkValidationError
+export 'motion_tokens.dart'; // NmtkMotionTokens

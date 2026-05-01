@@ -38,7 +38,7 @@ NMTK is a toolkit of modular components. While this root policy provides general
 - **[NeuroCNL](./neurocnl/SECURITY.md)**: conceptual neuromorphic language compiler.
 - **[Neuro-Dream-Hand](./Neuro-Dream-Hand/SECURITY.md)**: Hardware robotics and edge integration.
 
-For all other modules (Neurosim, Neurobench, Neurochip, Neurohub, Neurosense), please refer to this root policy.
+For all other modules and merged surfaces (including the NeuroStudio canvas now hosted in `neurocnl`, plus Neurobench, Neurochip, Neurohub, and Neurosense), please refer to this root policy.
 
 ## Security Best Practices
 

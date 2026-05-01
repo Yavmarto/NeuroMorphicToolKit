@@ -6,10 +6,10 @@ This walkthrough is the simplest supported demo path:
 2. Paste a valid CNL
 3. Validate it
 4. Run the simulation
-5. Click `Open in NeuroSim`
-6. Confirm NeuroSim opens with the canvas already populated
+5. Click `Open in NeuroStudio`
+6. Confirm the canvas opens already populated
 
-`Export` is optional. It is for saving files, not for moving the design into NeuroSim.
+`Export` is optional. It is for saving files, not for moving the design into the merged canvas workflow.
 
 ---
 
@@ -23,11 +23,10 @@ Recommended:
 docker compose up -d
 ```
 
-Or start the three demo services individually:
+Or start the two demo backends individually:
 
 ```bash
 cd neurocnl && docker compose up -d
-cd Neurosim && docker compose up -d
 cd Neurochip && docker compose up -d
 ```
 
@@ -35,7 +34,6 @@ Verify the services:
 
 ```bash
 curl -s http://localhost:8000/health   # neurocnl
-curl -s http://localhost:8001/health   # neurosim
 curl -s http://localhost:8002/health   # neurochip
 ```
 
@@ -68,7 +66,7 @@ You should see:
 - a CNL editor on the left
 - results tabs on the right
 - `Run Simulation`
-- `Open in NeuroSim`
+- `Open in NeuroStudio`
 - `Export`
 
 ### 2.2 Paste a Valid CNL
@@ -105,11 +103,11 @@ The important checkpoint is simple:
 - the CNL is valid
 - the simulation completes successfully
 
-### 2.5 Open in NeuroSim
+### 2.5 Open in NeuroStudio
 
-1. Click `Open in NeuroSim`.
-2. The launcher should switch to the NeuroSim tab automatically.
-3. NeuroSim should open with:
+1. Click `Open in NeuroStudio`.
+2. The launcher should switch to the NeuroStudio canvas automatically.
+3. The canvas should open with:
    - the imported CNL already present in the CNL panel
    - the canvas already populated from that CNL
    - a success banner confirming the import
@@ -118,16 +116,16 @@ This is the intended handoff. You do **not** need to export a file first.
 
 If the canvas is still empty, the flow is not working correctly.
 
-### 2.6 Confirm the NeuroSim State
+### 2.6 Confirm the NeuroStudio State
 
-Once NeuroSim opens, confirm:
+Once the canvas opens, confirm:
 
 - the canvas is not empty
 - at least the imported reflex-arc nodes are visible
 - the CNL panel contains the imported text
 - the import banner confirms the handoff worked
 
-If NeuroSim cannot parse the incoming spec, it should:
+If the merged canvas cannot parse the incoming spec, it should:
 
 - keep the imported text visible in the CNL panel
 - keep the canvas empty
@@ -156,9 +154,9 @@ If clicking `Export` turns the whole embedded page into plain text, that is a bu
 
 ## 4. Optional Follow-On Module Checks
 
-### 4.1 NeuroSim
+### 4.1 NeuroStudio Canvas
 
-After the one-click handoff succeeds, you can continue in NeuroSim by:
+After the one-click handoff succeeds, you can continue in the canvas by:
 
 - inspecting the imported graph
 - editing the imported CNL and clicking `Sync to Canvas`
@@ -166,7 +164,7 @@ After the one-click handoff succeeds, you can continue in NeuroSim by:
 
 ### 4.2 Neurochip
 
-You can also open Neurochip separately to inspect hardware-oriented workflows after the simulation and NeuroSim handoff are complete.
+You can also open Neurochip separately to inspect hardware-oriented workflows after the simulation and NeuroStudio handoff are complete.
 
 ---
 
@@ -184,17 +182,17 @@ This checks the NeuroCNL parse, validate, and simulate pipeline, but it does not
 
 ## 6. Troubleshooting
 
-### `Open in NeuroSim` does nothing
+### `Open in NeuroStudio` does nothing
 
-- Confirm both `http://localhost:8000/health` and `http://localhost:8001/health` return healthy responses.
-- If you are inside the launcher, make sure NeuroSim can be launched from the catalog.
+- Confirm `http://localhost:8000/health` returns a healthy response for the merged backend.
+- If you are inside the launcher, make sure NeuroStudio can be launched from the catalog.
 - If needed, use the launcher `Open in System Browser` button and retry from there.
 
-### NeuroSim opens but the canvas is empty
+### NeuroStudio opens but the canvas is empty
 
 - This means the handoff did not populate the graph correctly.
-- Check whether the imported CNL is visible in the NeuroSim CNL panel.
-- If the text is present but the graph is empty, NeuroSim should show an import error banner and you can try `Sync to Canvas`.
+- Check whether the imported CNL is visible in the canvas CNL panel.
+- If the text is present but the graph is empty, the app should show an import error banner and you can try `Sync to Canvas`.
 
 ### Export shows raw text in the page
 
@@ -205,7 +203,6 @@ This checks the NeuroCNL parse, validate, and simulate pipeline, but it does not
 
 ```bash
 lsof -ti:8000 | xargs kill -9
-lsof -ti:8001 | xargs kill -9
 lsof -ti:8002 | xargs kill -9
 ```
 
@@ -213,7 +210,6 @@ lsof -ti:8002 | xargs kill -9
 
 ```bash
 docker compose logs neurocnl
-docker compose logs neurosim
 docker compose logs neurochip
 ```
 

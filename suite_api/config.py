@@ -10,7 +10,7 @@ class Settings(BaseSettings):
 
     # Module backend URLs (used by health aggregator and proxy fallback)
     neurocnl_url: str = "http://localhost:8000"
-    neurosim_url: str = "http://localhost:8001"
+    neurosim_url: str = "http://localhost:8000"
     neurochip_url: str = "http://localhost:8002"
     neurobench_url: str = "http://localhost:8003"
     neurosense_url: str = "http://localhost:8004"

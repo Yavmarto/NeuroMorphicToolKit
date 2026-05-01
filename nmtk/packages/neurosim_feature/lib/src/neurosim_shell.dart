@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:Neurosim_shell_adapter/Neurosim_shell_adapter.dart';
+import 'package:neurocnl_studio/canvas_app/shell_adapter.dart';
 
 /// Feature flag — set to false during migration to use the WebView fallback.
 /// Always true from Phase 3B onwards.

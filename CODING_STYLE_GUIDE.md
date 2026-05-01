@@ -5,7 +5,6 @@ This guide only covers cross-repo defaults that are not already enforced by the 
 ## Audited module map
 
 - `neurocnl`: Python + Dart. See `neurocnl/pyproject.toml`, `neurocnl/frontend/pubspec.yaml`, `neurocnl/frontend/analysis_options.yaml`, `neurocnl/.pre-commit-config.yaml`.
-- `Neurosim`: Python + Dart. See `Neurosim/pyproject.toml`, `Neurosim/frontend/pubspec.yaml`, `Neurosim/frontend/analysis_options.yaml`, `Neurosim/.pre-commit-config.yaml`.
 - `Neurochip`: Python + Dart. See `Neurochip/pyproject.toml`, `Neurochip/frontend/pubspec.yaml`, `Neurochip/frontend/analysis_options.yaml`.
 - `Neurobench`: Python + Dart. See `Neurobench/neurobench/pyproject.toml`, `Neurobench/frontend/pubspec.yaml`, `Neurobench/frontend/analysis_options.yaml`.
 - `Neuro-Dream-Hand`: Python. See `Neuro-Dream-Hand/pyproject.toml`.
@@ -48,7 +47,7 @@ Each module must pass its assigned `NmtkShellMode` to `NmtkDesktopScaffold` (or 
 | Mode | Accent | Intended for |
 |------|--------|-------------|
 | `NmtkShellMode.command` | Navy / default | Launcher, NeuroHub, NeuroBench |
-| `NmtkShellMode.studio` | Violet | neurocnl (CNL Studio), Neurosim |
+| `NmtkShellMode.studio` | Violet | neurocnl (CNL Studio + NeuroStudio canvas) |
 | `NmtkShellMode.instrument` | Cyan | NeuroSense, NeuroChip |
 
 Never leave the mode at the default when the module should be in a non-command mode — the three-mode design exists specifically to give each module a distinct visual identity in the shared shell.

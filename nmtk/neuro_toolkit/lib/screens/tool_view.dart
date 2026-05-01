@@ -34,6 +34,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   String _activeModuleId = '';
   bool _workspaceInitialized = false;
+  bool _developerModeEnabled = false;
 
   String _serviceHost() {
     if (!kIsWeb) {
@@ -529,51 +530,75 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Developer-mode toggle — always visible (wrench icon).
         Semantics(
-          label: 'Open a module',
-          button: true,
-          child: IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showModulePicker(context),
-            tooltip: 'Open a Module',
-          ),
-        ),
-        Semantics(
-          label: 'Open module in system browser',
-          button: true,
-          child: IconButton(
-            icon: const Icon(Icons.open_in_browser),
-            onPressed: activeModule != null
-                ? () => _launchInBrowser(activeModule)
-                : null,
-            tooltip: 'Open in System Browser',
-          ),
-        ),
-        Semantics(
-          label: 'Stop currently active module',
+          label: _developerModeEnabled ? 'Hide developer controls' : 'Show developer controls',
           button: true,
           child: IconButton(
             icon: Icon(
-              Icons.stop_circle,
-              color: ShadTheme.of(context).colorScheme.destructive,
+              _developerModeEnabled
+                  ? Icons.handyman_rounded
+                  : Icons.handyman_outlined,
+              color: _developerModeEnabled
+                  ? ShadTheme.of(context).colorScheme.primary
+                  : null,
             ),
-            onPressed: activeModule == null
-                ? null
-                : () {
-                    unawaited(moduleProvider.stopModule(activeModule.id));
-                  },
-            tooltip: 'Stop Module',
+            onPressed: () => setState(() {
+              _developerModeEnabled = !_developerModeEnabled;
+            }),
+            tooltip: _developerModeEnabled
+                ? 'Hide module internals'
+                : 'Show module internals',
           ),
         ),
-        Semantics(
-          label: 'Check for Updates',
-          button: true,
-          child: IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => moduleProvider.checkForUpdates(),
-            tooltip: 'Check for Updates',
+        // Module management controls — developer mode only.
+        if (_developerModeEnabled) ...[
+          Semantics(
+            label: 'Open a module',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => _showModulePicker(context),
+              tooltip: 'Open a Module',
+            ),
           ),
-        ),
+          Semantics(
+            label: 'Open module in system browser',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.open_in_browser),
+              onPressed: activeModule != null
+                  ? () => _launchInBrowser(activeModule)
+                  : null,
+              tooltip: 'Open in System Browser',
+            ),
+          ),
+          Semantics(
+            label: 'Stop currently active module',
+            button: true,
+            child: IconButton(
+              icon: Icon(
+                Icons.stop_circle,
+                color: ShadTheme.of(context).colorScheme.destructive,
+              ),
+              onPressed: activeModule == null
+                  ? null
+                  : () {
+                      unawaited(moduleProvider.stopModule(activeModule.id));
+                    },
+              tooltip: 'Stop Module',
+            ),
+          ),
+          Semantics(
+            label: 'Check for Updates',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () => moduleProvider.checkForUpdates(),
+              tooltip: 'Check for Updates',
+            ),
+          ),
+        ],
       ],
     );
   }

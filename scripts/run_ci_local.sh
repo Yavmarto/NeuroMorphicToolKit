@@ -2,7 +2,7 @@
 # scripts/run_ci_local.sh — Orchestrate local CI across all modules
 #
 # Individual module scripts live in scripts/ci/<module>.sh
-# Each can also be run standalone, e.g.: ./scripts/ci/neurosim.sh
+# Each can also be run standalone, e.g.: ./scripts/ci/neurocnl.sh
 #
 # Usage:
 #   ./scripts/run_ci_local.sh                # test changed modules (git diff)
@@ -19,8 +19,8 @@ cd "$ROOT_DIR"
 source "$ROOT_DIR/scripts/ci/lib.sh"
 
 # ── Module registry ───────────────────────────────────────────────────
-PY_NAMES=(Neurosim Neurochip Neurosense Neurohub Neuro-Dream-Hand neurocnl Neurobench)
-PY_DIRS=(Neurosim Neurochip Neurosense/neurosense Neurohub/neurohub Neuro-Dream-Hand neurocnl Neurobench/neurobench)
+PY_NAMES=(Neurochip Neurosense Neurohub Neuro-Dream-Hand neurocnl Neurobench)
+PY_DIRS=(Neurochip Neurosense/neurosense Neurohub/neurohub Neuro-Dream-Hand neurocnl Neurobench/neurobench)
 
 FL_NAMES=(nmtk_ui_core neuro_toolkit neurocnl_frontend Neurochip_frontend Neurohub_frontend Neurosense_frontend Neurobench_frontend)
 FL_DIRS=(nmtk_ui_core nmtk/neuro_toolkit neurocnl/frontend Neurochip/frontend Neurohub/frontend Neurosense/frontend Neurobench/frontend)

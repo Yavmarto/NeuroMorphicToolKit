@@ -1,31 +1,34 @@
 // ignore_for_file: lines_longer_than_80_chars
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:nmtk_ui_core/models/shell_models.dart';
+import 'package:nmtk_ui_core/motion_tokens.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LAYOUT CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-const double _kSidebarExpandedWidth = 220.0;
-const double _kSidebarCollapsedWidth = 56.0;
-const double _kBrandRowHeight = 52.0; // matches header height
-const double _kHeaderHeight = 52.0;
+const double _kRailWidth = 56.0;
+const double _kBrandRowHeight = 52.0;
+const double _kContentHeaderHeight = 44.0;
 const double _kNavItemHeight = 36.0;
-const double _kNavItemRadius = 8.0; // tighter than global 12 px inside sidebar
+const double _kNavItemRadius = 8.0;
 const double _kNavItemHPad = 8.0;
 const double _kNavItemVPad = 1.0;
 
-const Duration _kSideAnimDuration = Duration(milliseconds: 200);
-const Curve _kSideAnimCurve = Curves.easeInOut;
+const Duration _kSideAnimDuration = NmtkMotionTokens.durationFast;
+
+const Duration _kBackButtonAnimDuration = NmtkMotionTokens.durationSpring;
+const Curve _kBackButtonAnimCurve = NmtkMotionTokens.easeEnter;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DATA MODELS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// A single navigation destination in the [NmtkDesktopScaffold] sidebar.
+/// A single navigation destination in the [NmtkDesktopScaffold] rail.
 class NmtkSidebarItem {
   const NmtkSidebarItem({
     required this.id,
@@ -38,7 +41,7 @@ class NmtkSidebarItem {
   /// Stable string id used for selection tracking and accessibility labels.
   final String id;
 
-  /// Human-readable label shown when the sidebar is expanded.
+  /// Human-readable label shown in tooltip when collapsed.
   final String label;
 
   final IconData icon;
@@ -46,8 +49,8 @@ class NmtkSidebarItem {
   /// Icon shown in place of [icon] when this item is selected.
   final IconData? selectedIcon;
 
-  /// When non-null and > 0, a [ShadBadge] with this number is shown
-  /// to the right of the label in expanded mode.
+  /// When non-null and > 0, a badge with this number is shown (rail mode
+  /// renders it as a small overlay since there is no label area).
   final int? badgeCount;
 }
 
@@ -79,7 +82,7 @@ class NmtkUserProfileAction {
   final bool isDivider;
 }
 
-/// User identity shown in the [NmtkDesktopScaffold] header.
+/// User identity shown in the [NmtkDesktopScaffold] profile chip.
 ///
 /// Pass [null] to omit the profile section entirely.
 class NmtkUserProfile {
@@ -108,184 +111,200 @@ class NmtkUserProfile {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// FILE ACTION DELEGATE
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Abstract interface for New/Open/Save/Save-As file operations.
+///
+/// Provide an implementation via [NmtkDesktopScaffold.fileActions] to render
+/// the file-action icon strip in [_NmtkContentHeader] and activate the
+/// corresponding keyboard shortcuts (Cmd/Ctrl + N/O/S and Cmd/Ctrl+Shift+S).
+abstract class NmtkFileActionDelegate {
+  void onNewFile();
+  void onOpenFile();
+  void onSaveFile();
+  void onSaveFileAs();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // DESKTOP SCAFFOLD
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Master desktop layout for all NeuroMorphicToolKit submodules.
 ///
-/// Replaces the previous top-tab routing pattern with a persistent left-hand
-/// sidebar that provides module-level navigation.
+/// Phase C1 shell chrome: compact navigation rail (56 px, icon-only) with no
+/// collapsible sidebar and no top header bar.
 ///
 /// ## Layout anatomy
 ///
 /// ```
-/// ┌──────────────────────────────────────────────────────────────┐
-/// │  [Brand]  │  [Page title]              [actions] [profile]  │ 52 px
-/// ├───────────┼──────────────────────────────────────────────────┤
-/// │           │                                                  │
-/// │  Sidebar  │   Content area  ← child →                       │
-/// │  card bg  │   background token                               │
-/// │           │                                                  │
-/// │  [nav 1]  │                                                  │
-/// │  [nav 2]  │                                                  │
-/// │  ───────  │                                                  │
-/// │  [foot 1] │                                                  │
-/// │  [toggle] │                                                  │
-/// └───────────┴──────────────────────────────────────────────────┘
+/// ┌────┬────────────────────────────────────────┐
+/// │ N  │  [← back]           [new][open][save]  │  44 px (optional)
+/// │────┤────────────────────────────────────────┤
+/// │nav1│                                        │
+/// │nav2│   Content area  ← child →              │
+/// │    │                                        │
+/// │    │                                        │
+/// │────┤                                        │
+/// │ ⚙  │                                        │
+/// │ 👤 │                                        │
+/// └────┴────────────────────────────────────────┘
+///  56px
 /// ```
 ///
 /// ## Colour contract
 ///
-/// All colours are read from [ShadTheme.of(context).colorScheme] — no
+/// All colours come from [ShadTheme.of(context).colorScheme] — no
 /// `Colors.*` references appear in this file.
 ///
-/// | Surface              | Token                  |
-/// |----------------------|------------------------|
-/// | Sidebar              | `scheme.card`          |
-/// | Sidebar border       | `scheme.border`        |
-/// | Header               | `scheme.card`          |
-/// | Header border        | `scheme.border`        |
-/// | Content area         | `scheme.background`    |
-/// | Active nav item fill | `scheme.primary` @ 10% |
-/// | Active nav text/icon | `scheme.primary`       |
-/// | Nav item hover       | `scheme.muted`         |
-/// | Destructive actions  | `scheme.destructive`   |
+/// | Surface                | Token                  |
+/// |------------------------|------------------------|
+/// | Rail                   | `scheme.card`          |
+/// | Rail border            | `scheme.border`        |
+/// | Content header         | `scheme.card`          |
+/// | Content header border  | `scheme.border`        |
+/// | Content area           | `scheme.background`    |
+/// | Active nav item fill   | `scheme.primary` @ 10% |
+/// | Active nav icon        | `scheme.primary`       |
+/// | Nav item hover         | `scheme.muted`         |
+/// | Destructive actions    | `scheme.destructive`   |
 ///
 /// ## Minimal usage
 ///
 /// ```dart
 /// NmtkDesktopScaffold(
-///   pageTitle: 'CNL Studio',
 ///   navItems: const [
 ///     NmtkSidebarItem(id: 'editor',   label: 'Editor',   icon: Icons.code),
 ///     NmtkSidebarItem(id: 'simulate', label: 'Simulate', icon: Icons.play_arrow),
 ///   ],
 ///   selectedIndex: _index,
 ///   onNavItemSelected: (i) => setState(() => _index = i),
-///   userProfile: NmtkUserProfile(
-///     displayName: 'Yoshi M.',
-///     email: 'yoshi@response.nl',
-///     actions: [
-///       NmtkUserProfileAction(label: 'Settings', icon: Icons.settings_outlined, onPressed: _settings),
-///       const NmtkUserProfileAction.divider(),
-///       NmtkUserProfileAction(label: 'Sign out', icon: Icons.logout, isDestructive: true, onPressed: _signOut),
-///     ],
-///   ),
+///   showBackButton: _showBack,
+///   onBack: () => Navigator.of(context).pop(),
 ///   child: MyPageContent(),
 /// )
 /// ```
-class NmtkDesktopScaffold extends StatefulWidget {
+class NmtkDesktopScaffold extends StatelessWidget {
   const NmtkDesktopScaffold({
     super.key,
-    required this.pageTitle,
     required this.navItems,
     required this.selectedIndex,
     required this.child,
     this.onNavItemSelected,
-    this.footerNavItems = const [],
-    this.onFooterNavItemSelected,
-    this.headerActions,
     this.userProfile,
     this.sidebarBrand,
     this.mode = NmtkShellMode.command,
-    this.initiallyExpanded = true,
+    // C1 params:
+    this.showBackButton = false,
+    this.onBack,
+    this.fileActions,
+    this.onSettingsPressed,
+    // Legacy / backward-compat params (accepted but not rendered):
+    this.pageTitle,
+    this.headerActions,
+    this.footerNavItems = const [],
+    this.onFooterNavItemSelected,
+    this.initiallyExpanded,
   });
 
-  /// Text shown as the current page title in the top header strip.
-  final String pageTitle;
-
-  /// Primary navigation items listed in the sidebar.
+  /// Primary navigation items listed in the rail.
   final List<NmtkSidebarItem> navItems;
 
   /// Currently selected index into [navItems].
   final int selectedIndex;
 
-  /// Called when the user taps a primary nav item.
-  final ValueChanged<int>? onNavItemSelected;
-
-  /// Optional items pinned at the bottom of the sidebar, above the collapse
-  /// toggle.  These do not participate in [selectedIndex] tracking — they are
-  /// utility destinations (Help, Settings, Feedback, …).
-  final List<NmtkSidebarItem> footerNavItems;
-
-  /// Called when the user taps a footer nav item (index into [footerNavItems]).
-  final ValueChanged<int>? onFooterNavItemSelected;
-
-  /// Optional widgets injected to the right of the page title in the header
-  /// (left of the user profile button).
-  final Widget? headerActions;
-
-  /// User profile configuration.  Pass [null] to omit the profile button.
-  final NmtkUserProfile? userProfile;
-
-  /// Custom brand widget placed at the top of the sidebar.
-  /// Defaults to an NMTK logotype mark when [null].
-  final Widget? sidebarBrand;
-
-  /// Shell mode — carried through for consumers that need it; does not
-  /// directly affect scaffold colours (those come from the Shadcn scheme).
-  final NmtkShellMode mode;
-
-  /// Whether the sidebar starts in the expanded (label-visible) state.
-  final bool initiallyExpanded;
-
   /// Page content injected by the submodule.  Fills the full content area.
   final Widget child;
 
-  @override
-  State<NmtkDesktopScaffold> createState() => _NmtkDesktopScaffoldState();
-}
+  /// Called when the user taps a primary nav item.
+  final ValueChanged<int>? onNavItemSelected;
 
-class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
-  late bool _expanded;
+  /// User profile configuration.  Pass [null] to omit the profile chip.
+  final NmtkUserProfile? userProfile;
 
-  @override
-  void initState() {
-    super.initState();
-    _expanded = widget.initiallyExpanded;
-  }
+  /// Custom brand widget placed at the top of the rail.
+  /// Defaults to the NMTK "N" monogram when [null].
+  final Widget? sidebarBrand;
+
+  /// Shell mode — carried through for consumers that need it.
+  final NmtkShellMode mode;
+
+  /// When true, an animated back button is shown at the top-left of the
+  /// content header area.
+  final bool showBackButton;
+
+  /// Called when the user presses the back button.
+  final VoidCallback? onBack;
+
+  /// When non-null, a file-action icon strip (New / Open / Save / Save-As)
+  /// is rendered in the content header, and keyboard shortcuts are active.
+  final NmtkFileActionDelegate? fileActions;
+
+  /// When non-null, a settings gear icon is shown at the bottom of the rail.
+  final VoidCallback? onSettingsPressed;
+
+  // ── Legacy / backward-compat params ──────────────────────────────────────
+
+  /// Accepted for backward compatibility but not rendered in C1.
+  final String? pageTitle;
+
+  /// Accepted for backward compatibility but not rendered in C1.
+  final Widget? headerActions;
+
+  /// Accepted for backward compatibility but not rendered in C1.
+  final List<NmtkSidebarItem> footerNavItems;
+
+  /// Accepted for backward compatibility but not rendered in C1.
+  final ValueChanged<int>? onFooterNavItemSelected;
+
+  /// Accepted for backward compatibility but ignored in C1.
+  final bool? initiallyExpanded;
 
   @override
   Widget build(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
+    final showHeader = showBackButton || fileActions != null;
+
+    Widget contentColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (showHeader)
+          _NmtkContentHeader(
+            showBackButton: showBackButton,
+            onBack: onBack,
+            fileActions: fileActions,
+          ),
+        Expanded(
+          child: ColoredBox(
+            color: scheme.background,
+            child: child,
+          ),
+        ),
+      ],
+    );
+
+    // Wrap with keyboard shortcut handling when file actions are provided.
+    if (fileActions != null) {
+      contentColumn = _FileActionShortcuts(
+        delegate: fileActions!,
+        child: contentColumn,
+      );
+    }
 
     return Scaffold(
-      // Scaffold itself uses the Shadcn background token so any safe-area
-      // insets and system bars inherit the correct surface colour.
       backgroundColor: scheme.background,
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Left sidebar ───────────────────────────────────────────────
-          _NmtkSidebarColumn(
-            items: widget.navItems,
-            footerItems: widget.footerNavItems,
-            selectedIndex: widget.selectedIndex,
-            isExpanded: _expanded,
-            onItemSelected: widget.onNavItemSelected,
-            onFooterSelected: widget.onFooterNavItemSelected,
-            onToggle: () => setState(() => _expanded = !_expanded),
-            brand: widget.sidebarBrand,
+          _NmtkRailColumn(
+            items: navItems,
+            selectedIndex: selectedIndex,
+            onItemSelected: onNavItemSelected,
+            brand: sidebarBrand,
+            userProfile: userProfile,
+            onSettingsPressed: onSettingsPressed,
           ),
-          // ── Right column: header + content ─────────────────────────────
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _NmtkDesktopHeader(
-                  pageTitle: widget.pageTitle,
-                  headerActions: widget.headerActions,
-                  userProfile: widget.userProfile,
-                ),
-                Expanded(
-                  child: ColoredBox(
-                    color: scheme.background,
-                    child: widget.child,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          Expanded(child: contentColumn),
         ],
       ),
     );
@@ -293,113 +312,89 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SIDEBAR COLUMN
+// RAIL COLUMN
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _NmtkSidebarColumn extends StatelessWidget {
-  const _NmtkSidebarColumn({
+class _NmtkRailColumn extends StatelessWidget {
+  const _NmtkRailColumn({
     required this.items,
-    required this.footerItems,
     required this.selectedIndex,
-    required this.isExpanded,
     required this.onItemSelected,
-    required this.onFooterSelected,
-    required this.onToggle,
     this.brand,
+    this.userProfile,
+    this.onSettingsPressed,
   });
 
   final List<NmtkSidebarItem> items;
-  final List<NmtkSidebarItem> footerItems;
   final int selectedIndex;
-  final bool isExpanded;
   final ValueChanged<int>? onItemSelected;
-  final ValueChanged<int>? onFooterSelected;
-  final VoidCallback onToggle;
   final Widget? brand;
+  final NmtkUserProfile? userProfile;
+  final VoidCallback? onSettingsPressed;
 
   @override
   Widget build(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
 
-    // AnimatedContainer handles the expand/collapse width transition.
-    // The inner Column always lays out at the full expanded width; we clip
-    // overflow so nothing bleeds into the content area during animation.
-    return AnimatedContainer(
-      duration: _kSideAnimDuration,
-      curve: _kSideAnimCurve,
-      width: isExpanded ? _kSidebarExpandedWidth : _kSidebarCollapsedWidth,
-      decoration: BoxDecoration(
-        color: scheme.card,
-        border: Border(right: BorderSide(color: scheme.border)),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Brand / logo row (aligned with header) ─────────────────────
-          _SidebarBrandRow(isExpanded: isExpanded, brand: brand),
-          const ShadSeparator.horizontal(),
-
-          // ── Primary nav items ───────────────────────────────────────────
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: _kNavItemHPad,
-                vertical: 6,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < items.length; i++)
-                    _SidebarNavItem(
-                      item: items[i],
-                      isSelected: i == selectedIndex,
-                      isExpanded: isExpanded,
-                      onTap: () => onItemSelected?.call(i),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Footer nav items ───────────────────────────────────────────
-          if (footerItems.isNotEmpty) ...[
+    return SizedBox(
+      width: _kRailWidth,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.card,
+          border: Border(right: BorderSide(color: scheme.border)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Brand / logo row ──────────────────────────────────────
+            _RailBrandRow(brand: brand),
             const ShadSeparator.horizontal(),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: _kNavItemHPad,
-                vertical: 6,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < footerItems.length; i++)
-                    _SidebarNavItem(
-                      item: footerItems[i],
-                      isSelected: false,
-                      isExpanded: isExpanded,
-                      onTap: () => onFooterSelected?.call(i),
-                    ),
-                ],
+
+            // ── Primary nav items (scrollable) ────────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _kNavItemHPad,
+                  vertical: 6,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < items.length; i++)
+                      _SidebarNavItem(
+                        item: items[i],
+                        isSelected: i == selectedIndex,
+                        isExpanded: false,
+                        onTap: () => onItemSelected?.call(i),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ],
 
-          // ── Expand / collapse toggle ────────────────────────────────────
-          const ShadSeparator.horizontal(),
-          _SidebarToggle(isExpanded: isExpanded, onTap: onToggle),
-        ],
+            // ── Bottom anchored: settings + profile ───────────────────
+            const ShadSeparator.horizontal(),
+            if (onSettingsPressed != null)
+              _RailIconButton(
+                icon: Icons.settings_outlined,
+                tooltip: 'Settings',
+                onPressed: onSettingsPressed!,
+              ),
+            if (userProfile != null)
+              _RailProfileChip(profile: userProfile!),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── Brand row ─────────────────────────────────────────────────────────────────
+// ── Rail brand row ─────────────────────────────────────────────────────────────
 
-class _SidebarBrandRow extends StatelessWidget {
-  const _SidebarBrandRow({required this.isExpanded, this.brand});
+class _RailBrandRow extends StatelessWidget {
+  const _RailBrandRow({this.brand});
 
-  final bool isExpanded;
   final Widget? brand;
 
   @override
@@ -409,63 +404,163 @@ class _SidebarBrandRow extends StatelessWidget {
     if (brand != null) {
       return SizedBox(
         height: _kBrandRowHeight,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _kNavItemHPad + 2),
-          child: Align(
-            alignment: isExpanded ? Alignment.centerLeft : Alignment.center,
-            child: brand!,
-          ),
-        ),
+        child: Center(child: brand!),
       );
     }
 
-    // Default NMTK logotype mark.
+    // Default NMTK "N" monogram — centred, no wordmark in rail mode.
     return SizedBox(
       height: _kBrandRowHeight,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: _kNavItemHPad + 2),
-        child: Row(
-          children: [
-            // Filled square monogram.
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: scheme.primary,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                'N',
-                style: TextStyle(
-                  color: scheme.primaryForeground,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
+      child: Center(
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: scheme.primary,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            'N',
+            style: TextStyle(
+              color: scheme.primaryForeground,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
             ),
-            // Wordmark — visible only when expanded.
-            if (isExpanded) ...[
-              const SizedBox(width: 10),
-              Text(
-                'NMTK',
-                style: TextStyle(
-                  color: scheme.foreground,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ── Individual nav item ────────────────────────────────────────────────────────
+// ── Rail small icon button (settings, etc.) ────────────────────────────────────
+
+class _RailIconButton extends StatefulWidget {
+  const _RailIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  State<_RailIconButton> createState() => _RailIconButtonState();
+}
+
+class _RailIconButtonState extends State<_RailIconButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+
+    return ShadTooltip(
+      builder: (ctx) => Text(widget.tooltip),
+      child: Semantics(
+        label: widget.tooltip,
+        button: true,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: widget.onPressed,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 100),
+              height: 40,
+              color: _hovered ? scheme.muted : null,
+              child: Center(
+                child: Icon(
+                  widget.icon,
+                  size: 18,
+                  color: scheme.foreground.withValues(alpha: 0.65),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Rail profile chip ──────────────────────────────────────────────────────────
+
+class _RailProfileChip extends StatefulWidget {
+  const _RailProfileChip({required this.profile});
+
+  final NmtkUserProfile profile;
+
+  @override
+  State<_RailProfileChip> createState() => _RailProfileChipState();
+}
+
+class _RailProfileChipState extends State<_RailProfileChip> {
+  final _popover = ShadPopoverController();
+
+  @override
+  void dispose() {
+    _popover.dispose();
+    super.dispose();
+  }
+
+  String _initials(NmtkUserProfile p) {
+    if (p.avatarFallback != null) return p.avatarFallback!;
+    final words = p.displayName.trim().split(RegExp(r'\s+'));
+    if (words.length >= 2) {
+      return '${words.first[0]}${words.last[0]}'.toUpperCase();
+    }
+    final n = p.displayName;
+    return (n.length >= 2 ? n.substring(0, 2) : n).toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    final profile = widget.profile;
+
+    return ShadPopover(
+      controller: _popover,
+      popover: (ctx) =>
+          _ProfilePopover(profile: profile, onClose: _popover.hide),
+      child: Semantics(
+        label: 'User profile: ${profile.displayName}',
+        button: true,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: _popover.toggle,
+            child: SizedBox(
+              height: 40,
+              child: Center(
+                child: ShadAvatar(
+                  profile.avatarUrl,
+                  placeholder: Text(
+                    _initials(profile),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.primaryForeground,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INDIVIDUAL NAV ITEM (kept for reuse; always rendered with isExpanded: false)
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _SidebarNavItem extends StatefulWidget {
   const _SidebarNavItem({
@@ -494,8 +589,6 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
     final isSelected = widget.isSelected;
     final isExpanded = widget.isExpanded;
 
-    // Background colour — only paint when needed so transparent items don't
-    // show a paint call on every frame.
     final bgColor = isSelected
         ? scheme.primary.withValues(alpha: 0.10)
         : _hovered
@@ -508,11 +601,9 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 
     final textColor = isSelected ? scheme.primary : scheme.foreground;
 
-    final effectiveIcon = isSelected
-        ? (item.selectedIcon ?? item.icon)
-        : item.icon;
+    final effectiveIcon =
+        isSelected ? (item.selectedIcon ?? item.icon) : item.icon;
 
-    // ── Inner content ────────────────────────────────────────────────────
     Widget inner = AnimatedContainer(
       duration: _kSideAnimDuration,
       height: _kNavItemHeight,
@@ -522,6 +613,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
         borderRadius: BorderRadius.circular(_kNavItemRadius),
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(effectiveIcon, size: 18, color: iconColor),
           if (isExpanded) ...[
@@ -550,7 +642,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
       ),
     );
 
-    // Tooltip only when collapsed — label is already visible when expanded.
+    // Tooltip always shown in rail (icon-only) mode.
     if (!isExpanded) {
       inner = ShadTooltip(builder: (ctx) => Text(item.label), child: inner);
     }
@@ -576,86 +668,22 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
   }
 }
 
-// ── Collapse / expand toggle ───────────────────────────────────────────────────
-
-class _SidebarToggle extends StatefulWidget {
-  const _SidebarToggle({required this.isExpanded, required this.onTap});
-
-  final bool isExpanded;
-  final VoidCallback onTap;
-
-  @override
-  State<_SidebarToggle> createState() => _SidebarToggleState();
-}
-
-class _SidebarToggleState extends State<_SidebarToggle> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
-    final icon = widget.isExpanded
-        ? Icons.chevron_left_rounded
-        : Icons.chevron_right_rounded;
-    final tooltip = widget.isExpanded ? 'Collapse sidebar' : 'Expand sidebar';
-
-    return Semantics(
-      label: tooltip,
-      button: true,
-      child: ShadTooltip(
-        builder: (ctx) => Text(tooltip),
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
-          child: GestureDetector(
-            onTap: widget.onTap,
-            child: AnimatedContainer(
-              duration: _kSideAnimDuration,
-              height: 44,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              color: _hovered ? scheme.muted : null,
-              child: Row(
-                children: [
-                  Icon(
-                    icon,
-                    size: 18,
-                    color: scheme.foreground.withValues(alpha: 0.45),
-                  ),
-                  if (widget.isExpanded) ...[
-                    const SizedBox(width: 10),
-                    Text(
-                      'Collapse',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.foreground.withValues(alpha: 0.45),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
-// TOP HEADER BAR
+// CONTENT HEADER (back button + file actions)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _NmtkDesktopHeader extends StatelessWidget {
-  const _NmtkDesktopHeader({
-    required this.pageTitle,
-    this.headerActions,
-    this.userProfile,
+/// Optional header bar rendered above the content area when [showBackButton]
+/// is true or [fileActions] is provided.
+class _NmtkContentHeader extends StatelessWidget {
+  const _NmtkContentHeader({
+    required this.showBackButton,
+    this.onBack,
+    this.fileActions,
   });
 
-  final String pageTitle;
-  final Widget? headerActions;
-  final NmtkUserProfile? userProfile;
+  final bool showBackButton;
+  final VoidCallback? onBack;
+  final NmtkFileActionDelegate? fileActions;
 
   @override
   Widget build(BuildContext context) {
@@ -667,33 +695,62 @@ class _NmtkDesktopHeader extends StatelessWidget {
         border: Border(bottom: BorderSide(color: scheme.border)),
       ),
       child: SizedBox(
-        height: _kHeaderHeight,
+        height: _kContentHeaderHeight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
             children: [
-              // ── Page title ───────────────────────────────────────────────
-              Expanded(
-                child: Text(
-                  pageTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: scheme.foreground,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
+              // ── Back button (animated) ──────────────────────────────
+              AnimatedOpacity(
+                opacity: showBackButton ? 1.0 : 0.0,
+                duration: _kBackButtonAnimDuration,
+                curve: _kBackButtonAnimCurve,
+                child: AnimatedSlide(
+                  offset: showBackButton
+                      ? Offset.zero
+                      : const Offset(-0.5, 0),
+                  duration: _kBackButtonAnimDuration,
+                  curve: _kBackButtonAnimCurve,
+                  child: Semantics(
+                    label: 'Back',
+                    button: true,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      iconSize: 18,
+                      tooltip: 'Back',
+                      color: scheme.foreground,
+                      onPressed: showBackButton ? onBack : null,
+                    ),
                   ),
                 ),
               ),
-              // ── Optional header action widgets ────────────────────────────
-              if (headerActions != null) ...[
-                headerActions!,
-                const SizedBox(width: 12),
+
+              const Spacer(),
+
+              // ── File action icon strip ──────────────────────────────
+              if (fileActions != null) ...[
+                _FileActionIconButton(
+                  icon: Icons.add_rounded,
+                  tooltip: 'New File\n⌘N / Ctrl+N',
+                  onPressed: fileActions!.onNewFile,
+                ),
+                _FileActionIconButton(
+                  icon: Icons.folder_open_rounded,
+                  tooltip: 'Open File\n⌘O / Ctrl+O',
+                  onPressed: fileActions!.onOpenFile,
+                ),
+                _FileActionIconButton(
+                  icon: Icons.save_rounded,
+                  tooltip: 'Save\n⌘S / Ctrl+S',
+                  onPressed: fileActions!.onSaveFile,
+                ),
+                _FileActionIconButton(
+                  icon: Icons.save_as_rounded,
+                  tooltip: 'Save As\n⌘⇧S / Ctrl+Shift+S',
+                  onPressed: fileActions!.onSaveFileAs,
+                ),
+                const SizedBox(width: 4),
               ],
-              // ── User profile button ───────────────────────────────────────
-              if (userProfile != null)
-                _UserProfileButton(profile: userProfile!),
             ],
           ),
         ),
@@ -702,103 +759,79 @@ class _NmtkDesktopHeader extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// USER PROFILE BUTTON + POPOVER
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Individual file-action icon button ─────────────────────────────────────────
 
-class _UserProfileButton extends StatefulWidget {
-  const _UserProfileButton({required this.profile});
+class _FileActionIconButton extends StatelessWidget {
+  const _FileActionIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
 
-  final NmtkUserProfile profile;
-
-  @override
-  State<_UserProfileButton> createState() => _UserProfileButtonState();
-}
-
-class _UserProfileButtonState extends State<_UserProfileButton> {
-  final _popover = ShadPopoverController();
-
-  @override
-  void dispose() {
-    _popover.dispose();
-    super.dispose();
-  }
-
-  /// Derives two-letter initials from [NmtkUserProfile.displayName].
-  String _initials(NmtkUserProfile p) {
-    if (p.avatarFallback != null) return p.avatarFallback!;
-    final words = p.displayName.trim().split(RegExp(r'\s+'));
-    if (words.length >= 2) {
-      return '${words.first[0]}${words.last[0]}'.toUpperCase();
-    }
-    final n = p.displayName;
-    return (n.length >= 2 ? n.substring(0, 2) : n).toUpperCase();
-  }
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
-    final profile = widget.profile;
 
-    return ShadPopover(
-      controller: _popover,
-      popover: (ctx) =>
-          _ProfilePopover(profile: profile, onClose: _popover.hide),
-      child: Semantics(
-        label: 'User profile: ${profile.displayName}',
-        button: true,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: _popover.toggle,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ShadAvatar(
-                  profile.avatarUrl,
-                  placeholder: Text(
-                    _initials(profile),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.primaryForeground,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profile.displayName,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.foreground,
-                      ),
-                    ),
-                    if (profile.email != null)
-                      Text(
-                        profile.email!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: scheme.mutedForeground,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.unfold_more_rounded,
-                  size: 14,
-                  color: scheme.mutedForeground,
-                ),
-              ],
-            ),
-          ),
-        ),
+    return ShadTooltip(
+      builder: (ctx) => Text(tooltip),
+      child: IconButton(
+        icon: Icon(icon),
+        iconSize: 18,
+        color: scheme.foreground.withValues(alpha: 0.75),
+        onPressed: onPressed,
+        splashRadius: 18,
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FILE ACTION KEYBOARD SHORTCUTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Wraps [child] with [CallbackShortcuts] that fire [NmtkFileActionDelegate]
+/// methods on Cmd/Ctrl+N, +O, +S and Cmd/Ctrl+Shift+S.
+class _FileActionShortcuts extends StatelessWidget {
+  const _FileActionShortcuts({
+    required this.delegate,
+    required this.child,
+  });
+
+  final NmtkFileActionDelegate delegate;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
+            delegate.onNewFile,
+        const SingleActivator(LogicalKeyboardKey.keyN, control: true):
+            delegate.onNewFile,
+        const SingleActivator(LogicalKeyboardKey.keyO, meta: true):
+            delegate.onOpenFile,
+        const SingleActivator(LogicalKeyboardKey.keyO, control: true):
+            delegate.onOpenFile,
+        const SingleActivator(LogicalKeyboardKey.keyS, meta: true):
+            delegate.onSaveFile,
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true):
+            delegate.onSaveFile,
+        const SingleActivator(
+          LogicalKeyboardKey.keyS,
+          meta: true,
+          shift: true,
+        ): delegate.onSaveFileAs,
+        const SingleActivator(
+          LogicalKeyboardKey.keyS,
+          control: true,
+          shift: true,
+        ): delegate.onSaveFileAs,
+      },
+      child: Focus(autofocus: true, child: child),
     );
   }
 }
@@ -823,7 +856,7 @@ class _ProfilePopover extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Profile header ─────────────────────────────────────────────
+          // ── Profile header ─────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
             child: Column(
@@ -851,7 +884,7 @@ class _ProfilePopover extends StatelessWidget {
             ),
           ),
           const ShadSeparator.horizontal(),
-          // ── Actions ───────────────────────────────────────────────────
+          // ── Actions ───────────────────────────────────────────────
           for (final action in profile.actions)
             if (action.isDivider)
               const Padding(
@@ -921,6 +954,111 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
                     color: fgColor,
                     fontWeight: FontWeight.w500,
                   ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEGACY — kept only for backward compatibility; no longer used internally
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// _UserProfileButton was the header-mode profile button.  It is no longer
+// rendered by NmtkDesktopScaffold but is kept here (private) so that any
+// consuming code that relied on internal implementation details does not
+// break at the import level.  It will be removed in a future cleanup pass.
+
+class _UserProfileButton extends StatefulWidget {
+  const _UserProfileButton({required this.profile});
+
+  final NmtkUserProfile profile;
+
+  @override
+  State<_UserProfileButton> createState() => _UserProfileButtonState();
+}
+
+class _UserProfileButtonState extends State<_UserProfileButton> {
+  final _popover = ShadPopoverController();
+
+  @override
+  void dispose() {
+    _popover.dispose();
+    super.dispose();
+  }
+
+  String _initials(NmtkUserProfile p) {
+    if (p.avatarFallback != null) return p.avatarFallback!;
+    final words = p.displayName.trim().split(RegExp(r'\s+'));
+    if (words.length >= 2) {
+      return '${words.first[0]}${words.last[0]}'.toUpperCase();
+    }
+    final n = p.displayName;
+    return (n.length >= 2 ? n.substring(0, 2) : n).toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+    final profile = widget.profile;
+
+    return ShadPopover(
+      controller: _popover,
+      popover: (ctx) =>
+          _ProfilePopover(profile: profile, onClose: _popover.hide),
+      child: Semantics(
+        label: 'User profile: ${profile.displayName}',
+        button: true,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: _popover.toggle,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ShadAvatar(
+                  profile.avatarUrl,
+                  placeholder: Text(
+                    _initials(profile),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.primaryForeground,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      profile.displayName,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.foreground,
+                      ),
+                    ),
+                    if (profile.email != null)
+                      Text(
+                        profile.email!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: scheme.mutedForeground,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 6),
+                Icon(
+                  Icons.unfold_more_rounded,
+                  size: 14,
+                  color: scheme.mutedForeground,
                 ),
               ],
             ),

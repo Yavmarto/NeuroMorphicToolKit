@@ -94,7 +94,7 @@ $DestModulesDir = Join-Path $ReleaseDir "modules"
 if (Test-Path $DestModulesDir) { Remove-Item -Recurse -Force $DestModulesDir }
 New-Item -ItemType Directory -Path $DestModulesDir | Out-Null
 
-$Modules = @("neurocnl", "Neurosim", "Neurochip", "Neurobench", "Neurosense", "Neurohub", "Neuro-Dream-Hand")
+$Modules = @("neurocnl", "Neurochip", "Neurobench", "Neurosense", "Neurohub", "Neuro-Dream-Hand")
 
 foreach ($mod in $Modules) {
     $Src = Join-Path $RepoRoot $mod

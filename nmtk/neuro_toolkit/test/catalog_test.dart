@@ -132,24 +132,13 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
     final List<Map<String, dynamic>> mockData = [
       {
         'id': 'neurocnl',
-        'name': 'CNL Studio',
-        'description': 'CNL parser',
+        'name': 'NeuroStudio',
+        'description': 'CNL and canvas authoring',
         'icon': 'code',
         'port': 8000,
         'installPath': 'neurocnl/',
         'hasFrontend': true,
         'frontendStatus': 'Yes',
-        'requiresMuJoCo': false,
-      },
-      {
-        'id': 'Neurosim',
-        'name': 'NeuroSim',
-        'description': 'Visual design',
-        'icon': 'architecture',
-        'port': 8001,
-        'installPath': 'Neurosim/',
-        'hasFrontend': true,
-        'frontendStatus': 'Minimal',
         'requiresMuJoCo': false,
       },
       {
@@ -285,7 +274,7 @@ void main() {
     expect(hiddenModule.showInLauncherNav, isFalse);
   });
 
-  testWidgets('CatalogScreen shows all 7 modules', (WidgetTester tester) async {
+  testWidgets('CatalogScreen shows all 6 launcher modules', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1920, 2000);
     tester.view.devicePixelRatio = 1.0;
 
@@ -309,8 +298,7 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('CNL Studio'), findsOneWidget);
-    expect(find.text('NeuroSim'), findsOneWidget);
+    expect(find.text('NeuroStudio'), findsOneWidget);
     expect(find.text('NeuroChip'), findsOneWidget);
     expect(find.text('NeuroBench'), findsOneWidget);
     expect(find.text('NeuroSense'), findsOneWidget);
@@ -345,10 +333,10 @@ void main() {
 
     await tester.pump();
 
-    // Find the Install button for CNL Studio
+    // Find the Install button for NeuroStudio
     final installButton = find.descendant(
       of: find.ancestor(
-          of: find.text('CNL Studio'), matching: find.byType(Card)),
+          of: find.text('NeuroStudio'), matching: find.byType(Card)),
       matching: find.text('Install'),
     );
 

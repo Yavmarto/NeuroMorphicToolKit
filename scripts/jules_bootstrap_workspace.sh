@@ -98,7 +98,7 @@ ensure_submodules() {
 
 export_service_hints() {
   export NEUROCNL_URL="${NEUROCNL_URL:-http://localhost:8000}"
-  export NEUROSIM_URL="${NEUROSIM_URL:-http://localhost:8001}"
+  export NEUROSIM_URL="${NEUROSIM_URL:-http://localhost:8000}"
   export NEUROCHIP_URL="${NEUROCHIP_URL:-http://localhost:8002}"
   export NEUROBENCH_URL="${NEUROBENCH_URL:-http://localhost:8003}"
   export NEUROSENSE_URL="${NEUROSENSE_URL:-http://localhost:8004}"
@@ -146,7 +146,6 @@ run_smoke_checks() {
     "neurocnl/AGENTS.md"
     "neurocnl/docs/support_matrix.md"
     "neurocnl/docs/PRE_BETA_READINESS_REVIEW.md"
-    "Neurosim/AGENTS.md"
     "Neurochip/AGENTS.md"
     "Neurobench/AGENTS.md"
     "Neuro-Dream-Hand/AGENTS.md"

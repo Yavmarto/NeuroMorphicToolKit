@@ -19,8 +19,6 @@ dependencies:
     path: ../../nmtk_ui_core # path: ../../nmtk_ui_core # DO NOT CHANGE AND DON'T REMOVE THIS COMMENT Local path to the nmtk_ui_core package
   neurocnl_studio:
     path: ../../neurocnl/frontend
-  Neurosim_shell_adapter:
-    path: ../../Neurosim/Neurosim_shell_adapter
   neurohub_shell_adapter:
     path: ../../Neurohub/Neurohub_shell_adapter
   neurosense_shell_adapter:

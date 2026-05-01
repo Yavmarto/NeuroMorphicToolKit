@@ -74,12 +74,12 @@ If you already cloned without `--recurse-submodules`:
 git submodule update --init --recursive
 ```
 
-Verify all 7 submodules are present:
+Verify all 6 checked-out submodules are present:
 ```bash
 git submodule status
 ```
 
-You should see entries for: `Neuro-Dream-Hand`, `Neurobench`, `Neurochip`, `Neurohub`, `Neurosense`, `Neurosim`, `neurocnl`.
+You should see entries for: `Neuro-Dream-Hand`, `Neurobench`, `Neurochip`, `Neurohub`, `Neurosense`, `neurocnl`.
 
 ---
 
@@ -202,9 +202,8 @@ flutter run -d macos
 ### 5c. Using the launcher
 
 1. **Dashboard** — Shows status of installed modules
-2. **Catalog** — Browse all 7 available modules:
-   - neurocnl (CNL Studio)
-   - Neurosim (Visual SNN Designer)
+2. **Catalog** — Browse all 6 available modules:
+   - neurocnl / NeuroStudio (CNL Studio + Visual SNN Designer)
    - Neurochip (Hardware Deployment)
    - Neurobench (Benchmarking)
    - Neurosense (Biosignal Acquisition)
@@ -241,7 +240,7 @@ cd nmtk/installer/macos
 1. Downloads a standalone Python 3.12 interpreter (python-build-standalone)
 2. Builds the Flutter macOS app (`flutter build macos --release`)
 3. Bundles Python into `.app/Contents/Frameworks/python/`
-4. Copies all 7 module source dirs into `.app/Contents/Resources/modules/`
+4. Copies all 6 checked-out module source dirs into `.app/Contents/Resources/modules/`
 5. Code signs and optionally creates a DMG
 
 **End-user flow:**
@@ -285,7 +284,6 @@ flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000
 ```
 
 Repeat for other modules, keeping `API_BASE_URL` pointed to `suite_api` on port `9000`:
-- **Neurosim:** `cd Neurosim/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000`
 - **Neurochip:** `cd Neurochip/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000`
 - **Neurobench:** `cd Neurobench/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000`
 - **Neurosense:** `cd Neurosense/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000`
@@ -297,14 +295,6 @@ Repeat for other modules, keeping `API_BASE_URL` pointed to `suite_api` on port 
 
 ```bash
 cd neurocnl/frontend
-flutter pub get
-flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:9000
-```
-
-### Neurosim frontend
-
-```bash
-cd Neurosim/frontend
 flutter pub get
 flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:9000
 ```
@@ -434,9 +424,9 @@ pytest -v
 cd Neuro-Dream-Hand
 pytest -v
 
-# Neurosim
-cd Neurosim
-pytest -v
+# NeuroStudio backend and merged canvas tests
+cd neurocnl
+pytest backend/tests neurosim/tests -v
 
 # Neurochip (92% coverage)
 cd Neurochip/neurochip
@@ -470,8 +460,9 @@ flutter test
 cd neurocnl/frontend
 flutter test
 
-# Neurosim frontend
-cd Neurosim/frontend
+# NeuroStudio frontend
+# Canvas routes now live inside the shared neurocnl frontend.
+cd neurocnl/frontend
 flutter test
 ```
 
@@ -516,7 +507,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for all repo
 
 ### 10b. Submodule Management
 
-This is a monorepo that manages 7 git submodules.
+This is a monorepo that manages 6 git submodules.
 
 **Checking out changes:**
 Always use `git submodule update --init --recursive` after pulling the root repository to ensure your local submodules match the tracked commits.
@@ -659,11 +650,9 @@ git checkout dev
 ```
 NeuroMorphicToolKit/
 ├── suite_api/             # Unified monolithic backend (port 9000)
-├── neurocnl/              # Core CNL compiler & SNN engine (submodule)
-│   └── frontend/          # Flutter frontend (served by suite_api)
+├── neurocnl/              # Core CNL compiler, NeuroStudio canvas, and frontend (submodule)
+│   └── frontend/          # Shared Flutter frontend (served by suite_api)
 ├── Neuro-Dream-Hand/      # Prosthetic SNN simulator (submodule)
-├── Neurosim/              # Visual SNN designer (submodule)
-│   └── frontend/          # Flutter frontend (served by suite_api)
 ├── Neurochip/             # Hardware deployment toolkit (submodule)
 │   └── frontend/          # Flutter frontend (served by suite_api)
 ├── Neurobench/            # Benchmarking workbench (submodule)

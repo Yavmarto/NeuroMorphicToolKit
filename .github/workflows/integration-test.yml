@@ -56,7 +56,7 @@ jobs:
           echo "## Integration Test" >> "$GITHUB_STEP_SUMMARY"
           STARTED=""
 
-          for dir in Neurosim Neurochip/neurochip Neurosense/neurosense Neurohub/neurohub neurocnl Neurobench/neurobench; do
+          for dir in Neurochip/neurochip Neurosense/neurosense Neurohub/neurohub neurocnl Neurobench/neurobench; do
             MODULE=$(basename "$dir")
             # Prefer docker-compose
             if [ -f "$dir/docker-compose.yml" ]; then
@@ -92,7 +92,7 @@ jobs:
           # Known module ports (from scaffold convention, default 8000)
           modules = {
               'neurocnl':  8000,
-              'neurosim':  8001,
+              'neurosim':  8000,
               'neurochip': 8002,
               'neurobench': 8003,
               'neurosense': 8004,

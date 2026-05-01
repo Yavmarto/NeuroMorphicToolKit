@@ -13,8 +13,8 @@ dependencies:
   flutter_riverpod: ^2.6.1
   nmtk_ui_core:
     path: ../../../nmtk_ui_core
-  Neurosim_shell_adapter:
-    path: ../../../Neurosim/Neurosim_shell_adapter
+  neurocnl_studio:
+    path: ../../../neurocnl/frontend
 
 dev_dependencies:
   flutter_test:

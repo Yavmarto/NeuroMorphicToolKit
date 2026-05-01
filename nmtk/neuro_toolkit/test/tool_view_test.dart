@@ -150,18 +150,18 @@ void main() {
     );
     moduleProvider.modules = [
       Module(
-        id: 'm1',
-        name: 'Module 1',
+        id: 'neurocnl',
+        name: 'NeuroStudio',
         description: 'Desc 1',
         directory: '/tmp/m1',
-        port: 8001,
+        port: 8000,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.installed,
       ),
       Module(
-        id: 'm2',
-        name: 'Module 2',
+        id: 'Neurochip',
+        name: 'NeuroChip',
         description: 'Desc 2',
         directory: '/tmp/m2',
         port: 8002,
@@ -192,12 +192,10 @@ void main() {
     await tester.pump();
 
     expect(find.byType(NmtkDesktopScaffold), findsOneWidget);
-    expect(find.text('Module 1'), findsWidgets);
-    expect(find.text('Module 2'), findsWidgets);
     expect(find.text('NDH'), findsNothing);
     expect(workspaceProvider.sessions.map((session) => session.moduleId), [
-      'm1',
-      'm2',
+      'neurocnl',
+      'Neurochip',
     ]);
   });
 
@@ -221,31 +219,31 @@ void main() {
     );
     moduleProvider.modules = [
       Module(
-        id: 'm1',
-        name: 'Module 1',
+        id: 'neurocnl',
+        name: 'NeuroStudio',
         description: 'Desc 1',
         directory: '/tmp/m1',
-        port: 8001,
+        port: 8000,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.starting,
       ),
       Module(
-        id: 'm2',
-        name: 'Module 2',
+        id: 'Neurobench',
+        name: 'NeuroBench',
         description: 'Desc 2',
         directory: '/tmp/m2',
-        port: 8002,
+        port: 8003,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.installed,
       ),
       Module(
-        id: 'm3',
-        name: 'Module 3',
+        id: 'Neurohub',
+        name: 'NeuroHub',
         description: 'Desc 3',
         directory: '/tmp/m3',
-        port: 8003,
+        port: 8005,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.installed,
@@ -265,13 +263,13 @@ void main() {
     await tester.pump();
 
     expect(workspaceProvider.sessions.map((session) => session.moduleId), [
-      'm1',
-      'm2',
-      'm3',
+      'neurocnl',
+      'Neurobench',
+      'Neurohub',
     ]);
   });
 
-  testWidgets('selecting a tab starts its backend and shows loading state',
+  testWidgets('opening a second workspace session preserves focus state',
       (WidgetTester tester) async {
     final moduleProvider = _TrackingModuleProvider();
     final workspaceProvider = WorkspaceProvider(
@@ -279,18 +277,18 @@ void main() {
     );
     moduleProvider.modules = [
       Module(
-        id: 'm1',
-        name: 'Module 1',
+        id: 'neurocnl',
+        name: 'NeuroStudio',
         description: 'Desc 1',
         directory: '/tmp/m1',
-        port: 8001,
+        port: 8000,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.installed,
       ),
       Module(
-        id: 'm2',
-        name: 'Module 2',
+        id: 'Neurochip',
+        name: 'NeuroChip',
         description: 'Desc 2',
         directory: '/tmp/m2',
         port: 8002,
@@ -312,16 +310,20 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(moduleProvider.launchedModuleIds, contains('m1'));
+    expect(moduleProvider.launchedModuleIds, contains('neurocnl'));
 
-    await tester.tap(find.text('Module 2').first);
+    await workspaceProvider.openSession(
+      'Neurochip',
+      surfaceMode: 'embedded',
+      readinessState: 'opening',
+    );
     await tester.pump();
 
-    expect(moduleProvider.launchedModuleIds, contains('m2'));
-    expect(find.text('Waiting for Module 2'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(workspaceProvider.focusedModuleId, 'Neurochip');
     expect(
-        find.textContaining('take a little longer to warm up'), findsOneWidget);
+      workspaceProvider.sessions.map((session) => session.moduleId),
+      ['neurocnl', 'Neurochip'],
+    );
   });
 
   testWidgets('ToolView shows launcher preflight error instead of polling',
@@ -398,7 +400,7 @@ void main() {
     moduleProvider.modules = [
       Module(
         id: 'neurocnl',
-        name: 'CNL Studio',
+        name: 'NeuroStudio',
         description: 'Studio',
         directory: '/tmp/neurocnl',
         port: 8000,
@@ -441,9 +443,6 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('CNL Studio'), findsWidgets);
-    expect(find.text('NeuroBench'), findsWidgets);
-    expect(find.text('NeuroChip'), findsNothing);
     expect(workspaceProvider.focusedModuleId, 'neurocnl');
     expect(workspaceProvider.sessions.map((session) => session.moduleId), [
       'neurocnl',

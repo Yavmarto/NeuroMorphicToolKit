@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# verify_backend.sh — monorepo guardrail for all 7 Python adapter modules.
+# verify_backend.sh — monorepo guardrail for the active Python adapter modules.
 # Usage: ./verify_backend.sh
 # Exit code: 0 = clean, non-zero = regression detected.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export PYTHONPATH="${ROOT}:${ROOT}/Neurochip:${ROOT}/Neurobench/neurobench:${ROOT}/Neurosense:${ROOT}/Neurohub:${ROOT}/Neurosim:${ROOT}/neurocnl:${ROOT}/Neuro-Dream-Hand:${ROOT}/nmtk${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="${ROOT}:${ROOT}/Neurochip:${ROOT}/Neurobench/neurobench:${ROOT}/Neurosense:${ROOT}/Neurohub:${ROOT}/neurocnl:${ROOT}/Neuro-Dream-Hand:${ROOT}/nmtk${PYTHONPATH:+:$PYTHONPATH}"
 
 # Resolve a pytest that has access to numpy, sqlalchemy, and syrupy.
 # The Homebrew Python 3.11 installation at /usr/local/bin/pytest is the
@@ -25,12 +25,12 @@ fail() {
 }
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Step 1 — Lint / format check across all 7 adapter modules
+# Step 1 — Lint / format check across the active adapter modules
 # ──────────────────────────────────────────────────────────────────────────────
-echo "━━━ [1/2] Running ruff lint across all 7 backend modules ━━━"
+echo "━━━ [1/2] Running ruff lint across the active backend modules ━━━"
 ruff check \
   "${ROOT}/neurocnl/backend/app" \
-  "${ROOT}/Neurosim/neurosim/app" \
+  "${ROOT}/neurocnl/neurosim/app" \
   "${ROOT}/Neurochip/neurochip/app" \
   "${ROOT}/Neurobench/neurobench/app" \
   "${ROOT}/Neurosense/neurosense/app" \

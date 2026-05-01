@@ -7,7 +7,7 @@ import pytest
 
 HEALTH_ENDPOINTS = [
     ("neurocnl",   "http://localhost:8000/health"),
-    ("neurosim",   "http://localhost:8001/health"),
+    ("neurosim",   "http://localhost:8000/health"),
     ("neurochip",  "http://localhost:8002/health"),
     ("neurobench", "http://localhost:8003/health"),
     ("neurosense", "http://localhost:8004/health"),

@@ -45,7 +45,7 @@ _CALL_API_POST_CASSETTE = str(_CASSETTE_DIR / "test_call_api_post.yaml")
 _FETCH_ACTIVITY_CASSETTE = str(_CASSETTE_DIR / "test_fetch_activity.yaml")
 
 # The URLs must exactly match the ``uri`` fields in the cassette files
-_BASE = "http://localhost:8001"
+_BASE = "http://localhost:8000"
 
 
 # ---------------------------------------------------------------------------
@@ -145,8 +145,8 @@ def test_build_health_endpoint_strips_trailing_slash() -> None:
     """Confirm URL building logic — pure function, no network call."""
     from neurohub.app.services.suite_client import build_health_endpoint
 
-    assert build_health_endpoint("http://neurosim:8001/") == "http://neurosim:8001/health"
-    assert build_health_endpoint("http://neurosim:8001") == "http://neurosim:8001/health"
+    assert build_health_endpoint("http://neurosim:8000/") == "http://neurosim:8000/health"
+    assert build_health_endpoint("http://neurosim:8000") == "http://neurosim:8000/health"
 
 
 def test_get_app_urls_returns_defaults_without_db_config() -> None:
@@ -159,6 +159,6 @@ def test_get_app_urls_returns_defaults_without_db_config() -> None:
     mock_db.query.return_value.first.return_value = None  # no config in DB
 
     urls = get_app_urls(mock_db)
-    assert urls["neurosim"] == "http://localhost:8001"
+    assert urls["neurosim"] == "http://localhost:8000"
     assert urls["neurochip"] == "http://localhost:8002"
     assert len(urls) == 5

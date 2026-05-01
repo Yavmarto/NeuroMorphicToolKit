@@ -15,7 +15,6 @@ import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 // Phase 3: native feature package shell imports
 import 'package:neurocnl_feature/neurocnl_feature.dart';
-import 'package:neurosim_feature/neurosim_feature.dart';
 import 'package:neurochip_feature/neurochip_feature.dart';
 import 'package:neurobench_feature/neurobench_feature.dart';
 import 'package:neurosense_feature/neurosense_feature.dart';
@@ -82,7 +81,9 @@ GoRouter createGoRouter(AppProvider appProvider) {
           GoRoute(
             path: '/module/neurosim',
             name: 'module-neurosim',
-            builder: (context, state) => const NeurosimShell(),
+            builder: (context, state) => NeurocnlShell(
+              initialLocation: '/canvas${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
+            ),
           ),
           GoRoute(
             path: '/module/neurochip',

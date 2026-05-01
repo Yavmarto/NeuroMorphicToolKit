@@ -37,8 +37,7 @@ the full endpoint smoke workflow.
 
 | Module id | Service | Default base URL | Live docs | Human API guide | Auth notes |
 | --- | --- | --- | --- | --- | --- |
-| `neurocnl` | CNL Studio | `http://127.0.0.1:8000` | `/docs`, `/openapi.json` | [`neurocnl/docs/api_reference.md`](../../neurocnl/docs/api_reference.md) | Optional `X-API-Key` when `AUTH_ENABLED=true`. |
-| `Neurosim` | NeuroSim | `http://127.0.0.1:8001` | `/docs`, `/openapi.json` | [`Neurosim/docs/api_documentation.md`](../../Neurosim/docs/api_documentation.md) | No API-key gate in the current app. |
+| `neurocnl` | NeuroStudio backend | `http://127.0.0.1:8000` | `/docs`, `/openapi.json` | [`neurocnl/docs/api_reference.md`](../../neurocnl/docs/api_reference.md) | Optional `X-API-Key` when `AUTH_ENABLED=true`; this service now owns both `/api/*` and `/api/neurosim/*`. |
 | `Neurochip` | NeuroChip | `http://127.0.0.1:8002` | `/docs`, `/openapi.json` | [`Neurochip/docs/neurochip/api_reference.md`](../../Neurochip/docs/neurochip/api_reference.md) | Optional `X-API-Key` when `NEUROCHIP_AUTH_ENABLED=true`. |
 | `Neurobench` | NeuroBench | `http://127.0.0.1:8003` | `/docs`, `/openapi.json` | [`Neurobench/docs/api_reference.md`](../../Neurobench/docs/api_reference.md) | Optional `X-API-Key` when `NB_AUTH_ENABLED=true`. |
 | `Neurosense` | NeuroSense | `http://127.0.0.1:8004` | `/docs`, `/openapi.json` | [`Neurosense/docs/api_documentation.md`](../../Neurosense/docs/api_documentation.md) | Optional `X-API-Key` header or `api_key` query when `NEUROSENSE_AUTH_ENABLED=true`. |
@@ -55,7 +54,7 @@ Every runnable HTTP module exposes:
 
 Some services also expose operational routes:
 
-- `neurocnl`: `GET /metrics` for Prometheus metrics.
+- `neurocnl`: `GET /metrics` for Prometheus metrics, plus the merged NeuroStudio canvas routes at `/api/neurosim/*`.
 - `Neurochip`: `/hardware/pynq/*` for board-local PYNQ runtime operations.
 - `Neurobench`: `/bench/*` for selected hardware benchmark runners.
 

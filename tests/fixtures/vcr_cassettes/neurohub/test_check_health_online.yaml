@@ -5,7 +5,7 @@ interactions:
       Accept:
       - '*/*'
     method: GET
-    uri: http://localhost:8001/health
+    uri: http://localhost:8000/health
   response:
     body:
       string: '{"status": "ok", "version": "1.0.0"}'

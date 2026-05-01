@@ -260,6 +260,7 @@ class Module {
   final String icon;
   final String directory;
   final int? port;
+  final bool required;
   final bool hasFrontend;
   final bool showInLauncherNav;
   final String frontendStatus;
@@ -297,6 +298,7 @@ class Module {
     this.icon = 'extension',
     required this.directory,
     this.port,
+    this.required = false,
     this.hasFrontend = false,
     this.showInLauncherNav = true,
     this.frontendStatus = 'No',
@@ -337,6 +339,7 @@ class Module {
       directory:
           json['installPath'] as String? ?? json['directory'] as String? ?? '',
       port: json['port'] as int?,
+      required: json['required'] as bool? ?? false,
       hasFrontend: json['hasFrontend'] as bool? ?? false,
       showInLauncherNav: json['showInLauncherNav'] as bool? ?? true,
       frontendStatus: json['frontendStatus'] as String? ?? 'No',
@@ -398,6 +401,7 @@ class Module {
     String? icon,
     String? directory,
     int? port,
+    bool? required,
     bool? hasFrontend,
     bool? showInLauncherNav,
     String? frontendStatus,
@@ -435,6 +439,7 @@ class Module {
       icon: icon ?? this.icon,
       directory: directory ?? this.directory,
       port: port ?? this.port,
+      required: required ?? this.required,
       hasFrontend: hasFrontend ?? this.hasFrontend,
       showInLauncherNav: showInLauncherNav ?? this.showInLauncherNav,
       frontendStatus: frontendStatus ?? this.frontendStatus,
@@ -500,6 +505,7 @@ class Module {
         'icon': icon,
         'directory': directory,
         'port': port,
+        'required': required,
         'hasFrontend': hasFrontend,
         'showInLauncherNav': showInLauncherNav,
         'frontendStatus': frontendStatus,

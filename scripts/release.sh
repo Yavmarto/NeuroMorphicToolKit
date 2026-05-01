@@ -21,7 +21,7 @@ echo "────────────────────────�
 # 1. Update versions in submodules
 echo "📦 Updating versions and changelogs in submodules..."
 
-MODULES=("neurocnl" "Neuro-Dream-Hand" "Neurobench" "Neurosim" "Neurosense" "Neurochip" "Neurohub")
+MODULES=("neurocnl" "Neuro-Dream-Hand" "Neurobench" "Neurosense" "Neurochip" "Neurohub")
 
 for mod in "${MODULES[@]}"; do
   if [ -d "$ROOT_DIR/$mod" ]; then

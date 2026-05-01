@@ -5,7 +5,6 @@ This checkout contains the suite control plane plus the individual product modul
 Read before edit:
 - Before writing code anywhere in this repo, read `CODING_STYLE_GUIDE.md`.
 - If editing `neurocnl/**`, read `neurocnl/AGENTS.md`.
-- If editing `Neurosim/**`, read `Neurosim/AGENTS.md`.
 - If editing `Neurochip/**`, read `Neurochip/AGENTS.md`.
 - If editing `Neurobench/**`, read `Neurobench/AGENTS.md`.
 - If editing `Neuro-Dream-Hand/**`, read `Neuro-Dream-Hand/AGENTS.md`.

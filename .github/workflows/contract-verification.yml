@@ -22,7 +22,6 @@ jobs:
     outputs:
       neurocnl: ${{ steps.filter.outputs.neurocnl }}
       neurodreamhand: ${{ steps.filter.outputs.neurodreamhand }}
-      neurosim: ${{ steps.filter.outputs.neurosim }}
       neurosense: ${{ steps.filter.outputs.neurosense }}
       neurochip: ${{ steps.filter.outputs.neurochip }}
       neurobench: ${{ steps.filter.outputs.neurobench }}
@@ -44,8 +43,6 @@ jobs:
               - 'neurocnl/**'
             neurodreamhand:
               - 'Neuro-Dream-Hand/**'
-            neurosim:
-              - 'Neurosim/**'
             neurosense:
               - 'Neurosense/**'
             neurochip:
@@ -184,10 +181,6 @@ jobs:
           - [self-hosted, Windows, X64]
           - [self-hosted, Linux, X64]
         include:
-          - module: Neurosim
-            flag: neurosim
-            python: "3.12"
-            framework: pip
           - module: Neurosense
             flag: neurosense
             python: "3.11"
@@ -205,7 +198,6 @@ jobs:
             python: "3.11"
             framework: pip
     if: >-
-      needs.detect-changes.outputs.neurosim == 'true' ||
       needs.detect-changes.outputs.neurosense == 'true' ||
       needs.detect-changes.outputs.neurochip == 'true' ||
       needs.detect-changes.outputs.neurobench == 'true' ||

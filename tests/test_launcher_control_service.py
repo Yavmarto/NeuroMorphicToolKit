@@ -206,6 +206,14 @@ class LauncherControlServiceTest(unittest.TestCase):
         self._resolver_calls.append(module_id)
         return self._resolved_versions.get(module_id)
 
+    def _reload_state_with_modules(self, modules: list[dict[str, Any]]) -> None:
+        manifest_path = self.repo_root / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+        manifest_path.write_text(json.dumps(modules), encoding="utf-8")
+        self.state.shutdown()
+        self.state = launcher_server.LauncherControlState(
+            remote_version_resolver=self._resolve_remote_version
+        )
+
     def test_modules_endpoint_returns_manifest_data(self) -> None:
         payload = self.state.serialize_modules()
 
@@ -554,6 +562,127 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(workspace["focusedModuleId"], "dummy")
         self.assertEqual(workspace["sessions"][0]["deepLink"], "/analysis")
         self.assertEqual(workspace["sessions"][0]["restoreState"]["tab"], "energy")
+
+    def test_workspace_session_normalizes_legacy_neurosim_module_and_deep_link(self) -> None:
+        self._reload_state_with_modules(
+            [
+                {
+                    "id": "dummy",
+                    "name": "Dummy Module",
+                    "description": "Used for launcher control tests",
+                    "icon": "extension",
+                    "port": 8123,
+                    "installPath": "dummy_module",
+                    "sourcePath": ".",
+                    "runPath": ".",
+                    "uvicornTarget": "app.main:app",
+                    "hasFrontend": True,
+                    "frontendStatus": "Yes",
+                    "requiresMuJoCo": False,
+                    "version": "1.0.0",
+                    "remoteUrl": "https://api.github.com/repos/example/dummy",
+                },
+                {
+                    "id": "neurocnl",
+                    "name": "NeuroStudio",
+                    "description": "CNL and canvas authoring",
+                    "icon": "code",
+                    "port": 8000,
+                    "installPath": "neurocnl",
+                    "sourcePath": ".",
+                    "runPath": ".",
+                    "uvicornTarget": "backend.app.main:app",
+                    "hasFrontend": True,
+                    "frontendStatus": "Yes",
+                    "requiresMuJoCo": False,
+                    "version": "0.6.0",
+                    "remoteUrl": "https://api.github.com/repos/example/neurocnl",
+                },
+            ]
+        )
+
+        created = self.state.create_workspace_session(
+            {
+                "moduleId": "Neurosim",
+                "surfaceMode": "native",
+                "deepLink": "/projects?view=recent",
+                "restoreState": {"tab": "canvas"},
+                "readinessState": "restoring_session",
+            }
+        )
+
+        self.assertEqual(created["focusedModuleId"], "neurocnl")
+        self.assertEqual(len(created["sessions"]), 1)
+        self.assertEqual(created["sessions"][0]["moduleId"], "neurocnl")
+        self.assertEqual(created["sessions"][0]["surfaceMode"], "native")
+        self.assertEqual(created["sessions"][0]["deepLink"], "/canvas/projects?view=recent")
+
+    def test_workspace_reload_normalizes_legacy_neurosim_focus_and_canvas_routes(self) -> None:
+        self._reload_state_with_modules(
+            [
+                {
+                    "id": "dummy",
+                    "name": "Dummy Module",
+                    "description": "Used for launcher control tests",
+                    "icon": "extension",
+                    "port": 8123,
+                    "installPath": "dummy_module",
+                    "sourcePath": ".",
+                    "runPath": ".",
+                    "uvicornTarget": "app.main:app",
+                    "hasFrontend": True,
+                    "frontendStatus": "Yes",
+                    "requiresMuJoCo": False,
+                    "version": "1.0.0",
+                    "remoteUrl": "https://api.github.com/repos/example/dummy",
+                },
+                {
+                    "id": "neurocnl",
+                    "name": "NeuroStudio",
+                    "description": "CNL and canvas authoring",
+                    "icon": "code",
+                    "port": 8000,
+                    "installPath": "neurocnl",
+                    "sourcePath": ".",
+                    "runPath": ".",
+                    "uvicornTarget": "backend.app.main:app",
+                    "hasFrontend": True,
+                    "frontendStatus": "Yes",
+                    "requiresMuJoCo": False,
+                    "version": "0.6.0",
+                    "remoteUrl": "https://api.github.com/repos/example/neurocnl",
+                },
+            ]
+        )
+
+        workspace_file = self.repo_root / "nmtk" / "neuro_toolkit" / "workspace_state.json"
+        workspace_file.write_text(
+            json.dumps(
+                {
+                    "sessions": [
+                        {
+                            "moduleId": "Neurosim",
+                            "surfaceMode": "native",
+                            "deepLink": "/export?target=python",
+                            "restoreState": {"tab": "export"},
+                            "readinessState": "ready",
+                        }
+                    ],
+                    "focusedModuleId": "Neurosim",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        reloaded = launcher_server.LauncherControlState(
+            remote_version_resolver=self._resolve_remote_version
+        )
+        self.addCleanup(reloaded.shutdown)
+
+        workspace = reloaded.get_workspace()
+        self.assertEqual(workspace["focusedModuleId"], "neurocnl")
+        self.assertEqual(workspace["sessions"][0]["moduleId"], "neurocnl")
+        self.assertEqual(workspace["sessions"][0]["deepLink"], "/canvas/export?target=python")
 
     def test_akida_host_round_trip_updates_settings_file(self) -> None:
         created = self.state.create_akida_host(

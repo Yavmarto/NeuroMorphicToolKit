@@ -4,7 +4,6 @@
 ## Module(s) Changed
 - [ ] neurocnl
 - [ ] Neuro-Dream-Hand
-- [ ] Neurosim
 - [ ] Neurosense
 - [ ] Neurochip
 - [ ] Neurobench

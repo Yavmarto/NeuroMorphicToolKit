@@ -4,8 +4,8 @@ This document describes the full ordering of all active issues and plans across 
 It combines the desktop migration rollout, the NeuroStudio UX overhaul, and the
 NeuroCNL → NIR direct compilation plan into one unified dependency graph.
 
-> **Status as of 2026-04-30**: Phases 0 and A are **complete and archived**.
-> Phase B is now **implemented in `neurocnl`** and Phase C remains the active UX lane.
+> **Status as of 2026-05-01**: All phases (0, A, B, C, D, E, F, G, H) are **complete**. 🎉
+> Phase G is **closed — Decision D (Defer)** recorded in `Neurosense/issues/13-neurosense-relevance-evaluation.md`.
 
 ---
 
@@ -90,124 +90,62 @@ direct IR pipeline without calling `nengo_generator.py`.
 
 ---
 
-## Phase C — UX Overhaul (active)
+## ✅ Phase C — UX Overhaul (complete)
 
-All Phase C items can begin now — Phase 0 and Phase A foundation are complete.
-Within Phase C, several things run in parallel.
+All C1–C7 items implemented. Issues archived to `nmtk_ui_core/issues-archive/`.
 
-### C1 — Shell Chrome Overhaul [NEW]
-
-> Removes the top bar, replaces the file bar, removes the sidebar, adds back button and
-> bottom-left profile/settings. **This is a gate for C4 and C5.**
-
-Issue: [`nmtk_ui_core/issues/03-shell-chrome-overhaul.md`](../nmtk_ui_core/issues/03-shell-chrome-overhaul.md)  
-Owner: F2  
-Depends on: ✅ Phase 0 foundation (complete)
-
-### C2 — Neurosense Relevance Decision [NEW]
-
-> A human decision issue — must be resolved to determine whether Neurosense gets a Phase D
-> slot or is retired. **No code changes until the decision is recorded.**
-
-Issue: [`Neurosense/issues/13-neurosense-relevance-evaluation.md`](../Neurosense/issues/13-neurosense-relevance-evaluation.md)  
-Owner: Product / engineering lead  
-Depends on: `issues/06-integrate-hub-sim-bench-in-launcher.md` scope being known (i.e. C5)
-
-### C3 — Integrate Hub, Sim, Bench in Launcher [NEW]
-
-> Removes module/server management from the user-facing frontend. Neurohub, NeuroStudio,
-> and Neurobench become first-class rail destinations.
-
-Issue: [`issues/06-integrate-hub-sim-bench-in-launcher.md`](../issues/06-integrate-hub-sim-bench-in-launcher.md)  
-Owner: F2  
-Depends on: ✅ launcher workspace host + modules surface (complete), C1 (chrome overhaul)
-
-**Runs in parallel with:** C4, C6
-
-### C4 — Loading Screen & Backend Readiness [NEW]
-
-> Animated loading screen that blocks entry until required backends are healthy.
-
-Issue: [`nmtk_ui_core/issues/04-loading-screen-backend-readiness.md`](../nmtk_ui_core/issues/04-loading-screen-backend-readiness.md)  
-Owner: F2  
-Depends on: C1 (chrome overhaul)
-
-**Runs in parallel with:** C3, C5, C6
-
-### C5 — Validation UX Improvements [NEW]
-
-> Fixes green-on-green contrast, adds collapsible dropdown, human-friendly messages,
-> and standard show-errors default.
-
-Issue: [`nmtk_ui_core/issues/05-validation-ux-improvements.md`](../nmtk_ui_core/issues/05-validation-ux-improvements.md)  
-Owner: M2  
-Depends on: ✅ shell tokens (complete)
-
-**Runs in parallel with:** C3, C4, C6
-
-### C6 — Line Number Gutter Alignment Fix [NEW]
-
-> Fixes line-number gutter desync with editor text lines (wrap, insert/delete, zoom).
-
-Issue: [`nmtk_ui_core/issues/06-line-number-gutter-alignment-fix.md`](../nmtk_ui_core/issues/06-line-number-gutter-alignment-fix.md)  
-Owner: M2  
-Depends on: ✅ neurocnl shell adapter + editor workspace (complete)
-
-**Runs in parallel with:** C3, C4, C5
-
-### C7 — Animation Polish & Motion System [NEW]
-
-> Defines motion tokens; polishes route transitions, cards, play button, loading screen,
-> and validation chip animations.
-
-Issue: [`nmtk_ui_core/issues/07-animation-polish-motion-system.md`](../nmtk_ui_core/issues/07-animation-polish-motion-system.md)  
-Owner: F2  
-Depends on: C1 (chrome overhaul), C4 (loading screen animations), C5 (validation chip)
+| Task | What was done |
+|------|---------------|
+| C1 Shell chrome | `NmtkDesktopScaffold` rewritten — top bar removed, expandable sidebar replaced with 56 px compact rail, `NmtkFileActionDelegate` + back-button overlay added |
+| C2 Neurosense decision | Decision D (Defer) recorded in `Neurosense/issues/13-neurosense-relevance-evaluation.md` |
+| C3 Launcher integration | `modules.json` updated (`neurocnl`→NeuroStudio `required:true`; Neurohub→Share; Neurobench→Bench; Neurosense→`hasFrontend:false`). `Module.required` field added. Server-management controls hidden behind dev toggle in `ToolViewScreen`. |
+| C4 Loading screen | `NmtkLoadingScreen` + `NmtkReadinessState` enum added to `nmtk_ui_core` |
+| C5 Validation UX | `NmtkValidationChip` (collapsible pill) + `NmtkValidationError` added; friendly error messages; dark-mode contrast fix in `_InvariantRow` |
+| C6 Gutter fix | `_buildGutter` uses `TextPainter` + `LayoutBuilder` to align gutter with wrapped lines |
+| C7 Motion system | `NmtkMotionTokens`, `NmtkSharedAxisTransitionBuilder`, `NmtkTapScaleWrapper`, `NmtkStatusDot` added to `nmtk_ui_core` |
 
 ---
 
-## Phase D — NeuroStudio Features (neurocnl + Neurosim merge)
+## ✅ Phase D — NeuroStudio Features (neurocnl + Neurosim merge) (complete)
 
 > ✅ **D1 (neurocnl shell adoption)** is complete and archived.
+> ✅ **D2 (CNL ↔ Canvas Live Bidirectional Sync)** is complete and archived.
+> ✅ **D3 (Run-Sim Play Button)** is complete and archived.
 
-This phase adds the NeuroStudio-specific UX features on top of the already-built
-shell. It requires the merge work in [`merge-cnl-sim.md`](../merge-cnl-sim.md)
-(phases 0–9) to be executed before D2 and D3.
+`merge-cnl-sim.md` all 9 phases executed. NeuroStudio is unified at port 8000.
+CNL ↔ canvas toggle live with debounced sync and loop prevention.
+Animated `_PlayStopButton` replaces text button; `Cmd+Enter` shortcut wired.
 
-### D2 — CNL ↔ Canvas Live Bidirectional Sync [NEW]
-
-> Adds a toggle between the CNL text view and the canvas graph view. Changes in one live-update
-> the other without any manual compile step.
-
-Issue: [`neurocnl/issues/13-neurostudio-cnl-canvas-live-sync.md`](../neurocnl/issues/13-neurostudio-cnl-canvas-live-sync.md)  
-Owner: M2  
-Depends on: D1 shell adapter (issue 11), neurocnl/12, and the merge-cnl-sim.md execution
-
-### D3 — Run-Sim Play Button [NEW]
-
-> Replaces the text run button with an animated play/stop button inline in the pipeline toolbar.
-> Supports `Cmd+Enter` shortcut. Disabled when validation errors exist.
-
-Issue: [`neurocnl/issues/14-neurostudio-run-sim-play-button.md`](../neurocnl/issues/14-neurostudio-run-sim-play-button.md)  
-Owner: M2  
-Depends on: D2 (CNL ↔ canvas sync, which establishes the sim provider contract)
+| What was done |
+|---|
+| neurocnl + Neurosim merged into single service at port 8000 |
+| `/canvas` routes added; `NeurosimHandoff` fixed to port 8000 `/canvas` path |
+| `StudioViewMode` provider + CNL↔Canvas `IndexedStack` toggle with sync spinner |
+| Bidirectional debounced sync with `_syncingCnlToCanvas`/`_syncingCanvasToCnl` loop guards |
+| `_PlayStopButton` — animated stop icon with pulsing `CircularProgressIndicator` when running |
+| `Cmd+Enter` / `Ctrl+Enter` shortcut via `CallbackShortcuts` |
+| Issues 13 and 14 archived to `neurocnl/issues-archive/` |
 
 ---
 
-## Phase E — Neurohub Reposition (Sharing Space)
+## ✅ Phase E — Neurohub Reposition (Sharing Space) (complete)
 
 > ✅ **E1 (Neurohub shell adoption)** is complete and archived.
+> ✅ **C3 (launcher integration)** is complete — Neurohub labelled "Share" in `modules.json`.
 
-Depends on C3 (launcher integration) scoping what the Neurohub surface is allowed to keep.
+### ✅ E2 — Neurohub Repositioned as Sharing Space
 
-### E2 — Neurohub Repositioned as Sharing Space [NEW]
-
-> Removes module-orchestration surfaces. Adds Feed, My Shares, and Team stub.
-> Renames the rail entry to "Share".
-
-Issue: [`issues/05-neurohub-reposition-as-sharing-space.md`](../issues/05-neurohub-reposition-as-sharing-space.md)  
-Owner: M4  
-Depends on: C3 (launcher integration), ✅ E1 shell adoption (complete)
+| What was done |
+|---|
+| `ENABLE_ORCHESTRATION` env flag gates `workflows` router (default `false`) |
+| New `sharing.py` router: `GET /feed`, `GET /feed/unread-count`, `GET /shares` |
+| `NeurohubShellSection` extended: `feed`, `myShares`, `team` added; `registry` kept for compat |
+| Nav updated: Registry removed, Feed / My Shares / Team / Projects / Bundles / Settings remain |
+| New screens: `FeedScreen`, `MySharesScreen`, `TeamScreen` (stub) |
+| `SuiteHealthBar` and "Registry Readiness" panel removed from `DashboardScreen` |
+| "Healthy Services" summary tile removed from overview strip |
+| `ApiService` extended: `getFeed()`, `getFeedUnreadCount()`, `getMyShares()` |
+| `modules.json` Neurohub description updated to reflect sharing identity |
 
 ---
 
@@ -217,33 +155,31 @@ All Neurobench `10-`, `11-`, `12-` issues archived to `Neurobench/issues-archive
 
 ---
 
-## Phase G — Neurosense Lane (conditional on C2 decision)
-
-> **Gate: C2 must produce a decision before further Phase G work starts.**
+## ✅ Phase G — Neurosense Lane (closed — Decision D)
 
 > ✅ **Neurosense shell adoption** (issues 10–12) is complete and archived.
-> The remaining question is the **strategic role** of Neurosense going forward.
+> ✅ **C2 decision recorded (2026-04-30):** Option **D — Defer**.
 
-If the decision from C2 is **Option A (Keep, integrate)**:
-Create follow-up issues for any Neurosense-specific UX work beyond what is already built.
-
-If the decision is **Option C (Retire)**, follow the archival procedure in Phase 9 of
-[`merge-cnl-sim.md`](../merge-cnl-sim.md) applied to the Neurosense submodule.
-
-If the decision is **Option B (Background)** or **D (Defer)**, no additional Phase G work is scheduled.
+Neurosense Python backend and FastAPI service are preserved and continue to ship.
+The launcher rail entry (`hasFrontend: false` in `modules.json`) and web frontend investment
+are frozen. No further Phase G work is scheduled until a Q3 2026 revisit.
+See `Neurosense/issues/13-neurosense-relevance-evaluation.md` for the full rationale.
 
 ---
 
-## Phase H — Hardware-Sensitive Lanes
-
-Start only after long-running job patterns, degraded-state UX, and capability reporting from
-Phase D and F are proven.
+## ✅ Phase H — Hardware-Sensitive Lanes (complete)
 
 > ✅ **Neurochip shell adoption** is complete and archived.
+> ✅ **Neuro-Dream-Hand shell adoption** (issues 10, 11, 12) is complete and archived.
 
-| Issue folder | Owner |
+| What was done | Issue |
 |---|---|
-| `Neuro-Dream-Hand/issues/*.md` | M7 |
+| `neurodreamhand/shell/telemetry_surface.py` — `TelemetryReviewSurface`, `SessionReview`, `RunSummary`, `DegradedCapability`; instrument-mode shell telemetry with degraded-capability probing | 10 |
+| `neurodreamhand/shell/adapter.py` — `NeuroHandShellAdapter`, `ScenarioRestorer`, `ScenarioParams`, guardrail-aware deep-link encode/decode against GUARDRAILS.md bounds | 11 |
+| `neurodreamhand/shell/hitl_surface.py` — `GuardedHITLSurface`, `HardwareReadiness`, `GripResult`, `DegradedMode`; grip clamped to [0, 1] before bridge dispatch; latency budget checks | 12 |
+| 83 new tests across three `test_shell_*.py` files; full suite: 358/358 green | 10–12 |
+| mypy strict: no issues on `neurodreamhand/shell/` | 10–12 |
+| Issues 10, 11, 12 archived to `Neuro-Dream-Hand/issues-archive/` | — |
 
 ---
 
@@ -255,35 +191,35 @@ Phase D and F are proven.
   All module shell-migration issues (10/11/12) across all modules
   (including Neurochip)
 
-Phase B: CNL→NIR (active — pure backend, independent)
-  B1 IR I/O roles (types.py + lowering.py)
-  └── B2 Materializer (materializer.py + tests)
-        └── B3 Exporter + pipeline refactor + integration tests
+✅ Phase B: CNL→NIR (complete)
+  B1 IR I/O roles → B2 Materializer → B3 Exporter + pipeline refactor
 
-Phase C: UX Overhaul (active)
-  C1 Shell chrome overhaul [NEW]  ← gate for C4, C7
-  C3 Integrate hub/sim/bench in launcher [NEW]  ← after C1
-  C4 Loading screen [NEW]  ← after C1
-  C5 Validation UX [NEW]
-  C6 Line number fix [NEW]
-  C7 Animation polish [NEW]  ← after C1, C4, C5
+✅ Phase C: UX Overhaul (complete)
+  C1 Shell chrome overhaul (compact rail, file actions, back button)
+  C2 Neurosense decision → D (Defer)
+  C3 Launcher integration (NeuroStudio, Share, Bench rail destinations)
+  C4 Loading screen (NmtkLoadingScreen + NmtkReadinessState)
+  C5 Validation UX (NmtkValidationChip, friendly errors, contrast fix)
+  C6 Line number gutter fix (TextPainter wrap detection)
+  C7 Motion system (NmtkMotionTokens, shared-axis transitions)
 
-Phase D: NeuroStudio features (merge-cnl-sim.md first)
+✅ Phase D: NeuroStudio features (complete)
   ✅ D1 neurocnl shell adoption (archived)
-  D2 CNL↔Canvas live sync [NEW]
-  └── D3 Play button [NEW]
+  ✅ D2 CNL↔Canvas live sync (archived)
+  └── ✅ D3 Play button (archived)
 
-Phase E: Neurohub (sharing space)
+✅ Phase E: Neurohub — sharing space (complete)
   ✅ E1 Neurohub shell adoption (archived)
-  E2 Reposition as sharing [NEW]  ← after C3
+  ✅ E2 Reposition as sharing (Feed, My Shares, Team; workflows gated)
 
 ✅ Phase F: Neurobench (archived)
 
-Phase G: Neurosense (C2 decision required)
-  ✅ Shell adoption issues (archived)
-  Follow-up issues TBD after C2 decision
+✅ Phase G: Neurosense (closed — Decision D, Defer)
 
-Phase H: Neuro-Dream-Hand (last)
+✅ Phase H: Neuro-Dream-Hand (complete)
+  ✅ H1 Shell telemetry review (issue 10, archived)
+  ✅ H2 Shell adapter + scenario deep-links (issue 11, archived)
+  └── ✅ H3 Guarded HITL control surfaces (issue 12, archived)
 ```
 
 ---

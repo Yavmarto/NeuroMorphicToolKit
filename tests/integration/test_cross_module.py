@@ -9,7 +9,7 @@ import pytest
 
 # Service URLs from environment or defaults (Docker service names)
 NEUROCNL_URL = os.getenv("NEUROCNL_URL", "http://neurocnl:8000")
-NEUROSIM_URL = os.getenv("NEUROSIM_URL", "http://neurosim:8000")
+NEUROSIM_URL = os.getenv("NEUROSIM_URL", "http://neurocnl:8000")
 NEUROCHIP_URL = os.getenv("NEUROCHIP_URL", "http://neurochip:8000")
 NEUROSENSE_URL = os.getenv("NEUROSENSE_URL", "http://neurosense:8000")
 NEUROHUB_URL = os.getenv("NEUROHUB_URL", "http://neurohub:8000")

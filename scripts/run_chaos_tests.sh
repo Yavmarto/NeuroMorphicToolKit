@@ -2,7 +2,7 @@
 # scripts/run_chaos_tests.sh
 # Randomly stops and restarts services while running a basic smoke test.
 
-SERVICES=("neurocnl" "neurosim" "neurochip" "neurohub" "neurosense" "neurobench")
+SERVICES=("neurocnl" "neurochip" "neurohub" "neurosense" "neurobench")
 
 echo "🌪️ Starting Chaos Testing..."
 
@@ -20,7 +20,6 @@ check_all_healthy() {
 get_port() {
   case $1 in
     "neurocnl") echo 8000 ;;
-    "neurosim") echo 8001 ;;
     "neurochip") echo 8002 ;;
     "neurobench") echo 8003 ;;
     "neurosense") echo 8004 ;;

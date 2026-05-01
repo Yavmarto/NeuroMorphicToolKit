@@ -23,28 +23,25 @@ Neuromorphic computing is inherently multidisciplinary.
 
 NMTK orchestrates the following specialized modules, which can be dynamically downloaded into the main toolkit:
 
-1.  **[NeuroCNL](./neurocnl) (Conceptual Neuromorphic Language)**
-    *   *Purpose:* Translates plain-English specifications into verified Spiking Neural Networks (SNNs).
-    *   *Best for:* Fast prototyping, ensuring biological constraints, and exporting to various hardware (Loihi, Lava, SpiNNaker).
-2.  **[Neurosim](./Neurosim)**
-    *   *Purpose:* A robust simulation environment to test neuromorphic models before physical deployment.
-    *   *Best for:* Software testing, model validation, and parameter tuning.
-3.  **[Neurosense](./Neurosense)**
+1.  **[neurocnl / NeuroStudio](./neurocnl)**
+    *   *Purpose:* Translates plain-English specifications into verified Spiking Neural Networks (SNNs) and hosts the merged visual canvas workflow under the NeuroStudio launcher surface.
+    *   *Best for:* Fast prototyping, biological-constraint validation, visual editing, simulation preview, and export to hardware targets such as Loihi, Lava, and SpiNNaker.
+2.  **[Neurosense](./Neurosense)**
     *   *Purpose:* Sensory processing and encoding. Converts traditional data modalities (vision, audio, touch) into spike trains.
     *   *Best for:* Preparing datasets for SNNs and integrating sensors.
-4.  **[Neurochip](./Neurochip)**
+3.  **[Neurochip](./Neurochip)**
     *   *Purpose:* Interfacing directly with neuromorphic hardware backends.
     *   *Best for:* Hardware engineers and low-level deployment orchestration.
-5.  **[Neurobench](./Neurobench)**
+4.  **[Neurobench](./Neurobench)**
     *   *Purpose:* Standardized benchmarking and testing of neuromorphic models and hardware configurations.
     *   *Best for:* Evaluating performance, latency, and energy efficiency.
-6.  **[Neurohub](./Neurohub)**
+5.  **[Neurohub](./Neurohub)**
     *   *Purpose:* Community registry for sharing and discovering pre-trained SNN models, neuromorphic datasets, hardware profiles, NeuroCNL spec templates, encoding presets, and benchmark baselines.
     *   *Best for:* Researchers publishing work, engineers looking for a starting point, and anyone who wants to reuse community-validated artefacts across the suite.
-7.  **[NeuroDash](./NeuroDash)**
+6.  **[NeuroDash](./NeuroDash)**
     *   *Purpose:* Central orchestration dashboard for managing cross-app projects, pipelines, milestones, and team collaboration across the full suite.
     *   *Best for:* Team leads and project managers coordinating work across multiple Neuro-space apps.
-8.  **[Neuro-Dream-Hand](./Neuro-Dream-Hand)**
+7.  **[Neuro-Dream-Hand](./Neuro-Dream-Hand)**
     *   *Purpose:* Applied hardware robotics and edge integration (e.g., controlling a robotic hand via SNNs and Teensy microcontrollers).
     *   *Best for:* Applied robotics, edge AI, and end-to-end physical demonstrations.
 
@@ -52,8 +49,7 @@ NMTK orchestrates the following specialized modules, which can be dynamically do
 
 | Module | Status | Backend | Frontend | Tests | Docker | CI |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **NeuroCNL** | 97% | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Neurosim** | 80% | ✅ | ⚠️ | ✅ | ✅ | ✅ |
+| **neurocnl / NeuroStudio** | 97% | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Neurosense** | 85% | ✅ | ✅ | ✅ | ⚠️ | ✅ |
 | **Neurohub** | 0% | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **NeuroDash** | 80% | ✅ | ✅ | ✅ | ⚠️ | ✅ |
@@ -131,4 +127,4 @@ For users and developers:
     bash scripts/demo_smoke_test.sh
     ```
 
-For detailed module-specific development, explore the subdirectories (e.g., `neurocnl/`, `Neurosim/`) which contain their own `README.md` files.
+For detailed module-specific development, explore the subdirectories (e.g., `neurocnl/`, `Neurochip/`) which contain their own `README.md` files.

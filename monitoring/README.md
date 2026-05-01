@@ -19,13 +19,10 @@ In other words, this is the shared monitoring plane for the NMTK microservice su
 
 [`prometheus/prometheus.yml`](./prometheus/prometheus.yml) scrapes:
 
-- `neurocnl`
-- `neurocnl-physics`
-- `neurosim`
-- `neurochip`
-- `neurobench`
-- `neurosense`
-- `neurohub`
+- `suite_api`
+- optional worker targets when those profiles are enabled:
+  `neurocnl-physics-worker`, `neurosense-hw-worker`, `neurobench-runner-worker`,
+  `neurochip-hw-worker`
 
 It also loads alert rules from [`prometheus/alert_rules.yml`](./prometheus/alert_rules.yml).
 
@@ -35,7 +32,7 @@ It also loads alert rules from [`prometheus/alert_rules.yml`](./prometheus/alert
 
 ### Loki + Promtail
 
-- [`promtail/promtail-config.yml`](./promtail/promtail-config.yml) watches Docker containers and keeps only the NMTK service logs.
+- [`promtail/promtail-config.yml`](./promtail/promtail-config.yml) watches Docker containers and keeps only the active NMTK service logs.
 - [`loki/loki-config.yml`](./loki/loki-config.yml) stores and serves those logs for querying.
 
 ### Grafana

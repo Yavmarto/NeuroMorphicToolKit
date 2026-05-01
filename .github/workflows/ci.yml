@@ -25,7 +25,6 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      neurosim: ${{ steps.filter.outputs.neurosim }}
       neurochip: ${{ steps.filter.outputs.neurochip }}
       neurochip_frontend: ${{ steps.filter.outputs.neurochip_frontend }}
       neurosense: ${{ steps.filter.outputs.neurosense }}
@@ -50,8 +49,6 @@ jobs:
         id: filter
         with:
           filters: |
-            neurosim:
-              - 'Neurosim/**'
             neurochip:
               - 'Neurochip/neurochip/**'
             neurochip_frontend:
@@ -107,80 +104,6 @@ jobs:
         run: python -m pip install pre-commit
       - name: Run pre-commit
         run: pre-commit run --all-files
-
-  test-neurosim:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.neurosim == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - [self-hosted, macOS, ARM64]
-          - [self-hosted, Windows, X64]
-          - [self-hosted, Linux, X64]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Add Git to PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
-      - name: Configure tool cache
-        shell: bash
-        run: |
-          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
-          mkdir -p "$TOOL_CACHE"
-          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
-          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-      - name: Update submodule
-        run: git submodule update --init Neurosim || true
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-        env:
-          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
-      - name: Python diagnostics
-        run: |
-          python --version
-          python -m pip --version
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            where python || true
-            where pytest || true
-          else
-            which python || true
-            which pytest || true
-          fi
-      - name: Install dependencies
-        run: |
-          if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
-            python -m pip install -e ./Neurosim
-            python -m pip install pytest httpx ruff mypy
-          else
-            echo "Submodule missing, skipping"
-          fi
-      - name: Lint with ruff
-        run: |
-          if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
-            cd Neurosim
-            python -m ruff check .
-            python -m ruff format --check .
-          fi
-      - name: Type check with mypy
-        run: |
-          if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
-            cd Neurosim
-            python -m mypy neurosim
-          fi
-      - name: Run tests
-        run: |
-          if [ -d "Neurosim" ] && [ -f "Neurosim/pyproject.toml" ]; then
-            cd Neurosim
-            python -m pytest --tb=short --hypothesis-show-statistics
-          fi
 
   test-neurochip:
     needs: detect-changes
@@ -929,7 +852,6 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     needs:
       - pre-commit
-      - test-neurosim
       - test-neurochip
       - test-neurochip-frontend
       - test-neurosense
@@ -949,7 +871,6 @@ jobs:
         shell: bash
         run: |
           echo "Results:"
-          echo "  neurosim:       ${{ needs.test-neurosim.result }}"
           echo "  neurochip:      ${{ needs.test-neurochip.result }}"
           echo "  neurosense:     ${{ needs.test-neurosense.result }}"
           echo "  neurohub:       ${{ needs.test-neurohub.result }}"
@@ -962,7 +883,6 @@ jobs:
           # Fail if any job failed (skipped is OK — means no changes in that module)
           for result in \
             "${{ needs.pre-commit.result }}" \
-            "${{ needs.test-neurosim.result }}" \
             "${{ needs.test-neurochip.result }}" \
             "${{ needs.test-neurochip-frontend.result }}" \
             "${{ needs.test-neurosense.result }}" \

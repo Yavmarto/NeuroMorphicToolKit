@@ -20,6 +20,180 @@ removed from `.gitmodules`.
 **Python package:** unchanged — `neurocnl` (library) + `neurosim` sub-package (moved inside)  
 **Port:** 8000 (Neurosim's port 8001 retired)
 
+## Status Update — 2026-05-01 (second pass)
+
+Completed in this pass:
+
+- Phase 1 backend move is started and functionally in place: the Python package, contracts,
+  components, templates, and tests from `Neurosim/neurosim/**` now exist under
+  `neurocnl/neurosim/**`.
+- A compatibility shim now exists at `neurocnl/neurosim/app/main.py` so existing
+  `neurosim.app.main` imports resolve to the merged FastAPI app during the transition.
+- Phase 2 is implemented: `neurocnl/neurosim/app/services/neurocnl_bridge.py` now imports
+  `neurocnl` directly and no longer does dynamic `sys.path` or module bootstrapping.
+- Phase 3 is partially implemented: `neurocnl/backend/app/main.py` now includes the Neurosim
+  routers, uses a shared limiter that honours `X-Forwarded-For`, accepts both
+  `CORS_ALLOWED_ORIGINS` and `ALLOWED_ORIGINS`, restores a root fallback when the frontend is
+  absent, extends `/health` with canvas status, and now initializes and closes a shared
+  `ProjectStore` during app lifespan.
+- Phase 4 is partially implemented: `neurocnl/pyproject.toml` now includes `watchdog`, adds
+  `neurosim/tests` to pytest discovery, and enables strict mypy for `neurosim.contracts.*`.
+- Phase 5 is started: the current Neurosim Flutter app has been copied into
+  `neurocnl/frontend/lib/canvas_app/**` as an embedded subtree, the shared `neurocnl` router now
+  exposes `/canvas`, `/canvas/projects`, `/canvas/sweep`, and `/canvas/export`, the outer shell
+  now includes a Canvas destination, the canonical canvas route/shell entry files now live under
+  `neurocnl/frontend/lib/screens/canvas/**` and `neurocnl/frontend/lib/routing/canvas/**`, and
+  the copied canvas API client now defaults to the merged backend at port 8000 (or the current
+  web origin). The follow-on normalization passes are now also landed: canvas models now live
+  under `neurocnl/frontend/lib/models/canvas/**`, canvas providers under
+  `neurocnl/frontend/lib/providers/canvas/**`, shared canvas services under
+  `neurocnl/frontend/lib/services/**`, the shared canvas utility helper under
+  `neurocnl/frontend/lib/utils/canvas_component_utils.dart`, the remaining canvas-specific widgets
+  under `neurocnl/frontend/lib/widgets/canvas/**`, and the embedded NeuroSim shell bootstrap under
+  `neurocnl/frontend/lib/routing/canvas/neurosim_app.dart`. The old
+  `neurocnl/frontend/lib/canvas_app/**` subtree has now been removed. The inherited canvas typing
+  debt that previously blocked `flutter analyze` has also been reduced materially: the dead
+  handwritten duplicate graph model is gone, the relocated canvas API client now performs typed
+  JSON decoding, the canvas shell adapter imports only the canonical routing files, and the
+  remaining analyzer output is now fully clean: `cd neurocnl/frontend && flutter analyze` now
+  passes with no findings after the follow-on lint and test-surface cleanup. The shared widget
+  smoke coverage for the merged canvas surface is also now broader than the original
+  `/canvas/export` check: `neurocnl/frontend/test/widget_test.dart` now exercises the base
+  `/canvas` route plus `/canvas/projects` and `/canvas/sweep` inside the shared shell. The
+  route/workspace validation is also now deeper than smoke level: the full
+  `cd neurocnl/frontend && flutter test` suite is green again, the stale API-client path
+  expectations are corrected, and the merged canvas restoration surface now has direct unit
+  coverage for `NeurosimRestorationSnapshot` and `NeurosimWorkspaceController` round-trips and
+  persisted session hydration. Project workflow validation is also broader than before: the
+  merged canvas project browser now has direct widget coverage for listing a saved project,
+  loading its details, and pushing its graph into the shared canvas provider through
+  `ProjectScreen`.
+- Phase 6 is started: the launcher manifest now removes `Neurosim` as a first-class module,
+  renames the `neurocnl` entry to `NeuroStudio`, rewrites persisted legacy `Neurosim`
+  workspace sessions to `neurocnl` canvas sessions during launcher-control normalization, and
+  keeps old launcher-native Neurosim entry points alive as compatibility aliases into
+  `neurocnl`'s `/canvas` routes.
+- Phase 7 is started: NeuroHub suite-config defaults and suite-client defaults now alias
+  `"neurosim"` to the merged backend at port 8000, and the root cross-module integration default
+  now points `NEUROSIM_URL` at `http://neurocnl:8000`.
+- Phase 6b and follow-on root cleanup are now materially advanced: the active root validation,
+  CI, release, integration, and chaos scripts no longer treat `Neurosim` as a standalone service
+  or Docker image; monitoring no longer scrapes or tails a separate `neurosim` container; and the
+  desktop installer bundles no longer package the standalone `Neurosim/` tree.
+- Consumer cleanup outside NeuroHub is now materially advanced: NeuroBench now defaults
+  `NEUROSIM_API_URL` to the merged `neurocnl` canvas endpoint, the launcher-side
+  `neurosim_feature` package now imports its shell adapter from `neurocnl/frontend`, and active
+  root audit / contract workflows no longer schedule a standalone Neurosim verification lane.
+- Phase 9 root retirement is now started in-repo: `.gitmodules` no longer registers a standalone
+  `Neurosim` submodule, the checked-out `Neurosim/` tree has been removed from the parent repo,
+  and active root documentation, verification scripts, suite_api defaults, and GitHub templates
+  no longer direct operators toward a separate `Neurosim` checkout or port 8001 service.
+- Launcher compatibility coverage is now extended for the merged workspace contract: root
+  launcher-control tests now assert that persisted legacy `Neurosim` workspace sessions are
+  normalized to the `neurocnl` module id and that old deep links like `/projects` and `/export`
+  are rewritten onto the merged `/canvas/*` route family during load and session creation.
+
+Additional work completed in this pass:
+
+- **Handoff port and route fixed**: `neurocnl/frontend/lib/services/neurosim_handoff.dart` now
+  targets port 8000 (was 8001) and the `/canvas` route (was `/`). Both `buildDeepLink` and
+  `buildTarget` emit correct merged-backend URLs. The corresponding test assertion in
+  `test/services/neurosim_handoff_test.dart` is updated and a new path assertion for `/canvas` is
+  added.
+- **Studio `moduleId` updated**: `studio_screen.dart` now calls `openModuleInHost` with
+  `moduleId: 'neurocnl'` (was `'Neurosim'`). The launcher's `'Neurosim'` compatibility alias
+  remains for any external callers, but the canonical module id is now used at the call site.
+- **Export workflow coverage added**: `test/screens/canvas/export_screen_test.dart` now covers
+  the CNL-format export (fully local, no HTTP), widget rendering with the format dropdown and
+  submit button, and the preflight-then-export flow for a non-CNL format (python) via a direct
+  `ExportNotifier` provider test with a mocked HTTP client.
+- **Sweep provider workflow coverage added**: `test/providers/canvas/sweep_provider_test.dart`
+  covers four cases: synchronous completed sweep, async job-poll loop (queued → running →
+  completed), failed sweep with `backendSupport.verdict = 'unsupported'`, and `reset()` clearing
+  all state.
+- **Save-project workflow coverage added**: `test/screens/canvas/project_screen_test.dart` now
+  includes a second test that opens the "Save Current Design" dialog, enters a project name,
+  confirms, and verifies the `POST /api/neurosim/projects` call receives the correct name.
+- Full `cd neurocnl/frontend && flutter test` suite is green at 121 tests (up from 113).
+
+## Status Update — 2026-05-01 (third pass — D2/D3 completion)
+
+D2 (CNL ↔ Canvas Live Bidirectional Sync, issue #13) and D3 (Run-Sim Play Button, issue #14) are
+now fully implemented and tested. Issues 13 and 14 are archived to `neurocnl/issues-archive/`.
+`docs/execution-order.md` is updated: Phase D is marked complete.
+
+Changes in this pass:
+
+- **`studio_view_mode_provider.dart`** (NEW): `StudioViewMode` enum, `StudioSyncState`, and
+  `StudioViewModeNotifier` `StateNotifierProvider` for the CNL/Canvas toggle.
+- **`studio_screen.dart`** (D2+D3):
+  - Two `ref.listen` blocks for bidirectional debounced sync (CNL→canvas and canvas→CNL).
+  - `_syncingCnlToCanvas` / `_syncingCanvasToCnl` bool flags prevent feedback loops.
+  - `_FileTabStrip` extended with `_ViewModeToggle` (sync spinner, error icon, two
+    `_ToggleSegment` buttons with keys `cnl-view-toggle` and `canvas-view-toggle`).
+  - Editor workspace now renders `IndexedStack([CnlEditor(), NetworkCanvas()])` indexed by mode.
+  - `_RunButton` replaced with `_PlayStopButton` (`SingleTickerProviderStateMixin`; pulsing
+    `CircularProgressIndicator` when running; animation only starts when `isRunning` is true).
+  - `CallbackShortcuts` + `Focus(autofocus: true, skipTraversal: true)` for `Cmd+Enter` / `Ctrl+Enter`.
+- **`pipeline_provider.dart`**: `cancelSimulation()` method added.
+- **l10n** (`app_en.arb`, `app_localizations.dart`, `app_localizations_en.dart`): 5 new strings:
+  `cnlViewToggle`, `canvasViewToggle`, `syncing`, `stopSimulation`, `fixErrorsFirst`.
+- **Tests**:
+  - `test/screens/studio_screen_test.dart`: 5 new tests covering toggle visibility, toggle state
+    change, play button disabled state, stop-icon when running, and `Cmd+Enter` shortcut.
+  - `test/widget_test.dart` and `test/pipeline_integration_test.dart`: updated to use `play-icon`
+    key instead of `find.text('Run Preview')` / `ElevatedButton` lookups.
+- Full `cd neurocnl/frontend && flutter test` suite: **126/126 green** (up from 121).
+
+Not done yet:
+
+- Some non-critical legacy references still remain in historical docs and archive material.
+- Deeper Studio→Canvas import handoff integration test (covering the full navigation path from
+  Studio editor through `openModuleInHost` into the canvas route) is still absent.
+
+Validation completed for this pass:
+
+- `rtk venv/bin/python -m pytest neurosim/tests/services/test_neurocnl_bridge_bootstrap.py neurosim/tests/routers/test_main.py neurosim/tests/routers/test_rate_limiting.py backend/tests/test_cors_config.py backend/tests/test_health.py -q`
+- `rtk venv/bin/python -m pytest neurosim/tests/routers/test_components.py neurosim/tests/routers/test_projects.py -q`
+- `rtk venv/bin/python -m pytest neurosim/tests/routers/test_projects.py backend/tests/test_health.py -q`
+- `cd neurocnl/frontend && flutter pub get`
+- `cd neurocnl/frontend && flutter test test/widget_test.dart --plain-name "Canvas export route renders inside the shared shell"`
+- `cd neurocnl/frontend && flutter test test/widget_test.dart --plain-name "Canvas export route renders inside the shared shell"` (re-run after moving canvas route/shell entry files into `screens/canvas/**` and `routing/canvas/**`)
+- `cd neurocnl/frontend && flutter test test/widget_test.dart`
+- `cd neurocnl/frontend && flutter test test/widget_test.dart` (re-run after moving the remaining
+  canvas bootstrap and widget files out of `canvas_app/**`)
+- `cd neurocnl/frontend && flutter test test/widget_test.dart` (re-run after fixing the remaining
+  canvas strict-typing and JSON-decoding errors)
+- `cd neurocnl/frontend && flutter test test/widget_test.dart` (re-run after final analyzer and
+  lint cleanup)
+- `cd neurocnl/frontend && flutter test test/widget_test.dart` (re-run after broadening merged
+  canvas route coverage for `/canvas`, `/canvas/projects`, and `/canvas/sweep`)
+- `cd neurocnl/frontend && flutter test test/services/api_client_test.dart test/services/api_client_fault_injection_test.dart test/routing/neurosim_workspace_controller_test.dart`
+- `cd neurocnl/frontend && flutter test test/screens/canvas/project_screen_test.dart`
+- `cd neurocnl/frontend && flutter test`
+- `bash scripts/run_launcher_guardrails.sh`
+- `rtk python3 -m pytest tests/test_launcher_control_service.py -q`
+- `rtk python3 -m pytest Neurohub/neurohub/tests/test_suite_client.py Neurohub/neurohub/tests/test_config_service.py -q`
+- `bash scripts/validate_docker_compose.sh`
+- `cd nmtk/neuro_toolkit && flutter pub get`
+- `cd nmtk/neuro_toolkit && flutter test test/catalog_test.dart test/cross_module_navigation_test.dart`
+- `cd nmtk/neuro_toolkit && flutter test test/ui_integration_test.dart test/tool_view_test.dart`
+- `cd nmtk/packages/neurosim_feature && flutter test`
+
+Validation completed for this pass (continued):
+
+- `cd neurocnl/frontend && flutter test test/services/neurosim_handoff_test.dart test/services/neurosim_handoff_coordinator_test.dart`
+- `cd neurocnl/frontend && flutter test test/screens/canvas/project_screen_test.dart`
+- `cd neurocnl/frontend && flutter test test/screens/canvas/export_screen_test.dart`
+- `cd neurocnl/frontend && flutter test test/providers/canvas/sweep_provider_test.dart`
+- `cd neurocnl/frontend && flutter test` (full suite — 121 tests, all green)
+
+Validation attempted but not yet green:
+
+- `cd Neurobench/neurobench && pytest tests/test_benchmark_runner_hardware.py -q`
+  `fastapi` is declared in `Neurobench/neurobench/pyproject.toml` but is not installed in the
+  local interpreter. Run `cd Neurobench && poetry install` to resolve, then retry.
+
 ---
 
 ## Goals
@@ -142,6 +316,7 @@ Neurosim/neurosim/                     →  neurocnl/neurosim/
     routers/                           keep as-is
     services/                          keep as-is
     properties/                        keep as-is
+  app/main.py                          compatibility shim to merged backend app
   __init__.py                          keep as-is
 ```
 
@@ -267,6 +442,11 @@ async with asynccontextmanager(lifespan):
     await ProjectStore.close()        # add this
 ```
 
+Implementation note: the lifecycle hook is now present as an async wrapper around the existing
+synchronous SQLite store. `ProjectStore.initialize()` primes the shared default store during
+startup, `ProjectStore.close()` clears it on shutdown, and `/health` still uses `ping()` for the
+lightweight readiness probe.
+
 ### CORS update
 
 Neurosim's `main.py` set `ALLOWED_ORIGINS` from environment. The combined app should honour both
@@ -282,8 +462,8 @@ cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", os.getenv("ALLOWED_ORIGINS", "*
 Extend the existing `GET /health` response to include neurosim component status:
 
 ```python
-"canvas_store": await ProjectStore.ping(),   # add to health dict
-"canvas_components": len(await load_components()) > 0,
+"canvas_store": ProjectStore().ping(),   # add to health dict
+"canvas_components": len(load_components()) > 0,
 ```
 
 ---
@@ -342,6 +522,18 @@ The neurocnl frontend gains a "Canvas" section. Neurosim's four screens become s
 
 ### 5a — Copy files into `neurocnl/frontend/lib/`
 
+Status: materially implemented. The old copied Neurosim subtree under
+`neurocnl/frontend/lib/canvas_app/**` has now been eliminated. The top-level screen entry points
+live at `neurocnl/frontend/lib/screens/canvas/**`, the route restoration / shell controller files
+at `neurocnl/frontend/lib/routing/canvas/**`, the embedded NeuroSim shell app at
+`neurocnl/frontend/lib/routing/canvas/neurosim_app.dart`, the canvas models under
+`neurocnl/frontend/lib/models/canvas/**`, the canvas providers under
+`neurocnl/frontend/lib/providers/canvas/**`, the copied API client at
+`neurocnl/frontend/lib/services/canvas_api_client.dart`, the shared canvas helper at
+`neurocnl/frontend/lib/utils/canvas_component_utils.dart`, and the canvas-specific widgets at
+`neurocnl/frontend/lib/widgets/canvas/**`. The remaining follow-up is code-quality cleanup rather
+than more path normalization.
+
 ```
 Neurosim/frontend/lib/screens/canvas_screen.dart     → neurocnl/frontend/lib/screens/canvas/canvas_screen.dart
 Neurosim/frontend/lib/screens/export_screen.dart     → neurocnl/frontend/lib/screens/canvas/export_screen.dart
@@ -391,6 +583,10 @@ Neurosim/frontend/lib/utils/canvas_component_utils.dart  → neurocnl/frontend/l
 
 ### 5b — Update `canvas_api_client.dart` base URL
 
+Status: implemented in `neurocnl/frontend/lib/services/canvas_api_client.dart`. The copied client
+now prefers the current web origin and otherwise defaults to `http://localhost:8000`, with no
+remaining 8001 fallback.
+
 Change the default port from `8001` to `8000` and remove all references to `localhost:8001`:
 
 ```dart
@@ -412,6 +608,11 @@ String _resolveBaseUrl({String? override}) {
 The path prefix `/api/neurosim` in every method call remains unchanged.
 
 ### 5c — Add canvas routes to `app_router.dart`
+
+Status: implemented in `neurocnl/frontend/lib/routing/app_router.dart` using
+`CanvasHostScreen` plus the canonical `screens/canvas/**` and `routing/canvas/**` files to
+bootstrap the embedded canvas app with `NeurosimRestorationSnapshot` state for the `/canvas`,
+`/canvas/projects`, `/canvas/sweep`, and `/canvas/export` entry points.
 
 In `neurocnl/frontend/lib/routing/app_router.dart`, add four new routes. Keep them under a
 `/canvas` parent so they are clearly scoped:
@@ -443,11 +644,18 @@ GoRoute(
 
 ### 5d — Add "Canvas" to the navigation rail
 
+Status: implemented in the shared shell destination list in
+`neurocnl/frontend/lib/routing/app_router.dart`.
+
 In the desktop NavigationRail (and mobile BottomNavigationBar), add a "Canvas" destination between
 Studio and Deploy. Update the index-to-route mapping accordingly. The exact widget file is
 `neurocnl/frontend/lib/app.dart` or wherever the navigation destinations are defined.
 
 ### 5e — Update `pubspec.yaml`
+
+Status: implemented in `neurocnl/frontend/pubspec.yaml` with `json_annotation`, `shadcn_ui`, and
+`json_serializable` added so the embedded canvas subtree can build inside the `neurocnl`
+frontend package.
 
 Add to `neurocnl/frontend/pubspec.yaml`:
 
@@ -465,6 +673,11 @@ dev_dependencies:
 ## Phase 6 — Update module registry, Docker, and build scripts
 
 ### 6a — `nmtk/neuro_toolkit/assets/modules.json`
+
+Status: partially implemented. The `Neurosim` manifest entry is removed and the `neurocnl`
+launcher label/description now read as `NeuroStudio`, but the underlying launcher runtime
+strategy remains the current suite-web embedding model (`port: 9000`, `startStrategy: none`)
+rather than the older direct-uvicorn shape assumed in the original plan text.
 
 Remove the Neurosim entry entirely. Update the neurocnl entry's display name:
 
@@ -491,6 +704,16 @@ python3 scripts/launcher_control_service.py --doctor --json
 
 Update the launcher Dart model (`nmtk/neuro_toolkit/lib/models/module.dart`) and any launcher tests
 that assert on the count or ids of entries in `modules.json`.
+
+Additional compatibility work completed in this pass:
+
+- `nmtk/neuro_toolkit/lib/routing/router.dart` now maps `/module/neurosim` to
+  `NeurocnlShell(initialLocation: '/canvas...')`.
+- `nmtk/neuro_toolkit/lib/workspace/native_surface_registry.dart` now treats legacy
+  `WorkspaceSession.moduleId == "Neurosim"` as a compatibility alias to `neurocnl`.
+- `nmtk/launcher_control/server.py` now rewrites persisted legacy `Neurosim` workspace sessions to
+  `neurocnl` plus `/canvas` deep links during workspace normalization, which was required to make
+  launcher doctor pass after manifest removal.
 
 ### 6b — Root `docker-compose.yml`
 
@@ -563,6 +786,10 @@ docker run --rm neurostudio-test python -c "import neurosim; print('ok')"
 ## Phase 7 — Update consumers
 
 ### 7a — `Neurohub/neurohub/app/services/suite_client.py`
+
+Status: partially implemented. NeuroHub now defaults both `neurosim` and `neurocnl` to
+ `http://localhost:8000`, and `SuiteConfig.neurosim_url` now also defaults to
+ `http://localhost:8000`.
 
 The suite client routes requests to modules by name. `"neurosim"` is still a valid workflow step
 in existing saved workflows (e.g. `app: "neurosim"`, `endpoint: "/api/neurosim/preview"`).
@@ -644,6 +871,9 @@ the `neurocnl` directory tree. The coverage will still include it because pytest
 ## Phase 8 — Update tests
 
 ### 8a — `tests/integration/test_cross_module.py`
+
+Status: partially implemented. The root integration default for `NEUROSIM_URL` now points at
+`http://neurocnl:8000`.
 
 The test calls these endpoints to verify the neurocnl → Neurosim integration:
 

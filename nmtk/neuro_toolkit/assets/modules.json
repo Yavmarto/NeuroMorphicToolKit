@@ -1,8 +1,8 @@
 [
   {
     "id": "neurocnl",
-    "name": "CNL Studio",
-    "description": "Author and validate neuromorphic network specs in CNL Studio",
+    "name": "NeuroStudio",
+    "description": "CNL compiler and visual SNN design suite",
     "icon": "code",
     "port": 9000,
     "version": "1.0.0",
@@ -17,26 +17,8 @@
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
     "version": "1.0.0",
-    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/neurocnl"
-  },
-  {
-    "id": "Neurosim",
-    "name": "NeuroSim",
-    "description": "Visual editing, topology inspection, and simulation for designs handed off from CNL Studio",
-    "icon": "architecture",
-    "port": 9000,
-    "version": "1.0.0",
-    "installPath": "Neurosim/",
-    "sourcePath": ".",
-    "runPath": ".",
-    "installStrategy": "pip",
-    "startStrategy": "none",
-    "uvicornTarget": "",
-    "hasFrontend": true,
-    "frontendStatus": "Yes",
-    "requiresMuJoCo": false,
-    "version": "1.0.0",
-    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurosim"
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/neurocnl",
+    "required": true
   },
   {
     "id": "Neurochip",
@@ -102,11 +84,12 @@
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
     "version": "1.0.0",
-    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurochip"
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurochip",
+    "required": false
   },
   {
     "id": "Neurobench",
-    "name": "NeuroBench",
+    "name": "Bench",
     "description": "SNN testing and benchmarking workbench",
     "icon": "speed",
     "port": 9000,
@@ -121,7 +104,8 @@
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
     "version": "1.0.0",
-    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurobench"
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurobench",
+    "required": false
   },
   {
     "id": "Neurosense",
@@ -136,16 +120,17 @@
     "installStrategy": "pip",
     "startStrategy": "none",
     "uvicornTarget": "",
-    "hasFrontend": true,
+    "hasFrontend": false,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
     "version": "1.0.0",
-    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurosense"
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurosense",
+    "required": false
   },
   {
     "id": "Neurohub",
-    "name": "NeuroHub",
-    "description": "Project registry and workflow metadata",
+    "name": "Share",
+    "description": "Share CNL networks, canvas projects, and bench results with your team and the community",
     "icon": "hub",
     "port": 9000,
     "version": "1.0.0",
@@ -159,7 +144,8 @@
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
     "version": "1.0.0",
-    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurohub"
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurohub",
+    "required": false
   },
   {
     "id": "neuro_dream_hand",
@@ -178,6 +164,7 @@
     "frontendStatus": "No",
     "requiresMuJoCo": true,
     "version": "1.0.0",
-    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neuro-Dream-Hand"
+    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neuro-Dream-Hand",
+    "required": false
   }
 ]

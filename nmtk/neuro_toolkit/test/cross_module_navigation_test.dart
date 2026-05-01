@@ -6,31 +6,31 @@ void main() {
   final modules = [
     Module(
       id: 'neurocnl',
-      name: 'CNL Studio',
+      name: 'NeuroStudio',
       description: 'CNL',
       directory: 'neurocnl',
       port: 8000,
       hasFrontend: true,
     ),
     Module(
-      id: 'Neurosim',
-      name: 'NeuroSim',
-      description: 'Sim',
-      directory: 'Neurosim',
-      port: 8001,
+      id: 'Neurochip',
+      name: 'NeuroChip',
+      description: 'Hardware',
+      directory: 'Neurochip',
+      port: 8002,
       hasFrontend: true,
     ),
   ];
 
   test('resolveCrossModuleNavigation detects a different module port', () {
     final navigation = resolveCrossModuleNavigation(
-      targetUri: Uri.parse('http://localhost:8001/?import_cnl=abc123'),
+      targetUri: Uri.parse('http://localhost:8002/?import_cnl=abc123'),
       modules: modules,
       currentModuleId: 'neurocnl',
     );
 
     expect(navigation, isNotNull);
-    expect(navigation!.targetModule.id, 'Neurosim');
+    expect(navigation!.targetModule.id, 'Neurochip');
     expect(navigation.targetUri.queryParameters['import_cnl'], 'abc123');
   });
 

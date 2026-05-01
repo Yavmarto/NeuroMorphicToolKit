@@ -24,7 +24,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse, urlunparse
 from uuid import uuid4
 
 import tomllib
@@ -2032,7 +2032,9 @@ class LauncherControlState:
         }
 
     def _normalize_workspace_session(self, payload: dict[str, Any]) -> dict[str, Any]:
-        module_id = str(payload.get("moduleId") or "").strip()
+        module_id = self._canonicalize_workspace_module_id(
+            str(payload.get("moduleId") or "").strip()
+        )
         if not module_id:
             raise ValueError("Workspace session moduleId is required")
         if module_id not in self._modules:
@@ -2053,6 +2055,7 @@ class LauncherControlState:
         deep_link = payload.get("deepLink")
         if deep_link is not None:
             deep_link = str(deep_link).strip() or None
+        deep_link = self._canonicalize_workspace_deep_link(module_id, deep_link)
         restore_state = payload.get("restoreState")
         if not isinstance(restore_state, dict):
             restore_state = {}
@@ -2063,6 +2066,31 @@ class LauncherControlState:
             "restoreState": restore_state,
             "readinessState": readiness_state,
         }
+
+    def _canonicalize_workspace_module_id(self, module_id: str) -> str:
+        if module_id == "Neurosim" and "neurocnl" in self._modules:
+            return "neurocnl"
+        return module_id
+
+    def _canonicalize_workspace_deep_link(
+        self, module_id: str, deep_link: str | None
+    ) -> str | None:
+        if module_id != "neurocnl":
+            return deep_link
+        if deep_link is None:
+            return deep_link
+        uri = urlparse(deep_link)
+        if uri.path.startswith("/canvas"):
+            return deep_link
+        if uri.path in {"/", ""}:
+            rewritten_path = "/canvas"
+        elif uri.path.startswith("/projects") or uri.path.startswith("/sweep") or uri.path.startswith(
+            "/export"
+        ):
+            rewritten_path = f"/canvas{uri.path}"
+        else:
+            return deep_link
+        return urlunparse(uri._replace(path=rewritten_path))
 
     def _dedupe_workspace_sessions(
         self, sessions: list[dict[str, Any]]

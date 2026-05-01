@@ -63,7 +63,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 for module_id, path in [
     ("neurocnl", "neurocnl/frontend/build/web"),
-    ("neurosim", "Neurosim/frontend/build/web"),
+    ("neurosim", "neurocnl/frontend/build/web"),
     ("neurochip", "Neurochip/frontend/build/web"),
     ("neurobench", "Neurobench/frontend/build/web"),
     ("neurosense", "Neurosense/frontend/build/web"),
