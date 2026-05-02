@@ -1004,6 +1004,7 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
         "agentExecutableName": str(
             raw.get("agentExecutableName") or contract.agent_executable_name
         ).strip(),
+        "isDefault": bool(raw.get("isDefault")),
     }
     return board
 
@@ -1540,6 +1541,7 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         if isinstance(raw.get("lastInstallStatus"), dict)
         else None,
         "capabilitySnapshot": capability_snapshot,
+        "isDefault": bool(raw.get("isDefault")),
     }
 
 
@@ -2315,6 +2317,9 @@ class LauncherControlState:
             hosts = self._settings["akidaHosts"]
             if any(existing["id"] == host["id"] for existing in hosts):
                 raise ValueError(f"Akida host '{host['id']}' already exists")
+            if host.get("isDefault"):
+                for existing in hosts:
+                    existing["isDefault"] = False
             hosts.append(host)
             if not self._settings.get("selectedAkidaHostId"):
                 self._settings["selectedAkidaHostId"] = host["id"]
@@ -2327,6 +2332,10 @@ class LauncherControlState:
         with self._lock:
             host = self._get_akida_host(host_id)
             normalized = self._normalize_updated_akida_host(host, {"id": host_id, **payload})
+            if normalized.get("isDefault"):
+                for existing in self._settings.get("akidaHosts", []):
+                    if existing["id"] != host_id:
+                        existing["isDefault"] = False
             host.clear()
             host.update(normalized)
             self._persist_settings()
@@ -2363,6 +2372,9 @@ class LauncherControlState:
             boards = self._settings["pynqBoards"]
             if any(existing["id"] == board["id"] for existing in boards):
                 raise ValueError(f"PYNQ board '{board['id']}' already exists")
+            if board.get("isDefault"):
+                for existing in boards:
+                    existing["isDefault"] = False
             boards.append(board)
             self._persist_settings()
             return _serialize_pynq_board(board)
@@ -2375,6 +2387,10 @@ class LauncherControlState:
             normalized = self._normalize_updated_pynq_board(
                 board, {"id": board_id, **payload}
             )
+            if normalized.get("isDefault"):
+                for existing in self._settings.get("pynqBoards", []):
+                    if existing["id"] != board_id:
+                        existing["isDefault"] = False
             board.clear()
             board.update(normalized)
             self._persist_settings()

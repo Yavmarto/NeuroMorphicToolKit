@@ -1292,7 +1292,7 @@ class LauncherControlServiceTest(unittest.TestCase):
                     "bash /tmp/install.sh",
                 )
 
-    def test_run_scp_password_auth_requires_sshpass(self) -> None:
+    def test_run_scp_password_auth_uses_askpass_without_sshpass(self) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
@@ -1305,16 +1305,22 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
         local_file = self.repo_root / "bundle.txt"
         local_file.write_text("bundle", encoding="utf-8")
-        with mock.patch.object(launcher_server.shutil, "which", return_value=None):
-            with self.assertRaisesRegex(
-                RuntimeError,
-                "Password-auth SSH for this PYNQ board requires sshpass on the launcher host",
-            ):
-                self.state._run_scp(
-                    self.state._get_pynq_board(board["id"]),
-                    local_file,
-                    "/tmp/bundle.txt",
-                )
+        with (
+            mock.patch.object(launcher_server.shutil, "which", return_value=None),
+            mock.patch.object(
+                launcher_server.subprocess,
+                "run",
+                return_value=subprocess.CompletedProcess(["scp"], 0, "", ""),
+            ) as run_mock,
+        ):
+            self.state._run_scp(
+                self.state._get_pynq_board(board["id"]),
+                local_file,
+                "/tmp/bundle.txt",
+            )
+            run_mock.assert_called_once()
+            _, kwargs = run_mock.call_args
+            self.assertIn("NMTK_PYNQ_PASSWORD", kwargs.get("env", {}))
 
     def test_run_ssh_detached_ignores_benign_known_host_warning(self) -> None:
         board = self.state.create_pynq_board(
