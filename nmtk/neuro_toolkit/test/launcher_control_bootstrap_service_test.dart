@@ -114,6 +114,8 @@ void main() {
       environment.startedCommands.single.join(' '),
       contains('scripts/launcher_control_service.py'),
     );
+    expect(environment.startedCommands.single.join(' '),
+        contains('--host 0.0.0.0'));
   });
 
   test('does not start a local process when an explicit control API is set',

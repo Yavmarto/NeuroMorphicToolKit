@@ -1600,8 +1600,8 @@ def _version_matches_range(version: str, version_range: str) -> bool:
 
 
 def _uvicorn_host() -> str:
-    host = os.environ.get("NMTK_UVICORN_HOST", "127.0.0.1").strip()
-    return host or "127.0.0.1"
+    host = os.environ.get("NMTK_UVICORN_HOST", "0.0.0.0").strip()
+    return host or "0.0.0.0"
 
 
 def _mujoco_available() -> bool:
@@ -5643,7 +5643,7 @@ def create_server(host: str, port: int) -> LauncherControlServer:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Launcher control service")
-    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8090)
     parser.add_argument(
         "--doctor",
@@ -5656,6 +5656,7 @@ def main(argv: list[str] | None = None) -> int:
         help="When used with --doctor, print the report as JSON",
     )
     args = parser.parse_args(argv)
+    os.environ.setdefault("NMTK_UVICORN_HOST", str(args.host).strip() or "0.0.0.0")
 
     if args.doctor:
         state = LauncherControlState()

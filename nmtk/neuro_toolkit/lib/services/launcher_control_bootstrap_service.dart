@@ -208,7 +208,7 @@ class LauncherControlBootstrapService {
         <String>[
           launchSpec.scriptPath,
           '--host',
-          '127.0.0.1',
+          '0.0.0.0',
           '--port',
           '${ControlApiService.configuredPort}',
         ],
@@ -216,7 +216,7 @@ class LauncherControlBootstrapService {
         environment: <String, String>{
           ..._environment.environment,
           'PYTHONPATH': _mergedPythonPath(launchSpec.pythonPathRoot),
-          'NMTK_UVICORN_HOST': '127.0.0.1',
+          'NMTK_UVICORN_HOST': '0.0.0.0',
         },
       );
     } catch (error) {

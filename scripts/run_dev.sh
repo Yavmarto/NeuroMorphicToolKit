@@ -37,6 +37,8 @@ FLUTTER_DEVICE=""
 CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-8090}"
 CONTROL_API_PID=""
 CONTROL_API_BIND_HOST="127.0.0.1"
+CONTROL_API_PUBLIC_HOST="127.0.0.1"
+SUITE_API_URL=""
 
 usage() {
   cat <<'EOF'
@@ -57,6 +59,45 @@ cleanup() {
 is_port_in_use() {
   local port="$1"
   lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
+}
+
+
+resolve_host_ip() {
+  python3 - <<'PY'
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+try:
+    s.connect(("8.8.8.8", 80))
+    print(s.getsockname()[0])
+except OSError:
+    print("127.0.0.1")
+finally:
+    s.close()
+PY
+}
+
+
+resolve_flutter_target_platform() {
+  local target_id="$1"
+  local py_script='
+import json
+import sys
+
+target_id = sys.argv[1]
+try:
+    devices = json.load(sys.stdin)
+except Exception:
+    print("")
+    raise SystemExit(0)
+
+for device in devices:
+    if str(device.get("id", "")) == target_id:
+        print(str(device.get("targetPlatform", "")))
+        break
+else:
+    print("")
+'
+  flutter devices --machine 2>/dev/null | python3 -c "$py_script" "$target_id"
 }
 
 
@@ -132,14 +173,32 @@ fi
 
 trap cleanup EXIT INT TERM
 
-DESKTOP_CONTROL_API_URL=""
+TARGET_PLATFORM="$(resolve_flutter_target_platform "$FLUTTER_DEVICE")"
+if [[ "$TARGET_PLATFORM" == android* || "$TARGET_PLATFORM" == ios* || "$FLUTTER_DEVICE" == "ios" ]]; then
+  CONTROL_API_BIND_HOST="0.0.0.0"
+  CONTROL_API_PUBLIC_HOST="$(resolve_host_ip)"
+  SUITE_API_URL="http://$CONTROL_API_PUBLIC_HOST:9000"
+fi
+
+CONTROL_API_URL=""
 start_control_api "$CONTROL_API_BIND_HOST"
-DESKTOP_CONTROL_API_URL="http://127.0.0.1:$CONTROL_API_PORT"
+CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
 
 echo "------------------------------------------------------------"
 echo "==> Starting NeuroToolkit launcher on $FLUTTER_DEVICE"
 echo "------------------------------------------------------------"
+if [[ -n "$SUITE_API_URL" ]]; then
+  echo "==> Using remote-accessible control API: $CONTROL_API_URL"
+  echo "==> Using remote-accessible suite API:   $SUITE_API_URL"
+fi
 cd "$REPO_ROOT/nmtk/neuro_toolkit"
-flutter run -d "$FLUTTER_DEVICE" \
-  --dart-define="NMTK_CONTROL_API_BASE_URL=$DESKTOP_CONTROL_API_URL" \
+flutter_args=(
+  run
+  -d "$FLUTTER_DEVICE"
+  --dart-define="NMTK_CONTROL_API_BASE_URL=$CONTROL_API_URL"
   --dart-define="NMTK_CONTROL_API_PORT=$CONTROL_API_PORT"
+)
+if [[ -n "$SUITE_API_URL" ]]; then
+  flutter_args+=(--dart-define="SUITE_API_URL=$SUITE_API_URL")
+fi
+flutter "${flutter_args[@]}"

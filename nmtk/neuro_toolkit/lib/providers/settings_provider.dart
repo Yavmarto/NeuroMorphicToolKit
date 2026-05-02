@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import 'package:neuro_toolkit/services/analytics_service.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
 
 enum LogLevel { info, debug, warning, error, critical }
 
@@ -17,6 +18,8 @@ class SettingsProvider with ChangeNotifier {
   static const String _fontSizeFactorKey = 'font_size_factor';
   static const String _logLevelKey = 'log_level';
   static const String _moduleSettingsKey = 'module_settings';
+  static const String _launcherControlApiBaseUrlKey =
+      'launcher_control_api_base_url';
 
   bool _telemetryEnabled = false;
   String? _remoteEndpoint;
@@ -25,6 +28,7 @@ class SettingsProvider with ChangeNotifier {
   double _fontSizeFactor = 1.0;
   LogLevel _logLevel = LogLevel.info;
   Map<String, Map<String, dynamic>> _moduleSettings = {};
+  String? _launcherControlApiBaseUrl;
 
   late final SharedPreferences _prefs;
   final AnalyticsService _analytics;
@@ -37,6 +41,7 @@ class SettingsProvider with ChangeNotifier {
   bool get isHighContrast => _isHighContrast;
   double get fontSizeFactor => _fontSizeFactor;
   LogLevel get logLevel => _logLevel;
+  String? get launcherControlApiBaseUrl => _launcherControlApiBaseUrl;
 
   Map<String, dynamic> getModuleSettings(String moduleId) {
     return _moduleSettings[moduleId] ?? {};
@@ -50,6 +55,8 @@ class SettingsProvider with ChangeNotifier {
     _isHighContrast = _prefs.getBool(_highContrastKey) ?? false;
     _fontSizeFactor = _prefs.getDouble(_fontSizeFactorKey) ?? 1.0;
     _logLevel = LogLevel.values[_prefs.getInt(_logLevelKey) ?? 0];
+    _launcherControlApiBaseUrl =
+        _prefs.getString(_launcherControlApiBaseUrlKey);
 
     final String? moduleSettingsJson = _prefs.getString(_moduleSettingsKey);
     if (moduleSettingsJson != null) {
@@ -110,6 +117,21 @@ class SettingsProvider with ChangeNotifier {
   Future<void> setLogLevel(LogLevel level) async {
     _logLevel = level;
     await _prefs.setInt(_logLevelKey, level.index);
+    notifyListeners();
+  }
+
+  Future<void> setLauncherControlApiBaseUrl(String? value) async {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      _launcherControlApiBaseUrl = null;
+      await _prefs.remove(_launcherControlApiBaseUrlKey);
+    } else {
+      _launcherControlApiBaseUrl = ControlApiService.normalizeBaseUrl(trimmed);
+      await _prefs.setString(
+        _launcherControlApiBaseUrlKey,
+        _launcherControlApiBaseUrl!,
+      );
+    }
     notifyListeners();
   }
 

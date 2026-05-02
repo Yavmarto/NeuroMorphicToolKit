@@ -10,13 +10,18 @@ else
   FLUTTER_DEVICE = windows
 endif
 
+# Resolve a concrete Android device id for flutter run. Prefer wireless ADB
+# targets when one is connected, and allow callers to override explicitly.
+ANDROID_DEVICE ?= $(shell flutter devices --machine 2>/dev/null | python3 -c 'import json,sys; devices=json.load(sys.stdin); android_ids=[d["id"] for d in devices if d.get("isSupported") and str(d.get("targetPlatform", "")).startswith("android")]; wireless_ids=[device_id for device_id in android_ids if ":" in device_id]; print((wireless_ids or android_ids or ["android"])[0])' 2>/dev/null || printf 'android')
+
 
 help:
 	@echo "NeuroMorphicToolkit (NMTK) Build System"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make dev                      - Run suite_api and the native launcher"
-	@echo "  make dev-a                    - Run suite_api and the launcher on Android"
+	@echo "  make dev-a                    - Run suite_api and the launcher on the resolved Android device"
+	@echo "                                  Override with ANDROID_DEVICE=<flutter-device-id> when needed"
 	@echo "  make dev-i                    - Run suite_api and the launcher on iOS"
 	@echo "  make dev-native               - Run the native launcher control API and Flutter app"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
@@ -34,17 +39,18 @@ dev:
 	./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
 
 dev-a:
+	@echo "==> Using Android device: $(ANDROID_DEVICE)"
 	@echo "==> Ensuring port 9000 is free..."
 	@lsof -ti:9000 | xargs kill -9 2>/dev/null || true
-	@uvicorn suite_api.main:app --port 9000 --reload & \
+	@uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload & \
 	SUITE_API_PID=$$!; \
 	trap 'kill $$SUITE_API_PID 2>/dev/null || true' EXIT INT TERM; \
-	./scripts/run_dev.sh --flutter-device "android"
+	./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)"
 
 dev-i:
 	@echo "==> Ensuring port 9000 is free..."
 	@lsof -ti:9000 | xargs kill -9 2>/dev/null || true
-	@uvicorn suite_api.main:app --port 9000 --reload & \
+	@uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload & \
 	SUITE_API_PID=$$!; \
 	trap 'kill $$SUITE_API_PID 2>/dev/null || true' EXIT INT TERM; \
 	./scripts/run_dev.sh --flutter-device "ios"
@@ -54,7 +60,7 @@ dev-native:
 	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
 
 suite_api_dev:
-	uvicorn suite_api.main:app --port 9000 --reload
+	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload
 
 ci:
 	@chmod +x scripts/run_ci_local.sh

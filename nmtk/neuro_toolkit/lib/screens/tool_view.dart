@@ -14,6 +14,7 @@ import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
@@ -36,8 +37,21 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   bool _workspaceInitialized = false;
   bool _developerModeEnabled = false;
 
+  Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
+
+  bool _usesRemoteHostedServices() {
+    if (kIsWeb) {
+      return false;
+    }
+    return !ControlApiService.isLoopbackHost(_launcherBaseUri().host);
+  }
+
   String _serviceHost() {
     if (!kIsWeb) {
+      final baseUri = _launcherBaseUri();
+      if (_usesRemoteHostedServices()) {
+        return baseUri.host;
+      }
       return 'localhost';
     }
     final host = Uri.base.host.trim();
@@ -49,6 +63,10 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   String _serviceScheme() {
     if (!kIsWeb) {
+      final baseUri = _launcherBaseUri();
+      if (_usesRemoteHostedServices()) {
+        return baseUri.scheme.isEmpty ? 'http' : baseUri.scheme;
+      }
       return 'http';
     }
     final scheme = Uri.base.scheme.trim();
@@ -87,6 +105,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   String _surfaceModeForModule(String moduleId) {
+    if (_usesRemoteHostedServices()) {
+      return 'embedded';
+    }
     return NativeSurfaceRegistry.supportsModule(moduleId)
         ? 'native'
         : 'embedded';
@@ -532,7 +553,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       children: [
         // Developer-mode toggle — always visible (wrench icon).
         Semantics(
-          label: _developerModeEnabled ? 'Hide developer controls' : 'Show developer controls',
+          label: _developerModeEnabled
+              ? 'Hide developer controls'
+              : 'Show developer controls',
           button: true,
           child: IconButton(
             icon: Icon(
