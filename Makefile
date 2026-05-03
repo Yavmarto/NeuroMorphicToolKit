@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-native clean-all bump-version ci suite_api_dev
+.PHONY: release help dev dev-a dev-i dev-native clean-all bump-version ci suite_api_dev check-devices
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -13,6 +13,9 @@ endif
 # Resolve a concrete Android device id for flutter run. Prefer wireless ADB
 # targets when one is connected, and allow callers to override explicitly.
 ANDROID_DEVICE ?= $(shell flutter devices --machine 2>/dev/null | python3 -c 'import json,sys; devices=json.load(sys.stdin); android_ids=[d["id"] for d in devices if d.get("isSupported") and str(d.get("targetPlatform", "")).startswith("android")]; wireless_ids=[device_id for device_id in android_ids if ":" in device_id]; print((wireless_ids or android_ids or ["android"])[0])' 2>/dev/null || printf 'android')
+
+# Resolve a concrete iOS device id for flutter run.
+IOS_DEVICE ?= $(shell flutter devices --machine 2>/dev/null | python3 -c 'import json,sys; devices=json.load(sys.stdin); ios_ids=[d["id"] for d in devices if d.get("isSupported") and str(d.get("targetPlatform", "")).startswith("ios")]; print((ios_ids or ["ios"])[0])' 2>/dev/null || printf 'ios')
 
 
 help:
@@ -39,6 +42,7 @@ dev:
 	./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
 
 dev-a:
+	@$(MAKE) check-devices
 	@echo "==> Using Android device: $(ANDROID_DEVICE)"
 	@echo "==> Ensuring port 9000 is free..."
 	@lsof -ti:9000 | xargs kill -9 2>/dev/null || true
@@ -48,12 +52,14 @@ dev-a:
 	./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)"
 
 dev-i:
+	@$(MAKE) check-devices
+	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@echo "==> Ensuring port 9000 is free..."
 	@lsof -ti:9000 | xargs kill -9 2>/dev/null || true
 	@uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload & \
 	SUITE_API_PID=$$!; \
 	trap 'kill $$SUITE_API_PID 2>/dev/null || true' EXIT INT TERM; \
-	./scripts/run_dev.sh --flutter-device "ios"
+	./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)"
 
 dev-native:
 	@chmod +x scripts/run_dev.sh
@@ -84,3 +90,8 @@ bump-version:
 	fi
 	@chmod +x scripts/bump_all.py
 	@python3 scripts/bump_all.py $(VERSION)
+
+check-devices:
+	@echo "==> Checking for connected devices..."
+	@flutter devices | grep -E "connected device|wirelessly|•" || true
+	@echo ""
