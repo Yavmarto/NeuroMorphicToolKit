@@ -10,29 +10,22 @@
     },
     {
       "deepLink": null,
-      "moduleId": "Neurochip",
-      "readinessState": "warming_up",
-      "restoreState": {},
-      "surfaceMode": "native"
-    },
-    {
-      "deepLink": null,
       "moduleId": "Neurobench",
-      "readinessState": "warming_up",
+      "readinessState": "opening",
       "restoreState": {},
       "surfaceMode": "native"
     },
     {
       "deepLink": null,
       "moduleId": "Neurosense",
-      "readinessState": "warming_up",
+      "readinessState": "opening",
       "restoreState": {},
       "surfaceMode": "native"
     },
     {
       "deepLink": null,
       "moduleId": "Neurohub",
-      "readinessState": "warming_up",
+      "readinessState": "opening",
       "restoreState": {},
       "surfaceMode": "native"
     }
