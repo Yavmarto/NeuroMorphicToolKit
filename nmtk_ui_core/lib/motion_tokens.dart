@@ -22,7 +22,7 @@ import 'package:flutter/material.dart';
 /// | [easeEnter]    | Curves.easeOut     | Elements entering the screen |
 /// | [easeExit]     | Curves.easeIn      | Elements leaving the screen  |
 /// | [easeStandard] | Curves.easeInOut   | In-place transitions         |
-/// | [easeSpring]   | Curves.elasticOut  | Pop / spring-back moments    |
+/// | [easeSpring]   | Curves.easeOutQuart| Pop / spring-back moments    |
 ///
 /// ## Usage
 ///
@@ -61,8 +61,8 @@ class NmtkMotionTokens {
   /// `Curves.easeInOut` — in-place transforms (expand, slide, reorder).
   static const Curve easeStandard = Curves.easeInOut;
 
-  /// `Curves.elasticOut` — spring-back / pop moments (tap-up, badge appear).
-  static const Curve easeSpring = Curves.elasticOut;
+  /// `Curves.easeOutQuart` — spring-back / pop moments (tap-up, badge appear).
+  static const Curve easeSpring = Curves.easeOutQuart;
 
   // ── Shared-axis slide offsets ───────────────────────────────────────────────
 

@@ -1,44 +1,59 @@
-# neuro_toolkit
+# NMTK Launcher (neuro_toolkit)
 
-`neuro_toolkit` is the unified Flutter launcher for NeuroMorphicToolKit.
+> **The unified entry point for neuromorphic R&D.**
 
-It is no longer a generic starter app. In the current architecture it is the suite control plane that:
+Welcome to the **NMTK Launcher**—the cockpit of the NeuroMorphicToolKit suite. Designed as a robust desktop application for Windows, macOS, and Linux, the NMTK Launcher provides a seamless, unified interface for managing the entire neuromorphic development lifecycle.
 
-- reads module metadata from `assets/modules.json`
-- hosts native module surfaces through feature packages under `nmtk/packages/`
-- manages launcher state, installation state, workspace sessions, and runtime health UX
-- deep-links into module routes such as `/module/neurocnl`, `/module/neurochip`, and `/module/neurobench`
-- preserves the legacy `/workspace?moduleId=` path for compatibility
+---
 
-The control-plane ownership described here matches [`../../docs/ADR-claude/0023-nmtk-sole-control-plane-neurohub-metadata-layer.md`](../../docs/ADR-claude/0023-nmtk-sole-control-plane-neurohub-metadata-layer.md).
+## 🎯 The Vision
 
-## Current Architecture
+The complexity of neuromorphic toolchains—spanning Docker, Python virtual environments, and specialized hardware drivers—often creates a massive barrier to entry. The NMTK Launcher hides this complexity by acting as an **"App Store for Neuromorphic Research."** It handles installation, local orchestration, and inter-module communication, allowing users to jump from design to deployment without ever touching a terminal.
 
-- Backend default: `suite_api` on `http://127.0.0.1:9000`
-- Frontend integration model: native Flutter feature packages, not WebViews
-- Native surfaces: `neurocnl`, `neurosim`, `neurochip`, `neurobench`, `neurosense`, `neurohub`
-- Source of truth for launcher-visible module metadata: `assets/modules.json`
+---
 
-## Local Development
+## 🧩 The "Cockpit" Experience
 
-From the repo root, the normal integrated path is:
+The Launcher is the sole control plane for the suite:
 
-```bash
-make dev
-```
+* **Unified Dashboard:** Browse, install, and launch specialized modules like `NeuroStudio` or `Neurobench`.
+* **Workspace Management:** Seamlessly switch between projects and maintain global user profiles.
+* **Health & Monitoring:** Real-time visibility into the status of local backends and hardware workers.
+* **Native Surfaces:** Deeply integrated Flutter interfaces for every module, providing a premium, cohesive user experience.
 
-To run just the launcher against an already running backend:
+---
 
+## 🚀 Local Orchestration
+
+Behind the scenes, the Launcher acts as a powerful daemon manager:
+
+1.  **Dependency Management:** Automatically sets up Docker containers and isolated Python environments.
+2.  **Process Control:** Spins up local micro-services (e.g., `suite_api`) on demand.
+3.  **Module Manifests:** Uses a central `assets/modules.json` as the source of truth for versioning and routing.
+
+---
+
+## 🛠 Technical Details
+
+### Architecture
+- **Framework:** Flutter (Desktop).
+- **Control Plane:** Defined in [ADR 0023](../../docs/ADR-claude/0023-nmtk-sole-control-plane-neurohub-metadata-layer.md).
+- **Default API:** `suite_api` on port `9000`.
+
+### Local Development
+To run the launcher in developer mode against an existing backend:
 ```bash
 cd nmtk/neuro_toolkit
 flutter pub get
 flutter run -d macos --dart-define=SUITE_API_URL=http://127.0.0.1:9000
 ```
 
-## Important Files
+### Key Files
+- `assets/modules.json`: The central module manifest.
+- `lib/routing/router.dart`: Global suite routing logic.
+- `lib/workspace/native_surface_registry.dart`: Registration for native module surfaces.
 
-- `assets/modules.json`: launcher module manifest
-- `lib/routing/router.dart`: top-level routes
-- `lib/workspace/native_surface_registry.dart`: native surface registry and legacy workspace compatibility
-- `lib/services/launcher_control_bootstrap_service.dart`: launcher bootstrap wiring
-- `test/`: launcher behavior and manifest-backed regression coverage
+---
+
+## ⚖️ License
+MIT

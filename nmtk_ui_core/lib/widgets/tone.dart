@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 enum NmtkTone { neutral, info, success, warning, danger }
 
@@ -16,6 +17,8 @@ class NmtkTonePalette {
 
 NmtkTonePalette resolveNmtkTonePalette(BuildContext context, NmtkTone tone) {
   final scheme = Theme.of(context).colorScheme;
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final tokens = NmtkShellTokens.of(context);
 
   switch (tone) {
     case NmtkTone.neutral:
@@ -31,17 +34,29 @@ NmtkTonePalette resolveNmtkTonePalette(BuildContext context, NmtkTone tone) {
         border: scheme.primary.withValues(alpha: 0.35),
       );
     case NmtkTone.success:
-      return const NmtkTonePalette(
-        foreground: Color(0xFF1B5E20),
-        background: Color(0x1F4CAF50),
-        border: Color(0x664CAF50),
-      );
+      return isDark
+          ? NmtkTonePalette(
+              foreground: tokens.healthyColor,
+              background: tokens.healthyColor.withValues(alpha: 0.12),
+              border: tokens.healthyColor.withValues(alpha: 0.35),
+            )
+          : const NmtkTonePalette(
+              foreground: Color(0xFF1B5E20),
+              background: Color(0x1F4CAF50),
+              border: Color(0x664CAF50),
+            );
     case NmtkTone.warning:
-      return const NmtkTonePalette(
-        foreground: Color(0xFF9A5B00),
-        background: Color(0x1FF59E0B),
-        border: Color(0x66F59E0B),
-      );
+      return isDark
+          ? NmtkTonePalette(
+              foreground: tokens.warningColor,
+              background: tokens.warningColor.withValues(alpha: 0.12),
+              border: tokens.warningColor.withValues(alpha: 0.35),
+            )
+          : const NmtkTonePalette(
+              foreground: Color(0xFF9A5B00),
+              background: Color(0x1FF59E0B),
+              border: Color(0x66F59E0B),
+            );
     case NmtkTone.danger:
       return NmtkTonePalette(
         foreground: scheme.error,

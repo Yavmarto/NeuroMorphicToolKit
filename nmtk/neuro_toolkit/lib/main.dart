@@ -163,9 +163,12 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
       title: 'NeuroToolkit',
       theme: NmtkShadTheme.light,
       darkTheme: NmtkShadTheme.dark,
-      materialThemeBuilder: (_, __) => settings.isHighContrast
-          ? AppTheme.highContrastDarkTheme
-          : AppTheme.darkTheme,
+      materialThemeBuilder: (_, __) {
+        final b = settings.themeMode == ThemeMode.dark
+            ? AppTheme.darkTheme
+            : AppTheme.lightTheme;
+        return settings.isHighContrast ? AppTheme.highContrastDarkTheme : b;
+      },
       themeMode: settings.themeMode,
       builder: (BuildContext ctx, Widget? child) {
         return MediaQuery(
@@ -210,9 +213,12 @@ class NeuroToolkitApp extends ConsumerWidget {
       theme: NmtkShadTheme.light,
       darkTheme: NmtkShadTheme.dark,
       // Material 3 layer — controls native Flutter widgets.
-      materialThemeBuilder: (_, __) => settings.isHighContrast
-          ? AppTheme.highContrastDarkTheme
-          : AppTheme.darkTheme,
+      materialThemeBuilder: (_, __) {
+        final b = settings.themeMode == ThemeMode.dark
+            ? AppTheme.darkTheme
+            : AppTheme.lightTheme;
+        return settings.isHighContrast ? AppTheme.highContrastDarkTheme : b;
+      },
       themeMode: settings.themeMode,
       routerConfig: router,
       builder: (BuildContext ctx, Widget? child) {
@@ -266,9 +272,8 @@ class _BootstrapSetupView extends StatelessWidget {
                 'Enter the host or IP address for the launcher control API.',
           ),
           const SizedBox(height: 16),
-          const Text('CONTROL API HOST'),
-          const SizedBox(height: 8),
-          ShadInput(
+          ShadInputFormField(
+            label: const Text('CONTROL API HOST'),
             controller: controller,
             placeholder: const Text('http://192.168.1.50:8090'),
           ),

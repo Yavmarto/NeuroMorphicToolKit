@@ -39,6 +39,8 @@ class NmtkLoadingScreen extends StatefulWidget {
     this.degradedMessage,
     this.onRetry,
     this.appName = 'NeuroMorphicToolKit',
+    this.backgroundColor,
+    this.foregroundColor,
   });
 
   /// Current readiness state.
@@ -58,6 +60,12 @@ class NmtkLoadingScreen extends StatefulWidget {
 
   /// Application name displayed below the logo.
   final String appName;
+  
+  /// Background color of the loading screen.
+  final Color? backgroundColor;
+  
+  /// Foreground color of the text.
+  final Color? foregroundColor;
 
   @override
   State<NmtkLoadingScreen> createState() => _NmtkLoadingScreenState();
@@ -90,8 +98,11 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final bg = widget.backgroundColor ?? _kBackground;
+    final fg = widget.foregroundColor ?? _kTextLight;
+
     return Scaffold(
-      backgroundColor: _kBackground,
+      backgroundColor: bg,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -106,10 +117,10 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
                   const SizedBox(height: 16),
                   Text(
                     widget.appName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Space Grotesk',
                       fontSize: 18,
-                      color: _kTextLight,
+                      color: fg,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.2,
                     ),
@@ -119,18 +130,19 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
             ),
             const SizedBox(height: 32),
             // ── State-specific content ──
-            _buildStateContent(widget.state),
+            _buildStateContent(widget.state, fg),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStateContent(NmtkReadinessState state) {
+  Widget _buildStateContent(NmtkReadinessState state, Color fg) {
     switch (state) {
       case NmtkReadinessState.waiting:
         return _WaitingContent(
           message: widget.progressMessage ?? 'Starting up…',
+          textColor: fg,
         );
       case NmtkReadinessState.ready:
         return const _ReadyContent();
@@ -138,12 +150,14 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
         return _DegradedContent(
           message: widget.degradedMessage ??
               'Some optional services are unavailable.',
+          textColor: fg,
         );
       case NmtkReadinessState.failed:
         return _FailedContent(
           message: widget.errorMessage ??
               'A required service failed to start.',
           onRetry: widget.onRetry,
+          textColor: fg,
         );
     }
   }
@@ -178,9 +192,10 @@ class _LogoBox extends StatelessWidget {
 // ── Waiting ───────────────────────────────────────────────────────────────
 
 class _WaitingContent extends StatelessWidget {
-  const _WaitingContent({required this.message});
+  const _WaitingContent({required this.message, required this.textColor});
 
   final String message;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) {
@@ -190,7 +205,7 @@ class _WaitingContent extends StatelessWidget {
         SizedBox(
           width: 200,
           child: LinearProgressIndicator(
-            backgroundColor: _kTextLight.withValues(alpha: 0.15),
+            backgroundColor: textColor.withValues(alpha: 0.15),
             color: _kLogoBg,
             minHeight: 3,
           ),
@@ -198,9 +213,9 @@ class _WaitingContent extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           message,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
-            color: _kTextLight,
+            color: textColor,
           ),
         ),
       ],
@@ -226,9 +241,10 @@ class _ReadyContent extends StatelessWidget {
 // ── Degraded ──────────────────────────────────────────────────────────────
 
 class _DegradedContent extends StatelessWidget {
-  const _DegradedContent({required this.message});
+  const _DegradedContent({required this.message, required this.textColor});
 
   final String message;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) {
@@ -246,9 +262,9 @@ class _DegradedContent extends StatelessWidget {
           child: Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: _kTextLight,
+              color: textColor,
             ),
           ),
         ),
@@ -260,10 +276,11 @@ class _DegradedContent extends StatelessWidget {
 // ── Failed ────────────────────────────────────────────────────────────────
 
 class _FailedContent extends StatelessWidget {
-  const _FailedContent({required this.message, this.onRetry});
+  const _FailedContent({required this.message, this.onRetry, required this.textColor});
 
   final String message;
   final VoidCallback? onRetry;
+  final Color textColor;
 
   @override
   Widget build(BuildContext context) {
@@ -287,9 +304,9 @@ class _FailedContent extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: _kTextLight,
+              color: textColor,
             ),
           ),
           if (onRetry != null) ...[

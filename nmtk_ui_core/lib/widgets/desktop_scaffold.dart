@@ -464,12 +464,11 @@ class _RailIconButtonState extends State<_RailIconButton> {
       child: Semantics(
         label: widget.tooltip,
         button: true,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
-          child: GestureDetector(
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
             onTap: widget.onPressed,
+            onHover: (hovered) => setState(() => _hovered = hovered),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 100),
               height: 40,
@@ -653,13 +652,12 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
         label: item.label,
         selected: isSelected,
         button: true,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (_) => setState(() => _hovered = true),
-          onExit: (_) => setState(() => _hovered = false),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
             onTap: widget.onTap,
+            onHover: (hovered) => setState(() => _hovered = hovered),
+            borderRadius: BorderRadius.circular(_kNavItemRadius),
             child: inner,
           ),
         ),
@@ -924,15 +922,14 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
     return Semantics(
       label: action.label,
       button: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() => _hovered = false),
-        child: GestureDetector(
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
           onTap: () {
             widget.onClose();
             action.onPressed?.call();
           },
+          onHover: (hovered) => setState(() => _hovered = hovered),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 100),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
