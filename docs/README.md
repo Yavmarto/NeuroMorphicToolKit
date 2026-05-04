@@ -1,89 +1,46 @@
 # docs
 
-`docs` is the shared documentation and governance layer for the whole NMTK workspace.
+`docs/` is the shared architecture, operations, and governance layer for the whole workspace.
 
-## What It Should Do
+## What Is Authoritative Now
 
-Based on the files already in this folder, `docs` is not a single manual or API reference. It serves three different roles:
+For current suite behavior, start with:
 
-1. user and operator documentation
-2. engineering process and CI/CD documentation
-3. agent/pipeline governance for automated development workflows
-
-## What Is Already Here
-
-### User and operations docs
-
-These files describe how to use, deploy, and troubleshoot the suite:
-
+- [`ADR-claude/`](./ADR-claude/)
 - [`api/README.md`](./api/README.md)
-- [`user/installation.md`](./user/installation.md)
-- [`user/troubleshooting.md`](./user/troubleshooting.md)
-- [`PRODUCTION_PLAYBOOK.md`](./PRODUCTION_PLAYBOOK.md)
-- [`CI_OVERVIEW.md`](./CI_OVERVIEW.md)
+- [`agents/`](./agents/)
+- dated consolidation and roadmap docs in the root of `docs/`
 
-The API index is the entrypoint for service ports, live Swagger/OpenAPI links,
-module-specific API guides, authentication notes, and endpoint smoke-test
-instructions. It intentionally points to live `/openapi.json` documents instead
-of duplicating a generated endpoint catalog in the root docs.
+The current architecture to keep in mind while reading the repo is:
 
-### Audit and status artifacts
+- one backend: `suite_api`
+- one control plane: `nmtk`
+- native Flutter feature packages instead of WebView-hosted module apps
+- `NeuroHub` as registry and metadata, not launcher/runtime orchestration
 
-The archive files under [`archive/`](./archive/) show that this folder is also the canonical home for cross-repo status audits and historical readiness reports.
+## What Lives Here
 
-### Agentic development pipeline
+- user and operator guides
+- suite-level API and backend-smoke guidance
+- ADRs and dated decision/roadmap documents
+- CI, release, and operational playbooks
+- agent and automation workflows
+- historical audits and archived reports
 
-The strongest signal in this folder is [`unified-dev-pipeline/README.md`](./unified-dev-pipeline/README.md), which describes a full contract-driven and property-based migration pipeline for all modules. That subfolder includes:
+## How To Read This Folder
 
-- per-module `module.json` manifests
-- `.issue-state.json` tracking
-- issue generation scripts
-- workflow-audit scripts
-- verification scripts
-- agent guardrails and templates
+Not all documentation here has the same status.
 
-This makes `docs` the place where the team defines how the repository should evolve, not just how it should be used.
+- `docs/ADR-claude/` contains the accepted cross-repo architecture trail.
+- `docs/archive/` is historical record and should not be rewritten to match current state.
+- dated roadmap and audit docs are useful evidence, but their title and status line matter.
+- older pipeline directories may still be informative, but they are not automatically the current source of truth.
 
-## Why This Fits The Rest Of NMTK
+If you only need the current suite model, read these first:
 
-NMTK is a multi-module workspace with:
-
-- several Python and Flutter submodules
-- a root Docker Compose stack
-- agent-driven workflows
-- recurring audit reports
-
-Because of that, the root repo needs a place for cross-cutting knowledge that does not belong to any one product module. This folder fills that role.
-
-In practice, `docs` should act as the shared source for:
-
-- onboarding
-- deployment and recovery guidance
-- CI/CD inventory
-- audit prompts and reporting conventions
-- contract-migration governance
-- future architecture documentation
-
-## Current State
-
-This folder is active, but uneven.
-
-What is clearly established:
-
-- production and troubleshooting docs exist
-- audit/reporting conventions exist
-- a substantial unified development pipeline already exists
-
-What still looks incomplete:
-
-- there is no single root overview README for the folder until now
-- there is overlap between active pipeline docs and archived pipeline variants
-- some historical docs appear duplicated or superseded
-
-## Practical Mental Model
-
-If the product modules are the "apps," then `docs` is the workspace handbook plus engineering control plane.
-
-- Users should land here for installation, troubleshooting, and deployment guidance.
-- Contributors should land here for CI, process, and migration rules.
-- Agents should land here for prompts, manifests, and automation contracts.
+1. [`../README.md`](../README.md)
+2. [`ADR-claude/0018-suite-api-unified-backend.md`](./ADR-claude/0018-suite-api-unified-backend.md)
+3. [`ADR-claude/0019-flutter-feature-packages.md`](./ADR-claude/0019-flutter-feature-packages.md)
+4. [`ADR-claude/0021-studio-neurochip-handoff-contract.md`](./ADR-claude/0021-studio-neurochip-handoff-contract.md)
+5. [`ADR-claude/0023-nmtk-sole-control-plane-neurohub-metadata-layer.md`](./ADR-claude/0023-nmtk-sole-control-plane-neurohub-metadata-layer.md)
+6. [`api/README.md`](./api/README.md)
