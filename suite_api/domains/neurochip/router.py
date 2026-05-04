@@ -3,11 +3,11 @@
 Non-hardware analysis routes (targets, analysis, quantization, faults,
 estimation, export, spinnaker2, deployments) are served in-process.
 
-Hardware routes (akida, lava, pynq, serial) are proxied to the
+Hardware routes (akida, lava, speck, pynq, serial) are proxied to the
 neurochip-hw-worker (port 8002, Docker profile: hardware). When the worker
 is not running, those routes return HTTP 503.
 
-Suite_api starts cleanly on machines without Akida/PYNQ/Lava installed
+Suite_api starts cleanly on machines without Akida/PYNQ/Lava/Speck installed
 (the hardware routes simply 503 when the worker is not running).
 """
 import logging
@@ -79,6 +79,14 @@ async def proxy_neurochip_lava(request: Request, path: str) -> Response:
 
 
 @router.api_route(
+    "/api/neurochip/hardware/speck/{path:path}",
+    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
+)
+async def proxy_neurochip_speck(request: Request, path: str) -> Response:
+    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
+
+
+@router.api_route(
     "/hardware/pynq/{path:path}",
     methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
 )
@@ -101,5 +109,5 @@ async def neurochip_health() -> dict[str, Any]:
         "status": "healthy",
         "service": "neurochip",
         "hardware_worker": settings.neurochip_hw_worker_url,
-        "note": "Hardware routes (akida/lava/pynq/serial) proxied to hardware worker",
+        "note": "Hardware routes (akida/lava/speck/pynq/serial) proxied to hardware worker",
     }

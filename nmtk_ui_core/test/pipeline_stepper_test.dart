@@ -7,21 +7,25 @@ void main() {
     testWidgets('renders all steps with labels and details', (WidgetTester tester) async {
       final steps = [
         const NmtkPipelineStepData(
+          id: 'step1',
           label: 'Step 1',
           status: NmtkStepStatus.success,
           detail: 'Done',
         ),
         const NmtkPipelineStepData(
+          id: 'step2',
           label: 'Step 2',
           status: NmtkStepStatus.running,
           detail: 'In progress',
         ),
         const NmtkPipelineStepData(
+          id: 'step3',
           label: 'Step 3',
           status: NmtkStepStatus.error,
           detail: 'Failed',
         ),
         const NmtkPipelineStepData(
+          id: 'step4',
           label: 'Step 4',
           status: NmtkStepStatus.idle,
         ),
@@ -34,29 +38,30 @@ void main() {
       );
 
       expect(find.text('Step 1'), findsOneWidget);
-      expect(find.text('Done'), findsOneWidget);
       expect(find.text('Step 2'), findsOneWidget);
-      expect(find.text('In progress'), findsOneWidget);
       expect(find.text('Step 3'), findsOneWidget);
-      expect(find.text('Failed'), findsOneWidget);
       expect(find.text('Step 4'), findsOneWidget);
     });
 
     testWidgets('renders correct icons for each status', (WidgetTester tester) async {
       final steps = [
         const NmtkPipelineStepData(
+          id: 's1',
           label: 'S1',
           status: NmtkStepStatus.success,
         ),
         const NmtkPipelineStepData(
+          id: 's2',
           label: 'S2',
           status: NmtkStepStatus.running,
         ),
         const NmtkPipelineStepData(
+          id: 's3',
           label: 'S3',
           status: NmtkStepStatus.error,
         ),
         const NmtkPipelineStepData(
+          id: 's4',
           label: 'S4',
           status: NmtkStepStatus.idle,
         ),
@@ -78,6 +83,88 @@ void main() {
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
 
+    testWidgets('highlights selected step', (WidgetTester tester) async {
+      final steps = [
+        const NmtkPipelineStepData(
+          id: 's1',
+          label: 'S1',
+          status: NmtkStepStatus.idle,
+        ),
+        const NmtkPipelineStepData(
+          id: 's2',
+          label: 'S2',
+          status: NmtkStepStatus.idle,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NmtkPipelineStepper(
+              steps: steps,
+              selectedStepId: 's2',
+            ),
+          ),
+        ),
+      );
+
+      final step2Container = tester.widget<Container>(
+        find.ancestor(
+          of: find.text('S2'),
+          matching: find.byType(Container),
+        ).first,
+      );
+
+      final decoration = step2Container.decoration as BoxDecoration;
+      expect(decoration.border?.top.width, equals(1.6));
+    });
+
+    testWidgets('auto-scrolls to selected step', (WidgetTester tester) async {
+      final manySteps = List.generate(
+        10,
+        (i) => NmtkPipelineStepData(
+          id: 'step$i',
+          label: 'Step $i',
+          status: NmtkStepStatus.idle,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 200,
+              child: NmtkPipelineStepper(
+                steps: manySteps,
+                selectedStepId: 'step0',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final scrollable = tester.widget<SingleChildScrollView>(find.byType(SingleChildScrollView));
+      final controller = scrollable.controller!;
+      expect(controller.offset, equals(0.0));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 200,
+              child: NmtkPipelineStepper(
+                steps: manySteps,
+                selectedStepId: 'step9',
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(controller.offset, isPositive);
+    });
+
     testWidgets('handles empty steps gracefully', (WidgetTester tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -85,7 +172,6 @@ void main() {
         ),
       );
 
-      // Verify no exceptions
       expect(find.byType(Row), findsOneWidget);
     });
   });

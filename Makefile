@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-native clean-all bump-version ci suite_api_dev check-devices
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -23,6 +23,7 @@ help:
 	@echo ""
 	@echo "Usage:"
 	@echo "  make dev                      - Run suite_api and the native launcher"
+	@echo "  make dev-web                  - Run suite_api and the launcher in Chrome"
 	@echo "  make dev-a                    - Run suite_api and the launcher on the resolved Android device"
 	@echo "                                  Override with ANDROID_DEVICE=<flutter-device-id> when needed"
 	@echo "  make dev-i                    - Run suite_api and the launcher on iOS"
@@ -34,36 +35,24 @@ help:
 	@echo ""
 
 dev:
-	@echo "==> Ensuring port 9000 is free..."
-	@lsof -ti:9000 | xargs kill -9 2>/dev/null || true
-	@uvicorn suite_api.main:app --port 9000 --reload & \
-	SUITE_API_PID=$$!; \
-	trap 'kill $$SUITE_API_PID 2>/dev/null || true' EXIT INT TERM; \
-	./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
 
 dev-a:
 	@$(MAKE) check-devices
 	@echo "==> Using Android device: $(ANDROID_DEVICE)"
-	@echo "==> Ensuring port 9000 is free..."
-	@lsof -ti:9000 | xargs kill -9 2>/dev/null || true
-	@uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload & \
-	SUITE_API_PID=$$!; \
-	trap 'kill $$SUITE_API_PID 2>/dev/null || true' EXIT INT TERM; \
-	./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)"
 
 dev-i:
 	@$(MAKE) check-devices
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
-	@echo "==> Ensuring port 9000 is free..."
-	@lsof -ti:9000 | xargs kill -9 2>/dev/null || true
-	@uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload & \
-	SUITE_API_PID=$$!; \
-	trap 'kill $$SUITE_API_PID 2>/dev/null || true' EXIT INT TERM; \
-	./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)"
 
 dev-native:
 	@chmod +x scripts/run_dev.sh
 	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
+
+dev-web:
+	@./scripts/run_dev.sh --flutter-device chrome
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload

@@ -376,6 +376,29 @@ class ProcessManager {
     return Platform.operatingSystem;
   }
 
+  String _pythonExecutableForEnv(String envPath) {
+    return Platform.isWindows
+        ? p.join(envPath, 'Scripts', 'python.exe')
+        : p.join(envPath, 'bin', 'python');
+  }
+
+  String _pipExecutableForEnv(String envPath) {
+    return Platform.isWindows
+        ? p.join(envPath, 'Scripts', 'pip.exe')
+        : p.join(envPath, 'bin', 'pip');
+  }
+
+  Future<String?> _existingModuleEnvPath(String installDir) async {
+    for (final envName in const ['.venv', 'venv']) {
+      final envPath = p.join(installDir, envName);
+      if (await Directory(envPath).exists() &&
+          await File(_pythonExecutableForEnv(envPath)).exists()) {
+        return envPath;
+      }
+    }
+    return null;
+  }
+
   bool _pythonVersionMatchesRange(String range, String version) {
     final versionParts = version
         .trim()
@@ -453,16 +476,15 @@ class ProcessManager {
       );
     }
 
-    final venvPath = p.join(installDir, 'venv');
+    final venvPath =
+        await _existingModuleEnvPath(installDir) ?? p.join(installDir, 'venv');
     final venvDir = Directory(venvPath);
 
     try {
       // If the venv directory exists but python is missing/broken (e.g. the
       // base interpreter was removed), delete it so it gets recreated below.
       if (await venvDir.exists()) {
-        final venvPythonCheck = Platform.isWindows
-            ? p.join(venvPath, 'Scripts', 'python.exe')
-            : p.join(venvPath, 'bin', 'python');
+        final venvPythonCheck = _pythonExecutableForEnv(venvPath);
         if (!await File(venvPythonCheck).exists()) {
           debugPrint(
             '[${module.id}] venv python missing/broken, deleting for recreation...',
@@ -503,9 +525,7 @@ class ProcessManager {
             throw Exception('Failed to create venv: ${venvResult.stderr}');
           }
 
-          final venvPython = Platform.isWindows
-              ? p.join(venvPath, 'Scripts', 'python.exe')
-              : p.join(venvPath, 'bin', 'python');
+          final venvPython = _pythonExecutableForEnv(venvPath);
 
           var pipBootstrap = await _processRunner.run(
             venvPython,
@@ -544,9 +564,7 @@ class ProcessManager {
 
       onProgress?.call(0.3);
 
-      final pipPath = Platform.isWindows
-          ? p.join(venvPath, 'Scripts', 'pip.exe')
-          : p.join(venvPath, 'bin', 'pip');
+      final pipPath = _pipExecutableForEnv(venvPath);
 
       // Install local sibling dependencies first (e.g. Neuro-Dream-Hand for neurocnl)
       if (module.localDeps.isNotEmpty) {
@@ -611,13 +629,10 @@ class ProcessManager {
     }
 
     final installDir = _installDir(module);
-    final venvPath = p.join(installDir, 'venv');
-    final pythonPath = Platform.isWindows
-        ? p.join(venvPath, 'Scripts', 'python.exe')
-        : p.join(venvPath, 'bin', 'python');
-    final pipPath = Platform.isWindows
-        ? p.join(venvPath, 'Scripts', 'pip.exe')
-        : p.join(venvPath, 'bin', 'pip');
+    final venvPath =
+        await _existingModuleEnvPath(installDir) ?? p.join(installDir, 'venv');
+    final pythonPath = _pythonExecutableForEnv(venvPath);
+    final pipPath = _pipExecutableForEnv(venvPath);
 
     Module updatedModule = module;
 
@@ -765,14 +780,13 @@ class ProcessManager {
 
     final installDir = _installDir(module);
     final runDir = _runDir(module);
-    final venvPath = p.join(installDir, 'venv');
+    var venvPath =
+        await _existingModuleEnvPath(installDir) ?? p.join(installDir, 'venv');
     final uvicornHost =
         Platform.environment['NMTK_UVICORN_HOST']?.trim().isNotEmpty == true
             ? Platform.environment['NMTK_UVICORN_HOST']!.trim()
             : '127.0.0.1';
-    final pythonPath = Platform.isWindows
-        ? p.join(venvPath, 'Scripts', 'python.exe')
-        : p.join(venvPath, 'bin', 'python');
+    var pythonPath = _pythonExecutableForEnv(venvPath);
 
     debugPrint(
       '[${module.id}] startModule: installDir=$installDir runDir=$runDir',
@@ -790,6 +804,9 @@ class ProcessManager {
         debugPrint('[${module.id}] Auto-install failed: $e');
         rethrow;
       }
+      venvPath = await _existingModuleEnvPath(installDir) ??
+          p.join(installDir, 'venv');
+      pythonPath = _pythonExecutableForEnv(venvPath);
       // Verify the install actually created the venv
       if (!await File(pythonPath).exists()) {
         throw Exception(

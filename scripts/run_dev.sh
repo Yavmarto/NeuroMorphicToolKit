@@ -101,11 +101,71 @@ else:
 }
 
 
+wait_for_suite_api() {
+  local control_url="$1"
+  local timeout_secs=150
+  local start
+  start=$(date +%s)
+
+  echo "==> Waiting for suite_api to be ready (timeout ${timeout_secs}s)..."
+  while true; do
+    local elapsed=$(( $(date +%s) - start ))
+    if [ "$elapsed" -ge "$timeout_secs" ]; then
+      echo "==> suite_api did not become ready within ${timeout_secs}s; continuing" >&2
+      return 0
+    fi
+
+    local status
+    status=$("$PYTHON3" - "$control_url" 2>/dev/null <<'PY'
+import json, sys
+import urllib.request, urllib.error
+try:
+    with urllib.request.urlopen(sys.argv[1] + "/health", timeout=2) as r:
+        d = json.loads(r.read())
+        print(str(d.get("suiteApiStatus") or "").strip())
+except Exception:
+    print("")
+PY
+)
+
+    case "$status" in
+      ready|disabled)
+        echo "==> suite_api is ${status}"
+        return 0
+        ;;
+      preflight_failed|failed)
+        echo "==> suite_api reported preflight failure; starting Flutter anyway" >&2
+        return 0
+        ;;
+    esac
+    sleep 1
+  done
+}
+
+
 reserve_control_api_port() {
   if is_port_in_use "$CONTROL_API_PORT"; then
     echo "==> Port $CONTROL_API_PORT is in use; freeing it..."
-    lsof -ti:"$CONTROL_API_PORT" | xargs kill -9 2>/dev/null || true
-    sleep 1
+    # SIGTERM first so the launcher control service can terminate the suite_api child cleanly.
+    lsof -ti:"$CONTROL_API_PORT" | xargs kill -TERM 2>/dev/null || true
+    sleep 2
+    if is_port_in_use "$CONTROL_API_PORT"; then
+      lsof -ti:"$CONTROL_API_PORT" | xargs kill -9 2>/dev/null || true
+      sleep 1
+    fi
+  fi
+}
+
+reserve_suite_api_port() {
+  local suite_port="${NMTK_SUITE_API_PORT:-9000}"
+  if is_port_in_use "$suite_port"; then
+    echo "==> Port $suite_port is in use; freeing it..."
+    lsof -ti:"$suite_port" | xargs kill -TERM 2>/dev/null || true
+    sleep 2
+    if is_port_in_use "$suite_port"; then
+      lsof -ti:"$suite_port" | xargs kill -9 2>/dev/null || true
+      sleep 1
+    fi
   fi
 }
 
@@ -181,8 +241,11 @@ if [[ "$TARGET_PLATFORM" == android* || "$TARGET_PLATFORM" == ios* || "$FLUTTER_
 fi
 
 CONTROL_API_URL=""
+reserve_suite_api_port
 start_control_api "$CONTROL_API_BIND_HOST"
 CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
+
+wait_for_suite_api "$CONTROL_API_URL"
 
 echo "------------------------------------------------------------"
 echo "==> Starting NeuroToolkit launcher on $FLUTTER_DEVICE"

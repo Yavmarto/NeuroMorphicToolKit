@@ -10,9 +10,9 @@ void main() {
     const leftPaneKey = Key('deploy-flow-left-pane');
     const rightPaneKey = Key('deploy-flow-right-pane');
 
-    const steps = [
-      NmtkPipelineStepData(label: 'Prepare', status: NmtkStepStatus.success),
-      NmtkPipelineStepData(label: 'Deploy', status: NmtkStepStatus.running),
+    final steps = [
+      const NmtkPipelineStepData(id: 'prepare', label: 'Prepare', status: NmtkStepStatus.success),
+      const NmtkPipelineStepData(id: 'deploy', label: 'Deploy', status: NmtkStepStatus.running),
     ];
 
     Future<void> pumpShell(WidgetTester tester, {required Size size}) async {
@@ -24,13 +24,13 @@ void main() {
         MaterialApp(
           home: MediaQuery(
             data: MediaQueryData(size: size),
-            child: const Scaffold(
+            child: Scaffold(
               body: SizedBox.expand(
                 child: NmtkWorkspaceShell(
                   layoutId: layoutId,
                   steps: steps,
-                  leftPane: Text('Configuration Pane'),
-                  rightPane: Text('Status Pane'),
+                  leftPane: const Text('Configuration Pane'),
+                  rightPane: const Text('Status Pane'),
                 ),
               ),
             ),

@@ -195,6 +195,53 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
+  test('installModule reuses an existing .venv without recreating venv',
+      () async {
+    final tempDir = Directory.systemTemp.createTempSync(
+      'nmtk_test_install_dotvenv',
+    );
+    final installDir = p.join(tempDir.path, 'src');
+    final dotVenvPath = p.join(installDir, '.venv');
+    Directory(dotVenvPath).createSync(recursive: true);
+    final dotVenvPython = Platform.isWindows
+        ? p.join(dotVenvPath, 'Scripts', 'python.exe')
+        : p.join(dotVenvPath, 'bin', 'python');
+    final dotVenvPip = Platform.isWindows
+        ? p.join(dotVenvPath, 'Scripts', 'pip.exe')
+        : p.join(dotVenvPath, 'bin', 'pip');
+    File(dotVenvPython).createSync(recursive: true);
+    File(dotVenvPip).createSync(recursive: true);
+
+    final module = Module(
+      id: 'test_module_dotvenv_install',
+      name: 'Test Module',
+      description: 'Description',
+      directory: tempDir.path,
+      sourcePath: 'src',
+    );
+
+    await processManager.installModule(module);
+
+    expect(
+      mockRunner.calls.any(
+        (c) =>
+            c.method == 'run' &&
+            c.arguments.length >= 3 &&
+            c.arguments[0] == '-m' &&
+            c.arguments[1] == 'venv',
+      ),
+      isFalse,
+    );
+    expect(
+      mockRunner.calls.any(
+        (c) => c.executable == dotVenvPip && c.arguments.contains('install'),
+      ),
+      isTrue,
+    );
+
+    tempDir.deleteSync(recursive: true);
+  });
+
   test(
     'prepareAkidaRuntime installs configured package set on supported hosts',
     () async {
@@ -355,6 +402,48 @@ void main() {
     expect(mockRunner.calls.any((c) => c.arguments.contains('8001')), isTrue);
 
     await subscription.cancel();
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test('startModule uses .venv python when venv is absent', () async {
+    final tempDir = Directory.systemTemp.createTempSync(
+      'nmtk_test_start_dotvenv',
+    );
+    final runDir = tempDir.path;
+    final dotVenvPath = p.join(runDir, '.venv');
+    Directory(dotVenvPath).createSync(recursive: true);
+    final pythonExe = Platform.isWindows
+        ? p.join(dotVenvPath, 'Scripts', 'python.exe')
+        : p.join(dotVenvPath, 'bin', 'python');
+    File(pythonExe).createSync(recursive: true);
+
+    final module = Module(
+      id: 'test_module_start_dotvenv',
+      name: 'Test Module',
+      description: 'Description',
+      directory: runDir,
+      sourcePath: '.',
+      runPath: '.',
+      port: 8011,
+      uvicornTarget: 'main:app',
+    );
+
+    final mockProcess = MockProcess();
+    mockRunner.mockProcesses[pythonExe] = mockProcess;
+
+    await processManager.startModule(module);
+
+    expect(
+      mockRunner.calls.any(
+        (c) =>
+            c.method == 'start' &&
+            c.executable == pythonExe &&
+            c.arguments.contains('uvicorn') &&
+            c.arguments.contains('8011'),
+      ),
+      isTrue,
+    );
+
     tempDir.deleteSync(recursive: true);
   });
 

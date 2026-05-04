@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -166,13 +167,24 @@ class LauncherControlBootstrapService {
   Future<LauncherBootstrapState> _ensureReadyInternal() async {
     final explicitBaseUri = _explicitBaseUri();
     if (explicitBaseUri != null) {
-      if (await _isHealthy(explicitBaseUri)) {
-        return LauncherBootstrapState.ready(explicitBaseUri);
+      final deadline = DateTime.now().add(startupTimeout);
+      while (DateTime.now().isBefore(deadline)) {
+        final health = await _probeHealth(explicitBaseUri);
+        if (health.ready) {
+          return LauncherBootstrapState.ready(explicitBaseUri);
+        }
+        if (health.failureMessage != null) {
+          return LauncherBootstrapState.preflightFailed(
+            explicitBaseUri,
+            health.failureMessage!,
+          );
+        }
+        await Future<void>.delayed(pollInterval);
       }
       return LauncherBootstrapState.preflightFailed(
         explicitBaseUri,
-        'Preflight failed: configured launcher control API is unreachable at '
-        '$explicitBaseUri.',
+        'Preflight failed: configured launcher control API did not become ready at '
+        '$explicitBaseUri within ${startupTimeout.inSeconds}s.',
       );
     }
 
@@ -181,8 +193,15 @@ class LauncherControlBootstrapService {
       return LauncherBootstrapState.ready(localBaseUri);
     }
 
-    if (await _isHealthy(localBaseUri)) {
+    final existingHealth = await _probeHealth(localBaseUri);
+    if (existingHealth.ready) {
       return LauncherBootstrapState.ready(localBaseUri);
+    }
+    if (existingHealth.failureMessage != null) {
+      return LauncherBootstrapState.preflightFailed(
+        localBaseUri,
+        existingHealth.failureMessage!,
+      );
     }
 
     final python = await _environment.findPython();
@@ -217,6 +236,7 @@ class LauncherControlBootstrapService {
           ..._environment.environment,
           'PYTHONPATH': _mergedPythonPath(launchSpec.pythonPathRoot),
           'NMTK_UVICORN_HOST': '0.0.0.0',
+          if (_environment.isBundled) 'NMTK_BUNDLED_MODE': '1',
         },
       );
     } catch (error) {
@@ -228,8 +248,15 @@ class LauncherControlBootstrapService {
 
     final deadline = DateTime.now().add(startupTimeout);
     while (DateTime.now().isBefore(deadline)) {
-      if (await _isHealthy(localBaseUri)) {
+      final health = await _probeHealth(localBaseUri);
+      if (health.ready) {
         return LauncherBootstrapState.ready(localBaseUri);
+      }
+      if (health.failureMessage != null) {
+        return LauncherBootstrapState.preflightFailed(
+          localBaseUri,
+          health.failureMessage!,
+        );
       }
       await Future<void>.delayed(pollInterval);
     }
@@ -256,14 +283,39 @@ class LauncherControlBootstrapService {
     return Uri.parse('http://127.0.0.1:${ControlApiService.configuredPort}');
   }
 
-  Future<bool> _isHealthy(Uri baseUri) async {
+  Future<_HealthProbeResult> _probeHealth(Uri baseUri) async {
     try {
       final response = await _client
           .get(baseUri.replace(path: '/health'))
           .timeout(const Duration(seconds: 2));
-      return response.statusCode == 200;
+      if (response.statusCode != 200) {
+        return const _HealthProbeResult.notReady();
+      }
+      if (response.body.isEmpty) {
+        return const _HealthProbeResult.ready();
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        return const _HealthProbeResult.ready();
+      }
+      final suiteApiStatus = (decoded['suiteApiStatus'] as String?)?.trim();
+      final suiteApiMessage = (decoded['suiteApiMessage'] as String?)?.trim();
+      if (suiteApiStatus == null ||
+          suiteApiStatus.isEmpty ||
+          suiteApiStatus == 'ready' ||
+          suiteApiStatus == 'disabled') {
+        return const _HealthProbeResult.ready();
+      }
+      if (suiteApiStatus == 'preflight_failed' || suiteApiStatus == 'failed') {
+        return _HealthProbeResult.failed(
+          suiteApiMessage == null || suiteApiMessage.isEmpty
+              ? 'Preflight failed: suite_api could not start.'
+              : 'Preflight failed: $suiteApiMessage',
+        );
+      }
+      return const _HealthProbeResult.notReady();
     } catch (_) {
-      return false;
+      return const _HealthProbeResult.notReady();
     }
   }
 
@@ -310,4 +362,18 @@ class _LaunchSpec {
   final String scriptPath;
   final String pythonPathRoot;
   final String workingDirectory;
+}
+
+class _HealthProbeResult {
+  const _HealthProbeResult._({required this.ready, this.failureMessage});
+
+  const _HealthProbeResult.ready() : this._(ready: true);
+
+  const _HealthProbeResult.notReady() : this._(ready: false);
+
+  const _HealthProbeResult.failed(String message)
+      : this._(ready: false, failureMessage: message);
+
+  final bool ready;
+  final String? failureMessage;
 }

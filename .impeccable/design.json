@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-04T00:00:00Z",
+  "title": "Design System: NeuroMorphicToolKit",
+  "extensions": {
+    "colorMeta": {
+      "command-blue": {
+        "role": "primary",
+        "displayName": "Command Blue",
+        "canonical": "oklch(44% 0.282 264)",
+        "tonalRamp": ["#010415", "#030B30", "#071660", "#0F2CD0", "#1337EC", "#3D5BFF", "#7B99FF", "#BCC9FF"]
+      },
+      "studio-violet": {
+        "role": "secondary",
+        "displayName": "Studio Violet",
+        "canonical": "oklch(57% 0.255 285)",
+        "tonalRamp": ["#070415", "#0E0830", "#1E1060", "#5B32D8", "#8B5CF6", "#A97FFA", "#C3A8FC", "#DDD0FF"]
+      },
+      "instrument-cyan": {
+        "role": "secondary",
+        "displayName": "Instrument Cyan",
+        "canonical": "oklch(72% 0.155 210)",
+        "tonalRamp": ["#031820", "#063850", "#0A6880", "#0A96B8", "#06B6D4", "#38CDE6", "#82DFF0", "#BEF0F9"]
+      },
+      "state-healthy": {
+        "role": "semantic",
+        "displayName": "Healthy",
+        "canonical": "#22C55E",
+        "tonalRamp": ["#052E16", "#14532D", "#166534", "#15803D", "#22C55E", "#4ADE80", "#86EFAC", "#DCFCE7"]
+      },
+      "state-error": {
+        "role": "semantic",
+        "displayName": "Error",
+        "canonical": "#EF4444",
+        "tonalRamp": ["#450A0A", "#7F1D1D", "#991B1B", "#B91C1C", "#EF4444", "#F87171", "#FCA5A5", "#FEE2E2"]
+      },
+      "state-running": {
+        "role": "semantic",
+        "displayName": "Running",
+        "canonical": "#38BDF8",
+        "tonalRamp": ["#082F49", "#0C4A6E", "#075985", "#0369A1", "#38BDF8", "#7DD3FC", "#BAE6FD", "#E0F2FE"]
+      },
+      "state-degraded": {
+        "role": "semantic",
+        "displayName": "Degraded",
+        "canonical": "#F59E0B",
+        "tonalRamp": ["#451A03", "#78350F", "#92400E", "#B45309", "#F59E0B", "#FCD34D", "#FDE68A", "#FEF3C7"]
+      },
+      "state-live": {
+        "role": "semantic",
+        "displayName": "Live",
+        "canonical": "#E11D48",
+        "tonalRamp": ["#4C0519", "#881337", "#9F1239", "#BE123C", "#E11D48", "#FB7185", "#FDA4AF", "#FFE4E6"]
+      },
+      "shell-bg-dark": {
+        "role": "neutral",
+        "displayName": "Night Shell",
+        "canonical": "#0B1020",
+        "tonalRamp": ["#04060F", "#070C1A", "#0B1020", "#101728", "#1A2436", "#243044", "#3D4F6A", "#9BA8BC"]
+      },
+      "shell-bg-light": {
+        "role": "neutral",
+        "displayName": "Silver Field",
+        "canonical": "#F3F5FA",
+        "tonalRamp": ["#5B677C", "#8A96A8", "#C2C9D6", "#D9E0EA", "#E7ECF3", "#F3F5FA", "#F7F9FC", "#FAFBFD"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Module-level headers and major surface titles. Used sparingly." },
+      "headline": { "displayName": "Headline", "purpose": "Section headers within module surfaces and panel titles." },
+      "title": { "displayName": "Title", "purpose": "Card headers, workspace labels, group headers." },
+      "body": { "displayName": "Body", "purpose": "Primary readable content: descriptions, documentation, pipeline step text." },
+      "label": { "displayName": "Label", "purpose": "Status labels, metadata, chip text, navigation items. The workhorse at density." },
+      "mono": { "displayName": "Mono", "purpose": "Code, CNL spec text, terminal output, column-aligned numeric telemetry." }
+    },
+    "shadows": [],
+    "motion": [
+      { "name": "fast", "value": "120ms ease-out", "purpose": "Hover states, tooltip appearance, micro-interaction feedback." },
+      { "name": "base", "value": "220ms ease-in-out", "purpose": "Standard expand/collapse, chip open, card lift." },
+      { "name": "slow", "value": "350ms ease-in-out", "purpose": "Page/route transitions, loading-screen entrance/exit." },
+      { "name": "spring", "value": "180ms cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Spring-back on tap-up, badge pop, back-button appearance." },
+      { "name": "tap-scale", "value": "0.96", "purpose": "Scale factor on button press-down." },
+      { "name": "status-pulse", "value": "900ms ease-in-out infinite", "purpose": "Status dot oscillation for degraded/error states only." }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "600px", "purpose": "Below this width, shell adapts to compact layout." },
+      { "name": "normal", "value": "1080px", "purpose": "Standard desktop workspace layout." },
+      { "name": "wide", "value": "1280px", "purpose": "Wide desktop; utility panel always visible." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Definitive action for a workflow step. Command-blue fill, white label.",
+      "html": "<button class=\"ds-btn-primary\">Run Pipeline</button>",
+      "css": ".ds-btn-primary { background: #1337EC; color: #ffffff; padding: 10px 20px; border: none; border-radius: 16px; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; font-weight: 600; line-height: 1.4; cursor: pointer; transition: background 120ms ease-out, transform 120ms ease-out; } .ds-btn-primary:hover { background: #0D2EC0; } .ds-btn-primary:active { transform: scale(0.96); background: #0B28A8; } .ds-btn-primary:focus-visible { outline: 2px solid rgba(19, 55, 236, 0.4); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.38; cursor: not-allowed; }"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "refersTo": "button-outlined",
+      "description": "Secondary action. Transparent with command-blue border.",
+      "html": "<button class=\"ds-btn-outlined\">View Logs</button>",
+      "css": ".ds-btn-outlined { background: rgba(19, 55, 236, 0.08); color: #1337EC; padding: 10px 20px; border: 1px solid rgba(19, 55, 236, 0.35); border-radius: 16px; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; font-weight: 600; line-height: 1.4; cursor: pointer; transition: background 120ms ease-out; } .ds-btn-outlined:hover { background: rgba(19, 55, 236, 0.18); } .ds-btn-outlined:active { transform: scale(0.96); } .ds-btn-outlined:focus-visible { outline: 2px solid rgba(19, 55, 236, 0.4); outline-offset: 2px; } .ds-btn-outlined:disabled { opacity: 0.38; cursor: not-allowed; }"
+    },
+    {
+      "name": "Surface Card (Dark)",
+      "kind": "card",
+      "refersTo": "surface-card-dark",
+      "description": "Primary container for a bounded set of information or controls. Dark theme.",
+      "html": "<div class=\"ds-surface-card-dark\"><span class=\"ds-card-title\">Model Deployment</span><span class=\"ds-card-subtitle\">AKD1000 · Target ready</span><div class=\"ds-card-body\">Card content lives here. Flat surface, no shadow.</div></div>",
+      "css": ".ds-surface-card-dark { background: #101728; border: 1px solid rgba(36, 48, 68, 0.65); border-radius: 24px; padding: 14px; font-family: 'Space Grotesk', system-ui, sans-serif; } .ds-card-title { display: block; font-size: 16px; font-weight: 700; color: #e8eaf0; line-height: 1.3; } .ds-card-subtitle { display: block; font-size: 12px; font-weight: 400; color: #9BA8BC; margin-top: 2px; letter-spacing: 0.3px; } .ds-card-body { margin-top: 10px; font-size: 14px; color: #c8cfde; line-height: 1.5; }"
+    },
+    {
+      "name": "Surface Card (Light)",
+      "kind": "card",
+      "refersTo": "surface-card-light",
+      "description": "Primary container for a bounded set of information or controls. Light theme.",
+      "html": "<div class=\"ds-surface-card-light\"><span class=\"ds-card-title-light\">Model Deployment</span><span class=\"ds-card-subtitle-light\">AKD1000 · Target ready</span><div class=\"ds-card-body-light\">Card content lives here. Flat surface, no shadow.</div></div>",
+      "css": ".ds-surface-card-light { background: #FFFFFF; border: 1px solid rgba(217, 224, 234, 0.65); border-radius: 24px; padding: 14px; font-family: 'Space Grotesk', system-ui, sans-serif; } .ds-card-title-light { display: block; font-size: 16px; font-weight: 700; color: #1a2030; line-height: 1.3; } .ds-card-subtitle-light { display: block; font-size: 12px; font-weight: 400; color: #5B677C; margin-top: 2px; letter-spacing: 0.3px; } .ds-card-body-light { margin-top: 10px; font-size: 14px; color: #3a4558; line-height: 1.5; }"
+    },
+    {
+      "name": "Workspace Chip (Active)",
+      "kind": "chip",
+      "refersTo": "workspace-chip-active",
+      "description": "Active module in the workspace switcher bar. Command-mode variant shown.",
+      "html": "<div class=\"ds-workspace-chip ds-workspace-chip--active\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\"><rect x=\"3\" y=\"3\" width=\"10\" height=\"10\" rx=\"2.5\" fill=\"currentColor\" opacity=\"0.75\"/></svg><span>neurocnl</span><span class=\"ds-wchip-dot\" style=\"background:#22C55E\"></span><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\"><line x1=\"4\" y1=\"4\" x2=\"12\" y2=\"12\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/><line x1=\"12\" y1=\"4\" x2=\"4\" y2=\"12\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/></svg></div>",
+      "css": ".ds-workspace-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 120ms ease-out, color 120ms ease-out; } .ds-workspace-chip--active { background: #1337EC; color: #ffffff; } .ds-workspace-chip--idle { background: rgba(155, 168, 188, 0.12); color: #9BA8BC; } .ds-workspace-chip--idle:hover { background: rgba(155, 168, 188, 0.20); } .ds-wchip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }"
+    },
+    {
+      "name": "Workspace Chip (Idle)",
+      "kind": "chip",
+      "refersTo": "workspace-chip-idle",
+      "description": "Inactive module in the workspace switcher bar.",
+      "html": "<div class=\"ds-workspace-chip ds-workspace-chip--idle\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\"><rect x=\"3\" y=\"3\" width=\"10\" height=\"10\" rx=\"2.5\" fill=\"currentColor\" opacity=\"0.5\"/></svg><span>Neurosense</span><span class=\"ds-wchip-dot\" style=\"background:#F59E0B\"></span><svg width=\"12\" height=\"12\" viewBox=\"0 0 16 16\"><line x1=\"4\" y1=\"4\" x2=\"12\" y2=\"12\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/><line x1=\"12\" y1=\"4\" x2=\"4\" y2=\"12\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/></svg></div>",
+      "css": ".ds-workspace-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 120ms ease-out; } .ds-workspace-chip--idle { background: rgba(155, 168, 188, 0.10); color: #9BA8BC; } .ds-workspace-chip--idle:hover { background: rgba(155, 168, 188, 0.20); color: #c8d0df; } .ds-wchip-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }"
+    },
+    {
+      "name": "Shell Status Badge",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Compact suite-level health indicator in the top app bar. Shows six operational states.",
+      "html": "<div style=\"display:flex;gap:8px;flex-wrap:wrap;\"><div class=\"ds-status-badge ds-status-badge--healthy\"><span class=\"ds-sbadge-dot\"></span><span>ready</span></div><div class=\"ds-status-badge ds-status-badge--running\"><span class=\"ds-sbadge-dot\"></span><span>running</span></div><div class=\"ds-status-badge ds-status-badge--degraded\"><span class=\"ds-sbadge-dot\"></span><span>degraded</span></div><div class=\"ds-status-badge ds-status-badge--error\"><span class=\"ds-sbadge-dot\"></span><span>error</span></div><div class=\"ds-status-badge ds-status-badge--live\"><span class=\"ds-sbadge-dot\"></span><span>live</span></div></div>",
+      "css": ".ds-status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 12px; font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 12px; font-weight: 500; } .ds-sbadge-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; } .ds-status-badge--healthy { color: #166534; background: rgba(34, 197, 94, 0.12); } .ds-status-badge--healthy .ds-sbadge-dot { background: #22C55E; } .ds-status-badge--running { color: #0C4A6E; background: rgba(56, 189, 248, 0.12); } .ds-status-badge--running .ds-sbadge-dot { background: #38BDF8; } .ds-status-badge--degraded { color: #78350F; background: rgba(245, 158, 11, 0.12); } .ds-status-badge--degraded .ds-sbadge-dot { background: #F59E0B; } .ds-status-badge--error { color: #7F1D1D; background: rgba(239, 68, 68, 0.12); } .ds-status-badge--error .ds-sbadge-dot { background: #EF4444; } .ds-status-badge--live { color: #7F1D1D; background: rgba(225, 29, 72, 0.12); } .ds-status-badge--live .ds-sbadge-dot { background: #E11D48; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Transparent Machine",
+    "overview": "NMTK is a suite where complexity is accessible on demand at every level, not necessarily always visible. The user sees a calm, controlled workspace. Behind that surface, pipeline state, hardware diagnostics, and process telemetry are always one interaction away. The interface holds information in readiness; it does not broadcast it.\n\nThe suite occupies a precise space between scientific instrument and modern professional tool. It has the visual discipline of precision equipment without the aesthetic of a developer IDE, an enterprise console, or a consumer application. It is technically honest and visually composed.\n\nNMTK presents two symmetrical themes: dark navy and light silver-blue. Three workbench modes (command, studio, instrument) share one family identity but carry distinct palette accents.",
+    "keyCharacteristics": [
+      "State accessible on demand, not broadcast: depth one interaction away, calm at surface",
+      "Three workbench modes with distinct palette accents within one shared shape and type language",
+      "Dense without cramped: hierarchy is clear, surfaces breathe, labels are readable at 12px",
+      "Operationally honest: every status color has exactly one meaning, never used decoratively",
+      "No ornamentation: every element earns its place or is removed"
+    ],
+    "rules": [
+      { "name": "The Semantic Purity Rule", "body": "Status colors have one job each: communicating operational state. They are never used for decoration, emphasis, or branding.", "section": "colors" },
+      { "name": "The Mode Palette Rule", "body": "Command blue, studio violet, and instrument cyan are applied only to their assigned modules. Chrome tinting follows mode assignment strictly. These assignments never cross.", "section": "colors" },
+      { "name": "The No-Oversize Rule", "body": "Hierarchy comes from weight contrast before scale. 28px is the ceiling. This is a professional workstation; it earns authority through precision, not scale.", "section": "typography" },
+      { "name": "The Mono Boundary Rule", "body": "JetBrains Mono is reserved for machine-generated content, user-authored code, and numeric telemetry. Navigation labels and status text always use Space Grotesk.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. State changes produce tint shifts or border accents, not shadow introduction.", "section": "elevation" },
+      { "name": "The Border-Not-Shadow Rule", "body": "Cards use a 1px border to define their bounds. If an element needs to feel elevated, lighten its background by one tonal step. Do not add a shadow.", "section": "elevation" },
+      { "name": "The No-Nested-Cards Rule", "body": "A card inside a card is always wrong. Use tonal sections, inline rows, or subtle-border dividers for internal hierarchy.", "section": "components" },
+      { "name": "The Inline-Over-Modal Rule", "body": "Modals are for blocking decisions only. Diagnostic detail, log output, and progressive disclosure use the utility panel or inline expansion.", "section": "components" }
+    ],
+    "dos": [
+      "Apply mode palettes strictly: command blue for shell and Neurohub, studio violet for neurocnl and Neurosim, instrument cyan/teal for Neurosense, Neurochip, and Neurobench.",
+      "Use tonal depth (background tint steps) rather than shadows to communicate surface hierarchy.",
+      "Achieve typographic hierarchy through Space Grotesk weight contrast (w400 vs w700) before reaching for size differences.",
+      "Map every status indicator to one of the six semantic states: healthy, running, degraded, warning, error, live.",
+      "Make state accessible on demand: summary at surface, detail one interaction away.",
+      "Keep the top app bar at 52px and the workspace bar at 48px.",
+      "Use the pulsing status dot exclusively for degraded and error states.",
+      "Use JetBrains Mono for all code, CNL text, and column-aligned numeric telemetry; never for chrome."
+    ],
+    "donts": [
+      "Don't let NMTK feel like a consumer SaaS (Canva, Wix): no marketing chrome, growth funnels, freemium onboarding wizards, or pastel animations.",
+      "Don't let it feel like an Arduino IDE: no clunky, cramped, dated developer-tool aesthetic.",
+      "Don't let it feel like a dark hacker terminal: no neon-on-black, no all-dark intimidation aesthetic.",
+      "Don't let it feel like SAP, Salesforce, or Atlassian Jira: no grey form overload, no bureaucratic navigation chrome, no ticket-board framing.",
+      "Don't let it feel like ZBrush or Blender: no toolbar overload, not every control visible at once.",
+      "Don't let it feel like VS Code: NMTK is a workstation, not an editor with extensions.",
+      "Don't use side-stripe borders: border-left or border-right greater than 1px as a colored accent on any card, list item, or callout.",
+      "Don't animate layout properties (width, height, padding, margin). Animate opacity and transform only.",
+      "Don't use status colors decoratively.",
+      "Don't flood the surface with detail state. Surface status is a summary.",
+      "Don't nest cards.",
+      "Don't reach for a modal first.",
+      "Don't use gradient text (background-clip: text with a gradient)."
+    ]
+  }
+}

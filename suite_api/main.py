@@ -5,6 +5,10 @@ Start with: uvicorn suite_api.main:app --port 9000 --reload
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
+from suite_api.bootstrap import validate_runtime_dependencies
+
+validate_runtime_dependencies()
+
 from fastapi import FastAPI
 from suite_api.config import settings
 from suite_api.middleware import attach_middleware
