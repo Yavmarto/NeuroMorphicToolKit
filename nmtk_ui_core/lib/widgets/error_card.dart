@@ -35,10 +35,7 @@ class NmtkErrorCard extends StatelessWidget {
         children: [
           if (prefix != null) ...[prefix!, const SizedBox(height: 8)],
           selectable
-              ? SelectableText(
-                  message,
-                  style: TextStyle(color: errColor),
-                )
+              ? SelectableText(message, style: TextStyle(color: errColor))
               : Text(message, style: TextStyle(color: errColor)),
         ],
       ),

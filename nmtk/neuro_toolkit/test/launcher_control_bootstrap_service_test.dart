@@ -266,7 +266,8 @@ void main() {
     expect(healthChecks, greaterThanOrEqualTo(2));
   });
 
-  test('surfaces suite_api preflight failure from control API health', () async {
+  test('surfaces suite_api preflight failure from control API health',
+      () async {
     var healthChecks = 0;
     final client = MockClient((request) async {
       if (request.url.path == '/health') {
@@ -296,7 +297,8 @@ void main() {
     final state = await service.ensureReady();
 
     expect(state.status, LauncherBootstrapStatus.preflightFailed);
-    expect(state.message, contains('suite_api runtime dependencies are missing'));
+    expect(
+        state.message, contains('suite_api runtime dependencies are missing'));
     expect(environment.startedCommands, hasLength(1));
   });
 }

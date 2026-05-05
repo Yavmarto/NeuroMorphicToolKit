@@ -274,7 +274,8 @@ void main() {
     expect(hiddenModule.showInLauncherNav, isFalse);
   });
 
-  testWidgets('CatalogScreen shows all 6 launcher modules', (WidgetTester tester) async {
+  testWidgets('CatalogScreen shows all 6 launcher modules',
+      (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1920, 2000);
     tester.view.devicePixelRatio = 1.0;
 

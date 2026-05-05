@@ -105,7 +105,6 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
   final Color terminalBackground;
   final Color syntaxHighlightColor;
   final LinearGradient brandGradient;
-  final Color glassmorphismColor;
 
   final Color synKeyword;
   final Color synSubject;
@@ -129,7 +128,6 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
     required this.terminalBackground,
     required this.syntaxHighlightColor,
     required this.brandGradient,
-    required this.glassmorphismColor,
     this.synKeyword = const Color(0xFF60A5FA),
     this.synSubject = const Color(0xFF38BDF8),
     this.synNumber = const Color(0xFFFBBF24),
@@ -173,7 +171,6 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
       terminalBackground: terminalBackground ?? this.terminalBackground,
       syntaxHighlightColor: syntaxHighlightColor ?? this.syntaxHighlightColor,
       brandGradient: brandGradient ?? this.brandGradient,
-      glassmorphismColor: glassmorphismColor ?? this.glassmorphismColor,
       synKeyword: synKeyword ?? this.synKeyword,
       synSubject: synSubject ?? this.synSubject,
       synNumber: synNumber ?? this.synNumber,
@@ -215,11 +212,6 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
       brandGradient: LinearGradient.lerp(
         brandGradient,
         other.brandGradient,
-        t,
-      )!,
-      glassmorphismColor: Color.lerp(
-        glassmorphismColor,
-        other.glassmorphismColor,
         t,
       )!,
       synKeyword: Color.lerp(synKeyword, other.synKeyword, t)!,
@@ -404,9 +396,27 @@ class AppTheme {
             ? [colorScheme.primary, colorScheme.secondaryContainer]
             : [colorScheme.primary, colorScheme.tertiary],
       ),
-      glassmorphismColor: isDark
-          ? NmtkDesignTokens.backgroundDark.withValues(alpha: 0.8)
-          : Colors.white.withValues(alpha: 0.7),
+      synKeyword: isDark ? const Color(0xFF60A5FA) : const Color(0xFF1D4ED8),
+      synSubject: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
+      synNumber: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
+      synComment: isDark ? const Color(0xFF6B7280) : const Color(0xFF4B5563),
+      synString: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+      nodeEnsemble: isDark ? const Color(0xFF3B82F6) : const Color(0xFF2563EB),
+      nodeMotor: isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706),
+      nodeInterneuron: isDark
+          ? const Color(0xFF14B8A6)
+          : const Color(0xFF0D9488),
+      nodeInput: isDark ? const Color(0xFF22C55E) : const Color(0xFF16A34A),
+      nodeErrorInput: isDark
+          ? const Color(0xFFEF4444)
+          : const Color(0xFFDC2626),
+      edgeExcitatory: isDark
+          ? const Color(0xFF3B82F6)
+          : const Color(0xFF2563EB),
+      edgeInhibitory: isDark
+          ? const Color(0xFFEF4444)
+          : const Color(0xFFDC2626),
+      edgePlastic: isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706),
       variant: variant,
     );
   }
@@ -648,9 +658,6 @@ class AppTheme {
       brandGradient: LinearGradient(
         colors: [colorScheme.primary, colorScheme.secondary],
       ),
-      glassmorphismColor: isDark
-          ? const Color(0xCC1A1625)
-          : const Color(0xCCFFFFFF),
       synKeyword: NmtkNeurocnlTokens.synKeyword,
       synSubject: NmtkNeurocnlTokens.synSubject,
       synNumber: NmtkNeurocnlTokens.synNumber,

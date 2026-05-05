@@ -35,9 +35,8 @@ class NativeSurfaceRegistry {
     'Neurochip': (WorkspaceSession session) {
       return NeurochipShellAdapter(
         initialDeepLink: session.deepLink,
-        restorationSnapshot: session.restoreState.isEmpty
-            ? null
-            : session.restoreState,
+        restorationSnapshot:
+            session.restoreState.isEmpty ? null : session.restoreState,
       );
     },
     'Neurobench': (WorkspaceSession session) {

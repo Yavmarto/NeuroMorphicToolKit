@@ -11,9 +11,7 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 /// Wraps [child] in a [ShadApp] so that [ShadTheme.of(context)] resolves
 /// correctly for all widgets in [NmtkDesktopScaffold].
 Widget _buildHarness(Widget child) {
-  return ShadApp(
-    home: child,
-  );
+  return ShadApp(home: child);
 }
 
 const _kNavItems = [
@@ -97,10 +95,7 @@ void main() {
       );
 
       // No content header rendered means no back button icon.
-      expect(
-        find.byIcon(Icons.arrow_back_ios_new_rounded),
-        findsNothing,
-      );
+      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsNothing);
     });
 
     // 3. Back button visible when showBackButton is true
@@ -123,10 +118,7 @@ void main() {
         ),
       );
 
-      expect(
-        find.byIcon(Icons.arrow_back_ios_new_rounded),
-        findsOneWidget,
-      );
+      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
     });
 
     // 4. onSettingsPressed callback fires

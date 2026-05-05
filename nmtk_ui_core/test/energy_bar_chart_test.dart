@@ -22,7 +22,9 @@ void main() {
       expect(find.text('100'), findsOneWidget);
     });
 
-    testWidgets('renders ensemble breakdowns correctly', (WidgetTester tester) async {
+    testWidgets('renders ensemble breakdowns correctly', (
+      WidgetTester tester,
+    ) async {
       const report = EnergyReport(
         perEnsemblePj: {'E1': 10.0, 'E2': 20.0},
         totalPj: 30.0,
@@ -44,12 +46,10 @@ void main() {
       expect(find.byType(LinearProgressIndicator), findsWidgets);
     });
 
-    testWidgets('handles empty ensembles gracefully', (WidgetTester tester) async {
-      const report = EnergyReport(
-        perEnsemblePj: {},
-        totalPj: 0.0,
-        opsCount: 0,
-      );
+    testWidgets('handles empty ensembles gracefully', (
+      WidgetTester tester,
+    ) async {
+      const report = EnergyReport(perEnsemblePj: {}, totalPj: 0.0, opsCount: 0);
 
       await tester.pumpWidget(
         const MaterialApp(

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../motion_tokens.dart';
@@ -20,9 +18,6 @@ enum NmtkReadinessState {
 }
 
 // ── Inline color constants (no nmtk_ui_core imports allowed here) ──────────
-const Color _kBackground = Color(0xFF101322);
-const Color _kLogoBg = Color(0xFF1337EC);
-const Color _kTextLight = Color(0xFFCBD5E1);
 const Color _kGreen = Color(0xFF22C55E);
 const Color _kYellow = Color(0xFFF59E0B);
 const Color _kRed = Color(0xFFEF4444);
@@ -60,10 +55,10 @@ class NmtkLoadingScreen extends StatefulWidget {
 
   /// Application name displayed below the logo.
   final String appName;
-  
+
   /// Background color of the loading screen.
   final Color? backgroundColor;
-  
+
   /// Foreground color of the text.
   final Color? foregroundColor;
 
@@ -83,10 +78,16 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
       vsync: this,
       duration: NmtkMotionTokens.durationSlow,
     );
-    _scaleAnimation = CurvedAnimation(
-      parent: _scaleController,
-      curve: NmtkMotionTokens.easeSpring,
-    ).drive(Tween<double>(begin: NmtkMotionTokens.logoEntranceScaleBegin, end: 1.0));
+    _scaleAnimation =
+        CurvedAnimation(
+          parent: _scaleController,
+          curve: NmtkMotionTokens.easeSpring,
+        ).drive(
+          Tween<double>(
+            begin: NmtkMotionTokens.logoEntranceScaleBegin,
+            end: 1.0,
+          ),
+        );
     _scaleController.forward();
   }
 
@@ -98,8 +99,9 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final bg = widget.backgroundColor ?? _kBackground;
-    final fg = widget.foregroundColor ?? _kTextLight;
+    final scheme = Theme.of(context).colorScheme;
+    final bg = widget.backgroundColor ?? scheme.surface;
+    final fg = widget.foregroundColor ?? scheme.onSurface;
 
     return Scaffold(
       backgroundColor: bg,
@@ -148,14 +150,14 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
         return const _ReadyContent();
       case NmtkReadinessState.degraded:
         return _DegradedContent(
-          message: widget.degradedMessage ??
+          message:
+              widget.degradedMessage ??
               'Some optional services are unavailable.',
           textColor: fg,
         );
       case NmtkReadinessState.failed:
         return _FailedContent(
-          message: widget.errorMessage ??
-              'A required service failed to start.',
+          message: widget.errorMessage ?? 'A required service failed to start.',
           onRetry: widget.onRetry,
           textColor: fg,
         );
@@ -168,11 +170,13 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
 class _LogoBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Container(
       width: 64,
       height: 64,
       decoration: BoxDecoration(
-        color: _kLogoBg,
+        color: scheme.primary,
         borderRadius: BorderRadius.circular(16),
       ),
       alignment: Alignment.center,
@@ -206,18 +210,12 @@ class _WaitingContent extends StatelessWidget {
           width: 200,
           child: LinearProgressIndicator(
             backgroundColor: textColor.withValues(alpha: 0.15),
-            color: _kLogoBg,
+            color: Theme.of(context).colorScheme.primary,
             minHeight: 3,
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          message,
-          style: TextStyle(
-            fontSize: 14,
-            color: textColor,
-          ),
-        ),
+        Text(message, style: TextStyle(fontSize: 14, color: textColor)),
       ],
     );
   }
@@ -230,11 +228,7 @@ class _ReadyContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Icon(
-      Icons.check_circle_outline,
-      color: _kGreen,
-      size: 36,
-    );
+    return const Icon(Icons.check_circle_outline, color: _kGreen, size: 36);
   }
 }
 
@@ -251,21 +245,14 @@ class _DegradedContent extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(
-          Icons.warning_amber_rounded,
-          color: _kYellow,
-          size: 36,
-        ),
+        const Icon(Icons.warning_amber_rounded, color: _kYellow, size: 36),
         const SizedBox(height: 10),
         SizedBox(
           width: 280,
           child: Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: textColor,
-            ),
+            style: TextStyle(fontSize: 13, color: textColor),
           ),
         ),
       ],
@@ -276,7 +263,11 @@ class _DegradedContent extends StatelessWidget {
 // ── Failed ────────────────────────────────────────────────────────────────
 
 class _FailedContent extends StatelessWidget {
-  const _FailedContent({required this.message, this.onRetry, required this.textColor});
+  const _FailedContent({
+    required this.message,
+    this.onRetry,
+    required this.textColor,
+  });
 
   final String message;
   final VoidCallback? onRetry;
@@ -295,19 +286,12 @@ class _FailedContent extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.error_outline,
-            color: _kRed,
-            size: 36,
-          ),
+          const Icon(Icons.error_outline, color: _kRed, size: 36),
           const SizedBox(height: 12),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: textColor,
-            ),
+            style: TextStyle(fontSize: 14, color: textColor),
           ),
           if (onRetry != null) ...[
             const SizedBox(height: 16),

@@ -82,7 +82,8 @@ GoRouter createGoRouter(AppProvider appProvider) {
             path: '/module/neurosim',
             name: 'module-neurosim',
             builder: (context, state) => NeurocnlShell(
-              initialLocation: '/canvas${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
+              initialLocation:
+                  '/canvas${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
             ),
           ),
           GoRoute(

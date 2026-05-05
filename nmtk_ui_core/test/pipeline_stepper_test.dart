@@ -4,7 +4,9 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 void main() {
   group('NmtkPipelineStepper', () {
-    testWidgets('renders all steps with labels and details', (WidgetTester tester) async {
+    testWidgets('renders all steps with labels and details', (
+      WidgetTester tester,
+    ) async {
       final steps = [
         const NmtkPipelineStepData(
           id: 'step1',
@@ -43,7 +45,9 @@ void main() {
       expect(find.text('Step 4'), findsOneWidget);
     });
 
-    testWidgets('renders correct icons for each status', (WidgetTester tester) async {
+    testWidgets('renders correct icons for each status', (
+      WidgetTester tester,
+    ) async {
       final steps = [
         const NmtkPipelineStepData(
           id: 's1',
@@ -100,19 +104,15 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: NmtkPipelineStepper(
-              steps: steps,
-              selectedStepId: 's2',
-            ),
+            body: NmtkPipelineStepper(steps: steps, selectedStepId: 's2'),
           ),
         ),
       );
 
       final step2Container = tester.widget<Container>(
-        find.ancestor(
-          of: find.text('S2'),
-          matching: find.byType(Container),
-        ).first,
+        find
+            .ancestor(of: find.text('S2'), matching: find.byType(Container))
+            .first,
       );
 
       final decoration = step2Container.decoration as BoxDecoration;
@@ -143,7 +143,9 @@ void main() {
         ),
       );
 
-      final scrollable = tester.widget<SingleChildScrollView>(find.byType(SingleChildScrollView));
+      final scrollable = tester.widget<SingleChildScrollView>(
+        find.byType(SingleChildScrollView),
+      );
       final controller = scrollable.controller!;
       expect(controller.offset, equals(0.0));
 

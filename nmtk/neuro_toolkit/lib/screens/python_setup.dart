@@ -65,8 +65,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
           unawaited(_retryCheck());
         } else {
           setState(() {
-            _errorMessage =
-                'Homebrew install exited with code $exitCode. '
+            _errorMessage = 'Homebrew install exited with code $exitCode. '
                 'Try installing manually from python.org.';
           });
         }
@@ -122,7 +121,9 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                         Text(
                           'Python Required',
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.headlineMedium
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 12),
@@ -137,9 +138,8 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: NmtkPrimaryButton(
-                              onPressed: _isInstalling
-                                  ? null
-                                  : _installWithHomebrew,
+                              onPressed:
+                                  _isInstalling ? null : _installWithHomebrew,
                               icon: Icons.download,
                               label: _isInstalling
                                   ? 'Installing...'
@@ -184,7 +184,9 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                           reverse: true,
                           child: SelectableText(
                             _installOutput!,
-                            style: Theme.of(context).textTheme.bodySmall
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
                                 ?.copyWith(fontFamily: 'monospace'),
                           ),
                         ),
@@ -208,9 +210,9 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                           ? 'brew install python'
                           : 'sudo apt install python3 python3-venv',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.w700,
-                      ),
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                   ),
                 ],

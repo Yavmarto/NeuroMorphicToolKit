@@ -180,10 +180,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       buildHarness(
-        const NmtkKeyValueRow(
-          label: 'Synapses',
-          value: '4096',
-        ),
+        const NmtkKeyValueRow(label: 'Synapses', value: '4096'),
         theme: AppTheme.lightTheme,
       ),
     );
@@ -192,10 +189,7 @@ void main() {
 
     expect(find.text('Synapses'), findsOneWidget);
     expect(find.text('4096'), findsOneWidget);
-    expect(
-      valueText.style?.color,
-      AppTheme.lightTheme.colorScheme.primary,
-    );
+    expect(valueText.style?.color, AppTheme.lightTheme.colorScheme.primary);
   });
 
   testWidgets('NmtkSectionCard keeps neutral header content and actions', (

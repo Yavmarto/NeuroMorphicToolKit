@@ -87,6 +87,11 @@ DEFAULT_PYNQ_PREFLIGHT_TIMEOUT_SECONDS = 45.0
 PYNQ_PREFLIGHT_TIMEOUT_BOUNDS = (5.0, 300.0)
 PYNQ_PREFLIGHT_RETRY_COUNT = 3
 PYNQ_PREFLIGHT_RETRY_DELAY_SECONDS = 2.0
+# PYNQ inference (DMA transfer + SNN worker subprocess) on real Z2 hardware
+# regularly exceeds the 15s _runtime_json_request default. 60s covers
+# typical SNN workloads; operators can tune via NEUROCHIP_PYNQ_RUN_TIMEOUT_SECONDS.
+DEFAULT_PYNQ_RUN_TIMEOUT_SECONDS = 60.0
+PYNQ_RUN_TIMEOUT_BOUNDS = (15.0, 300.0)
 PYNQ_RUNTIME_LOG_TAIL_LINES = 80
 DEFAULT_STAGED_OVERLAY_DIRNAME = "overlay_staging"
 DEFAULT_STAGED_OVERLAY_TARGET = "pynq_z2"
@@ -917,6 +922,18 @@ def _resolve_pynq_preflight_timeout() -> float:
     except ValueError:
         return DEFAULT_PYNQ_PREFLIGHT_TIMEOUT_SECONDS
     lower, upper = PYNQ_PREFLIGHT_TIMEOUT_BOUNDS
+    return max(lower, min(upper, parsed))
+
+
+def _resolve_pynq_run_timeout() -> float:
+    raw = os.getenv("NEUROCHIP_PYNQ_RUN_TIMEOUT_SECONDS", "").strip()
+    if not raw:
+        return DEFAULT_PYNQ_RUN_TIMEOUT_SECONDS
+    try:
+        parsed = float(raw)
+    except ValueError:
+        return DEFAULT_PYNQ_RUN_TIMEOUT_SECONDS
+    lower, upper = PYNQ_RUN_TIMEOUT_BOUNDS
     return max(lower, min(upper, parsed))
 
 
@@ -3695,7 +3712,10 @@ class LauncherControlState:
 
     def proxy_pynq_run(self, board_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
-        return self._runtime_json_request(board, "POST", "/hardware/pynq/run", payload)
+        return self._runtime_json_request(
+            board, "POST", "/hardware/pynq/run", payload,
+            timeout=_resolve_pynq_run_timeout(),
+        )
 
     def proxy_pynq_runtime_status(self, board_id: str) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)

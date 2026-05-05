@@ -96,12 +96,17 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
 
     final stepBox = stepContext.findRenderObject() as RenderBox?;
     final rowBox = rowContext.findRenderObject() as RenderBox?;
-    if (stepBox == null || rowBox == null || !stepBox.hasSize || !rowBox.hasSize) {
+    if (stepBox == null ||
+        rowBox == null ||
+        !stepBox.hasSize ||
+        !rowBox.hasSize) {
       return;
     }
 
     final tokens = NmtkShellTokens.of(context);
-    final targetOffset = stepBox.localToGlobal(Offset.zero, ancestor: rowBox).dx;
+    final targetOffset = stepBox
+        .localToGlobal(Offset.zero, ancestor: rowBox)
+        .dx;
     final clampedOffset = targetOffset.clamp(
       0.0,
       _scrollController.position.maxScrollExtent,
@@ -130,10 +135,7 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
         scrollDirection: Axis.horizontal,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(
-            key: _rowKey,
-            children: _buildSteps(context),
-          ),
+          child: Row(key: _rowKey, children: _buildSteps(context)),
         ),
       ),
     );
@@ -161,12 +163,18 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
           key: _stepKeys[step.id],
           data: step,
           selected: widget.selectedStepId == step.id,
-          onTap: step.onTap ?? (widget.onSelected != null ? () => widget.onSelected!(step.id) : null),
+          onTap:
+              step.onTap ??
+              (widget.onSelected != null
+                  ? () => widget.onSelected!(step.id)
+                  : null),
         ),
       );
       if (i < widget.steps.length - 1) {
         widgets.add(
-          _StepConnector(active: widget.steps[i].status == NmtkStepStatus.success),
+          _StepConnector(
+            active: widget.steps[i].status == NmtkStepStatus.success,
+          ),
         );
       }
     }
@@ -201,15 +209,6 @@ class _PipelineStep extends StatelessWidget {
           color: _getBorderColor(context, theme, tokens),
           width: selected ? 1.6 : 1,
         ),
-        boxShadow: selected
-            ? [
-                BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.14),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -233,21 +232,23 @@ class _PipelineStep extends StatelessWidget {
       child: Semantics(
         button: onTap != null,
         selected: selected,
-        label: '${data.label} step, status: ${data.status.name}${data.detail != null ? ", ${data.detail}" : ""}',
+        label:
+            '${data.label} step, status: ${data.status.name}${data.detail != null ? ", ${data.detail}" : ""}',
         child: onTap == null
             ? child
             : MouseRegion(
                 cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  onTap: onTap,
-                  child: child,
-                ),
+                child: GestureDetector(onTap: onTap, child: child),
               ),
       ),
     );
   }
 
-  Widget _buildIcon(BuildContext context, ThemeData theme, NmtkShellTokens tokens) {
+  Widget _buildIcon(
+    BuildContext context,
+    ThemeData theme,
+    NmtkShellTokens tokens,
+  ) {
     if (data.status == NmtkStepStatus.running) {
       return SizedBox(
         width: 14,
@@ -265,7 +266,9 @@ class _PipelineStep extends StatelessWidget {
     switch (data.status) {
       case NmtkStepStatus.idle:
         iconData = data.icon ?? Icons.circle_outlined;
-        iconColor = selected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant;
+        iconColor = selected
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant;
       case NmtkStepStatus.success:
         iconData = Icons.check_circle;
         iconColor = tokens.healthyColor;
@@ -280,19 +283,32 @@ class _PipelineStep extends StatelessWidget {
     return Icon(iconData, size: 14, color: iconColor);
   }
 
-  Color _getBgColor(BuildContext context, ThemeData theme, NmtkShellTokens tokens) {
+  Color _getBgColor(
+    BuildContext context,
+    ThemeData theme,
+    NmtkShellTokens tokens,
+  ) {
     final base = switch (data.status) {
       NmtkStepStatus.idle => theme.colorScheme.surface,
-      NmtkStepStatus.running => theme.colorScheme.primary.withValues(alpha: 0.12),
+      NmtkStepStatus.running => theme.colorScheme.primary.withValues(
+        alpha: 0.12,
+      ),
       NmtkStepStatus.success => tokens.healthyColor.withValues(alpha: 0.1),
       NmtkStepStatus.error => tokens.errorColor.withValues(alpha: 0.1),
     };
     return selected
-        ? Color.alphaBlend(theme.colorScheme.primary.withValues(alpha: 0.06), base)
+        ? Color.alphaBlend(
+            theme.colorScheme.primary.withValues(alpha: 0.06),
+            base,
+          )
         : base;
   }
 
-  Color _getBorderColor(BuildContext context, ThemeData theme, NmtkShellTokens tokens) {
+  Color _getBorderColor(
+    BuildContext context,
+    ThemeData theme,
+    NmtkShellTokens tokens,
+  ) {
     if (selected) {
       return theme.colorScheme.primary;
     }

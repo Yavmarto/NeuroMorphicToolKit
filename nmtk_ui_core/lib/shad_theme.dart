@@ -95,90 +95,90 @@ class NmtkShadTheme {
   // ────────────────────────────────────────────────────────────────────────
 
   static ShadColorScheme get _lightScheme => const ShadColorScheme(
-        // ── Surfaces ─────────────────────────────────────────────────────
-        /// Scaffold / page background — near-white with an imperceptible
-        /// warm cast; avoids the clinical flatness of pure #FFFFFF.
-        background: Color(0xFFFAFAFB),
+    // ── Surfaces ─────────────────────────────────────────────────────
+    /// Scaffold / page background — near-white with an imperceptible
+    /// warm cast; avoids the clinical flatness of pure #FFFFFF.
+    background: Color(0xFFFAFAFB),
 
-        /// Default text on background — deep violet-black; warmer than
-        /// pure #000000, anchors the palette without harsh contrast.
-        foreground: Color(0xFF11052C),
+    /// Default text on background — deep violet-black; warmer than
+    /// pure #000000, anchors the palette without harsh contrast.
+    foreground: Color(0xFF11052C),
 
-        // Card surfaces are pure white so they lift clearly off the
-        // slightly-tinted background, creating visual hierarchy without
-        // using drop shadows.
-        card: Color(0xFFFFFFFF),
-        cardForeground: Color(0xFF11052C),
+    // Card surfaces are pure white so they lift clearly off the
+    // slightly-tinted background, creating visual hierarchy without
+    // using drop shadows.
+    card: Color(0xFFFFFFFF),
+    cardForeground: Color(0xFF11052C),
 
-        // Popovers, dropdowns, command-palette — also pure white so they
-        // feel elevated above card surfaces.
-        popover: Color(0xFFFFFFFF),
-        popoverForeground: Color(0xFF11052C),
+    // Popovers, dropdowns, command-palette — also pure white so they
+    // feel elevated above card surfaces.
+    popover: Color(0xFFFFFFFF),
+    popoverForeground: Color(0xFF11052C),
 
-        // ── Primary — deep indigo ─────────────────────────────────────
-        /// Primary brand colour.  Indigo-600 sits at the confident,
-        /// "technical authority" end of the spectrum while still reading
-        /// as vibrant and modern.
-        primary: Color(0xFF4F46E5),
+    // ── Primary — deep indigo ─────────────────────────────────────
+    /// Primary brand colour.  Indigo-600 sits at the confident,
+    /// "technical authority" end of the spectrum while still reading
+    /// as vibrant and modern.
+    primary: Color(0xFF4F46E5),
 
-        /// Text/icons rendered on top of a solid primary surface.
-        /// Indigo-50 — near-white with a violet cast so it harmonises
-        /// rather than clashing.
-        primaryForeground: Color(0xFFF5F3FF),
+    /// Text/icons rendered on top of a solid primary surface.
+    /// Indigo-50 — near-white with a violet cast so it harmonises
+    /// rather than clashing.
+    primaryForeground: Color(0xFFF5F3FF),
 
-        // ── Secondary — light indigo tint ────────────────────────────
-        /// Tinted surface for secondary buttons, selected-row backgrounds,
-        /// and subtle highlights.  Indigo-50 is barely-perceptible in
-        /// isolation but communicates grouping at a glance.
-        secondary: Color(0xFFEEF2FF),
+    // ── Secondary — light indigo tint ────────────────────────────
+    /// Tinted surface for secondary buttons, selected-row backgrounds,
+    /// and subtle highlights.  Indigo-50 is barely-perceptible in
+    /// isolation but communicates grouping at a glance.
+    secondary: Color(0xFFEEF2FF),
 
-        /// Text on secondary surfaces — indigo-800 for strong contrast
-        /// against the light secondary background.
-        secondaryForeground: Color(0xFF3730A3),
+    /// Text on secondary surfaces — indigo-800 for strong contrast
+    /// against the light secondary background.
+    secondaryForeground: Color(0xFF3730A3),
 
-        // ── Muted — lavender-gray neutral ────────────────────────────
-        /// Low-priority surface: disabled states, placeholder backgrounds,
-        /// skeleton loaders.  Slightly lavender to stay in family.
-        muted: Color(0xFFF1F0F8),
+    // ── Muted — lavender-gray neutral ────────────────────────────
+    /// Low-priority surface: disabled states, placeholder backgrounds,
+    /// skeleton loaders.  Slightly lavender to stay in family.
+    muted: Color(0xFFF1F0F8),
 
-        /// Secondary text / placeholder labels on muted surfaces.
-        mutedForeground: Color(0xFF6D6B8D),
+    /// Secondary text / placeholder labels on muted surfaces.
+    mutedForeground: Color(0xFF6D6B8D),
 
-        // ── Accent — teal ────────────────────────────────────────────
-        /// The "playful" pole of the palette.  Teal-500 complements indigo
-        /// by sitting on the opposite warm-cool arc without clashing.
-        /// Used for: hover highlights on menu items, keyboard-focused rings
-        /// in non-primary contexts, selected-chip fills, and interactive
-        /// affordances in Shadcn components.
-        accent: Color(0xFF14B8A6),
+    // ── Accent — teal ────────────────────────────────────────────
+    /// The "playful" pole of the palette.  Teal-500 complements indigo
+    /// by sitting on the opposite warm-cool arc without clashing.
+    /// Used for: hover highlights on menu items, keyboard-focused rings
+    /// in non-primary contexts, selected-chip fills, and interactive
+    /// affordances in Shadcn components.
+    accent: Color(0xFF14B8A6),
 
-        /// Text/icons on solid teal accent surfaces — pure white for
-        /// maximum legibility against teal-500.
-        accentForeground: Color(0xFFFFFFFF),
+    /// Text/icons on solid teal accent surfaces — pure white for
+    /// maximum legibility against teal-500.
+    accentForeground: Color(0xFFFFFFFF),
 
-        // ── Destructive ───────────────────────────────────────────────
-        /// Destructive actions — red-600.  Aligned with NmtkShellTokens
-        /// errorColor territory (red-500) without being identical.
-        destructive: Color(0xFFDC2626),
-        destructiveForeground: Color(0xFFFEF2F2),
+    // ── Destructive ───────────────────────────────────────────────
+    /// Destructive actions — red-600.  Aligned with NmtkShellTokens
+    /// errorColor territory (red-500) without being identical.
+    destructive: Color(0xFFDC2626),
+    destructiveForeground: Color(0xFFFEF2F2),
 
-        // ── Chrome ────────────────────────────────────────────────────
-        /// Card / input borders — violet-200.  Soft enough to recede but
-        /// tinted so the chrome feels intentional rather than generic grey.
-        border: Color(0xFFDDD6FE),
+    // ── Chrome ────────────────────────────────────────────────────
+    /// Card / input borders — violet-200.  Soft enough to recede but
+    /// tinted so the chrome feels intentional rather than generic grey.
+    border: Color(0xFFDDD6FE),
 
-        /// Input field fill colour — violet-100.  Distinguishes editable
-        /// surfaces from plain surfaces without heavy contrast.
-        input: Color(0xFFEDE9FE),
+    /// Input field fill colour — violet-100.  Distinguishes editable
+    /// surfaces from plain surfaces without heavy contrast.
+    input: Color(0xFFEDE9FE),
 
-        /// Keyboard-focus ring — matches primary indigo so focus is
-        /// unmistakeable without introducing a fourth colour.
-        ring: Color(0xFF4F46E5),
+    /// Keyboard-focus ring — matches primary indigo so focus is
+    /// unmistakeable without introducing a fourth colour.
+    ring: Color(0xFF4F46E5),
 
-        /// Text-selection highlight — indigo-50.  Subtle on white but
-        /// clearly visible when text is selected.
-        selection: Color(0xFFEEF2FF),
-      );
+    /// Text-selection highlight — indigo-50.  Subtle on white but
+    /// clearly visible when text is selected.
+    selection: Color(0xFFEEF2FF),
+  );
 
   // ────────────────────────────────────────────────────────────────────────
   // DARK COLOUR SCHEME
@@ -189,67 +189,66 @@ class NmtkShadTheme {
   // ────────────────────────────────────────────────────────────────────────
 
   static ShadColorScheme get _darkScheme => const ShadColorScheme(
-        // ── Surfaces — neurocnl-aligned ───────────────────────────────
-        /// Deep violet-black — matches NmtkNeurocnlTokens.background
-        /// (#0F0D1A) so Shadcn pages blend with the existing dark layout.
-        background: Color(0xFF0F0D1A),
+    // ── Surfaces — neurocnl-aligned ───────────────────────────────
+    /// Deep violet-black — matches NmtkNeurocnlTokens.background
+    /// (#0F0D1A) so Shadcn pages blend with the existing dark layout.
+    background: Color(0xFF0F0D1A),
 
-        /// Primary body text — matches NmtkNeurocnlTokens.textPrimary
-        /// (#F1EEF9) — near-white with violet cast.
-        foreground: Color(0xFFF1EEF9),
+    /// Primary body text — matches NmtkNeurocnlTokens.textPrimary
+    /// (#F1EEF9) — near-white with violet cast.
+    foreground: Color(0xFFF1EEF9),
 
-        // Card surfaces — one level above the background.
-        // Matches NmtkNeurocnlTokens.surface (#1A1625).
-        card: Color(0xFF1A1625),
-        cardForeground: Color(0xFFF1EEF9),
+    // Card surfaces — one level above the background.
+    // Matches NmtkNeurocnlTokens.surface (#1A1625).
+    card: Color(0xFF1A1625),
+    cardForeground: Color(0xFFF1EEF9),
 
-        // Popover / dropdown — one level above cards.
-        // Matches NmtkNeurocnlTokens.surfaceVariant (#231E35).
-        popover: Color(0xFF231E35),
-        popoverForeground: Color(0xFFF1EEF9),
+    // Popover / dropdown — one level above cards.
+    // Matches NmtkNeurocnlTokens.surfaceVariant (#231E35).
+    popover: Color(0xFF231E35),
+    popoverForeground: Color(0xFFF1EEF9),
 
-        // ── Primary — lifted indigo ───────────────────────────────────
-        /// Indigo-400 — brighter than the light-mode indigo-600 so it
-        /// achieves the same visual weight on dark backgrounds without
-        /// washing out.
-        primary: Color(0xFF818CF8),
+    // ── Primary — lifted indigo ───────────────────────────────────
+    /// Indigo-400 — brighter than the light-mode indigo-600 so it
+    /// achieves the same visual weight on dark backgrounds without
+    /// washing out.
+    primary: Color(0xFF818CF8),
 
-        /// Text on solid primary — very dark so it contrasts against the
-        /// bright indigo-400 surface.
-        primaryForeground: Color(0xFF0F0D1A),
+    /// Text on solid primary — very dark so it contrasts against the
+    /// bright indigo-400 surface.
+    primaryForeground: Color(0xFF0F0D1A),
 
-        // ── Secondary ─────────────────────────────────────────────────
-        secondary: Color(0xFF231E35),
-        secondaryForeground: Color(0xFFB0A8CC), // NmtkNeurocnlTokens.textSecondary
+    // ── Secondary ─────────────────────────────────────────────────
+    secondary: Color(0xFF231E35),
+    secondaryForeground: Color(0xFFB0A8CC), // NmtkNeurocnlTokens.textSecondary
+    // ── Muted ─────────────────────────────────────────────────────
+    muted: Color(0xFF1A1625),
+    mutedForeground: Color(0xFF7B728E),
 
-        // ── Muted ─────────────────────────────────────────────────────
-        muted: Color(0xFF1A1625),
-        mutedForeground: Color(0xFF7B728E),
+    // ── Accent — brighter teal ────────────────────────────────────
+    /// Teal-400 — one step lighter than light-mode teal-500 to
+    /// compensate for the dark background and maintain visual vibrancy.
+    accent: Color(0xFF2DD4BF),
 
-        // ── Accent — brighter teal ────────────────────────────────────
-        /// Teal-400 — one step lighter than light-mode teal-500 to
-        /// compensate for the dark background and maintain visual vibrancy.
-        accent: Color(0xFF2DD4BF),
+    /// Text on teal — very dark for legibility against the bright teal.
+    accentForeground: Color(0xFF0F172A),
 
-        /// Text on teal — very dark for legibility against the bright teal.
-        accentForeground: Color(0xFF0F172A),
+    // ── Destructive ───────────────────────────────────────────────
+    /// Red-500 — matches NmtkShellTokens.errorColor exactly so Shadcn
+    /// destructive states read the same as suite-level error badges.
+    destructive: Color(0xFFEF4444),
+    destructiveForeground: Color(0xFFFEF2F2),
 
-        // ── Destructive ───────────────────────────────────────────────
-        /// Red-500 — matches NmtkShellTokens.errorColor exactly so Shadcn
-        /// destructive states read the same as suite-level error badges.
-        destructive: Color(0xFFEF4444),
-        destructiveForeground: Color(0xFFFEF2F2),
+    // ── Chrome ────────────────────────────────────────────────────
+    /// Matches NmtkNeurocnlTokens.border (#3D3560) — the same violet-
+    /// tinted separator used throughout the CNL studio.
+    border: Color(0xFF3D3560),
+    input: Color(0xFF231E35),
 
-        // ── Chrome ────────────────────────────────────────────────────
-        /// Matches NmtkNeurocnlTokens.border (#3D3560) — the same violet-
-        /// tinted separator used throughout the CNL studio.
-        border: Color(0xFF3D3560),
-        input: Color(0xFF231E35),
-
-        /// Focus ring — matches the dark primary (indigo-400).
-        ring: Color(0xFF818CF8),
-        selection: Color(0xFF231E35),
-      );
+    /// Focus ring — matches the dark primary (indigo-400).
+    ring: Color(0xFF818CF8),
+    selection: Color(0xFF231E35),
+  );
 
   // ── Public API ────────────────────────────────────────────────────────────
 
@@ -259,19 +258,19 @@ class NmtkShadTheme {
   /// The `radius` is set to 12 px — softer than the shadcn default (8 px)
   /// and aligned with [NmtkDesignTokens.buttonShape].
   static ShadThemeData get light => ShadThemeData(
-        brightness: Brightness.light,
-        colorScheme: _lightScheme,
-        radius: _kRadius,
-      );
+    brightness: Brightness.light,
+    colorScheme: _lightScheme,
+    radius: _kRadius,
+  );
 
   /// Dark [ShadThemeData] for the suite.
   ///
   /// Pass to [ShadApp.darkTheme] (or [ShadApp.material]'s `darkTheme`).
   static ShadThemeData get dark => ShadThemeData(
-        brightness: Brightness.dark,
-        colorScheme: _darkScheme,
-        radius: _kRadius,
-      );
+    brightness: Brightness.dark,
+    colorScheme: _darkScheme,
+    radius: _kRadius,
+  );
 
   // ── Convenience accessor ──────────────────────────────────────────────────
 

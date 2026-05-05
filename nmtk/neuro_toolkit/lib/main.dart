@@ -106,18 +106,10 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
       return;
     }
 
-    if (_isMobilePlatform || explicitBaseUri != null) {
-      setState(() {
-        _bootstrapState = null;
-        _isLoading = false;
-        _setupMessage = bootstrap.message;
-      });
-      return;
-    }
-
     setState(() {
-      _bootstrapState = bootstrap;
+      _bootstrapState = null;
       _isLoading = false;
+      _setupMessage = bootstrap.message;
     });
   }
 
@@ -163,11 +155,14 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
       title: 'NeuroToolkit',
       theme: NmtkShadTheme.light,
       darkTheme: NmtkShadTheme.dark,
-      materialThemeBuilder: (_, __) {
-        final b = settings.themeMode == ThemeMode.dark
-            ? AppTheme.darkTheme
-            : AppTheme.lightTheme;
-        return settings.isHighContrast ? AppTheme.highContrastDarkTheme : b;
+      materialThemeBuilder: (_, mTheme) {
+        final isDark = mTheme.brightness == Brightness.dark;
+        final b = isDark ? AppTheme.darkTheme : AppTheme.lightTheme;
+        return settings.isHighContrast
+            ? (isDark
+                ? AppTheme.highContrastDarkTheme
+                : AppTheme.highContrastLightTheme)
+            : b;
       },
       themeMode: settings.themeMode,
       builder: (BuildContext ctx, Widget? child) {
@@ -213,11 +208,14 @@ class NeuroToolkitApp extends ConsumerWidget {
       theme: NmtkShadTheme.light,
       darkTheme: NmtkShadTheme.dark,
       // Material 3 layer — controls native Flutter widgets.
-      materialThemeBuilder: (_, __) {
-        final b = settings.themeMode == ThemeMode.dark
-            ? AppTheme.darkTheme
-            : AppTheme.lightTheme;
-        return settings.isHighContrast ? AppTheme.highContrastDarkTheme : b;
+      materialThemeBuilder: (_, mTheme) {
+        final isDark = mTheme.brightness == Brightness.dark;
+        final b = isDark ? AppTheme.darkTheme : AppTheme.lightTheme;
+        return settings.isHighContrast
+            ? (isDark
+                ? AppTheme.highContrastDarkTheme
+                : AppTheme.highContrastLightTheme)
+            : b;
       },
       themeMode: settings.themeMode,
       routerConfig: router,
@@ -279,7 +277,7 @@ class _BootstrapSetupView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'The host machine must run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090` so the Android device can reach it.',
+            'Run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090` on the host machine, then retry.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),

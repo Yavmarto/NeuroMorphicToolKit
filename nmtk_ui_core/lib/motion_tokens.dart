@@ -141,24 +141,23 @@ class _NmtkSharedAxisTransition extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final enterSlide = Tween<Offset>(
-      begin: NmtkMotionTokens.slideForwardBegin,
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: animation,
-        curve: NmtkMotionTokens.easeEnter,
-      ),
-    );
-    final exitSlide = Tween<Offset>(
-      begin: Offset.zero,
-      end: NmtkMotionTokens.slideBackwardBegin,
-    ).animate(
-      CurvedAnimation(
-        parent: secondaryAnimation,
-        curve: NmtkMotionTokens.easeExit,
-      ),
-    );
+    final enterSlide =
+        Tween<Offset>(
+          begin: NmtkMotionTokens.slideForwardBegin,
+          end: Offset.zero,
+        ).animate(
+          CurvedAnimation(parent: animation, curve: NmtkMotionTokens.easeEnter),
+        );
+    final exitSlide =
+        Tween<Offset>(
+          begin: Offset.zero,
+          end: NmtkMotionTokens.slideBackwardBegin,
+        ).animate(
+          CurvedAnimation(
+            parent: secondaryAnimation,
+            curve: NmtkMotionTokens.easeExit,
+          ),
+        );
     return SlideTransition(
       position: exitSlide,
       child: SlideTransition(
@@ -212,12 +211,13 @@ class _NmtkTapScaleWrapperState extends State<NmtkTapScaleWrapper>
       duration: NmtkMotionTokens.durationFast,
       reverseDuration: NmtkMotionTokens.durationSpring,
     );
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: NmtkMotionTokens.tapDownScale,
-    ).animate(
-      CurvedAnimation(parent: _controller, curve: NmtkMotionTokens.easeEnter),
-    );
+    _scaleAnimation =
+        Tween<double>(begin: 1.0, end: NmtkMotionTokens.tapDownScale).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: NmtkMotionTokens.easeEnter,
+          ),
+        );
   }
 
   @override
@@ -240,12 +240,15 @@ class _NmtkTapScaleWrapperState extends State<NmtkTapScaleWrapper>
 
   @override
   Widget build(BuildContext context) {
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
     return GestureDetector(
       onTap: widget.enabled ? widget.onTap : null,
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
-      child: ScaleTransition(scale: _scaleAnimation, child: widget.child),
+      onTapDown: disableAnimations ? null : _onTapDown,
+      onTapUp: disableAnimations ? null : _onTapUp,
+      onTapCancel: disableAnimations ? null : _onTapCancel,
+      child: disableAnimations
+          ? widget.child
+          : ScaleTransition(scale: _scaleAnimation, child: widget.child),
     );
   }
 }
@@ -289,7 +292,10 @@ class _NmtkStatusDotState extends State<NmtkStatusDot>
       duration: const Duration(milliseconds: 900),
     );
     _pulseAnimation = Tween<double>(begin: 0.5, end: 1.2).animate(
-      CurvedAnimation(parent: _controller, curve: NmtkMotionTokens.easeStandard),
+      CurvedAnimation(
+        parent: _controller,
+        curve: NmtkMotionTokens.easeStandard,
+      ),
     );
     if (widget.isPulsing) {
       _controller.repeat(reverse: true);
@@ -321,7 +327,8 @@ class _NmtkStatusDotState extends State<NmtkStatusDot>
       height: widget.size,
       decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
     );
-    if (!widget.isPulsing) return dot;
+    final disableAnimations = MediaQuery.of(context).disableAnimations;
+    if (!widget.isPulsing || disableAnimations) return dot;
     return ScaleTransition(scale: _pulseAnimation, child: dot);
   }
 }

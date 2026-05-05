@@ -4,7 +4,9 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 void main() {
   group('NmtkQuantizationTable', () {
-    testWidgets('renders report data into data table correctly', (WidgetTester tester) async {
+    testWidgets('renders report data into data table correctly', (
+      WidgetTester tester,
+    ) async {
       const report = QuantizationReport(
         bitWidths: [8, 4],
         accuracyDrops: [0.01, 0.06],
@@ -31,7 +33,9 @@ void main() {
       expect(find.text('80.0%'), findsOneWidget);
     });
 
-    testWidgets('renders empty state gracefully when report is empty', (WidgetTester tester) async {
+    testWidgets('renders empty state gracefully when report is empty', (
+      WidgetTester tester,
+    ) async {
       const report = QuantizationReport(
         bitWidths: [],
         accuracyDrops: [],

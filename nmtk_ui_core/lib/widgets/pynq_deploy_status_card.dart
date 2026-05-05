@@ -41,10 +41,9 @@ class PynqSupportStateCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     supportState.label,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(color: color),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: color),
                   ),
                 ),
               ],

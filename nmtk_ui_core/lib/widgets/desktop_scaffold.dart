@@ -12,9 +12,11 @@ import 'package:nmtk_ui_core/motion_tokens.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const double _kRailWidth = 56.0;
+const double _kExpandedRailWidth = 200.0;
+const double _kMobileBreakpoint = 600.0;
 const double _kBrandRowHeight = 52.0;
 const double _kContentHeaderHeight = 44.0;
-const double _kNavItemHeight = 36.0;
+const double _kNavItemHeight = 44.0;
 const double _kNavItemRadius = 8.0;
 const double _kNavItemHPad = 8.0;
 const double _kNavItemVPad = 1.0;
@@ -132,8 +134,8 @@ abstract class NmtkFileActionDelegate {
 
 /// Master desktop layout for all NeuroMorphicToolKit submodules.
 ///
-/// Phase C1 shell chrome: compact navigation rail (56 px, icon-only) with no
-/// collapsible sidebar and no top header bar.
+/// Phase C1 shell chrome: compact navigation rail (56 px, icon-only) with
+/// collapsible sidebar support and a responsive mobile layout.
 ///
 /// ## Layout anatomy
 ///
@@ -149,7 +151,7 @@ abstract class NmtkFileActionDelegate {
 /// │ ⚙  │                                        │
 /// │ 👤 │                                        │
 /// └────┴────────────────────────────────────────┘
-///  56px
+///  56px (collapsed) or 200px (expanded)
 /// ```
 ///
 /// ## Colour contract
@@ -184,7 +186,7 @@ abstract class NmtkFileActionDelegate {
 ///   child: MyPageContent(),
 /// )
 /// ```
-class NmtkDesktopScaffold extends StatelessWidget {
+class NmtkDesktopScaffold extends StatefulWidget {
   const NmtkDesktopScaffold({
     super.key,
     required this.navItems,
@@ -199,7 +201,7 @@ class NmtkDesktopScaffold extends StatelessWidget {
     this.onBack,
     this.fileActions,
     this.onSettingsPressed,
-    // Legacy / backward-compat params (accepted but not rendered):
+    // Legacy / backward-compat params:
     this.pageTitle,
     this.headerActions,
     this.footerNavItems = const [],
@@ -251,42 +253,67 @@ class NmtkDesktopScaffold extends StatelessWidget {
   /// Accepted for backward compatibility but not rendered in C1.
   final Widget? headerActions;
 
-  /// Accepted for backward compatibility but not rendered in C1.
+  /// Footer nav items rendered at the bottom of the rail above the settings
+  /// button and profile chip.
   final List<NmtkSidebarItem> footerNavItems;
 
-  /// Accepted for backward compatibility but not rendered in C1.
+  /// Called when the user taps a footer nav item.
   final ValueChanged<int>? onFooterNavItemSelected;
 
-  /// Accepted for backward compatibility but ignored in C1.
+  /// When provided, the sidebar starts in expanded state.
   final bool? initiallyExpanded;
 
   @override
+  State<NmtkDesktopScaffold> createState() => _NmtkDesktopScaffoldState();
+}
+
+class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
+  late bool _isExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isExpanded = widget.initiallyExpanded ?? false;
+  }
+
+  void _toggleSidebar() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < _kMobileBreakpoint) {
+      return _buildMobileLayout(context);
+    }
+    return _buildDesktopLayout(context);
+  }
+
+  Widget _buildDesktopLayout(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
-    final showHeader = showBackButton || fileActions != null;
+    final showHeader = widget.showBackButton || widget.fileActions != null;
 
     Widget contentColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (showHeader)
           _NmtkContentHeader(
-            showBackButton: showBackButton,
-            onBack: onBack,
-            fileActions: fileActions,
+            showBackButton: widget.showBackButton,
+            onBack: widget.onBack,
+            fileActions: widget.fileActions,
           ),
         Expanded(
-          child: ColoredBox(
-            color: scheme.background,
-            child: child,
-          ),
+          child: ColoredBox(color: scheme.background, child: widget.child),
         ),
       ],
     );
 
     // Wrap with keyboard shortcut handling when file actions are provided.
-    if (fileActions != null) {
+    if (widget.fileActions != null) {
       contentColumn = _FileActionShortcuts(
-        delegate: fileActions!,
+        delegate: widget.fileActions!,
         child: contentColumn,
       );
     }
@@ -296,16 +323,273 @@ class NmtkDesktopScaffold extends StatelessWidget {
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _NmtkRailColumn(
-            items: navItems,
-            selectedIndex: selectedIndex,
-            onItemSelected: onNavItemSelected,
-            brand: sidebarBrand,
-            userProfile: userProfile,
-            onSettingsPressed: onSettingsPressed,
+          AnimatedContainer(
+            duration: _kSideAnimDuration,
+            width: _isExpanded ? _kExpandedRailWidth : _kRailWidth,
+            child: _NmtkRailColumn(
+              items: widget.navItems,
+              selectedIndex: widget.selectedIndex,
+              onItemSelected: widget.onNavItemSelected,
+              brand: widget.sidebarBrand,
+              userProfile: widget.userProfile,
+              onSettingsPressed: widget.onSettingsPressed,
+              footerNavItems: widget.footerNavItems,
+              onFooterNavItemSelected: widget.onFooterNavItemSelected,
+              isExpanded: _isExpanded,
+              onToggleExpanded: _toggleSidebar,
+            ),
           ),
           Expanded(child: contentColumn),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
+    final scheme = ShadTheme.of(context).colorScheme;
+
+    return Scaffold(
+      backgroundColor: scheme.background,
+      appBar: _NmtkMobileAppBar(
+        scheme: scheme,
+        showBackButton: widget.showBackButton,
+        onBack: widget.onBack,
+        fileActions: widget.fileActions,
+        onSettingsPressed: widget.onSettingsPressed,
+        userProfile: widget.userProfile,
+      ),
+      drawer: _NmtkMobileDrawer(
+        navItems: widget.navItems,
+        selectedIndex: widget.selectedIndex,
+        onNavItemSelected: widget.onNavItemSelected,
+        footerNavItems: widget.footerNavItems,
+        onFooterNavItemSelected: widget.onFooterNavItemSelected,
+        onSettingsPressed: widget.onSettingsPressed,
+        userProfile: widget.userProfile,
+        brand: widget.sidebarBrand,
+        scheme: scheme,
+      ),
+      body: ColoredBox(color: scheme.background, child: widget.child),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOBILE APP BAR
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _NmtkMobileAppBar({
+    required this.scheme,
+    required this.showBackButton,
+    this.onBack,
+    this.fileActions,
+    this.onSettingsPressed,
+    this.userProfile,
+  });
+
+  final ShadColorScheme scheme;
+  final bool showBackButton;
+  final VoidCallback? onBack;
+  final NmtkFileActionDelegate? fileActions;
+  final VoidCallback? onSettingsPressed;
+  final NmtkUserProfile? userProfile;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(_kContentHeaderHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.card,
+        border: Border(bottom: BorderSide(color: scheme.border)),
+      ),
+      child: SizedBox(
+        height: _kContentHeaderHeight,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            children: [
+              // Hamburger menu button
+              Builder(
+                builder: (ctx) => IconButton(
+                  icon: Icon(
+                    Icons.menu_rounded,
+                    color: scheme.foreground,
+                    size: 20,
+                  ),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                  tooltip: 'Open navigation',
+                ),
+              ),
+
+              // Optional back arrow
+              if (showBackButton)
+                IconButton(
+                  icon: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: scheme.foreground,
+                    size: 18,
+                  ),
+                  onPressed: onBack,
+                  tooltip: 'Back',
+                ),
+
+              const Spacer(),
+
+              // Optional file action icons
+              if (fileActions != null) ...[
+                _FileActionIconButton(
+                  icon: Icons.add_rounded,
+                  tooltip: 'New File',
+                  onPressed: fileActions!.onNewFile,
+                ),
+                _FileActionIconButton(
+                  icon: Icons.folder_open_rounded,
+                  tooltip: 'Open File',
+                  onPressed: fileActions!.onOpenFile,
+                ),
+                _FileActionIconButton(
+                  icon: Icons.save_rounded,
+                  tooltip: 'Save',
+                  onPressed: fileActions!.onSaveFile,
+                ),
+                _FileActionIconButton(
+                  icon: Icons.save_as_rounded,
+                  tooltip: 'Save As',
+                  onPressed: fileActions!.onSaveFileAs,
+                ),
+              ],
+
+              // Optional settings icon
+              if (onSettingsPressed != null)
+                IconButton(
+                  icon: Icon(
+                    Icons.settings_outlined,
+                    color: scheme.foreground.withValues(alpha: 0.65),
+                    size: 18,
+                  ),
+                  onPressed: onSettingsPressed,
+                  tooltip: 'Settings',
+                ),
+
+              // Optional profile chip
+              if (userProfile != null) _RailProfileChip(profile: userProfile!),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOBILE DRAWER
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _NmtkMobileDrawer extends StatelessWidget {
+  const _NmtkMobileDrawer({
+    required this.navItems,
+    required this.selectedIndex,
+    required this.onNavItemSelected,
+    required this.footerNavItems,
+    required this.onFooterNavItemSelected,
+    required this.scheme,
+    this.onSettingsPressed,
+    this.userProfile,
+    this.brand,
+  });
+
+  final List<NmtkSidebarItem> navItems;
+  final int selectedIndex;
+  final ValueChanged<int>? onNavItemSelected;
+  final List<NmtkSidebarItem> footerNavItems;
+  final ValueChanged<int>? onFooterNavItemSelected;
+  final ShadColorScheme scheme;
+  final VoidCallback? onSettingsPressed;
+  final NmtkUserProfile? userProfile;
+  final Widget? brand;
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: scheme.card,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Brand row at top
+            _RailBrandRow(
+              brand: brand,
+              isExpanded: true,
+              onToggle: () => Navigator.of(context).pop(),
+            ),
+            const ShadSeparator.horizontal(),
+
+            // Primary nav items
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _kNavItemHPad,
+                  vertical: 6,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < navItems.length; i++)
+                      _SidebarNavItem(
+                        item: navItems[i],
+                        isSelected: i == selectedIndex,
+                        isExpanded: true,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onNavItemSelected?.call(i);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Footer nav items
+            if (footerNavItems.isNotEmpty) ...[
+              const ShadSeparator.horizontal(),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _kNavItemHPad,
+                  vertical: 4,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < footerNavItems.length; i++)
+                      _SidebarNavItem(
+                        item: footerNavItems[i],
+                        isSelected: false,
+                        isExpanded: true,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          onFooterNavItemSelected?.call(i);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Settings + profile at bottom
+            const ShadSeparator.horizontal(),
+            if (onSettingsPressed != null)
+              _RailIconButton(
+                icon: Icons.settings_outlined,
+                tooltip: 'Settings',
+                onPressed: onSettingsPressed!,
+              ),
+            if (userProfile != null) _RailProfileChip(profile: userProfile!),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -320,9 +604,13 @@ class _NmtkRailColumn extends StatelessWidget {
     required this.items,
     required this.selectedIndex,
     required this.onItemSelected,
+    required this.isExpanded,
+    required this.onToggleExpanded,
     this.brand,
     this.userProfile,
     this.onSettingsPressed,
+    this.footerNavItems = const [],
+    this.onFooterNavItemSelected,
   });
 
   final List<NmtkSidebarItem> items;
@@ -331,60 +619,87 @@ class _NmtkRailColumn extends StatelessWidget {
   final Widget? brand;
   final NmtkUserProfile? userProfile;
   final VoidCallback? onSettingsPressed;
+  final List<NmtkSidebarItem> footerNavItems;
+  final ValueChanged<int>? onFooterNavItemSelected;
+  final bool isExpanded;
+  final VoidCallback onToggleExpanded;
 
   @override
   Widget build(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
 
-    return SizedBox(
-      width: _kRailWidth,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.card,
-          border: Border(right: BorderSide(color: scheme.border)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Brand / logo row ──────────────────────────────────────
-            _RailBrandRow(brand: brand),
-            const ShadSeparator.horizontal(),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: scheme.card,
+        border: Border(right: BorderSide(color: scheme.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // ── Brand / logo row ──────────────────────────────────────
+          _RailBrandRow(
+            brand: brand,
+            isExpanded: isExpanded,
+            onToggle: onToggleExpanded,
+          ),
+          const ShadSeparator.horizontal(),
 
-            // ── Primary nav items (scrollable) ────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _kNavItemHPad,
-                  vertical: 6,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < items.length; i++)
-                      _SidebarNavItem(
-                        item: items[i],
-                        isSelected: i == selectedIndex,
-                        isExpanded: false,
-                        onTap: () => onItemSelected?.call(i),
-                      ),
-                  ],
-                ),
+          // ── Primary nav items (scrollable) ────────────────────────
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _kNavItemHPad,
+                vertical: 6,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < items.length; i++)
+                    _SidebarNavItem(
+                      item: items[i],
+                      isSelected: i == selectedIndex,
+                      isExpanded: isExpanded,
+                      onTap: () => onItemSelected?.call(i),
+                    ),
+                ],
               ),
             ),
+          ),
 
-            // ── Bottom anchored: settings + profile ───────────────────
+          // ── Footer nav items ──────────────────────────────────────
+          if (footerNavItems.isNotEmpty) ...[
             const ShadSeparator.horizontal(),
-            if (onSettingsPressed != null)
-              _RailIconButton(
-                icon: Icons.settings_outlined,
-                tooltip: 'Settings',
-                onPressed: onSettingsPressed!,
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _kNavItemHPad,
+                vertical: 4,
               ),
-            if (userProfile != null)
-              _RailProfileChip(profile: userProfile!),
-            const SizedBox(height: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < footerNavItems.length; i++)
+                    _SidebarNavItem(
+                      item: footerNavItems[i],
+                      isSelected: false,
+                      isExpanded: isExpanded,
+                      onTap: () => onFooterNavItemSelected?.call(i),
+                    ),
+                ],
+              ),
+            ),
           ],
-        ),
+
+          // ── Bottom anchored: settings + profile ───────────────────
+          const ShadSeparator.horizontal(),
+          if (onSettingsPressed != null)
+            _RailIconButton(
+              icon: Icons.settings_outlined,
+              tooltip: 'Settings',
+              onPressed: onSettingsPressed!,
+            ),
+          if (userProfile != null) _RailProfileChip(profile: userProfile!),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }
@@ -393,25 +708,26 @@ class _NmtkRailColumn extends StatelessWidget {
 // ── Rail brand row ─────────────────────────────────────────────────────────────
 
 class _RailBrandRow extends StatelessWidget {
-  const _RailBrandRow({this.brand});
+  const _RailBrandRow({
+    this.brand,
+    required this.isExpanded,
+    required this.onToggle,
+  });
 
   final Widget? brand;
+  final bool isExpanded;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
 
+    Widget logoWidget;
     if (brand != null) {
-      return SizedBox(
-        height: _kBrandRowHeight,
-        child: Center(child: brand!),
-      );
-    }
-
-    // Default NMTK "N" monogram — centred, no wordmark in rail mode.
-    return SizedBox(
-      height: _kBrandRowHeight,
-      child: Center(
+      logoWidget = Center(child: brand!);
+    } else {
+      // Default NMTK "N" monogram
+      logoWidget = Center(
         child: Container(
           width: 28,
           height: 28,
@@ -430,8 +746,42 @@ class _RailBrandRow extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
+      );
+    }
+
+    if (isExpanded) {
+      // Expanded: show brand on left + collapse button on right
+      return SizedBox(
+        height: _kBrandRowHeight,
+        child: Row(
+          children: [
+            const SizedBox(width: 8),
+            Expanded(child: logoWidget),
+            IconButton(
+              icon: Icon(
+                Icons.chevron_left_rounded,
+                color: scheme.foreground.withValues(alpha: 0.65),
+                size: 20,
+              ),
+              onPressed: onToggle,
+              tooltip: 'Collapse sidebar',
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Collapsed: clicking the logo expands sidebar
+      return ShadTooltip(
+        builder: (ctx) => const Text('Expand sidebar'),
+        child: GestureDetector(
+          onTap: onToggle,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: SizedBox(height: _kBrandRowHeight, child: logoWidget),
+          ),
+        ),
+      );
+    }
   }
 }
 
@@ -558,7 +908,7 @@ class _RailProfileChipState extends State<_RailProfileChip> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INDIVIDUAL NAV ITEM (kept for reuse; always rendered with isExpanded: false)
+// INDIVIDUAL NAV ITEM
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _SidebarNavItem extends StatefulWidget {
@@ -600,8 +950,9 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 
     final textColor = isSelected ? scheme.primary : scheme.foreground;
 
-    final effectiveIcon =
-        isSelected ? (item.selectedIcon ?? item.icon) : item.icon;
+    final effectiveIcon = isSelected
+        ? (item.selectedIcon ?? item.icon)
+        : item.icon;
 
     Widget inner = AnimatedContainer(
       duration: _kSideAnimDuration,
@@ -704,9 +1055,7 @@ class _NmtkContentHeader extends StatelessWidget {
                 duration: _kBackButtonAnimDuration,
                 curve: _kBackButtonAnimCurve,
                 child: AnimatedSlide(
-                  offset: showBackButton
-                      ? Offset.zero
-                      : const Offset(-0.5, 0),
+                  offset: showBackButton ? Offset.zero : const Offset(-0.5, 0),
                   duration: _kBackButtonAnimDuration,
                   curve: _kBackButtonAnimCurve,
                   child: Semantics(
@@ -794,10 +1143,7 @@ class _FileActionIconButton extends StatelessWidget {
 /// Wraps [child] with [CallbackShortcuts] that fire [NmtkFileActionDelegate]
 /// methods on Cmd/Ctrl+N, +O, +S and Cmd/Ctrl+Shift+S.
 class _FileActionShortcuts extends StatelessWidget {
-  const _FileActionShortcuts({
-    required this.delegate,
-    required this.child,
-  });
+  const _FileActionShortcuts({required this.delegate, required this.child});
 
   final NmtkFileActionDelegate delegate;
   final Widget child;
@@ -818,11 +1164,8 @@ class _FileActionShortcuts extends StatelessWidget {
             delegate.onSaveFile,
         const SingleActivator(LogicalKeyboardKey.keyS, control: true):
             delegate.onSaveFile,
-        const SingleActivator(
-          LogicalKeyboardKey.keyS,
-          meta: true,
-          shift: true,
-        ): delegate.onSaveFileAs,
+        const SingleActivator(LogicalKeyboardKey.keyS, meta: true, shift: true):
+            delegate.onSaveFileAs,
         const SingleActivator(
           LogicalKeyboardKey.keyS,
           control: true,
@@ -951,111 +1294,6 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
                     color: fgColor,
                     fontWeight: FontWeight.w500,
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LEGACY — kept only for backward compatibility; no longer used internally
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// _UserProfileButton was the header-mode profile button.  It is no longer
-// rendered by NmtkDesktopScaffold but is kept here (private) so that any
-// consuming code that relied on internal implementation details does not
-// break at the import level.  It will be removed in a future cleanup pass.
-
-class _UserProfileButton extends StatefulWidget {
-  const _UserProfileButton({required this.profile});
-
-  final NmtkUserProfile profile;
-
-  @override
-  State<_UserProfileButton> createState() => _UserProfileButtonState();
-}
-
-class _UserProfileButtonState extends State<_UserProfileButton> {
-  final _popover = ShadPopoverController();
-
-  @override
-  void dispose() {
-    _popover.dispose();
-    super.dispose();
-  }
-
-  String _initials(NmtkUserProfile p) {
-    if (p.avatarFallback != null) return p.avatarFallback!;
-    final words = p.displayName.trim().split(RegExp(r'\s+'));
-    if (words.length >= 2) {
-      return '${words.first[0]}${words.last[0]}'.toUpperCase();
-    }
-    final n = p.displayName;
-    return (n.length >= 2 ? n.substring(0, 2) : n).toUpperCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
-    final profile = widget.profile;
-
-    return ShadPopover(
-      controller: _popover,
-      popover: (ctx) =>
-          _ProfilePopover(profile: profile, onClose: _popover.hide),
-      child: Semantics(
-        label: 'User profile: ${profile.displayName}',
-        button: true,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: _popover.toggle,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ShadAvatar(
-                  profile.avatarUrl,
-                  placeholder: Text(
-                    _initials(profile),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.primaryForeground,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profile.displayName,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.foreground,
-                      ),
-                    ),
-                    if (profile.email != null)
-                      Text(
-                        profile.email!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: scheme.mutedForeground,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.unfold_more_rounded,
-                  size: 14,
-                  color: scheme.mutedForeground,
                 ),
               ],
             ),

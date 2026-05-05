@@ -46,7 +46,8 @@ class _FakeWebViewPlatform extends WebViewPlatform {
 }
 
 class _FakePlatformNavigationDelegate extends PlatformNavigationDelegate {
-  _FakePlatformNavigationDelegate(PlatformNavigationDelegateCreationParams params)
+  _FakePlatformNavigationDelegate(
+      PlatformNavigationDelegateCreationParams params)
       : super.implementation(params);
 
   @override

@@ -4,7 +4,9 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 void main() {
   group('NmtkSparklineChart', () {
-    testWidgets('renders chart with data and label', (WidgetTester tester) async {
+    testWidgets('renders chart with data and label', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -21,7 +23,9 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('renders gracefully with single value', (WidgetTester tester) async {
+    testWidgets('renders gracefully with single value', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -38,7 +42,9 @@ void main() {
       expect(find.byType(CustomPaint), findsWidgets);
     });
 
-    testWidgets('renders gracefully with empty values', (WidgetTester tester) async {
+    testWidgets('renders gracefully with empty values', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -54,14 +60,13 @@ void main() {
       expect(find.text('No data'), findsOneWidget);
     });
 
-    testWidgets('respects missing label gracefully', (WidgetTester tester) async {
+    testWidgets('respects missing label gracefully', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: NmtkSparklineChart(
-              values: [0.1, 0.9],
-              color: Colors.red,
-            ),
+            body: NmtkSparklineChart(values: [0.1, 0.9], color: Colors.red),
           ),
         ),
       );

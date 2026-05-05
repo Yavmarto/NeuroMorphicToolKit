@@ -41,10 +41,10 @@ class TeensyNetworkResponse {
   factory TeensyNetworkResponse.fromJson(Map<String, dynamic> json) {
     return TeensyNetworkResponse(
       verdict: TeensyDeploymentVerdict.fromString(json['verdict'] as String),
-      warnings:
-          (json['warnings'] as List).map((e) => e as String).toList(),
-      rejectionReasons:
-          (json['rejection_reasons'] as List).map((e) => e as String).toList(),
+      warnings: (json['warnings'] as List).map((e) => e as String).toList(),
+      rejectionReasons: (json['rejection_reasons'] as List)
+          .map((e) => e as String)
+          .toList(),
       payload: json['payload'] as Map<String, dynamic>?,
     );
   }
@@ -120,8 +120,7 @@ class FlashJob {
       progressPct: (json['progress_pct'] as num?)?.toDouble() ?? 0.0,
       message: json['message'] as String?,
       error: json['error'] as String?,
-      verificationReport:
-          json['verification_report'] as Map<String, dynamic>?,
+      verificationReport: json['verification_report'] as Map<String, dynamic>?,
     );
   }
 }
@@ -143,7 +142,8 @@ class SerialPortInfo {
   factory SerialPortInfo.fromJson(Map<String, dynamic> json) {
     final desc = json['description'] as String? ?? '';
     final hwid = json['hwid'] as String? ?? '';
-    final isTeensy = desc.toLowerCase().contains('teensy') ||
+    final isTeensy =
+        desc.toLowerCase().contains('teensy') ||
         hwid.toLowerCase().contains('16c0:0483');
     return SerialPortInfo(
       device: json['device'] as String,
@@ -215,10 +215,10 @@ class VerificationReport {
       passed: json['passed'] as bool,
       summary: json['summary'] as String,
       smoke: ProtocolSmokeResult.fromJson(
-          json['smoke'] as Map<String, dynamic>),
+        json['smoke'] as Map<String, dynamic>,
+      ),
       demo: json['demo'] != null
-          ? HardwareDemoResult.fromJson(
-              json['demo'] as Map<String, dynamic>)
+          ? HardwareDemoResult.fromJson(json['demo'] as Map<String, dynamic>)
           : null,
     );
   }

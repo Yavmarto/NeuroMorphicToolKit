@@ -43,16 +43,16 @@ class NmtkBackendSupportBanner extends StatelessWidget {
   final Widget? details;
 
   Color _background(ColorScheme cs) => switch (verdict) {
-        'faithful' => cs.primaryContainer,
-        'unsupported' => cs.errorContainer,
-        _ => cs.tertiaryContainer,
-      };
+    'faithful' => cs.primaryContainer,
+    'unsupported' => cs.errorContainer,
+    _ => cs.tertiaryContainer,
+  };
 
   Color _foreground(ColorScheme cs) => switch (verdict) {
-        'faithful' => cs.onPrimaryContainer,
-        'unsupported' => cs.onErrorContainer,
-        _ => cs.onTertiaryContainer,
-      };
+    'faithful' => cs.onPrimaryContainer,
+    'unsupported' => cs.onErrorContainer,
+    _ => cs.onTertiaryContainer,
+  };
 
   @override
   Widget build(BuildContext context) {

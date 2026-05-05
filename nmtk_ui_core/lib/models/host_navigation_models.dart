@@ -1,8 +1,7 @@
 import 'package:flutter/foundation.dart';
 
-typedef NmtkHostModuleNavigator = Future<bool> Function(
-  NmtkHostNavigationRequest request,
-);
+typedef NmtkHostModuleNavigator =
+    Future<bool> Function(NmtkHostNavigationRequest request);
 
 @immutable
 class NmtkHostNavigationRequest {

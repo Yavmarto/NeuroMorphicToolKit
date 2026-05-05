@@ -196,8 +196,9 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
         ? '✗ 1 error'
         : '✗ ${widget.errorCount} errors';
     final chipLabel = hasErrors ? errorLabel : '✓ Valid';
-    final chipIcon =
-        hasErrors ? Icons.cancel_outlined : Icons.check_circle_outline;
+    final chipIcon = hasErrors
+        ? Icons.cancel_outlined
+        : Icons.check_circle_outline;
 
     final pill = GestureDetector(
       onTap: hasErrors ? _toggleExpanded : null,
@@ -229,11 +230,7 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
                 AnimatedRotation(
                   turns: _expanded ? 0.5 : 0.0,
                   duration: _kExpandCollapseDuration,
-                  child: Icon(
-                    Icons.keyboard_arrow_down,
-                    size: 14,
-                    color: fg,
-                  ),
+                  child: Icon(Icons.keyboard_arrow_down, size: 14, color: fg),
                 ),
               ],
             ],
@@ -290,15 +287,11 @@ class _ErrorDropdown extends StatelessWidget {
           shrinkWrap: true,
           padding: const EdgeInsets.symmetric(vertical: 6),
           itemCount: errors.length,
-          separatorBuilder: (_, __) => Divider(
-            height: 1,
-            color: _kErrorBorder,
-          ),
+          separatorBuilder: (_, __) => Divider(height: 1, color: _kErrorBorder),
           itemBuilder: (context, index) {
             final error = errors[index];
             return Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

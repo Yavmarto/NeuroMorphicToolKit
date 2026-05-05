@@ -11,8 +11,16 @@ void main() {
     const rightPaneKey = Key('deploy-flow-right-pane');
 
     final steps = [
-      const NmtkPipelineStepData(id: 'prepare', label: 'Prepare', status: NmtkStepStatus.success),
-      const NmtkPipelineStepData(id: 'deploy', label: 'Deploy', status: NmtkStepStatus.running),
+      const NmtkPipelineStepData(
+        id: 'prepare',
+        label: 'Prepare',
+        status: NmtkStepStatus.success,
+      ),
+      const NmtkPipelineStepData(
+        id: 'deploy',
+        label: 'Deploy',
+        status: NmtkStepStatus.running,
+      ),
     ];
 
     Future<void> pumpShell(WidgetTester tester, {required Size size}) async {

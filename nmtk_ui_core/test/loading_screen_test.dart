@@ -5,25 +5,26 @@ import 'package:nmtk_ui_core/widgets/loading_screen.dart';
 void main() {
   group('NmtkLoadingScreen', () {
     testWidgets(
-        '1. renders in waiting state without crashing and shows LinearProgressIndicator',
-        (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: NmtkLoadingScreen(
-            state: NmtkReadinessState.waiting,
-            progressMessage: 'Starting NeuroStudio…',
+      '1. renders in waiting state without crashing and shows LinearProgressIndicator',
+      (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: NmtkLoadingScreen(
+              state: NmtkReadinessState.waiting,
+              progressMessage: 'Starting NeuroStudio…',
+            ),
           ),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
+        );
+        await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      expect(find.text('Starting NeuroStudio…'), findsOneWidget);
-    });
+        expect(find.byType(LinearProgressIndicator), findsOneWidget);
+        expect(find.text('Starting NeuroStudio…'), findsOneWidget);
+      },
+    );
 
-    testWidgets(
-        '2. renders in failed state and shows Retry button',
-        (tester) async {
+    testWidgets('2. renders in failed state and shows Retry button', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: NmtkLoadingScreen(
@@ -40,9 +41,9 @@ void main() {
       expect(find.text('Retry'), findsNothing);
     });
 
-    testWidgets(
-        '3. tapping Retry in failed state calls the onRetry callback',
-        (tester) async {
+    testWidgets('3. tapping Retry in failed state calls the onRetry callback', (
+      tester,
+    ) async {
       var retried = false;
 
       await tester.pumpWidget(
@@ -65,9 +66,9 @@ void main() {
       expect(retried, isTrue);
     });
 
-    testWidgets(
-        '4. renders in degraded state and shows degraded message',
-        (tester) async {
+    testWidgets('4. renders in degraded state and shows degraded message', (
+      tester,
+    ) async {
       const degradedMsg = 'Some optional services are unavailable.';
 
       await tester.pumpWidget(
@@ -81,10 +82,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(degradedMsg), findsOneWidget);
-      expect(
-        find.byIcon(Icons.warning_amber_rounded),
-        findsOneWidget,
-      );
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
     });
   });
 }
