@@ -693,11 +693,13 @@ class PynqDeployJob {
   final PynqDeployJobStatus status;
   final String? bitstreamPath;
   final PynqBackendRuntimeMode runtimeMode;
+  final bool loopRunning;
 
   const PynqDeployJob({
     required this.status,
     this.bitstreamPath,
     this.runtimeMode = PynqBackendRuntimeMode.unknown,
+    this.loopRunning = false,
   });
 
   factory PynqDeployJob.fromJson(Map<String, dynamic> json) {
@@ -705,6 +707,7 @@ class PynqDeployJob {
       status: PynqDeployJobStatus.fromString(json['state'] as String),
       bitstreamPath: json['bitstream_path'] as String?,
       runtimeMode: PynqBackendRuntimeMode.fromJson(json['runtime_mode']),
+      loopRunning: json['loop_running'] as bool? ?? false,
     );
   }
 }
@@ -716,11 +719,17 @@ class PynqDeployJob {
 /// Per-step result from SITL verification.
 class PynqSitlStepResult {
   final String label;
+  final List<int> inputSpikes;
+  final List<int> outputSpikes;
+  final List<int>? expectedOutputSpikes;
   final bool passed;
   final double executionTimeUs;
 
   const PynqSitlStepResult({
     required this.label,
+    required this.inputSpikes,
+    required this.outputSpikes,
+    this.expectedOutputSpikes,
     required this.passed,
     required this.executionTimeUs,
   });
@@ -728,8 +737,45 @@ class PynqSitlStepResult {
   factory PynqSitlStepResult.fromJson(Map<String, dynamic> json) {
     return PynqSitlStepResult(
       label: json['label'] as String,
+      inputSpikes: (json['input_spikes'] as List<dynamic>? ?? const <dynamic>[])
+          .map((value) => (value as num).toInt())
+          .toList(growable: false),
+      outputSpikes:
+          (json['output_spikes'] as List<dynamic>? ?? const <dynamic>[])
+              .map((value) => (value as num).toInt())
+              .toList(growable: false),
+      expectedOutputSpikes: (json['expected_output_spikes'] as List<dynamic>?)
+          ?.map((value) => (value as num).toInt())
+          .toList(growable: false),
       passed: json['passed'] as bool,
       executionTimeUs: (json['execution_time_us'] as num).toDouble(),
+    );
+  }
+}
+
+/// Single PYNQ runtime run result from POST /hardware/pynq/run.
+class PynqRunResult {
+  final String status;
+  final List<int> outputSpikes;
+  final int timesteps;
+  final double executionTimeUs;
+
+  const PynqRunResult({
+    required this.status,
+    required this.outputSpikes,
+    required this.timesteps,
+    required this.executionTimeUs,
+  });
+
+  factory PynqRunResult.fromJson(Map<String, dynamic> json) {
+    return PynqRunResult(
+      status: json['status'] as String? ?? 'unknown',
+      outputSpikes:
+          (json['output_spikes'] as List<dynamic>? ?? const <dynamic>[])
+              .map((value) => (value as num).toInt())
+              .toList(growable: false),
+      timesteps: (json['timesteps'] as num?)?.toInt() ?? 1,
+      executionTimeUs: (json['execution_time_us'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

@@ -1166,7 +1166,7 @@ def _describe_akida_preflight(verification: dict[str, Any]) -> str:
         for issue in raw_sdk_issues
         if str(issue).strip()
     ]
-    if sdk_available and sdk_status == "deployable":
+    if _akida_hardware_runtime_ready(verification):
         return "Akida SDK verification ready."
     if sdk_issue_detail:
         return sdk_issue_detail
@@ -1177,9 +1177,21 @@ def _describe_akida_preflight(verification: dict[str, Any]) -> str:
     return "Optional capability unavailable on remote Akida host."
 
 
-def _preflight_status_for_akida_verification(verification: dict[str, Any]) -> str:
+def _akida_hardware_runtime_ready(verification: dict[str, Any]) -> bool:
     sdk_status = str(verification.get("sdk_status") or "").strip().lower()
-    if bool(verification.get("sdk_available")) and sdk_status == "deployable":
+    runtime_target = str(verification.get("runtime_target") or "").strip().lower()
+    raw_sdk_issues = verification.get("sdk_issues", [])
+    if not isinstance(raw_sdk_issues, list):
+        raw_sdk_issues = []
+    return (
+        bool(verification.get("sdk_available"))
+        and runtime_target == "hardware"
+        and (sdk_status == "deployable" or not raw_sdk_issues)
+    )
+
+
+def _preflight_status_for_akida_verification(verification: dict[str, Any]) -> str:
+    if _akida_hardware_runtime_ready(verification):
         return PREFLIGHT_OK
     return PREFLIGHT_DEGRADED
 
@@ -3681,6 +3693,10 @@ class LauncherControlState:
             board, "POST", "/hardware/pynq/verify", payload
         )
 
+    def proxy_pynq_run(self, board_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        board = self._get_pynq_board(board_id)
+        return self._runtime_json_request(board, "POST", "/hardware/pynq/run", payload)
+
     def proxy_pynq_runtime_status(self, board_id: str) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
         return self._runtime_json_request(board, "GET", "/hardware/pynq/status")
@@ -4130,6 +4146,12 @@ class LauncherControlState:
         message = str(preflight.get("preflight_message") or "").strip()
         runtime_target = str(preflight.get("runtime_target") or "").strip()
         sdk_status = str(preflight.get("sdk_status") or "").strip()
+        if status == PREFLIGHT_DEGRADED and runtime_status is not None:
+            if _akida_hardware_runtime_ready(runtime_status):
+                status = PREFLIGHT_OK
+                message = "Akida hardware runtime is ready."
+                runtime_target = str(runtime_status.get("runtime_target") or "").strip()
+                sdk_status = str(runtime_status.get("sdk_status") or "").strip()
         state = "preflight_failed"
         if status == PREFLIGHT_OK:
             state = "ready" if runtime_target == "hardware" else "degraded_optional_capability"
@@ -5896,6 +5918,12 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.proxy_pynq_verify(board_id, body or {}),
+                    )
+                    return
+                if len(segments) == 6 and segments[5] == "run" and method == "POST":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.proxy_pynq_run(board_id, body or {}),
                     )
                     return
                 if (

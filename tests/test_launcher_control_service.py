@@ -493,6 +493,53 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertIn("192.168.2.51:8002", payload["error"])
         self.assertIn("Connection refused", payload["error"])
 
+    def test_pynq_run_http_endpoint_proxies_runtime_payload(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+        board = server.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.2.77",
+                "username": "xilinx",
+                "password": "xilinx",
+            }
+        )
+
+        with mock.patch.object(
+            server.state,
+            "_runtime_json_request",
+            return_value={
+                "status": "success",
+                "output_spikes": [0, 2],
+                "timesteps": 2,
+                "execution_time_us": 18.5,
+            },
+        ) as runtime_request:
+            request = urllib.request.Request(
+                (
+                    f"http://127.0.0.1:{server.server_address[1]}"
+                    f"/api/launcher/pynq/boards/{board['id']}/run"
+                ),
+                data=json.dumps({"input_spikes": [0, 1], "timesteps": 2}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+
+        self.assertEqual(payload["status"], "success")
+        self.assertEqual(payload["output_spikes"], [0, 2])
+        runtime_request.assert_called_once()
+        called_board, called_method, called_path, called_payload = runtime_request.call_args.args
+        self.assertEqual(called_board["id"], board["id"])
+        self.assertEqual(called_method, "POST")
+        self.assertEqual(called_path, "/hardware/pynq/run")
+        self.assertEqual(called_payload, {"input_spikes": [0, 1], "timesteps": 2})
+
     def test_missing_environment_normalizes_stale_installed_state(self) -> None:
         state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"
         state_file.write_text(
@@ -1460,6 +1507,99 @@ class LauncherControlServiceTest(unittest.TestCase):
             launcher_server.PREFLIGHT_FAILED,
         )
         self.assertIn("remote verify exploded", result["preflight"]["preflight_message"])
+
+    def test_akida_remote_control_doctor_accepts_visible_hardware_before_model_mapping(
+        self,
+    ) -> None:
+        namespace: dict[str, Any] = {}
+        exec(provisioning_helpers._remote_control_script_text(), namespace)
+
+        def fake_local_json(path: str) -> tuple[int, dict[str, Any]]:
+            if path == "/health":
+                return 200, {"status": "healthy"}
+            if path == "/api/neurochip/akida/status":
+                return 200, {
+                    "sdk_available": True,
+                    "sdk_status": "unknown",
+                    "sdk_issues": [],
+                    "sdk_issue_detail": None,
+                    "runtime_target": "hardware",
+                    "device_info": "<akida.core.HardwareDevice object>",
+                    "environment_checks": {
+                        "host_supported": True,
+                        "python_supported": True,
+                        "tensorflow_available": True,
+                        "cnn2snn_available": True,
+                        "akida_models_available": True,
+                        "recommended_runtime": "local_sdk",
+                    },
+                }
+            raise AssertionError(f"unexpected path: {path}")
+
+        namespace["_local_json"] = fake_local_json
+        namespace["_run_probe"] = lambda _command: ""
+        namespace["_load_install_status"] = lambda: {"installMode": "systemd"}
+
+        payload = namespace["_doctor_payload"]()
+
+        self.assertEqual(payload["preflight"]["preflight_status"], launcher_server.PREFLIGHT_OK)
+        self.assertEqual(
+            payload["preflight"]["preflight_message"],
+            "Akida hardware runtime is ready.",
+        )
+        self.assertTrue(payload["preflight"]["physicalHardwareReady"])
+
+    def test_akida_install_script_force_reinstalls_bundled_neurochip_wheel(
+        self,
+    ) -> None:
+        script = provisioning_helpers._akida_install_script_text(
+            install_root="/opt/neurochip-akida-host",
+            service_user="neurochip",
+            venv_path="/opt/neurochip-akida-host/venv",
+            runtime_service_name="neurochip",
+            control_service_name="neurochip-akida-control",
+            runtime_port=8002,
+            control_port=8090,
+            token_path="/opt/neurochip-akida-host/credentials/api-token",
+            install_status_path="/opt/neurochip-akida-host/install-status.json",
+            wheel_name="neurochip-0.6.0-py3-none-any.whl",
+            required_packages=[],
+        )
+
+        self.assertIn("pip\" install --force-reinstall --no-deps", script)
+
+    def test_akida_preflight_promotes_stale_remote_doctor_when_hardware_is_ready(
+        self,
+    ) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "akida-box.local",
+                "username": "operator",
+            }
+        )
+        runtime_status = {
+            "sdk_available": True,
+            "sdk_status": "unknown",
+            "sdk_issues": [],
+            "runtime_target": "hardware",
+        }
+
+        updated = self.state._apply_preflight_to_akida_host(
+            host["id"],
+            {
+                "preflight_status": launcher_server.PREFLIGHT_DEGRADED,
+                "preflight_message": "Optional Akida capability is degraded.",
+                "runtime_target": "hardware",
+                "sdk_status": "unknown",
+            },
+            runtime_status=runtime_status,
+            install_status={"installMode": "systemd"},
+        )
+
+        self.assertEqual(updated["state"], "ready")
+        self.assertEqual(updated["lastPreflightStatus"], launcher_server.PREFLIGHT_OK)
+        self.assertEqual(updated["lastPreflightMessage"], "Akida hardware runtime is ready.")
 
     def test_akida_host_preflight_fallback_logs_single_high_level_message(self) -> None:
         host = self.state.create_akida_host(

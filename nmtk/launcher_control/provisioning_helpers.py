@@ -620,10 +620,16 @@ def _doctor_payload() -> dict[str, object]:
 
     sdk_status = str(runtime_status.get("sdk_status") or "").strip().lower()
     runtime_target = str(runtime_status.get("runtime_target") or "").strip().lower()
+    sdk_available = runtime_status.get("sdk_available") is True
+    sdk_issues = runtime_status.get("sdk_issues")
+    if not isinstance(sdk_issues, list):
+        sdk_issues = []
     if runtime_health_status != 200:
         preflight_status = "failed"
         preflight_message = "Neurochip runtime health check failed"
-    elif sdk_status == "deployable" and runtime_target == "hardware":
+    elif runtime_target == "hardware" and (
+        sdk_status == "deployable" or (sdk_available and not sdk_issues)
+    ):
         preflight_status = "ok"
         preflight_message = "Akida hardware runtime is ready."
     elif runtime_status_status == 200:
@@ -905,7 +911,7 @@ def _akida_install_script_text(
             '  log_step "Upgrading pip"',
             '  sudo_cmd -u "$SERVICE_USER" "$VENV_PATH/bin/pip" install --upgrade pip setuptools wheel',
             '  log_step "Installing Neurochip wheel"',
-            '  sudo_cmd -u "$SERVICE_USER" "$VENV_PATH/bin/pip" install "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            '  sudo_cmd -u "$SERVICE_USER" "$VENV_PATH/bin/pip" install --force-reinstall --no-deps "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
             '  log_step "Installing Akida runtime dependencies"',
             f'  sudo_cmd -u "$SERVICE_USER" "$VENV_PATH/bin/pip" install {package_install}',
             '  log_step "Installing remote control service script"',
@@ -946,7 +952,7 @@ def _akida_install_script_text(
             '  log_step "Upgrading pip"',
             '  "$VENV_PATH/bin/pip" install --upgrade pip setuptools wheel',
             '  log_step "Installing Neurochip wheel"',
-            '  "$VENV_PATH/bin/pip" install "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            '  "$VENV_PATH/bin/pip" install --force-reinstall --no-deps "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
             '  log_step "Installing Akida runtime dependencies"',
             f'  "$VENV_PATH/bin/pip" install {package_install}',
             '  log_step "Installing remote control service script"',
