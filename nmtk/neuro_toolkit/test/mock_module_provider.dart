@@ -127,24 +127,13 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
     final List<Map<String, dynamic>> mockData = [
       {
         'id': 'neurocnl',
-        'name': 'CNL Studio',
-        'description': 'CNL parser',
+        'name': 'NeuroStudio',
+        'description': 'CNL and canvas authoring',
         'icon': 'code',
         'port': 8000,
         'installPath': 'neurocnl/',
         'hasFrontend': true,
         'frontendStatus': 'Yes',
-        'requiresMuJoCo': false,
-      },
-      {
-        'id': 'Neurosim',
-        'name': 'NeuroSim',
-        'description': 'Visual design',
-        'icon': 'architecture',
-        'port': 8001,
-        'installPath': 'Neurosim/',
-        'hasFrontend': true,
-        'frontendStatus': 'Minimal',
         'requiresMuJoCo': false,
       },
       {
@@ -183,7 +172,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
       {
         'id': 'Neurohub',
         'name': 'NeuroHub',
-        'description': 'Dashboard',
+        'description': 'Project registry and workflow metadata',
         'icon': 'hub',
         'port': 8005,
         'installPath': 'Neurohub/',

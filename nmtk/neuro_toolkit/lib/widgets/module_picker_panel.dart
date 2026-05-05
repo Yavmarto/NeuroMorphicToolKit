@@ -533,7 +533,7 @@ class _ModuleActivityState extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Text(label),
+          Expanded(child: Text(label)),
         ],
       ),
     );

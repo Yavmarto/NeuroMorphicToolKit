@@ -132,24 +132,13 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
     final List<Map<String, dynamic>> mockData = [
       {
         'id': 'neurocnl',
-        'name': 'CNL Studio',
-        'description': 'CNL parser',
+        'name': 'NeuroStudio',
+        'description': 'CNL and canvas authoring',
         'icon': 'code',
         'port': 8000,
         'installPath': 'neurocnl/',
         'hasFrontend': true,
         'frontendStatus': 'Yes',
-        'requiresMuJoCo': false,
-      },
-      {
-        'id': 'Neurosim',
-        'name': 'NeuroSim',
-        'description': 'Visual design',
-        'icon': 'architecture',
-        'port': 8001,
-        'installPath': 'Neurosim/',
-        'hasFrontend': true,
-        'frontendStatus': 'Minimal',
         'requiresMuJoCo': false,
       },
       {
@@ -188,7 +177,7 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
       {
         'id': 'Neurohub',
         'name': 'NeuroHub',
-        'description': 'Dashboard',
+        'description': 'Project registry and workflow metadata',
         'icon': 'hub',
         'port': 8005,
         'installPath': 'Neurohub/',
@@ -224,7 +213,7 @@ void main() {
     final module = Module.fromJson({
       'id': 'Neurochip',
       'name': 'NeuroChip',
-      'description': 'Hardware deployment',
+      'description': 'Execution, flashing, and hardware diagnostics',
       'installPath': 'Neurochip/',
       'akidaRuntime': {
         'supportedPlatforms': ['linux', 'windows'],
@@ -232,6 +221,18 @@ void main() {
         'requiredPackages': ['akida==2.19.1'],
         'docsUrl': 'https://doc.brainchipinc.com/installation.html',
         'localModeFallback': 'simulator_only',
+      },
+      'launcherRuntime': {
+        'pynq': {
+          'defaultUsername': 'xilinx',
+          'serviceName': 'neurochip-pynq-agent',
+          'overlayStagingSubdir': 'overlay_staging/pynq_z2',
+        },
+        'akida': {
+          'installRoot': '/opt/neurochip-akida-host',
+          'runtimeServiceName': 'neurochip',
+          'controlServiceName': 'neurochip-akida-control',
+        },
       },
       'akidaRuntimeState': {
         'status': 'ready',
@@ -242,10 +243,38 @@ void main() {
 
     expect(module.akidaRuntime, isNotNull);
     expect(module.akidaRuntime!.supportedPlatforms, ['linux', 'windows']);
+    expect(module.launcherRuntime, isNotNull);
+    expect(module.launcherRuntime!.pynq?.defaultUsername, 'xilinx');
+    expect(
+      module.launcherRuntime!.akida?.controlServiceName,
+      'neurochip-akida-control',
+    );
     expect(module.akidaRuntimeState?.status, 'ready');
   });
 
-  testWidgets('CatalogScreen shows all 7 modules', (WidgetTester tester) async {
+  test('Module.fromJson defaults showInLauncherNav to true and parses false',
+      () {
+    final visibleByDefault = Module.fromJson({
+      'id': 'neurocnl',
+      'name': 'CNL Studio',
+      'description': 'Studio',
+      'installPath': 'neurocnl/',
+      'hasFrontend': true,
+    });
+    final hiddenModule = Module.fromJson({
+      'id': 'Neurochip',
+      'name': 'NeuroChip',
+      'description': 'Hardware runtime',
+      'installPath': 'Neurochip/',
+      'hasFrontend': true,
+      'showInLauncherNav': false,
+    });
+
+    expect(visibleByDefault.showInLauncherNav, isTrue);
+    expect(hiddenModule.showInLauncherNav, isFalse);
+  });
+
+  testWidgets('CatalogScreen shows all 6 launcher modules', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1920, 2000);
     tester.view.devicePixelRatio = 1.0;
 
@@ -269,8 +298,7 @@ void main() {
 
     await tester.pump();
 
-    expect(find.text('CNL Studio'), findsOneWidget);
-    expect(find.text('NeuroSim'), findsOneWidget);
+    expect(find.text('NeuroStudio'), findsOneWidget);
     expect(find.text('NeuroChip'), findsOneWidget);
     expect(find.text('NeuroBench'), findsOneWidget);
     expect(find.text('NeuroSense'), findsOneWidget);
@@ -305,10 +333,10 @@ void main() {
 
     await tester.pump();
 
-    // Find the Install button for CNL Studio
+    // Find the Install button for NeuroStudio
     final installButton = find.descendant(
       of: find.ancestor(
-          of: find.text('CNL Studio'), matching: find.byType(Card)),
+          of: find.text('NeuroStudio'), matching: find.byType(Card)),
       matching: find.text('Install'),
     );
 

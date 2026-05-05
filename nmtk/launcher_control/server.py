@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import socket
 import subprocess
@@ -24,10 +25,16 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse, urlunparse
 from uuid import uuid4
 
 import tomllib
+
+from .provisioning_helpers import (
+    build_akida_host_bundle,
+    build_pynq_agent_bundle,
+    build_pynq_user_space_agent_launch_command,
+)
 
 STATUS_INDEX: dict[str, int] = {
     "notInstalled": 0,
@@ -48,15 +55,22 @@ SETTINGS_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "launcher_settings.json"
 WORKSPACE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "workspace_state.json"
 
 DEFAULT_CONTROL_LOG_LEVEL = "info"
+DEFAULT_SUITE_API_PORT = 9000
 HEALTH_POLL_SECONDS = 5.0
 STARTUP_GRACE_SECONDS = 12.0
+SUITE_API_STARTUP_TIMEOUT_SECONDS = 120.0
 LOG_LINE_LIMIT = 400
 PREFLIGHT_OK = "ok"
 PREFLIGHT_DEGRADED = "degraded"
 PREFLIGHT_FAILED = "failed"
+SUITE_API_STATUS_DISABLED = "disabled"
+SUITE_API_STATUS_STARTING = "starting"
+SUITE_API_STATUS_READY = "ready"
+SUITE_API_STATUS_PREFLIGHT_FAILED = "preflight_failed"
 SUPPORTED_INSTALL_STRATEGIES = {"pip"}
 SUPPORTED_START_STRATEGIES = {"uvicorn", "none"}
 PREFLIGHT_SENTINEL = "NMTK_PREFLIGHT_JSON="
+INSTALL_STATUS_SENTINEL = "INSTALL_STATUS_JSON="
 DEFAULT_AKIDA_HOST_PORT = 8002
 DEFAULT_AKIDA_CONTROL_PORT = 8090
 DEFAULT_AKIDA_HOST_SSH_PORT = 22
@@ -74,6 +88,11 @@ PYNQ_PREFLIGHT_TIMEOUT_BOUNDS = (5.0, 300.0)
 PYNQ_PREFLIGHT_RETRY_COUNT = 3
 PYNQ_PREFLIGHT_RETRY_DELAY_SECONDS = 2.0
 PYNQ_RUNTIME_LOG_TAIL_LINES = 80
+DEFAULT_STAGED_OVERLAY_DIRNAME = "overlay_staging"
+DEFAULT_STAGED_OVERLAY_TARGET = "pynq_z2"
+DEFAULT_STAGED_OVERLAY_MANIFEST = "overlay_manifest.json"
+DEFAULT_STAGED_PYNQ_BITSTREAM_NAME = "snn_overlay.bit"
+DEFAULT_STAGED_PYNQ_HWH_NAME = "snn_overlay.hwh"
 DEFAULT_PYNQ_BOARD_USERNAME = "xilinx"
 DEFAULT_PYNQ_BOARD_STATE = "unpaired"
 DEFAULT_PYNQ_AUTH_MODE = "password"
@@ -117,6 +136,7 @@ PRERELEASE_VERSION_PATTERN = re.compile(
     r"(?:^|[.\-])(alpha|beta|rc|dev|nightly|snapshot|canary|preview)(?:[.\-\d]|$)",
     re.IGNORECASE,
 )
+SUITE_API_ENV_ROOT = REPO_ROOT / ".nmtk" / "suite_api_env"
 PYNQ_BOARD_STATES = {
     "unpaired",
     "reachable",
@@ -181,6 +201,33 @@ IMPORT_PROBE_SCRIPT = textwrap.dedent(
     """
 ).strip()
 
+EXPECTED_PYNQ_OVERLAY_MANIFEST = {
+    "overlay_id": "snn_overlay_v1",
+    "overlay_version": "1.0.1",
+    "target_part": "xc7z020clg400-1",
+    "supported_neuron_models": ("LIF",),
+    "supported_weight_bit_widths": (8,),
+    "max_neurons": 256,
+    "max_synapses": 15360,
+    "max_populations": 2,
+    "dma_ip_name": "axi_dma_0",
+    "snn_ip_name": "snn_engine_0",
+    "register_map": {
+        "weight_base_offset": 0x1000,
+        "dma_channel": "axi_dma_0",
+    },
+    "weight_layout": {
+        "base_offset": 0x1000,
+        "stride_bytes": 4,
+        "max_entries": 15360,
+    },
+    "threshold_layout": {
+        "base_offset": 0x100,
+        "stride_bytes": 4,
+        "max_entries": 2,
+    },
+}
+
 
 def _read_json_file(path: Path, default: Any) -> Any:
     if not path.exists():
@@ -194,6 +241,347 @@ def _read_json_file(path: Path, default: Any) -> Any:
 def _write_json_file(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+@dataclass(frozen=True)
+class PynqLauncherRuntimeContract:
+    runtime_port: int = 8002
+    ssh_port: int = 22
+    default_username: str = "xilinx"
+    default_state: str = "unpaired"
+    default_auth_mode: str = "password"
+    legacy_install_root: str = "/opt/neurochip-pynq-agent"
+    install_root_template: str = "/home/{username}/.local/share/neurochip-pynq-agent"
+    agent_venv_dir_name: str = "venv"
+    runtime_venv_dir_name: str = "pynq-venv"
+    overlay_dir_name: str = "overlays"
+    service_name: str = "neurochip-pynq-agent"
+    agent_executable_name: str = "neurochip-pynq-agent"
+    install_status_filename: str = "install-status.json"
+    runtime_log_filename: str = "runtime.log"
+    overlay_staging_subdir: str = "overlay_staging/pynq_z2"
+
+    def install_root_for(self, username: str) -> str:
+        normalized_username = username.strip() or self.default_username
+        return self.install_root_template.replace("{username}", normalized_username)
+
+    def legacy_venv_path(self) -> str:
+        return f"{self.legacy_install_root}/{self.agent_venv_dir_name}"
+
+    def legacy_overlay_dir(self) -> str:
+        return f"{self.legacy_install_root}/{self.overlay_dir_name}"
+
+    def agent_venv_path_for(self, install_root: str) -> str:
+        return f"{install_root.rstrip('/')}/{self.agent_venv_dir_name}"
+
+    def runtime_venv_path_for(self, install_root: str) -> str:
+        return f"{install_root.rstrip('/')}/{self.runtime_venv_dir_name}"
+
+    def overlay_dir_for(self, install_root: str) -> str:
+        return f"{install_root.rstrip('/')}/{self.overlay_dir_name}"
+
+    def install_status_path_for(self, install_root: str) -> str:
+        return f"{install_root.rstrip('/')}/{self.install_status_filename}"
+
+    def runtime_log_path_for(self, install_root: str) -> str:
+        return f"{install_root.rstrip('/')}/{self.runtime_log_filename}"
+
+    def overlay_staging_dir_for(self, module_root: Path) -> Path:
+        return (module_root / self.overlay_staging_subdir).resolve()
+
+
+@dataclass(frozen=True)
+class AkidaLauncherRuntimeContract:
+    runtime_port: int = 8002
+    control_port: int = 8090
+    ssh_port: int = 22
+    default_state: str = "unknown"
+    default_auth_mode: str = "password"
+    install_root: str = "/opt/neurochip-akida-host"
+    service_user: str = "neurochip"
+    venv_dir_name: str = "venv"
+    runtime_service_name: str = "neurochip"
+    control_service_name: str = "neurochip-akida-control"
+    token_relative_path: str = "credentials/api-token"
+    install_status_relative_path: str = "install-status.json"
+
+    def venv_path_for(self, install_root: str) -> str:
+        return f"{install_root.rstrip('/')}/{self.venv_dir_name}"
+
+    def token_path_for(self, install_root: str) -> str:
+        return f"{install_root.rstrip('/')}/{self.token_relative_path}"
+
+    def install_status_path_for(self, install_root: str) -> str:
+        return f"{install_root.rstrip('/')}/{self.install_status_relative_path}"
+
+
+@dataclass(frozen=True)
+class NeurochipLauncherRuntimeContract:
+    pynq: PynqLauncherRuntimeContract = field(default_factory=PynqLauncherRuntimeContract)
+    akida: AkidaLauncherRuntimeContract = field(
+        default_factory=AkidaLauncherRuntimeContract
+    )
+
+
+def _contract_string(value: Any, default: str) -> str:
+    normalized = str(value or "").strip()
+    return normalized or default
+
+
+def _contract_int(value: Any, default: int) -> int:
+    return value if isinstance(value, int) else default
+
+
+def _load_neurochip_launcher_runtime_contract() -> NeurochipLauncherRuntimeContract:
+    manifest = _read_json_file(MODULES_MANIFEST, [])
+    launcher_runtime: dict[str, Any] = {}
+    if isinstance(manifest, list):
+        for raw in manifest:
+            if (
+                isinstance(raw, dict)
+                and str(raw.get("id") or "").strip() == "Neurochip"
+                and isinstance(raw.get("launcherRuntime"), dict)
+            ):
+                launcher_runtime = raw["launcherRuntime"]
+                break
+
+    pynq_raw = launcher_runtime.get("pynq", {})
+    if not isinstance(pynq_raw, dict):
+        pynq_raw = {}
+    akida_raw = launcher_runtime.get("akida", {})
+    if not isinstance(akida_raw, dict):
+        akida_raw = {}
+
+    default_pynq = PynqLauncherRuntimeContract()
+    default_akida = AkidaLauncherRuntimeContract()
+    return NeurochipLauncherRuntimeContract(
+        pynq=PynqLauncherRuntimeContract(
+            runtime_port=_contract_int(
+                pynq_raw.get("runtimePort"),
+                default_pynq.runtime_port,
+            ),
+            ssh_port=_contract_int(pynq_raw.get("sshPort"), default_pynq.ssh_port),
+            default_username=_contract_string(
+                pynq_raw.get("defaultUsername"),
+                default_pynq.default_username,
+            ),
+            default_state=_contract_string(
+                pynq_raw.get("defaultState"),
+                default_pynq.default_state,
+            ),
+            default_auth_mode=_contract_string(
+                pynq_raw.get("defaultAuthMode"),
+                default_pynq.default_auth_mode,
+            ),
+            legacy_install_root=_contract_string(
+                pynq_raw.get("legacyInstallRoot"),
+                default_pynq.legacy_install_root,
+            ),
+            install_root_template=_contract_string(
+                pynq_raw.get("installRootTemplate"),
+                default_pynq.install_root_template,
+            ),
+            agent_venv_dir_name=_contract_string(
+                pynq_raw.get("agentVenvDirName"),
+                default_pynq.agent_venv_dir_name,
+            ),
+            runtime_venv_dir_name=_contract_string(
+                pynq_raw.get("runtimeVenvDirName"),
+                default_pynq.runtime_venv_dir_name,
+            ),
+            overlay_dir_name=_contract_string(
+                pynq_raw.get("overlayDirName"),
+                default_pynq.overlay_dir_name,
+            ),
+            service_name=_contract_string(
+                pynq_raw.get("serviceName"),
+                default_pynq.service_name,
+            ),
+            agent_executable_name=_contract_string(
+                pynq_raw.get("agentExecutableName"),
+                default_pynq.agent_executable_name,
+            ),
+            install_status_filename=_contract_string(
+                pynq_raw.get("installStatusFilename"),
+                default_pynq.install_status_filename,
+            ),
+            runtime_log_filename=_contract_string(
+                pynq_raw.get("runtimeLogFilename"),
+                default_pynq.runtime_log_filename,
+            ),
+            overlay_staging_subdir=_contract_string(
+                pynq_raw.get("overlayStagingSubdir"),
+                default_pynq.overlay_staging_subdir,
+            ),
+        ),
+        akida=AkidaLauncherRuntimeContract(
+            runtime_port=_contract_int(
+                akida_raw.get("runtimePort"),
+                default_akida.runtime_port,
+            ),
+            control_port=_contract_int(
+                akida_raw.get("controlPort"),
+                default_akida.control_port,
+            ),
+            ssh_port=_contract_int(
+                akida_raw.get("sshPort"),
+                default_akida.ssh_port,
+            ),
+            default_state=_contract_string(
+                akida_raw.get("defaultState"),
+                default_akida.default_state,
+            ),
+            default_auth_mode=_contract_string(
+                akida_raw.get("defaultAuthMode"),
+                default_akida.default_auth_mode,
+            ),
+            install_root=_contract_string(
+                akida_raw.get("installRoot"),
+                default_akida.install_root,
+            ),
+            service_user=_contract_string(
+                akida_raw.get("serviceUser"),
+                default_akida.service_user,
+            ),
+            venv_dir_name=_contract_string(
+                akida_raw.get("venvDirName"),
+                default_akida.venv_dir_name,
+            ),
+            runtime_service_name=_contract_string(
+                akida_raw.get("runtimeServiceName"),
+                default_akida.runtime_service_name,
+            ),
+            control_service_name=_contract_string(
+                akida_raw.get("controlServiceName"),
+                default_akida.control_service_name,
+            ),
+            token_relative_path=_contract_string(
+                akida_raw.get("tokenRelativePath"),
+                default_akida.token_relative_path,
+            ),
+            install_status_relative_path=_contract_string(
+                akida_raw.get("installStatusRelativePath"),
+                default_akida.install_status_relative_path,
+            ),
+        ),
+    )
+
+
+def _validate_pynq_overlay_manifest(payload: Any) -> None:
+    if not isinstance(payload, dict):
+        raise ValueError("manifest must be a JSON object")
+
+    expected = EXPECTED_PYNQ_OVERLAY_MANIFEST
+    for key in (
+        "overlay_id",
+        "overlay_version",
+        "target_part",
+        "max_neurons",
+        "max_synapses",
+        "max_populations",
+        "dma_ip_name",
+        "snn_ip_name",
+    ):
+        if payload.get(key) != expected[key]:
+            raise ValueError(f"{key} must be {expected[key]!r}")
+
+    supported_models = tuple(payload.get("supported_neuron_models") or ())
+    if supported_models != expected["supported_neuron_models"]:
+        raise ValueError(
+            "supported_neuron_models must match the fixed overlay-v1 contract"
+        )
+
+    supported_weight_bit_widths = tuple(payload.get("supported_weight_bit_widths") or ())
+    if supported_weight_bit_widths != expected["supported_weight_bit_widths"]:
+        raise ValueError(
+            "supported_weight_bit_widths must match the fixed overlay-v1 contract"
+        )
+
+    register_map = payload.get("register_map")
+    if not isinstance(register_map, dict):
+        raise ValueError("register_map must be an object")
+    if register_map.get("dma_channel") != payload.get("dma_ip_name"):
+        raise ValueError("register_map.dma_channel must match dma_ip_name")
+    if int(register_map.get("weight_base_offset", -1)) != expected["register_map"][
+        "weight_base_offset"
+    ]:
+        raise ValueError(
+            "register_map.weight_base_offset must match the fixed overlay-v1 contract"
+        )
+
+    weight_layout = payload.get("weight_layout")
+    if not isinstance(weight_layout, dict):
+        raise ValueError("weight_layout must be an object")
+    if int(weight_layout.get("base_offset", -1)) != int(
+        register_map.get("weight_base_offset", -1)
+    ):
+        raise ValueError(
+            "weight_layout.base_offset must match register_map.weight_base_offset"
+        )
+    if int(weight_layout.get("stride_bytes", -1)) != expected["weight_layout"][
+        "stride_bytes"
+    ]:
+        raise ValueError(
+            "weight_layout.stride_bytes must match overlay-v1 word-MMIO stride"
+        )
+    if int(weight_layout.get("max_entries", -1)) != expected["weight_layout"][
+        "max_entries"
+    ]:
+        raise ValueError("weight_layout.max_entries must match max_synapses")
+    if (
+        int(weight_layout["base_offset"])
+        + int(weight_layout["stride_bytes"]) * int(weight_layout["max_entries"])
+        > 0x10000
+    ):
+        raise ValueError("weight_layout exceeds the SNN IP MMIO window")
+
+    threshold_layout = payload.get("threshold_layout")
+    if not isinstance(threshold_layout, dict):
+        raise ValueError("threshold_layout must be an object")
+    for key, expected_value in expected["threshold_layout"].items():
+        if int(threshold_layout.get(key, -1)) != expected_value:
+            raise ValueError(f"threshold_layout.{key} must be {expected_value}")
+
+
+def _inspect_staged_pynq_overlay_package(staging_dir: Path) -> dict[str, Any]:
+    base_dir = staging_dir.resolve()
+    bitstream_path = base_dir / DEFAULT_STAGED_PYNQ_BITSTREAM_NAME
+    hwh_path = base_dir / DEFAULT_STAGED_PYNQ_HWH_NAME
+    manifest_path = base_dir / DEFAULT_STAGED_OVERLAY_MANIFEST
+
+    issues: list[str] = []
+    if not base_dir.exists():
+        issues.append(f"staged overlay package directory not found at {base_dir}")
+    if not bitstream_path.exists():
+        issues.append(f"missing staged overlay bitstream at {bitstream_path}")
+    if not hwh_path.exists():
+        issues.append(f"missing staged overlay hardware handoff file at {hwh_path}")
+
+    manifest_present = manifest_path.exists()
+    manifest_valid = True
+    if not manifest_present:
+        manifest_valid = False
+        issues.append(f"missing staged overlay manifest at {manifest_path}")
+    else:
+        try:
+            decoded = json.loads(manifest_path.read_text(encoding="utf-8"))
+            _validate_pynq_overlay_manifest(decoded)
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
+            manifest_valid = False
+            issues.append(f"overlay manifest is invalid: {exc}")
+
+    return {
+        "stagingDir": str(base_dir),
+        "bitstreamPath": str(bitstream_path),
+        "hwhPath": str(hwh_path),
+        "manifestPath": str(manifest_path),
+        "bitstreamExists": bitstream_path.exists(),
+        "hwhExists": hwh_path.exists(),
+        "manifestPresent": manifest_present,
+        "manifestValid": manifest_valid,
+        "ready": not issues,
+        "issues": issues,
+    }
 
 
 @dataclass(frozen=True)
@@ -389,14 +777,16 @@ def _status_name(index: int) -> str:
     return "notInstalled"
 
 
-def _normalize_pynq_board_state(value: Any) -> str:
-    candidate = str(value or DEFAULT_PYNQ_BOARD_STATE).strip().lower()
-    return candidate if candidate in PYNQ_BOARD_STATES else DEFAULT_PYNQ_BOARD_STATE
+def _normalize_pynq_board_state(value: Any, default_state: str) -> str:
+    candidate = str(value or default_state).strip().lower()
+    normalized_default = default_state.strip().lower() or "unpaired"
+    return candidate if candidate in PYNQ_BOARD_STATES else normalized_default
 
 
-def _normalize_akida_host_state(value: Any) -> str:
-    candidate = str(value or DEFAULT_AKIDA_HOST_STATE).strip().lower()
-    return candidate if candidate in AKIDA_HOST_STATES else DEFAULT_AKIDA_HOST_STATE
+def _normalize_akida_host_state(value: Any, default_state: str) -> str:
+    candidate = str(value or default_state).strip().lower()
+    normalized_default = default_state.strip().lower() or "unknown"
+    return candidate if candidate in AKIDA_HOST_STATES else normalized_default
 
 
 def _normalize_akida_runtime_mode(value: Any) -> str:
@@ -404,26 +794,43 @@ def _normalize_akida_runtime_mode(value: Any) -> str:
     return candidate if candidate in AKIDA_RUNTIME_MODES else "unknown"
 
 
-def _normalize_akida_host_auth_mode(value: Any) -> str:
-    candidate = str(value or DEFAULT_AKIDA_AUTH_MODE).strip().lower()
-    return candidate if candidate in AKIDA_HOST_AUTH_MODES else DEFAULT_AKIDA_AUTH_MODE
+def _normalize_akida_host_auth_mode(value: Any, default_auth_mode: str) -> str:
+    candidate = str(value or default_auth_mode).strip().lower()
+    normalized_default = default_auth_mode.strip().lower() or "password"
+    return candidate if candidate in AKIDA_HOST_AUTH_MODES else normalized_default
 
 
-def _normalize_auth_mode(value: Any) -> str:
-    candidate = str(value or DEFAULT_PYNQ_AUTH_MODE).strip().lower()
-    return candidate if candidate in {"password", "ssh_key"} else DEFAULT_PYNQ_AUTH_MODE
+def _normalize_auth_mode(value: Any, default_auth_mode: str) -> str:
+    candidate = str(value or default_auth_mode).strip().lower()
+    normalized_default = default_auth_mode.strip().lower() or "password"
+    return candidate if candidate in {"password", "ssh_key"} else normalized_default
 
 
-def _default_akida_base_url(host: str, port: int = DEFAULT_AKIDA_HOST_PORT) -> str:
-    return f"http://{host}:{port}"
+def _default_akida_base_url(host: str, port: int | None = None) -> str:
+    resolved_port = (
+        port
+        if port is not None
+        else _load_neurochip_launcher_runtime_contract().akida.runtime_port
+    )
+    return f"http://{host}:{resolved_port}"
 
 
-def _default_akida_control_url(host: str, port: int = DEFAULT_AKIDA_CONTROL_PORT) -> str:
-    return f"http://{host}:{port}"
+def _default_akida_control_url(host: str, port: int | None = None) -> str:
+    resolved_port = (
+        port
+        if port is not None
+        else _load_neurochip_launcher_runtime_contract().akida.control_port
+    )
+    return f"http://{host}:{resolved_port}"
 
 
-def _default_runtime_api_url(host: str, port: int = DEFAULT_PYNQ_BOARD_PORT) -> str:
-    return f"http://{host}:{port}"
+def _default_runtime_api_url(host: str, port: int | None = None) -> str:
+    resolved_port = (
+        port
+        if port is not None
+        else _load_neurochip_launcher_runtime_contract().pynq.runtime_port
+    )
+    return f"http://{host}:{resolved_port}"
 
 
 def _normalize_base_url(value: Any) -> str:
@@ -440,8 +847,9 @@ def _normalize_base_url(value: Any) -> str:
 def _normalize_runtime_api_url_override(
     host: str,
     raw: dict[str, Any],
+    runtime_port: int,
 ) -> str:
-    default_url = _default_runtime_api_url(host) if host else ""
+    default_url = _default_runtime_api_url(host, runtime_port) if host else ""
     explicit_override = raw.get("runtimeApiUrlOverride")
     if explicit_override is not None:
         override = str(explicit_override).strip()
@@ -453,20 +861,38 @@ def _normalize_runtime_api_url_override(
     return ""
 
 
-def _effective_runtime_api_url(host: str, runtime_api_url_override: str) -> str:
+def _effective_runtime_api_url(
+    host: str,
+    runtime_api_url_override: str,
+    runtime_port: int,
+) -> str:
     normalized_override = str(runtime_api_url_override or "").strip()
     if normalized_override:
         return normalized_override
     normalized_host = host.strip()
-    return _default_runtime_api_url(normalized_host) if normalized_host else ""
+    return (
+        _default_runtime_api_url(normalized_host, runtime_port)
+        if normalized_host
+        else ""
+    )
 
 
 def _pynq_user_space_upgrade_message(username: str) -> str:
-    normalized_username = username.strip() or DEFAULT_PYNQ_BOARD_USERNAME
+    contract = _load_neurochip_launcher_runtime_contract().pynq
+    normalized_username = username.strip() or contract.default_username
     return (
         "Runtime is installed in user space. "
         f"Enable passwordless sudo for '{normalized_username}', then re-run Provision "
         "Runtime to upgrade the board to systemd auto-start and launcher-managed restarts."
+    )
+
+
+def _akida_user_space_upgrade_message(username: str) -> str:
+    normalized_username = username.strip() or "the configured SSH user"
+    return (
+        "Runtime is installed in user space. "
+        f"Enable passwordless sudo for '{normalized_username}', then re-run Provision "
+        "Runtime to upgrade the host to systemd auto-start and launcher-managed restarts."
     )
 
 
@@ -495,72 +921,52 @@ def _resolve_pynq_preflight_timeout() -> float:
 
 
 def _default_pynq_remote_install_root(username: str) -> str:
-    normalized_username = username.strip() or DEFAULT_PYNQ_BOARD_USERNAME
-    return f"/home/{normalized_username}/.local/share/neurochip-pynq-agent"
-
-
-def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
-    host = str(raw.get("host") or "").strip()
-    port = raw.get("port", DEFAULT_AKIDA_HOST_PORT)
-    if not isinstance(port, int):
-        port = DEFAULT_AKIDA_HOST_PORT
-    base_url = _normalize_base_url(raw.get("baseUrl"))
-    if not base_url and host:
-        base_url = _default_akida_base_url(host, port)
-    parsed_base_url = urlparse(base_url) if base_url else None
-    if parsed_base_url is not None and parsed_base_url.hostname:
-        host = host or parsed_base_url.hostname
-        if not isinstance(raw.get("port"), int) and parsed_base_url.port is not None:
-            port = parsed_base_url.port
-
-    return {
-        "id": str(raw.get("id") or uuid4()),
-        "displayName": str(raw.get("displayName") or host or "Akida Host").strip(),
-        "host": host,
-        "port": port,
-        "baseUrl": base_url,
-        "credentialRef": str(raw.get("credentialRef") or "").strip(),
-        "state": _normalize_akida_host_state(raw.get("state")),
-        "lastPreflightStatus": str(raw.get("lastPreflightStatus") or "").strip(),
-        "lastPreflightMessage": str(raw.get("lastPreflightMessage") or "").strip(),
-        "lastSdkStatus": str(raw.get("lastSdkStatus") or "").strip(),
-        "lastRuntimeTarget": str(raw.get("lastRuntimeTarget") or "").strip(),
-        "lastStatus": raw.get("lastStatus")
-        if isinstance(raw.get("lastStatus"), dict)
-        else None,
-    }
+    return _load_neurochip_launcher_runtime_contract().pynq.install_root_for(username)
 
 
 def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
+    contract = _load_neurochip_launcher_runtime_contract().pynq
     host = str(raw.get("host", "")).strip()
-    runtime_api_url_override = _normalize_runtime_api_url_override(host, raw)
-    ssh_port = raw.get("sshPort", DEFAULT_PYNQ_BOARD_SSH_PORT)
+    runtime_api_url_override = _normalize_runtime_api_url_override(
+        host,
+        raw,
+        contract.runtime_port,
+    )
+    ssh_port = raw.get("sshPort", contract.ssh_port)
     if not isinstance(ssh_port, int):
-        ssh_port = DEFAULT_PYNQ_BOARD_SSH_PORT
+        ssh_port = contract.ssh_port
     username = (
-        str(raw.get("username") or DEFAULT_PYNQ_BOARD_USERNAME).strip()
-        or DEFAULT_PYNQ_BOARD_USERNAME
+        str(raw.get("username") or contract.default_username).strip()
+        or contract.default_username
     )
     remote_install_root = str(raw.get("remoteInstallRoot") or "").strip()
     if (
         not remote_install_root
-        or remote_install_root == LEGACY_PYNQ_REMOTE_INSTALL_ROOT
+        or remote_install_root == contract.legacy_install_root
     ):
-        remote_install_root = _default_pynq_remote_install_root(username)
+        remote_install_root = contract.install_root_for(username)
 
     remote_venv_path = str(raw.get("remoteVenvPath") or "").strip()
-    if not remote_venv_path or remote_venv_path == LEGACY_PYNQ_REMOTE_VENV_PATH:
-        remote_venv_path = f"{remote_install_root}/venv"
+    if not remote_venv_path or remote_venv_path == contract.legacy_venv_path():
+        remote_venv_path = contract.agent_venv_path_for(remote_install_root)
 
     remote_pynq_venv_path = str(raw.get("remotePynqVenvPath") or "").strip()
     if not remote_pynq_venv_path:
-        remote_pynq_venv_path = (
-            f"{remote_install_root}/{DEFAULT_PYNQ_REMOTE_PYNQ_VENV_DIRNAME}"
-        )
+        remote_pynq_venv_path = contract.runtime_venv_path_for(remote_install_root)
 
     remote_overlay_dir = str(raw.get("remoteOverlayDir") or "").strip()
-    if not remote_overlay_dir or remote_overlay_dir == LEGACY_PYNQ_REMOTE_OVERLAY_DIR:
-        remote_overlay_dir = f"{remote_install_root}/overlays"
+    if not remote_overlay_dir or remote_overlay_dir == contract.legacy_overlay_dir():
+        remote_overlay_dir = contract.overlay_dir_for(remote_install_root)
+
+    remote_install_status_path = str(raw.get("remoteInstallStatusPath") or "").strip()
+    if not remote_install_status_path:
+        remote_install_status_path = contract.install_status_path_for(
+            remote_install_root
+        )
+
+    remote_runtime_log_path = str(raw.get("remoteRuntimeLogPath") or "").strip()
+    if not remote_runtime_log_path:
+        remote_runtime_log_path = contract.runtime_log_path_for(remote_install_root)
 
     board = {
         "id": str(raw.get("id") or uuid4()),
@@ -568,14 +974,24 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
         "host": host,
         "sshPort": ssh_port,
         "username": username,
-        "authMode": _normalize_auth_mode(raw.get("authMode")),
+        "authMode": _normalize_auth_mode(
+            raw.get("authMode"),
+            contract.default_auth_mode,
+        ),
         "credentialRef": str(raw.get("credentialRef") or "").strip(),
         "password": str(raw.get("password") or ""),
         "sshKeyPath": str(raw.get("sshKeyPath") or "").strip(),
-        "runtimeApiUrl": _effective_runtime_api_url(host, runtime_api_url_override),
+        "runtimeApiUrl": _effective_runtime_api_url(
+            host,
+            runtime_api_url_override,
+            contract.runtime_port,
+        ),
         "runtimeApiUrlOverride": runtime_api_url_override,
         "overlayVersion": str(raw.get("overlayVersion") or "").strip(),
-        "state": _normalize_pynq_board_state(raw.get("state")),
+        "state": _normalize_pynq_board_state(
+            raw.get("state"),
+            contract.default_state,
+        ),
         "lastPreflightStatus": str(raw.get("lastPreflightStatus") or "").strip(),
         "lastPreflightMessage": str(raw.get("lastPreflightMessage") or "").strip(),
         "lastRuntimeMode": str(raw.get("lastRuntimeMode") or "").strip(),
@@ -586,9 +1002,15 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
         "remoteVenvPath": remote_venv_path,
         "remotePynqVenvPath": remote_pynq_venv_path,
         "remoteOverlayDir": remote_overlay_dir,
+        "remoteInstallStatusPath": remote_install_status_path,
+        "remoteRuntimeLogPath": remote_runtime_log_path,
         "remoteServiceName": str(
-            raw.get("remoteServiceName") or "neurochip-pynq-agent"
+            raw.get("remoteServiceName") or contract.service_name
         ).strip(),
+        "agentExecutableName": str(
+            raw.get("agentExecutableName") or contract.agent_executable_name
+        ).strip(),
+        "isDefault": bool(raw.get("isDefault")),
     }
     return board
 
@@ -601,15 +1023,10 @@ def _serialize_pynq_board(board: dict[str, Any]) -> dict[str, Any]:
     payload["runtimeApiUrl"] = _effective_runtime_api_url(
         str(payload.get("host") or "").strip(),
         str(payload.get("runtimeApiUrlOverride") or "").strip(),
+        _load_neurochip_launcher_runtime_contract().pynq.runtime_port,
     )
     payload.pop("password", None)
     payload["hasPassword"] = bool(board.get("password"))
-    return payload
-
-
-def _serialize_akida_host(host: dict[str, Any]) -> dict[str, Any]:
-    payload = dict(host)
-    payload["baseUrl"] = _resolved_akida_base_url(host)
     return payload
 
 
@@ -624,36 +1041,89 @@ def _ssh_failure_message(stdout_lines: list[str], stderr_lines: list[str]) -> st
     return "ssh command failed"
 
 
+def _extract_install_status_from_output(output: str) -> dict[str, Any] | None:
+    lines = output.splitlines()
+    decoder = json.JSONDecoder()
+    for index in range(len(lines) - 1, -1, -1):
+        line = lines[index]
+        if not line.startswith(INSTALL_STATUS_SENTINEL):
+            continue
+        raw_payload = line.removeprefix(INSTALL_STATUS_SENTINEL).strip()
+        if not raw_payload:
+            continue
+        candidate = "\n".join([raw_payload, *lines[index + 1 :]]).strip()
+        payload, _end = decoder.raw_decode(candidate)
+        if not isinstance(payload, dict):
+            raise RuntimeError("Install status sentinel must decode to an object")
+        return payload
+    return None
+
+
+def _build_password_askpass_env(
+    *,
+    password: str,
+    env_key: str,
+    prefix: str,
+) -> tuple[dict[str, str], Callable[[], None]]:
+    askpass_handle = tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        prefix=prefix,
+        delete=False,
+    )
+    askpass_handle.write("#!/bin/sh\n")
+    askpass_handle.write(f"printf '%s\\n' \"${env_key}\"\n")
+    askpass_handle.close()
+    os.chmod(askpass_handle.name, 0o700)
+
+    env = os.environ.copy()
+    env[env_key] = password
+    env["SSH_ASKPASS"] = askpass_handle.name
+    env["SSH_ASKPASS_REQUIRE"] = "force"
+    env.setdefault("DISPLAY", "nmtk-launcher-control:0")
+
+    def _cleanup_askpass() -> None:
+        try:
+            os.unlink(askpass_handle.name)
+        except FileNotFoundError:
+            return None
+
+    return env, _cleanup_askpass
+
+
 def _resolved_pynq_runtime_api_url(board: dict[str, Any]) -> str:
     return _effective_runtime_api_url(
         str(board.get("host") or "").strip(),
         str(board.get("runtimeApiUrlOverride") or "").strip(),
+        _load_neurochip_launcher_runtime_contract().pynq.runtime_port,
     )
 
 
 def _resolved_akida_base_url(host: dict[str, Any]) -> str:
+    contract = _load_neurochip_launcher_runtime_contract().akida
     base_url = _normalize_base_url(host.get("baseUrl"))
     if base_url:
         return base_url
     normalized_host = str(host.get("host") or "").strip()
     if not normalized_host:
         return ""
-    port = host.get("port", DEFAULT_AKIDA_HOST_PORT)
+    port = host.get("port", contract.runtime_port)
     if not isinstance(port, int):
-        port = DEFAULT_AKIDA_HOST_PORT
+        port = contract.runtime_port
     return _default_akida_base_url(normalized_host, port)
 
 
 def _resolved_akida_control_api_url(host: dict[str, Any]) -> str:
+    contract = _load_neurochip_launcher_runtime_contract().akida
     control_api_url = _normalize_base_url(host.get("controlApiUrl"))
     if control_api_url:
         return control_api_url
     normalized_host = str(host.get("host") or "").strip()
     if not normalized_host:
         return ""
-    port = host.get("controlPort", DEFAULT_AKIDA_CONTROL_PORT)
+    port = host.get("controlPort", contract.control_port)
     if not isinstance(port, int):
-        port = DEFAULT_AKIDA_CONTROL_PORT
+        port = contract.control_port
     return _default_akida_control_url(normalized_host, port)
 
 
@@ -736,6 +1206,18 @@ def _akida_host_state_for_status(
 def _module_root(module: dict[str, Any]) -> Path:
     install_path = module.get("installPath") or module.get("directory") or ""
     return (REPO_ROOT / install_path).resolve()
+
+
+def _neurochip_module_root() -> Path:
+    manifest = _read_json_file(MODULES_MANIFEST, [])
+    if isinstance(manifest, list):
+        for raw in manifest:
+            if (
+                isinstance(raw, dict)
+                and str(raw.get("id") or "").strip() == "Neurochip"
+            ):
+                return _module_root(raw)
+    return (REPO_ROOT / "Neurochip").resolve()
 
 
 def _module_install_dir(module: dict[str, Any]) -> Path:
@@ -968,19 +1450,20 @@ def _default_akida_host_display_name(runtime_api_url: str) -> str:
 
 
 def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
+    contract = _load_neurochip_launcher_runtime_contract().akida
     runtime_api_url = _normalize_base_url(raw.get("runtimeApiUrl"))
     control_api_url = _normalize_base_url(raw.get("controlApiUrl"))
     base_url = _normalize_base_url(raw.get("baseUrl"))
     host = str(raw.get("host") or "").strip()
-    port = raw.get("port", DEFAULT_AKIDA_HOST_PORT)
+    port = raw.get("port", contract.runtime_port)
     if not isinstance(port, int):
-        port = DEFAULT_AKIDA_HOST_PORT
-    ssh_port = raw.get("sshPort", DEFAULT_AKIDA_HOST_SSH_PORT)
+        port = contract.runtime_port
+    ssh_port = raw.get("sshPort", contract.ssh_port)
     if not isinstance(ssh_port, int):
-        ssh_port = DEFAULT_AKIDA_HOST_SSH_PORT
-    control_port = raw.get("controlPort", DEFAULT_AKIDA_CONTROL_PORT)
+        ssh_port = contract.ssh_port
+    control_port = raw.get("controlPort", contract.control_port)
     if not isinstance(control_port, int):
-        control_port = DEFAULT_AKIDA_CONTROL_PORT
+        control_port = contract.control_port
     if not base_url and runtime_api_url:
         base_url = runtime_api_url
     if not runtime_api_url and base_url:
@@ -998,6 +1481,9 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         runtime_api_url = runtime_api_url or base_url
     if not control_api_url and host:
         control_api_url = _default_akida_control_url(host, control_port)
+    remote_install_root = str(
+        raw.get("remoteInstallRoot") or contract.install_root
+    ).strip()
     capability_snapshot = _normalize_akida_capability_snapshot(
         raw.get("capabilitySnapshot", raw.get("capability_snapshot"))
     )
@@ -1005,6 +1491,13 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         raw.get("runtimeMode")
         or (capability_snapshot or {}).get("recommendedRuntime")
     )
+    password = str(raw.get("password") or "")
+    auth_mode = _normalize_akida_host_auth_mode(
+        raw.get("authMode"),
+        contract.default_auth_mode,
+    )
+    if password and auth_mode not in {"password", "ssh_key"}:
+        auth_mode = "password"
     return {
         "id": str(raw.get("id") or uuid4()),
         "displayName": str(
@@ -1019,30 +1512,35 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         "baseUrl": base_url,
         "runtimeApiUrl": runtime_api_url,
         "controlApiUrl": control_api_url,
-        "authMode": _normalize_akida_host_auth_mode(raw.get("authMode")),
+        "authMode": auth_mode,
         "credentialRef": str(raw.get("credentialRef") or "").strip(),
-        "password": str(raw.get("password") or ""),
+        "password": password,
         "sshKeyPath": str(raw.get("sshKeyPath") or "").strip(),
-        "remoteInstallRoot": str(
-            raw.get("remoteInstallRoot") or DEFAULT_AKIDA_REMOTE_INSTALL_ROOT
-        ).strip(),
+        "remoteInstallRoot": remote_install_root,
         "remoteVenvPath": str(
-            raw.get("remoteVenvPath") or DEFAULT_AKIDA_REMOTE_VENV_PATH
+            raw.get("remoteVenvPath") or contract.venv_path_for(remote_install_root)
         ).strip(),
-        "serviceUser": str(
-            raw.get("serviceUser") or DEFAULT_AKIDA_SERVICE_USER
-        ).strip(),
+        "serviceUser": str(raw.get("serviceUser") or contract.service_user).strip(),
         "runtimeServiceName": str(
-            raw.get("runtimeServiceName") or DEFAULT_AKIDA_RUNTIME_SERVICE_NAME
+            raw.get("runtimeServiceName") or contract.runtime_service_name
         ).strip(),
         "controlServiceName": str(
-            raw.get("controlServiceName") or DEFAULT_AKIDA_CONTROL_SERVICE_NAME
+            raw.get("controlServiceName") or contract.control_service_name
         ).strip(),
-        "tokenPath": str(raw.get("tokenPath") or DEFAULT_AKIDA_TOKEN_PATH).strip(),
+        "tokenPath": str(
+            raw.get("tokenPath") or contract.token_path_for(remote_install_root)
+        ).strip(),
+        "installStatusPath": str(
+            raw.get("installStatusPath")
+            or contract.install_status_path_for(remote_install_root)
+        ).strip(),
         "hostOs": str(raw.get("hostOs") or "").strip(),
         "pythonVersion": str(raw.get("pythonVersion") or "").strip(),
         "runtimeMode": runtime_mode,
-        "state": _normalize_akida_host_state(raw.get("state")),
+        "state": _normalize_akida_host_state(
+            raw.get("state"),
+            contract.default_state,
+        ),
         "lastPreflightStatus": str(raw.get("lastPreflightStatus") or "").strip(),
         "lastPreflightMessage": str(raw.get("lastPreflightMessage") or "").strip(),
         "lastSdkStatus": str(raw.get("lastSdkStatus") or "").strip(),
@@ -1056,6 +1554,7 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         if isinstance(raw.get("lastInstallStatus"), dict)
         else None,
         "capabilitySnapshot": capability_snapshot,
+        "isDefault": bool(raw.get("isDefault")),
     }
 
 
@@ -1114,8 +1613,8 @@ def _version_matches_range(version: str, version_range: str) -> bool:
 
 
 def _uvicorn_host() -> str:
-    host = os.environ.get("NMTK_UVICORN_HOST", "127.0.0.1").strip()
-    return host or "127.0.0.1"
+    host = os.environ.get("NMTK_UVICORN_HOST", "0.0.0.0").strip()
+    return host or "0.0.0.0"
 
 
 def _mujoco_available() -> bool:
@@ -1324,6 +1823,127 @@ def _flutter_sdk_check() -> dict[str, Any]:
     }
 
 
+def _suite_api_bind_host() -> str:
+    return str(os.environ.get("NMTK_UVICORN_HOST") or "127.0.0.1").strip() or "127.0.0.1"
+
+
+def _suite_api_base_url() -> str:
+    return f"http://127.0.0.1:{DEFAULT_SUITE_API_PORT}"
+
+
+def _suite_api_health_url() -> str:
+    return f"{_suite_api_base_url()}/api/suite/health"
+
+
+def _running_in_bundled_mode() -> bool:
+    return str(os.environ.get("NMTK_BUNDLED_MODE") or "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+
+
+def _default_user_data_dir() -> Path:
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "NeuroToolkit"
+    if os.name == "nt":
+        base = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+        if base:
+            return Path(base) / "NeuroToolkit"
+        return Path.home() / "AppData" / "Local" / "NeuroToolkit"
+    xdg_data_home = str(os.environ.get("XDG_DATA_HOME") or "").strip()
+    if xdg_data_home:
+        return Path(xdg_data_home) / "NeuroToolkit"
+    return Path.home() / ".local" / "share" / "NeuroToolkit"
+
+
+def _suite_api_env_dir() -> Path:
+    explicit = str(os.environ.get("NMTK_SUITE_API_ENV_DIR") or "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
+    if _running_in_bundled_mode():
+        return _default_user_data_dir() / "suite_api_env"
+    return SUITE_API_ENV_ROOT
+
+
+def _suite_api_env_python(env_dir: Path) -> Path:
+    if os.name == "nt":
+        return env_dir / "venv" / "Scripts" / "python.exe"
+    return env_dir / "venv" / "bin" / "python"
+
+
+def _suite_api_env_stamp(env_dir: Path) -> Path:
+    return env_dir / "install-fingerprint.json"
+
+
+def _suite_api_dev_install_paths() -> tuple[Path, ...]:
+    return (
+        REPO_ROOT / "suite_api",
+        REPO_ROOT / "neurocnl",
+        REPO_ROOT / "Neuro-Dream-Hand",
+        REPO_ROOT / "Neurohub",
+        REPO_ROOT / "Neurochip",
+        REPO_ROOT / "Neurobench" / "neurobench",
+        REPO_ROOT / "Neurosense",
+    )
+
+
+def _suite_api_env_fingerprint_files() -> tuple[Path, ...]:
+    return (
+        REPO_ROOT / "suite_api" / "pyproject.toml",
+        REPO_ROOT / "neurocnl" / "pyproject.toml",
+        REPO_ROOT / "Neuro-Dream-Hand" / "pyproject.toml",
+        REPO_ROOT / "Neurohub" / "pyproject.toml",
+        REPO_ROOT / "Neurochip" / "pyproject.toml",
+        REPO_ROOT / "Neurobench" / "neurobench" / "pyproject.toml",
+        REPO_ROOT / "Neurosense" / "pyproject.toml",
+    )
+
+
+def _suite_api_env_fingerprint() -> str:
+    payload = {
+        str(path.relative_to(REPO_ROOT)): _hash_file(path)
+        for path in _suite_api_env_fingerprint_files()
+        if path.exists()
+    }
+    return hashlib.sha256(
+        json.dumps(payload, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+
+
+def _suite_api_pythonpath_entries() -> list[str]:
+    entries = [
+        str(REPO_ROOT),
+        str(REPO_ROOT / "Neurohub"),
+        str(REPO_ROOT / "Neurosense"),
+        str(REPO_ROOT / "Neurochip"),
+        str(REPO_ROOT / "Neurobench" / "neurobench"),
+    ]
+    return [entry for entry in entries if Path(entry).exists()]
+
+
+def _suite_api_pythonpath() -> str:
+    entries = _suite_api_pythonpath_entries()
+    existing = str(os.environ.get("PYTHONPATH") or "").strip()
+    if existing:
+        entries.append(existing)
+    return os.pathsep.join(entries)
+
+
+def _suite_api_health_probe() -> tuple[bool, str | None]:
+    try:
+        with urllib.request.urlopen(_suite_api_health_url(), timeout=2.0) as response:
+            body = response.read().decode("utf-8", errors="replace")
+            if int(response.status) == HTTPStatus.OK:
+                return True, body
+            return False, body or f"Unexpected status {response.status}"
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        return False, body or f"HTTP {exc.code}"
+    except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
+        return False, str(exc)
+
+
 def _global_preflight_checks() -> list[dict[str, Any]]:
     return [_flutter_sdk_check()]
 
@@ -1409,11 +2029,24 @@ class LauncherControlState:
     def __init__(
         self,
         remote_version_resolver: Callable[[dict[str, Any]], str | None] | None = None,
+        *,
+        manage_suite_api: bool = False,
     ) -> None:
         self._lock = threading.RLock()
         self._terminal_lock = threading.Lock()
         self._remote_version_resolver = (
             remote_version_resolver or _resolve_remote_module_version
+        )
+        self._manage_suite_api = manage_suite_api
+        self._suite_api_status = (
+            SUITE_API_STATUS_STARTING
+            if manage_suite_api
+            else SUITE_API_STATUS_DISABLED
+        )
+        self._suite_api_message: str | None = None
+        self._suite_api_process: subprocess.Popen[str] | None = None
+        self._suite_api_logs: collections.deque[str] = collections.deque(
+            maxlen=LOG_LINE_LIMIT
         )
         self._modules = self._load_modules()
         self._processes: dict[str, ManagedProcess] = {}
@@ -1430,6 +2063,12 @@ class LauncherControlState:
             daemon=True,
         )
         self._health_thread.start()
+        if self._manage_suite_api:
+            threading.Thread(
+                target=self._ensure_suite_api_ready,
+                name="launcher-control-suite-api",
+                daemon=True,
+            ).start()
 
     def shutdown(self) -> None:
         self._shutdown.set()
@@ -1437,6 +2076,183 @@ class LauncherControlState:
             module_ids = list(self._processes.keys())
         for module_id in module_ids:
             self.stop_module(module_id)
+        if self._suite_api_process is not None and self._suite_api_process.poll() is None:
+            self._suite_api_process.terminate()
+            try:
+                self._suite_api_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._suite_api_process.kill()
+                self._suite_api_process.wait(timeout=5)
+
+    def _set_suite_api_state(self, status: str, message: str | None = None) -> None:
+        with self._lock:
+            self._suite_api_status = status
+            self._suite_api_message = message
+
+    def _suite_api_ready_result(self) -> PreflightResult:
+        if not self._manage_suite_api:
+            return PreflightResult(status=PREFLIGHT_OK)
+        if self._suite_api_status == SUITE_API_STATUS_READY:
+            return PreflightResult(status=PREFLIGHT_OK, message="Managed by suite_api")
+        if self._suite_api_status == SUITE_API_STATUS_STARTING:
+            return PreflightResult(
+                status=PREFLIGHT_FAILED,
+                message=self._suite_api_message
+                or "suite_api is still starting; wait for the control plane to finish booting",
+            )
+        return PreflightResult(
+            status=PREFLIGHT_FAILED,
+            message=self._suite_api_message or "suite_api is unavailable",
+        )
+
+    def _suite_api_python(self) -> str:
+        if _running_in_bundled_mode():
+            return sys.executable
+
+        env_dir = _suite_api_env_dir()
+        venv_dir = env_dir / "venv"
+        venv_python = _suite_api_env_python(env_dir)
+        fingerprint = _suite_api_env_fingerprint()
+        stamp_path = _suite_api_env_stamp(env_dir)
+        saved_fingerprint = ""
+        if stamp_path.exists():
+            try:
+                saved_fingerprint = str(
+                    json.loads(stamp_path.read_text(encoding="utf-8")).get("fingerprint")
+                    or ""
+                )
+            except (json.JSONDecodeError, OSError):
+                saved_fingerprint = ""
+
+        env_dir.mkdir(parents=True, exist_ok=True)
+        if not venv_python.exists():
+            result = subprocess.run(
+                [sys.executable, "-m", "venv", str(venv_dir)],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(
+                    result.stderr.strip()
+                    or result.stdout.strip()
+                    or "Failed to create suite_api virtual environment"
+                )
+
+        if saved_fingerprint != fingerprint:
+            for install_path in _suite_api_dev_install_paths():
+                if not install_path.exists():
+                    raise RuntimeError(
+                        f"suite_api dependency checkout not found: {install_path}"
+                    )
+                result = subprocess.run(
+                    [str(venv_python), "-m", "pip", "install", "-e", str(install_path)],
+                    cwd=REPO_ROOT,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if result.returncode != 0:
+                    raise RuntimeError(
+                        result.stderr.strip()
+                        or result.stdout.strip()
+                        or f"Failed to install {install_path}"
+                    )
+            stamp_path.write_text(
+                json.dumps({"fingerprint": fingerprint}, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+
+        return str(venv_python)
+
+    def _suite_api_environment(self) -> dict[str, str]:
+        environment = dict(os.environ)
+        environment["PYTHONPATH"] = _suite_api_pythonpath()
+        return environment
+
+    def _stream_suite_api_logs(self, process: subprocess.Popen[str]) -> None:
+        if process.stdout is None:
+            return
+
+        def _pump() -> None:
+            assert process.stdout is not None
+            for line in process.stdout:
+                message = line.rstrip()
+                if not message:
+                    continue
+                self._suite_api_logs.append(message)
+                with self._terminal_lock:
+                    print(f"[suite_api] {message}")
+
+        threading.Thread(
+            target=_pump,
+            name="suite-api-stdout",
+            daemon=True,
+        ).start()
+
+    def _ensure_suite_api_ready(self) -> None:
+        if not self._manage_suite_api or self._shutdown.is_set():
+            return
+
+        ok, _message = _suite_api_health_probe()
+        if ok:
+            self._set_suite_api_state(SUITE_API_STATUS_READY, "Managed by suite_api")
+            return
+
+        self._set_suite_api_state(
+            SUITE_API_STATUS_STARTING,
+            "Starting suite_api and provisioning its runtime environment",
+        )
+        try:
+            python_path = self._suite_api_python()
+        except RuntimeError as exc:
+            self._set_suite_api_state(SUITE_API_STATUS_PREFLIGHT_FAILED, str(exc))
+            return
+
+        process = subprocess.Popen(
+            [
+                python_path,
+                "-m",
+                "uvicorn",
+                "suite_api.main:app",
+                "--host",
+                _suite_api_bind_host(),
+                "--port",
+                str(DEFAULT_SUITE_API_PORT),
+                "--log-level",
+                str(self._settings["logLevel"]),
+            ],
+            cwd=REPO_ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            bufsize=1,
+            env=self._suite_api_environment(),
+        )
+        self._suite_api_process = process
+        self._stream_suite_api_logs(process)
+
+        deadline = time.monotonic() + SUITE_API_STARTUP_TIMEOUT_SECONDS
+        while time.monotonic() < deadline and not self._shutdown.is_set():
+            ok, message = _suite_api_health_probe()
+            if ok:
+                self._set_suite_api_state(SUITE_API_STATUS_READY, "Managed by suite_api")
+                return
+            if process.poll() is not None:
+                startup_logs = "\n".join(self._suite_api_logs).strip()
+                self._set_suite_api_state(
+                    SUITE_API_STATUS_PREFLIGHT_FAILED,
+                    startup_logs or message or f"suite_api exited with code {process.returncode}",
+                )
+                return
+            time.sleep(0.5)
+
+        self._set_suite_api_state(
+            SUITE_API_STATUS_PREFLIGHT_FAILED,
+            f"Timed out waiting for suite_api health at {_suite_api_health_url()}",
+        )
 
     def _load_modules(self) -> dict[str, dict[str, Any]]:
         manifest = _read_json_file(MODULES_MANIFEST, [])
@@ -1606,7 +2422,9 @@ class LauncherControlState:
         }
 
     def _normalize_workspace_session(self, payload: dict[str, Any]) -> dict[str, Any]:
-        module_id = str(payload.get("moduleId") or "").strip()
+        module_id = self._canonicalize_workspace_module_id(
+            str(payload.get("moduleId") or "").strip()
+        )
         if not module_id:
             raise ValueError("Workspace session moduleId is required")
         if module_id not in self._modules:
@@ -1627,6 +2445,7 @@ class LauncherControlState:
         deep_link = payload.get("deepLink")
         if deep_link is not None:
             deep_link = str(deep_link).strip() or None
+        deep_link = self._canonicalize_workspace_deep_link(module_id, deep_link)
         restore_state = payload.get("restoreState")
         if not isinstance(restore_state, dict):
             restore_state = {}
@@ -1637,6 +2456,31 @@ class LauncherControlState:
             "restoreState": restore_state,
             "readinessState": readiness_state,
         }
+
+    def _canonicalize_workspace_module_id(self, module_id: str) -> str:
+        if module_id == "Neurosim" and "neurocnl" in self._modules:
+            return "neurocnl"
+        return module_id
+
+    def _canonicalize_workspace_deep_link(
+        self, module_id: str, deep_link: str | None
+    ) -> str | None:
+        if module_id != "neurocnl":
+            return deep_link
+        if deep_link is None:
+            return deep_link
+        uri = urlparse(deep_link)
+        if uri.path.startswith("/canvas"):
+            return deep_link
+        if uri.path in {"/", ""}:
+            rewritten_path = "/canvas"
+        elif uri.path.startswith("/projects") or uri.path.startswith("/sweep") or uri.path.startswith(
+            "/export"
+        ):
+            rewritten_path = f"/canvas{uri.path}"
+        else:
+            return deep_link
+        return urlunparse(uri._replace(path=rewritten_path))
 
     def _dedupe_workspace_sessions(
         self, sessions: list[dict[str, Any]]
@@ -1750,6 +2594,8 @@ class LauncherControlState:
                 "logLevel": self._settings["logLevel"],
                 "mujocoAvailable": self._settings["mujocoAvailable"],
                 "pythonAvailable": self._settings["pythonAvailable"],
+                "suiteApiStatus": self._suite_api_status,
+                "suiteApiMessage": self._suite_api_message,
                 "pynqBoards": [
                     _serialize_pynq_board(board)
                     for board in self._settings["pynqBoards"]
@@ -1803,6 +2649,9 @@ class LauncherControlState:
             hosts = self._settings["akidaHosts"]
             if any(existing["id"] == host["id"] for existing in hosts):
                 raise ValueError(f"Akida host '{host['id']}' already exists")
+            if host.get("isDefault"):
+                for existing in hosts:
+                    existing["isDefault"] = False
             hosts.append(host)
             if not self._settings.get("selectedAkidaHostId"):
                 self._settings["selectedAkidaHostId"] = host["id"]
@@ -1815,6 +2664,10 @@ class LauncherControlState:
         with self._lock:
             host = self._get_akida_host(host_id)
             normalized = self._normalize_updated_akida_host(host, {"id": host_id, **payload})
+            if normalized.get("isDefault"):
+                for existing in self._settings.get("akidaHosts", []):
+                    if existing["id"] != host_id:
+                        existing["isDefault"] = False
             host.clear()
             host.update(normalized)
             self._persist_settings()
@@ -1851,6 +2704,9 @@ class LauncherControlState:
             boards = self._settings["pynqBoards"]
             if any(existing["id"] == board["id"] for existing in boards):
                 raise ValueError(f"PYNQ board '{board['id']}' already exists")
+            if board.get("isDefault"):
+                for existing in boards:
+                    existing["isDefault"] = False
             boards.append(board)
             self._persist_settings()
             return _serialize_pynq_board(board)
@@ -1863,6 +2719,10 @@ class LauncherControlState:
             normalized = self._normalize_updated_pynq_board(
                 board, {"id": board_id, **payload}
             )
+            if normalized.get("isDefault"):
+                for existing in self._settings.get("pynqBoards", []):
+                    if existing["id"] != board_id:
+                        existing["isDefault"] = False
             board.clear()
             board.update(normalized)
             self._persist_settings()
@@ -1933,6 +2793,10 @@ class LauncherControlState:
     ) -> dict[str, Any]:
         merged = dict(host)
         merged.update(updates)
+        if "password" in updates and not str(updates.get("password") or ""):
+            merged["password"] = str(host.get("password") or "")
+        if str(merged.get("password") or "") and "authMode" not in updates:
+            merged["authMode"] = "password"
         if "baseUrl" in updates and "runtimeApiUrl" not in updates:
             merged.pop("runtimeApiUrl", None)
         if "baseUrl" in updates and "port" not in updates:
@@ -1954,46 +2818,25 @@ class LauncherControlState:
         *,
         copy_mode: bool = False,
     ) -> tuple[list[str], dict[str, str] | None, Callable[[], None] | None]:
+        prefix: list[str] = []
         env: dict[str, str] | None = None
         cleanup: Callable[[], None] | None = None
-        prefix: list[str] = []
         auth_mode = str(board.get("authMode", DEFAULT_PYNQ_AUTH_MODE))
         if auth_mode == "password":
             password = str(board.get("password") or "")
             if not password:
-                raise RuntimeError("Password authentication requires a stored password")
+                raise RuntimeError(
+                    "No SSH password is configured for this PYNQ board"
+                )
             sshpass = shutil.which("sshpass")
             if sshpass is not None:
                 prefix.extend([sshpass, "-p", password])
             else:
-                self._emit_pynq_terminal_log(
-                    board,
-                    "sshpass not found on host; falling back to SSH_ASKPASS for password authentication",
-                )
-                askpass_handle = tempfile.NamedTemporaryFile(
-                    mode="w",
-                    encoding="utf-8",
+                env, cleanup = _build_password_askpass_env(
+                    password=password,
+                    env_key="NMTK_PYNQ_PASSWORD",
                     prefix="nmtk-pynq-askpass-",
-                    delete=False,
                 )
-                askpass_handle.write("#!/bin/sh\n")
-                askpass_handle.write("printf '%s\\n' \"$NMTK_PYNQ_PASSWORD\"\n")
-                askpass_handle.close()
-                os.chmod(askpass_handle.name, 0o700)
-
-                env = os.environ.copy()
-                env["NMTK_PYNQ_PASSWORD"] = password
-                env["SSH_ASKPASS"] = askpass_handle.name
-                env["SSH_ASKPASS_REQUIRE"] = "force"
-                env.setdefault("DISPLAY", "nmtk-launcher-control:0")
-
-                def _cleanup_askpass() -> None:
-                    try:
-                        os.unlink(askpass_handle.name)
-                    except FileNotFoundError:
-                        return None
-
-                cleanup = _cleanup_askpass
         command = ["scp"] if copy_mode else ["ssh"]
         port_flag = "-P" if copy_mode else "-p"
         command.extend(
@@ -2003,7 +2846,10 @@ class LauncherControlState:
                 "-o",
                 "UserKnownHostsFile=/dev/null",
                 port_flag,
-                str(board.get("sshPort", DEFAULT_PYNQ_BOARD_SSH_PORT)),
+                str(
+                    board.get("sshPort")
+                    or _load_neurochip_launcher_runtime_contract().pynq.ssh_port
+                ),
             ]
         )
         if auth_mode == "password":
@@ -2036,6 +2882,7 @@ class LauncherControlState:
                 stderr=subprocess.PIPE,
                 text=True,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
             stdout_lines: list[str] = []
             stderr_lines: list[str] = []
@@ -2075,7 +2922,12 @@ class LauncherControlState:
         return "\n".join(stdout_lines).strip()
 
     def _remote_pynq_install_status_path(self, board: dict[str, Any]) -> str:
-        return f"{board['remoteInstallRoot']}/install-status.json"
+        return str(
+            board.get("remoteInstallStatusPath")
+            or _load_neurochip_launcher_runtime_contract().pynq.install_status_path_for(
+                str(board["remoteInstallRoot"])
+            )
+        )
 
     def _read_remote_pynq_install_status(self, board: dict[str, Any]) -> dict[str, Any]:
         raw = self._run_ssh(
@@ -2142,7 +2994,10 @@ class LauncherControlState:
     ) -> None:
         runtime_log_path = str(
             install_status.get("runtimeLogPath")
-            or f"{board['remoteInstallRoot']}/runtime.log"
+            or board.get("remoteRuntimeLogPath")
+            or _load_neurochip_launcher_runtime_contract().pynq.runtime_log_path_for(
+                str(board["remoteInstallRoot"])
+            )
         )
         self._emit_pynq_terminal_log(
             board, f"fetching last {lines} lines of {runtime_log_path}"
@@ -2170,17 +3025,10 @@ class LauncherControlState:
         install_status_path: str,
         overlay_dir: str,
         runtime_log_path: str,
+        agent_executable_name: str,
     ) -> str:
-        neurochip_root = REPO_ROOT / "Neurochip"
-        if not (neurochip_root / "neurochip").exists():
-            neurochip_root = Path(__file__).resolve().parents[2] / "Neurochip"
-        neurochip_package_root = str(neurochip_root)
-        if neurochip_package_root not in sys.path:
-            sys.path.insert(0, neurochip_package_root)
-        from neurochip.provisioning import build_pynq_user_space_agent_launch_command
-
         return build_pynq_user_space_agent_launch_command(
-            agent_executable=f"{agent_venv_path}/bin/neurochip-pynq-agent",
+            agent_executable=f"{agent_venv_path}/bin/{agent_executable_name}",
             pynq_python_path=f"{pynq_venv_path}/bin/python",
             install_status_path=install_status_path,
             overlay_dir=overlay_dir,
@@ -2215,6 +3063,7 @@ class LauncherControlState:
                 timeout=ssh_timeout,
                 check=False,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
             if result.stdout.strip():
                 self._emit_pynq_terminal_log(board, result.stdout.strip())
@@ -2263,10 +3112,17 @@ class LauncherControlState:
         )
         runtime_log_path = str(
             install_status.get("runtimeLogPath")
-            or f"{board['remoteInstallRoot']}/runtime.log"
+            or board.get("remoteRuntimeLogPath")
+            or _load_neurochip_launcher_runtime_contract().pynq.runtime_log_path_for(
+                str(board["remoteInstallRoot"])
+            )
         )
         install_status_path = self._remote_pynq_install_status_path(board)
         overlay_dir = str(board["remoteOverlayDir"])
+        agent_executable_name = str(
+            board.get("agentExecutableName")
+            or _load_neurochip_launcher_runtime_contract().pynq.agent_executable_name
+        )
         self._emit_pynq_terminal_log(
             board,
             f"restarting user-space agent with NEUROCHIP_PYNQ_OVERLAY_DIR={overlay_dir}",
@@ -2277,9 +3133,10 @@ class LauncherControlState:
             install_status_path=install_status_path,
             overlay_dir=overlay_dir,
             runtime_log_path=runtime_log_path,
+            agent_executable_name=agent_executable_name,
         )
         restart_cmd = (
-            f'pkill -f "{agent_venv_path}/bin/neurochip-pynq-agent" >/dev/null 2>&1 || true; '
+            f'pkill -f "{agent_venv_path}/bin/{agent_executable_name}" >/dev/null 2>&1 || true; '
             f"sleep 1; "
             f"{launch_command}"
         )
@@ -2310,6 +3167,7 @@ class LauncherControlState:
                 text=True,
                 check=False,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
         finally:
             if cleanup is not None:
@@ -2528,11 +3386,7 @@ class LauncherControlState:
     def _build_local_pynq_bundle(
         self, board: dict[str, Any], bundle_dir: Path
     ) -> dict[str, Any]:
-        neurochip_root = REPO_ROOT / "Neurochip"
-        neurochip_package_root = str(neurochip_root)
-        if neurochip_package_root not in sys.path:
-            sys.path.insert(0, neurochip_package_root)
-        from neurochip.provisioning import build_pynq_agent_bundle
+        neurochip_root = _neurochip_module_root()
 
         overlay_version = str(board.get("overlayVersion") or "dev")
         return build_pynq_agent_bundle(
@@ -2544,25 +3398,17 @@ class LauncherControlState:
             pynq_venv_path=str(board["remotePynqVenvPath"]),
             overlay_dir=str(board["remoteOverlayDir"]),
             service_name=str(board["remoteServiceName"]),
+            agent_executable_name=str(board["agentExecutableName"]),
+            install_status_path=str(board["remoteInstallStatusPath"]),
+            runtime_log_path=str(board["remoteRuntimeLogPath"]),
         )
 
     def _inspect_local_pynq_overlay_package(self) -> dict[str, Any]:
-        neurochip_root = REPO_ROOT / "Neurochip"
-        neurochip_package_root = str(neurochip_root)
-        if neurochip_package_root not in sys.path:
-            sys.path.insert(0, neurochip_package_root)
-        from neurochip.provisioning import (
-            DEFAULT_STAGED_OVERLAY_DIRNAME,
-            DEFAULT_STAGED_OVERLAY_TARGET,
-            inspect_staged_overlay_package,
-        )
-
-        staging_dir = (
+        neurochip_root = _neurochip_module_root()
+        staging_dir = _load_neurochip_launcher_runtime_contract().pynq.overlay_staging_dir_for(
             neurochip_root
-            / DEFAULT_STAGED_OVERLAY_DIRNAME
-            / DEFAULT_STAGED_OVERLAY_TARGET
         )
-        return inspect_staged_overlay_package(staging_dir=staging_dir).to_dict()
+        return _inspect_staged_pynq_overlay_package(staging_dir)
 
     def provision_pynq_board(self, board_id: str) -> dict[str, Any]:
         board = self._update_pynq_board_fields(board_id, state="provisioning")
@@ -2604,6 +3450,9 @@ class LauncherControlState:
                             f"PYNQ_VENV_PATH={board['remotePynqVenvPath']}",
                             f"OVERLAY_DIR={board['remoteOverlayDir']}",
                             f"SERVICE_NAME={board['remoteServiceName']}",
+                            f"AGENT_EXECUTABLE_NAME={board['agentExecutableName']}",
+                            f"INSTALL_STATUS_PATH={board['remoteInstallStatusPath']}",
+                            f"RUNTIME_LOG_PATH={board['remoteRuntimeLogPath']}",
                             f"bash {remote_bundle_dir}/install-pynq-agent.sh",
                         ]
                     ),
@@ -2751,14 +3600,14 @@ class LauncherControlState:
                     "Follow-up preflight could not reach the runtime after overlay upload: "
                     f"{exc}"
                 )
-            self._emit_pynq_terminal_log(
-                board,
-                (
-                    "readiness refresh after overlay upload did not complete: "
-                    f"{exc}; {PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE}"
-                ),
-                stderr=True,
-            )
+                self._emit_pynq_terminal_log(
+                    board,
+                    (
+                        "readiness refresh after overlay upload did not complete: "
+                        f"{exc}; {PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE}"
+                    ),
+                    stderr=True,
+                )
             updated = self._update_pynq_board_fields(
                 board_id,
                 state="degraded_optional_capability",
@@ -2851,46 +3700,29 @@ class LauncherControlState:
         *,
         copy_mode: bool = False,
     ) -> tuple[list[str], dict[str, str] | None, Callable[[], None] | None]:
+        prefix: list[str] = []
         env: dict[str, str] | None = None
         cleanup: Callable[[], None] | None = None
-        prefix: list[str] = []
         auth_mode = str(host.get("authMode", DEFAULT_AKIDA_AUTH_MODE))
+        if auth_mode not in {"password", "ssh_key"}:
+            raise RuntimeError(
+                "Akida host SSH operations require password or SSH-key authentication"
+            )
         if auth_mode == "password":
             password = str(host.get("password") or "")
             if not password:
-                raise RuntimeError("Password authentication requires a stored password")
+                raise RuntimeError(
+                    "No SSH password is configured for this Akida host"
+                )
             sshpass = shutil.which("sshpass")
             if sshpass is not None:
                 prefix.extend([sshpass, "-p", password])
             else:
-                self._emit_akida_terminal_log(
-                    host,
-                    "sshpass not found on host; falling back to SSH_ASKPASS for password authentication",
-                )
-                askpass_handle = tempfile.NamedTemporaryFile(
-                    mode="w",
-                    encoding="utf-8",
+                env, cleanup = _build_password_askpass_env(
+                    password=password,
+                    env_key="NMTK_AKIDA_PASSWORD",
                     prefix="nmtk-akida-askpass-",
-                    delete=False,
                 )
-                askpass_handle.write("#!/bin/sh\n")
-                askpass_handle.write("printf '%s\\n' \"$NMTK_AKIDA_PASSWORD\"\n")
-                askpass_handle.close()
-                os.chmod(askpass_handle.name, 0o700)
-
-                env = os.environ.copy()
-                env["NMTK_AKIDA_PASSWORD"] = password
-                env["SSH_ASKPASS"] = askpass_handle.name
-                env["SSH_ASKPASS_REQUIRE"] = "force"
-                env.setdefault("DISPLAY", "nmtk-launcher-control:0")
-
-                def _cleanup_askpass() -> None:
-                    try:
-                        os.unlink(askpass_handle.name)
-                    except FileNotFoundError:
-                        return None
-
-                cleanup = _cleanup_askpass
         command = ["scp"] if copy_mode else ["ssh"]
         port_flag = "-P" if copy_mode else "-p"
         command.extend(
@@ -2900,7 +3732,10 @@ class LauncherControlState:
                 "-o",
                 "UserKnownHostsFile=/dev/null",
                 port_flag,
-                str(host.get("sshPort", DEFAULT_AKIDA_HOST_SSH_PORT)),
+                str(
+                    host.get("sshPort")
+                    or _load_neurochip_launcher_runtime_contract().akida.ssh_port
+                ),
             ]
         )
         if auth_mode == "password":
@@ -2921,14 +3756,34 @@ class LauncherControlState:
             command.extend(["-i", ssh_key_path])
         return prefix + command, env, cleanup
 
-    def _run_akida_ssh(self, host: dict[str, Any], remote_command: str) -> str:
+    def _akida_remote_command_with_sudo_password(
+        self,
+        host: dict[str, Any],
+        remote_command: str,
+    ) -> tuple[str, str]:
+        password = str(host.get("password") or "")
+        if str(host.get("authMode") or "").strip() != "password" or not password:
+            return remote_command, remote_command
+        return (
+            f"NMTK_AKIDA_SUDO_PASSWORD={shlex.quote(password)} {remote_command}",
+            f"NMTK_AKIDA_SUDO_PASSWORD=<redacted> {remote_command}",
+        )
+
+    def _run_akida_ssh(
+        self,
+        host: dict[str, Any],
+        remote_command: str,
+        *,
+        display_command: str | None = None,
+    ) -> str:
         username = str(host.get("username") or "").strip()
         if not username:
             raise RuntimeError("Akida host username is required for SSH operations")
         target = f"{username}@{host['host']}"
         command, env, cleanup = self._prepare_akida_ssh_invocation(host)
         command.extend([target, remote_command])
-        self._emit_akida_terminal_log(host, f"ssh -> {target}: {remote_command}")
+        logged_command = display_command if display_command is not None else remote_command
+        self._emit_akida_terminal_log(host, f"ssh -> {target}: {logged_command}")
         try:
             process = subprocess.Popen(
                 command,
@@ -2936,6 +3791,7 @@ class LauncherControlState:
                 stderr=subprocess.PIPE,
                 text=True,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
             stdout_lines: list[str] = []
             stderr_lines: list[str] = []
@@ -2998,6 +3854,7 @@ class LauncherControlState:
                 text=True,
                 check=False,
                 env=env,
+                stdin=subprocess.DEVNULL,
             )
         finally:
             if cleanup is not None:
@@ -3019,6 +3876,8 @@ class LauncherControlState:
         method: str,
         path: str,
         payload: dict[str, Any] | None = None,
+        *,
+        emit_terminal_errors: bool = True,
     ) -> dict[str, Any]:
         base_url = _resolved_akida_control_api_url(host).rstrip("/")
         if not base_url:
@@ -3044,26 +3903,40 @@ class LauncherControlState:
                 return decoded
         except urllib.error.HTTPError as exc:
             error_body = exc.read().decode("utf-8", errors="replace")
-            self._emit_akida_terminal_log(
-                host,
-                (
-                    f"control request failed: {method} {url} returned HTTP {exc.code}"
-                    + (f" with body: {error_body}" if error_body else "")
-                ),
-                stderr=True,
-            )
-            raise RuntimeError(
+            if emit_terminal_errors:
+                self._emit_akida_terminal_log(
+                    host,
+                    (
+                        f"control request failed: {method} {url} returned HTTP {exc.code}"
+                        + (f" with body: {error_body}" if error_body else "")
+                    ),
+                    stderr=True,
+                )
+            raise RuntimeRequestError(
                 f"Control request failed for {method} {url}: HTTP {exc.code}"
-                + (f" — {error_body}" if error_body else "")
+                + (f" — {error_body}" if error_body else ""),
+                kind="http",
+                url=url,
+                status_code=exc.code,
+                response_body=error_body,
             ) from exc
         except urllib.error.URLError as exc:
-            self._emit_akida_terminal_log(
-                host,
-                f"control request failed: {method} {url} could not be reached: {exc}",
-                stderr=True,
+            kind = _runtime_request_error_kind(exc)
+            detail = (
+                "timed out"
+                if kind == "timeout"
+                else f"could not be reached: {exc}"
             )
-            raise RuntimeError(
-                f"Control request failed for {method} {url}: {exc}"
+            if emit_terminal_errors:
+                self._emit_akida_terminal_log(
+                    host,
+                    f"control request failed: {method} {url} {detail}",
+                    stderr=True,
+                )
+            raise RuntimeRequestError(
+                f"Control request failed for {method} {url}: {detail}",
+                kind=kind,
+                url=url,
             ) from exc
 
     def _akida_json_request(
@@ -3105,18 +3978,30 @@ class LauncherControlState:
                 ),
                 stderr=True,
             )
-            raise RuntimeError(
+            raise RuntimeRequestError(
                 f"Runtime request failed for {method} {url}: HTTP {exc.code}"
-                + (f" — {error_body}" if error_body else "")
+                + (f" — {error_body}" if error_body else ""),
+                kind="http",
+                url=url,
+                status_code=exc.code,
+                response_body=error_body,
             ) from exc
         except urllib.error.URLError as exc:
+            kind = _runtime_request_error_kind(exc)
+            detail = (
+                "timed out"
+                if kind == "timeout"
+                else f"could not be reached: {exc}"
+            )
             self._emit_akida_terminal_log(
                 host,
-                f"runtime request failed: {method} {url} could not be reached: {exc}",
+                f"runtime request failed: {method} {url} {detail}",
                 stderr=True,
             )
-            raise RuntimeError(
-                f"Runtime request failed for {method} {url}: {exc}"
+            raise RuntimeRequestError(
+                f"Runtime request failed for {method} {url}: {detail}",
+                kind=kind,
+                url=url,
             ) from exc
 
     def test_akida_host_connection(self, host_id: str) -> dict[str, Any]:
@@ -3143,19 +4028,15 @@ class LauncherControlState:
     def _build_local_akida_bundle(
         self, host: dict[str, Any], bundle_dir: Path
     ) -> dict[str, Any]:
-        neurochip_root = REPO_ROOT / "Neurochip"
-        neurochip_package_root = str(neurochip_root)
-        if neurochip_package_root not in sys.path:
-            sys.path.insert(0, neurochip_package_root)
-        from neurochip.provisioning import build_akida_host_bundle
-
         neurochip_module = self._get_module("Neurochip")
+        neurochip_root = _module_root(neurochip_module)
         akida_runtime = neurochip_module.get("akidaRuntime", {})
         required_packages = akida_runtime.get("requiredPackages", [])
         if not isinstance(required_packages, list) or not all(
             isinstance(item, str) for item in required_packages
         ):
             raise RuntimeError("Neurochip Akida runtime manifest is invalid")
+        akida_contract = _load_neurochip_launcher_runtime_contract().akida
         return build_akida_host_bundle(
             bundle_dir,
             repo_root=neurochip_root,
@@ -3165,15 +4046,25 @@ class LauncherControlState:
             venv_path=str(host["remoteVenvPath"]),
             runtime_service_name=str(host["runtimeServiceName"]),
             control_service_name=str(host["controlServiceName"]),
-            runtime_port=int(host.get("port", DEFAULT_AKIDA_HOST_PORT)),
-            control_port=int(host.get("controlPort", DEFAULT_AKIDA_CONTROL_PORT)),
+            runtime_port=int(host.get("port") or akida_contract.runtime_port),
+            control_port=int(host.get("controlPort") or akida_contract.control_port),
+            token_path=str(host["tokenPath"]),
+            install_status_path=str(host["installStatusPath"]),
         )
 
     def _remote_akida_install_status_path(self, host: dict[str, Any]) -> str:
-        return f"{host['remoteInstallRoot']}/install-status.json"
+        return str(
+            host.get("installStatusPath")
+            or _load_neurochip_launcher_runtime_contract().akida.install_status_path_for(
+                str(host["remoteInstallRoot"])
+            )
+        )
 
     def _read_remote_akida_install_status(self, host: dict[str, Any]) -> dict[str, Any]:
         raw = self._run_akida_ssh(host, f"cat {self._remote_akida_install_status_path(host)}")
+        raw = raw.strip()
+        if not raw:
+            raise RuntimeError("Remote Akida install status file is empty")
         try:
             decoded = json.loads(raw)
         except json.JSONDecodeError as exc:
@@ -3184,9 +4075,48 @@ class LauncherControlState:
             raise RuntimeError("Remote Akida install status must decode to an object")
         return decoded
 
-    def _read_remote_akida_token(self, host: dict[str, Any]) -> str:
-        token_path = str(host.get("tokenPath") or DEFAULT_AKIDA_TOKEN_PATH).strip()
-        return self._run_akida_ssh(host, f"sudo cat {token_path}").strip()
+    def _read_remote_akida_token(
+        self,
+        host: dict[str, Any],
+        *,
+        install_status: dict[str, Any] | None = None,
+    ) -> str:
+        token_path = str(
+            host.get("tokenPath")
+            or _load_neurochip_launcher_runtime_contract().akida.token_path_for(
+                str(host["remoteInstallRoot"])
+            )
+        ).strip()
+        install_mode = str(
+            (install_status or host.get("lastInstallStatus") or {}).get("installMode")
+            or ""
+        ).strip()
+        username = str(host.get("username") or "").strip()
+        service_user = str(host.get("serviceUser") or "").strip()
+        command = f"cat {shlex.quote(token_path)}"
+        display_command = command
+        if install_mode != "user-space" and service_user and service_user != username:
+            if (
+                str(host.get("authMode") or "").strip() == "password"
+                and str(host.get("password") or "")
+            ):
+                password = str(host.get("password") or "")
+                command = (
+                    f"printf '%s\\n' {shlex.quote(password)} "
+                    f"| sudo -S -p '' {command}"
+                )
+                display_command = (
+                    "printf '%s\\n' <redacted> "
+                    f"| sudo -S -p '' cat {shlex.quote(token_path)}"
+                )
+            else:
+                command = f"sudo {command}"
+                display_command = command
+        return self._run_akida_ssh(
+            host,
+            command,
+            display_command=display_command,
+        ).strip()
 
     def _apply_preflight_to_akida_host(
         self,
@@ -3209,6 +4139,20 @@ class LauncherControlState:
                 if runtime_target in {"software_fallback", "akd1000_simulator"}
                 else "degraded_optional_capability"
             )
+        install_mode = str((install_status or {}).get("installMode") or "").strip()
+        if install_mode == "user-space":
+            message = " ".join(
+                part
+                for part in (
+                    message,
+                    _akida_user_space_upgrade_message(
+                        str(self._get_akida_host(host_id).get("username") or "")
+                    ),
+                )
+                if part
+            )
+            if state == "ready":
+                state = "degraded_optional_capability"
         return self._update_akida_host_fields(
             host_id,
             state=state,
@@ -3239,10 +4183,7 @@ class LauncherControlState:
                 remote_bundle_dir = f"{remote_bundle_parent}/{bundle_dir.name}"
                 self._run_akida_ssh(
                     host,
-                    (
-                        f"mkdir -p {host['remoteInstallRoot']} && "
-                        f"rm -rf {remote_bundle_dir}"
-                    ),
+                    f"rm -rf {remote_bundle_dir}",
                 )
                 self._emit_akida_terminal_log(host, "uploading provisioning bundle")
                 self._run_akida_scp(host, bundle_dir, remote_bundle_parent, recursive=True)
@@ -3252,31 +4193,66 @@ class LauncherControlState:
                     lastReadinessMessage="Running remote install script.",
                 )
                 self._emit_akida_terminal_log(host, "running remote install script")
-                self._run_akida_ssh(
-                    host,
-                    " ".join(
-                        [
-                            f"INSTALL_ROOT={host['remoteInstallRoot']}",
-                            f"SERVICE_USER={host['serviceUser']}",
-                            f"VENV_PATH={host['remoteVenvPath']}",
-                            f"RUNTIME_SERVICE_NAME={host['runtimeServiceName']}",
-                            f"CONTROL_SERVICE_NAME={host['controlServiceName']}",
-                            f"RUNTIME_PORT={host['port']}",
-                            f"CONTROL_PORT={host['controlPort']}",
-                            f"TOKEN_PATH={host['tokenPath']}",
-                            f"bash {remote_bundle_dir}/install-akida-host.sh",
-                        ]
-                    ),
+                install_command = " ".join(
+                    [
+                        f"INSTALL_ROOT={shlex.quote(str(host['remoteInstallRoot']))}",
+                        f"SERVICE_USER={shlex.quote(str(host['serviceUser']))}",
+                        f"VENV_PATH={shlex.quote(str(host['remoteVenvPath']))}",
+                        f"RUNTIME_SERVICE_NAME={shlex.quote(str(host['runtimeServiceName']))}",
+                        f"CONTROL_SERVICE_NAME={shlex.quote(str(host['controlServiceName']))}",
+                        f"RUNTIME_PORT={shlex.quote(str(host['port']))}",
+                        f"CONTROL_PORT={shlex.quote(str(host['controlPort']))}",
+                        f"TOKEN_PATH={shlex.quote(str(host['tokenPath']))}",
+                        f"bash {shlex.quote(remote_bundle_dir)}/install-akida-host.sh",
+                    ]
                 )
-                install_status = self._read_remote_akida_install_status(host)
-                token_value = self._read_remote_akida_token(host)
+                install_command, display_install_command = (
+                    self._akida_remote_command_with_sudo_password(
+                        host,
+                        install_command,
+                    )
+                )
+                install_output = self._run_akida_ssh(
+                    host,
+                    install_command,
+                    display_command=display_install_command,
+                )
+                install_status = _extract_install_status_from_output(install_output) or {}
+                if not install_status:
+                    install_status = self._read_remote_akida_install_status(host)
+                host = self._update_akida_host_fields(
+                    host_id,
+                    remoteInstallRoot=str(
+                        install_status.get("installRoot") or host["remoteInstallRoot"]
+                    ).strip(),
+                    remoteVenvPath=str(
+                        install_status.get("venvPath") or host["remoteVenvPath"]
+                    ).strip(),
+                    serviceUser=str(
+                        install_status.get("serviceUser") or host["serviceUser"]
+                    ).strip(),
+                    tokenPath=str(
+                        install_status.get("tokenPath") or host["tokenPath"]
+                    ).strip(),
+                    installStatusPath=str(
+                        install_status.get("installStatusPath")
+                        or host["installStatusPath"]
+                    ).strip(),
+                    lastInstallStatus=install_status,
+                )
+                token_value = self._read_remote_akida_token(
+                    host,
+                    install_status=install_status,
+                )
+                if not token_value:
+                    raise RuntimeError("Remote Akida API token read returned an empty value")
                 host = self._update_akida_host_fields(
                     host_id,
                     credentialRef=token_value,
-                    runtimeApiUrl=str(install_status.get("runtimeApiUrl") or "").strip()
-                    or _default_akida_base_url(str(host["host"]), int(host["port"])),
-                    controlApiUrl=str(install_status.get("controlApiUrl") or "").strip()
-                    or _default_akida_control_url(
+                    runtimeApiUrl=_default_akida_base_url(
+                        str(host["host"]), int(host["port"])
+                    ),
+                    controlApiUrl=_default_akida_control_url(
                         str(host["host"]), int(host["controlPort"])
                     ),
                     hostOs=str(install_status.get("hostOs") or "").strip(),
@@ -3310,6 +4286,24 @@ class LauncherControlState:
 
     def restart_akida_host_services(self, host_id: str) -> dict[str, Any]:
         host = self._get_akida_host(host_id)
+        install_status = self._read_remote_akida_install_status(host)
+        install_mode = (
+            str(install_status.get("installMode") or "unknown").strip() or "unknown"
+        )
+        if install_mode == "user-space":
+            message = _akida_user_space_upgrade_message(str(host.get("username") or ""))
+            updated = self._update_akida_host_fields(
+                host_id,
+                state="degraded_optional_capability",
+                lastPreflightStatus=PREFLIGHT_DEGRADED,
+                lastPreflightMessage=message,
+            )
+            self._emit_akida_terminal_log(host, message)
+            return {
+                "host": _serialize_akida_host(updated),
+                "warning": message,
+                "installStatus": install_status,
+            }
         self._emit_akida_terminal_log(host, "restarting remote Akida services")
         self._run_akida_ssh(
             host,
@@ -3318,7 +4312,9 @@ class LauncherControlState:
                 f"{host['controlServiceName']}.service"
             ),
         )
-        return self.fetch_akida_host_preflight(host_id)
+        result = self.fetch_akida_host_preflight(host_id)
+        result["installStatus"] = install_status
+        return result
 
     def fetch_akida_host_preflight(self, host_id: str) -> dict[str, Any]:
         host = self._get_akida_host(host_id)
@@ -3330,7 +4326,10 @@ class LauncherControlState:
             if _resolved_akida_control_api_url(host):
                 try:
                     doctor = self._akida_control_json_request(
-                        host, "GET", "/api/remote-akida/doctor"
+                        host,
+                        "GET",
+                        "/api/remote-akida/doctor",
+                        emit_terminal_errors=False,
                     )
                     preflight = doctor.get("preflight")
                     if isinstance(preflight, dict):
@@ -3420,7 +4419,10 @@ class LauncherControlState:
         if _resolved_akida_control_api_url(host):
             try:
                 doctor = self._akida_control_json_request(
-                    host, "GET", "/api/remote-akida/doctor"
+                    host,
+                    "GET",
+                    "/api/remote-akida/doctor",
+                    emit_terminal_errors=False,
                 )
                 runtime_status = (
                     doctor.get("runtimeStatus")
@@ -3948,7 +4950,6 @@ class LauncherControlState:
             )
 
         venv_python = _module_venv_python(module)
-        venv_pip = _module_venv_pip(module)
         poetry = _poetry_command()
         use_poetry = _module_uses_poetry(module) and poetry is not None
 
@@ -3969,6 +4970,9 @@ class LauncherControlState:
                 cwd=install_dir,
                 module_id=module_id,
             )
+            venv_python = _module_venv_python(module)
+        if not use_poetry:
+            self._ensure_module_pip(venv_python, install_dir, module_id)
 
         self._update_module_fields(module_id, installProgress=0.3)
         for dependency in module.get("localDeps", []):
@@ -3990,7 +4994,7 @@ class LauncherControlState:
                     )
                 else:
                     self._run_command(
-                        [str(venv_pip), "install", str(dep_path)],
+                        [str(venv_python), "-m", "pip", "install", str(dep_path)],
                         cwd=install_dir,
                         module_id=module_id,
                     )
@@ -4009,7 +5013,7 @@ class LauncherControlState:
             )
         else:
             self._run_command(
-                [str(venv_pip), "install", "."],
+                [str(venv_python), "-m", "pip", "install", "."],
                 cwd=install_dir,
                 module_id=module_id,
             )
@@ -4024,6 +5028,74 @@ class LauncherControlState:
             capabilityWarnings=[],
             environmentFingerprint=environment_fingerprint,
         )
+
+    def _ensure_module_pip(self, python_path: Path, cwd: Path, module_id: str) -> None:
+        probe = subprocess.run(
+            [str(python_path), "-m", "pip", "--version"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if probe.returncode == 0:
+            return
+
+        self._append_log(
+            module_id,
+            "pip is missing from the module environment; bootstrapping it now",
+            emit_terminal=True,
+        )
+        ensurepip = subprocess.run(
+            [str(python_path), "-m", "ensurepip", "--upgrade"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if ensurepip.stdout:
+            self._append_log(module_id, ensurepip.stdout, emit_terminal=True)
+        if ensurepip.stderr:
+            self._append_log(
+                module_id, ensurepip.stderr, stderr=True, emit_terminal=True
+            )
+        if ensurepip.returncode != 0:
+            self._append_log(
+                module_id,
+                "ensurepip unavailable; downloading get-pip.py as a fallback",
+                emit_terminal=True,
+            )
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix="-get-pip.py", delete=False, dir=cwd
+            ) as handle:
+                temp_path = Path(handle.name)
+            try:
+                urllib.request.urlretrieve(
+                    "https://bootstrap.pypa.io/get-pip.py",
+                    temp_path,
+                )
+                self._run_command(
+                    [str(python_path), str(temp_path)],
+                    cwd=cwd,
+                    module_id=module_id,
+                )
+            finally:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+
+        final_probe = subprocess.run(
+            [str(python_path), "-m", "pip", "--version"],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if final_probe.returncode != 0:
+            raise RuntimeError(
+                final_probe.stderr.strip()
+                or "pip bootstrap failed for the module environment"
+            )
 
     def _update_sync(self, module_id: str) -> None:
         module = self._get_module(module_id)
@@ -4047,6 +5119,24 @@ class LauncherControlState:
         if not module.get("isEnabled", True):
             raise RuntimeError("Module is disabled")
 
+        start_strategy = _module_start_strategy(module)
+        if start_strategy == "none":
+            suite_api_result = self._suite_api_ready_result()
+            self._update_module_fields(module_id, **suite_api_result.state_fields())
+            if suite_api_result.status == PREFLIGHT_FAILED:
+                self._update_module_fields(
+                    module_id,
+                    status=STATUS_INDEX["error"],
+                    healthStatus=suite_api_result.message,
+                )
+                raise RuntimeError(suite_api_result.message or "suite_api is unavailable")
+            self._update_module_fields(
+                module_id,
+                status=STATUS_INDEX["running"],
+                healthStatus="Managed by suite_api",
+            )
+            return
+
         preflight = self._preflight_module(module, allow_repair=True)
         self._update_module_fields(module_id, **preflight.state_fields())
         if preflight.status == PREFLIGHT_FAILED:
@@ -4058,11 +5148,6 @@ class LauncherControlState:
             raise RuntimeError(preflight.message or "Module preflight failed")
 
         module = self._get_module(module_id)
-        start_strategy = _module_start_strategy(module)
-        if start_strategy == "none":
-            raise RuntimeError(
-                f"Module '{module_id}' does not define a runnable backend"
-            )
         if start_strategy not in SUPPORTED_START_STRATEGIES:
             raise RuntimeError(
                 f"Unsupported start strategy '{start_strategy}' for {module_id}"
@@ -4186,7 +5271,14 @@ class LauncherControlState:
         port = _effective_port(module)
         if port is None:
             return False, 0, None
-        url = f"http://127.0.0.1:{port}/health"
+
+        start_strategy = _module_start_strategy(module)
+        if start_strategy == "none":
+            # Native feature modules in the monolith have their own health path
+            # All mounted domain prefixes in suite_api are lowercase.
+            url = f"http://127.0.0.1:{port}/api/{module['id'].lower()}/health"
+        else:
+            url = f"http://127.0.0.1:{port}/health"
         try:
             with urllib.request.urlopen(url, timeout=2.0) as response:
                 body = response.read().decode("utf-8", errors="replace")
@@ -4201,6 +5293,17 @@ class LauncherControlState:
 
     def _health_poll_loop(self) -> None:
         while not self._shutdown.wait(HEALTH_POLL_SECONDS):
+            if self._manage_suite_api:
+                ok, message = _suite_api_health_probe()
+                if ok:
+                    self._set_suite_api_state(
+                        SUITE_API_STATUS_READY, "Managed by suite_api"
+                    )
+                elif self._suite_api_status == SUITE_API_STATUS_READY:
+                    self._set_suite_api_state(
+                        SUITE_API_STATUS_PREFLIGHT_FAILED,
+                        message or "suite_api health probe failed",
+                    )
             with self._lock:
                 module_ids = list(self._processes.keys())
             for module_id in module_ids:
@@ -4340,10 +5443,7 @@ class LauncherControlState:
                     message="Module not installed",
                 )
             elif _module_start_strategy(module) == "none":
-                result = PreflightResult(
-                    status=PREFLIGHT_OK,
-                    message="No runnable backend configured",
-                )
+                result = self._suite_api_ready_result()
             else:
                 result = self._preflight_module(module, allow_repair=False)
 
@@ -4376,7 +5476,10 @@ class LauncherControlState:
             ]
 
         for host in akida_host_snapshot:
-            state = _normalize_akida_host_state(host.get("state"))
+            state = _normalize_akida_host_state(
+                host.get("state"),
+                _load_neurochip_launcher_runtime_contract().akida.default_state,
+            )
             if state == "ready":
                 ok_count += 1
             elif state in {
@@ -4407,7 +5510,10 @@ class LauncherControlState:
                     "runtimeApiUrl": str(
                         host.get("runtimeApiUrl") or _resolved_akida_base_url(host)
                     ).strip(),
-                    "sshPort": int(host.get("sshPort", DEFAULT_AKIDA_HOST_SSH_PORT)),
+                    "sshPort": int(
+                        host.get("sshPort")
+                        or _load_neurochip_launcher_runtime_contract().akida.ssh_port
+                    ),
                     "username": str(host.get("username") or "").strip(),
                     "runtimeMode": _normalize_akida_runtime_mode(
                         host.get("runtimeMode")
@@ -4426,7 +5532,10 @@ class LauncherControlState:
             )
 
         for board in board_snapshot:
-            state = _normalize_pynq_board_state(board.get("state"))
+            state = _normalize_pynq_board_state(
+                board.get("state"),
+                _load_neurochip_launcher_runtime_contract().pynq.default_state,
+            )
             if state == "ready":
                 ok_count += 1
             elif state == "degraded_optional_capability":
@@ -4500,6 +5609,7 @@ class LauncherControlState:
                 "directory": module["directory"],
                 "port": module.get("port"),
                 "hasFrontend": bool(module.get("hasFrontend", False)),
+                "showInLauncherNav": bool(module.get("showInLauncherNav", True)),
                 "frontendStatus": module.get("frontendStatus", "No"),
                 "requiresMuJoCo": bool(module.get("requiresMuJoCo", False)),
                 "sourcePath": module.get("sourcePath", "."),
@@ -4881,7 +5991,11 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         except KeyError as exc:
             self._send_json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
         except RuntimeRequestError as exc:
-            status = HTTPStatus.INTERNAL_SERVER_ERROR
+            status = (
+                HTTPStatus.GATEWAY_TIMEOUT
+                if exc.kind == "timeout"
+                else HTTPStatus.BAD_GATEWAY
+            )
             if exc.status_code is not None:
                 try:
                     status = HTTPStatus(exc.status_code)
@@ -4939,7 +6053,7 @@ class LauncherControlServer(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(self, server_address: tuple[str, int]) -> None:
-        self.state = LauncherControlState()
+        self.state = LauncherControlState(manage_suite_api=True)
         super().__init__(server_address, LauncherControlHandler)
 
     def server_close(self) -> None:
@@ -4953,7 +6067,7 @@ def create_server(host: str, port: int) -> LauncherControlServer:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Launcher control service")
-    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8090)
     parser.add_argument(
         "--doctor",
@@ -4966,6 +6080,7 @@ def main(argv: list[str] | None = None) -> int:
         help="When used with --doctor, print the report as JSON",
     )
     args = parser.parse_args(argv)
+    os.environ.setdefault("NMTK_UVICORN_HOST", str(args.host).strip() or "0.0.0.0")
 
     if args.doctor:
         state = LauncherControlState()

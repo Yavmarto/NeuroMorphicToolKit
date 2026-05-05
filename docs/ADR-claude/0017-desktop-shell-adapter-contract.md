@@ -1,7 +1,13 @@
 # ADR 0017: Desktop Shell Adapter Contract
 
 ## Status
-Accepted
+Accepted — Implemented by Phase 3 of consolidation plan
+
+## Implementation note
+The `ShellModuleAdapter` contract defined in this ADR is implemented by the
+six Flutter feature packages created in Phase 3:
+nmtk/packages/{neurocnl,neurosim,neurochip,neurobench,neurosense,neurohub}_feature/.
+See ADR 0019 and docs/implementation-plan-consolidation.md.
 
 ## Context
 

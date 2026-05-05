@@ -14,6 +14,7 @@ import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
@@ -34,9 +35,23 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   String _activeModuleId = '';
   bool _workspaceInitialized = false;
+  bool _developerModeEnabled = false;
+
+  Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
+
+  bool _usesRemoteHostedServices() {
+    if (kIsWeb) {
+      return false;
+    }
+    return !ControlApiService.isLoopbackHost(_launcherBaseUri().host);
+  }
 
   String _serviceHost() {
     if (!kIsWeb) {
+      final baseUri = _launcherBaseUri();
+      if (_usesRemoteHostedServices()) {
+        return baseUri.host;
+      }
       return 'localhost';
     }
     final host = Uri.base.host.trim();
@@ -48,6 +63,10 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   String _serviceScheme() {
     if (!kIsWeb) {
+      final baseUri = _launcherBaseUri();
+      if (_usesRemoteHostedServices()) {
+        return baseUri.scheme.isEmpty ? 'http' : baseUri.scheme;
+      }
       return 'http';
     }
     final scheme = Uri.base.scheme.trim();
@@ -55,6 +74,27 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Uri _moduleUri(Module module, {bool healthCheck = false}) {
+    final String moduleId = module.id.toLowerCase();
+
+    // If it's on the monolith port (9000), we use path-based routing.
+    if (module.effectivePort == 9000) {
+      if (healthCheck) {
+        return Uri(
+          scheme: _serviceScheme(),
+          host: _serviceHost(),
+          port: 9000,
+          path: '/api/$moduleId/health',
+        );
+      }
+      return Uri(
+        scheme: _serviceScheme(),
+        host: _serviceHost(),
+        port: 9000,
+        path: '/$moduleId/',
+      );
+    }
+
+    // Legacy fallback for standalone modules
     final path = healthCheck ? '/health' : (module.hasFrontend ? '' : '/docs');
     return Uri(
       scheme: _serviceScheme(),
@@ -65,6 +105,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   String _surfaceModeForModule(String moduleId) {
+    if (_usesRemoteHostedServices()) {
+      return 'embedded';
+    }
     return NativeSurfaceRegistry.supportsModule(moduleId)
         ? 'native'
         : 'embedded';
@@ -166,7 +209,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   bool _shouldOpenModule(Module module) {
-    if (!module.isEnabled || module.startStrategy == 'none') {
+    if (!module.isEnabled || !module.showInLauncherNav) {
       return false;
     }
     return module.hasFrontend ||
@@ -508,51 +551,77 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Developer-mode toggle — always visible (wrench icon).
         Semantics(
-          label: 'Open a module',
-          button: true,
-          child: IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showModulePicker(context),
-            tooltip: 'Open a Module',
-          ),
-        ),
-        Semantics(
-          label: 'Open module in system browser',
-          button: true,
-          child: IconButton(
-            icon: const Icon(Icons.open_in_browser),
-            onPressed: activeModule != null
-                ? () => _launchInBrowser(activeModule)
-                : null,
-            tooltip: 'Open in System Browser',
-          ),
-        ),
-        Semantics(
-          label: 'Stop currently active module',
+          label: _developerModeEnabled
+              ? 'Hide developer controls'
+              : 'Show developer controls',
           button: true,
           child: IconButton(
             icon: Icon(
-              Icons.stop_circle,
-              color: ShadTheme.of(context).colorScheme.destructive,
+              _developerModeEnabled
+                  ? Icons.handyman_rounded
+                  : Icons.handyman_outlined,
+              color: _developerModeEnabled
+                  ? ShadTheme.of(context).colorScheme.primary
+                  : null,
             ),
-            onPressed: activeModule == null
-                ? null
-                : () {
-                    unawaited(moduleProvider.stopModule(activeModule.id));
-                  },
-            tooltip: 'Stop Module',
+            onPressed: () => setState(() {
+              _developerModeEnabled = !_developerModeEnabled;
+            }),
+            tooltip: _developerModeEnabled
+                ? 'Hide module internals'
+                : 'Show module internals',
           ),
         ),
-        Semantics(
-          label: 'Check for Updates',
-          button: true,
-          child: IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => moduleProvider.checkForUpdates(),
-            tooltip: 'Check for Updates',
+        // Module management controls — developer mode only.
+        if (_developerModeEnabled) ...[
+          Semantics(
+            label: 'Open a module',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => _showModulePicker(context),
+              tooltip: 'Open a Module',
+            ),
           ),
-        ),
+          Semantics(
+            label: 'Open module in system browser',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.open_in_browser),
+              onPressed: activeModule != null
+                  ? () => _launchInBrowser(activeModule)
+                  : null,
+              tooltip: 'Open in System Browser',
+            ),
+          ),
+          Semantics(
+            label: 'Stop currently active module',
+            button: true,
+            child: IconButton(
+              icon: Icon(
+                Icons.stop_circle,
+                color: ShadTheme.of(context).colorScheme.destructive,
+              ),
+              onPressed: activeModule == null
+                  ? null
+                  : () {
+                      unawaited(moduleProvider.stopModule(activeModule.id));
+                    },
+              tooltip: 'Stop Module',
+            ),
+          ),
+          Semantics(
+            label: 'Check for Updates',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.refresh_rounded),
+              onPressed: () => moduleProvider.checkForUpdates(),
+              tooltip: 'Check for Updates',
+            ),
+          ),
+        ],
       ],
     );
   }

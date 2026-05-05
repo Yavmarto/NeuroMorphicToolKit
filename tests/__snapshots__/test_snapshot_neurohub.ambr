@@ -19,7 +19,7 @@
     'neurochip_url': 'http://localhost:8002',
     'neurocnl_url': 'http://localhost:8000',
     'neurosense_url': 'http://localhost:8004',
-    'neurosim_url': 'http://localhost:8001',
+    'neurosim_url': 'http://localhost:8000',
     'shared_storage_path': './shared_assets',
   })
 # ---
@@ -37,7 +37,7 @@
     'neurochip_url': 'http://neurochip.internal:8002',
     'neurocnl_url': 'http://neurocnl.internal:8000',
     'neurosense_url': 'http://neurosense.internal:8004',
-    'neurosim_url': 'http://neurosim.internal:8001',
+    'neurosim_url': 'http://neurosim.internal:8000',
     'shared_storage_path': '/mnt/shared',
   })
 # ---

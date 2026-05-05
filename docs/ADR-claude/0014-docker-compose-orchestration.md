@@ -12,3 +12,10 @@ Use Docker Compose with three isolated networks (`frontend-net`, `backend-net`, 
 ## Consequences
 - **Positive:** Network isolation prevents frontend-to-monitoring cross-talk; service profiles allow running minimal subsets (e.g., just neurocnl + Neurosim for CNL development).
 - **Negative:** Three compose files (base, dev, prod) must be kept in sync; health-check-based dependency ordering adds startup latency as services wait for upstreams.
+
+## Amendment — Consolidation Phase 2 (2026)
+The six-service Docker Compose layout described above is superseded after
+Phase 5 of the consolidation plan. The new layout has one `suite_api`
+service plus optional worker profiles (`hardware`, `jobs`, `physics`).
+See ADR 0018 and the implementation plan at
+`docs/implementation-plan-consolidation.md`.

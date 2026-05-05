@@ -505,6 +505,7 @@ class PynqPairedBoard {
   final String lastRuntimeMode;
   final bool hasPassword;
   final String sshKeyPath;
+  final bool isDefault;
   final Map<String, dynamic>? lastStatus;
 
   const PynqPairedBoard({
@@ -524,6 +525,7 @@ class PynqPairedBoard {
     required this.lastRuntimeMode,
     required this.hasPassword,
     required this.sshKeyPath,
+    this.isDefault = false,
     this.lastStatus,
   });
 
@@ -547,6 +549,7 @@ class PynqPairedBoard {
       lastRuntimeMode: json['lastRuntimeMode'] as String? ?? '',
       hasPassword: json['hasPassword'] as bool? ?? false,
       sshKeyPath: json['sshKeyPath'] as String? ?? '',
+      isDefault: json['isDefault'] as bool? ?? false,
       lastStatus: json['lastStatus'] as Map<String, dynamic>?,
     );
   }
@@ -566,6 +569,7 @@ class PynqPairedBoard {
         'runtimeApiUrlOverride': runtimeApiUrlOverride,
       if (overlayVersion.isNotEmpty) 'overlayVersion': overlayVersion,
       'state': state.apiValue,
+      'isDefault': isDefault,
     };
   }
 
@@ -586,6 +590,7 @@ class PynqPairedBoard {
     String? lastRuntimeMode,
     bool? hasPassword,
     String? sshKeyPath,
+    bool? isDefault,
     Map<String, dynamic>? lastStatus,
   }) {
     return PynqPairedBoard(
@@ -606,6 +611,7 @@ class PynqPairedBoard {
       lastRuntimeMode: lastRuntimeMode ?? this.lastRuntimeMode,
       hasPassword: hasPassword ?? this.hasPassword,
       sshKeyPath: sshKeyPath ?? this.sshKeyPath,
+      isDefault: isDefault ?? this.isDefault,
       lastStatus: lastStatus ?? this.lastStatus,
     );
   }

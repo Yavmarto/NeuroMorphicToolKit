@@ -6,11 +6,11 @@ echo "📦 Running Comprehensive Test Suite..."
 
 # 1. Unit & Property tests (Estimated: 5 mins)
 echo "🧪 Running Unit and Property tests..."
-export PYTHONPATH=$PYTHONPATH:$(pwd)/neurocnl:$(pwd)/Neurochip:$(pwd)/Neurosense:$(pwd)/Neurohub:$(pwd)/Neurosim:$(pwd)/Neuro-Dream-Hand
-pytest --cov=neurocnl --cov=neurosim --cov=neurosense --cov=neurochip --cov=neurobench --cov=neurohub --cov=neurodreamhand \
+export PYTHONPATH=$PYTHONPATH:$(pwd)/neurocnl:$(pwd)/Neurochip:$(pwd)/Neurosense:$(pwd)/Neurohub:$(pwd)/Neuro-Dream-Hand
+pytest --cov=neurocnl --cov=neurosense --cov=neurochip --cov=neurobench --cov=neurohub --cov=neurodreamhand \
     neurocnl/neurocnl/tests/ \
     neurocnl/backend/tests/ \
-    Neurosim/neurosim/tests/ \
+    neurocnl/neurosim/tests/ \
     Neurosense/neurosense/tests/ \
     Neurochip/neurochip/tests/ \
     Neurobench/neurobench/tests/ \

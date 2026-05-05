@@ -1,12 +1,4 @@
-.PHONY: release help dev dev-web dev-native build-submodules rebuild-submodules build-interactive clean-all build-all bump-version ci
-
-MODULES = neurocnl Neurosim Neurochip Neurobench Neurosense Neurohub
-PORT_neurocnl = 8000
-PORT_Neurosim = 8001
-PORT_Neurochip = 8002
-PORT_Neurobench = 8003
-PORT_Neurosense = 8004
-PORT_Neurohub = 8005
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -18,63 +10,52 @@ else
   FLUTTER_DEVICE = windows
 endif
 
-# Shared UI core dependency
-UI_CORE_FILES = $(shell find nmtk_ui_core/lib -type f) nmtk_ui_core/pubspec.yaml
+# Resolve a concrete Android device id for flutter run. Prefer wireless ADB
+# targets when one is connected, and allow callers to override explicitly.
+ANDROID_DEVICE ?= $(shell flutter devices --machine 2>/dev/null | python3 -c 'import json,sys; devices=json.load(sys.stdin); android_ids=[d["id"] for d in devices if d.get("isSupported") and str(d.get("targetPlatform", "")).startswith("android")]; wireless_ids=[device_id for device_id in android_ids if ":" in device_id]; print((wireless_ids or android_ids or ["android"])[0])' 2>/dev/null || printf 'android')
+
+# Resolve a concrete iOS device id for flutter run.
+IOS_DEVICE ?= $(shell flutter devices --machine 2>/dev/null | python3 -c 'import json,sys; devices=json.load(sys.stdin); ios_ids=[d["id"] for d in devices if d.get("isSupported") and str(d.get("targetPlatform", "")).startswith("ios")]; print((ios_ids or ["ios"])[0])' 2>/dev/null || printf 'ios')
+
 
 help:
 	@echo "NeuroMorphicToolkit (NMTK) Build System"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make dev                      - Build all submodules and run the launcher"
-	@echo "  make dev-native               - Run launcher in fully native mode (no web builds)"
-	@echo "  make dev -w                  - Also build/serve the launcher web app on your LAN"
-	@echo "  make dev-web                 - Same as 'make dev -w'"
-	@echo "  make build-submodules         - Build all submodule web frontends (only if changed)"
-	@echo "  make rebuild-submodules       - Force rebuild all submodule web frontends"
-	@echo "  make build-interactive        - Interactively select modules to build"
+	@echo "  make dev                      - Run suite_api and the native launcher"
+	@echo "  make dev-web                  - Run suite_api and the launcher in Chrome"
+	@echo "  make dev-a                    - Run suite_api and the launcher on the resolved Android device"
+	@echo "                                  Override with ANDROID_DEVICE=<flutter-device-id> when needed"
+	@echo "  make dev-i                    - Run suite_api and the launcher on iOS"
+	@echo "  make dev-native               - Run the native launcher control API and Flutter app"
+	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
 	@echo "  make clean-all                - Deep clean the entire monorepo"
 	@echo ""
 
-# Legacy target for backward compatibility, now only builds what's changed
-build-submodules: $(addprefix build-,$(MODULES))
-
-rebuild-submodules:
-	@chmod +x scripts/build_module.sh
-	@for mod in $(MODULES); do \
-		case "$$mod" in \
-			neurocnl) port="$(PORT_neurocnl)" ;; \
-			Neurosim) port="$(PORT_Neurosim)" ;; \
-			Neurochip) port="$(PORT_Neurochip)" ;; \
-			Neurobench) port="$(PORT_Neurobench)" ;; \
-			Neurosense) port="$(PORT_Neurosense)" ;; \
-			Neurohub) port="$(PORT_Neurohub)" ;; \
-			*) echo "Unknown module $$mod"; exit 1 ;; \
-		esac; \
-		./scripts/build_module.sh "$$mod" "$$port"; \
-	done
-
-build-interactive:
-	@chmod +x scripts/select_modules.sh
-	@./scripts/select_modules.sh
-
 dev:
-	@chmod +x scripts/build_module.sh scripts/run_dev.sh
-	@case " $(MAKEFLAGS) " in \
-		*" --print-directory "*|*" w "*) \
-			./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" --with-web ;; \
-		*) \
-			./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" ;; \
-	esac
+	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
 
-dev-web:
-	@chmod +x scripts/build_module.sh scripts/run_dev.sh
-	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" --with-web
+dev-a:
+	@$(MAKE) check-devices
+	@echo "==> Using Android device: $(ANDROID_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)"
+
+dev-i:
+	@$(MAKE) check-devices
+	@echo "==> Using iOS device: $(IOS_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)"
 
 dev-native:
 	@chmod +x scripts/run_dev.sh
-	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)" --native-only
+	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
+
+dev-web:
+	@./scripts/run_dev.sh --flutter-device chrome
+
+suite_api_dev:
+	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload
 
 ci:
 	@chmod +x scripts/run_ci_local.sh
@@ -99,14 +80,7 @@ bump-version:
 	@chmod +x scripts/bump_all.py
 	@python3 scripts/bump_all.py $(VERSION)
 
-# Dependency rules for each module
-define BUILD_RULE
-build-$(1): $(1)/frontend/build/web/index.html
-
-$(1)/frontend/build/web/index.html: $(shell find $(1)/frontend/lib -type f 2>/dev/null) $(1)/frontend/pubspec.yaml $(UI_CORE_FILES)
-	@chmod +x scripts/build_module.sh
-	@./scripts/build_module.sh $(1) $(PORT_$(1))
-	@touch $(1)/frontend/build/web/index.html
-endef
-
-$(foreach mod,$(MODULES),$(eval $(call BUILD_RULE,$(mod))))
+check-devices:
+	@echo "==> Checking for connected devices..."
+	@flutter devices | grep -E "connected device|wirelessly|•" || true
+	@echo ""

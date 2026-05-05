@@ -5,7 +5,7 @@ These tests pin the exact CanvasGraph structure produced by the
 consumed by the Flutter canvas frontend.  Any silent rename of node/
 edge fields or change to default position layout will be caught here.
 
-PYTHONPATH must include NeuroMorphicToolKit/Neurosim so that
+PYTHONPATH must include NeuroMorphicToolKit/neurocnl so that
 `neurosim.app.*` is importable.
 """
 

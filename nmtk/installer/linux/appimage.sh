@@ -26,7 +26,7 @@ cp -r "$REPO_ROOT/${BUNDLE_DIR}"/* "$APPDIR/usr/bin/"
 
 # Bundle all 7 submodules
 echo "📦 Bundling submodules..."
-MODULES=("neurocnl" "Neurosim" "Neurochip" "Neurobench" "Neurosense" "Neurohub" "Neuro-Dream-Hand")
+MODULES=("neurocnl" "Neurochip" "Neurobench" "Neurosense" "Neurohub" "Neuro-Dream-Hand")
 
 for mod in "${MODULES[@]}"; do
   if [ -d "$REPO_ROOT/$mod" ]; then

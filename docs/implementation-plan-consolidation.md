@@ -1877,6 +1877,213 @@ All pass. `fatalCount` is 0.
 
 ---
 
+## Phase 6 — Verification remediation and final decommission closeout
+
+**Goal**: Correct the remaining gaps found during implementation verification on 2026-04-27. Phase 6 exists because the repository already contains substantial Phase 1–4 work, but the Phase 5 decommission state is not complete: legacy services and WebView-era startup/build paths remain active.
+
+**Verification findings that created this phase**:
+
+- `suite_api/`, six domain routers, six Flutter feature packages, Phase 2 parity tests, ADR 0018, ADR 0019, and the four worker package directories exist.
+- `docker-compose.yml` still defines the old standalone services `neurocnl`, `neurosim`, `neurochip`, `neurobench`, `neurosense`, `neurohub`, and `neurocnl-physics`; `docker compose config --services` still includes legacy default services.
+- `Makefile` still has `MODULES = neurocnl Neurosim Neurochip Neurobench Neurosense Neurohub`, per-module `PORT_*` variables, `build-submodules`, `rebuild-submodules`, `build-interactive`, and generated `build-$(module)` rules.
+- `scripts/build_module.sh`, `scripts/build_all_frontends.sh`, and `scripts/select_modules.sh` still live directly under `scripts/`; `scripts/archive/` does not contain the archived copies required by Phase 5.
+- `nmtk/neuro_toolkit/assets/modules.json` still uses `startStrategy: "uvicorn"` and `uvicornTarget` for all six core modules.
+- `SETUP_GUIDE.md` still documents the old multi-service Docker/manual setup, per-module `uvicorn` commands, WebView launcher behavior, and old port table.
+- `docker-compose.dev.yml`, `docker-compose.prod.yml`, monitoring scrape config, CI workflows, and helper scripts still contain references to removed per-module service names and ports; these must be audited so the final architecture is consistent.
+- `python3 -c "from suite_api.main import app"` could not be verified in the current shell because `fastapi` was not installed; Phase 6 must validate in an environment with `suite_api` dependencies installed.
+
+---
+
+### Step 6.1 — Re-run repository rule preflight and establish the write set
+
+Read `AGENTS.md`, `CODING_STYLE_GUIDE.md`, `nmtk/AGENTS.md`, and `nmtk_ui_core/AGENTS.md` before editing. If Phase 6 changes any submodule file, also read that submodule's `AGENTS.md` first.
+
+Expected Phase 6 write set:
+
+- root-owned config/docs/scripts/tests: `docker-compose*.yml`, `Makefile`, `SETUP_GUIDE.md`, `.env.example`, `monitoring/`, `.github/workflows/`, `scripts/`, `tests/`
+- launcher config/model/tests: `nmtk/neuro_toolkit/assets/modules.json`, related Dart models, launcher tests
+- no submodule code unless a route import or worker contract bug is found during validation
+
+**Acceptance gate**: The final Phase 6 diff touches only the declared write set unless the plan is amended with a reason.
+
+---
+
+### Step 6.2 — Finish Docker Compose decommission
+
+In `docker-compose.yml`, remove the legacy standalone service blocks for:
+
+- `neurocnl`
+- `neurosim`
+- `neurochip`
+- `neurobench`
+- `neurosense`
+- `neurohub`
+- `neurocnl-physics`
+
+Keep `suite_api`, all four worker services, and monitoring services. Update `suite_api.depends_on` so it no longer depends on removed services. Add worker dependency/proxy behavior only where required by profile-specific workers; default `docker compose up` must start `suite_api` without legacy module containers.
+
+Update `docker-compose.dev.yml` and `docker-compose.prod.yml` to match the same service model: `suite_api` as the only always-on backend, workers only behind `hardware`, `jobs`, or `physics` profiles.
+
+Update monitoring configuration so Prometheus no longer scrapes removed standalone services by default. If worker scrape jobs remain, put them behind clear labels/profile documentation.
+
+**Acceptance gate**:
+
+```bash
+python3 scripts/validate_docker_compose.sh
+docker compose config --quiet
+docker compose config --services
+```
+
+The service list includes `suite_api` and optional worker/monitoring services, but not the seven removed legacy service names.
+
+---
+
+### Step 6.3 — Finish launcher module lifecycle decommission
+
+Read `nmtk/AGENTS.md` before editing.
+
+In `nmtk/neuro_toolkit/assets/modules.json`, update all six core modules so they no longer start their own backend process:
+
+- set `startStrategy` to `none`
+- remove or blank `uvicornTarget`
+- preserve `id`, `name`, `port`, `installPath`, `sourcePath`, `runPath`, `installStrategy`, frontend metadata, hardware metadata, and remote URLs unless the launcher model requires a schema-compatible adjustment
+
+Update the Dart module model, launcher control service assumptions, and launcher tests in the same change so `startStrategy: none` is valid for installed native feature modules.
+
+**Acceptance gate**:
+
+```bash
+python3 scripts/launcher_control_service.py --doctor --json
+bash scripts/run_launcher_guardrails.sh
+flutter test nmtk/neuro_toolkit/
+```
+
+`fatalCount` is 0, and launcher tests do not expect core modules to launch via `uvicorn`.
+
+---
+
+### Step 6.4 — Remove WebView-era build paths from Makefile and scripts
+
+In `Makefile`:
+
+- remove the `MODULES` variable for the six frontend modules
+- remove per-module `PORT_*` variables used only by web builds
+- remove `build-submodules`, `rebuild-submodules`, `build-interactive`, and generated `build-$(module)` rules
+- update `help` so it no longer advertises WebView/web-frontend build targets
+- make `dev` start `suite_api` and the native Flutter launcher only
+- keep `suite_api_dev`, `dev-native`, `clean-all`, `bump-version`, `ci`, and `release`
+
+Move these scripts to `scripts/archive/`:
+
+- `scripts/build_module.sh`
+- `scripts/build_all_frontends.sh`
+- `scripts/select_modules.sh`
+
+Update any remaining callers (`scripts/run_dev.sh`, CI scripts, docs, or tests) so they do not require the archived scripts for the standard native workflow.
+
+**Acceptance gate**:
+
+```bash
+make help
+grep -R "build_module.sh\|build_all_frontends.sh\|select_modules.sh" Makefile scripts .github/workflows nmtk/neuro_toolkit -n
+make ci
+```
+
+Only archived or historical references may remain. Standard `make dev` must not build Flutter web frontends.
+
+---
+
+### Step 6.5 — Refresh setup and architecture documentation
+
+Update `SETUP_GUIDE.md` so the primary paths describe the consolidated architecture:
+
+- Docker setup starts `suite_api` by default.
+- Manual setup installs and runs `suite_api`, then runs `nmtk/neuro_toolkit` with `SUITE_API_URL`.
+- Per-module `uvicorn` commands are removed from standard setup sections.
+- WebView and per-module Flutter web build instructions are removed from standard launcher sections.
+- Optional hardware/compute worker instructions are documented separately for `neurosense-hw-worker`, `neurobench-runner-worker`, `neurochip-hw-worker`, and `neurocnl-physics-worker`.
+- The port table lists `suite_api` on 9000 and only the optional workers on legacy ports 8002, 8003, 8004, and 8006.
+
+Audit README/developer docs touched by default workflow instructions and update them only if they still direct users to the old multi-service/WebView flow.
+
+**Acceptance gate**:
+
+```bash
+grep -n "uvicorn .*800[0-5]\|desktop_webview_window\|build web\|build_module.sh" SETUP_GUIDE.md README.md Makefile
+```
+
+Any remaining matches must be explicitly historical or optional-worker documentation, not the default development path.
+
+---
+
+### Step 6.6 — Validate suite_api in an installed environment
+
+Create or use a Python environment with `suite_api` dependencies installed:
+
+```bash
+pip install -e suite_api/
+python3 -c "from suite_api.main import app; print(len(app.routes))"
+```
+
+Verify every domain prefix is mounted:
+
+```bash
+python3 - <<'PY'
+from suite_api.main import app
+paths = sorted(getattr(r, "path", "") for r in app.routes)
+for prefix in [
+    "/api/suite",
+    "/api/neurocnl",
+    "/api/neurosim",
+    "/api/neurochip",
+    "/api/neurobench",
+    "/api/neurosense",
+    "/api/neurohub",
+]:
+    assert any(path.startswith(prefix) for path in paths), prefix
+print("suite_api route prefixes OK")
+PY
+```
+
+If imports fail because multiple submodules expose a top-level `app` package, fix `suite_api.domains.*` import isolation before continuing. The final implementation must not depend on whichever submodule path was inserted first.
+
+**Acceptance gate**: Both commands exit 0 in a clean environment after `pip install -e suite_api/`.
+
+---
+
+### Step 6.7 — Final verification run
+
+Run the consolidated verification suite:
+
+```bash
+python3 -m pytest tests/integration/ -v -k "phase0 or phase1 or phase2"
+python3 scripts/launcher_control_service.py --doctor --json
+bash scripts/run_launcher_guardrails.sh --with-integration
+flutter analyze nmtk/neuro_toolkit/
+flutter test nmtk/neuro_toolkit/
+docker compose config --quiet
+```
+
+If hardware/worker dependencies are unavailable locally, still verify that suite_api starts without them and that worker-backed routes return controlled 503-style responses rather than import errors.
+
+**Acceptance gate**: All commands pass, launcher doctor reports `fatalCount: 0`, and default Docker Compose no longer starts legacy module services.
+
+---
+
+### Phase 6 completion — Update final capture and tag
+
+After Phase 6 acceptance gates pass, amend the final OpenBrain capture text from Step 5.6 to say "all 6 phases done" and mention that Phase 6 closed the verification gaps in decommissioned compose services, launcher lifecycle config, archived WebView build scripts, setup docs, and final validation.
+
+Then tag:
+
+```bash
+git tag consolidation-phase-6-done
+git push origin consolidation-phase-6-done
+```
+
+Open the final PR from `consolidation` to `main` only after Phase 6 passes and human review is requested.
+
+---
 ## Summary table
 
 | Phase   | Parent repo branch                      | Submodule branches         | What changes                                        | ADR actions                                           | OpenBrain capture        | Rollback path                                         |
@@ -1890,6 +2097,7 @@ All pass. `fatalCount` is 0.
 | 3F done | —                                      | none                       | Phase 3 final gate                                  | Write ADR 0019; amend 0010, 0017; supersede nmtk/0004 | Yes (Phase 3 completion) | Revert ADR files                                      |
 | 4A–4D  | `consolidation/phase-4-workers`       | none                       | Four worker processes                               | none                                                  | Yes (Phase 4 completion) | Remove worker, restore in-process router              |
 | 5       | `consolidation/phase-5-decommission`  | none                       | Remove old services, scripts, compose entries       | Amend ADR 0008                                        | Yes (Step 5.6, final)    | Git revert Phase 5 commits                            |
+| 6       | `consolidation/phase-6-verification-remediation` | none unless validation exposes submodule import bugs | Close verification gaps: compose decommission, launcher lifecycle, Makefile/scripts, docs, final validation | none unless docs/ADR status is found stale | Yes (amended final capture) | Git revert Phase 6 commits                            |
 | Final   | PR:`consolidation → main`            | none                       | Merge to production                                 | —                                                    | —                       | Revert merge                                          |
 
 Each phase boundary is a stable, deployable state. Never start a phase until all prior acceptance gates pass. Never merge `consolidation → main` without human review — the auto-merge CI workflow will block it correctly.

@@ -7,9 +7,6 @@
 [submodule "Neurobench"]
 	path = Neurobench
 	url = ../Neurobench.git
-[submodule "Neurosim"]
-	path = Neurosim
-	url = ../Neurosim.git
 [submodule "Neurosense"]
 	path = Neurosense
 	url = ../Neurosense.git

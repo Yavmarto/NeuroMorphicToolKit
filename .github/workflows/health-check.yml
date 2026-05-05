@@ -59,7 +59,7 @@ jobs:
         run: |
           echo "## Module Discovery" >> "$GITHUB_STEP_SUMMARY"
           MODULES=""
-          for dir in Neurosim Neurochip Neurosense Neurohub neurocnl Neuro-Dream-Hand Neurobench; do
+          for dir in Neurochip Neurosense Neurohub neurocnl Neuro-Dream-Hand Neurobench; do
             if [ -f "$dir/Dockerfile" ] || [ -f "$dir/docker-compose.yml" ] || [ -f "$dir/docker-compose.yaml" ]; then
               echo "- ✓ $dir has Docker config" >> "$GITHUB_STEP_SUMMARY"
               MODULES="$MODULES $dir"
@@ -72,7 +72,7 @@ jobs:
       - name: Validate health endpoint declarations
         run: |
           echo "## Health Endpoint Audit" >> "$GITHUB_STEP_SUMMARY"
-          for dir in Neurosim Neurochip Neurosense Neurohub neurocnl Neuro-Dream-Hand Neurobench; do
+          for dir in Neurochip Neurosense Neurohub neurocnl Neuro-Dream-Hand Neurobench; do
             # Search for /health route in Python files
             if [ -d "$dir" ]; then
               HEALTH=$(grep -rl '"/health"' "$dir" --include="*.py" 2>/dev/null || true)
@@ -88,7 +88,7 @@ jobs:
         run: |
           echo "## API Contract Check" >> "$GITHUB_STEP_SUMMARY"
           # Check that modules importing from other modules reference valid endpoints
-          for dir in Neurosim Neurochip Neurosense Neurohub neurocnl Neuro-Dream-Hand Neurobench; do
+          for dir in Neurochip Neurosense Neurohub neurocnl Neuro-Dream-Hand Neurobench; do
             if [ -d "$dir" ]; then
               # Find cross-module HTTP calls
               CALLS=$(grep -rn 'localhost:\|127\.0\.0\.1:' "$dir" --include="*.py" 2>/dev/null || true)

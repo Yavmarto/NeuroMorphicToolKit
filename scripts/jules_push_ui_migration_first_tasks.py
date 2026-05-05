@@ -24,7 +24,6 @@ load_dotenv(ENV_PATH)
 
 DEFAULT_MODULES = (
     "neurocnl",
-    "Neurosim",
     "Neurochip",
     "Neurobench",
     "Neurosense",

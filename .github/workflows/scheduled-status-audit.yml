@@ -15,7 +15,6 @@ jobs:
       matrix:
         module: [
           'neurocnl',
-          'Neurosim',
           'Neurosense',
           'Neurohub',
           'Neurochip',

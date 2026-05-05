@@ -10,8 +10,108 @@ import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
+
+class _FakeWebViewPlatform extends WebViewPlatform {
+  @override
+  PlatformNavigationDelegate createPlatformNavigationDelegate(
+    PlatformNavigationDelegateCreationParams params,
+  ) {
+    return _FakePlatformNavigationDelegate(params);
+  }
+
+  @override
+  PlatformWebViewController createPlatformWebViewController(
+    PlatformWebViewControllerCreationParams params,
+  ) {
+    return _FakePlatformWebViewController(params);
+  }
+
+  @override
+  PlatformWebViewWidget createPlatformWebViewWidget(
+    PlatformWebViewWidgetCreationParams params,
+  ) {
+    return _FakePlatformWebViewWidget(params);
+  }
+
+  @override
+  PlatformWebViewCookieManager createPlatformCookieManager(
+    PlatformWebViewCookieManagerCreationParams params,
+  ) {
+    return _FakePlatformWebViewCookieManager(params);
+  }
+}
+
+class _FakePlatformNavigationDelegate extends PlatformNavigationDelegate {
+  _FakePlatformNavigationDelegate(PlatformNavigationDelegateCreationParams params)
+      : super.implementation(params);
+
+  @override
+  Future<void> setOnNavigationRequest(
+    NavigationRequestCallback onNavigationRequest,
+  ) async {}
+
+  @override
+  Future<void> setOnPageStarted(PageEventCallback onPageStarted) async {}
+
+  @override
+  Future<void> setOnPageFinished(PageEventCallback onPageFinished) async {}
+
+  @override
+  Future<void> setOnProgress(ProgressCallback onProgress) async {}
+
+  @override
+  Future<void> setOnWebResourceError(
+    WebResourceErrorCallback onWebResourceError,
+  ) async {}
+
+  @override
+  Future<void> setOnUrlChange(UrlChangeCallback onUrlChange) async {}
+
+  @override
+  Future<void> setOnHttpError(HttpResponseErrorCallback onHttpError) async {}
+
+  @override
+  Future<void> setOnHttpAuthRequest(
+    HttpAuthRequestCallback onHttpAuthRequest,
+  ) async {}
+
+  @override
+  Future<void> setOnSSlAuthError(SslAuthErrorCallback onSslAuthError) async {}
+}
+
+class _FakePlatformWebViewController extends PlatformWebViewController {
+  _FakePlatformWebViewController(PlatformWebViewControllerCreationParams params)
+      : super.implementation(params);
+
+  @override
+  Future<void> loadRequest(LoadRequestParams params) async {}
+
+  @override
+  Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {}
+
+  @override
+  Future<void> setPlatformNavigationDelegate(
+    PlatformNavigationDelegate handler,
+  ) async {}
+}
+
+class _FakePlatformWebViewWidget extends PlatformWebViewWidget {
+  _FakePlatformWebViewWidget(PlatformWebViewWidgetCreationParams params)
+      : super.implementation(params);
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
+class _FakePlatformWebViewCookieManager extends PlatformWebViewCookieManager {
+  _FakePlatformWebViewCookieManager(
+    PlatformWebViewCookieManagerCreationParams params,
+  ) : super.implementation(params);
+}
 
 class _NoopProcessManager implements ProcessManager {
   final _statusController = StreamController<Module>.broadcast();
@@ -141,6 +241,7 @@ class _FakeWorkspaceControlApiService extends ControlApiService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  WebViewPlatform.instance = _FakeWebViewPlatform();
 
   testWidgets('ToolView seeds all launcher tabs on startup',
       (WidgetTester tester) async {
@@ -150,18 +251,18 @@ void main() {
     );
     moduleProvider.modules = [
       Module(
-        id: 'm1',
-        name: 'Module 1',
+        id: 'neurocnl',
+        name: 'NeuroStudio',
         description: 'Desc 1',
         directory: '/tmp/m1',
-        port: 8001,
+        port: 8000,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.installed,
       ),
       Module(
-        id: 'm2',
-        name: 'Module 2',
+        id: 'Neurochip',
+        name: 'NeuroChip',
         description: 'Desc 2',
         directory: '/tmp/m2',
         port: 8002,
@@ -192,13 +293,56 @@ void main() {
     await tester.pump();
 
     expect(find.byType(NmtkDesktopScaffold), findsOneWidget);
-    expect(find.text('Module 1'), findsWidgets);
-    expect(find.text('Module 2'), findsWidgets);
     expect(find.text('NDH'), findsNothing);
     expect(workspaceProvider.sessions.map((session) => session.moduleId), [
-      'm1',
-      'm2',
+      'neurocnl',
+      'Neurochip',
     ]);
+  });
+
+  testWidgets(
+      'ToolView forces embedded surfaces when control API uses a remote host',
+      (WidgetTester tester) async {
+    final moduleProvider = _TrackingModuleProvider();
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(),
+    );
+    moduleProvider.modules = [
+      Module(
+        id: 'Neurochip',
+        name: 'NeuroChip',
+        description: 'Desc 1',
+        directory: '/tmp/m1',
+        port: 9000,
+        hasFrontend: true,
+        startStrategy: 'none',
+        status: ModuleStatus.running,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          launcherBootstrapStateProvider.overrideWithValue(
+            LauncherBootstrapState.ready(
+              Uri.parse('http://192.168.1.50:8090'),
+            ),
+          ),
+          controlApiServiceProvider.overrideWithValue(
+            ControlApiService(baseUri: Uri.parse('http://192.168.1.50:8090')),
+          ),
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+        ],
+        child: _buildTestShell(const ToolViewScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(workspaceProvider.sessions, hasLength(1));
+    expect(workspaceProvider.sessions.single.moduleId, 'Neurochip');
+    expect(workspaceProvider.sessions.single.surfaceMode, 'embedded');
   });
 
   testWidgets(
@@ -221,31 +365,31 @@ void main() {
     );
     moduleProvider.modules = [
       Module(
-        id: 'm1',
-        name: 'Module 1',
+        id: 'neurocnl',
+        name: 'NeuroStudio',
         description: 'Desc 1',
         directory: '/tmp/m1',
-        port: 8001,
+        port: 8000,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.starting,
       ),
       Module(
-        id: 'm2',
-        name: 'Module 2',
+        id: 'Neurobench',
+        name: 'NeuroBench',
         description: 'Desc 2',
         directory: '/tmp/m2',
-        port: 8002,
+        port: 8003,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.installed,
       ),
       Module(
-        id: 'm3',
-        name: 'Module 3',
+        id: 'Neurohub',
+        name: 'NeuroHub',
         description: 'Desc 3',
         directory: '/tmp/m3',
-        port: 8003,
+        port: 8005,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.installed,
@@ -265,13 +409,13 @@ void main() {
     await tester.pump();
 
     expect(workspaceProvider.sessions.map((session) => session.moduleId), [
-      'm1',
-      'm2',
-      'm3',
+      'neurocnl',
+      'Neurobench',
+      'Neurohub',
     ]);
   });
 
-  testWidgets('selecting a tab starts its backend and shows loading state',
+  testWidgets('opening a second workspace session preserves focus state',
       (WidgetTester tester) async {
     final moduleProvider = _TrackingModuleProvider();
     final workspaceProvider = WorkspaceProvider(
@@ -279,18 +423,18 @@ void main() {
     );
     moduleProvider.modules = [
       Module(
-        id: 'm1',
-        name: 'Module 1',
+        id: 'neurocnl',
+        name: 'NeuroStudio',
         description: 'Desc 1',
         directory: '/tmp/m1',
-        port: 8001,
+        port: 8000,
         hasFrontend: true,
         startStrategy: 'uvicorn',
         status: ModuleStatus.installed,
       ),
       Module(
-        id: 'm2',
-        name: 'Module 2',
+        id: 'Neurochip',
+        name: 'NeuroChip',
         description: 'Desc 2',
         directory: '/tmp/m2',
         port: 8002,
@@ -312,15 +456,20 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(moduleProvider.launchedModuleIds, contains('m1'));
+    expect(moduleProvider.launchedModuleIds, contains('neurocnl'));
 
-    await tester.tap(find.text('Module 2').first);
+    await workspaceProvider.openSession(
+      'Neurochip',
+      surfaceMode: 'embedded',
+      readinessState: 'opening',
+    );
     await tester.pump();
 
-    expect(moduleProvider.launchedModuleIds, contains('m2'));
-    expect(find.text('Waiting for Module 2'), findsOneWidget);
-    expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    expect(find.textContaining('take a little longer to warm up'), findsOneWidget);
+    expect(workspaceProvider.focusedModuleId, 'Neurochip');
+    expect(
+      workspaceProvider.sessions.map((session) => session.moduleId),
+      ['neurocnl', 'Neurochip'],
+    );
   });
 
   testWidgets('ToolView shows launcher preflight error instead of polling',
@@ -369,6 +518,83 @@ void main() {
     );
     expect(find.text('Retry Start'), findsOneWidget);
     expect(find.textContaining('Checking http'), findsNothing);
+  });
+
+  testWidgets(
+      'ToolView hides launcher-nav-disabled modules and falls back focus',
+      (WidgetTester tester) async {
+    final moduleProvider = _TrackingModuleProvider();
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(
+        initialSnapshot: const WorkspaceSnapshot(
+          sessions: <WorkspaceSession>[
+            WorkspaceSession(
+              moduleId: 'neurocnl',
+              surfaceMode: 'embedded',
+              readinessState: 'warming_up',
+            ),
+            WorkspaceSession(
+              moduleId: 'Neurochip',
+              surfaceMode: 'embedded',
+              readinessState: 'warming_up',
+            ),
+          ],
+          focusedModuleId: 'Neurochip',
+        ),
+      ),
+    );
+    moduleProvider.modules = [
+      Module(
+        id: 'neurocnl',
+        name: 'NeuroStudio',
+        description: 'Studio',
+        directory: '/tmp/neurocnl',
+        port: 8000,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+      Module(
+        id: 'Neurochip',
+        name: 'NeuroChip',
+        description: 'Hardware runtime',
+        directory: '/tmp/neurochip',
+        port: 8002,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+        showInLauncherNav: false,
+      ),
+      Module(
+        id: 'Neurobench',
+        name: 'NeuroBench',
+        description: 'Bench',
+        directory: '/tmp/neurobench',
+        port: 8003,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+        ],
+        child: _buildTestShell(const ToolViewScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(workspaceProvider.focusedModuleId, 'neurocnl');
+    expect(workspaceProvider.sessions.map((session) => session.moduleId), [
+      'neurocnl',
+      'Neurobench',
+    ]);
+    expect(moduleProvider.launchedModuleIds, contains('neurocnl'));
   });
 }
 

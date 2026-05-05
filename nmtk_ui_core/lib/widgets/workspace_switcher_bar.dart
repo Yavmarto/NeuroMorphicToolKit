@@ -89,7 +89,7 @@ class NmtkWorkspaceChip extends StatelessWidget {
     final palette = tokens.paletteForMode(mode);
 
     return Semantics(
-      label: data.semanticsLabel ?? data.label,
+      label: '${data.semanticsLabel ?? data.label}, status: ${data.state.name}',
       selected: isActive,
       button: true,
       child: Material(

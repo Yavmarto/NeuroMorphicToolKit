@@ -1,7 +1,13 @@
 # ADR 0004: WebView Module Embedding
 
 ## Status
-Accepted
+Superseded by ADR 0019 (Flutter Feature Packages)
+
+## Supersession note
+WebView embedding via desktop_webview_window is replaced by native Flutter
+feature packages after Phase 3 of the consolidation plan. See
+docs/ADR-claude/0019-flutter-feature-packages.md and
+docs/implementation-plan-consolidation.md.
 
 ## Context
 Each NMTK module has its own Flutter web frontend served by its respective FastAPI backend. The desktop launcher needs to display these web UIs within the native application without rebuilding them as native widgets.

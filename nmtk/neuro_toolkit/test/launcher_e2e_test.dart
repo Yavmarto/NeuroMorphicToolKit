@@ -8,6 +8,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+
+class _TestPathProvider extends PathProviderPlatform {
+  @override
+  Future<String?> getApplicationDocumentsPath() async {
+    return Directory.systemTemp.path;
+  }
+}
 
 /// This script tests the ProcessManager's ability to install and launch modules.
 /// It also tests the failure recovery mechanism.
@@ -24,6 +32,7 @@ void main() {
 
     setUpAll(() async {
       TestWidgetsFlutterBinding.ensureInitialized();
+      PathProviderPlatform.instance = _TestPathProvider();
       repoRoot = p.normalize(p.join(Directory.current.path, '..', '..'));
 
       // Load modules from assets/modules.json

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/section_card.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
 
@@ -22,11 +23,12 @@ class NmtkErrorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final errColor = NmtkShellTokens.of(context).errorColor;
     return NmtkSectionCard(
       title: title,
       subtitle: subtitle,
       tone: NmtkTone.danger,
-      leading: const Icon(Icons.error_outline, color: Colors.red),
+      leading: Icon(Icons.error_outline, color: errColor),
       trailing: action,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,9 +37,9 @@ class NmtkErrorCard extends StatelessWidget {
           selectable
               ? SelectableText(
                   message,
-                  style: const TextStyle(color: Colors.red),
+                  style: TextStyle(color: errColor),
                 )
-              : Text(message, style: const TextStyle(color: Colors.red)),
+              : Text(message, style: TextStyle(color: errColor)),
         ],
       ),
     );

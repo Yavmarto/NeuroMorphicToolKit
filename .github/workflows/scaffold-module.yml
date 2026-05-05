@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       module_name:
-        description: 'Module name exactly as in NMTK (e.g. NeuroCNL, Neurosim, Neuro-Dream-Hand)'
+        description: 'Module name exactly as in NMTK (e.g. neurocnl, Neurochip, Neuro-Dream-Hand)'
         required: true
         type: string
       module_purpose:

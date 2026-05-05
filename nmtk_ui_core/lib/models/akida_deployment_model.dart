@@ -492,6 +492,7 @@ class AkidaPairedHost {
   final AkidaPairedHostState state;
   final String lastReadinessMessage;
   final String lastVerifiedAt;
+  final bool isDefault;
   final AkidaEnvironmentChecks? capabilitySnapshot;
 
   const AkidaPairedHost({
@@ -515,6 +516,7 @@ class AkidaPairedHost {
     required this.state,
     required this.lastReadinessMessage,
     required this.lastVerifiedAt,
+    this.isDefault = false,
     this.capabilitySnapshot,
   });
 
@@ -578,6 +580,7 @@ class AkidaPairedHost {
           json['lastVerifiedAt'] as String? ??
           json['last_verified_at'] as String? ??
           '',
+      isDefault: json['isDefault'] as bool? ?? false,
       capabilitySnapshot: json['capabilitySnapshot'] is Map<String, dynamic>
           ? AkidaEnvironmentChecks.fromJson(
               json['capabilitySnapshot'] as Map<String, dynamic>,
@@ -612,6 +615,7 @@ class AkidaPairedHost {
       'state': state.apiValue,
       'lastReadinessMessage': lastReadinessMessage,
       'lastVerifiedAt': lastVerifiedAt,
+      'isDefault': isDefault,
       if (capabilitySnapshot != null)
         'capabilitySnapshot': capabilitySnapshot!.toJson(),
     };
@@ -638,6 +642,7 @@ class AkidaPairedHost {
     AkidaPairedHostState? state,
     String? lastReadinessMessage,
     String? lastVerifiedAt,
+    bool? isDefault,
     AkidaEnvironmentChecks? capabilitySnapshot,
   }) {
     return AkidaPairedHost(
@@ -661,6 +666,7 @@ class AkidaPairedHost {
       state: state ?? this.state,
       lastReadinessMessage: lastReadinessMessage ?? this.lastReadinessMessage,
       lastVerifiedAt: lastVerifiedAt ?? this.lastVerifiedAt,
+      isDefault: isDefault ?? this.isDefault,
       capabilitySnapshot: capabilitySnapshot ?? this.capabilitySnapshot,
     );
   }

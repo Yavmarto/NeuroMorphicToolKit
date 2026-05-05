@@ -74,56 +74,43 @@ If you already cloned without `--recurse-submodules`:
 git submodule update --init --recursive
 ```
 
-Verify all 7 submodules are present:
+Verify all 6 checked-out submodules are present:
 ```bash
 git submodule status
 ```
 
-You should see entries for: `Neuro-Dream-Hand`, `Neurobench`, `Neurochip`, `Neurohub`, `Neurosense`, `Neurosim`, `neurocnl`.
+You should see entries for: `Neuro-Dream-Hand`, `Neurobench`, `Neurochip`, `Neurohub`, `Neurosense`, `neurocnl`.
 
 ---
 
 ## 3. Option A: Docker Setup (Recommended)
 
-This is the fastest way to get all backend services running.
+This is the fastest way to get the backend running.
 
-### 3a. Start core services (neurocnl + neurosim + neurochip)
+### 3a. Start suite_api
 
 ```bash
 docker compose up --build
 ```
 
-This starts 3 services on the default profile:
-- **neurocnl** on `http://localhost:8000`
-- **neurosim** on `http://localhost:8001`
-- **neurochip** on `http://localhost:8002`
+This starts the unified `suite_api` backend on `http://localhost:9000`.
 
-### 3b. Start all 7 services
+### 3b. Start with physics or hardware workers
 
-```bash
-docker compose --profile full up --build
-```
-
-This adds:
-- **neurobench** on `http://localhost:8003`
-- **neurosense** on `http://localhost:8004`
-- **neurohub** on `http://localhost:8005`
-
-### 3c. Start with physics module variant
+If you need specialized hardware or physics support, you can start the corresponding workers via Docker profiles:
 
 ```bash
+# Start suite_api + physics worker (MuJoCo)
 docker compose --profile physics up --build
+
+# Start suite_api + hardware workers (Neurochip/Neurosense)
+docker compose --profile hardware up --build
 ```
 
-This starts `neurocnl-physics` on port 8006 (includes MuJoCo physics support).
-
-### 3d. Verify services are healthy
+### 3c. Verify service is healthy
 
 ```bash
-# Check individual services
-curl http://localhost:8000/health
-curl http://localhost:8001/health
-curl http://localhost:8002/health
+curl http://localhost:9000/api/suite/health
 
 # Or run the validation script
 bash scripts/validate_docker_compose.sh
@@ -132,7 +119,7 @@ bash scripts/validate_docker_compose.sh
 bash scripts/demo_smoke_test.sh
 ```
 
-### 3e. Stop services
+### 3d. Stop services
 
 ```bash
 docker compose down
@@ -141,34 +128,16 @@ docker compose down
 docker compose down -v
 ```
 
-### 3f. Port configuration
-
-Ports are configured in `.env` at the repository root:
-
-```
-NEUROCNL_PORT=8000
-NEUROCNL_PHYSICS_PORT=8006
-NEUROSIM_PORT=8001
-NEUROCHIP_PORT=8002
-NEUROBENCH_PORT=8003
-NEUROSENSE_PORT=8004
-NEUROHUB_PORT=8005
-```
-
-Edit `.env` to change port assignments if you have conflicts.
-
 ---
 
 ## 4. Option B: Manual Setup (Development)
 
-Use this when you need to develop and debug individual modules with hot-reloading.
+Use this when you need to develop and debug the backend with hot-reloading. Since all backend modules are now consolidated under the `suite_api` monolith, you only need to run a single server.
 
-### 4a. Install core libraries first
-
-neurocnl and Neuro-Dream-Hand are shared dependencies used by other modules.
+### 4a. Install dependencies
 
 ```bash
-# Create a shared virtual environment (recommended)
+# Create a shared virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
@@ -180,76 +149,29 @@ cd ..
 cd Neuro-Dream-Hand
 pip install -e ".[dev]"
 cd ..
+
+# Install suite_api
+cd suite_api
+pip install -e .
+cd ..
 ```
 
-### 4b. Install and start individual backends
+*Note: For full hardware and benchmarking features, also install Neurochip and Neurobench using Poetry in their respective directories.*
 
-Each backend can be started independently. Open a separate terminal for each.
-
-**neurocnl backend (port 8000):**
-```bash
-source .venv/bin/activate
-cd neurocnl
-pip install -e ".[dev]"
-# Note: must run from neurocnl/ root for 'backend' import to work
-uvicorn backend.app.main:app --reload --port 8000
-```
-
-**Neurosim backend (port 8001):**
-```bash
-source .venv/bin/activate
-cd Neurosim
-pip install -e ".[dev]"
-uvicorn neurosim.app.main:app --reload --port 8001
-```
-
-**Neurochip backend (port 8002):**
-```bash
-cd Neurochip/neurochip
-poetry install
-# Note: must run from Neurochip/neurochip root
-poetry run uvicorn app.main:app --reload --port 8002
-```
-
-**Neurobench backend (port 8003):**
-```bash
-cd Neurobench/neurobench
-poetry install
-# Note: must run from Neurobench/neurobench root
-poetry run uvicorn app.main:app --reload --port 8003
-```
-
-**Neurosense backend (port 8004):**
-```bash
-source .venv/bin/activate
-cd Neurosense
-pip install -e ".[dev]"
-cd neurosense
-uvicorn app.main:app --reload --port 8004
-```
-
-**Neurohub backend (port 8005):**
-```bash
-source .venv/bin/activate
-cd Neurohub
-pip install -e ".[dev]"
-cd neurohub
-# Note: PYTHONPATH=. required for 'db' and 'app' sibling imports
-PYTHONPATH=. uvicorn app.main:app --reload --port 8005
-```
-
-### 4c. Verify each backend
+### 4b. Start suite_api
 
 ```bash
-curl http://localhost:8000/health   # neurocnl
-curl http://localhost:8001/health   # Neurosim
-curl http://localhost:8002/health   # Neurochip
-curl http://localhost:8003/health   # Neurobench
-curl http://localhost:8004/health   # Neurosense
-curl http://localhost:8005/health   # Neurohub
+# Note: run from the repository root so sibling module imports work
+uvicorn suite_api.main:app --reload --port 9000
 ```
 
-Each should return a JSON response with `"status": "ok"`, `"status": "healthy"`, or similar.
+### 4c. Verify the backend
+
+```bash
+curl http://localhost:9000/api/suite/health
+```
+
+The response should return a JSON indicating `"status": "ok"` and listing the connected domains.
 
 ---
 
@@ -280,9 +202,8 @@ flutter run -d macos
 ### 5c. Using the launcher
 
 1. **Dashboard** — Shows status of installed modules
-2. **Catalog** — Browse all 7 available modules:
-   - neurocnl (CNL Studio)
-   - Neurosim (Visual SNN Designer)
+2. **Catalog** — Browse all 6 available modules:
+   - neurocnl / NeuroStudio (CNL Studio + Visual SNN Designer)
    - Neurochip (Hardware Deployment)
    - Neurobench (Benchmarking)
    - Neurosense (Biosignal Acquisition)
@@ -319,7 +240,7 @@ cd nmtk/installer/macos
 1. Downloads a standalone Python 3.12 interpreter (python-build-standalone)
 2. Builds the Flutter macOS app (`flutter build macos --release`)
 3. Bundles Python into `.app/Contents/Frameworks/python/`
-4. Copies all 7 module source dirs into `.app/Contents/Resources/modules/`
+4. Copies all 6 checked-out module source dirs into `.app/Contents/Resources/modules/`
 5. Code signs and optionally creates a DMG
 
 **End-user flow:**
@@ -357,17 +278,16 @@ To serve the frontend from the backend's `/` route, you must build the Flutter w
 # Example: Building neurocnl web frontend
 cd neurocnl/frontend
 flutter pub get
-flutter build web --release --dart-define=API_BASE_URL=http://localhost:8000
+flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000
 
-# After building, the backend (if configured) will serve it at http://localhost:8000/
+# After building, the suite_api backend will serve it at http://localhost:9000/neurocnl/
 ```
 
-Repeat for other modules, replacing the directory and port in `API_BASE_URL`:
-- **Neurosim:** `cd Neurosim/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8001`
-- **Neurochip:** `cd Neurochip/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8002`
-- **Neurobench:** `cd Neurobench/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8003`
-- **Neurosense:** `cd Neurosense/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8004`
-- **Neurohub:** `cd Neurohub/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:8005`
+Repeat for other modules, keeping `API_BASE_URL` pointed to `suite_api` on port `9000`:
+- **Neurochip:** `cd Neurochip/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000`
+- **Neurobench:** `cd Neurobench/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000`
+- **Neurosense:** `cd Neurosense/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000`
+- **Neurohub:** `cd Neurohub/frontend && flutter build web --release --dart-define=API_BASE_URL=http://localhost:9000`
 
 ### 6b. Running Standalone Desktop Frontends (Development)
 
@@ -376,15 +296,7 @@ Repeat for other modules, replacing the directory and port in `API_BASE_URL`:
 ```bash
 cd neurocnl/frontend
 flutter pub get
-flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8000
-```
-
-### Neurosim frontend
-
-```bash
-cd Neurosim/frontend
-flutter pub get
-flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8001
+flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:9000
 ```
 
 ### Neurochip frontend
@@ -392,7 +304,7 @@ flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8001
 ```bash
 cd Neurochip/frontend
 flutter pub get
-flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8002
+flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:9000
 ```
 
 ### Neurosense frontend
@@ -400,7 +312,7 @@ flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8002
 ```bash
 cd Neurosense/frontend
 flutter pub get
-flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8004
+flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:9000
 ```
 
 ### Neurohub frontend
@@ -408,7 +320,7 @@ flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8004
 ```bash
 cd Neurohub/frontend
 flutter pub get
-flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8005
+flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:9000
 ```
 
 ### Neurobench frontend
@@ -416,10 +328,10 @@ flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8005
 ```bash
 cd Neurobench/frontend
 flutter pub get
-flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:8003
+flutter run -d macos --dart-define=API_BASE_URL=http://127.0.0.1:9000
 ```
 
-> **Note:** Ensure the corresponding backend is running before launching a frontend. The frontend will attempt to connect to the backend at the specified API_BASE_URL.
+> **Note:** Ensure `suite_api` backend is running before launching a frontend. The frontend will attempt to connect to it at the specified API_BASE_URL.
 
 ---
 
@@ -491,13 +403,11 @@ See `DEMO_WALKTHROUGH.md` for the full step-by-step guide with troubleshooting.
 
 | Service | Port | Profile | Health Endpoint |
 |---------|------|---------|----------------|
-| neurocnl | 8000 | default | `/health` |
-| Neurosim | 8001 | default | `/health` |
-| Neurochip | 8002 | default | `/health` |
-| Neurobench | 8003 | full | `/health` |
-| Neurosense | 8004 | full | `/health` |
-| Neurohub | 8005 | full | `/health` |
-| neurocnl-physics | 8006 | physics | `/health` |
+| suite_api | 9000 | default | `/api/suite/health` |
+| neurocnl-physics-worker | 8006 | physics | `/health` |
+| neurochip-hw-worker | 8002 | hardware | `/health` |
+| neurosense-hw-worker | 8004 | hardware | `/health` |
+| neurobench-runner-worker | 8003 | jobs | `/health` |
 
 ---
 
@@ -514,9 +424,9 @@ pytest -v
 cd Neuro-Dream-Hand
 pytest -v
 
-# Neurosim
-cd Neurosim
-pytest -v
+# NeuroStudio backend and merged canvas tests
+cd neurocnl
+pytest backend/tests neurosim/tests -v
 
 # Neurochip (92% coverage)
 cd Neurochip/neurochip
@@ -550,8 +460,9 @@ flutter test
 cd neurocnl/frontend
 flutter test
 
-# Neurosim frontend
-cd Neurosim/frontend
+# NeuroStudio frontend
+# Canvas routes now live inside the shared neurocnl frontend.
+cd neurocnl/frontend
 flutter test
 ```
 
@@ -596,7 +507,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for all repo
 
 ### 10b. Submodule Management
 
-This is a monorepo that manages 7 git submodules.
+This is a monorepo that manages 6 git submodules.
 
 **Checking out changes:**
 Always use `git submodule update --init --recursive` after pulling the root repository to ensure your local submodules match the tracked commits.
@@ -738,33 +649,24 @@ git checkout dev
 
 ```
 NeuroMorphicToolKit/
-├── neurocnl/              # Core CNL compiler & SNN engine (submodule)
-│   ├── neurocnl/          # Python library
-│   ├── backend/           # FastAPI backend (port 8000)
-│   └── frontend/          # Flutter frontend
+├── suite_api/             # Unified monolithic backend (port 9000)
+├── neurocnl/              # Core CNL compiler, NeuroStudio canvas, and frontend (submodule)
+│   └── frontend/          # Shared Flutter frontend (served by suite_api)
 ├── Neuro-Dream-Hand/      # Prosthetic SNN simulator (submodule)
-├── Neurosim/              # Visual SNN designer (submodule)
-│   ├── neurosim/          # FastAPI backend (port 8001)
-│   └── frontend/          # Flutter frontend
 ├── Neurochip/             # Hardware deployment toolkit (submodule)
-│   ├── neurochip/         # FastAPI backend (port 8002)
-│   └── frontend/          # Flutter frontend
+│   └── frontend/          # Flutter frontend (served by suite_api)
 ├── Neurobench/            # Benchmarking workbench (submodule)
-│   ├── neurobench/        # FastAPI backend (port 8003)
-│   └── frontend/          # Flutter frontend
+│   └── frontend/          # Flutter frontend (served by suite_api)
 ├── Neurosense/            # Biosignal acquisition (submodule)
-│   ├── neurosense/        # FastAPI backend (port 8004)
-│   └── frontend/          # Flutter frontend
+│   └── frontend/          # Flutter frontend (served by suite_api)
 ├── Neurohub/              # Suite orchestrator (submodule)
-│   ├── neurohub/          # FastAPI backend (port 8005)
-│   └── frontend/          # Flutter frontend
+│   └── frontend/          # Flutter frontend (served by suite_api)
 ├── nmtk/                  # Installer, CI, and launcher
 │   ├── neuro_toolkit/     # Flutter desktop launcher
 │   ├── scripts/           # Setup scripts
 │   └── installer/         # Platform installers (macOS, Linux, Windows)
 ├── nmtk_ui_core/          # Shared Flutter design system
-├── docker-compose.yml     # Root orchestration (7 services)
-├── .env                   # Port configuration
+├── docker-compose.yml     # Root orchestration (suite_api + workers)
 ├── scripts/               # Demo and validation scripts
 ├── DEMO_WALKTHROUGH.md    # Step-by-step demo guide
 └── SETUP_GUIDE.md         # This file

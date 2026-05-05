@@ -159,7 +159,7 @@ MODULES_DIR="$APP_PATH/Contents/Resources/modules"
 rm -rf "$MODULES_DIR"
 mkdir -p "$MODULES_DIR"
 
-MODULES=(neurocnl Neurosim Neurochip Neurobench Neurosense Neurohub Neuro-Dream-Hand)
+MODULES=(neurocnl Neurochip Neurobench Neurosense Neurohub Neuro-Dream-Hand)
 
 for mod in "${MODULES[@]}"; do
   SRC="$REPO_ROOT/$mod"

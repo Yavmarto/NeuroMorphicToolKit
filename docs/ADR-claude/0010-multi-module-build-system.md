@@ -12,3 +12,10 @@ The Makefile uses file-based dependency tracking: each frontend target depends o
 ## Consequences
 - **Positive:** File-based dependency tracking avoids unnecessary rebuilds; per-module build scripts enable focused development on a single module.
 - **Negative:** Modification-time-based tracking can miss changes in transitive dependencies (e.g., nmtk_ui_core changes not triggering module frontend rebuilds); no content-hash-based caching.
+
+## Amendment — Consolidation Phase 3 (2026)
+The per-module `flutter build web` pipeline described above is superseded
+after Phase 3 of the consolidation plan. The new build system is a single
+`flutter build macos` of `nmtk/neuro_toolkit/` which includes all six domain
+feature packages as path dependencies. See ADR 0019 and the implementation
+plan at `docs/implementation-plan-consolidation.md`.

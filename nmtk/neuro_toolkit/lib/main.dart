@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -17,8 +18,6 @@ void main() async {
 
   final settings = SettingsProvider(analyticsService: analytics);
   await settings.init();
-  final bootstrap = await LauncherControlBootstrapService().ensureReady();
-  final controlApiService = ControlApiService(baseUri: bootstrap.baseUri);
 
   // Global error handlers for crash reporting
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -35,12 +34,169 @@ void main() async {
       overrides: [
         analyticsServiceProvider.overrideWithValue(analytics),
         settingsStateProvider.overrideWith((ref) => settings),
-        launcherBootstrapStateProvider.overrideWithValue(bootstrap),
-        controlApiServiceProvider.overrideWithValue(controlApiService),
       ],
-      child: const NeuroToolkitApp(),
+      child: const LauncherBootstrapHost(),
     ),
   );
+}
+
+class LauncherBootstrapHost extends ConsumerStatefulWidget {
+  const LauncherBootstrapHost({super.key});
+
+  @override
+  ConsumerState<LauncherBootstrapHost> createState() =>
+      _LauncherBootstrapHostState();
+}
+
+class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
+  final TextEditingController _controlApiController = TextEditingController();
+  LauncherBootstrapState? _bootstrapState;
+  bool _isLoading = true;
+  String? _setupMessage;
+
+  bool get _isMobilePlatform =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(settingsStateProvider);
+    _controlApiController.text = settings.launcherControlApiBaseUrl ?? '';
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
+  }
+
+  @override
+  void dispose() {
+    _controlApiController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _bootstrap() async {
+    final settings = ref.read(settingsStateProvider);
+    final explicitBaseUri = _configuredBaseUri(settings);
+    if (_isMobilePlatform && explicitBaseUri == null) {
+      setState(() {
+        _bootstrapState = null;
+        _isLoading = false;
+        _setupMessage =
+            'Set the launcher control API host before opening the workspace.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _setupMessage = null;
+    });
+
+    final bootstrap = await LauncherControlBootstrapService(
+      explicitBaseUriOverride: explicitBaseUri,
+    ).ensureReady();
+    if (!mounted) {
+      return;
+    }
+
+    if (bootstrap.canUseControlApi) {
+      setState(() {
+        _bootstrapState = bootstrap;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    if (_isMobilePlatform || explicitBaseUri != null) {
+      setState(() {
+        _bootstrapState = null;
+        _isLoading = false;
+        _setupMessage = bootstrap.message;
+      });
+      return;
+    }
+
+    setState(() {
+      _bootstrapState = bootstrap;
+      _isLoading = false;
+    });
+  }
+
+  Uri? _configuredBaseUri(SettingsProvider settings) {
+    final stored = settings.launcherControlApiBaseUrl?.trim() ?? '';
+    if (stored.isNotEmpty) {
+      return Uri.parse(stored);
+    }
+    final configured = ControlApiService.configuredBaseUrl.trim();
+    if (configured.isNotEmpty) {
+      return Uri.parse(configured);
+    }
+    return null;
+  }
+
+  Future<void> _saveAndRetry() async {
+    await ref
+        .read(settingsStateProvider)
+        .setLauncherControlApiBaseUrl(_controlApiController.text);
+    if (!mounted) {
+      return;
+    }
+    await _bootstrap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(settingsStateProvider);
+    final bootstrap = _bootstrapState;
+    if (bootstrap != null) {
+      return ProviderScope(
+        overrides: [
+          launcherBootstrapStateProvider.overrideWithValue(bootstrap),
+          controlApiServiceProvider.overrideWithValue(
+            ControlApiService(baseUri: bootstrap.baseUri),
+          ),
+        ],
+        child: const NeuroToolkitApp(),
+      );
+    }
+
+    return ShadApp(
+      title: 'NeuroToolkit',
+      theme: NmtkShadTheme.light,
+      darkTheme: NmtkShadTheme.dark,
+      materialThemeBuilder: (_, __) {
+        final b = settings.themeMode == ThemeMode.dark
+            ? AppTheme.darkTheme
+            : AppTheme.lightTheme;
+        return settings.isHighContrast ? AppTheme.highContrastDarkTheme : b;
+      },
+      themeMode: settings.themeMode,
+      builder: (BuildContext ctx, Widget? child) {
+        return MediaQuery(
+          data: MediaQuery.of(ctx).copyWith(
+            textScaler: TextScaler.linear(settings.fontSizeFactor),
+          ),
+          child: ShadToaster(child: child!),
+        );
+      },
+      home: Scaffold(
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 640),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: _isLoading
+                  ? const _BootstrapLoadingView()
+                  : _BootstrapSetupView(
+                      controller: _controlApiController,
+                      message: _setupMessage,
+                      onRetry: _saveAndRetry,
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class NeuroToolkitApp extends ConsumerWidget {
@@ -57,9 +213,12 @@ class NeuroToolkitApp extends ConsumerWidget {
       theme: NmtkShadTheme.light,
       darkTheme: NmtkShadTheme.dark,
       // Material 3 layer — controls native Flutter widgets.
-      materialThemeBuilder: (_, __) => settings.isHighContrast
-          ? AppTheme.highContrastDarkTheme
-          : AppTheme.darkTheme,
+      materialThemeBuilder: (_, __) {
+        final b = settings.themeMode == ThemeMode.dark
+            ? AppTheme.darkTheme
+            : AppTheme.lightTheme;
+        return settings.isHighContrast ? AppTheme.highContrastDarkTheme : b;
+      },
       themeMode: settings.themeMode,
       routerConfig: router,
       builder: (BuildContext ctx, Widget? child) {
@@ -72,6 +231,65 @@ class NeuroToolkitApp extends ConsumerWidget {
           child: ShadToaster(child: child!),
         );
       },
+    );
+  }
+}
+
+class _BootstrapLoadingView extends StatelessWidget {
+  const _BootstrapLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return NmtkShellReadinessStateView.fromState(
+      NmtkShellReadinessState.warmingUp,
+      message: 'Connecting to the launcher control API…',
+    );
+  }
+}
+
+class _BootstrapSetupView extends StatelessWidget {
+  const _BootstrapSetupView({
+    required this.controller,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final TextEditingController controller;
+  final String? message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return NmtkSurfaceCard(
+      title: 'Launcher Server',
+      subtitle: 'Connect this device to the launcher control API first.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          NmtkShellReadinessStateView.fromState(
+            NmtkShellReadinessState.error,
+            message: message ??
+                'Enter the host or IP address for the launcher control API.',
+          ),
+          const SizedBox(height: 16),
+          ShadInputFormField(
+            label: const Text('CONTROL API HOST'),
+            controller: controller,
+            placeholder: const Text('http://192.168.1.50:8090'),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'The host machine must run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090` so the Android device can reach it.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          NmtkPrimaryButton(
+            onPressed: onRetry,
+            icon: Icons.wifi_find_rounded,
+            label: 'Save & Retry',
+          ),
+        ],
+      ),
     );
   }
 }

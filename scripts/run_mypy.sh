@@ -11,7 +11,6 @@ PYTHON_DIRS=(
     "Neurohub"
     "Neurochip"
     "Neurobench/neurobench"
-    "Neurosim"
 )
 
 ROOT_DIR=$(pwd)

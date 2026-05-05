@@ -14,7 +14,7 @@ jobs:
     runs-on: self-hosted
     strategy:
       matrix:
-        module: [neurocnl, neurosim, neurochip, neurobench, neurosense, neurohub]
+        module: [neurocnl, neurochip, neurobench, neurosense, neurohub]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,7 +44,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ matrix.module == 'neurocnl' && 'neurocnl/backend/Dockerfile' || format('{0}/Dockerfile', matrix.module == 'neurosim' && 'Neurosim' || matrix.module == 'neurochip' && 'Neurochip' || matrix.module == 'neurobench' && 'Neurobench' || matrix.module == 'neurosense' && 'Neurosense' || matrix.module == 'neurohub' && 'Neurohub') }}
+          file: ${{ matrix.module == 'neurocnl' && 'neurocnl/backend/Dockerfile' || format('{0}/Dockerfile', matrix.module == 'neurochip' && 'Neurochip' || matrix.module == 'neurobench' && 'Neurobench' || matrix.module == 'neurosense' && 'Neurosense' || matrix.module == 'neurohub' && 'Neurohub') }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

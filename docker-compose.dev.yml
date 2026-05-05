@@ -1,44 +1,6 @@
 services:
-  neurocnl:
+  suite_api:
     volumes:
-      - ./neurocnl/neurocnl:/app/neurocnl
-      - ./neurocnl/backend:/app/backend
-    environment:
-      - DEBUG=1
-
-  neurocnl-physics:
-    volumes:
-      - ./neurocnl/neurocnl:/app/neurocnl
-      - ./neurocnl/backend:/app/backend
-    environment:
-      - DEBUG=1
-
-  neurosim:
-    volumes:
-      - ./Neurosim/neurosim:/app/neurosim
-    environment:
-      - DEBUG=1
-
-  neurochip:
-    volumes:
-      - ./Neurochip/neurochip:/app/neurochip
-    environment:
-      - DEBUG=1
-
-  neurobench:
-    volumes:
-      - ./Neurobench/neurobench:/app/neurobench
-    environment:
-      - DEBUG=1
-
-  neurosense:
-    volumes:
-      - ./Neurosense/neurosense:/app/neurosense
-    environment:
-      - DEBUG=1
-
-  neurohub:
-    volumes:
-      - ./Neurohub/neurohub:/app/neurohub
+      - ./suite_api:/app
     environment:
       - DEBUG=1

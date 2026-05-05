@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
@@ -17,17 +18,21 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final TextEditingController _endpointController = TextEditingController();
+  final TextEditingController _launcherControlController =
+      TextEditingController();
 
   @override
   void initState() {
     super.initState();
     final settings = ref.read(settingsStateProvider);
     _endpointController.text = settings.remoteEndpoint ?? '';
+    _launcherControlController.text = settings.launcherControlApiBaseUrl ?? '';
   }
 
   @override
   void dispose() {
     _endpointController.dispose();
+    _launcherControlController.dispose();
     super.dispose();
   }
 
@@ -41,6 +46,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        NmtkSurfaceCard(
+          title: 'Launcher Settings',
+          subtitle:
+              'Secondary pages use an explicit return action so you can always get back to the workspace.',
+          trailing: NmtkOutlinedButton(
+            onPressed: () => context.go('/workspace'),
+            icon: Icons.arrow_back_rounded,
+            label: 'Back to Workspace',
+          ),
+          child: Text(
+            'Adjust shell behavior, logging, telemetry, and per-module overrides here.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
         // ── Appearance ──────────────────────────────────────────────────────
         NmtkSurfaceCard(
           title: 'Appearance',
@@ -95,6 +118,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onChanged: (LogLevel? newValue) {
                   if (newValue != null) settings.setLogLevel(newValue);
                 },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        NmtkSurfaceCard(
+          title: 'Launcher Control API',
+          subtitle:
+              'Configure the launcher backend host used by mobile or remote clients.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Launcher Control API Base URL',
+                style: theme.textTheme.labelMedium,
+              ),
+              const SizedBox(height: 6),
+              ShadInput(
+                controller: _launcherControlController,
+                placeholder: const Text('http://192.168.1.50:8090'),
+                onChanged: settings.setLauncherControlApiBaseUrl,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'On Android and iOS, point this at the machine running '
+                '`scripts/launcher_control_service.py --host 0.0.0.0 --port 8090`.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),

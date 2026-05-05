@@ -49,11 +49,15 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
           children: [
             if (leading != null) ...[leading!, const SizedBox(width: 10)],
             if (title != null)
-              DefaultTextStyle(
-                style: theme.textTheme.titleMedium!.copyWith(
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                fit: FlexFit.loose,
+                child: DefaultTextStyle(
+                  style: theme.textTheme.titleMedium!.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  child: title!,
                 ),
-                child: title!,
               ),
             if (title != null) const SizedBox(width: 14),
             Expanded(

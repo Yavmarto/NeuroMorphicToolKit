@@ -81,7 +81,7 @@ def test_update_and_get_config_snapshot(db: Session, snapshot: object) -> None:
     from neurohub.app.services.config_service import get_config, update_config
 
     new_cfg = SuiteConfig(
-        neurosim_url="http://neurosim.internal:8001",
+        neurosim_url="http://neurosim.internal:8000",
         neurochip_url="http://neurochip.internal:8002",
         neurobench_url="http://neurobench.internal:8003",
         neurosense_url="http://neurosense.internal:8004",

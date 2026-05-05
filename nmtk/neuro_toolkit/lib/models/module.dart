@@ -77,6 +77,182 @@ class AkidaRuntimeState {
       };
 }
 
+class PynqLauncherRuntimeConfig {
+  const PynqLauncherRuntimeConfig({
+    required this.runtimePort,
+    required this.sshPort,
+    required this.defaultUsername,
+    required this.defaultState,
+    required this.defaultAuthMode,
+    required this.legacyInstallRoot,
+    required this.installRootTemplate,
+    required this.agentVenvDirName,
+    required this.runtimeVenvDirName,
+    required this.overlayDirName,
+    required this.serviceName,
+    required this.agentExecutableName,
+    required this.installStatusFilename,
+    required this.runtimeLogFilename,
+    required this.overlayStagingSubdir,
+  });
+
+  final int runtimePort;
+  final int sshPort;
+  final String defaultUsername;
+  final String defaultState;
+  final String defaultAuthMode;
+  final String legacyInstallRoot;
+  final String installRootTemplate;
+  final String agentVenvDirName;
+  final String runtimeVenvDirName;
+  final String overlayDirName;
+  final String serviceName;
+  final String agentExecutableName;
+  final String installStatusFilename;
+  final String runtimeLogFilename;
+  final String overlayStagingSubdir;
+
+  factory PynqLauncherRuntimeConfig.fromJson(Map<String, dynamic> json) {
+    return PynqLauncherRuntimeConfig(
+      runtimePort: json['runtimePort'] as int? ?? 8002,
+      sshPort: json['sshPort'] as int? ?? 22,
+      defaultUsername: json['defaultUsername'] as String? ?? 'xilinx',
+      defaultState: json['defaultState'] as String? ?? 'unpaired',
+      defaultAuthMode: json['defaultAuthMode'] as String? ?? 'password',
+      legacyInstallRoot:
+          json['legacyInstallRoot'] as String? ?? '/opt/neurochip-pynq-agent',
+      installRootTemplate: json['installRootTemplate'] as String? ??
+          '/home/{username}/.local/share/neurochip-pynq-agent',
+      agentVenvDirName: json['agentVenvDirName'] as String? ?? 'venv',
+      runtimeVenvDirName: json['runtimeVenvDirName'] as String? ?? 'pynq-venv',
+      overlayDirName: json['overlayDirName'] as String? ?? 'overlays',
+      serviceName: json['serviceName'] as String? ?? 'neurochip-pynq-agent',
+      agentExecutableName:
+          json['agentExecutableName'] as String? ?? 'neurochip-pynq-agent',
+      installStatusFilename:
+          json['installStatusFilename'] as String? ?? 'install-status.json',
+      runtimeLogFilename:
+          json['runtimeLogFilename'] as String? ?? 'runtime.log',
+      overlayStagingSubdir:
+          json['overlayStagingSubdir'] as String? ?? 'overlay_staging/pynq_z2',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'runtimePort': runtimePort,
+        'sshPort': sshPort,
+        'defaultUsername': defaultUsername,
+        'defaultState': defaultState,
+        'defaultAuthMode': defaultAuthMode,
+        'legacyInstallRoot': legacyInstallRoot,
+        'installRootTemplate': installRootTemplate,
+        'agentVenvDirName': agentVenvDirName,
+        'runtimeVenvDirName': runtimeVenvDirName,
+        'overlayDirName': overlayDirName,
+        'serviceName': serviceName,
+        'agentExecutableName': agentExecutableName,
+        'installStatusFilename': installStatusFilename,
+        'runtimeLogFilename': runtimeLogFilename,
+        'overlayStagingSubdir': overlayStagingSubdir,
+      };
+}
+
+class AkidaLauncherRuntimeConfig {
+  const AkidaLauncherRuntimeConfig({
+    required this.runtimePort,
+    required this.controlPort,
+    required this.sshPort,
+    required this.defaultState,
+    required this.defaultAuthMode,
+    required this.installRoot,
+    required this.serviceUser,
+    required this.venvDirName,
+    required this.runtimeServiceName,
+    required this.controlServiceName,
+    required this.tokenRelativePath,
+    required this.installStatusRelativePath,
+  });
+
+  final int runtimePort;
+  final int controlPort;
+  final int sshPort;
+  final String defaultState;
+  final String defaultAuthMode;
+  final String installRoot;
+  final String serviceUser;
+  final String venvDirName;
+  final String runtimeServiceName;
+  final String controlServiceName;
+  final String tokenRelativePath;
+  final String installStatusRelativePath;
+
+  factory AkidaLauncherRuntimeConfig.fromJson(Map<String, dynamic> json) {
+    return AkidaLauncherRuntimeConfig(
+      runtimePort: json['runtimePort'] as int? ?? 8002,
+      controlPort: json['controlPort'] as int? ?? 8090,
+      sshPort: json['sshPort'] as int? ?? 22,
+      defaultState: json['defaultState'] as String? ?? 'unknown',
+      defaultAuthMode: json['defaultAuthMode'] as String? ?? 'password',
+      installRoot:
+          json['installRoot'] as String? ?? '/opt/neurochip-akida-host',
+      serviceUser: json['serviceUser'] as String? ?? 'neurochip',
+      venvDirName: json['venvDirName'] as String? ?? 'venv',
+      runtimeServiceName: json['runtimeServiceName'] as String? ?? 'neurochip',
+      controlServiceName:
+          json['controlServiceName'] as String? ?? 'neurochip-akida-control',
+      tokenRelativePath:
+          json['tokenRelativePath'] as String? ?? 'credentials/api-token',
+      installStatusRelativePath:
+          json['installStatusRelativePath'] as String? ?? 'install-status.json',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'runtimePort': runtimePort,
+        'controlPort': controlPort,
+        'sshPort': sshPort,
+        'defaultState': defaultState,
+        'defaultAuthMode': defaultAuthMode,
+        'installRoot': installRoot,
+        'serviceUser': serviceUser,
+        'venvDirName': venvDirName,
+        'runtimeServiceName': runtimeServiceName,
+        'controlServiceName': controlServiceName,
+        'tokenRelativePath': tokenRelativePath,
+        'installStatusRelativePath': installStatusRelativePath,
+      };
+}
+
+class LauncherRuntimeConfig {
+  const LauncherRuntimeConfig({
+    this.pynq,
+    this.akida,
+  });
+
+  final PynqLauncherRuntimeConfig? pynq;
+  final AkidaLauncherRuntimeConfig? akida;
+
+  factory LauncherRuntimeConfig.fromJson(Map<String, dynamic> json) {
+    return LauncherRuntimeConfig(
+      pynq: json['pynq'] is Map<String, dynamic>
+          ? PynqLauncherRuntimeConfig.fromJson(
+              json['pynq'] as Map<String, dynamic>,
+            )
+          : null,
+      akida: json['akida'] is Map<String, dynamic>
+          ? AkidaLauncherRuntimeConfig.fromJson(
+              json['akida'] as Map<String, dynamic>,
+            )
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'pynq': pynq?.toJson(),
+        'akida': akida?.toJson(),
+      };
+}
+
 class Module {
   final String id;
   final String name;
@@ -84,7 +260,9 @@ class Module {
   final String icon;
   final String directory;
   final int? port;
+  final bool required;
   final bool hasFrontend;
+  final bool showInLauncherNav;
   final String frontendStatus;
   final bool requiresMuJoCo;
   final String sourcePath;
@@ -103,6 +281,7 @@ class Module {
   final String installStrategy;
   final String startStrategy;
   final AkidaRuntimeConfig? akidaRuntime;
+  final LauncherRuntimeConfig? launcherRuntime;
   final AkidaRuntimeState? akidaRuntimeState;
   String preflightStatus;
   String? preflightMessage;
@@ -119,12 +298,14 @@ class Module {
     this.icon = 'extension',
     required this.directory,
     this.port,
+    this.required = false,
     this.hasFrontend = false,
+    this.showInLauncherNav = true,
     this.frontendStatus = 'No',
     this.requiresMuJoCo = false,
     this.sourcePath = '.',
     this.runPath = '.',
-    this.uvicornTarget = 'app.main:app',
+    this.uvicornTarget = '',
     this.localDeps = const [],
     this.version = '0.0.0',
     this.remoteVersion = '0.0.0',
@@ -136,8 +317,9 @@ class Module {
     this.requiredImports = const [],
     this.optionalImports = const [],
     this.installStrategy = 'pip',
-    this.startStrategy = 'uvicorn',
+    this.startStrategy = 'none',
     this.akidaRuntime,
+    this.launcherRuntime,
     this.akidaRuntimeState,
     this.preflightStatus = 'ok',
     this.preflightMessage,
@@ -157,13 +339,15 @@ class Module {
       directory:
           json['installPath'] as String? ?? json['directory'] as String? ?? '',
       port: json['port'] as int?,
+      required: json['required'] as bool? ?? false,
       hasFrontend: json['hasFrontend'] as bool? ?? false,
+      showInLauncherNav: json['showInLauncherNav'] as bool? ?? true,
       frontendStatus: json['frontendStatus'] as String? ?? 'No',
       requiresMuJoCo: json['requiresMuJoCo'] as bool? ?? false,
       sourcePath: json['sourcePath'] as String? ?? '.',
       runPath:
           json['runPath'] as String? ?? json['sourcePath'] as String? ?? '.',
-      uvicornTarget: json['uvicornTarget'] as String? ?? 'app.main:app',
+      uvicornTarget: json['uvicornTarget'] as String? ?? '',
       localDeps:
           (json['localDeps'] as List<dynamic>?)?.cast<String>() ?? const [],
       version: json['version'] as String? ?? '0.0.0',
@@ -180,10 +364,15 @@ class Module {
           (json['optionalImports'] as List<dynamic>?)?.cast<String>() ??
               const [],
       installStrategy: json['installStrategy'] as String? ?? 'pip',
-      startStrategy: json['startStrategy'] as String? ?? 'uvicorn',
+      startStrategy: json['startStrategy'] as String? ?? 'none',
       akidaRuntime: json['akidaRuntime'] is Map<String, dynamic>
           ? AkidaRuntimeConfig.fromJson(
               json['akidaRuntime'] as Map<String, dynamic>,
+            )
+          : null,
+      launcherRuntime: json['launcherRuntime'] is Map<String, dynamic>
+          ? LauncherRuntimeConfig.fromJson(
+              json['launcherRuntime'] as Map<String, dynamic>,
             )
           : null,
       akidaRuntimeState: json['akidaRuntimeState'] is Map<String, dynamic>
@@ -212,7 +401,9 @@ class Module {
     String? icon,
     String? directory,
     int? port,
+    bool? required,
     bool? hasFrontend,
+    bool? showInLauncherNav,
     String? frontendStatus,
     bool? requiresMuJoCo,
     String? sourcePath,
@@ -231,6 +422,7 @@ class Module {
     String? installStrategy,
     String? startStrategy,
     Object? akidaRuntime = const Object(),
+    Object? launcherRuntime = const Object(),
     Object? akidaRuntimeState = const Object(),
     String? preflightStatus,
     Object? preflightMessage = const Object(),
@@ -247,7 +439,9 @@ class Module {
       icon: icon ?? this.icon,
       directory: directory ?? this.directory,
       port: port ?? this.port,
+      required: required ?? this.required,
       hasFrontend: hasFrontend ?? this.hasFrontend,
+      showInLauncherNav: showInLauncherNav ?? this.showInLauncherNav,
       frontendStatus: frontendStatus ?? this.frontendStatus,
       requiresMuJoCo: requiresMuJoCo ?? this.requiresMuJoCo,
       sourcePath: sourcePath ?? this.sourcePath,
@@ -268,6 +462,9 @@ class Module {
       akidaRuntime: akidaRuntime is AkidaRuntimeConfig?
           ? akidaRuntime
           : this.akidaRuntime,
+      launcherRuntime: launcherRuntime is LauncherRuntimeConfig?
+          ? launcherRuntime
+          : this.launcherRuntime,
       akidaRuntimeState: akidaRuntimeState is AkidaRuntimeState?
           ? akidaRuntimeState
           : this.akidaRuntimeState,
@@ -308,7 +505,9 @@ class Module {
         'icon': icon,
         'directory': directory,
         'port': port,
+        'required': required,
         'hasFrontend': hasFrontend,
+        'showInLauncherNav': showInLauncherNav,
         'frontendStatus': frontendStatus,
         'requiresMuJoCo': requiresMuJoCo,
         'sourcePath': sourcePath,
@@ -326,6 +525,7 @@ class Module {
         'installStrategy': installStrategy,
         'startStrategy': startStrategy,
         'akidaRuntime': akidaRuntime?.toJson(),
+        'launcherRuntime': launcherRuntime?.toJson(),
         'akidaRuntimeState': akidaRuntimeState?.toJson(),
         'preflightStatus': preflightStatus,
         'preflightMessage': preflightMessage,

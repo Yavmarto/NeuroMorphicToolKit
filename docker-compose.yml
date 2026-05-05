@@ -1,157 +1,109 @@
 services:
-  neurocnl:
+
+  suite_api:
     build:
-      context: ./neurocnl
-      dockerfile: backend/Dockerfile
+      context: ./suite_api
+      dockerfile: Dockerfile
     ports:
-      - "${NEUROCNL_PORT:-8000}:8000"
+      - "${SUITE_API_PORT:-9000}:9000"
     environment:
       - PYTHONUNBUFFERED=1
+      # Phase 4 worker URLs — must match Docker service names when profiles are active
+      - NEUROSENSE_HW_WORKER_URL=http://neurosense-hw-worker:8004
+      - NEUROBENCH_RUNNER_URL=http://neurobench-runner-worker:8003
+      - NEUROCHIP_HW_WORKER_URL=http://neurochip-hw-worker:8002
+      - NEUROCNL_PHYSICS_WORKER_URL=http://neurocnl-physics-worker:8006
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/suite/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
     networks:
-      - frontend-net
       - backend-net
       - monitoring-net
 
-  neurocnl-physics:
+  # ── Phase 4 workers — started only with the matching Docker Compose profile ──
+
+  neurosense-hw-worker:
     build:
-      context: ./neurocnl
-      dockerfile: backend/Dockerfile
-      args:
-        INSTALL_PHYSICS: 1
+      context: ./workers/neurosense_hw
     ports:
-      - "${NEUROCNL_PHYSICS_PORT:-8006}:8000"
+      - "${NEUROSENSE_PORT:-8004}:8004"
     environment:
       - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/repo:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
     networks:
       - backend-net
-      - monitoring-net
+    profiles:
+      - hardware
+
+  neurobench-runner-worker:
+    build:
+      context: ./workers/neurobench_runner
+    ports:
+      - "${NEUROBENCH_PORT:-8003}:8003"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/repo:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend-net
+    profiles:
+      - jobs
+
+  neurochip-hw-worker:
+    build:
+      context: ./workers/neurochip_hw
+    ports:
+      - "${NEUROCHIP_PORT:-8002}:8002"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/repo:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend-net
+    profiles:
+      - hardware
+
+  neurocnl-physics-worker:
+    build:
+      context: ./workers/neurocnl_physics
+    ports:
+      - "${NEUROCNL_PHYSICS_PORT:-8006}:8006"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/repo:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend-net
     profiles:
       - physics
-
-  neurosim:
-    build:
-      context: ./Neurosim
-      dockerfile: Dockerfile
-    ports:
-      - "${NEUROSIM_PORT:-8001}:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - backend-net
-      - monitoring-net
-
-  neurochip:
-    build:
-      context: ./Neurochip
-      dockerfile: Dockerfile
-    ports:
-      - "${NEUROCHIP_PORT:-8002}:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - backend-net
-      - monitoring-net
-
-  neurobench:
-    build:
-      context: ./Neurobench
-      dockerfile: Dockerfile
-    ports:
-      - "${NEUROBENCH_PORT:-8003}:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - backend-net
-      - monitoring-net
-    profiles:
-      - full
-
-  neurosense:
-    build:
-      context: ./Neurosense
-      dockerfile: Dockerfile
-    ports:
-      - "${NEUROSENSE_PORT:-8004}:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - backend-net
-      - monitoring-net
-    profiles:
-      - full
-
-  neurohub:
-    build:
-      context: ./Neurohub
-      dockerfile: Dockerfile
-    ports:
-      - "${NEUROHUB_PORT:-8005}:8000"
-    environment:
-      - PYTHONUNBUFFERED=1
-      - NEUROSIM_URL=${NEUROSIM_URL:-http://neurosim:8000}
-      - NEUROCHIP_URL=${NEUROCHIP_URL:-http://neurochip:8000}
-      - NEUROBENCH_URL=${NEUROBENCH_URL:-http://neurobench:8000}
-      - NEUROSENSE_URL=${NEUROSENSE_URL:-http://neurosense:8000}
-      - NEUROCNL_URL=${NEUROCNL_URL:-http://neurocnl:8000}
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/neurohub/health')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-    networks:
-      - frontend-net
-      - backend-net
-      - monitoring-net
-    profiles:
-      - full
-    depends_on:
-      neurocnl:
-        condition: service_healthy
-      neurosim:
-        condition: service_healthy
-      neurochip:
-        condition: service_healthy
-      neurobench:
-        condition: service_healthy
-      neurosense:
-        condition: service_healthy
 
   prometheus:
     image: prom/prometheus:v2.44.0

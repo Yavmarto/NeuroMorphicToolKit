@@ -15,13 +15,12 @@ scrape_configs:
   - job_name: 'nmtk-services'
     static_configs:
       - targets:
-          - 'neurocnl:8000'
-          - 'neurocnl-physics:8000'
-          - 'neurosim:8000'
-          - 'neurochip:8000'
-          - 'neurobench:8000'
-          - 'neurosense:8000'
-          - 'neurohub:8000'
+          - 'suite_api:9000'
+          # Optional worker services: uncomment or configure via service discovery if workers are enabled
+          # - 'neurosense-hw-worker:8004'
+          # - 'neurobench-runner-worker:8003'
+          # - 'neurochip-hw-worker:8002'
+          # - 'neurocnl-physics-worker:8006'
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance

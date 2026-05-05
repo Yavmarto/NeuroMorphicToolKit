@@ -63,7 +63,7 @@ class NmtkSurfaceCard extends StatelessWidget {
               LayoutBuilder(
                 builder: (context, constraints) {
                   final stackTrailing =
-                      trailing != null && constraints.maxWidth < 280;
+                      trailing != null && constraints.maxWidth < 400;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,7 +110,12 @@ class NmtkSurfaceCard extends StatelessWidget {
                         const SizedBox(height: 8),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: trailing!,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: constraints.maxWidth,
+                            ),
+                            child: trailing!,
+                          ),
                         ),
                       ],
                     ],

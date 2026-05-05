@@ -63,6 +63,8 @@ class ControlApiService {
   final http.Client _client;
   final Uri _baseUri;
 
+  Uri get baseUri => _baseUri;
+
   static String get configuredBaseUrl => const String.fromEnvironment(
         'NMTK_CONTROL_API_BASE_URL',
         defaultValue: '',
@@ -93,6 +95,29 @@ class ControlApiService {
     }
 
     return Uri.parse('http://127.0.0.1:${ControlApiService.configuredPort}');
+  }
+
+  static String normalizeBaseUrl(String input) {
+    var value = input.trim();
+    if (value.isEmpty) {
+      return value;
+    }
+    if (!value.startsWith('http://') && !value.startsWith('https://')) {
+      value = 'http://$value';
+    }
+    while (value.endsWith('/')) {
+      value = value.substring(0, value.length - 1);
+    }
+    return value;
+  }
+
+  static bool isLoopbackHost(String host) {
+    final normalized = host.trim().toLowerCase();
+    return normalized.isEmpty ||
+        normalized == 'localhost' ||
+        normalized == '127.0.0.1' ||
+        normalized == '::1' ||
+        normalized == '[::1]';
   }
 
   Uri _uri(String path) {

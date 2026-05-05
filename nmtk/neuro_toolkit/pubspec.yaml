@@ -19,8 +19,6 @@ dependencies:
     path: ../../nmtk_ui_core # path: ../../nmtk_ui_core # DO NOT CHANGE AND DON'T REMOVE THIS COMMENT Local path to the nmtk_ui_core package
   neurocnl_studio:
     path: ../../neurocnl/frontend
-  Neurosim_shell_adapter:
-    path: ../../Neurosim/Neurosim_shell_adapter
   neurohub_shell_adapter:
     path: ../../Neurohub/Neurohub_shell_adapter
   neurosense_shell_adapter:
@@ -29,6 +27,21 @@ dependencies:
     path: ../../Neurochip/frontend
   neurobench_frontend:
     path: ../../Neurobench/frontend
+  # Phase 3: feature packages — standardised wrappers for each domain
+  neurocnl_feature:
+    path: ../packages/neurocnl_feature
+  neurosim_feature:
+    path: ../packages/neurosim_feature
+  neurochip_feature:
+    path: ../packages/neurochip_feature
+  neurobench_feature:
+    path: ../packages/neurobench_feature
+  neurosense_feature:
+    path: ../packages/neurosense_feature
+  neurohub_feature:
+    path: ../packages/neurohub_feature
+  nmtk_module_contracts:
+    path: ../../nmtk_module_contracts
   package_info_plus: ^10.1.0
   path: ^1.9.0
   path_provider: ^2.1.2

@@ -27,7 +27,7 @@ check_health() {
 
 # Wait for all services
 check_health "neurocnl" "http://localhost:8000"
-check_health "neurosim" "http://localhost:8001"
+check_health "neurosim" "http://localhost:8000"
 check_health "neurochip" "http://localhost:8002"
 check_health "neurobench" "http://localhost:8003"
 check_health "neurosense" "http://localhost:8004"
@@ -36,7 +36,7 @@ check_health "neurohub" "http://localhost:8005"
 echo "🧪 Running cross-module integration tests..."
 # Pass service URLs pointing to localhost for the host-based test runner
 export NEUROCNL_URL=http://localhost:8000
-export NEUROSIM_URL=http://localhost:8001
+export NEUROSIM_URL=http://localhost:8000
 export NEUROCHIP_URL=http://localhost:8002
 export NEUROSENSE_URL=http://localhost:8004
 export NEUROHUB_URL=http://localhost:8005
