@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:neurochip/shell_adapter.dart';
+import 'package:neurocnl_studio/shell_adapter.dart';
 
 /// Feature flag — set to false during migration to use the WebView fallback.
 /// Always true from Phase 3C onwards.
@@ -9,7 +9,7 @@ const bool kNeurochipNativeScreen =
 /// Top-level native screen for the Neurochip hardware deployment domain.
 /// Shell mode: NmtkShellMode.instrument (cyan) — per AGENTS.md.
 ///
-/// Wraps [NeurochipShellAdapter]. API base URL is configured via the
+/// Wraps [NeurocnlShellAdapter]. API base URL is configured via the
 /// SUITE_API_URL dart-define (resolved to http://localhost:9000/api/neurochip).
 class NeurochipShell extends StatelessWidget {
   const NeurochipShell({super.key, this.initialDeepLink});
@@ -18,6 +18,8 @@ class NeurochipShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NeurochipShellAdapter(initialDeepLink: initialDeepLink);
+    return NeurocnlShellAdapter(
+      initialLocation: initialDeepLink ?? '/?panel=deploy',
+    );
   }
 }

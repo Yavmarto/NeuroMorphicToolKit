@@ -72,8 +72,8 @@ class _NmtkWorkflowStageTile extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withOpacity(0.5)),
+        color: color.withOpacity(0.08),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -266,15 +266,15 @@ enum AkidaSupportState {
   String get label {
     switch (this) {
       case AkidaSupportState.exportableScaffold:
-        return 'Exportable — scaffold package ready';
+        return 'Exportable: scaffold package ready';
       case AkidaSupportState.exportableScaffoldWithWarnings:
-        return 'Exportable — near capacity or approximate topology';
+        return 'Exportable: near capacity or approximate topology';
       case AkidaSupportState.unsupported:
-        return 'Unsupported — see rejections';
+        return 'Unsupported: see rejections';
       case AkidaSupportState.sdkDeployable:
-        return 'Verified — Akida SDK runtime ready';
+        return 'Verified: Akida SDK runtime ready';
       case AkidaSupportState.sdkNotDeployable:
-        return 'Scaffold Only — SDK verification blocked';
+        return 'Scaffold Only: SDK verification blocked';
     }
   }
 

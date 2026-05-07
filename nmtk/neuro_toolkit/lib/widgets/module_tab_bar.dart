@@ -69,10 +69,10 @@ class ModuleTabBar extends ConsumerWidget {
                     : colorScheme.onSurfaceVariant;
                 final backgroundColor = isActive
                     ? colorScheme.surface
-                    : colorScheme.surface.withValues(alpha: 0.18);
+                    : colorScheme.surface.withOpacity(0.18);
                 final borderColor = isActive
-                    ? colorScheme.primary.withValues(alpha: 0.4)
-                    : colorScheme.outlineVariant.withValues(alpha: 0.22);
+                    ? colorScheme.primary.withOpacity(0.4)
+                    : colorScheme.outlineVariant.withOpacity(0.22);
 
                 return Padding(
                   padding: EdgeInsets.only(

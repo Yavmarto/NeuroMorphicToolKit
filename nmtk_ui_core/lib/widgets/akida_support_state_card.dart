@@ -38,7 +38,7 @@ class AkidaSupportStateCard extends StatelessWidget {
     final color = supportState.color;
 
     return Card(
-      color: color.withValues(alpha: 0.08),
+      color: color.withOpacity(0.08),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -76,7 +76,7 @@ class AkidaSupportStateCard extends StatelessWidget {
                   style: TextStyle(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ).colorScheme.onSurface.withOpacity(0.6),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -125,7 +125,7 @@ class AkidaSupportStateCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ),

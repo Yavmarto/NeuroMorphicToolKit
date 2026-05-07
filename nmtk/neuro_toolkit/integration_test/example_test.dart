@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:neurochip/shell_adapter.dart';
+import 'package:neurocnl_studio/shell_adapter.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
@@ -127,8 +127,8 @@ class _LauncherAdapterHarness extends StatelessWidget {
             onTabClosed: (_) {},
           ),
           const Expanded(
-            child: NeurochipShellAdapter(
-              initialDeepLink: '/unknown/path',
+            child: NeurocnlShellAdapter(
+              initialLocation: '/unknown/path',
             ),
           ),
         ],

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:nmtk_ui_core/models/shell_models.dart';
+import 'package:nmtk_ui_core/models/commands.dart';
 import 'package:nmtk_ui_core/motion_tokens.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -284,6 +285,17 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    return Actions(
+      actions: <Type, Action<Intent>>{
+        ToggleSidebarIntent: CallbackAction<ToggleSidebarIntent>(
+          onInvoke: (_) => _toggleSidebar(),
+        ),
+      },
+      child: _buildLayout(context),
+    );
+  }
+
+  Widget _buildLayout(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < _kMobileBreakpoint) {
       return _buildMobileLayout(context);
@@ -467,7 +479,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                 IconButton(
                   icon: Icon(
                     Icons.settings_outlined,
-                    color: scheme.foreground.withValues(alpha: 0.65),
+                    color: scheme.foreground.withOpacity(0.65),
                     size: 18,
                   ),
                   onPressed: onSettingsPressed,
@@ -680,7 +692,7 @@ class _NmtkRailColumn extends StatelessWidget {
                   for (var i = 0; i < footerNavItems.length; i++)
                     _SidebarNavItem(
                       item: footerNavItems[i],
-                      isSelected: false,
+                      isSelected: selectedIndex < 0 && footerNavItems[i].id == 'settings',
                       isExpanded: isExpanded,
                       onTap: () => onFooterNavItemSelected?.call(i),
                     ),
@@ -726,10 +738,11 @@ class _RailBrandRow extends StatelessWidget {
     if (brand != null) {
       logoWidget = Center(child: brand!);
     } else {
-      // Default NMTK "N" monogram
+      // Default NMTK logo (monogram or full)
       logoWidget = Center(
-        child: Container(
-          width: 28,
+        child: AnimatedContainer(
+          duration: _kSideAnimDuration,
+          width: isExpanded ? 72 : 28,
           height: 28,
           decoration: BoxDecoration(
             color: scheme.primary,
@@ -737,12 +750,12 @@ class _RailBrandRow extends StatelessWidget {
           ),
           alignment: Alignment.center,
           child: Text(
-            'N',
+            isExpanded ? 'NMTK' : 'N',
             style: TextStyle(
               color: scheme.primaryForeground,
-              fontSize: 14,
+              fontSize: isExpanded ? 12 : 14,
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
+              letterSpacing: isExpanded ? 1.0 : -0.5,
             ),
           ),
         ),
@@ -760,7 +773,7 @@ class _RailBrandRow extends StatelessWidget {
             IconButton(
               icon: Icon(
                 Icons.chevron_left_rounded,
-                color: scheme.foreground.withValues(alpha: 0.65),
+                color: scheme.foreground.withOpacity(0.65),
                 size: 20,
               ),
               onPressed: onToggle,
@@ -827,7 +840,7 @@ class _RailIconButtonState extends State<_RailIconButton> {
                 child: Icon(
                   widget.icon,
                   size: 18,
-                  color: scheme.foreground.withValues(alpha: 0.65),
+                  color: scheme.foreground.withOpacity(0.65),
                 ),
               ),
             ),
@@ -939,14 +952,14 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
     final isExpanded = widget.isExpanded;
 
     final bgColor = isSelected
-        ? scheme.primary.withValues(alpha: 0.10)
+        ? scheme.primary.withOpacity(0.10)
         : _hovered
         ? scheme.muted
         : null;
 
     final iconColor = isSelected
         ? scheme.primary
-        : scheme.foreground.withValues(alpha: 0.70);
+        : scheme.foreground.withOpacity(0.70);
 
     final textColor = isSelected ? scheme.primary : scheme.foreground;
 
@@ -1128,7 +1141,8 @@ class _FileActionIconButton extends StatelessWidget {
       child: IconButton(
         icon: Icon(icon),
         iconSize: 18,
-        color: scheme.foreground.withValues(alpha: 0.75),
+        color: scheme.foreground.withOpacity(0.75),
+        tooltip: tooltip,
         onPressed: onPressed,
         splashRadius: 18,
       ),
@@ -1276,14 +1290,14 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 100),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            color: _hovered ? scheme.accent.withValues(alpha: 0.12) : null,
+            color: _hovered ? scheme.accent.withOpacity(0.12) : null,
             child: Row(
               children: [
                 if (action.icon != null) ...[
                   Icon(
                     action.icon,
                     size: 15,
-                    color: fgColor.withValues(alpha: 0.80),
+                    color: fgColor.withOpacity(0.80),
                   ),
                   const SizedBox(width: 10),
                 ],

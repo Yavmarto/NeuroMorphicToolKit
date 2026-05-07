@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/app_theme.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 
 class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
@@ -121,30 +122,21 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                             onPressed: action.onPressed,
                             icon: Icon(action.icon, size: 18),
                           )
-                        : OutlinedButton.icon(
+                        : ShadButton.outline(
                             onPressed: action.onPressed,
-                            icon: Icon(action.icon, size: 16),
-                            label: Text(action.label!),
-                            style: OutlinedButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              minimumSize: const Size(0, 36),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              side: BorderSide(
-                                color: isSelected
-                                    ? palette.accent.withValues(alpha: 0.35)
-                                    : tokens.subtleBorder,
-                              ),
-                              backgroundColor: isSelected
-                                  ? palette.accentContainer
-                                  : theme.colorScheme.surface.withValues(
-                                      alpha: 0.6,
-                                    ),
-                              foregroundColor: isSelected
-                                  ? palette.accentForeground
-                                  : theme.colorScheme.onSurfaceVariant,
-                              shape: const StadiumBorder(),
+                            leading: Icon(action.icon, size: 16),
+                            child: Text(action.label!),
+                            backgroundColor: isSelected
+                                ? palette.accentContainer
+                                : theme.colorScheme.surface.withOpacity(
+                                    0.6,
+                                  ),
+                            foregroundColor: isSelected
+                                ? palette.accentForeground
+                                : theme.colorScheme.onSurfaceVariant,
+                            // Apply stadium shape logic through decoration
+                            decoration: ShadDecoration(
+                              border: ShadBorder(radius: BorderRadius.circular(20)),
                             ),
                           ),
                   ),
@@ -192,12 +184,12 @@ class _DestinationChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected
                 ? accentContainer
-                : theme.colorScheme.surface.withValues(alpha: 0.18),
+                : theme.colorScheme.surface.withOpacity(0.18),
             borderRadius: BorderRadius.circular(tokens.radiusChip),
             border: Border.all(
               color: isSelected
-                  ? accentColor.withValues(alpha: 0.4)
-                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.22),
+                  ? accentColor.withOpacity(0.4)
+                  : theme.colorScheme.outlineVariant.withOpacity(0.22),
             ),
           ),
           child: Row(

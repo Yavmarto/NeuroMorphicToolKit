@@ -209,7 +209,7 @@ class _WaitingContent extends StatelessWidget {
         SizedBox(
           width: 200,
           child: LinearProgressIndicator(
-            backgroundColor: textColor.withValues(alpha: 0.15),
+            backgroundColor: textColor.withOpacity(0.15),
             color: Theme.of(context).colorScheme.primary,
             minHeight: 3,
           ),
@@ -279,8 +279,8 @@ class _FailedContent extends StatelessWidget {
       width: 320,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: _kRed.withValues(alpha: 0.08),
-        border: Border.all(color: _kRed.withValues(alpha: 0.35)),
+        color: _kRed.withOpacity(0.08),
+        border: Border.all(color: _kRed.withOpacity(0.35)),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

@@ -11,6 +11,7 @@ class AppProvider with ChangeNotifier {
 
   bool _hasSeenOnboarding = false;
   bool _isInitialized = false;
+  bool _developerMode = false;
 
   Future<void> _init() async {
     if (_isInitialized) return;
@@ -22,6 +23,12 @@ class AppProvider with ChangeNotifier {
 
   bool get hasSeenOnboarding => _hasSeenOnboarding;
   bool get isInitialized => _isInitialized;
+  bool get developerMode => _developerMode;
+
+  void toggleDeveloperMode() {
+    _developerMode = !_developerMode;
+    notifyListeners();
+  }
 
   Future<void> completeOnboarding() async {
     await _prefs.setHasSeenOnboarding(true);

@@ -13,8 +13,8 @@ dependencies:
   flutter_riverpod: ^2.6.1
   nmtk_ui_core:
     path: ../../../nmtk_ui_core
-  neurochip:
-    path: ../../../Neurochip/frontend
+  neurocnl_studio:
+    path: ../../../neurocnl/frontend
 
 dev_dependencies:
   flutter_test:

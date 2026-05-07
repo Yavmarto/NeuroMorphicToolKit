@@ -293,12 +293,12 @@ class _PipelineStep extends StatelessWidget {
       NmtkStepStatus.running => theme.colorScheme.primary.withValues(
         alpha: 0.12,
       ),
-      NmtkStepStatus.success => tokens.healthyColor.withValues(alpha: 0.1),
-      NmtkStepStatus.error => tokens.errorColor.withValues(alpha: 0.1),
+      NmtkStepStatus.success => tokens.healthyColor.withOpacity(0.1),
+      NmtkStepStatus.error => tokens.errorColor.withOpacity(0.1),
     };
     return selected
         ? Color.alphaBlend(
-            theme.colorScheme.primary.withValues(alpha: 0.06),
+            theme.colorScheme.primary.withOpacity(0.06),
             base,
           )
         : base;
@@ -318,9 +318,9 @@ class _PipelineStep extends StatelessWidget {
       case NmtkStepStatus.running:
         return theme.colorScheme.primary;
       case NmtkStepStatus.success:
-        return tokens.healthyColor.withValues(alpha: 0.3);
+        return tokens.healthyColor.withOpacity(0.3);
       case NmtkStepStatus.error:
-        return tokens.errorColor.withValues(alpha: 0.3);
+        return tokens.errorColor.withOpacity(0.3);
     }
   }
 }
@@ -341,7 +341,7 @@ class _StepConnector extends StatelessWidget {
         size: 10,
         color: active
             ? tokens.healthyColor
-            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+            : theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
       ),
     );
   }

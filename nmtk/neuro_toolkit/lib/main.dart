@@ -9,6 +9,7 @@ import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
+import 'package:neuro_toolkit/providers/command_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -166,11 +167,15 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
       },
       themeMode: settings.themeMode,
       builder: (BuildContext ctx, Widget? child) {
-        return MediaQuery(
-          data: MediaQuery.of(ctx).copyWith(
-            textScaler: TextScaler.linear(settings.fontSizeFactor),
+        final commands = ref.watch(commandStateProvider);
+        return NmtkShortcutScope(
+          globalCommands: commands,
+          child: MediaQuery(
+            data: MediaQuery.of(ctx).copyWith(
+              textScaler: TextScaler.linear(settings.fontSizeFactor),
+            ),
+            child: ShadToaster(child: child!),
           ),
-          child: ShadToaster(child: child!),
         );
       },
       home: Scaffold(
@@ -220,13 +225,17 @@ class NeuroToolkitApp extends ConsumerWidget {
       themeMode: settings.themeMode,
       routerConfig: router,
       builder: (BuildContext ctx, Widget? child) {
+        final commands = ref.watch(commandStateProvider);
         // Apply font scaling and inject ShadToaster so NmtkToasts can find it
         // in the widget tree via ShadToaster.of(context).
-        return MediaQuery(
-          data: MediaQuery.of(ctx).copyWith(
-            textScaler: TextScaler.linear(settings.fontSizeFactor),
+        return NmtkShortcutScope(
+          globalCommands: commands,
+          child: MediaQuery(
+            data: MediaQuery.of(ctx).copyWith(
+              textScaler: TextScaler.linear(settings.fontSizeFactor),
+            ),
+            child: ShadToaster(child: child!),
           ),
-          child: ShadToaster(child: child!),
         );
       },
     );

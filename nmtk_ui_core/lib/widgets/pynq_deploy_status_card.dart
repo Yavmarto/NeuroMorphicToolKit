@@ -28,7 +28,7 @@ class PynqSupportStateCard extends StatelessWidget {
     final color = supportState.color;
 
     return Card(
-      color: color.withValues(alpha: 0.08),
+      color: color.withOpacity(0.08),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

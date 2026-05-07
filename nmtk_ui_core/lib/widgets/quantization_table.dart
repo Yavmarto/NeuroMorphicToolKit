@@ -21,7 +21,7 @@ class NmtkQuantizationTable extends StatelessWidget {
 
     return DataTable(
       headingRowColor: WidgetStatePropertyAll(
-        theme.colorScheme.surfaceContainerHighest,
+        theme.colorScheme.surfaceVariant,
       ),
       dataRowColor: WidgetStatePropertyAll(theme.colorScheme.surface),
       border: TableBorder.all(

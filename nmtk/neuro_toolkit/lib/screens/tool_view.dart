@@ -16,8 +16,10 @@ import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
+import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
+import 'package:neuro_toolkit/providers/command_provider.dart';
 
 class ToolViewScreen extends ConsumerStatefulWidget {
   const ToolViewScreen({super.key, this.initialModuleId});
@@ -37,7 +39,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   String _activeModuleId = '';
   bool _workspaceInitialized = false;
-  bool _developerModeEnabled = false;
 
   Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
 
@@ -638,34 +639,48 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     ModuleProvider moduleProvider,
     Module? activeModule,
   ) {
+    final appProvider = ref.watch(appStateProvider);
+    final developerMode = appProvider.developerMode;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         // Developer-mode toggle — always visible (wrench icon).
         Semantics(
-          label: _developerModeEnabled
+          label: developerMode
               ? 'Hide developer controls'
               : 'Show developer controls',
           button: true,
           child: IconButton(
             icon: Icon(
-              _developerModeEnabled
+              developerMode
                   ? Icons.handyman_rounded
                   : Icons.handyman_outlined,
-              color: _developerModeEnabled
+              color: developerMode
                   ? ShadTheme.of(context).colorScheme.primary
                   : null,
             ),
-            onPressed: () => setState(() {
-              _developerModeEnabled = !_developerModeEnabled;
-            }),
-            tooltip: _developerModeEnabled
+            onPressed: () => appProvider.toggleDeveloperMode(),
+            tooltip: developerMode
                 ? 'Hide module internals'
                 : 'Show module internals',
           ),
         ),
+        // Search Commands button (H7)
+        Semantics(
+          label: 'Search commands',
+          button: true,
+          child: IconButton(
+            icon: const Icon(Icons.search_rounded),
+            onPressed: () {
+              final commands = ref.read(commandStateProvider);
+              NmtkCommandPalette.show(context, commands: commands);
+            },
+            tooltip: 'Search commands (${defaultTargetPlatform == TargetPlatform.macOS ? '⌘K' : 'Ctrl+K'})',
+          ),
+        ),
         // Module management controls — developer mode only.
-        if (_developerModeEnabled) ...[
+        if (developerMode) ...[
           Semantics(
             label: 'Open a module',
             button: true,
@@ -747,7 +762,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     final selectedIndex =
         navItems.indexWhere((item) => item.id == _activeModuleId);
-    final clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+    final clampedIndex = _activeModuleId == 'settings'
+        ? eligibleModules.length
+        : (selectedIndex < 0 ? 0 : selectedIndex);
 
     if (eligibleModules.isEmpty) {
       return NmtkDesktopScaffold(
@@ -771,13 +788,19 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final eligibleModuleIds =
         eligibleModules.map((module) => module.id).toSet();
     final focusedModuleId = workspaceProvider.focusedModuleId;
-    if (focusedModuleId != null &&
-        eligibleModuleIds.contains(focusedModuleId) &&
-        focusedModuleId != _activeModuleId) {
-      _activeModuleId = focusedModuleId;
-    }
-    if (!eligibleModuleIds.contains(_activeModuleId)) {
-      _activeModuleId = eligibleModules.first.id;
+
+    // Only sync focus from the provider if we are not currently in Settings.
+    // Explicit navigation to modules via _activateModule will still work as it
+    // calls setState internally.
+    if (_activeModuleId != 'settings') {
+      if (focusedModuleId != null &&
+          eligibleModuleIds.contains(focusedModuleId) &&
+          focusedModuleId != _activeModuleId) {
+        _activeModuleId = focusedModuleId;
+      }
+      if (!eligibleModuleIds.contains(_activeModuleId)) {
+        _activeModuleId = eligibleModules.first.id;
+      }
     }
 
     final sessionsByModuleId = <String, WorkspaceSession>{
@@ -791,9 +814,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     // ── Normal workspace ─────────────────────────────────────────────────────
     return NmtkDesktopScaffold(
-      pageTitle: activeModule.name,
+      pageTitle: _activeModuleId == 'settings' ? 'Settings' : activeModule.name,
       navItems: navItems,
-      selectedIndex: clampedIndex,
+      selectedIndex: clampedIndex < navItems.length ? clampedIndex : -1,
       onNavItemSelected: (i) async {
         await _activateModule(navItems[i].id, requestFocus: true);
       },
@@ -805,7 +828,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           selectedIcon: Icons.settings_rounded,
         ),
       ],
-      onFooterNavItemSelected: (_) => context.go('/settings'),
+      onFooterNavItemSelected: (_) => setState(() => _activeModuleId = 'settings'),
       headerActions: _buildHeaderActions(context, moduleProvider, activeModule),
       mode: NmtkShellMode.command,
       child: IndexedStack(
@@ -873,7 +896,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                                     ),
                                   ),
           );
-        }).toList(),
+        }).toList()
+          ..add(
+            Container(
+              key: const ValueKey('settings'),
+              child: const SettingsScreen(),
+            ),
+          ),
       ),
     );
   }

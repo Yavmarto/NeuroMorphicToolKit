@@ -18,7 +18,6 @@ import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neurocnl_feature/neurocnl_feature.dart';
 import 'package:neurochip_feature/neurochip_feature.dart';
 import 'package:neurobench_feature/neurobench_feature.dart';
-import 'package:neurosense_feature/neurosense_feature.dart';
 import 'package:neurohub_feature/neurohub_feature.dart';
 
 GoRouter createGoRouter(AppProvider appProvider) {
@@ -44,10 +43,6 @@ GoRouter createGoRouter(AppProvider appProvider) {
           // Root redirects to workspace — handles any legacy deep links.
           GoRoute(
             path: '/',
-            redirect: (context, state) => '/workspace',
-          ),
-          GoRoute(
-            path: '/catalog',
             redirect: (context, state) => '/workspace',
           ),
           GoRoute(
@@ -86,11 +81,8 @@ GoRouter createGoRouter(AppProvider appProvider) {
           ),
           GoRoute(
             path: '/module/neurosim',
-            name: 'module-neurosim',
-            builder: (context, state) => NeurocnlShell(
-              initialLocation:
-                  '/canvas${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
-            ),
+            redirect: (context, state) =>
+                '/module/neurocnl/canvas${state.uri.hasQuery ? '?${state.uri.query}' : ''}',
           ),
           GoRoute(
             path: '/module/neurochip',
@@ -104,8 +96,7 @@ GoRouter createGoRouter(AppProvider appProvider) {
           ),
           GoRoute(
             path: '/module/neurosense',
-            name: 'module-neurosense',
-            builder: (context, state) => const NeurosenseShell(),
+            redirect: (context, state) => '/module/neurocnl',
           ),
           GoRoute(
             path: '/module/neurohub',

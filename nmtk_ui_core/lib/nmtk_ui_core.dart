@@ -44,3 +44,6 @@ export 'widgets/tone.dart';
 export 'widgets/loading_screen.dart'; // NmtkLoadingScreen, NmtkReadinessState
 export 'widgets/validation_chip.dart'; // NmtkValidationChip, NmtkValidationError
 export 'motion_tokens.dart'; // NmtkMotionTokens
+export 'models/commands.dart';
+export 'widgets/command_palette.dart';
+export 'widgets/shortcut_scope.dart';

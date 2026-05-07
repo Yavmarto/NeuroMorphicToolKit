@@ -19,7 +19,7 @@ class NmtkInfoChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Row(

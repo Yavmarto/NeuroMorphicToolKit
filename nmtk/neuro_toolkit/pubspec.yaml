@@ -23,8 +23,6 @@ dependencies:
     path: ../../Neurohub/Neurohub_shell_adapter
   neurosense_shell_adapter:
     path: ../../Neurosense/Neurosense_shell_adapter
-  neurochip:
-    path: ../../Neurochip/frontend
   neurobench_frontend:
     path: ../../Neurobench/frontend
   # Phase 3: feature packages — standardised wrappers for each domain

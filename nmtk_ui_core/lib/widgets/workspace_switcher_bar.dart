@@ -106,7 +106,7 @@ class NmtkWorkspaceChip extends StatelessWidget {
               borderRadius: BorderRadius.circular(tokens.radiusChip),
               border: Border.all(
                 color: isActive
-                    ? palette.accent.withValues(alpha: 0.55)
+                    ? palette.accent.withOpacity(0.55)
                     : tokens.subtleBorder,
               ),
             ),

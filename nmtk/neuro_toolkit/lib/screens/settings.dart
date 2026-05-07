@@ -49,14 +49,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         NmtkSurfaceCard(
           title: 'Launcher Settings',
           subtitle:
-              'Secondary pages use an explicit return action so you can always get back to the workspace.',
-          trailing: NmtkOutlinedButton(
-            onPressed: () => context.go('/workspace'),
-            icon: Icons.arrow_back_rounded,
-            label: 'Back to Workspace',
-          ),
+              'Adjust shell behavior, logging, telemetry, and per-module overrides here.',
           child: Text(
-            'Adjust shell behavior, logging, telemetry, and per-module overrides here.',
+            'Launcher configuration and global preferences.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

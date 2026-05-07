@@ -386,13 +386,6 @@ packages:
       relative: true
     source: path
     version: "0.6.0+5"
-  neurochip:
-    dependency: "direct main"
-    description:
-      path: "../../Neurochip/frontend"
-      relative: true
-    source: path
-    version: "0.6.0+5"
   neurochip_feature:
     dependency: "direct main"
     description:

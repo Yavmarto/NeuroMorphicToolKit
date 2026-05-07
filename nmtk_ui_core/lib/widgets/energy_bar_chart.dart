@@ -39,7 +39,7 @@ class NmtkEnergyBarChart extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHighest,
+            color: theme.colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
@@ -174,7 +174,7 @@ class _EnergyBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: fraction,
             minHeight: 10,
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            backgroundColor: theme.colorScheme.surfaceVariant,
             valueColor: AlwaysStoppedAnimation<Color>(
               Color.lerp(
                     theme.colorScheme.primary,
