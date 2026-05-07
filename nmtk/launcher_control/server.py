@@ -3734,6 +3734,55 @@ class LauncherControlState:
         board = self._get_pynq_board(board_id)
         return self._runtime_json_request(board, "GET", "/hardware/pynq/status")
 
+    def proxy_akida_map(
+        self,
+        host_id: str,
+        payload: dict[str, Any],
+        *,
+        bit_width: int = 4,
+    ) -> dict[str, Any]:
+        host = self._get_akida_host(host_id)
+        self._emit_akida_terminal_log(
+            host, f"proxying runtime map request (bit_width={bit_width})"
+        )
+        status = self._akida_json_request(
+            host,
+            "POST",
+            f"/api/neurochip/akida/map?bit_width={bit_width}",
+            payload,
+        )
+        self._emit_akida_terminal_log(
+            host,
+            (
+                "runtime map completed with target "
+                f"{str(status.get('runtime_target') or 'unknown').strip() or 'unknown'}"
+            ),
+        )
+        self._update_akida_host_fields(
+            host_id,
+            state=_akida_host_state_for_status(host, status),
+            lastStatus=status,
+        )
+        return status
+
+    def proxy_akida_run(self, host_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+        host = self._get_akida_host(host_id)
+        self._emit_akida_terminal_log(host, "proxying runtime inference request")
+        result = self._akida_json_request(
+            host,
+            "POST",
+            "/api/neurochip/akida/inference",
+            payload,
+        )
+        self._emit_akida_terminal_log(
+            host,
+            (
+                "runtime inference completed on "
+                f"{str(result.get('runtime_target') or 'unknown').strip() or 'unknown'}"
+            ),
+        )
+        return result
+
     def _emit_akida_terminal_log(
         self, host: dict[str, Any], message: str, *, stderr: bool = False
     ) -> None:
@@ -5974,6 +6023,27 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.fetch_akida_host_status(host_id),
+                    )
+                    return
+                if len(segments) == 6 and segments[5] == "map" and method == "POST":
+                    bit_width_raw = query.get("bit_width", ["4"])[0]
+                    try:
+                        bit_width = int(bit_width_raw)
+                    except (TypeError, ValueError):
+                        raise ValueError("bit_width must be an integer")
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.proxy_akida_map(
+                            host_id,
+                            body or {},
+                            bit_width=bit_width,
+                        ),
+                    )
+                    return
+                if len(segments) == 6 and segments[5] == "run" and method == "POST":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.proxy_akida_run(host_id, body or {}),
                     )
                     return
 

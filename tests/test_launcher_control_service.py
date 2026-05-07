@@ -550,6 +550,96 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(called_path, "/hardware/pynq/run")
         self.assertEqual(called_payload, {"input_spikes": [0, 1], "timesteps": 2})
 
+    def test_proxy_akida_map_proxies_runtime_payload(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "192.168.2.88",
+                "username": "operator",
+                "password": "secret",
+                "runtimeApiUrl": "http://192.168.2.88:8002",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={
+                "sdk_available": True,
+                "sdk_status": "deployable",
+                "sdk_issues": [],
+                "state": "mapped",
+                "runtime_target": "hardware",
+                "environment_checks": {
+                    "host_supported": True,
+                    "python_supported": True,
+                    "tensorflow_available": True,
+                    "cnn2snn_available": True,
+                    "akida_models_available": True,
+                    "recommended_runtime": "remote_sdk",
+                },
+            },
+        ) as runtime_request:
+            payload = self.state.proxy_akida_map(
+                host["id"],
+                {
+                    "akida_version": "akida2",
+                    "populations": [{"id": "sensor", "size": 4}],
+                    "connections": [],
+                },
+                bit_width=2,
+            )
+
+        self.assertEqual(payload["runtime_target"], "hardware")
+        runtime_request.assert_called_once()
+        called_host, called_method, called_path, called_payload = runtime_request.call_args.args
+        self.assertEqual(called_host["id"], host["id"])
+        self.assertEqual(called_method, "POST")
+        self.assertEqual(called_path, "/api/neurochip/akida/map?bit_width=2")
+        self.assertEqual(
+            called_payload,
+            {
+                "akida_version": "akida2",
+                "populations": [{"id": "sensor", "size": 4}],
+                "connections": [],
+            },
+        )
+
+    def test_proxy_akida_run_proxies_runtime_payload(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "192.168.2.89",
+                "username": "operator",
+                "password": "secret",
+                "runtimeApiUrl": "http://192.168.2.89:8002",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={
+                "outputs": [0.0, 1.0],
+                "telemetry": {"fps": 123.0},
+                "execution_time_us": 4.2,
+                "runtime_target": "hardware",
+            },
+        ) as runtime_request:
+            payload = self.state.proxy_akida_run(
+                host["id"],
+                {"inputs": [1.0, 0.0, 1.0]},
+            )
+
+        self.assertEqual(payload["runtime_target"], "hardware")
+        self.assertEqual(payload["outputs"], [0.0, 1.0])
+        runtime_request.assert_called_once()
+        called_host, called_method, called_path, called_payload = runtime_request.call_args.args
+        self.assertEqual(called_host["id"], host["id"])
+        self.assertEqual(called_method, "POST")
+        self.assertEqual(called_path, "/api/neurochip/akida/inference")
+        self.assertEqual(called_payload, {"inputs": [1.0, 0.0, 1.0]})
+
     def test_missing_environment_normalizes_stale_installed_state(self) -> None:
         state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"
         state_file.write_text(
