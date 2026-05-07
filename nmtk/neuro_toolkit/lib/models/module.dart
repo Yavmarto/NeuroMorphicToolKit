@@ -253,6 +253,82 @@ class LauncherRuntimeConfig {
       };
 }
 
+class DeploymentCapability {
+  const DeploymentCapability({
+    this.supportedModes = const <String>[
+      'standalone',
+      'docker',
+      'kubernetes',
+    ],
+    this.healthPath = '/health',
+    this.requiredPorts = const <int>[],
+    this.requiredEnvironment = const <String>[],
+    this.secretFields = const <String>[],
+    this.defaultContainerImage = '',
+    this.composeProfile = '',
+    this.chartTemplateId = '',
+    this.startupTimeoutSeconds = 120,
+    this.readinessTimeoutSeconds = 120,
+  });
+
+  final List<String> supportedModes;
+  final String healthPath;
+  final List<int> requiredPorts;
+  final List<String> requiredEnvironment;
+  final List<String> secretFields;
+  final String defaultContainerImage;
+  final String composeProfile;
+  final String chartTemplateId;
+  final double startupTimeoutSeconds;
+  final double readinessTimeoutSeconds;
+
+  factory DeploymentCapability.fromJson(Map<String, dynamic> json) {
+    return DeploymentCapability(
+      supportedModes:
+          (json['supportedModes'] as List<dynamic>? ?? const <dynamic>[])
+              .map((dynamic value) => value.toString())
+              .where((String value) => value.isNotEmpty)
+              .toList(growable: false),
+      healthPath: json['healthPath'] as String? ?? '/health',
+      requiredPorts:
+          (json['requiredPorts'] as List<dynamic>? ?? const <dynamic>[])
+              .whereType<num>()
+              .map((num value) => value.toInt())
+              .toList(growable: false),
+      requiredEnvironment:
+          (json['requiredEnvironment'] as List<dynamic>? ?? const <dynamic>[])
+              .map((dynamic value) => value.toString())
+              .where((String value) => value.isNotEmpty)
+              .toList(growable: false),
+      secretFields:
+          (json['secretFields'] as List<dynamic>? ?? const <dynamic>[])
+              .map((dynamic value) => value.toString())
+              .where((String value) => value.isNotEmpty)
+              .toList(growable: false),
+      defaultContainerImage: json['defaultContainerImage'] as String? ?? '',
+      composeProfile: json['composeProfile'] as String? ?? '',
+      chartTemplateId: json['chartTemplateId'] as String? ?? '',
+      startupTimeoutSeconds:
+          (json['startupTimeoutSeconds'] as num?)?.toDouble() ?? 120,
+      readinessTimeoutSeconds:
+          (json['readinessTimeoutSeconds'] as num?)?.toDouble() ?? 120,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'supportedModes': supportedModes,
+        'healthPath': healthPath,
+        'requiredPorts': requiredPorts,
+        'requiredEnvironment': requiredEnvironment,
+        'secretFields': secretFields,
+        'defaultContainerImage': defaultContainerImage,
+        'composeProfile': composeProfile,
+        'chartTemplateId': chartTemplateId,
+        'startupTimeoutSeconds': startupTimeoutSeconds,
+        'readinessTimeoutSeconds': readinessTimeoutSeconds,
+      };
+}
+
 class Module {
   final String id;
   final String name;
@@ -282,6 +358,7 @@ class Module {
   final String startStrategy;
   final AkidaRuntimeConfig? akidaRuntime;
   final LauncherRuntimeConfig? launcherRuntime;
+  final DeploymentCapability? deployment;
   final AkidaRuntimeState? akidaRuntimeState;
   String preflightStatus;
   String? preflightMessage;
@@ -320,6 +397,7 @@ class Module {
     this.startStrategy = 'none',
     this.akidaRuntime,
     this.launcherRuntime,
+    this.deployment,
     this.akidaRuntimeState,
     this.preflightStatus = 'ok',
     this.preflightMessage,
@@ -375,6 +453,11 @@ class Module {
               json['launcherRuntime'] as Map<String, dynamic>,
             )
           : null,
+      deployment: json['deployment'] is Map<String, dynamic>
+          ? DeploymentCapability.fromJson(
+              json['deployment'] as Map<String, dynamic>,
+            )
+          : null,
       akidaRuntimeState: json['akidaRuntimeState'] is Map<String, dynamic>
           ? AkidaRuntimeState.fromJson(
               json['akidaRuntimeState'] as Map<String, dynamic>,
@@ -423,6 +506,7 @@ class Module {
     String? startStrategy,
     Object? akidaRuntime = const Object(),
     Object? launcherRuntime = const Object(),
+    Object? deployment = const Object(),
     Object? akidaRuntimeState = const Object(),
     String? preflightStatus,
     Object? preflightMessage = const Object(),
@@ -465,6 +549,8 @@ class Module {
       launcherRuntime: launcherRuntime is LauncherRuntimeConfig?
           ? launcherRuntime
           : this.launcherRuntime,
+      deployment:
+          deployment is DeploymentCapability? ? deployment : this.deployment,
       akidaRuntimeState: akidaRuntimeState is AkidaRuntimeState?
           ? akidaRuntimeState
           : this.akidaRuntimeState,
@@ -526,6 +612,7 @@ class Module {
         'startStrategy': startStrategy,
         'akidaRuntime': akidaRuntime?.toJson(),
         'launcherRuntime': launcherRuntime?.toJson(),
+        'deployment': deployment?.toJson(),
         'akidaRuntimeState': akidaRuntimeState?.toJson(),
         'preflightStatus': preflightStatus,
         'preflightMessage': preflightMessage,

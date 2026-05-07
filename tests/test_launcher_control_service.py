@@ -140,6 +140,16 @@ class LauncherControlServiceTest(unittest.TestCase):
                 "WORKSPACE_FILE",
                 self.repo_root / "nmtk" / "neuro_toolkit" / "workspace_state.json",
             ),
+            mock.patch.object(
+                launcher_server,
+                "DEPLOYMENT_STATE_FILE",
+                self.repo_root / "nmtk" / "neuro_toolkit" / "deployment_state.json",
+            ),
+            mock.patch.object(
+                launcher_server,
+                "DEPLOYMENT_SECRET_FILE",
+                self.repo_root / ".nmtk" / "deployment_secrets.json",
+            ),
         ]
         for patcher in self._patches:
             patcher.start()
@@ -4001,6 +4011,70 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertIn("[stderr] boom", self.state.get_logs(module_id)["lines"])
         self.assertIn("[dummy] ready", stdout.getvalue())
         self.assertIn("[dummy] boom", stderr.getvalue())
+
+    def test_deployment_target_persists_without_plaintext_secret(self) -> None:
+        target = self.state.create_deployment_target(
+            {
+                "displayName": "Remote backend",
+                "targetType": "remote_host",
+                "mode": "standalone",
+                "authMode": "ssh_password",
+                "host": "192.0.2.10",
+                "username": "nmtk",
+                "password": "super-secret",
+            }
+        )
+
+        self.assertEqual(target["displayName"], "Remote backend")
+        self.assertEqual(target["secretRefs"]["password"][:12], "file-secret:")
+        state_text = launcher_server.DEPLOYMENT_STATE_FILE.read_text(encoding="utf-8")
+        secret_text = launcher_server.DEPLOYMENT_SECRET_FILE.read_text(encoding="utf-8")
+        self.assertNotIn("super-secret", state_text)
+        self.assertIn("super-secret", secret_text)
+
+    def test_deployment_preflight_reports_local_standalone_ready(self) -> None:
+        result = self.state.deployment_preflight(
+            {
+                "target": {
+                    "displayName": "This machine",
+                    "targetType": "local",
+                    "mode": "standalone",
+                    "backendPort": 65530,
+                }
+            }
+        )
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["message"], "preflight ready")
+
+    def test_deployment_job_records_progress_events(self) -> None:
+        target = self.state.create_deployment_target(
+            {
+                "displayName": "This machine",
+                "targetType": "local",
+                "mode": "standalone",
+                "backendPort": 65531,
+            }
+        )
+
+        job = self.state.create_deployment_job({"targetId": target["id"]})
+        deadline = time.time() + 3.0
+        while time.time() < deadline:
+            job = self.state.get_deployment_job(job["id"])
+            if job["stage"] in {"completed", "failed"}:
+                break
+            time.sleep(0.05)
+
+        self.assertEqual(job["stage"], "completed")
+        self.assertGreaterEqual(len(job["events"]), 3)
+        sse_events = self.state.deployment_job_events(job["id"])
+        self.assertTrue(sse_events[0].startswith("event: progress"))
+        settings = self.state.get_settings()
+        self.assertTrue(settings["backendDeploymentReady"])
+        self.assertEqual(
+            settings["selectedBackendDeploymentTarget"]["lastReadiness"],
+            "ready",
+        )
 
 
 if __name__ == "__main__":

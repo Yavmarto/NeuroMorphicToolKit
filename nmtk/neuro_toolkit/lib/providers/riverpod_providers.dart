@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:neuro_toolkit/providers/app_provider.dart';
+import 'package:neuro_toolkit/providers/backend_deployment_provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
@@ -49,6 +50,13 @@ final workspaceStateProvider = ChangeNotifierProvider<WorkspaceProvider>((ref) {
   return WorkspaceProvider(
     controlApiService: ref.read(controlApiServiceProvider),
     bootstrapState: ref.read(launcherBootstrapStateProvider),
+  );
+});
+
+final backendDeploymentStateProvider =
+    ChangeNotifierProvider<BackendDeploymentProvider>((ref) {
+  return BackendDeploymentProvider(
+    controlApiService: ref.read(controlApiServiceProvider),
   );
 });
 

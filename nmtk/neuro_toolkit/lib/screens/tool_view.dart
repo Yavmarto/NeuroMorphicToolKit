@@ -32,6 +32,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   final Map<String, WebViewController> _controllers =
       <String, WebViewController>{};
   final Map<String, Uri> _pendingModuleRequests = <String, Uri>{};
+  final Map<String, _ModuleLoadFailure> _moduleLoadFailures =
+      <String, _ModuleLoadFailure>{};
 
   String _activeModuleId = '';
   bool _workspaceInitialized = false;
@@ -105,9 +107,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   String _surfaceModeForModule(String moduleId) {
-    if (_usesRemoteHostedServices()) {
-      return 'embedded';
-    }
     return NativeSurfaceRegistry.supportsModule(moduleId)
         ? 'native'
         : 'embedded';
@@ -264,6 +263,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     if (mounted) {
       setState(() {
         _activeModuleId = moduleId;
+        _moduleLoadFailures.remove(moduleId);
       });
     }
 
@@ -306,6 +306,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
+          onPageStarted: (url) {
+            if (!mounted) {
+              return;
+            }
+            setState(() {
+              _moduleLoadFailures.remove(module.id);
+            });
+          },
           onNavigationRequest: (request) async {
             final handled = await _handleCrossModuleNavigation(
               module,
@@ -315,9 +323,32 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                 ? NavigationDecision.prevent
                 : NavigationDecision.navigate;
           },
+          onHttpError: (HttpResponseError error) {
+            final response = error.response;
+            final request = error.request;
+            final uri = response?.uri ?? request?.uri ?? _moduleUri(module);
+            final statusCode = response?.statusCode;
+            final message = statusCode == null
+                ? 'Embedded module request failed before the page could load.'
+                : 'Embedded module returned HTTP $statusCode instead of a frontend page.';
+            _recordModuleLoadFailure(
+              module.id,
+              uri,
+              message,
+            );
+          },
           onWebResourceError: (WebResourceError error) {
             debugPrint(
               'WebView error for ${module.name}: ${error.description}',
+            );
+            if (error.isForMainFrame == false) {
+              return;
+            }
+            final failedUrl = error.url;
+            _recordModuleLoadFailure(
+              module.id,
+              failedUrl == null ? _moduleUri(module) : Uri.parse(failedUrl),
+              error.description,
             );
           },
         ),
@@ -336,6 +367,65 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         NmtkToasts.error(context, 'Could not launch $url');
       }
     }
+  }
+
+  void _recordModuleLoadFailure(
+    String moduleId,
+    Uri uri,
+    String message,
+  ) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _moduleLoadFailures[moduleId] = _ModuleLoadFailure(
+        uri: uri,
+        message: message,
+      );
+    });
+  }
+
+  Widget _buildModuleLoadFailureState(
+    Module module,
+    _ModuleLoadFailure failure,
+  ) {
+    final hostHint = _usesRemoteHostedServices()
+        ? 'Confirm that ${failure.uri} is reachable from the Android device and that the suite API is serving the module frontend on that host.'
+        : 'Confirm that the launcher host is configured correctly for mobile and that the suite API is reachable from this device.';
+    return NmtkEmptyState(
+      title: '${module.name} Page Could Not Load',
+      message: [
+        failure.message,
+        'Requested URL: ${failure.uri}',
+        hostHint,
+      ].join('\n\n'),
+      icon: Icons.language_outlined,
+      tone: NmtkTone.warning,
+      action: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          NmtkPrimaryButton(
+            onPressed: () async {
+              setState(() {
+                _moduleLoadFailures.remove(module.id);
+                _controllers.remove(module.id);
+              });
+              await _activateModule(module.id, requestFocus: false);
+            },
+            icon: Icons.refresh,
+            label: 'Retry Load',
+            tone: NmtkTone.warning,
+          ),
+          const SizedBox(height: 12),
+          NmtkOutlinedButton(
+            onPressed: () => _launchInBrowser(module),
+            icon: Icons.open_in_browser,
+            label: 'Open in Browser',
+            tone: NmtkTone.warning,
+          ),
+        ],
+      ),
+    );
   }
 
   bool _isWebViewSupported() {
@@ -723,6 +813,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         index: clampedIndex,
         children: eligibleModules.map((module) {
           final session = sessionsByModuleId[module.id];
+          final loadFailure = _moduleLoadFailures[module.id];
           final supported = _isWebViewSupported();
           final launchBlocked =
               module.isPreflightFailed || module.status == ModuleStatus.error;
@@ -754,34 +845,46 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                   )
                 : session == null || !isReady
                     ? _buildLoadingState(module)
-                    : session.surfaceMode == 'native'
-                        ? NmtkHostNavigationScope(
-                            navigator: _handleHostedModuleNavigationRequest,
-                            child: NativeSurfaceRegistry.build(
-                              module.id,
-                              session,
-                            ),
-                          )
-                        : supported
-                            ? WebViewWidget(
-                                controller: _getController(module),
-                              )
-                            : NmtkEmptyState(
-                                title: 'WebView Not Supported',
-                                message:
-                                    'Open ${module.name} in your system browser on this platform.',
-                                icon: Icons.warning_amber_rounded,
-                                tone: NmtkTone.warning,
-                                action: NmtkPrimaryButton(
-                                  onPressed: () => _launchInBrowser(module),
-                                  icon: Icons.open_in_browser,
-                                  label: 'Open in System Browser',
-                                  tone: NmtkTone.warning,
+                    : loadFailure != null
+                        ? _buildModuleLoadFailureState(module, loadFailure)
+                        : session.surfaceMode == 'native'
+                            ? NmtkHostNavigationScope(
+                                navigator: _handleHostedModuleNavigationRequest,
+                                child: NativeSurfaceRegistry.build(
+                                  module.id,
+                                  session,
                                 ),
-                              ),
+                              )
+                            : supported
+                                ? WebViewWidget(
+                                    controller: _getController(module),
+                                  )
+                                : NmtkEmptyState(
+                                    title: 'WebView Not Supported',
+                                    message:
+                                        'Open ${module.name} in your system browser on this platform.',
+                                    icon: Icons.warning_amber_rounded,
+                                    tone: NmtkTone.warning,
+                                    action: NmtkPrimaryButton(
+                                      onPressed: () => _launchInBrowser(module),
+                                      icon: Icons.open_in_browser,
+                                      label: 'Open in System Browser',
+                                      tone: NmtkTone.warning,
+                                    ),
+                                  ),
           );
         }).toList(),
       ),
     );
   }
+}
+
+class _ModuleLoadFailure {
+  const _ModuleLoadFailure({
+    required this.uri,
+    required this.message,
+  });
+
+  final Uri uri;
+  final String message;
 }

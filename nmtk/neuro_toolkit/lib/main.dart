@@ -273,11 +273,11 @@ class _BootstrapSetupView extends StatelessWidget {
           ShadInputFormField(
             label: const Text('CONTROL API HOST'),
             controller: controller,
-            placeholder: const Text('http://192.168.1.50:8090'),
+            placeholder: const Text('http://10.0.2.2:8090'),
           ),
           const SizedBox(height: 8),
           Text(
-            'Run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090` on the host machine, then retry.',
+            'Run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090` on the host machine, then retry. Use `http://10.0.2.2:8090` for an Android emulator or the host machine IP for a physical device.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),

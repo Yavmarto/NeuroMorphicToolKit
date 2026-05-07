@@ -150,7 +150,6 @@ class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
     Color? terminalBackground,
     Color? syntaxHighlightColor,
     LinearGradient? brandGradient,
-    Color? glassmorphismColor,
     Color? synKeyword,
     Color? synSubject,
     Color? synNumber,

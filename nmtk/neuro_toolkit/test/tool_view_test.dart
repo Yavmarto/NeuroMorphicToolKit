@@ -302,7 +302,7 @@ void main() {
   });
 
   testWidgets(
-      'ToolView forces embedded surfaces when control API uses a remote host',
+      'ToolView keeps native surfaces when control API uses a remote host',
       (WidgetTester tester) async {
     final moduleProvider = _TrackingModuleProvider();
     final workspaceProvider = WorkspaceProvider(
@@ -343,7 +343,7 @@ void main() {
 
     expect(workspaceProvider.sessions, hasLength(1));
     expect(workspaceProvider.sessions.single.moduleId, 'Neurochip');
-    expect(workspaceProvider.sessions.single.surfaceMode, 'embedded');
+    expect(workspaceProvider.sessions.single.surfaceMode, 'native');
   });
 
   testWidgets(

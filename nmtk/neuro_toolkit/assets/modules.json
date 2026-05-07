@@ -18,7 +18,19 @@
     "requiresMuJoCo": false,
     "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/neurocnl",
-    "required": true
+    "required": true,
+    "deployment": {
+      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "healthPath": "/health",
+      "requiredPorts": [9000],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "ghcr.io/completed-spoon-6/neurocnl:latest",
+      "composeProfile": "core",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
   },
   {
     "id": "Neurochip",
@@ -85,7 +97,19 @@
     "requiresMuJoCo": false,
     "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurochip",
-    "required": false
+    "required": false,
+    "deployment": {
+      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "healthPath": "/health",
+      "requiredPorts": [9000],
+      "requiredEnvironment": [],
+      "secretFields": ["NEUROCHIP_API_KEY"],
+      "defaultContainerImage": "ghcr.io/completed-spoon-6/neurochip:latest",
+      "composeProfile": "core",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
   },
   {
     "id": "Neurobench",
@@ -105,7 +129,19 @@
     "requiresMuJoCo": false,
     "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurobench",
-    "required": false
+    "required": false,
+    "deployment": {
+      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "healthPath": "/health",
+      "requiredPorts": [9000],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "ghcr.io/completed-spoon-6/neurobench:latest",
+      "composeProfile": "physics",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
   },
   {
     "id": "Neurosense",
@@ -125,7 +161,19 @@
     "requiresMuJoCo": false,
     "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurosense",
-    "required": false
+    "required": false,
+    "deployment": {
+      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "healthPath": "/health",
+      "requiredPorts": [9000],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "ghcr.io/completed-spoon-6/neurosense:latest",
+      "composeProfile": "full",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
   },
   {
     "id": "Neurohub",
@@ -145,7 +193,19 @@
     "requiresMuJoCo": false,
     "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurohub",
-    "required": false
+    "required": false,
+    "deployment": {
+      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "healthPath": "/health",
+      "requiredPorts": [9000],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "ghcr.io/completed-spoon-6/neurohub:latest",
+      "composeProfile": "core",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
   },
   {
     "id": "neuro_dream_hand",
@@ -165,6 +225,18 @@
     "requiresMuJoCo": true,
     "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neuro-Dream-Hand",
-    "required": false
+    "required": false,
+    "deployment": {
+      "supportedModes": ["standalone"],
+      "healthPath": "",
+      "requiredPorts": [],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "",
+      "composeProfile": "",
+      "chartTemplateId": "",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
   }
 ]

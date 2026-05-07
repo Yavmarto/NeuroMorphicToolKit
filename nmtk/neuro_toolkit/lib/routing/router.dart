@@ -8,6 +8,7 @@ import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/onboarding.dart';
+import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/app_provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
@@ -68,6 +69,11 @@ GoRouter createGoRouter(AppProvider appProvider) {
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/backend-setup',
+            name: 'backend-setup',
+            builder: (context, state) => const BackendSetupScreen(),
           ),
           // Phase 3: native module routes via feature packages.
           // These routes are the canonical way to navigate to a module screen.
@@ -140,6 +146,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = ref.watch(moduleStateProvider);
+    final backendDeployment = ref.watch(backendDeploymentStateProvider);
     final bootstrapState = ref.watch(launcherBootstrapStateProvider);
 
     // Queue the launcher-update dialog exactly once per available update.
@@ -178,6 +185,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
         ),
       );
+    }
+
+    if (!backendDeployment.isLoading && !backendDeployment.isReady) {
+      return const BackendSetupScreen();
     }
 
     // Normal operation: the child route provides its own chrome via

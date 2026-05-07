@@ -136,6 +136,13 @@ void main() {
       expect(find.text('NeuroSim'), findsOneWidget);
       expect(find.text('Live'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is SizedBox && widget.width == 44 && widget.height == 44,
+        ),
+        findsNWidgets(4),
+      );
 
       await tester.tap(find.text('NeuroSim'));
       await tester.pump();

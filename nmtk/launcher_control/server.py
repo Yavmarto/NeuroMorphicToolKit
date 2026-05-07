@@ -30,6 +30,8 @@ from uuid import uuid4
 
 import tomllib
 
+from .deployment_service import DeploymentService
+from .deployment_store import DeploymentStore, FileBackedSecretStore
 from .provisioning_helpers import (
     build_akida_host_bundle,
     build_pynq_agent_bundle,
@@ -53,6 +55,8 @@ MODULES_MANIFEST = REPO_ROOT / "nmtk" / "neuro_toolkit" / "assets" / "modules.js
 STATE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "module_states.json"
 SETTINGS_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "launcher_settings.json"
 WORKSPACE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "workspace_state.json"
+DEPLOYMENT_STATE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "deployment_state.json"
+DEPLOYMENT_SECRET_FILE = REPO_ROOT / ".nmtk" / "deployment_secrets.json"
 
 DEFAULT_CONTROL_LOG_LEVEL = "info"
 DEFAULT_SUITE_API_PORT = 9000
@@ -2085,6 +2089,13 @@ class LauncherControlState:
         self._tasks: dict[str, threading.Thread] = {}
         self._settings = self._load_settings()
         self._workspace = self._load_workspace()
+        self._deployment = DeploymentService(
+            store=DeploymentStore(
+                DEPLOYMENT_STATE_FILE,
+                FileBackedSecretStore(DEPLOYMENT_SECRET_FILE),
+            ),
+            repo_root=REPO_ROOT,
+        )
         self._shutdown = threading.Event()
         self._health_thread = threading.Thread(
             target=self._health_poll_loop,
@@ -2625,6 +2636,8 @@ class LauncherControlState:
                 "pythonAvailable": self._settings["pythonAvailable"],
                 "suiteApiStatus": self._suite_api_status,
                 "suiteApiMessage": self._suite_api_message,
+                "backendDeploymentReady": self._deployment.is_ready(),
+                "selectedBackendDeploymentTarget": self._deployment.selected_target(),
                 "pynqBoards": [
                     _serialize_pynq_board(board)
                     for board in self._settings["pynqBoards"]
@@ -5607,9 +5620,46 @@ class LauncherControlState:
             "okCount": ok_count,
             "globalChecks": global_checks,
             "modules": modules,
+            "backendDeployment": {
+                "ready": self._deployment.is_ready(),
+                "selectedTarget": self._deployment.selected_target(),
+                "targetCount": len(self._deployment.list_targets()),
+            },
             "akidaHosts": akida_hosts,
             "pynqBoards": pynq_boards,
         }
+
+    def list_deployment_targets(self) -> list[dict[str, Any]]:
+        return self._deployment.list_targets()
+
+    def create_deployment_target(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._deployment.create_target(payload)
+
+    def update_deployment_target(
+        self, target_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        return self._deployment.update_target(target_id, payload)
+
+    def delete_deployment_target(self, target_id: str) -> None:
+        self._deployment.delete_target(target_id)
+
+    def deployment_preflight(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._deployment.preflight(payload)
+
+    def create_deployment_job(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._deployment.create_job(payload)
+
+    def get_deployment_job(self, job_id: str) -> dict[str, Any]:
+        return self._deployment.get_job(job_id)
+
+    def cancel_deployment_job(self, job_id: str) -> dict[str, Any]:
+        return self._deployment.cancel_job(job_id)
+
+    def retry_deployment_job(self, job_id: str) -> dict[str, Any]:
+        return self._deployment.retry_job(job_id)
+
+    def deployment_job_events(self, job_id: str) -> list[str]:
+        return self._deployment.job_events(job_id)
 
     def _set_error(self, module_id: str, message: str) -> None:
         self._update_module_fields(
@@ -5778,7 +5828,84 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 )
                 return
 
+            if method == "GET" and path == "/api/launcher/deployment/targets":
+                self._send_json(
+                    HTTPStatus.OK,
+                    self.server.state.list_deployment_targets(),
+                )
+                return
+
+            if method == "POST" and path == "/api/launcher/deployment/targets":
+                self._send_json(
+                    HTTPStatus.CREATED,
+                    self.server.state.create_deployment_target(body or {}),
+                )
+                return
+
+            if method == "POST" and path == "/api/launcher/deployment/preflight":
+                self._send_json(
+                    HTTPStatus.OK,
+                    self.server.state.deployment_preflight(body or {}),
+                )
+                return
+
+            if method == "POST" and path == "/api/launcher/deployment/jobs":
+                self._send_json(
+                    HTTPStatus.ACCEPTED,
+                    self.server.state.create_deployment_job(body or {}),
+                )
+                return
+
             segments = [segment for segment in path.split("/") if segment]
+            if len(segments) >= 5 and segments[:4] == [
+                "api",
+                "launcher",
+                "deployment",
+                "targets",
+            ]:
+                target_id = segments[4]
+                if len(segments) == 5 and method == "PUT":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.update_deployment_target(
+                            target_id, body or {}
+                        ),
+                    )
+                    return
+                if len(segments) == 5 and method == "DELETE":
+                    self.server.state.delete_deployment_target(target_id)
+                    self._send_json(HTTPStatus.NO_CONTENT, {})
+                    return
+
+            if len(segments) >= 5 and segments[:4] == [
+                "api",
+                "launcher",
+                "deployment",
+                "jobs",
+            ]:
+                job_id = segments[4]
+                if len(segments) == 5 and method == "GET":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.get_deployment_job(job_id),
+                    )
+                    return
+                if len(segments) == 6 and segments[5] == "events" and method == "GET":
+                    self._send_deployment_sse(job_id)
+                    return
+                if len(segments) == 6 and segments[5] == "cancel" and method == "POST":
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.cancel_deployment_job(job_id),
+                    )
+                    return
+                if len(segments) == 6 and segments[5] == "retry" and method == "POST":
+                    self._send_json(
+                        HTTPStatus.ACCEPTED,
+                        self.server.state.retry_deployment_job(job_id),
+                    )
+                    return
+
             if len(segments) >= 5 and segments[:4] == [
                 "api",
                 "launcher",
@@ -6093,6 +6220,28 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         self.end_headers()
         if status != HTTPStatus.NO_CONTENT:
             self.wfile.write(encoded)
+
+    def _send_deployment_sse(self, job_id: str) -> None:
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        sent = 0
+        deadline = time.monotonic() + 60.0
+        while time.monotonic() < deadline:
+            events = self.server.state.deployment_job_events(job_id)
+            for event in events[sent:]:
+                self.wfile.write(event.encode("utf-8"))
+                self.wfile.flush()
+            sent = len(events)
+            job = self.server.state.get_deployment_job(job_id)
+            if str(job.get("stage") or "") in {"completed", "failed", "cancelled"}:
+                break
+            self.wfile.write(b"event: heartbeat\ndata: {}\n\n")
+            self.wfile.flush()
+            time.sleep(2.0)
 
 
 class LauncherControlServer(ThreadingHTTPServer):

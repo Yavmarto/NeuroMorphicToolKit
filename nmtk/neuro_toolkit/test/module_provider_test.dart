@@ -69,6 +69,31 @@ class MockProcessManager implements ProcessManager {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  test('Module parses deployment capability metadata', () {
+    final module = Module.fromJson(<String, dynamic>{
+      'id': 'dummy',
+      'name': 'Dummy',
+      'description': 'D1',
+      'installPath': 'dummy',
+      'deployment': <String, dynamic>{
+        'supportedModes': <String>['standalone', 'docker', 'kubernetes'],
+        'healthPath': '/health',
+        'requiredPorts': <int>[9000],
+        'defaultContainerImage': 'ghcr.io/example/dummy:latest',
+        'composeProfile': 'core',
+        'chartTemplateId': 'nmtk-backend',
+      },
+    });
+
+    expect(module.deployment, isNotNull);
+    expect(module.deployment!.supportedModes, contains('docker'));
+    expect(module.deployment!.requiredPorts, contains(9000));
+    final deploymentJson =
+        module.toJson()['deployment'] as Map<String, dynamic>;
+    expect(deploymentJson['defaultContainerImage'],
+        'ghcr.io/example/dummy:latest');
+  });
+
   test('ModuleProvider correctly filters installed and available modules', () {
     final mockProcessManager = MockProcessManager();
     final provider = ModuleProvider(processManager: mockProcessManager);

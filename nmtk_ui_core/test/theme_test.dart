@@ -33,7 +33,6 @@ void main() {
       terminalBackground: Colors.black,
       syntaxHighlightColor: Colors.blue,
       brandGradient: LinearGradient(colors: [Colors.blue, Colors.red]),
-      glassmorphismColor: Colors.white10,
     );
 
     test('copyWith works correctly', () {
@@ -51,7 +50,6 @@ void main() {
         brandGradient: const LinearGradient(
           colors: [Colors.green, Colors.yellow],
         ),
-        glassmorphismColor: Colors.black.withValues(alpha: 0.1),
       );
 
       final lerped = extension.lerp(other, 0.5) as NmtkThemeExtension;

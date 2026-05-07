@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
@@ -15,6 +16,8 @@ class LauncherControlSettings {
     required this.pynqBoards,
     required this.akidaHosts,
     required this.selectedAkidaHostId,
+    required this.backendDeploymentReady,
+    this.selectedBackendDeploymentTarget,
   });
 
   final String logLevel;
@@ -23,6 +26,8 @@ class LauncherControlSettings {
   final List<PynqPairedBoard> pynqBoards;
   final List<AkidaPairedHost> akidaHosts;
   final String? selectedAkidaHostId;
+  final bool backendDeploymentReady;
+  final DeploymentTarget? selectedBackendDeploymentTarget;
 
   factory LauncherControlSettings.fromJson(Map<String, dynamic> json) {
     return LauncherControlSettings(
@@ -38,6 +43,13 @@ class LauncherControlSettings {
           .map(AkidaPairedHost.fromJson)
           .toList(growable: false),
       selectedAkidaHostId: json['selectedAkidaHostId'] as String?,
+      backendDeploymentReady: json['backendDeploymentReady'] as bool? ?? false,
+      selectedBackendDeploymentTarget: json['selectedBackendDeploymentTarget']
+              is Map<String, dynamic>
+          ? DeploymentTarget.fromJson(
+              json['selectedBackendDeploymentTarget'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 
@@ -189,6 +201,68 @@ class ControlApiService {
     final response = await _client.get(_uri('/api/launcher/settings'));
     await _ensureSuccess(response);
     return LauncherControlSettings.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<List<DeploymentTarget>> fetchDeploymentTargets() async {
+    final response =
+        await _client.get(_uri('/api/launcher/deployment/targets'));
+    await _ensureSuccess(response);
+    final decoded = await _readJsonList(response);
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(DeploymentTarget.fromJson)
+        .toList(growable: false);
+  }
+
+  Future<DeploymentTarget> createDeploymentTarget(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _client.post(
+      _uri('/api/launcher/deployment/targets'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return DeploymentTarget.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<DeploymentPreflightResult> preflightDeploymentTarget(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _client.post(
+      _uri('/api/launcher/deployment/preflight'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return DeploymentPreflightResult.fromJson(
+      await _readJsonResponse(response),
+    );
+  }
+
+  Future<DeploymentJob> createDeploymentJob(
+      Map<String, dynamic> payload) async {
+    final response = await _client.post(
+      _uri('/api/launcher/deployment/jobs'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return DeploymentJob.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<DeploymentJob> fetchDeploymentJob(String jobId) async {
+    final response =
+        await _client.get(_uri('/api/launcher/deployment/jobs/$jobId'));
+    await _ensureSuccess(response);
+    return DeploymentJob.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<DeploymentJob> cancelDeploymentJob(String jobId) async {
+    final response =
+        await _client.post(_uri('/api/launcher/deployment/jobs/$jobId/cancel'));
+    await _ensureSuccess(response);
+    return DeploymentJob.fromJson(await _readJsonResponse(response));
   }
 
   Future<void> updateSettings({

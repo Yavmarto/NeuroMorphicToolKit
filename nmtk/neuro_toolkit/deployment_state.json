@@ -1,0 +1,88 @@
+{
+  "jobs": [
+    {
+      "blockingInputNeeded": "",
+      "error": "",
+      "events": [
+        {
+          "createdAt": "2026-05-06T21:02:50.347407+00:00",
+          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
+          "message": "Validating standalone backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-05-06T21:02:50.403173+00:00",
+          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
+          "message": "Preparing Python runtime plan",
+          "percent": 30,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-05-06T21:02:50.458724+00:00",
+          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
+          "message": "Writing standalone service configuration",
+          "percent": 55,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-05-06T21:02:50.514176+00:00",
+          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
+          "message": "Running backend health verification",
+          "percent": 80,
+          "stage": "verifying"
+        },
+        {
+          "createdAt": "2026-05-06T21:02:50.569662+00:00",
+          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
+          "message": "Standalone backend target is configured",
+          "percent": 100,
+          "stage": "completed"
+        }
+      ],
+      "id": "7204bdb8-a258-4c0d-be9c-cfb492534962",
+      "lastLogLine": "Standalone backend target is configured",
+      "logs": [
+        "Validating standalone backend prerequisites",
+        "Preparing Python runtime plan",
+        "Writing standalone service configuration",
+        "Running backend health verification",
+        "Standalone backend target is configured"
+      ],
+      "mode": "standalone",
+      "percent": 100,
+      "stage": "completed",
+      "stageLabel": "Ready",
+      "startedAt": "2026-05-06T21:02:50.346856+00:00",
+      "targetId": "This-machine",
+      "terminalOutcome": "completed",
+      "updatedAt": "2026-05-06T21:02:50.570182+00:00"
+    }
+  ],
+  "selectedTargetId": "This-machine",
+  "targets": [
+    {
+      "apiServer": "",
+      "authMode": "none",
+      "backendPort": 9000,
+      "context": "",
+      "createdAt": "2026-05-06T21:02:50.342727+00:00",
+      "displayName": "This machine",
+      "domain": "",
+      "host": "",
+      "id": "This-machine",
+      "imageTag": "latest",
+      "installRoot": "",
+      "lastDeployedVersion": "latest",
+      "lastFailureReason": "",
+      "lastReadiness": "ready",
+      "mode": "standalone",
+      "namespace": "nmtk",
+      "secretRefs": {},
+      "sshPort": 22,
+      "targetType": "local",
+      "updatedAt": "2026-05-06T21:02:50.570689+00:00",
+      "username": ""
+    }
+  ]
+}
