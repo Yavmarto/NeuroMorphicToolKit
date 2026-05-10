@@ -6319,8 +6319,10 @@ class LauncherControlServer(ThreadingHTTPServer):
 
     daemon_threads = True
 
-    def __init__(self, server_address: tuple[str, int]) -> None:
-        self.state = LauncherControlState(manage_suite_api=True)
+    def __init__(
+        self, server_address: tuple[str, int], manage_suite_api: bool = True
+    ) -> None:
+        self.state = LauncherControlState(manage_suite_api=manage_suite_api)
         super().__init__(server_address, LauncherControlHandler)
 
     def server_close(self) -> None:
@@ -6328,8 +6330,10 @@ class LauncherControlServer(ThreadingHTTPServer):
         super().server_close()
 
 
-def create_server(host: str, port: int) -> LauncherControlServer:
-    return LauncherControlServer((host, port))
+def create_server(
+    host: str, port: int, manage_suite_api: bool = True
+) -> LauncherControlServer:
+    return LauncherControlServer((host, port), manage_suite_api=manage_suite_api)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -6342,9 +6346,16 @@ def main(argv: list[str] | None = None) -> int:
         help="Run a non-mutating launcher environment diagnostic and exit",
     )
     parser.add_argument(
-        "--json",
+        "--manage-suite-api",
         action="store_true",
-        help="When used with --doctor, print the report as JSON",
+        default=True,
+        help="Manage the suite_api lifecycle (default: True)",
+    )
+    parser.add_argument(
+        "--no-manage-suite-api",
+        action="store_false",
+        dest="manage_suite_api",
+        help="Do not manage the suite_api lifecycle",
     )
     args = parser.parse_args(argv)
     os.environ.setdefault("NMTK_UVICORN_HOST", str(args.host).strip() or "0.0.0.0")
@@ -6361,7 +6372,7 @@ def main(argv: list[str] | None = None) -> int:
             print(_render_doctor_report(report))
         return 1 if report["fatalCount"] else 0
 
-    server = create_server(args.host, args.port)
+    server = create_server(args.host, args.port, manage_suite_api=args.manage_suite_api)
     print(f"Launcher control service listening on http://{args.host}:{args.port}")
     try:
         server.serve_forever()

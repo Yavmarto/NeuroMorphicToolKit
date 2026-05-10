@@ -1,13 +1,24 @@
 #!/usr/bin/env bash
-# push-all.sh — Stage, commit, and push changes in all submodules and the root repo.
+# push-all.sh — Stage, commit, and push changes in all top-level repos and the root repo.
 # Usage: push-all.sh [commit message] [branch]
 #   commit message  — quoted message (default: prompt user)
-#   branch          — branch to push to (default: current branch)
+#   branch          — branch to push to (default: current branch, except main)
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "dev")
+
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/repo_helpers.sh"
+
+CURRENT_BRANCH="$(git -C "$ROOT_DIR" branch --show-current 2>/dev/null || true)"
+
+if [[ -z "$CURRENT_BRANCH" ]]; then
+  echo "Error: could not determine the current branch. Specify one explicitly."
+  echo "Usage: push-all.sh [commit message] [branch]"
+  exit 1
+fi
 
 if [[ $# -eq 0 ]]; then
   echo -n "Enter commit message [chore: update]: "
@@ -17,6 +28,11 @@ if [[ $# -eq 0 ]]; then
 else
   MESSAGE="$1"
   BRANCH="${2:-$CURRENT_BRANCH}"
+fi
+
+if [[ "$BRANCH" == "main" ]]; then
+  echo "Error: push-all.sh will not run on 'main'. Use a non-main branch."
+  exit 1
 fi
 
 push_repo() {
@@ -62,11 +78,9 @@ echo "======================================================"
 echo "  push-all.sh  |  branch: $BRANCH"
 echo "======================================================"
 
-git submodule foreach --quiet 'echo $displaypath' | while read -r sub; do
-  push_repo "$ROOT_DIR/$sub" "$sub"
-done
-
-push_repo "$ROOT_DIR" "(root)"
+while IFS=$'\t' read -r repo_name repo_dir; do
+  push_repo "$repo_dir" "$repo_name"
+done < <(list_managed_repos "$ROOT_DIR")
 
 echo ""
 echo "======================================================"

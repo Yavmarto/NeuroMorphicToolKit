@@ -4,9 +4,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # ---------------------------------------------------------------------------
-# Resolve a Python 3 interpreter.  On conda-managed machines the interpreter
-# is often named 'python' (not 'python3').  Try explicit names first, then
-# fall back to the active conda prefix when PATH doesn't expose either name.
+# Resolve a Python 3 interpreter.
 # ---------------------------------------------------------------------------
 find_python3() {
   local cmd
@@ -34,6 +32,8 @@ if ! PYTHON3="$(find_python3)"; then
 fi
 
 FLUTTER_DEVICE=""
+USE_DOCKER="false"
+DOCKER_PROFILE="default"
 CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-8090}"
 CONTROL_API_PID=""
 CONTROL_API_BIND_HOST="127.0.0.1"
@@ -42,10 +42,12 @@ SUITE_API_URL=""
 
 usage() {
   cat <<'EOF'
-Usage: ./scripts/run_dev.sh --flutter-device <device>
+Usage: ./scripts/run_dev.sh --flutter-device <device> [options]
 
 Options:
   --flutter-device <device>  Desktop Flutter target to run.
+  --docker                   Use Docker for the backend services.
+  --profile <name>           Docker profile to use (e.g., physics, hardware, full).
 EOF
 }
 
@@ -172,6 +174,7 @@ reserve_suite_api_port() {
 
 start_control_api() {
   local host="$1"
+  local manage_suite_api="$2"
 
   reserve_control_api_port
 
@@ -182,9 +185,16 @@ start_control_api() {
     --host "$host"
     --port "$CONTROL_API_PORT"
   )
+  
+  if [[ "$manage_suite_api" == "false" ]]; then
+    control_api_cmd+=(--no-manage-suite-api)
+  fi
 
   echo "------------------------------------------------------------"
   echo "==> Starting launcher control API on $host:$CONTROL_API_PORT"
+  if [[ "$manage_suite_api" == "false" ]]; then
+    echo "    (Suite API management disabled — assuming external/docker start)"
+  fi
   echo "------------------------------------------------------------"
 
   NMTK_UVICORN_HOST="$host" PYTHONPATH="$control_api_pythonpath" "${control_api_cmd[@]}" &
@@ -209,8 +219,15 @@ while [ "$#" -gt 0 ]; do
       FLUTTER_DEVICE="${2:-}"
       shift 2
       ;;
+    --docker)
+      USE_DOCKER="true"
+      shift
+      ;;
+    --profile)
+      DOCKER_PROFILE="${2:-default}"
+      shift 2
+      ;;
     --native-only)
-      echo "==> --native-only is now the default and can be omitted"
       shift
       ;;
     -h|--help)
@@ -234,15 +251,32 @@ fi
 trap cleanup EXIT INT TERM
 
 TARGET_PLATFORM="$(resolve_flutter_target_platform "$FLUTTER_DEVICE")"
+HOST_IP="$(resolve_host_ip)"
+
 if [[ "$TARGET_PLATFORM" == android* || "$TARGET_PLATFORM" == ios* || "$FLUTTER_DEVICE" == "ios" ]]; then
   CONTROL_API_BIND_HOST="0.0.0.0"
-  CONTROL_API_PUBLIC_HOST="$(resolve_host_ip)"
+  CONTROL_API_PUBLIC_HOST="$HOST_IP"
   SUITE_API_URL="http://$CONTROL_API_PUBLIC_HOST:9000"
 fi
 
+if [[ "$USE_DOCKER" == "true" ]]; then
+  echo "------------------------------------------------------------"
+  echo "==> Starting Docker containers (profile: $DOCKER_PROFILE)"
+  echo "------------------------------------------------------------"
+  if [[ "$DOCKER_PROFILE" == "default" ]]; then
+    docker compose up -d
+  else
+    docker compose --profile "$DOCKER_PROFILE" up -d
+  fi
+fi
+
 CONTROL_API_URL=""
-reserve_suite_api_port
-start_control_api "$CONTROL_API_BIND_HOST"
+# Only reserve suite api port if NOT using docker (docker handles its own ports)
+if [[ "$USE_DOCKER" == "false" ]]; then
+  reserve_suite_api_port
+fi
+
+start_control_api "$CONTROL_API_BIND_HOST" "$(if [[ "$USE_DOCKER" == "true" ]]; then echo "false"; else echo "true"; fi)"
 CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
 
 wait_for_suite_api "$CONTROL_API_URL"
@@ -250,10 +284,13 @@ wait_for_suite_api "$CONTROL_API_URL"
 echo "------------------------------------------------------------"
 echo "==> Starting NeuroToolkit launcher on $FLUTTER_DEVICE"
 echo "------------------------------------------------------------"
+echo "==> HOST IP: $HOST_IP"
 if [[ -n "$SUITE_API_URL" ]]; then
   echo "==> Using remote-accessible control API: $CONTROL_API_URL"
   echo "==> Using remote-accessible suite API:   $SUITE_API_URL"
+  echo "    (If your phone cannot connect, ensure it is on the same WiFi as $HOST_IP)"
 fi
+
 cd "$REPO_ROOT/nmtk/neuro_toolkit"
 flutter_args=(
   run

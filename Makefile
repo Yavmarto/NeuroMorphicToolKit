@@ -28,6 +28,9 @@ help:
 	@echo "                                  Override with ANDROID_DEVICE=<flutter-device-id> when needed"
 	@echo "  make dev-i                    - Run suite_api and the launcher on iOS"
 	@echo "  make dev-native               - Run the native launcher control API and Flutter app"
+	@echo "  make docker                   - Run backend in Docker and native launcher on host"
+	@echo "  make docker-a                 - Run backend in Docker and launcher on Android"
+	@echo "  make docker-i                 - Run backend in Docker and launcher on iOS"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
@@ -53,6 +56,19 @@ dev-native:
 
 dev-web:
 	@./scripts/run_dev.sh --flutter-device chrome
+
+docker:
+	@./scripts/run_dev.sh --docker --flutter-device "$(FLUTTER_DEVICE)"
+
+docker-a:
+	@$(MAKE) check-devices
+	@echo "==> Using Android device: $(ANDROID_DEVICE)"
+	@./scripts/run_dev.sh --docker --flutter-device "$(ANDROID_DEVICE)"
+
+docker-i:
+	@$(MAKE) check-devices
+	@echo "==> Using iOS device: $(IOS_DEVICE)"
+	@./scripts/run_dev.sh --docker --flutter-device "$(IOS_DEVICE)"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload
