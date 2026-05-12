@@ -61,8 +61,10 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
     setState(() {
       _filteredCommands = widget.commands.where((cmd) {
         final matchLabel = cmd.label.toLowerCase().contains(query);
-        final matchDesc = cmd.description?.toLowerCase().contains(query) ?? false;
-        final matchAlias = cmd.aliases?.any((a) => a.toLowerCase().contains(query)) ?? false;
+        final matchDesc =
+            cmd.description?.toLowerCase().contains(query) ?? false;
+        final matchAlias =
+            cmd.aliases?.any((a) => a.toLowerCase().contains(query)) ?? false;
         return matchLabel || matchDesc || matchAlias;
       }).toList();
       _selectedIndex = 0;
@@ -74,23 +76,27 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
     cmd.onExecute();
   }
 
-  void _handleKeyEvent(KeyEvent event) {
-    if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        setState(() {
-          _selectedIndex = (_selectedIndex + 1) % _filteredCommands.length;
-        });
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        setState(() {
-          _selectedIndex = (_selectedIndex - 1 + _filteredCommands.length) % _filteredCommands.length;
-        });
-      } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-        if (_filteredCommands.isNotEmpty) {
-          _executeCommand(_filteredCommands[_selectedIndex]);
-        }
-      } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-        widget.onDismiss();
-      }
+  String _semanticLabelFor(NmtkCommand cmd) {
+    final parts = <String>[
+      cmd.label,
+      if (cmd.description != null) cmd.description!,
+      if (cmd.category != null) '${cmd.category} command',
+    ];
+    return parts.join(', ');
+  }
+
+  void _moveSelection(int delta) {
+    if (_filteredCommands.isEmpty) return;
+    setState(() {
+      _selectedIndex =
+          (_selectedIndex + delta + _filteredCommands.length) %
+          _filteredCommands.length;
+    });
+  }
+
+  void _executeSelectedCommand() {
+    if (_filteredCommands.isNotEmpty) {
+      _executeCommand(_filteredCommands[_selectedIndex]);
     }
   }
 
@@ -99,133 +105,198 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
 
-    return KeyboardListener(
-      focusNode: FocusNode(), // Dummy node for global keys
-      onKeyEvent: _handleKeyEvent,
-      child: Center(
-        child: Container(
-          width: 600,
-          constraints: const BoxConstraints(maxHeight: 450),
-          margin: const EdgeInsets.symmetric(vertical: 64, horizontal: 24),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: tokens.chromeBorder),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: ShadInput(
-                  controller: _searchController,
-                  focusNode: _focusNode,
-                  placeholder: const Text('Search commands...'),
-                  leading: const Padding(
-                    padding: EdgeInsets.only(right: 8),
-                    child: Icon(Icons.search, size: 18),
-                  ),
-                ),
-              ),
-              const Divider(height: 1),
-              Flexible(
-                child: _filteredCommands.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(32),
-                        child: Text('No commands found.'),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _filteredCommands.length,
-                        itemBuilder: (context, index) {
-                          final cmd = _filteredCommands[index];
-                          final isSelected = index == _selectedIndex;
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+            _moveSelection(1),
+        const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+            _moveSelection(-1),
+        const SingleActivator(LogicalKeyboardKey.enter):
+            _executeSelectedCommand,
+        const SingleActivator(LogicalKeyboardKey.escape): widget.onDismiss,
+      },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final paletteWidth = (constraints.maxWidth - 32).clamp(0.0, 600.0);
+          final paletteMaxHeight = (constraints.maxHeight - 32).clamp(
+            220.0,
+            450.0,
+          );
 
-                          return InkWell(
-                            onTap: () => _executeCommand(cmd),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? theme.colorScheme.primary.withOpacity(0.1)
-                                    : null,
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    cmd.icon ?? Icons.bolt_rounded,
-                                    size: 18,
-                                    color: isSelected
-                                        ? theme.colorScheme.primary
-                                        : theme.colorScheme.onSurfaceVariant,
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                key: const ValueKey<String>('nmtk-command-palette-panel'),
+                width: paletteWidth,
+                constraints: BoxConstraints(maxHeight: paletteMaxHeight),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface,
+                  borderRadius: BorderRadius.circular(tokens.radiusSm),
+                  border: Border.all(color: tokens.chromeBorder),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: ShadInput(
+                        controller: _searchController,
+                        focusNode: _focusNode,
+                        placeholder: const Text('Search commands...'),
+                        leading: const Padding(
+                          padding: EdgeInsets.only(right: 8),
+                          child: Icon(Icons.search, size: 18),
+                        ),
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Flexible(
+                      child: _filteredCommands.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Text('No commands found.'),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _filteredCommands.length,
+                              itemBuilder: (context, index) {
+                                final cmd = _filteredCommands[index];
+                                final isSelected = index == _selectedIndex;
+
+                                return Semantics(
+                                  key: ValueKey<String>(
+                                    'nmtk-command-${cmd.id}',
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          cmd.label,
-                                          style: theme.textTheme.bodyMedium?.copyWith(
-                                            fontWeight: isSelected ? FontWeight.w600 : null,
-                                            color: isSelected ? theme.colorScheme.primary : null,
+                                  button: true,
+                                  selected: isSelected,
+                                  label: _semanticLabelFor(cmd),
+                                  child: InkWell(
+                                    onTap: () => _executeCommand(cmd),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? theme.colorScheme.primary
+                                                  .withValues(alpha: 0.1)
+                                            : null,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            cmd.icon ?? Icons.bolt_rounded,
+                                            size: 18,
+                                            color: isSelected
+                                                ? theme.colorScheme.primary
+                                                : theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
                                           ),
-                                        ),
-                                        if (cmd.description != null)
-                                          Text(
-                                            cmd.description!,
-                                            style: theme.textTheme.bodySmall,
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  cmd.label,
+                                                  style: theme
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.copyWith(
+                                                        fontWeight: isSelected
+                                                            ? FontWeight.w600
+                                                            : null,
+                                                        color: isSelected
+                                                            ? theme
+                                                                  .colorScheme
+                                                                  .primary
+                                                            : null,
+                                                      ),
+                                                ),
+                                                if (cmd.description != null)
+                                                  Text(
+                                                    cmd.description!,
+                                                    style: theme
+                                                        .textTheme
+                                                        .bodySmall,
+                                                  ),
+                                              ],
+                                            ),
                                           ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (cmd.category != null)
-                                    Text(
-                                      cmd.category!,
-                                      style: theme.textTheme.labelSmall?.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                          if (cmd.category != null)
+                                            Text(
+                                              cmd.category!,
+                                              style: theme.textTheme.labelSmall
+                                                  ?.copyWith(
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurfaceVariant
+                                                        .withValues(alpha: 0.5),
+                                                  ),
+                                            ),
+                                        ],
                                       ),
                                     ),
-                                ],
-                              ),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
+                    ),
+                    const Divider(height: 1),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
                       ),
-              ),
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    _KeyCap(label: '↑↓'),
-                    const SizedBox(width: 4),
-                    const Text('to navigate', style: TextStyle(fontSize: 10)),
-                    const SizedBox(width: 12),
-                    _KeyCap(label: 'Enter'),
-                    const SizedBox(width: 4),
-                    const Text('to select', style: TextStyle(fontSize: 10)),
-                    const SizedBox(width: 12),
-                    _KeyCap(label: 'Esc'),
-                    const SizedBox(width: 4),
-                    const Text('to close', style: TextStyle(fontSize: 10)),
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 6,
+                        children: [
+                          _ShortcutHint(
+                            keyLabel: '↑↓',
+                            actionLabel: 'to navigate',
+                          ),
+                          _ShortcutHint(
+                            keyLabel: 'Enter',
+                            actionLabel: 'to select',
+                          ),
+                          _ShortcutHint(
+                            keyLabel: 'Esc',
+                            actionLabel: 'to close',
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
+    );
+  }
+}
+
+class _ShortcutHint extends StatelessWidget {
+  final String keyLabel;
+  final String actionLabel;
+
+  const _ShortcutHint({required this.keyLabel, required this.actionLabel});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _KeyCap(label: keyLabel),
+        const SizedBox(width: 4),
+        Text(actionLabel, style: const TextStyle(fontSize: 10)),
+      ],
     );
   }
 }
@@ -238,11 +309,12 @@ class _KeyCap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceVariant,
-        borderRadius: BorderRadius.circular(4),
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Text(

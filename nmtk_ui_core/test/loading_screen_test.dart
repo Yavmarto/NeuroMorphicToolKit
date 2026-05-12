@@ -84,5 +84,54 @@ void main() {
       expect(find.text(degradedMsg), findsOneWidget);
       expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
     });
+
+    testWidgets('5. degraded state fits narrow viewports', (tester) async {
+      tester.view.physicalSize = const Size(260, 560);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: NmtkLoadingScreen(
+            state: NmtkReadinessState.degraded,
+            degradedMessage:
+                'Optional acceleration services are unavailable right now.',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Optional acceleration services are unavailable right now.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('6. failed state fits narrow viewports', (tester) async {
+      tester.view.physicalSize = const Size(260, 560);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NmtkLoadingScreen(
+            state: NmtkReadinessState.failed,
+            errorMessage: 'Backend timed out before reporting readiness.',
+            onRetry: () {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Backend timed out before reporting readiness.'),
+        findsOneWidget,
+      );
+      expect(find.text('Retry'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 }

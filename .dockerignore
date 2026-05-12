@@ -11,3 +11,29 @@ node_modules
 .mypy_cache
 .ruff_cache
 *.log
+
+# Flutter build artifacts
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.g.dart
+
+# Module frontend build dirs (not needed by suite_api)
+neurocnl/frontend/
+Neurohub/frontend/
+Neurosense/Dockerfile.frontend
+Neurosim/frontend/
+Neurochip/frontend/
+Neurobench/frontend/
+nmtk/
+nmtk_ui_core/
+
+# Test and demo data
+data/
+Neuro-Dream-Hand/
+ai_safe/
+issues/
+issues-archive/
+docs/
+monitoring/

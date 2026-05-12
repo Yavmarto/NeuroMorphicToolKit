@@ -70,3 +70,45 @@ class ModuleRegistryClient:
             if module.id == module_id:
                 return module
         return None
+
+
+def shape_module_status(module: ModuleStatusModel) -> dict[str, Any]:
+    """Return a transport-neutral module status shape for MCP-facing tools."""
+    readiness = _module_readiness(module)
+    return {
+        "id": module.id,
+        "name": module.name,
+        "status": module.status,
+        "readiness": readiness,
+        "blocking": readiness == "preflight_failed",
+        "preflightStatus": module.preflightStatus,
+        "preflightMessage": module.preflightMessage,
+        "capabilityWarnings": list(module.capabilityWarnings),
+        "environmentFingerprint": module.environmentFingerprint,
+        "route": module.route,
+        "effectivePort": module.effectivePort,
+        "healthUrl": module.healthUrl,
+        "metadata": dict(module.metadata),
+    }
+
+
+def shape_module_statuses(modules: list[ModuleStatusModel]) -> list[dict[str, Any]]:
+    """Shape a list of launcher module records without changing semantics."""
+    return [shape_module_status(module) for module in modules]
+
+
+def _module_readiness(module: ModuleStatusModel) -> str:
+    preflight_status = module.preflightStatus
+    if preflight_status == "preflight_failed":
+        return "preflight_failed"
+    if preflight_status == "degraded_optional_capability":
+        return "degraded_optional_capability"
+    if preflight_status == "ok":
+        return "ok"
+    if module.status == "error":
+        return "preflight_failed"
+    if module.status == "degraded" or module.capabilityWarnings:
+        return "degraded_optional_capability"
+    if module.status in {"running", "installed", "starting", "stopping", "updating"}:
+        return "ok"
+    return "unknown"

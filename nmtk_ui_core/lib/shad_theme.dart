@@ -98,51 +98,39 @@ class NmtkShadTheme {
     // ── Surfaces ─────────────────────────────────────────────────────
     /// Scaffold / page background — near-white with an imperceptible
     /// warm cast; avoids the clinical flatness of pure #FFFFFF.
-    background: Color(0xFFFAFAFB),
-
-    /// Default text on background — deep violet-black; warmer than
-    /// pure #000000, anchors the palette without harsh contrast.
-    foreground: Color(0xFF11052C),
+    background: Color(0xFFF8FAFC),
+    foreground: Color(0xFF0F172A),
 
     // Card surfaces are pure white so they lift clearly off the
     // slightly-tinted background, creating visual hierarchy without
     // using drop shadows.
     card: Color(0xFFFFFFFF),
-    cardForeground: Color(0xFF11052C),
+    cardForeground: Color(0xFF0F172A),
 
     // Popovers, dropdowns, command-palette — also pure white so they
     // feel elevated above card surfaces.
     popover: Color(0xFFFFFFFF),
-    popoverForeground: Color(0xFF11052C),
+    popoverForeground: Color(0xFF18181B),
 
     // ── Primary — deep indigo ─────────────────────────────────────
     /// Primary brand colour.  Indigo-600 sits at the confident,
     /// "technical authority" end of the spectrum while still reading
     /// as vibrant and modern.
-    primary: Color(0xFF4F46E5),
-
-    /// Text/icons rendered on top of a solid primary surface.
-    /// Indigo-50 — near-white with a violet cast so it harmonises
-    /// rather than clashing.
-    primaryForeground: Color(0xFFF5F3FF),
+    primary: Color(0xFF0EA5E9),
+    primaryForeground: Color(0xFFF8FAFC),
 
     // ── Secondary — light indigo tint ────────────────────────────
     /// Tinted surface for secondary buttons, selected-row backgrounds,
     /// and subtle highlights.  Indigo-50 is barely-perceptible in
     /// isolation but communicates grouping at a glance.
-    secondary: Color(0xFFEEF2FF),
-
-    /// Text on secondary surfaces — indigo-800 for strong contrast
-    /// against the light secondary background.
-    secondaryForeground: Color(0xFF3730A3),
+    secondary: Color(0xFFF1F5F9),
+    secondaryForeground: Color(0xFF0F172A),
 
     // ── Muted — lavender-gray neutral ────────────────────────────
     /// Low-priority surface: disabled states, placeholder backgrounds,
     /// skeleton loaders.  Slightly lavender to stay in family.
-    muted: Color(0xFFF1F0F8),
-
-    /// Secondary text / placeholder labels on muted surfaces.
-    mutedForeground: Color(0xFF6D6B8D),
+    muted: Color(0xFFF8FAFC),
+    mutedForeground: Color(0xFF64748B),
 
     // ── Accent — teal ────────────────────────────────────────────
     /// The "playful" pole of the palette.  Teal-500 complements indigo
@@ -150,10 +138,7 @@ class NmtkShadTheme {
     /// Used for: hover highlights on menu items, keyboard-focused rings
     /// in non-primary contexts, selected-chip fills, and interactive
     /// affordances in Shadcn components.
-    accent: Color(0xFF14B8A6),
-
-    /// Text/icons on solid teal accent surfaces — pure white for
-    /// maximum legibility against teal-500.
+    accent: Color(0xFF94A3B8),
     accentForeground: Color(0xFFFFFFFF),
 
     // ── Destructive ───────────────────────────────────────────────
@@ -165,19 +150,10 @@ class NmtkShadTheme {
     // ── Chrome ────────────────────────────────────────────────────
     /// Card / input borders — violet-200.  Soft enough to recede but
     /// tinted so the chrome feels intentional rather than generic grey.
-    border: Color(0xFFDDD6FE),
-
-    /// Input field fill colour — violet-100.  Distinguishes editable
-    /// surfaces from plain surfaces without heavy contrast.
-    input: Color(0xFFEDE9FE),
-
-    /// Keyboard-focus ring — matches primary indigo so focus is
-    /// unmistakeable without introducing a fourth colour.
-    ring: Color(0xFF4F46E5),
-
-    /// Text-selection highlight — indigo-50.  Subtle on white but
-    /// clearly visible when text is selected.
-    selection: Color(0xFFEEF2FF),
+    border: Color(0xFFE2E8F0),
+    input: Color(0xFFF1F5F9),
+    ring: Color(0xFF0EA5E9),
+    selection: Color(0xFFE0F2FE),
   );
 
   // ────────────────────────────────────────────────────────────────────────
@@ -192,46 +168,37 @@ class NmtkShadTheme {
     // ── Surfaces — neurocnl-aligned ───────────────────────────────
     /// Deep violet-black — matches NmtkNeurocnlTokens.background
     /// (#0F0D1A) so Shadcn pages blend with the existing dark layout.
-    background: Color(0xFF0F0D1A),
-
-    /// Primary body text — matches NmtkNeurocnlTokens.textPrimary
-    /// (#F1EEF9) — near-white with violet cast.
-    foreground: Color(0xFFF1EEF9),
+    background: Color(0xFF08090A),
+    foreground: Color(0xFFF1F5F9),
 
     // Card surfaces — one level above the background.
     // Matches NmtkNeurocnlTokens.surface (#1A1625).
-    card: Color(0xFF1A1625),
-    cardForeground: Color(0xFFF1EEF9),
+    card: Color(0xFF0F172A),
+    cardForeground: Color(0xFFF1F5F9),
 
     // Popover / dropdown — one level above cards.
     // Matches NmtkNeurocnlTokens.surfaceVariant (#231E35).
-    popover: Color(0xFF231E35),
-    popoverForeground: Color(0xFFF1EEF9),
+    popover: Color(0xFF242426),
+    popoverForeground: Color(0xFFE5E7EB),
 
     // ── Primary — lifted indigo ───────────────────────────────────
     /// Indigo-400 — brighter than the light-mode indigo-600 so it
     /// achieves the same visual weight on dark backgrounds without
     /// washing out.
-    primary: Color(0xFF818CF8),
-
-    /// Text on solid primary — very dark so it contrasts against the
-    /// bright indigo-400 surface.
-    primaryForeground: Color(0xFF0F0D1A),
+    primary: Color(0xFF38BDF8),
+    primaryForeground: Color(0xFF08090A),
 
     // ── Secondary ─────────────────────────────────────────────────
-    secondary: Color(0xFF231E35),
-    secondaryForeground: Color(0xFFB0A8CC), // NmtkNeurocnlTokens.textSecondary
-    // ── Muted ─────────────────────────────────────────────────────
-    muted: Color(0xFF1A1625),
-    mutedForeground: Color(0xFF7B728E),
+    secondary: Color(0xFF1E293B),
+    secondaryForeground: Color(0xFF94A3B8),
+    muted: Color(0xFF0F172A),
+    mutedForeground: Color(0xFF475569),
 
     // ── Accent — brighter teal ────────────────────────────────────
     /// Teal-400 — one step lighter than light-mode teal-500 to
     /// compensate for the dark background and maintain visual vibrancy.
-    accent: Color(0xFF2DD4BF),
-
-    /// Text on teal — very dark for legibility against the bright teal.
-    accentForeground: Color(0xFF0F172A),
+    accent: Color(0xFF475569),
+    accentForeground: Color(0xFFF1F5F9),
 
     // ── Destructive ───────────────────────────────────────────────
     /// Red-500 — matches NmtkShellTokens.errorColor exactly so Shadcn
@@ -242,12 +209,10 @@ class NmtkShadTheme {
     // ── Chrome ────────────────────────────────────────────────────
     /// Matches NmtkNeurocnlTokens.border (#3D3560) — the same violet-
     /// tinted separator used throughout the CNL studio.
-    border: Color(0xFF3D3560),
-    input: Color(0xFF231E35),
-
-    /// Focus ring — matches the dark primary (indigo-400).
-    ring: Color(0xFF818CF8),
-    selection: Color(0xFF231E35),
+    border: Color(0xFF1E293B),
+    input: Color(0xFF0F172A),
+    ring: Color(0xFF38BDF8),
+    selection: Color(0xFF0C4A6E),
   );
 
   // ── Public API ────────────────────────────────────────────────────────────

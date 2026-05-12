@@ -40,7 +40,7 @@ dependencies:
     path: ../packages/neurohub_feature
   nmtk_module_contracts:
     path: ../../nmtk_module_contracts
-  package_info_plus: ^10.1.0
+  package_info_plus: ^9.0.1
   path: ^1.9.0
   path_provider: ^2.1.2
   shadcn_ui: ^0.54.0

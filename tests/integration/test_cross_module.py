@@ -121,6 +121,55 @@ async def test_neurosim_to_neurochip():
 
 
 @pytest.mark.asyncio
+async def test_neurocnl_to_neurochip_lava_simulator():
+    """Test NeuroCNL -> Neurochip Lava simulator handoff."""
+    spec = (
+        "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.8\n"
+        "The motor neuron MUST emit a spike ONLY IF membrane potential exceeds 0.6\n"
+        "The sensory neuron MUST NOT fire DURING the refractory period of 0.002 seconds\n"
+        "The motor neuron MUST NOT fire DURING the refractory period of 0.003 seconds\n"
+        "The sensory neuron membrane potential MUST decay WITH time constant of 0.01 seconds\n"
+        "The motor neuron membrane potential MUST decay WITH time constant of 0.02 seconds\n"
+        "The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 1.0\n"
+    )
+
+    async with httpx.AsyncClient() as client:
+        deploy_resp = await _request_or_skip(
+            client,
+            "POST",
+            f"{NEUROCNL_URL}/api/deploy/lava/network",
+            json={"spec": spec, "weight_bit_width": 8},
+        )
+        assert deploy_resp.status_code == 200, deploy_resp.text
+        deploy_data = deploy_resp.json()
+        if deploy_data["support_state"] == "unsupported":
+            pytest.skip("NeuroCNL reported this Lava path as unsupported.")
+
+        payload = deploy_data.get("deploy_payload")
+        assert payload is not None
+
+        compile_resp = await _request_or_skip(
+            client,
+            "POST",
+            f"{NEUROCHIP_URL}/api/neurochip/hardware/lava/compile",
+            json={"network": payload, "run_config": "sim"},
+        )
+        if compile_resp.status_code == 503:
+            pytest.skip("Neurochip Lava simulator runtime is unavailable in this environment.")
+        assert compile_resp.status_code == 200, compile_resp.text
+        session_id = compile_resp.json()["session_id"]
+
+        run_resp = await _request_or_skip(
+            client,
+            "POST",
+            f"{NEUROCHIP_URL}/api/neurochip/hardware/lava/run",
+            json={"session_id": session_id, "steps": 3},
+        )
+        assert run_resp.status_code == 200, run_resp.text
+        assert run_resp.json()["status"] == "success"
+
+
+@pytest.mark.asyncio
 async def test_neurosense_to_neurocnl():
     """Test Neurosense -> neurocnl pipeline (biosignal -> SNN model)"""
     mock_data = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]

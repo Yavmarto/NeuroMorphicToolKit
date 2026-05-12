@@ -273,6 +273,53 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertTrue(payload[0]["versionPinned"])
         self.assertEqual(payload[0]["remoteVersion"], "1.0.0")
 
+    def test_suite_api_python_reinstalls_when_venv_is_recreated(self) -> None:
+        suite_api_dir = self.repo_root / "suite_api"
+        suite_api_dir.mkdir(parents=True, exist_ok=True)
+
+        env_dir = self.repo_root / ".nmtk" / "suite_api_env"
+        env_dir.mkdir(parents=True, exist_ok=True)
+        stamp_path = launcher_server._suite_api_env_stamp(env_dir)
+        fingerprint = "test-fingerprint"
+        stamp_path.write_text(
+            json.dumps({"fingerprint": fingerprint}),
+            encoding="utf-8",
+        )
+
+        install_targets: list[str] = []
+
+        def fake_run(cmd: list[str], **kwargs: Any) -> mock.Mock:
+            args = [str(part) for part in cmd]
+            if args[:3] == [sys.executable, "-m", "venv"]:
+                venv_python = launcher_server._suite_api_env_python(env_dir)
+                venv_python.parent.mkdir(parents=True, exist_ok=True)
+                venv_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                venv_python.chmod(0o755)
+                return mock.Mock(returncode=0, stdout="", stderr="")
+            if len(args) >= 5 and args[1:4] == ["-m", "pip", "install"]:
+                install_targets.append(args[-1])
+                return mock.Mock(returncode=0, stdout="", stderr="")
+            self.fail(f"Unexpected subprocess.run call: {args}")
+
+        with (
+            mock.patch.dict(os.environ, {"NMTK_SUITE_API_ENV_DIR": str(env_dir)}, clear=False),
+            mock.patch.object(
+                launcher_server,
+                "_suite_api_env_fingerprint",
+                return_value=fingerprint,
+            ),
+            mock.patch.object(
+                launcher_server,
+                "_suite_api_dev_install_paths",
+                return_value=(suite_api_dir,),
+            ),
+            mock.patch("nmtk.launcher_control.server.subprocess.run", side_effect=fake_run),
+        ):
+            python_path = self.state._suite_api_python()
+
+        self.assertTrue(python_path.endswith("venv/bin/python"))
+        self.assertEqual(install_targets, [str(suite_api_dir)])
+
     def test_prepare_akida_runtime_marks_unsupported_host_without_installing(self) -> None:
         with (
             mock.patch.object(

@@ -1963,6 +1963,25 @@ def _suite_api_pythonpath() -> str:
     return os.pathsep.join(entries)
 
 
+def _suite_api_env_is_bootstrapped(venv_python: Path) -> bool:
+    if not venv_python.exists():
+        return False
+
+    result = subprocess.run(
+        [
+            str(venv_python),
+            "-c",
+            "import fastapi, uvicorn, suite_api.main",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTHONPATH": _suite_api_pythonpath()},
+    )
+    return result.returncode == 0
+
+
 def _suite_api_health_probe() -> tuple[bool, str | None]:
     try:
         with urllib.request.urlopen(_suite_api_health_url(), timeout=2.0) as response:
@@ -2165,6 +2184,7 @@ class LauncherControlState:
                 saved_fingerprint = ""
 
         env_dir.mkdir(parents=True, exist_ok=True)
+        venv_created = False
         if not venv_python.exists():
             result = subprocess.run(
                 [sys.executable, "-m", "venv", str(venv_dir)],
@@ -2179,8 +2199,13 @@ class LauncherControlState:
                     or result.stdout.strip()
                     or "Failed to create suite_api virtual environment"
                 )
+            venv_created = True
 
-        if saved_fingerprint != fingerprint:
+        needs_install = venv_created or saved_fingerprint != fingerprint
+        if not needs_install and not _suite_api_env_is_bootstrapped(venv_python):
+            needs_install = True
+
+        if needs_install:
             for install_path in _suite_api_dev_install_paths():
                 if not install_path.exists():
                     raise RuntimeError(
@@ -6344,6 +6369,11 @@ def main(argv: list[str] | None = None) -> int:
         "--doctor",
         action="store_true",
         help="Run a non-mutating launcher environment diagnostic and exit",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit doctor output as JSON when used with --doctor",
     )
     parser.add_argument(
         "--manage-suite-api",

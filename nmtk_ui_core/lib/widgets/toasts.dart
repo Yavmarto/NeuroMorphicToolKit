@@ -13,4 +13,12 @@ class NmtkToasts {
       context,
     ).show(ShadToast.destructive(description: Text(message)));
   }
+
+  static void warning(BuildContext context, String message) {
+    ShadToaster.of(context).show(
+      ShadToast(
+        description: Text(message),
+      ),
+    );
+  }
 }

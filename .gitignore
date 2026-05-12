@@ -15,3 +15,7 @@ nmtk/neuro_toolkit/module_states.json
 nmtk/neuro_toolkit/launcher_settings.json
 scripts/ci/failure_*.md
 nmtk/packages/neurosim_feature/.dart_tool
+NMTK_SIDE/.swarm
+NMTK_SIDE/.opencode
+NMTK_SIDE
+nmtk/packages

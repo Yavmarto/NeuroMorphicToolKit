@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,14 +63,15 @@ class ModulePickerPanel extends ConsumerWidget {
         else
           LayoutBuilder(
             builder: (context, constraints) {
-              const crossAxisCount = 3;
               const spacing = 12.0;
-              // Guard against cards becoming too narrow on small windows.
-              final cardWidth = math.max(
-                240.0,
-                (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
-                    crossAxisCount,
-              );
+              final crossAxisCount = constraints.maxWidth >= 900
+                  ? 3
+                  : constraints.maxWidth >= 600
+                      ? 2
+                      : 1;
+              final cardWidth =
+                  (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
+                      crossAxisCount;
               return Wrap(
                 spacing: spacing,
                 runSpacing: spacing,

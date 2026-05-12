@@ -8,15 +8,15 @@ import 'package:nmtk_ui_core/widgets/top_app_bar.dart';
 /// ----------------------------------------------------------------------------
 
 class NmtkDesignTokens {
-  static const Color primarySeed = Color(0xFF1337EC);
-  static const Color backgroundLight = Color(0xFFF6F6F8);
-  static const Color backgroundDark = Color(0xFF101322);
-  static const Color surfaceDark = Color(0xFF0D101D);
+  static const Color primarySeed = Color(0xFF38BDF8); // Sky Blue
+  static const Color backgroundLight = Color(0xFFF8FAFC); // Slate-50
+  static const Color backgroundDark = Color(0xFF08090A); // Midnight
+  static const Color surfaceDark = Color(0xFF111827); // Deep Navy
 
-  static final BorderRadius buttonShape = BorderRadius.circular(16.0);
-  static final BorderRadius cardShape = BorderRadius.circular(24.0);
-  static final BorderRadius dialogShape = BorderRadius.circular(28.0);
-  static final BorderRadius inputShape = BorderRadius.circular(12.0);
+  static final BorderRadius buttonShape = BorderRadius.circular(12.0);
+  static final BorderRadius cardShape = BorderRadius.circular(16.0);
+  static final BorderRadius dialogShape = BorderRadius.circular(20.0);
+  static final BorderRadius inputShape = BorderRadius.circular(8.0);
 }
 
 class NmtkFontFamilies {
@@ -34,12 +34,12 @@ class NmtkFontFamilies {
 class NmtkNeurocnlTokens {
   NmtkNeurocnlTokens._();
 
-  static const Color background = Color(0xFF0F0D1A);
-  static const Color surface = Color(0xFF1A1625);
-  static const Color surfaceVariant = Color(0xFF231E35);
+  static const Color background = Color(0xFF08090A);
+  static const Color surface = Color(0xFF0F172A);
+  static const Color surfaceVariant = Color(0xFF1E293B);
 
-  static const Color primary = Color(0xFF9B7FFF);
-  static const Color primaryDim = Color(0xFF7B5FDF);
+  static const Color primary = Color(0xFF38BDF8);
+  static const Color primaryDim = Color(0xFF0EA5E9);
 
   /// CNL **syntax-diagnostic colours only** (Dracula-derived palette).
   ///
@@ -60,26 +60,28 @@ class NmtkNeurocnlTokens {
   static const Color warning = Color(0xFFFFB347);
   static const Color info = Color(0xFF60A5FA);
 
-  static const Color textPrimary = Color(0xFFF1EEF9);
-  static const Color textSecondary = Color(0xFFB0A8CC);
-  static const Color border = Color(0xFF3D3560);
+  static const Color textPrimary = Color(0xFFF8FAFC);
+  static const Color textSecondary = Color(0xFF94A3B8);
+  static const Color border = Color(0xFF1E293B);
 
-  static const Color synKeyword = Color(0xFFBD93F9);
-  static const Color synSubject = Color(0xFF8BE9FD);
-  static const Color synNumber = Color(0xFFFFB86C);
-  static const Color synComment = Color(0xFF6272A4);
-  static const Color synString = Color(0xFFF1FA8C);
+  static const Color synKeyword = Color(0xFF818CF8); // Indigo-400 (Distinguished from Graph Blue)
+  static const Color synSubject = Color(0xFFF1F5F9); // White
+  static const Color synNumber = Color(0xFF22D3EE); // Cyan
+  static const Color synVerb = Color(0xFF34D399); // Emerald (Action/Relation)
+  static const Color synUnit = Color(0xFF94A3B8); // Slate (Units/Measurement)
+  static const Color synComment = Color(0xFF64748B); // Slate
+  static const Color synString = Color(0xFFA3E635); // Lime
 
-  static const Color nodeEnsemble = Color(0xFF9B7FFF);
-  static const Color nodeMotor = Color(0xFFFFB86C);
-  static const Color nodeInterneuron = Color(0xFF50D0B0);
-  static const Color nodeGenericEnsemble = Color(0xFFBD93F9);
-  static const Color nodeInput = Color(0xFF50FA7B);
-  static const Color nodeErrorInput = Color(0xFFFF6E6E);
+  static const Color nodeEnsemble = Color(0xFF38BDF8); // Sky-400
+  static const Color nodeMotor = Color(0xFF38BDF8); // Sky-400
+  static const Color nodeInterneuron = Color(0xFF34D399); // Emerald-400
+  static const Color nodeGenericEnsemble = Color(0xFF38BDF8);
+  static const Color nodeInput = Color(0xFF34D399);
+  static const Color nodeErrorInput = Color(0xFFEF4444);
 
-  static const Color edgeExcitatory = Color(0xFF8BE9FD);
-  static const Color edgeInhibitory = Color(0xFFFF5555);
-  static const Color edgePlastic = Color(0xFFFFD700);
+  static const Color edgeExcitatory = Color(0xFF38BDF8);
+  static const Color edgeInhibitory = Color(0xFFEF4444);
+  static const Color edgePlastic = Color(0xFF22D3EE);
 }
 
 /// ----------------------------------------------------------------------------
@@ -337,10 +339,10 @@ class AppTheme {
       brightness: Brightness.dark,
       surface: NmtkDesignTokens.backgroundDark,
       onSurface: const Color(0xFFF1F5F9),
-      surfaceContainerLowest: const Color(0xFF0A0D1A),
-      surfaceContainerLow: const Color(0xFF0F1220),
-      surfaceContainer: const Color(0xFF141728),
-      surfaceContainerHigh: const Color(0xFF1A1E30),
+      surfaceContainerLowest: const Color(0xFF020617),
+      surfaceContainerLow: const Color(0xFF0F172A),
+      surfaceContainer: const Color(0xFF111827),
+      surfaceContainerHigh: const Color(0xFF1E293B),
       surfaceContainerHighest: NmtkDesignTokens.surfaceDark,
     );
 
@@ -531,12 +533,12 @@ class AppTheme {
   }
 
   static ThemeData _neurocnlLightTheme() {
-    const background = Color(0xFFF8F6FF);
+    const background = Color(0xFFF2F2F2);
     const surface = Color(0xFFFFFFFF);
-    const surfaceVariant = Color(0xFFEAE3FF);
-    const border = Color(0xFFD8CCFF);
-    const textPrimary = Color(0xFF261F39);
-    const textSecondary = Color(0xFF5D557A);
+    const surfaceVariant = Color(0xFFE5E7EB);
+    const border = Color(0xFFD1D5DB);
+    const textPrimary = Color(0xFF18181B);
+    const textSecondary = Color(0xFF52525B);
 
     final colorScheme = ColorScheme.fromSeed(
       seedColor: NmtkNeurocnlTokens.primary,

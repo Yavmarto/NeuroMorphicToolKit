@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// NeuroMorphicToolKit motion token system.
 ///
@@ -241,14 +242,42 @@ class _NmtkTapScaleWrapperState extends State<NmtkTapScaleWrapper>
   @override
   Widget build(BuildContext context) {
     final disableAnimations = MediaQuery.of(context).disableAnimations;
-    return GestureDetector(
-      onTap: widget.enabled ? widget.onTap : null,
-      onTapDown: disableAnimations ? null : _onTapDown,
-      onTapUp: disableAnimations ? null : _onTapUp,
-      onTapCancel: disableAnimations ? null : _onTapCancel,
-      child: disableAnimations
-          ? widget.child
-          : ScaleTransition(scale: _scaleAnimation, child: widget.child),
+    final canActivate = widget.enabled && widget.onTap != null;
+    final child = disableAnimations
+        ? widget.child
+        : ScaleTransition(scale: _scaleAnimation, child: widget.child);
+
+    return Semantics(
+      button: widget.onTap != null,
+      enabled: canActivate,
+      child: FocusableActionDetector(
+        enabled: canActivate,
+        mouseCursor: canActivate
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
+        shortcuts: const <ShortcutActivator, Intent>{
+          SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+          SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
+        },
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              if (canActivate) {
+                widget.onTap!();
+              }
+              return null;
+            },
+          ),
+        },
+        child: GestureDetector(
+          behavior: canActivate ? HitTestBehavior.opaque : null,
+          onTap: canActivate ? widget.onTap : null,
+          onTapDown: disableAnimations ? null : _onTapDown,
+          onTapUp: disableAnimations ? null : _onTapUp,
+          onTapCancel: disableAnimations ? null : _onTapCancel,
+          child: child,
+        ),
+      ),
     );
   }
 }

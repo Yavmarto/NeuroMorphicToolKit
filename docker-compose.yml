@@ -2,8 +2,8 @@ services:
 
   suite_api:
     build:
-      context: ./suite_api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: suite_api/Dockerfile
     ports:
       - "${SUITE_API_PORT:-9000}:9000"
     environment:

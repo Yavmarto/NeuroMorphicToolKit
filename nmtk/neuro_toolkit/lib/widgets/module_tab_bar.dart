@@ -45,9 +45,9 @@ class ModuleTabBar extends ConsumerWidget {
       height: 48,
       padding: EdgeInsets.fromLTRB(
         tokens.compactGap,
-        6,
+        2,
         trailing == null ? tokens.compactGap : 8,
-        6,
+        2,
       ),
       decoration: BoxDecoration(
         color: tokens.workspaceBarBackground,
@@ -80,57 +80,64 @@ class ModuleTabBar extends ConsumerWidget {
                         ? 0
                         : tokens.compactGap,
                   ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(tokens.radiusMd),
-                      onTap: () => onTabSelected(module.id),
-                      child: Ink(
-                        key: ValueKey<String>('module-tab-${module.id}'),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 9,
-                        ),
-                        decoration: BoxDecoration(
-                          color: backgroundColor,
-                          borderRadius: BorderRadius.circular(tokens.radiusMd),
-                          border: Border.all(color: borderColor),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              module.hasFrontend ? Icons.web : Icons.api,
-                              size: 16,
-                              color: foregroundColor,
+                  child: Semantics(
+                    label: '${module.name} module tab',
+                    selected: isActive,
+                    button: true,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(tokens.radiusMd),
+                        onTap: () => onTabSelected(module.id),
+                        child: Ink(
+                          key: ValueKey<String>('module-tab-${module.id}'),
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          decoration: BoxDecoration(
+                            color: backgroundColor,
+                            borderRadius: BorderRadius.circular(
+                              tokens.radiusMd,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              module.name,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: isActive
-                                    ? FontWeight.w700
-                                    : FontWeight.w600,
-                                color: foregroundColor,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            IconButton(
-                              icon: Icon(
-                                Icons.close_rounded,
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                module.hasFrontend ? Icons.web : Icons.api,
                                 size: 16,
                                 color: foregroundColor,
                               ),
-                              onPressed: () => onTabClosed(module.id),
-                              tooltip: 'Close ${module.name}',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints.tightFor(
-                                width: 18,
-                                height: 18,
+                              const SizedBox(width: 8),
+                              Text(
+                                module.name,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: isActive
+                                      ? FontWeight.w700
+                                      : FontWeight.w600,
+                                  color: foregroundColor,
+                                ),
                               ),
-                              splashRadius: 16,
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          ],
+                              const SizedBox(width: 10),
+                              SizedBox.square(
+                                dimension: 44,
+                                child: IconButton(
+                                  icon: Icon(
+                                    Icons.close_rounded,
+                                    size: 16,
+                                    color: foregroundColor,
+                                  ),
+                                  onPressed: () => onTabClosed(module.id),
+                                  tooltip: 'Close ${module.name}',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints.tightFor(
+                                    width: 44,
+                                    height: 44,
+                                  ),
+                                  splashRadius: 22,
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

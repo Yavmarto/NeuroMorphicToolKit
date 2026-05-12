@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+
+class ToolStatus(StrEnum):
+    ok = "ok"
+    error = "error"
+    needs_attention = "needs_attention"
+    preflight_failed = "preflight_failed"
+    degraded_optional_capability = "degraded_optional_capability"
 
 
 class ArtifactRef(BaseModel):

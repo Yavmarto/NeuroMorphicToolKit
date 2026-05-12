@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -91,6 +93,109 @@ void main() {
 
   testWidgets('ModuleTabBar uses rounded launcher-style tabs',
       (WidgetTester tester) async {
+    String? selectedModuleId;
+    String? closedModuleId;
+    final moduleProvider = ModuleProvider(
+      processManager: _NoopProcessManager(),
+    );
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(),
+    );
+    moduleProvider.modules = <Module>[
+      Module(
+        id: 'neurocnl',
+        name: 'CNL Studio',
+        description: 'Authoring workspace',
+        directory: 'neurocnl',
+        hasFrontend: true,
+      ),
+      Module(
+        id: 'Neurochip',
+        name: 'NeuroChip',
+        description: 'Execution, flashing, and diagnostics',
+        directory: 'Neurochip',
+        hasFrontend: true,
+      ),
+    ];
+
+    await workspaceProvider.openSession(
+      'neurocnl',
+      surfaceMode: 'embedded',
+      readinessState: 'ready',
+    );
+    await workspaceProvider.openSession(
+      'Neurochip',
+      surfaceMode: 'embedded',
+      readinessState: 'ready',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: Scaffold(
+            body: ModuleTabBar(
+              activeModuleId: 'neurocnl',
+              onTabSelected: (id) {
+                selectedModuleId = id;
+              },
+              onTabClosed: (id) {
+                closedModuleId = id;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tokens = NmtkShellTokens.of(
+      tester.element(find.byType(ModuleTabBar)),
+    );
+    final activeTab = tester.widget<Ink>(
+      find.byKey(const ValueKey<String>('module-tab-neurocnl')),
+    );
+    final inactiveTab = tester.widget<Ink>(
+      find.byKey(const ValueKey<String>('module-tab-Neurochip')),
+    );
+
+    final activeDecoration = activeTab.decoration! as BoxDecoration;
+    final inactiveDecoration = inactiveTab.decoration! as BoxDecoration;
+
+    expect(
+      activeDecoration.borderRadius,
+      BorderRadius.circular(tokens.radiusMd),
+    );
+    expect(
+      inactiveDecoration.borderRadius,
+      BorderRadius.circular(tokens.radiusMd),
+    );
+    expect(activeDecoration.color, isNot(equals(Colors.transparent)));
+    expect(inactiveDecoration.color, isNot(equals(Colors.transparent)));
+
+    expect(
+        tester.getSize(find.byTooltip('Close CNL Studio')), const Size(44, 44));
+    expect(
+        tester.getSize(find.byTooltip('Close NeuroChip')), const Size(44, 44));
+
+    await tester.tap(find.text('NeuroChip'));
+    await tester.pump();
+    expect(selectedModuleId, 'Neurochip');
+
+    await tester.tap(find.byTooltip('Close CNL Studio'));
+    await tester.pump();
+    expect(closedModuleId, 'neurocnl');
+  });
+
+  testWidgets('ModuleTabBar exposes tab semantics',
+      (WidgetTester tester) async {
+    final semanticsHandle = tester.ensureSemantics();
+    addTearDown(semanticsHandle.dispose);
+
     final moduleProvider = ModuleProvider(
       processManager: _NoopProcessManager(),
     );
@@ -145,28 +250,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final tokens = NmtkShellTokens.of(
-      tester.element(find.byType(ModuleTabBar)),
-    );
-    final activeTab = tester.widget<Ink>(
+    final activeSemantics = tester.getSemantics(
       find.byKey(const ValueKey<String>('module-tab-neurocnl')),
     );
-    final inactiveTab = tester.widget<Ink>(
+    final inactiveSemantics = tester.getSemantics(
       find.byKey(const ValueKey<String>('module-tab-Neurochip')),
     );
 
-    final activeDecoration = activeTab.decoration! as BoxDecoration;
-    final inactiveDecoration = inactiveTab.decoration! as BoxDecoration;
-
-    expect(
-      activeDecoration.borderRadius,
-      BorderRadius.circular(tokens.radiusMd),
-    );
-    expect(
-      inactiveDecoration.borderRadius,
-      BorderRadius.circular(tokens.radiusMd),
-    );
-    expect(activeDecoration.color, isNot(equals(Colors.transparent)));
-    expect(inactiveDecoration.color, isNot(equals(Colors.transparent)));
+    expect(activeSemantics.label, contains('CNL Studio module tab'));
+    expect(activeSemantics.flagsCollection.isButton, isTrue);
+    expect(activeSemantics.flagsCollection.isSelected, ui.Tristate.isTrue);
+    expect(inactiveSemantics.label, contains('NeuroChip module tab'));
+    expect(inactiveSemantics.flagsCollection.isButton, isTrue);
   });
 }

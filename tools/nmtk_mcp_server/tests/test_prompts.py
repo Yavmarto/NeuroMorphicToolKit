@@ -11,5 +11,6 @@ def test_prompt_templates_cover_core_workflows() -> None:
         "suite_diagnostics",
         "simulation_workflow",
         "deployability_check",
+        "deerflow_packet_scaffold",
     ]
     assert all(template.resource_uris for template in templates)

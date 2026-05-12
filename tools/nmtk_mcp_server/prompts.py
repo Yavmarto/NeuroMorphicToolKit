@@ -56,4 +56,16 @@ def load_prompt_templates() -> list[PromptTemplate]:
             ],
             template="Check deployability for target: {target}. Spec: {spec}.",
         ),
+        PromptTemplate(
+            name="deerflow_packet_scaffold",
+            description="Prepare local DeerFlow packet context without dispatching it.",
+            resource_uris=[
+                "nmtk://suite/modules/current",
+                "nmtk://cnl/support-matrix/current",
+            ],
+            template=(
+                "Create a local DeerFlow packet scaffold for intent: {intent}. "
+                "Do not claim deployment or hardware execution."
+            ),
+        ),
     ]

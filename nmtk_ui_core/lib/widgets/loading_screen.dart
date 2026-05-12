@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../motion_tokens.dart';
+import 'package:nmtk_ui_core/motion_tokens.dart';
 
 /// Readiness state for the [NmtkLoadingScreen].
 enum NmtkReadinessState {
@@ -17,7 +16,7 @@ enum NmtkReadinessState {
   failed,
 }
 
-// ── Inline color constants (no nmtk_ui_core imports allowed here) ──────────
+// Inline semantic colors keep this widget self-contained inside ui_core.
 const Color _kGreen = Color(0xFF22C55E);
 const Color _kYellow = Color(0xFFF59E0B);
 const Color _kRed = Color(0xFFEF4444);
@@ -105,35 +104,39 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
 
     return Scaffold(
       backgroundColor: bg,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ── Logo + app name block (animated entrance) ──
-            ScaleTransition(
-              scale: _scaleAnimation,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _LogoBox(),
-                  const SizedBox(height: 16),
-                  Text(
-                    widget.appName,
-                    style: TextStyle(
-                      fontFamily: 'Space Grotesk',
-                      fontSize: 18,
-                      color: fg,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.2,
-                    ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _LogoBox(),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.appName,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Space Grotesk',
+                          fontSize: 18,
+                          color: fg,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 32),
+                _buildStateContent(widget.state, fg),
+              ],
             ),
-            const SizedBox(height: 32),
-            // ── State-specific content ──
-            _buildStateContent(widget.state, fg),
-          ],
+          ),
         ),
       ),
     );
@@ -143,7 +146,7 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
     switch (state) {
       case NmtkReadinessState.waiting:
         return _WaitingContent(
-          message: widget.progressMessage ?? 'Starting up…',
+          message: widget.progressMessage ?? 'Starting up...',
           textColor: fg,
         );
       case NmtkReadinessState.ready:
@@ -165,8 +168,6 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
   }
 }
 
-// ── Logo ──────────────────────────────────────────────────────────────────
-
 class _LogoBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -180,10 +181,10 @@ class _LogoBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       alignment: Alignment.center,
-      child: const Text(
+      child: Text(
         'N',
         style: TextStyle(
-          color: Colors.white,
+          color: scheme.onPrimary,
           fontSize: 32,
           fontWeight: FontWeight.bold,
           height: 1,
@@ -193,8 +194,6 @@ class _LogoBox extends StatelessWidget {
   }
 }
 
-// ── Waiting ───────────────────────────────────────────────────────────────
-
 class _WaitingContent extends StatelessWidget {
   const _WaitingContent({required this.message, required this.textColor});
 
@@ -203,25 +202,32 @@ class _WaitingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 200,
-          child: LinearProgressIndicator(
-            backgroundColor: textColor.withOpacity(0.15),
-            color: Theme.of(context).colorScheme.primary,
-            minHeight: 3,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(message, style: TextStyle(fontSize: 14, color: textColor)),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.clamp(0.0, 200.0).toDouble();
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: width,
+              child: LinearProgressIndicator(
+                backgroundColor: textColor.withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.primary,
+                minHeight: 3,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: textColor),
+            ),
+          ],
+        );
+      },
     );
   }
 }
-
-// ── Ready ─────────────────────────────────────────────────────────────────
 
 class _ReadyContent extends StatelessWidget {
   const _ReadyContent();
@@ -232,8 +238,6 @@ class _ReadyContent extends StatelessWidget {
   }
 }
 
-// ── Degraded ──────────────────────────────────────────────────────────────
-
 class _DegradedContent extends StatelessWidget {
   const _DegradedContent({required this.message, required this.textColor});
 
@@ -242,25 +246,28 @@ class _DegradedContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.warning_amber_rounded, color: _kYellow, size: 36),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: 280,
-          child: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: textColor),
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.clamp(0.0, 280.0).toDouble();
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: _kYellow, size: 36),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: width,
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: textColor),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
-
-// ── Failed ────────────────────────────────────────────────────────────────
 
 class _FailedContent extends StatelessWidget {
   const _FailedContent({
@@ -275,40 +282,45 @@ class _FailedContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 320,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: _kRed.withOpacity(0.08),
-        border: Border.all(color: _kRed.withOpacity(0.35)),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, color: _kRed, size: 36),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: textColor),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.clamp(0.0, 320.0).toDouble();
+        return Container(
+          width: width,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _kRed.withValues(alpha: 0.08),
+            border: Border.all(color: _kRed.withValues(alpha: 0.35)),
+            borderRadius: BorderRadius.circular(16),
           ),
-          if (onRetry != null) ...[
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: onRetry,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _kRed,
-                side: const BorderSide(color: _kRed),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, color: _kRed, size: 36),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: textColor),
               ),
-              child: const Text('Retry'),
-            ),
-          ],
-        ],
-      ),
+              if (onRetry != null) ...[
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  onPressed: onRetry,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _kRed,
+                    side: const BorderSide(color: _kRed),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

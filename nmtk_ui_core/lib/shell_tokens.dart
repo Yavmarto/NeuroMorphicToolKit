@@ -101,19 +101,19 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
       standardMotion: const Duration(milliseconds: 180),
       emphasizedMotion: const Duration(milliseconds: 240),
       shellBackground: isDark
-          ? const Color(0xFF0B1020)
-          : const Color(0xFFF3F5FA),
+          ? const Color(0xFF08090A)
+          : const Color(0xFFF8FAFC),
       topBarBackground: isDark
-          ? const Color(0xFF101728)
+          ? const Color(0xFF0F172A)
           : Colors.white.withValues(alpha: 0.94),
       workspaceBarBackground: isDark
           ? const Color(0xFF0D1424)
-          : const Color(0xFFF7F9FC),
+          : const Color(0xFFF1F5F9),
       utilityPanelBackground: isDark
-          ? const Color(0xFF111A2C)
+          ? const Color(0xFF111827)
           : const Color(0xFFFAFBFD),
       canvasBackground: isDark
-          ? const Color(0xFF0A0F1D)
+          ? const Color(0xFF020617)
           : const Color(0xFFFFFFFF),
       chromeBorder: isDark ? const Color(0xFF243044) : const Color(0xFFD9E0EA),
       subtleBorder: isDark ? const Color(0xFF1A2436) : const Color(0xFFE7ECF3),

@@ -6,6 +6,7 @@ import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 // ---------------------------------------------------------------------------
 // Minimal mock — only overrides what the panel touches
@@ -100,14 +101,14 @@ class _MockProvider extends ChangeNotifier implements ModuleProvider {
 // ---------------------------------------------------------------------------
 
 void main() {
-  Widget _wrap(_MockProvider mock) => ProviderScope(
+  Widget wrap(_MockProvider mock) => ProviderScope(
         overrides: [moduleStateProvider.overrideWith((ref) => mock)],
-        child: const MaterialApp(home: Scaffold(body: ModulePickerPanel())),
+        child: const ShadApp(home: Scaffold(body: ModulePickerPanel())),
       );
 
   testWidgets('shows empty state when no modules are loaded', (tester) async {
     final mock = _MockProvider();
-    await tester.pumpWidget(_wrap(mock));
+    await tester.pumpWidget(wrap(mock));
     expect(find.text('No Modules Available'), findsOneWidget);
   });
 
@@ -122,7 +123,7 @@ void main() {
         status: ModuleStatus.notInstalled,
       ),
     ]);
-    await tester.pumpWidget(_wrap(mock));
+    await tester.pumpWidget(wrap(mock));
     await tester.pump();
 
     expect(find.text('CNL Studio'), findsWidgets);
@@ -144,7 +145,7 @@ void main() {
         status: ModuleStatus.installed,
       ),
     ]);
-    await tester.pumpWidget(_wrap(mock));
+    await tester.pumpWidget(wrap(mock));
     await tester.pump();
 
     expect(find.text('Start'), findsOneWidget);
@@ -164,7 +165,7 @@ void main() {
         status: ModuleStatus.running,
       ),
     ]);
-    await tester.pumpWidget(_wrap(mock));
+    await tester.pumpWidget(wrap(mock));
     await tester.pump();
 
     expect(find.text('Open'), findsOneWidget);
@@ -178,7 +179,7 @@ void main() {
   testWidgets('does not show hardware deploy buttons (relocated to Neurochip)',
       (tester) async {
     final mock = _MockProvider();
-    await tester.pumpWidget(_wrap(mock));
+    await tester.pumpWidget(wrap(mock));
     expect(find.text('PYNQ Deploy'), findsNothing);
     expect(find.text('Teensy Deploy'), findsNothing);
     expect(find.text('Akida Deploy'), findsNothing);
@@ -198,9 +199,50 @@ void main() {
         remoteVersion: '0.5.0',
       ),
     ]);
-    await tester.pumpWidget(_wrap(mock));
+    await tester.pumpWidget(wrap(mock));
     await tester.pump();
 
     expect(find.text('Update to 0.5.0'), findsNothing);
+  });
+
+  testWidgets('lays out multiple modules on a narrow viewport without overflow',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final mock = _MockProvider();
+    mock.setModules([
+      Module(
+        id: 'neurocnl',
+        name: 'CNL Studio',
+        description: 'CNL parser',
+        directory: 'neurocnl/',
+        status: ModuleStatus.notInstalled,
+      ),
+      Module(
+        id: 'neurochip',
+        name: 'Neurochip',
+        description: 'Hardware deployment',
+        directory: 'Neurochip/',
+        status: ModuleStatus.installed,
+      ),
+      Module(
+        id: 'neurobench',
+        name: 'Neurobench',
+        description: 'Benchmark reports',
+        directory: 'Neurobench/',
+        status: ModuleStatus.running,
+      ),
+    ]);
+
+    await tester.pumpWidget(wrap(mock));
+    await tester.pumpAndSettle();
+
+    expect(find.text('CNL Studio'), findsWidgets);
+    expect(find.text('Neurochip'), findsWidgets);
+    expect(find.text('Neurobench'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 }

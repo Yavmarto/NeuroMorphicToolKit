@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -31,6 +31,8 @@ help:
 	@echo "  make docker                   - Run backend in Docker and native launcher on host"
 	@echo "  make docker-a                 - Run backend in Docker and launcher on Android"
 	@echo "  make docker-i                 - Run backend in Docker and launcher on iOS"
+	@echo "  make docker-physics           - Run backend + physics worker in Docker and native launcher"
+	@echo "  make docker-hardware          - Run backend + hardware workers in Docker and native launcher"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
@@ -69,6 +71,12 @@ docker-i:
 	@$(MAKE) check-devices
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@./scripts/run_dev.sh --docker --flutter-device "$(IOS_DEVICE)"
+
+docker-physics:
+	@./scripts/run_dev.sh --docker --profile physics --flutter-device "$(FLUTTER_DEVICE)"
+
+docker-hardware:
+	@./scripts/run_dev.sh --docker --profile hardware --flutter-device "$(FLUTTER_DEVICE)"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload

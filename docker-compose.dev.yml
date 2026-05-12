@@ -1,6 +1,6 @@
 services:
   suite_api:
     volumes:
-      - ./suite_api:/app
+      - ./suite_api:/repo/suite_api
     environment:
       - DEBUG=1

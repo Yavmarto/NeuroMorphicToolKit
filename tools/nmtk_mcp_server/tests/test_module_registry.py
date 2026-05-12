@@ -8,6 +8,9 @@ import requests
 from tools.nmtk_mcp_server.module_registry import (
     ModuleRegistryClient,
     ModuleRegistryClientError,
+    ModuleStatusModel,
+    shape_module_status,
+    shape_module_statuses,
 )
 
 
@@ -110,3 +113,77 @@ def test_network_failure_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(ModuleRegistryClientError, match="request failed"):
         ModuleRegistryClient().list_modules()
+
+
+def test_shape_module_status_preserves_launcher_fields() -> None:
+    shaped = shape_module_status(
+        ModuleStatusModel(
+            id="neurocnl",
+            name="NeuroCNL",
+            status="running",
+            preflightStatus="ok",
+            preflightMessage="ready",
+            capabilityWarnings=[],
+            route="/neurocnl",
+            effectivePort=9000,
+            healthUrl="http://127.0.0.1:9000/health",
+            metadata={"kind": "studio"},
+        )
+    )
+
+    assert shaped["id"] == "neurocnl"
+    assert shaped["readiness"] == "ok"
+    assert shaped["preflightStatus"] == "ok"
+    assert shaped["effectivePort"] == 9000
+    assert shaped["metadata"] == {"kind": "studio"}
+
+
+def test_shape_module_status_marks_preflight_failed_as_blocking() -> None:
+    shaped = shape_module_status(
+        ModuleStatusModel(
+            id="neurochip",
+            status="error",
+            preflightStatus="preflight_failed",
+            capabilityWarnings=["missing runtime"],
+        )
+    )
+
+    assert shaped["readiness"] == "preflight_failed"
+    assert shaped["blocking"] is True
+    assert shaped["capabilityWarnings"] == ["missing runtime"]
+
+
+def test_shape_module_status_marks_degraded_warnings() -> None:
+    shaped = shape_module_status(
+        ModuleStatusModel(
+            id="akida",
+            status="degraded",
+            preflightStatus="degraded_optional_capability",
+            capabilityWarnings=["remote host unavailable"],
+        )
+    )
+
+    assert shaped["readiness"] == "degraded_optional_capability"
+    assert shaped["blocking"] is False
+
+
+def test_shape_module_statuses_handles_missing_optional_fields() -> None:
+    shaped = shape_module_statuses([ModuleStatusModel(id="neurohub")])
+
+    assert shaped == [
+        {
+            "id": "neurohub",
+            "name": None,
+            "status": None,
+            "readiness": "unknown",
+            "blocking": False,
+            "preflightStatus": None,
+            "preflightMessage": None,
+            "capabilityWarnings": [],
+            "environmentFingerprint": None,
+            "route": None,
+            "effectivePort": None,
+            "healthUrl": None,
+            "metadata": {},
+        }
+    ]

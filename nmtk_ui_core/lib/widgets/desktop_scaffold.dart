@@ -692,7 +692,9 @@ class _NmtkRailColumn extends StatelessWidget {
                   for (var i = 0; i < footerNavItems.length; i++)
                     _SidebarNavItem(
                       item: footerNavItems[i],
-                      isSelected: selectedIndex < 0 && footerNavItems[i].id == 'settings',
+                      isSelected:
+                          selectedIndex < 0 &&
+                          footerNavItems[i].id == 'settings',
                       isExpanded: isExpanded,
                       onTap: () => onFooterNavItemSelected?.call(i),
                     ),
@@ -786,11 +788,16 @@ class _RailBrandRow extends StatelessWidget {
       // Collapsed: clicking the logo expands sidebar
       return ShadTooltip(
         builder: (ctx) => const Text('Expand sidebar'),
-        child: GestureDetector(
-          onTap: onToggle,
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: SizedBox(height: _kBrandRowHeight, child: logoWidget),
+        child: Semantics(
+          label: 'Expand sidebar',
+          button: true,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: onToggle,
+              mouseCursor: SystemMouseCursors.click,
+              child: SizedBox(height: _kBrandRowHeight, child: logoWidget),
+            ),
           ),
         ),
       );
@@ -893,10 +900,11 @@ class _RailProfileChipState extends State<_RailProfileChip> {
       child: Semantics(
         label: 'User profile: ${profile.displayName}',
         button: true,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
             onTap: _popover.toggle,
+            mouseCursor: SystemMouseCursors.click,
             child: SizedBox(
               height: 40,
               child: Center(
@@ -1294,11 +1302,7 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
             child: Row(
               children: [
                 if (action.icon != null) ...[
-                  Icon(
-                    action.icon,
-                    size: 15,
-                    color: fgColor.withOpacity(0.80),
-                  ),
+                  Icon(action.icon, size: 15, color: fgColor.withOpacity(0.80)),
                   const SizedBox(width: 10),
                 ],
                 Text(
