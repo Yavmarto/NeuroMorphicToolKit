@@ -262,6 +262,11 @@ fi
 if [[ "$USE_DOCKER" == "true" ]]; then
   echo "------------------------------------------------------------"
   echo "==> Starting Docker containers (profile: $DOCKER_PROFILE)"
+  if [[ "$DOCKER_PROFILE" == "default" ]]; then
+    echo "    (Default profile starts only the suite_api container.)"
+  else
+    echo "    (Additional worker containers are enabled by the selected profile.)"
+  fi
   echo "------------------------------------------------------------"
   if [[ "$DOCKER_PROFILE" == "default" ]]; then
     docker compose up -d

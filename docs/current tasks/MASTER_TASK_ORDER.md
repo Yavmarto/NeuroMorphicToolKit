@@ -134,7 +134,31 @@ Each concept: update lowering in `nir_exporter.py` → add test → re-run `test
 
 ---
 
-### T1-5: High-Level `compile()` / `evaluate()` CNL API *(docs: neurocnl_status_and_priorities.md #3)*
+### T1-5: Make NIR the Canonical Studio Graph Model *(new architectural task)*
+**Blocked by**: T1-4 (reverse translation is only trustworthy once the honest NIR subset is clearer).
+
+1. Treat the Studio simulation viewer / canvas as the primary editable graph backed by NIR-derived structure rather than a parallel ad-hoc graph model
+2. Make CNL editor updates compile into the same canonical graph state used by the viewer and simulation preview
+3. Make graph edits regenerate CNL through a fail-closed `NIR -> NetworkIR -> CNL` summarization path rather than one-off local text synthesis
+4. Preserve advisory semantics and unsupported-node diagnostics in the shared graph state so the UI can distinguish executable vs. descriptive content
+5. Document the invariant explicitly: within the app, NIR-backed graph state is canonical and CNL is a human-readable representation of that graph
+
+**Exit criteria**: Studio canvas, simulation preview, and CNL editor all describe the same underlying graph; round-trip edits no longer rely on separate graph/text models that drift silently.
+
+---
+
+### T1-6: NIR → CNL Translation Bridge *(new bidirectional bridge task)*
+**Blocked by**: T1-4 and T1-5.
+
+1. Build `NIRGraph -> NetworkIR -> CNL text` as an explicit supported path, not just an internal helper
+2. Add a `generate_cnl_from_nir(...)` pipeline surface and backend route for `.nir` uploads / graph summaries
+3. Reject or annotate unsupported NIR primitives with structured diagnostics instead of hallucinating exact CNL semantics
+4. Keep dual artifacts honest: `.nir` remains exact execution structure and tensors, while `.cnl` is the readable semantic overlay
+5. Add round-trip tests for `CNL -> NIR -> CNL` and `NIR -> CNL -> IR` at the semantic level
+
+---
+
+### T1-7: High-Level `compile()` / `evaluate()` CNL API *(docs: neurocnl_status_and_priorities.md #3)*
 **Blocked by**: T0-C (training adapter must exist first).
 
 1. Add `NeuroCNL.compile(spec: str) -> NetworkIR`
@@ -144,8 +168,8 @@ Each concept: update lowering in `nir_exporter.py` → add test → re-run `test
 
 ---
 
-### T1-6: Upstream NeuroBench Integration *(market intel — most precise finding)*
-**Blocked by**: T1-5 (`evaluate()` surface needs to exist first).
+### T1-8: Upstream NeuroBench Integration *(market intel — most precise finding)*
+**Blocked by**: T1-7 (`evaluate()` surface needs to exist first).
 
 1. Add `neurobench` as optional dep in `Neurobench/neurobench/pyproject.toml` (`neurobench[tasks]`)
 2. Map NMTK's `BenchmarkResult` schema to upstream `Benchmark` + `Postprocessor` interface
@@ -155,8 +179,8 @@ Each concept: update lowering in `nir_exporter.py` → add test → re-run `test
 
 ---
 
-### T1-7: One Event Dataset Loader *(docs: neurocnl_status_and_priorities.md #5)*
-**Blocked by**: T1-6 (NeuroBench task datasets align with this).
+### T1-9: One Event Dataset Loader *(docs: neurocnl_status_and_priorities.md #5)*
+**Blocked by**: T1-8 (NeuroBench task datasets align with this).
 
 - Target: N-MNIST or DVS-Gesture
 - Wire through `Neurosense/neurosense/app/services/event_encoder.py` existing binning
@@ -237,12 +261,14 @@ Explicit decisions to defer, backed by both sources.
 | 1 | T1-2 | Brian2 isolated container | T1-1 | Small |
 | 1 | T1-3 | Neurohub app container | — | Small |
 | 1 | T1-4 | NIR semantic coverage expansion | T0-C | Medium (4 concept families) |
-| 1 | T1-5 | High-level compile/evaluate API | T0-C | Small (thin wrapper) |
-| 1 | T1-6 | Upstream NeuroBench integration | T1-5 | Medium |
-| 1 | T1-7 | Event dataset loader (N-MNIST) | T1-6 | Small |
+| 1 | T1-5 | NIR as canonical Studio graph model | T1-4 | Medium |
+| 1 | T1-6 | NIR to CNL translation bridge | T1-4, T1-5 | Medium |
+| 1 | T1-7 | High-level compile/evaluate API | T0-C | Small (thin wrapper) |
+| 1 | T1-8 | Upstream NeuroBench integration | T1-7 | Medium |
+| 1 | T1-9 | Event dataset loader (N-MNIST) | T1-8 | Small |
 | 2 | T2-1 | Neurosim + Neurosense containers (close 20-container target) | T1-1, T1-2 | Small |
 | 2 | T2-2 | Quantization-aware training | T0-C | Medium |
-| 2 | T2-3 | Live weight visualization | T1-5 | Medium |
+| 2 | T2-3 | Live weight visualization | T1-7 | Medium |
 | 2 | T2-4 | Dream-Hand hero demo polish | T0-D | Small |
 | 2 | T2-5 | Podman/Colima support | — | Small |
 | 2 | T2-6 | Hybrid SNN-ANN node types | T1-4 | Medium |

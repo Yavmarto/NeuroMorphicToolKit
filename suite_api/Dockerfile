@@ -28,7 +28,9 @@ COPY suite_api/ suite_api/
 RUN pip install --no-cache-dir suite_api/
 
 RUN addgroup --system app && adduser --system --ingroup app app
-RUN chown -R app:app /repo
+RUN mkdir -p /home/app/.cache && chown -R app:app /repo /home/app
+ENV HOME=/home/app
+ENV XDG_CACHE_HOME=/home/app/.cache
 USER app
 EXPOSE 9000
 CMD ["uvicorn", "suite_api.main:app", "--host", "0.0.0.0", "--port", "9000"]
