@@ -43,6 +43,13 @@
 
 These are tasks actively planned in docs, partially done, or blocking release. Complete in order.
 
+### Status Check — 2026-05-12
+
+- Confirmed complete: NIR pivot/export path, Prophesee integration, Canvas ↔ CNL sync, and Teensy release readiness still match the code and supporting docs.
+- Confirmed complete this pass: `T0-B` actionable error diagnostics now use one normalized payload across backend CNL routes, with tests asserting payload shape.
+- Confirmed complete this pass: `T0-C` now has a concrete `snntorch` adapter, surrogate-gradient dispatch, a deterministic N-MNIST-style toy fixture, and a thin public `fit()` surface.
+- Still open: `T0-A` workspace file I/O repair and `T0-D` Akida contract cleanup.
+
 ### T0-A: Workspace File I/O Repair *(docs: 2026-05-10 plan)*
 **Why first**: Broken native load/save is a user-visible regression. Everything else builds on a reliable workspace foundation.
 
@@ -58,6 +65,7 @@ These are tasks actively planned in docs, partially done, or blocking release. C
 ---
 
 ### T0-B: Actionable Error Diagnostics *(docs: neurocnl_status_and_priorities.md #2)*
+**Status**: Complete on 2026-05-12.
 **Why second**: Parser already has structured errors. The work is propagating them consistently. Cheap usability win.
 
 1. Define one shared CNL error schema (`code`, `message`, `hint`, `examples`, `line`, `raw`)
@@ -68,12 +76,15 @@ These are tasks actively planned in docs, partially done, or blocking release. C
 ---
 
 ### T0-C: One Real Training Adapter *(docs: neurocnl_status_and_priorities.md #1)*
+**Status**: Complete for the first adapter milestone on 2026-05-12.
 **Why third**: The registry scaffold is ready. One adapter unlocks the whole training → deployment story. **snnTorch** recommended first (best NIR support, MIT license, largest community).
 
-1. Implement `SnnTorchAdapter` in `training_registry.py`
+1. Implement `SnnTorchAdapter` in the shared training surface and register it through the canonical adapter factory
 2. Wire surrogate gradient training through the existing adapter dispatch
 3. Add dataset fixture (N-MNIST or DVS-Gesture — pick one to start)
 4. Surface `fit()` as a thin CNL-facing method over the existing pipeline
+
+**Completion note**: the dataset slice is currently a deterministic N-MNIST-style toy fixture for bring-up, not a full upstream dataset loader. That remaining realism gap now belongs with Tier 1 event-dataset work rather than blocking the first-adapter milestone.
 
 ---
 
@@ -251,13 +262,13 @@ Explicit decisions to defer, backed by both sources.
 
 ## Execution Summary Table
 
-| Tier | ID | Task | Blocked by | Est. scope |
-|------|----|------|-----------|------------|
-| 0 | T0-A | Workspace file I/O repair | — | Medium (4-phase plan exists) |
-| 0 | T0-B | Actionable error diagnostics | — | Small (schema + propagation) |
-| 0 | T0-C | First real training adapter (snnTorch) | — | Medium |
-| 0 | T0-D | Akida contract cleanup (3 slices) | — | Small-Medium |
-| 1 | T1-1 | Lava isolated container | — | Small (Dockerfile + wiring) |
+| Tier | ID | Task | Status | Blocked by | Est. scope |
+|------|----|------|--------|-----------|------------|
+| 0 | T0-A | Workspace file I/O repair | Open | — | Medium (4-phase plan exists) |
+| 0 | T0-B | Actionable error diagnostics | Complete (2026-05-12) | — | Small (schema + propagation) |
+| 0 | T0-C | First real training adapter (snnTorch) | Complete for first-adapter milestone (2026-05-12) | — | Medium |
+| 0 | T0-D | Akida contract cleanup (3 slices) | Open | — | Small-Medium |
+| 1 | T1-1 | Lava isolated container | Open | — | Small (Dockerfile + wiring) |
 | 1 | T1-2 | Brian2 isolated container | T1-1 | Small |
 | 1 | T1-3 | Neurohub app container | — | Small |
 | 1 | T1-4 | NIR semantic coverage expansion | T0-C | Medium (4 concept families) |

@@ -17,21 +17,24 @@ It is the source of truth for what is already implemented for NeuroCNL, what is 
 - [x] NIR export fails closed when the requested concepts cannot be lowered honestly.
 - [x] Backend support planning exists for NIR and hardware-facing targets including Akida, PYNQ, and Teensy.
 - [x] Training-abstraction groundwork exists as a tested adapter registry in `neurocnl/neurocnl/training_registry.py`.
+- [x] Concrete training adapters now exist: `sleep_pes` plus a surrogate-gradient `snntorch` adapter with honest optional-dependency gating.
+- [x] A thin high-level `fit()` entrypoint now exists in `neurocnl/neurocnl/training_api.py` and is exported from `neurocnl`.
+- [x] Actionable CNL error diagnostics now use one normalized payload shape across parse, validate, generate, export, simulate, deploy, and training-request routes.
 - [x] NeuroBench-facing execution and metric-normalization groundwork already exists.
 - [x] Event-data groundwork exists via NeuroSense event binning, spike-tensor conversion, and replay handoff into NeuroCNL.
 
 ### Partially Implemented
 
 - [ ] NIR semantic coverage is only partial. Some parser-recognized concepts lower faithfully, some lower approximately, some are metadata-only, and some are still rejected.
-- [ ] Training abstraction is only scaffold-level. The registry exists, but no concrete framework adapter was found.
+- [ ] Training abstraction is now real but still early-stage. `snntorch` and `sleep_pes` are wired, but `evaluate()` is still missing, dataset support is still synthetic or compatibility-focused, and the frontend has not yet grown a richer adapter-specific training workflow.
 - [ ] Benchmarking is integrated at the plumbing level, but not yet exposed as a first-class high-level CNL `evaluate()` surface.
 - [ ] Event pipelines exist at the helper and artifact-handoff level, but not as full dataset-ready ingestion surfaces.
-- [ ] Actionable error diagnostics are only partially implemented. Parser failures already carry structured `code`, `message`, `hint`, `examples`, `line`, and `raw` fields, but several downstream routes still collapse failures into plain strings or message lists, and validation failures are not yet consistently prescriptive.
+- [ ] The first event-training dataset is only a deterministic N-MNIST-style toy fixture for adapter bring-up, not yet a full upstream dataset loader.
 
 ### Not Implemented
 
-- [ ] No first-class high-level `compile()` / `fit()` / `evaluate()` API.
-- [ ] No concrete `snnTorch`, `SpikingJelly`, or equivalent training adapters.
+- [ ] No first-class high-level `compile()` / `evaluate()` API yet.
+- [ ] No concrete `SpikingJelly` or equivalent second framework adapter yet.
 - [ ] No dataset loaders for N-MNIST, DVS-Gesture, or DDD17.
 - [ ] No graph partitioning for multi-chip deployment.
 - [ ] No quantization-aware training or integrated quantization-lowering workflow.
@@ -56,6 +59,8 @@ It is the source of truth for what is already implemented for NeuroCNL, what is 
 
 - `neurocnl/neurocnl/training_registry.py` provides adapter capability listing, mode validation, backend lookup, and fail-closed dispatch.
 - `neurocnl/neurocnl/tests/test_training_registry.py` covers duplicate registration, normalization, supported-mode checks, and dispatch behavior.
+- `neurocnl/neurocnl/training/snntorch_adapter.py` now provides a concrete surrogate-gradient adapter with honest dependency checks and a synthetic N-MNIST-style fixture.
+- `neurocnl/neurocnl/training_api.py` now exposes a thin `fit(...)` convenience wrapper over the shared registry.
 
 ### NeuroBench Groundwork
 
@@ -72,24 +77,18 @@ It is the source of truth for what is already implemented for NeuroCNL, what is 
 
 - `neurocnl/neurocnl/cnl/cnl_parser.py` already classifies parse failures into structured error details with hints and examples.
 - `neurocnl/backend/app/routers/parse.py` preserves those structured parse diagnostics cleanly.
-- `neurocnl/backend/app/services/neurocnl_bridge.py` also preserves structured parse diagnostics for validation flows.
-- Several other routes still reduce failures to strings or plain message arrays, so the guidance is not yet consistent across the full CNL surface.
+- `neurocnl/backend/app/utils/cnl_errors.py` now normalizes parse, validation, lowering, backend, and training-request failures into one route-safe schema.
+- `neurocnl/backend/app/services/neurocnl_bridge.py` and the generate/export/simulate/deploy/training routes now preserve actionable `items` with `code`, `message`, `hint`, `examples`, `line`, and `raw` when available.
 
 ## What Still Needs To Happen
 
 ### Must Do Now
 
-- [ ] Add one real training adapter.
-Reason: the registry scaffold is already in place, so this is the shortest path from architecture to actual user capability.
-
-- [ ] Add a thin high-level CNL API over the existing pipeline.
-Reason: the core pipeline already exists, but the public surface is still too low-level if CNL is meant to be the primary entrypoint.
+- [ ] Add `compile()` and `evaluate()` beside the new `fit()` surface.
+Reason: `fit()` now exists, but the public API is still incomplete for the full compile/train/evaluate story.
 
 - [ ] Tighten NIR support semantics and broaden lowering for the most common concept families.
 Reason: portability claims become risky when too many concepts degrade silently to metadata or approximation.
-
-- [ ] Make parse and validation failures consistently actionable across all CNL routes.
-Reason: the parser already has the right structured error model, so this is a realistic near-term usability win and one of the cheapest ways to reduce user confusion.
 
 ### Nice Next
 
@@ -115,30 +114,27 @@ Reason: one real adapter teaches more than a generic abstraction layer with no o
 
 ## Recommended Execution Order
 
-1. Implement one real training adapter end-to-end.
-2. Make parse and validation failures consistently actionable across parse, validate, generate, export, simulate, and deploy routes.
-3. Add a thin user-facing `compile()` and `evaluate()` layer over the existing pipeline.
-4. Expand the honest NIR subset for the most common parser-recognized concepts.
-5. Add one event dataset loader end-to-end.
-6. Add quantization workflow support where current hardware targets demand it.
-7. Revisit hybrid orchestration only after the above surfaces are stable.
+1. Add a thin user-facing `compile()` and `evaluate()` layer beside the new `fit()` surface.
+2. Expand the honest NIR subset for the most common parser-recognized concepts.
+3. Replace the synthetic N-MNIST-style fixture with one real event-dataset loader end-to-end.
+4. Add quantization workflow support where current hardware targets demand it.
+5. Revisit hybrid orchestration only after the above surfaces are stable.
 
 ## Actionable Error Diagnostics
 
-This is a realistic feature to build soon because the parser already contains most of the necessary scaffolding.
+This is now materially implemented across the backend CNL surface.
 
 ### What already exists
 
 - Parse failures already carry structured fields such as `code`, `message`, `hint`, `examples`, `line`, and `raw`.
 - Validation flows already have structured `checks_failed` payloads.
-- The `/api/parse` and `/api/validate` paths preserve more structure than several of the other CNL routes.
+- The route-safe helpers now normalize error `items` across parse, validate, generate, export, simulate, deploy, and training request validation.
+- Layer 1 and Layer 2 failures now gain prescriptive `hint` and example-rewrite guidance instead of collapsing to plain strings.
 
 ### What is still missing
 
-- A single error contract used consistently across parse, validate, generate, export, simulate, and deploy.
-- Preservation of structured error details instead of flattening them to strings or `messages` arrays.
-- Prescriptive hints and example rewrites for Layer 1 and Layer 2 validation failures, not just parser failures.
-- Clear separation between parse errors, semantic validation failures, lowering failures, and backend-support failures.
+- Frontend affordances still need to consume the richer error categories more explicitly.
+- Some deeper lowering and backend-specific failures still rely on generic rewrite hints rather than domain-specific remediation text.
 
 ### Recommended implementation shape
 
