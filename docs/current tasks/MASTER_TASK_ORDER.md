@@ -46,11 +46,14 @@ These are tasks actively planned in docs, partially done, or blocking release. C
 ### Status Check — 2026-05-12
 
 - Confirmed complete: NIR pivot/export path, Prophesee integration, Canvas ↔ CNL sync, and Teensy release readiness still match the code and supporting docs.
+- Assumed complete per current workspace/user note: `T0-A` workspace file I/O repair is treated as already implemented, but was not revalidated in this pass.
 - Confirmed complete this pass: `T0-B` actionable error diagnostics now use one normalized payload across backend CNL routes, with tests asserting payload shape.
 - Confirmed complete this pass: `T0-C` now has a concrete `snntorch` adapter, surrogate-gradient dispatch, a deterministic N-MNIST-style toy fixture, and a thin public `fit()` surface.
-- Still open: `T0-A` workspace file I/O repair and `T0-D` Akida contract cleanup.
+- Confirmed complete this pass: `T0-D` now makes `/map` the documented canonical Akida mapping action, keeps `/verify` as a deprecated compatibility path, updates Studio Akida messaging toward package/map/run wording, adds launcher HTTP coverage for Akida host map/run, adds a root NeuroCNL -> Neurochip Akida handoff integration test, and switches launcher preflight fallback to status-only probing.
+- Remaining local gap is environment-only: full guardrail and frontend test execution are still blocked in this shell by missing `flutter`/`dart` and incomplete Python test dependencies, but the required code and test surfaces for `T0-D` are now present.
 
 ### T0-A: Workspace File I/O Repair *(docs: 2026-05-10 plan)*
+**Status**: Assumed complete per current workspace state; not revalidated in this pass.
 **Why first**: Broken native load/save is a user-visible regression. Everything else builds on a reliable workspace foundation.
 
 | Phase | Task | Key files |
@@ -89,6 +92,7 @@ These are tasks actively planned in docs, partially done, or blocking release. C
 ---
 
 ### T0-D: Akida Contract Cleanup (Slices 1–3) *(docs: AKIDA_RUNTIME_ACTIONS_PLAN.md)*
+**Status**: Complete on 2026-05-12.
 **Why fourth**: Three slices are pending with explicit exit criteria. Neurobench toggle in Akida UI is currently visibly disabled.
 
 | Slice | Task |
@@ -97,6 +101,11 @@ These are tasks actively planned in docs, partially done, or blocking release. C
 | 2 | Studio messaging polish — distinguish package / map / run clearly across all state labels |
 | 3 | Launcher guardrail coverage for Akida host map/run; cross-module integration tests |
 
+**Progress note**:
+- Slice 1 is complete: backend docs now point operators to `/map`, `/verify` is marked deprecated, launcher preflight no longer treats `/verify` as the primary probe, and compatibility coverage remains in backend tests.
+- Slice 2 is complete for the active Studio Akida runtime flow: the main Akida surface now uses package/map/run wording rather than implying scaffold generation is deployment proof.
+- Slice 3 is complete at the code/test-surface level: launcher Akida map/run unit and HTTP tests exist, a fallback-status probe test exists, and a root NeuroCNL -> Neurochip Akida handoff integration test now covers the cross-module contract. Local execution of those checks remains toolchain-blocked in this shell.
+
 ---
 
 ## Tier 1 — Core Platform Completeness (v0.1 → v0.2)
@@ -104,6 +113,7 @@ These are tasks actively planned in docs, partially done, or blocking release. C
 These tasks make NMTK's architecture complete as specified. Order within Tier 1 matters.
 
 ### T1-1: Lava Isolated Container *(market intel + docs)*
+**Status**: Complete at task scope on 2026-05-13.
 **Blocked by**: Nothing (converter is ready). **Priority signal**: Python <3.11 requirement makes this a correctness issue.
 
 1. Write `Dockerfile.lava` (Python 3.10 base, `lava-nc` + deps)
@@ -111,6 +121,13 @@ These tasks make NMTK's architecture complete as specified. Order within Tier 1 
 3. Add module entry to `modules.json`
 4. Wire `lava_io.py` converter to call the container via inter-service HTTP
 5. Run `python3 -m pytest neurocnl/neurocnl/export/test_lava_integration.py`
+
+**Completion note**:
+- `Dockerfile.lava` now builds an isolated Python 3.10 Lava worker and `lava-backend` is wired into both root compose files.
+- `nmtk/neuro_toolkit/assets/modules.json` now contains a hidden `lava_backend` service entry so launcher-visible deployment metadata stays synchronized with compose wiring.
+- `Neurochip` Lava routes preserve the existing public API while forwarding to the isolated worker through `NEUROCHIP_LAVA_BACKEND_URL`, and `neurocnl/neurocnl/converter/lava_io.py` now has runtime payload + remote compile/run helpers for that HTTP contract.
+- Verification completed for the task-owned backend surfaces: `docker compose config --quiet`, `pytest Neurochip/neurochip/tests/test_lava.py`, and `pytest neurocnl/neurocnl/export/test_lava_integration.py` all pass when run in ephemeral dependency-complete environments.
+- Remaining local verification gap is launcher-environment-only rather than Lava-task-specific: `bash scripts/run_launcher_guardrails.sh` still stops immediately in this shell because `flutter` is not on `PATH`, and the broader `python3.11 -m unittest tests.test_launcher_control_service` suite still has one unrelated failing deployment-service test in the current workspace.
 
 ---
 
@@ -264,11 +281,11 @@ Explicit decisions to defer, backed by both sources.
 
 | Tier | ID | Task | Status | Blocked by | Est. scope |
 |------|----|------|--------|-----------|------------|
-| 0 | T0-A | Workspace file I/O repair | Open | — | Medium (4-phase plan exists) |
+| 0 | T0-A | Workspace file I/O repair | Assumed complete per current workspace/user note; not revalidated this pass | — | Medium (4-phase plan exists) |
 | 0 | T0-B | Actionable error diagnostics | Complete (2026-05-12) | — | Small (schema + propagation) |
 | 0 | T0-C | First real training adapter (snnTorch) | Complete for first-adapter milestone (2026-05-12) | — | Medium |
-| 0 | T0-D | Akida contract cleanup (3 slices) | Open | — | Small-Medium |
-| 1 | T1-1 | Lava isolated container | Open | — | Small (Dockerfile + wiring) |
+| 0 | T0-D | Akida contract cleanup (3 slices) | Complete (2026-05-12); local guardrail execution still environment-blocked in this shell | — | Small-Medium |
+| 1 | T1-1 | Lava isolated container | Complete at task scope (2026-05-13); local launcher guardrails still blocked by missing Flutter and one unrelated launcher deployment-suite failure in this workspace | — | Small (Dockerfile + wiring) |
 | 1 | T1-2 | Brian2 isolated container | T1-1 | Small |
 | 1 | T1-3 | Neurohub app container | — | Small |
 | 1 | T1-4 | NIR semantic coverage expansion | T0-C | Medium (4 concept families) |

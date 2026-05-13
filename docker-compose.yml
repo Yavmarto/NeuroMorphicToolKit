@@ -72,10 +72,32 @@ services:
       - "${NEUROCHIP_PORT:-8002}:8002"
     environment:
       - PYTHONUNBUFFERED=1
+      - NEUROCHIP_LAVA_BACKEND_URL=http://lava-backend:8012
     volumes:
       - .:/repo:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    depends_on:
+      - lava-backend
+    networks:
+      - backend-net
+    profiles:
+      - hardware
+
+  lava-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.lava
+    ports:
+      - "${LAVA_BACKEND_PORT:-8012}:8012"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8012/health')"]
       interval: 10s
       timeout: 5s
       retries: 5

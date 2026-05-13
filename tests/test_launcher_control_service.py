@@ -652,6 +652,63 @@ class LauncherControlServiceTest(unittest.TestCase):
             },
         )
 
+    def test_akida_map_http_endpoint_proxies_runtime_payload(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+        host = server.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "192.168.2.88",
+                "username": "operator",
+                "password": "secret",
+                "runtimeApiUrl": "http://192.168.2.88:8002",
+            }
+        )
+
+        with mock.patch.object(
+            server.state,
+            "proxy_akida_map",
+            return_value={
+                "sdk_available": True,
+                "sdk_status": "deployable",
+                "sdk_issues": [],
+                "state": "mapped",
+                "runtime_target": "hardware",
+            },
+        ) as proxy_map:
+            request = urllib.request.Request(
+                (
+                    f"http://127.0.0.1:{server.server_address[1]}"
+                    f"/api/launcher/akida/hosts/{host['id']}/map?bit_width=2"
+                ),
+                data=json.dumps(
+                    {
+                        "akida_version": "akida2",
+                        "populations": [{"id": "sensor", "size": 4}],
+                        "connections": [],
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+
+        self.assertEqual(payload["runtime_target"], "hardware")
+        proxy_map.assert_called_once_with(
+            host["id"],
+            {
+                "akida_version": "akida2",
+                "populations": [{"id": "sensor", "size": 4}],
+                "connections": [],
+            },
+            bit_width=2,
+        )
+
     def test_proxy_akida_run_proxies_runtime_payload(self) -> None:
         host = self.state.create_akida_host(
             {
@@ -686,6 +743,52 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(called_method, "POST")
         self.assertEqual(called_path, "/api/neurochip/akida/inference")
         self.assertEqual(called_payload, {"inputs": [1.0, 0.0, 1.0]})
+
+    def test_akida_run_http_endpoint_proxies_runtime_payload(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+        host = server.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "192.168.2.89",
+                "username": "operator",
+                "password": "secret",
+                "runtimeApiUrl": "http://192.168.2.89:8002",
+            }
+        )
+
+        with mock.patch.object(
+            server.state,
+            "proxy_akida_run",
+            return_value={
+                "outputs": [0.0, 1.0],
+                "telemetry": {"fps": 123.0},
+                "execution_time_us": 4.2,
+                "runtime_target": "hardware",
+            },
+        ) as proxy_run:
+            request = urllib.request.Request(
+                (
+                    f"http://127.0.0.1:{server.server_address[1]}"
+                    f"/api/launcher/akida/hosts/{host['id']}/run"
+                ),
+                data=json.dumps({"inputs": [1.0, 0.0, 1.0]}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(request, timeout=5) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+
+        self.assertEqual(payload["runtime_target"], "hardware")
+        self.assertEqual(payload["outputs"], [0.0, 1.0])
+        proxy_run.assert_called_once_with(
+            host["id"],
+            {"inputs": [1.0, 0.0, 1.0]},
+        )
 
     def test_missing_environment_normalizes_stale_installed_state(self) -> None:
         state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"
@@ -1758,6 +1861,26 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
 
         stderr = io.StringIO()
+        fallback_calls: list[tuple[str, str]] = []
+
+        def _record_runtime_status(_host: dict[str, Any], method: str, path: str) -> dict[str, Any]:
+            fallback_calls.append((method, path))
+            return {
+                "sdk_available": False,
+                "sdk_status": "sdk_unavailable",
+                "sdk_issues": ["sdk_not_available"],
+                "sdk_issue_detail": "BrainChip SDK missing on remote host",
+                "runtime_target": "local_sdk",
+                "environment_checks": {
+                    "host_supported": False,
+                    "python_supported": True,
+                    "tensorflow_available": False,
+                    "cnn2snn_available": False,
+                    "akida_models_available": False,
+                    "recommended_runtime": "local_sdk",
+                },
+            }
+
         with (
             mock.patch.object(
                 self.state,
@@ -1767,28 +1890,16 @@ class LauncherControlServiceTest(unittest.TestCase):
             mock.patch.object(
                 self.state,
                 "_akida_json_request",
-                return_value={
-                    "sdk_available": False,
-                    "sdk_status": "sdk_unavailable",
-                    "sdk_issues": ["sdk_not_available"],
-                    "sdk_issue_detail": "BrainChip SDK missing on remote host",
-                    "runtime_target": "local_sdk",
-                    "environment_checks": {
-                        "host_supported": False,
-                        "python_supported": True,
-                        "tensorflow_available": False,
-                        "cnn2snn_available": False,
-                        "akida_models_available": False,
-                        "recommended_runtime": "local_sdk",
-                    },
-                },
+                side_effect=_record_runtime_status,
             ),
             mock.patch.object(sys, "stderr", stderr),
         ):
             self.state.fetch_akida_host_preflight(host["id"])
 
         log_output = stderr.getvalue()
+        self.assertEqual(fallback_calls, [("GET", "/api/neurochip/akida/status")])
         self.assertIn("remote control API unavailable during preflight", log_output)
+        self.assertIn("falling back to runtime status", log_output)
         self.assertNotIn("control request failed:", log_output)
 
     def test_akida_host_status_fallback_logs_single_high_level_message(self) -> None:

@@ -170,6 +170,49 @@ async def test_neurocnl_to_neurochip_lava_simulator():
 
 
 @pytest.mark.asyncio
+async def test_neurocnl_to_neurochip_akida_runtime_handoff():
+    """Test NeuroCNL -> Neurochip Akida mapped-network handoff."""
+    spec = (
+        "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.8\n"
+        "The motor neuron MUST emit a spike ONLY IF membrane potential exceeds 0.6\n"
+        "The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 1.0\n"
+    )
+
+    async with httpx.AsyncClient() as client:
+        deploy_resp = await _request_or_skip(
+            client,
+            "POST",
+            f"{NEUROCNL_URL}/api/deploy/akida/network",
+            json={
+                "spec": spec,
+                "weight_bit_width": 4,
+                "akida_version": "akida2",
+            },
+        )
+        assert deploy_resp.status_code == 200, deploy_resp.text
+        deploy_data = deploy_resp.json()
+        if deploy_data["support_state"] == "unsupported":
+            pytest.skip("NeuroCNL reported this Akida path as unsupported.")
+
+        mapped_network = deploy_data.get("mapped_network")
+        assert mapped_network is not None
+
+        map_resp = await _request_or_skip(
+            client,
+            "POST",
+            f"{NEUROCHIP_URL}/api/neurochip/akida/map?bit_width=4",
+            json=mapped_network,
+        )
+        if map_resp.status_code == 503:
+            pytest.skip("Neurochip Akida runtime mapping is unavailable in this environment.")
+        assert map_resp.status_code == 200, map_resp.text
+        map_data = map_resp.json()
+        assert "sdk_status" in map_data
+        assert "runtime_target" in map_data
+        assert "sdk_available" in map_data
+
+
+@pytest.mark.asyncio
 async def test_neurosense_to_neurocnl():
     """Test Neurosense -> neurocnl pipeline (biosignal -> SNN model)"""
     mock_data = [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]

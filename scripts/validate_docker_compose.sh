@@ -80,7 +80,7 @@ done
 # 3. Check Dockerfiles exist and are non-empty
 echo ""
 echo "[3/4] Checking Dockerfiles"
-SERVICES=("neurocnl:backend/Dockerfile" "Neurochip:Dockerfile" "Neurobench:Dockerfile" "Neurosense:Dockerfile" "Neurohub:Dockerfile")
+SERVICES=("neurocnl:backend/Dockerfile" "Neurochip:Dockerfile" "Neurobench:Dockerfile" "Neurosense:Dockerfile" "Neurohub:Dockerfile" ".:Dockerfile.lava")
 for entry in "${SERVICES[@]}"; do
   ctx="${entry%%:*}"
   df="${entry##*:}"

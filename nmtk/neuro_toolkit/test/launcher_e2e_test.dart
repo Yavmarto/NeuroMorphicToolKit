@@ -65,7 +65,9 @@ void main() {
 
       debugPrint('🚀 Starting E2E Full Workflow Test...');
 
-      final httpModules = allModules.where((m) => m.port != null).toList();
+      final httpModules = allModules
+          .where((m) => m.port != null && m.showInLauncherNav)
+          .toList();
 
       for (final module in httpModules) {
         debugPrint('📦 Installing ${module.name} (${module.id})...');

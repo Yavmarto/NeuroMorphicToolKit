@@ -238,5 +238,37 @@
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
     }
+  },
+  {
+    "id": "lava_backend",
+    "name": "Lava Backend",
+    "description": "Isolated Lava simulator runtime service used by Neurochip hardware routes",
+    "icon": "bolt",
+    "port": 8012,
+    "version": "1.0.0",
+    "installPath": "workers/lava_backend/",
+    "sourcePath": ".",
+    "runPath": ".",
+    "installStrategy": "pip",
+    "startStrategy": "none",
+    "uvicornTarget": "",
+    "showInLauncherNav": false,
+    "hasFrontend": false,
+    "frontendStatus": "No",
+    "requiresMuJoCo": false,
+    "remoteUrl": "",
+    "required": false,
+    "deployment": {
+      "supportedModes": ["docker"],
+      "healthPath": "/health",
+      "requiredPorts": [8012],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "",
+      "composeProfile": "hardware",
+      "chartTemplateId": "",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
   }
 ]

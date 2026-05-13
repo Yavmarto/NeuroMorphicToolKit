@@ -1,0 +1,18 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir poetry
+
+COPY Neurochip/pyproject.toml Neurochip/poetry.lock* /app/Neurochip/
+RUN cd /app/Neurochip && \
+    poetry config virtualenvs.in-project true && \
+    poetry install --no-root --without dev --extras lava
+
+COPY Neurochip/neurochip /app/Neurochip/neurochip
+COPY workers/lava_backend /app/workers/lava_backend
+
+ENV PATH="/app/Neurochip/.venv/bin:$PATH"
+ENV PYTHONPATH="/app/Neurochip:/app/workers/lava_backend"
+
+CMD ["uvicorn", "main:app", "--app-dir", "/app/workers/lava_backend", "--host", "0.0.0.0", "--port", "8012"]

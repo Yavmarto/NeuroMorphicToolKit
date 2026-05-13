@@ -59,12 +59,27 @@ services:
     environment:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1
+      - NEUROCHIP_LAVA_BACKEND_URL=http://lava-backend:8012
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
 
   neurocnl-physics-worker:
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  lava-backend:
     restart: always
     read_only: true
     tmpfs:

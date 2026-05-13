@@ -1188,7 +1188,7 @@ def _describe_akida_preflight(verification: dict[str, Any]) -> str:
         if str(issue).strip()
     ]
     if _akida_hardware_runtime_ready(verification):
-        return "Akida SDK verification ready."
+        return "Akida runtime mapping is ready."
     if sdk_issue_detail:
         return sdk_issue_detail
     if sdk_issues:
@@ -4478,17 +4478,17 @@ class LauncherControlState:
                         host,
                         (
                             "remote control API unavailable during preflight; "
-                            f"falling back to runtime verify: {control_exc}"
+                            f"falling back to runtime status: {control_exc}"
                         ),
                         stderr=True,
                     )
                     verification = self._akida_json_request(
-                        host, "POST", "/api/neurochip/akida/verify"
+                        host, "GET", "/api/neurochip/akida/status"
                     )
                     runtime_status = verification
             else:
                 verification = self._akida_json_request(
-                    host, "POST", "/api/neurochip/akida/verify"
+                    host, "GET", "/api/neurochip/akida/status"
                 )
                 runtime_status = verification
         except Exception as exc:  # noqa: BLE001
