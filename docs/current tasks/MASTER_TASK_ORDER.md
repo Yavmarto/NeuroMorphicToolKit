@@ -119,8 +119,31 @@ These are tasks actively planned in docs, partially done, or blocking release. C
 4. **Template Popup**: Refactor template selection to a standard modal/popup.
 5. **Clean Validation Output**: Remove redundant "Invariant satisfied" messages from Layer 1 output.
 6. **Label Readability**: Replace underscores with whitespace in Layer 1 and Layer 2 property labels.
+7. **Fix CNL-Canvas Sync Regression**: Prevent comment stripping and unwanted text modification (e.g., auto-generating population encoding lines) when round-tripping from Canvas back to Editor.
 
 ---
+
+### T0-F: Automate Training & Robotic Dependencies *(new)*
+**Status**: Active / High Priority.
+**Why**: Training with `snnTorch` and robotic hand simulation with `neurodreamhand` are currently blocked by manual dependency installation, causing UI errors.
+
+1. **Update `pyproject.toml`**: Include `neurodreamhand` and ensure `torch`/`snntorch` are in the `training` extra.
+2. **Docker Automation**: Update `neurocnl/backend/Dockerfile` to install the `training` extras (e.g., `pip install -e .[training]`).
+3. **Verify Environment**: Ensure `backend_endpoint_smoke.py` validates these optional modules are present in the runtime.
+
+---
+
+### T0-G: Resolve STP Simulation Crash and NIR Type Mismatch *(new)*
+**Status**: Active / High Priority.
+**Why**: Short-Term Plasticity (STP) templates cause backend crashes during simulation and type-inference failures in NIR export.
+
+1. **Register Nengo Builder**: Implement and register a Nengo builder for `STPLearningRule` in `neurocnl/generation/nengo_generator.py` to fix the "Cannot build object" error.
+2. **Fix NIR Export Dimensionality**: Update `neurocnl/export/nir_exporter.py` to detect and handle neuron-to-neuron connections. Ensure NIR graph connectivity matches the actual neuron counts when `.neurons` is used as a source/target.
+3. **Fix CNL-Canvas Sync Failure**: Address the synchronization failure when switching between canvas and editor with the STP template, ensuring the CNL text updates correctly and the sync error is resolved.
+4. **End-to-End Verification**: Add a test in `test_short_term_plasticity_generator.py` that instantiates a `nengo.Simulator` and runs it to verify the fix.
+
+---
+
 
 ## Tier 1 — Core Platform Completeness (v0.1 → v0.2)
 
@@ -308,7 +331,9 @@ Explicit decisions to defer, backed by both sources.
 | 0 | T0-B | Actionable error diagnostics | Complete (2026-05-12) | — | Small (schema + propagation) |
 | 0 | T0-C | First real training adapter (snnTorch) | Complete for first-adapter milestone (2026-05-12) | — | Medium |
 | 0 | T0-D | Akida contract cleanup (3 slices) | Complete (2026-05-12) | — | Small-Medium |
-| 0 | T0-E | Quick Wins and Bugfixes | **Active** | — | Small |
+| 0 | T0-E | Quick Wins and Bugfixes | **Active** (New: Sync Bug) | — | Small |
+| 0 | T0-F | Automate Training & Robotic Dependencies | **Active** | — | Small |
+| 0 | T0-G | Resolve STP Simulation Crash and NIR Type Mismatch | **Active** | — | Small |
 | 1 | T1-1 | Lava isolated container | Complete at task scope (2026-05-13) | — | Small (Dockerfile + wiring) |
 | 1 | T1-2 | Brian2 isolated container | T1-1 | Small |
 | 1 | T1-3 | Neurohub app container | — | Small |
