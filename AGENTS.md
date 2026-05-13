@@ -33,7 +33,11 @@ Launcher and control-plane guardrails:
 - If `nmtk/neuro_toolkit/assets/modules.json` changes, update the launcher Dart models, launcher tests, and any consuming helper scripts in the same change.
 - Do not introduce a new install or startup strategy without doctor or preflight coverage.
 
+Knowledge Management (Open Brain):
 
+- **Always check Open Brain** (Knowledge Items and Brain logs) at the start of a task to retrieve relevant context, architectural decisions (ADRs), and historical workstreams.
+- **Update Open Brain** after completing a task if new durable knowledge, decisions, or important context were established. Use the `capture_thought` tool if available, or manually update Knowledge Items (KIs).
+- Refer to `docs/archive/open-brain-import.md` for guidelines on how to organize and categorize knowledge for the Open Brain.
 
 ## Code Search
 
@@ -57,7 +61,9 @@ If `semble` is not on `$PATH`, use `uvx --from "semble[mcp]" semble` in its plac
 
 ## Workflow
 
-1. Start with `semble search` to find relevant chunks.
-2. Inspect full files only when the returned chunk is not enough context.
-3. Optionally use `semble find-related` with a promising result's `file_path` and `line` to discover related implementations.
-4. Use grep only when you need exhaustive literal matches or quick confirmation of an exact string.
+1. **Check Open Brain** for existing context and relevant Knowledge Items.
+2. Start with `semble search` to find relevant chunks.
+3. Inspect full files only when the returned chunk is not enough context.
+4. Optionally use `semble find-related` with a promising result's `file_path` and `line` to discover related implementations.
+5. Use grep only when you need exhaustive literal matches or quick confirmation of an exact string.
+6. **Update Open Brain** with any new durable knowledge or architectural changes upon task completion.

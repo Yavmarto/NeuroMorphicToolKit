@@ -18,7 +18,7 @@
     {
       "deepLink": null,
       "moduleId": "Neurohub",
-      "readinessState": "warming_up",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     }

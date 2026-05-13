@@ -50,6 +50,7 @@ These are tasks actively planned in docs, partially done, or blocking release. C
 - Confirmed complete this pass: `T0-B` actionable error diagnostics now use one normalized payload across backend CNL routes, with tests asserting payload shape.
 - Confirmed complete this pass: `T0-C` now has a concrete `snntorch` adapter, surrogate-gradient dispatch, a deterministic N-MNIST-style toy fixture, and a thin public `fit()` surface.
 - Confirmed complete this pass: `T0-D` now makes `/map` the documented canonical Akida mapping action, keeps `/verify` as a deprecated compatibility path, updates Studio Akida messaging toward package/map/run wording, adds launcher HTTP coverage for Akida host map/run, adds a root NeuroCNL -> Neurochip Akida handoff integration test, and switches launcher preflight fallback to status-only probing.
+- **NEW / ACTIVE**: `T0-E` Quick Wins and Bugfixes (Nengo cache bug, UI training exposure, load performance animation, etc.).
 - Remaining local gap is environment-only: full guardrail and frontend test execution are still blocked in this shell by missing `flutter`/`dart` and incomplete Python test dependencies, but the required code and test surfaces for `T0-D` are now present.
 
 ### T0-A: Workspace File I/O Repair *(docs: 2026-05-10 plan)*
@@ -108,6 +109,19 @@ These are tasks actively planned in docs, partially done, or blocking release. C
 
 ---
 
+### T0-E: Quick Wins and Bugfixes *(docs: 2026-05-13-quick-wins-and-bugfixes.md)*
+**Status**: Active / High Priority.
+**Why first**: Urgent usability fixes and minor bugs that block a smooth v0.1 experience.
+
+1. **Fix Simulation Bug**: Configure Nengo decoders cache to use a valid writable path (or disable it) to fix the `ApiException(500)` regression.
+2. **Expose Training in UI**: Add "Train" button and config dialog in Studio to trigger `fit()`.
+3. **Load Performance**: Add "Obsidian Flow" themed loading animation to the workspace load operation.
+4. **Template Popup**: Refactor template selection to a standard modal/popup.
+5. **Clean Validation Output**: Remove redundant "Invariant satisfied" messages from Layer 1 output.
+6. **Label Readability**: Replace underscores with whitespace in Layer 1 and Layer 2 property labels.
+
+---
+
 ## Tier 1 — Core Platform Completeness (v0.1 → v0.2)
 
 These tasks make NMTK's architecture complete as specified. Order within Tier 1 matters.
@@ -132,6 +146,7 @@ These tasks make NMTK's architecture complete as specified. Order within Tier 1 
 ---
 
 ### T1-2: Brian2 Isolated Container *(market intel)*
+**Status**: Not implemented as of 2026-05-13.
 **Blocked by**: T1-1 complete (establishes the container pattern).
 
 1. Write `Dockerfile.brian2` (Python ≥3.12, `Brian2` + deps)
@@ -151,6 +166,7 @@ These tasks make NMTK's architecture complete as specified. Order within Tier 1 
 ---
 
 ### T1-4: Expand NIR Semantic Coverage *(docs: neurocnl_status_and_priorities.md #4)*
+**Status**: Complete for the current NIR bridge scope on 2026-05-13.
 **Blocked by**: T0-C (training adapter teaches which concepts are load-bearing). Priority order:
 
 1. `short_term_plasticity` — most common in published models
@@ -159,6 +175,13 @@ These tasks make NMTK's architecture complete as specified. Order within Tier 1 
 4. `neuromodulation` — defer until specific hardware target requires it
 
 Each concept: update lowering in `nir_exporter.py` → add test → re-run `test_materializer.py`.
+
+**Completion note**:
+- `short_term_plasticity` now survives direct CNL -> IR -> NIR export as explicit metadata on scoped connections and as graph metadata for unscoped rules.
+- `lateral_inhibition` no longer hard-fails NIR export; it lowers approximately through dense inhibitory weights while preserving locality intent as metadata.
+- `homeostatic_plasticity` now survives as population metadata in the NIR graph.
+- `neuromodulation` now survives as graph-level metadata in the NIR graph.
+- Export and planner tests now treat these concepts as metadata-backed or approximate NIR semantics instead of `not_lowered`.
 
 ---
 
@@ -284,8 +307,9 @@ Explicit decisions to defer, backed by both sources.
 | 0 | T0-A | Workspace file I/O repair | Assumed complete per current workspace/user note; not revalidated this pass | — | Medium (4-phase plan exists) |
 | 0 | T0-B | Actionable error diagnostics | Complete (2026-05-12) | — | Small (schema + propagation) |
 | 0 | T0-C | First real training adapter (snnTorch) | Complete for first-adapter milestone (2026-05-12) | — | Medium |
-| 0 | T0-D | Akida contract cleanup (3 slices) | Complete (2026-05-12); local guardrail execution still environment-blocked in this shell | — | Small-Medium |
-| 1 | T1-1 | Lava isolated container | Complete at task scope (2026-05-13); local launcher guardrails still blocked by missing Flutter and one unrelated launcher deployment-suite failure in this workspace | — | Small (Dockerfile + wiring) |
+| 0 | T0-D | Akida contract cleanup (3 slices) | Complete (2026-05-12) | — | Small-Medium |
+| 0 | T0-E | Quick Wins and Bugfixes | **Active** | — | Small |
+| 1 | T1-1 | Lava isolated container | Complete at task scope (2026-05-13) | — | Small (Dockerfile + wiring) |
 | 1 | T1-2 | Brian2 isolated container | T1-1 | Small |
 | 1 | T1-3 | Neurohub app container | — | Small |
 | 1 | T1-4 | NIR semantic coverage expansion | T0-C | Medium (4 concept families) |

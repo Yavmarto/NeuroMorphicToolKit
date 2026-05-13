@@ -269,9 +269,9 @@ if [[ "$USE_DOCKER" == "true" ]]; then
   fi
   echo "------------------------------------------------------------"
   if [[ "$DOCKER_PROFILE" == "default" ]]; then
-    docker compose up -d
+    docker compose up --build -d
   else
-    docker compose --profile "$DOCKER_PROFILE" up -d
+    docker compose --profile "$DOCKER_PROFILE" up --build -d
   fi
 fi
 

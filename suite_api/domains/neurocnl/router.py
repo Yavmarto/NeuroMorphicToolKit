@@ -34,6 +34,7 @@ from backend.app.routers import (
     jobs,
     neurosim_handoff,
     templates,
+    training,
 )
 from backend.app.routers.prosthetic import (
     analysis as prosthetic_analysis,
@@ -87,6 +88,7 @@ for _r in [
     jobs.router,
     neurosim_handoff.router,
     templates.router,
+    training.router,
 ]:
     router.include_router(_r)
 
