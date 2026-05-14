@@ -1,4 +1,4 @@
-# NeuroCNL Workspace, File I/O, and Simulation Persistence Plan
+# NeuroCNL Workspace, File I/O, and NIR Artifact Persistence Plan
 
 ## Scope
 
@@ -11,14 +11,14 @@ Primary goal:
 
 - Fix broken save/load/rename workflows in NeuroCNL Studio.
 - Introduce a real workspace file format that can contain multiple `.cnl` models.
-- Persist simulation results per model inside the workspace so reopening the workspace does not require rerunning simulation.
-- Keep cached results attached to the correct model when the active file changes.
-- Add a UI surface to compare models and their cached results.
+- Persist per-file NIR export artifacts and diagnostics inside the workspace so reopening the workspace does not require regenerating them immediately.
+- Keep cached NIR results attached to the correct model when the active file changes.
+- Add a UI surface to compare models and their cached NIR/export state.
 
 Non-goals for the first implementation:
 
 - Cross-module launcher changes
-- Backend API contract changes unless a missing field makes result persistence impossible
+- Backend API contract changes unless a missing field makes NIR result persistence impossible
 - A generic shared widget in `nmtk_ui_core` unless the comparison UI proves reusable across modules
 
 ## Current State
@@ -38,10 +38,9 @@ Observed from the current `neurocnl/frontend` code:
    - `lib/providers/workspace_provider.dart`
    - Current persistence is `shared_preferences` cache, not an explicit workspace artifact the user can save/open.
 
-4. Simulation state is not file-scoped.
-   - CNL simulation is stored globally in `lib/providers/pipeline_provider.dart`.
-   - Canvas preview is stored globally in `lib/providers/canvas/simulation_provider.dart`.
-   - Result: simulation output is tied to the current session state, not to a specific model file in the workspace.
+4. Export and analysis state is not file-scoped enough.
+   - Pipeline-derived export state is still easy to treat as global session state instead of a per-file artifact.
+   - Result: generated NIR output and related diagnostics are at risk of drifting away from the model file they came from.
 
 5. File rename support exists only in provider logic.
    - `WorkspaceNotifier.renameFile()` exists.
@@ -56,11 +55,11 @@ Observed from the current `neurocnl/frontend` code:
    - all model files
    - the active file id
    - UI restore state that is safe to persist
-   - cached simulation results keyed by file id
+   - cached NIR export results keyed by file id
 4. `Open Workspace` should fully restore the editor tabs and cached results.
-5. Running simulation for file A must persist only to file A.
-6. Switching to file B must not destroy file A's cached result.
-7. Switching back to file A must restore its cached result without rerunning simulation.
+5. Generating NIR for file A must persist only to file A.
+6. Switching to file B must not destroy file A's cached NIR result.
+7. Switching back to file A must restore its cached result without regenerating immediately.
 8. The UI must expose a comparison view for multiple models and their cached results.
 
 ## Proposed Design
@@ -88,17 +87,18 @@ Each file entry should contain:
 - `dirty`
 - `isUntitled`
 - editor selection/scroll restore fields
-- `simulationCache`
+- `nirCache`
 
-`simulationCache` should start with CNL pipeline simulation only:
+`nirCache` should start with the NIR export pipeline only:
 
 - `status`
 - `duration`
 - `savedAt`
-- `result`
+- `artifact`
 - `error`
+- `diagnostics`
 
-If canvas preview persistence is needed in the same change, add a second optional slot such as `previewCache`. Do not overload one result type for both systems.
+If additional graph-view restore state is needed in the same change, add a second optional slot such as `graphCache`. Do not overload one result type for both systems.
 
 ### 2. Split transient UI state from durable workspace state
 
@@ -107,31 +107,30 @@ Persist in the workspace file only what is needed to restore user work:
 - file tabs
 - active file
 - chosen panel
-- deploy target
-- simulation caches
+- NIR export caches
 
 Do not persist purely session-local or derived values unless they materially improve reopen behavior.
 
-### 3. Make simulation persistence file-scoped
+### 3. Make NIR persistence file-scoped
 
-Refactor `workspaceProvider` to become the owner of per-file cached simulation data.
+Refactor `workspaceProvider` to become the owner of per-file cached NIR data.
 
 Recommended direction:
 
-- add a typed simulation cache model under `lib/models/`
-- extend `WorkspaceFile` with an optional simulation cache field
+- add a typed NIR cache model under `lib/models/`
+- extend `WorkspaceFile` with an optional NIR cache field
 - add notifier methods such as:
-  - `saveSimulationResultForActiveFile(...)`
-  - `clearSimulationResultForFile(...)`
-  - `simulationResultForFile(String fileId)`
+  - `saveNirResultForActiveFile(...)`
+  - `clearNirResultForFile(...)`
+  - `nirResultForFile(String fileId)`
 
-Then wire the simulation flow:
+Then wire the export flow:
 
-- after `PipelineNotifier.runGenerateAndSimulate()` succeeds, push the result into the active workspace file cache
-- when active file changes, hydrate `pipelineProvider` from that file's cached simulation result
-- when the active file has no cached result, clear pipeline simulation state only, not the whole workspace
+- after the canonical NIR export action succeeds, push the result into the active workspace file cache
+- when active file changes, hydrate the pipeline/export state from that file's cached NIR result
+- when the active file has no cached result, clear only the export artifact state, not the whole workspace
 
-This keeps the result bound to the file id instead of the global provider instance.
+This keeps the export artifact bound to the file id instead of the global provider instance.
 
 ### 4. Fix platform file I/O properly
 
@@ -180,19 +179,17 @@ Recommended first-pass UI:
 - table or cards listing each file
 - columns:
   - model name
-  - simulation cached/not cached
+  - NIR cached/not cached
   - duration
-  - wall time
-  - sensory spike count
-  - motor spike count
-  - sensory mean rate
-  - motor mean rate
-  - latency
+  - node count
+  - edge count
+  - diagnostics summary
+  - last exported at
 - row action to activate/open that model
 
-This should compare cached results across files without rerunning anything.
+This should compare cached export results across files without regenerating anything.
 
-If detailed probe-level comparison is wanted later, add it as a second step after the summary comparison ships.
+If detailed graph or tensor comparison is wanted later, add it as a second step after the summary comparison ships.
 
 ## Implementation Order
 
@@ -205,15 +202,15 @@ If detailed probe-level comparison is wanted later, add it as a second step afte
 ### Phase 2: Workspace schema and serialization
 
 - Add new workspace models and JSON codecs.
-- Extend `WorkspaceFile` to carry typed simulation cache.
-- Add notifier methods for workspace save/open and per-file simulation cache updates.
+- Extend `WorkspaceFile` to carry typed NIR cache data.
+- Add notifier methods for workspace save/open and per-file NIR cache updates.
 - Preserve compatibility with existing `shared_preferences` bootstrap as a fallback.
 
-### Phase 3: Simulation cache integration
+### Phase 3: NIR cache integration
 
-- Persist successful simulation results into the active file.
-- Restore cached simulation state when switching active files or reopening the workspace.
-- Clear only the active file's simulation state when explicitly requested.
+- Persist successful NIR export results into the active file.
+- Restore cached NIR state when switching active files or reopening the workspace.
+- Clear only the active file's NIR state when explicitly requested.
 
 ### Phase 4: UI actions and comparison panel
 
@@ -241,9 +238,9 @@ Minimum checks for the implementation:
 
 Must-have test coverage:
 
-1. Workspace serialization round-trip with multiple files and cached results.
-2. Active-file switch restores the correct cached simulation result.
-3. Reopening a saved workspace restores tabs, active file, and cached results.
+1. Workspace serialization round-trip with multiple files and cached NIR results.
+2. Active-file switch restores the correct cached NIR result.
+3. Reopening a saved workspace restores tabs, active file, and cached NIR results.
 4. Native file open no longer returns `null` by default.
 5. Native save returns the chosen path and writes the expected file contents.
 6. Rename persists through workspace save/open.
@@ -257,5 +254,5 @@ Must-have test coverage:
 - Desktop/native `Load` visibly imports a `.cnl` file.
 - Desktop/native `Save` writes where the user chose, not only to an internal app-documents path.
 - Users can save and reopen a multi-file NeuroCNL workspace artifact.
-- Simulation results persist per model across file switches and app/workspace reopen.
+- NIR export results persist per model across file switches and app/workspace reopen.
 - The comparison UI shows per-model cached results without requiring reruns.

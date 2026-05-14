@@ -8,7 +8,7 @@ WORKDIR /repo
 
 # ── neurocnl: install package; backend/ and neurosim/ stay for sys.path access ──
 COPY neurocnl/ neurocnl/
-RUN pip install --no-cache-dir neurocnl/
+RUN pip install --no-cache-dir "neurocnl/[training]"
 
 # ── Modules installed as top-level packages ───────────────────────────────────
 COPY Neurohub/ Neurohub/

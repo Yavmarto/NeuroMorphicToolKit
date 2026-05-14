@@ -435,6 +435,21 @@ def run_neurocnl_examples(module: ModuleSpec) -> None:
     print("neurocnl validate: ok")
 
 
+def _check_training_modules() -> None:
+    """Try to import torch and snntorch and report their availability.
+
+    Called during neurocnl smoke testing to surface whether the optional
+    training extras (installed via ``pip install -e ".[training]"``) are
+    present in the active environment.
+    """
+    for mod_name in ("torch", "snntorch"):
+        try:
+            __import__(mod_name)
+            print(f"training module: {mod_name} available")
+        except ImportError:
+            print(f"training module: {mod_name} NOT available (optional)")
+
+
 def command_smoke(args: argparse.Namespace, modules: list[ModuleSpec], repo_root: Path) -> int:
     module = find_module(args.module, modules)
     started: StartedBackend | None = None
@@ -454,6 +469,7 @@ def command_smoke(args: argparse.Namespace, modules: list[ModuleSpec], repo_root
 
         if module.id.lower() == "neurocnl":
             run_neurocnl_examples(module)
+            _check_training_modules()
 
         if started is not None and args.keep_running:
             print(f"Leaving {module.id} running on {module_base_url(module)}")

@@ -33,6 +33,7 @@ help:
 	@echo "  make docker-i                 - Run backend in Docker and launcher on iOS"
 	@echo "  make docker-physics           - Run backend + physics worker in Docker and native launcher"
 	@echo "  make docker-hardware          - Run backend + hardware workers in Docker and native launcher"
+	@echo "  make docker-all               - Run backend + all active profiles/containers in Docker and native launcher"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
@@ -77,6 +78,9 @@ docker-physics:
 
 docker-hardware:
 	@./scripts/run_dev.sh --docker --profile hardware --flutter-device "$(FLUTTER_DEVICE)"
+
+docker-all:
+	@./scripts/run_dev.sh --docker --profile all --flutter-device "$(FLUTTER_DEVICE)"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload

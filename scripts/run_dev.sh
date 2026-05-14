@@ -270,6 +270,9 @@ if [[ "$USE_DOCKER" == "true" ]]; then
   echo "------------------------------------------------------------"
   if [[ "$DOCKER_PROFILE" == "default" ]]; then
     docker compose up --build -d
+  elif [[ "$DOCKER_PROFILE" == "all" ]]; then
+    ALL_PROFILES=$(docker compose config --profiles | tr '\n' ',' | sed 's/,$//')
+    COMPOSE_PROFILES="$ALL_PROFILES" docker compose up --build -d
   else
     docker compose --profile "$DOCKER_PROFILE" up --build -d
   fi

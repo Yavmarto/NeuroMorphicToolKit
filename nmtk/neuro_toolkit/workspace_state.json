@@ -4,7 +4,7 @@
     {
       "deepLink": null,
       "moduleId": "neurocnl",
-      "readinessState": "warming_up",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     },
@@ -18,7 +18,7 @@
     {
       "deepLink": null,
       "moduleId": "Neurohub",
-      "readinessState": "ready",
+      "readinessState": "warming_up",
       "restoreState": {},
       "surfaceMode": "native"
     }

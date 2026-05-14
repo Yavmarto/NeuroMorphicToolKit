@@ -19,7 +19,7 @@ Architected a cross-disciplinary platform unifying **Computational Neuroscience*
 *   **DSL Design (NeuroCNL):** Created the *Conceptual Neuromorphic Language*, a DSL translating natural language to verified SNNs with **18+ physics invariants**.
 *   **Agentic CDD Pipeline:** Pioneered a **Contract-Driven Development (CDD)** and **Property-Based Testing (PBT)** migration pipeline, automating **150+ requirements** across 7 modules.
 *   **Hardware-in-the-Loop (HITL):** Built the bridge for **Teensy 4.1** and **OpenBCI Ganglion**, deploying real-time sensory-motor control and BCI learning agents.
-*   **Hybrid Orchestration:** Engineered a **Flutter-based desktop suite** that orchestrates **Dockerized Python backends**, balancing UI lightness with scientific library power.
+*   **Hybrid Orchestration:** Engineered a **Flutter-based desktop suite** that orchestrates **Dockerized Python backends**, enabling direct, bidirectional translation between CNL and the Neuromorphic Intermediate Representation (NIR) for hardware-agnostic deployments.
 
 ---
 
