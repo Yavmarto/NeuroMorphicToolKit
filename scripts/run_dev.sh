@@ -39,6 +39,7 @@ CONTROL_API_PID=""
 CONTROL_API_BIND_HOST="127.0.0.1"
 CONTROL_API_PUBLIC_HOST="127.0.0.1"
 SUITE_API_URL=""
+REMOTE_HOST_IP=""
 
 usage() {
   cat <<'EOF'
@@ -48,6 +49,7 @@ Options:
   --flutter-device <device>  Desktop Flutter target to run.
   --docker                   Use Docker for the backend services.
   --profile <name>           Docker profile to use (e.g., physics, hardware, full).
+  --remote-host <ip>         Use an external remote host for the backend.
 EOF
 }
 
@@ -227,6 +229,10 @@ while [ "$#" -gt 0 ]; do
       DOCKER_PROFILE="${2:-default}"
       shift 2
       ;;
+    --remote-host)
+      REMOTE_HOST_IP="$2"
+      shift 2
+      ;;
     --native-only)
       shift
       ;;
@@ -256,7 +262,13 @@ HOST_IP="$(resolve_host_ip)"
 if [[ "$TARGET_PLATFORM" == android* || "$TARGET_PLATFORM" == ios* || "$FLUTTER_DEVICE" == "ios" ]]; then
   CONTROL_API_BIND_HOST="0.0.0.0"
   CONTROL_API_PUBLIC_HOST="$HOST_IP"
-  SUITE_API_URL="http://$CONTROL_API_PUBLIC_HOST:9000"
+  if [[ -z "$REMOTE_HOST_IP" ]]; then
+    SUITE_API_URL="http://$CONTROL_API_PUBLIC_HOST:9000"
+  fi
+fi
+
+if [[ -n "$REMOTE_HOST_IP" ]]; then
+  SUITE_API_URL="http://$REMOTE_HOST_IP:9000"
 fi
 
 if [[ "$USE_DOCKER" == "true" ]]; then
@@ -279,15 +291,24 @@ if [[ "$USE_DOCKER" == "true" ]]; then
 fi
 
 CONTROL_API_URL=""
-# Only reserve suite api port if NOT using docker (docker handles its own ports)
-if [[ "$USE_DOCKER" == "false" ]]; then
+# Only reserve suite api port if NOT using docker and NOT using remote host
+if [[ "$USE_DOCKER" == "false" ]] && [[ -z "$REMOTE_HOST_IP" ]]; then
   reserve_suite_api_port
 fi
 
-start_control_api "$CONTROL_API_BIND_HOST" "$(if [[ "$USE_DOCKER" == "true" ]]; then echo "false"; else echo "true"; fi)"
+MANAGE_SUITE_API="true"
+if [[ "$USE_DOCKER" == "true" ]] || [[ -n "$REMOTE_HOST_IP" ]]; then
+  MANAGE_SUITE_API="false"
+fi
+
+start_control_api "$CONTROL_API_BIND_HOST" "$MANAGE_SUITE_API"
 CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
 
-wait_for_suite_api "$CONTROL_API_URL"
+if [[ -z "$REMOTE_HOST_IP" ]]; then
+  wait_for_suite_api "$CONTROL_API_URL"
+else
+  echo "==> Using remote backend at $REMOTE_HOST_IP; skipping local suite_api readiness check."
+fi
 
 echo "------------------------------------------------------------"
 echo "==> Starting NeuroToolkit launcher on $FLUTTER_DEVICE"

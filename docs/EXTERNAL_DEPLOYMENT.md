@@ -26,7 +26,27 @@ docker-ex:
 	@echo "==> Starting Docker containers on $(REMOTE_HOST)..."
 	ssh $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose up --build -d"
 	@echo "==> Backend deployed. Access it at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
+
+docker-ex-m: docker-ex
+	@./scripts/run_dev.sh --flutter-device macos --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-a: docker-ex
+	@$(MAKE) check-devices
+	@echo "==> Using Android device: $(ANDROID_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-i: docker-ex
+	@$(MAKE) check-devices
+	@echo "==> Using iOS device: $(IOS_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 ```
+
+**How to use:**
+- `make docker-ex REMOTE_HOST=user@192.168.1.50` -> Deploys the backend only.
+- `make docker-ex-m REMOTE_HOST=user@192.168.1.50` -> Deploys the backend, then launches the macOS Flutter desktop app pointing to it.
+- `make docker-ex-a REMOTE_HOST=user@192.168.1.50` -> Deploys the backend, then launches the Android Flutter app pointing to it.
+- `make docker-ex-i REMOTE_HOST=user@192.168.1.50` -> Deploys the backend, then launches the iOS Flutter app pointing to it.
+- `make docker-ex-down REMOTE_HOST=user@192.168.1.50` -> Stops and removes the Docker containers on the remote host.
 
 ### Prerequisites
 1. **SSH Access:** Ensure you have SSH key-based authentication set up to the target server.

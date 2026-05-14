@@ -64,7 +64,14 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   void initState() {
     super.initState();
     final settings = ref.read(settingsStateProvider);
-    _controlApiController.text = settings.launcherControlApiBaseUrl ?? '';
+    var saved = settings.launcherControlApiBaseUrl?.trim() ?? '';
+    if (saved.isNotEmpty) {
+      final uri = Uri.tryParse(saved);
+      if (uri != null && uri.host.isNotEmpty) {
+        saved = uri.host;
+      }
+    }
+    _controlApiController.text = saved;
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
   }
 
@@ -127,9 +134,19 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   }
 
   Future<void> _saveAndRetry() async {
+    var input = _controlApiController.text.trim();
+    if (input.isNotEmpty) {
+      if (!input.startsWith('http://') && !input.startsWith('https://')) {
+        input = 'http://$input';
+      }
+      final uri = Uri.tryParse(input);
+      if (uri != null && !uri.hasPort) {
+        input = '${uri.scheme}://${uri.host}:8090${uri.path}';
+      }
+    }
     await ref
         .read(settingsStateProvider)
-        .setLauncherControlApiBaseUrl(_controlApiController.text);
+        .setLauncherControlApiBaseUrl(input);
     if (!mounted) {
       return;
     }
@@ -280,13 +297,13 @@ class _BootstrapSetupView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           ShadInputFormField(
-            label: const Text('CONTROL API HOST'),
+            label: const Text('CONTROL API HOST IP'),
             controller: controller,
-            placeholder: const Text('http://10.0.2.2:8090'),
+            placeholder: const Text('192.168.2.192'),
           ),
           const SizedBox(height: 8),
           Text(
-            'Run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090` on the host machine, then retry. Use `http://10.0.2.2:8090` for an Android emulator or the host machine IP for a physical device.',
+            'Run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090` on the host machine, then retry. Use `10.0.2.2` for an Android emulator or the host machine IP for a physical device.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),

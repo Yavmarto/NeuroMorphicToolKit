@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware docker-all docker-ex
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -35,6 +35,10 @@ help:
 	@echo "  make docker-hardware          - Run backend + hardware workers in Docker and native launcher"
 	@echo "  make docker-all               - Run backend + all active profiles/containers in Docker and native launcher"
 	@echo "  make docker-ex REMOTE_HOST=user@ip - Deploy backend to a remote server using SSH and Docker"
+	@echo "  make docker-ex-m REMOTE_HOST=user@ip - Deploy to remote and run frontend on macOS"
+	@echo "  make docker-ex-a REMOTE_HOST=user@ip - Deploy to remote and run frontend on Android"
+	@echo "  make docker-ex-i REMOTE_HOST=user@ip - Deploy to remote and run frontend on iOS"
+	@echo "  make docker-ex-down REMOTE_HOST=user@ip - Stop and remove remote Docker containers"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
@@ -94,10 +98,31 @@ docker-ex:
 	fi
 	@echo "==> Syncing source code to $(REMOTE_HOST)..."
 	ssh $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
-	rsync -avz --exclude '.git' --exclude '.env' . $(REMOTE_HOST):$(DEPLOY_DIR)
+	rsync -avz --exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' --exclude '__pycache__' --exclude 'node_modules' . $(REMOTE_HOST):$(DEPLOY_DIR)
 	@echo "==> Starting Docker containers on $(REMOTE_HOST)..."
-	ssh $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose up --build -d"
+	ssh $(REMOTE_HOST) "cd $(DEPLOY_DIR) && COMPOSE_PROFILES=all docker compose up --build -d"
 	@echo "==> Backend deployed. Access it at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
+
+docker-ex-m: docker-ex
+	@./scripts/run_dev.sh --flutter-device macos --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-a: docker-ex
+	@$(MAKE) check-devices
+	@echo "==> Using Android device: $(ANDROID_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-i: docker-ex
+	@$(MAKE) check-devices
+	@echo "==> Using iOS device: $(IOS_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-down:
+	@if [ -z "$(REMOTE_HOST)" ]; then \
+		echo "Error: REMOTE_HOST is not set. Example: make docker-ex-down REMOTE_HOST=user@192.168.1.50"; \
+		exit 1; \
+	fi
+	@echo "==> Stopping Docker containers on $(REMOTE_HOST)..."
+	ssh $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose down"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload
