@@ -27,7 +27,8 @@ services:
 
   neurosense-hw-worker:
     build:
-      context: ./workers/neurosense_hw
+      context: .
+      dockerfile: workers/neurosense_hw/Dockerfile
     ports:
       - "${NEUROSENSE_PORT:-8004}:8004"
     environment:
@@ -47,7 +48,8 @@ services:
 
   neurobench-runner-worker:
     build:
-      context: ./workers/neurobench_runner
+      context: .
+      dockerfile: workers/neurobench_runner/Dockerfile
     ports:
       - "${NEUROBENCH_PORT:-8003}:8003"
     environment:
@@ -67,7 +69,8 @@ services:
 
   neurochip-hw-worker:
     build:
-      context: ./workers/neurochip_hw
+      context: .
+      dockerfile: workers/neurochip_hw/Dockerfile
     ports:
       - "${NEUROCHIP_PORT:-8002}:8002"
     environment:
@@ -109,7 +112,8 @@ services:
 
   neurocnl-physics-worker:
     build:
-      context: ./workers/neurocnl_physics
+      context: .
+      dockerfile: workers/neurocnl_physics/Dockerfile
     ports:
       - "${NEUROCNL_PHYSICS_PORT:-8006}:8006"
     environment:

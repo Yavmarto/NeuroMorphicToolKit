@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware docker-all docker-ex
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -34,6 +34,7 @@ help:
 	@echo "  make docker-physics           - Run backend + physics worker in Docker and native launcher"
 	@echo "  make docker-hardware          - Run backend + hardware workers in Docker and native launcher"
 	@echo "  make docker-all               - Run backend + all active profiles/containers in Docker and native launcher"
+	@echo "  make docker-ex REMOTE_HOST=user@ip - Deploy backend to a remote server using SSH and Docker"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
@@ -81,6 +82,22 @@ docker-hardware:
 
 docker-all:
 	@./scripts/run_dev.sh --docker --profile all --flutter-device "$(FLUTTER_DEVICE)"
+
+# Deployment variables (can be overridden on command line)
+REMOTE_HOST ?= 
+DEPLOY_DIR ?= ~/nmtk-deploy
+
+docker-ex:
+	@if [ -z "$(REMOTE_HOST)" ]; then \
+		echo "Error: REMOTE_HOST is not set. Example: make docker-ex REMOTE_HOST=user@192.168.1.50"; \
+		exit 1; \
+	fi
+	@echo "==> Syncing source code to $(REMOTE_HOST)..."
+	ssh $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
+	rsync -avz --exclude '.git' --exclude '.env' . $(REMOTE_HOST):$(DEPLOY_DIR)
+	@echo "==> Starting Docker containers on $(REMOTE_HOST)..."
+	ssh $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose up --build -d"
+	@echo "==> Backend deployed. Access it at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload

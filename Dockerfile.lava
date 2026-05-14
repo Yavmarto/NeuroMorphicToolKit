@@ -9,7 +9,8 @@ RUN cd /app/Neurochip && \
     poetry config virtualenvs.in-project true && \
     poetry install --no-root --without dev --extras lava
 
-COPY Neurochip/neurochip /app/Neurochip/neurochip
+COPY Neurochip/neurochip/__init__.py /app/Neurochip/neurochip/
+COPY Neurochip/neurochip/app /app/Neurochip/neurochip/app
 COPY workers/lava_backend /app/workers/lava_backend
 
 ENV PATH="/app/Neurochip/.venv/bin:$PATH"

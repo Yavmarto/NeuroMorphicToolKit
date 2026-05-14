@@ -258,6 +258,7 @@ class PynqDeployPayload {
     'max_supported_synapses',
     'dma_ip_name',
     'snn_ip_name',
+    'require_hardware',
     'register_map',
   };
 
@@ -271,6 +272,7 @@ class PynqDeployPayload {
   final int? maxSupportedSynapses;
   final String? dmaIpName;
   final String? snnIpName;
+  final bool requireHardware;
   final PynqRegisterMap registerMap;
   final Map<String, dynamic> additionalFields;
 
@@ -285,6 +287,7 @@ class PynqDeployPayload {
     this.maxSupportedSynapses,
     this.dmaIpName,
     this.snnIpName,
+    this.requireHardware = false,
     required this.registerMap,
     this.additionalFields = const <String, dynamic>{},
   });
@@ -309,6 +312,7 @@ class PynqDeployPayload {
       maxSupportedSynapses: json['max_supported_synapses'] as int?,
       dmaIpName: json['dma_ip_name'] as String?,
       snnIpName: json['snn_ip_name'] as String?,
+      requireHardware: json['require_hardware'] as bool? ?? false,
       registerMap: PynqRegisterMap.fromJson(
         json['register_map'] as Map<String, dynamic>? ??
             const <String, dynamic>{},
@@ -336,6 +340,7 @@ class PynqDeployPayload {
     }
     if (dmaIpName != null) payload['dma_ip_name'] = dmaIpName;
     if (snnIpName != null) payload['snn_ip_name'] = snnIpName;
+    if (requireHardware) payload['require_hardware'] = true;
     return payload;
   }
 }
