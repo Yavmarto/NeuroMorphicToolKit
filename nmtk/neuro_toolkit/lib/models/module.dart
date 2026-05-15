@@ -354,6 +354,7 @@ class Module {
   final bool startOnLaunch;
   final List<String> requiredImports;
   final List<String> optionalImports;
+  final List<String> installExtras;
   final String installStrategy;
   final String startStrategy;
   final AkidaRuntimeConfig? akidaRuntime;
@@ -393,6 +394,7 @@ class Module {
     this.startOnLaunch = false,
     this.requiredImports = const [],
     this.optionalImports = const [],
+    this.installExtras = const [],
     this.installStrategy = 'pip',
     this.startStrategy = 'none',
     this.akidaRuntime,
@@ -441,6 +443,8 @@ class Module {
       optionalImports:
           (json['optionalImports'] as List<dynamic>?)?.cast<String>() ??
               const [],
+      installExtras:
+          (json['installExtras'] as List<dynamic>?)?.cast<String>() ?? const [],
       installStrategy: json['installStrategy'] as String? ?? 'pip',
       startStrategy: json['startStrategy'] as String? ?? 'none',
       akidaRuntime: json['akidaRuntime'] is Map<String, dynamic>
@@ -502,6 +506,7 @@ class Module {
     bool? startOnLaunch,
     List<String>? requiredImports,
     List<String>? optionalImports,
+    List<String>? installExtras,
     String? installStrategy,
     String? startStrategy,
     Object? akidaRuntime = const Object(),
@@ -541,6 +546,7 @@ class Module {
       startOnLaunch: startOnLaunch ?? this.startOnLaunch,
       requiredImports: requiredImports ?? this.requiredImports,
       optionalImports: optionalImports ?? this.optionalImports,
+      installExtras: installExtras ?? this.installExtras,
       installStrategy: installStrategy ?? this.installStrategy,
       startStrategy: startStrategy ?? this.startStrategy,
       akidaRuntime: akidaRuntime is AkidaRuntimeConfig?
@@ -608,6 +614,7 @@ class Module {
         'startOnLaunch': startOnLaunch,
         'requiredImports': requiredImports,
         'optionalImports': optionalImports,
+        'installExtras': installExtras,
         'installStrategy': installStrategy,
         'startStrategy': startStrategy,
         'akidaRuntime': akidaRuntime?.toJson(),

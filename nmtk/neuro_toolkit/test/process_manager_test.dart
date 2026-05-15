@@ -195,6 +195,35 @@ void main() {
     tempDir.deleteSync(recursive: true);
   });
 
+  test('installModule includes configured pip extras', () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('nmtk_test_install_extras');
+    final installDir = p.join(tempDir.path, 'src');
+    Directory(installDir).createSync(recursive: true);
+
+    final module = Module(
+      id: 'test_module_extras',
+      name: 'Test Module',
+      description: 'Description',
+      directory: tempDir.path,
+      sourcePath: 'src',
+      installExtras: const ['training', 'lava'],
+    );
+
+    await processManager.installModule(module);
+
+    expect(
+      mockRunner.calls.any(
+        (c) =>
+            c.arguments.contains('install') &&
+            c.arguments.contains('.[training,lava]'),
+      ),
+      isTrue,
+    );
+
+    tempDir.deleteSync(recursive: true);
+  });
+
   test('installModule reuses an existing .venv without recreating venv',
       () async {
     final tempDir = Directory.systemTemp.createTempSync(

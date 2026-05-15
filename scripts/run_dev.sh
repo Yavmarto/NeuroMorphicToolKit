@@ -31,6 +31,11 @@ if ! PYTHON3="$(find_python3)"; then
   exit 1
 fi
 
+if ! command -v flutter >/dev/null 2>&1; then
+  echo "ERROR: flutter command not found. Please install the Flutter SDK and ensure it is in your PATH." >&2
+  exit 1
+fi
+
 FLUTTER_DEVICE=""
 USE_DOCKER="false"
 DOCKER_PROFILE="default"
@@ -67,7 +72,7 @@ is_port_in_use() {
 
 
 resolve_host_ip() {
-  python3 - <<'PY'
+  "$PYTHON3" - <<'PY'
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 try:
@@ -101,7 +106,7 @@ for device in devices:
 else:
     print("")
 '
-  flutter devices --machine 2>/dev/null | python3 -c "$py_script" "$target_id"
+  flutter devices --machine 2>/dev/null | "$PYTHON3" -c "$py_script" "$target_id" || echo ""
 }
 
 
@@ -284,7 +289,11 @@ if [[ "$USE_DOCKER" == "true" ]]; then
     docker compose up --build -d
   elif [[ "$DOCKER_PROFILE" == "all" ]]; then
     ALL_PROFILES=$(docker compose config --profiles | tr '\n' ',' | sed 's/,$//')
-    COMPOSE_PROFILES="$ALL_PROFILES" docker compose up --build -d
+    NEUROCNL_LAVA_WORKER_URL="${NEUROCNL_LAVA_WORKER_URL:-http://lava-backend:8012}" \
+      COMPOSE_PROFILES="$ALL_PROFILES" docker compose up --build -d
+  elif [[ "$DOCKER_PROFILE" == "hardware" ]]; then
+    NEUROCNL_LAVA_WORKER_URL="${NEUROCNL_LAVA_WORKER_URL:-http://lava-backend:8012}" \
+      docker compose --profile "$DOCKER_PROFILE" up --build -d
   else
     docker compose --profile "$DOCKER_PROFILE" up --build -d
   fi

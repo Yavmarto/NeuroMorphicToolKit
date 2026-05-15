@@ -1703,6 +1703,10 @@ def _module_optional_imports(module: dict[str, Any]) -> list[str]:
     return _normalized_import_list(module.get("optionalImports"))
 
 
+def _module_install_extras(module: dict[str, Any]) -> list[str]:
+    return _normalized_import_list(module.get("installExtras"))
+
+
 def _candidate_environment_files(module: dict[str, Any]) -> list[Path]:
     module_root = _module_root(module)
     install_dir = _module_install_dir(module)
@@ -2370,6 +2374,7 @@ class LauncherControlState:
             module["healthStatus"] = saved.get("healthStatus")
             module["requiredImports"] = _module_required_imports(module)
             module["optionalImports"] = _module_optional_imports(module)
+            module["installExtras"] = _module_install_extras(module)
             module["installStrategy"] = _module_install_strategy(module)
             module["startStrategy"] = _module_start_strategy(module)
             module["akidaRuntime"] = _normalize_akida_runtime_config(
@@ -4848,6 +4853,7 @@ class LauncherControlState:
             "installDir": str(_module_install_dir(module)),
             "runDir": str(_module_run_dir(module)),
             "installStrategy": _module_install_strategy(module),
+            "installExtras": _module_install_extras(module),
             "startStrategy": _module_start_strategy(module),
             "uvicornTarget": str(module.get("uvicornTarget", "")),
             "files": {
@@ -5141,8 +5147,12 @@ class LauncherControlState:
                 module_id=module_id,
             )
         else:
+            install_extras = _module_install_extras(module)
+            install_target = (
+                f".[{','.join(install_extras)}]" if install_extras else "."
+            )
             self._run_command(
-                [str(venv_python), "-m", "pip", "install", "."],
+                [str(venv_python), "-m", "pip", "install", install_target],
                 cwd=install_dir,
                 module_id=module_id,
             )
@@ -5783,6 +5793,7 @@ class LauncherControlState:
                 "uvicornTarget": module.get("uvicornTarget", "app.main:app"),
                 "requiredImports": list(module.get("requiredImports", [])),
                 "optionalImports": list(module.get("optionalImports", [])),
+                "installExtras": list(module.get("installExtras", [])),
                 "installStrategy": module.get("installStrategy", "pip"),
                 "startStrategy": module.get("startStrategy", "uvicorn"),
                 "akidaRuntimeState": _normalize_akida_runtime_state(

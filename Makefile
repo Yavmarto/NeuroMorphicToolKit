@@ -90,6 +90,7 @@ docker-all:
 # Deployment variables (can be overridden on command line)
 REMOTE_HOST ?= 
 DEPLOY_DIR ?= ~/nmtk-deploy
+DOCKER_EX_SERVICES ?= suite_api lava-backend
 
 docker-ex:
 	@if [ -z "$(REMOTE_HOST)" ]; then \
@@ -100,7 +101,7 @@ docker-ex:
 	ssh $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
 	rsync -avz --exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' --exclude '__pycache__' --exclude 'node_modules' . $(REMOTE_HOST):$(DEPLOY_DIR)
 	@echo "==> Starting Docker containers on $(REMOTE_HOST)..."
-	ssh $(REMOTE_HOST) "cd $(DEPLOY_DIR) && COMPOSE_PROFILES=all docker compose up --build -d"
+	ssh $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose up --build --wait -d lava-backend && NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012 docker compose up --build -d suite_api"
 	@echo "==> Backend deployed. Access it at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-m: docker-ex

@@ -264,7 +264,7 @@ Unsupported semantic subcases remain fail-closed or explicitly metadata-only, an
 
 ### T1-5: Shared `CNL -> NIR -> Simulator` Contract
 
-**Status**: Queued.
+**Status**: Complete on 2026-05-15.
 **Why now**: Lava and snnTorch simulator work needs one product contract so the Studio does not grow two incompatible runtime paths. This task is the prerequisite for simulator-specific implementation.
 
 **Primary plan doc**: `docs/current tasks/2026-05-14-cnl-nir-simulator-contract-plan.md`
@@ -286,7 +286,7 @@ Unsupported semantic subcases remain fail-closed or explicitly metadata-only, an
 
 ### T1-6: Lava Simulator E2E
 
-**Status**: Queued after T1-5.
+**Status**: Complete on 2026-05-15.
 **Why now**: Lava already has NeuroCNL conversion and NeuroChip runtime pieces, but it is not yet a first-class simulator path from CNL Studio.
 
 **Primary plan doc**: `docs/current tasks/2026-05-14-lava-simulator-e2e-plan.md`
@@ -308,7 +308,7 @@ Unsupported semantic subcases remain fail-closed or explicitly metadata-only, an
 
 ### T1-7: snnTorch Simulator E2E
 
-**Status**: Queued after T1-5.
+**Status**: Complete on 2026-05-15.
 **Why now**: snnTorch has a training adapter scaffold, but the user-facing need is fixed-weight simulation of generated NIR before any training workflow.
 
 **Primary plan doc**: `docs/current tasks/2026-05-14-snntorch-simulator-e2e-plan.md`
@@ -387,9 +387,9 @@ Unsupported semantic subcases remain fail-closed or explicitly metadata-only, an
 | 1    | T1-3  | NIR to CNL translation bridge                                                    | Complete | —               |
 | 1    | T1-4  | Public `compile_to_nir()` surface                                              | Complete | —               |
 | 1    | T1-x  | API provenance and production-safe defaults                                      | Queued   | T0-CR            |
-| 1    | T1-5  | Shared `CNL -> NIR -> Simulator` contract                                      | Queued   | T1-4             |
-| 1    | T1-6  | Lava simulator E2E                                                               | Queued   | T1-6             |
-| 1    | T1-7  | snnTorch simulator E2E                                                           | Queued   | T1-6             |
+| 1    | T1-5  | Shared `CNL -> NIR -> Simulator` contract                                      | Complete | 2026-05-15       |
+| 1    | T1-6  | Lava simulator E2E                                                               | Complete | 2026-05-15       |
+| 1    | T1-7  | snnTorch simulator E2E                                                           | Complete | 2026-05-15       |
 | 2    | T2-x  | Quantization, hybrid tags, partitioning                                          | Later    | Tier 1 stability |
 
 ---

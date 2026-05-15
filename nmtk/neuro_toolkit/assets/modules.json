@@ -10,6 +10,7 @@
     "sourcePath": ".",
     "runPath": ".",
     "installStrategy": "pip",
+    "installExtras": ["training", "lava"],
     "startStrategy": "none",
     "uvicornTarget": "",
     "localDeps": ["Neuro-Dream-Hand/"],

@@ -13,6 +13,7 @@ services:
       - NEUROBENCH_RUNNER_URL=http://neurobench-runner-worker:8003
       - NEUROCHIP_HW_WORKER_URL=http://neurochip-hw-worker:8002
       - NEUROCNL_PHYSICS_WORKER_URL=http://neurocnl-physics-worker:8006
+      - NEUROCNL_LAVA_WORKER_URL=${NEUROCNL_LAVA_WORKER_URL:-}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/suite/health')"]
       interval: 10s
@@ -85,7 +86,8 @@ services:
       retries: 5
     restart: unless-stopped
     depends_on:
-      - lava-backend
+      lava-backend:
+        condition: service_healthy
     networks:
       - backend-net
     profiles:

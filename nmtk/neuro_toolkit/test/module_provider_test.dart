@@ -75,6 +75,7 @@ void main() {
       'name': 'Dummy',
       'description': 'D1',
       'installPath': 'dummy',
+      'installExtras': <String>['training', 'lava'],
       'deployment': <String, dynamic>{
         'supportedModes': <String>['standalone', 'docker', 'kubernetes'],
         'healthPath': '/health',
@@ -86,12 +87,14 @@ void main() {
     });
 
     expect(module.deployment, isNotNull);
+    expect(module.installExtras, <String>['training', 'lava']);
     expect(module.deployment!.supportedModes, contains('docker'));
     expect(module.deployment!.requiredPorts, contains(9000));
     final deploymentJson =
         module.toJson()['deployment'] as Map<String, dynamic>;
     expect(deploymentJson['defaultContainerImage'],
         'ghcr.io/example/dummy:latest');
+    expect(module.toJson()['installExtras'], <String>['training', 'lava']);
   });
 
   test('ModuleProvider correctly filters installed and available modules', () {

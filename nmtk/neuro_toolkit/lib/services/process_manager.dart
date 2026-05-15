@@ -587,10 +587,15 @@ class ProcessManager {
         }
       }
 
-      debugPrint('[${module.id}] Running: $pipPath install . (in $installDir)');
+      final installTarget = module.installExtras.isEmpty
+          ? '.'
+          : '.[${module.installExtras.join(',')}]';
+      debugPrint(
+        '[${module.id}] Running: $pipPath install $installTarget (in $installDir)',
+      );
       final pipResult = await _processRunner.run(
         pipPath,
-        ['install', '.'],
+        ['install', installTarget],
         workingDirectory: installDir,
       );
 
