@@ -7,16 +7,20 @@ FROM python:3.11-slim
 # via sys.path insertions in each domain's __init__.py.
 WORKDIR /repo
 
-# ── neurocnl: install package; backend/ and neurosim/ stay for sys.path access ──
-COPY neurocnl/ neurocnl/
-# Install torch CPU-only first so pip doesn't fetch the 2 GB CUDA wheel, which
-# segfaults in memory-constrained Docker builds.  neurocnl[training] sees torch
-# already satisfied and skips it.
+# ── neurocnl: heavy deps BEFORE source copy ───────────────────────────────────
+# Installing torch and snntorch before any COPY keeps this layer cache-stable
+# across all source edits. Previously COPY neurocnl/ appeared first, so any
+# .py change busted the cache and forced a full ~10-minute reinstall every
+# deploy. Now that only happens when you deliberately change torch/snntorch
+# versions in this RUN line.
 RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
     torch \
- && pip install --no-cache-dir snntorch \
- && pip install --no-cache-dir "neurocnl/[training]"
+ && pip install --no-cache-dir snntorch
+
+# Copy source and install the package — torch already present so pip skips it
+COPY neurocnl/ neurocnl/
+RUN pip install --no-cache-dir "neurocnl/[training]"
 
 # ── Modules installed as top-level packages ───────────────────────────────────
 COPY Neurohub/ Neurohub/
@@ -27,7 +31,7 @@ RUN pip install --no-cache-dir Neurosense/
 
 COPY Neurochip/ Neurochip/
 ENV PYTHONPATH="/repo/neurocnl:/repo/Neurochip"
-RUN pip install --no-cache-dir jinja2
+# jinja2 is a dep of both Neurochip and suite_api — installed by those, not needed here
 
 # ── Neurobench: no pyproject.toml — directory only, accessed via sys.path ─────
 COPY Neurobench/neurobench/ Neurobench/neurobench/
@@ -36,10 +40,15 @@ COPY Neurobench/neurobench/ Neurobench/neurobench/
 COPY suite_api/ suite_api/
 RUN pip install --no-cache-dir suite_api/
 
-RUN addgroup --system app && adduser --system --ingroup app app
-RUN mkdir -p /home/app/.cache && chown -R app:app /repo /home/app
+RUN addgroup --system app && adduser --system --ingroup app app \
+ && mkdir -p /home/app/.cache /home/app/data && chown -R app:app /home/app
+# /repo is intentionally NOT chowned — all COPY'd and pip-installed files are
+# 644/755 (world-readable) so the app user can read them without owning them.
+# Chowning /repo recursively was walking thousands of inodes for no benefit.
 ENV HOME=/home/app
 ENV XDG_CACHE_HOME=/home/app/.cache
+ENV NEUROCNL_DATA_DIR=/home/app/data
+ENV NEUROHUB_DB_URL=sqlite:////home/app/data/neurohub.db
 USER app
 EXPOSE 9000
 CMD ["uvicorn", "suite_api.main:app", "--host", "0.0.0.0", "--port", "9000"]

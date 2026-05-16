@@ -4324,6 +4324,55 @@ class LauncherControlServiceTest(unittest.TestCase):
             "ready",
         )
 
+    def test_all_logs_endpoint_returns_aggregated_lines(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+
+        server.state._append_log("dummy", "stdout line", emit_terminal=False)
+        server.state._append_log("dummy", "stderr line", stderr=True, emit_terminal=False)
+        server.state._suite_api_logs.append("suite stdout")
+        server.state._suite_api_logs.append("[stderr] suite stderr")
+
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{server.server_address[1]}/api/launcher/logs"
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        lines = payload["lines"]
+        self.assertTrue(any("[suite_api] suite stdout" in line for line in lines))
+        self.assertTrue(any("[suite_api] [stderr] suite stderr" in line for line in lines))
+        self.assertTrue(any("[dummy] stdout line" in line for line in lines))
+        self.assertTrue(any("[dummy] [stderr] stderr line" in line for line in lines))
+
+    def test_all_logs_filter_error_only_returns_stderr_lines(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+
+        server.state._append_log("dummy", "stdout line", emit_terminal=False)
+        server.state._append_log("dummy", "stderr line", stderr=True, emit_terminal=False)
+        server.state._suite_api_logs.append("suite stdout")
+        server.state._suite_api_logs.append("[stderr] suite stderr")
+
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{server.server_address[1]}/api/launcher/logs?filter=error"
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        lines = payload["lines"]
+        self.assertTrue(any("[suite_api] [stderr] suite stderr" in line for line in lines))
+        self.assertTrue(any("[dummy] [stderr] stderr line" in line for line in lines))
+        self.assertFalse(any("stdout line" in line for line in lines))
+
 
 if __name__ == "__main__":
     unittest.main()

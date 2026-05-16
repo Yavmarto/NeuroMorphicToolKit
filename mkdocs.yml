@@ -1,0 +1,108 @@
+site_name: NeuroMorphicToolKit
+site_description: A unified desktop suite for neuromorphic computing — SNN authoring, simulation, hardware deployment, benchmarking, and community sharing.
+site_url: https://completed-spoon-6.github.io/NeuroMorphicToolKit/
+repo_url: https://github.com/Completed-Spoon-6/NeuroMorphicToolKit
+repo_name: NeuroMorphicToolKit
+edit_uri: edit/dev/docs/
+
+theme:
+  name: material
+  logo: assets/logo.png
+  favicon: assets/favicon.png
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+
+plugins:
+  - search
+  - awesome-pages
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Core Concepts: getting-started/concepts.md
+  - Modules:
+    - NeuroStudio: modules/neurostudio.md
+    - Neurosense: modules/neurosense.md
+    - Neurochip: modules/neurochip.md
+    - Neurobench: modules/neurobench.md
+    - Neurohub: modules/neurohub.md
+    - Neuro-Dream-Hand: modules/neuro-dream-hand.md
+  - Workflows:
+    - Design to Simulation: workflows/design-to-simulation.md
+    - Simulation to Hardware: workflows/simulation-to-hardware.md
+    - Benchmark & Publish: workflows/benchmark-and-publish.md
+  - API Reference:
+    - Overview: api-reference/index.md
+    - NeuroStudio: api-reference/neurocnl.md
+    - Neurosense: api-reference/neurosense.md
+    - Neurochip: api-reference/neurochip.md
+    - Neurobench: api-reference/neurobench.md
+    - Neurohub: api-reference/neurohub.md
+    - WebSocket Streams: api-reference/websockets.md
+  - Hardware:
+    - Support Matrix: hardware/support-matrix.md
+    - PYNQ-Z2: hardware/pynq-z2.md
+    - Akida: hardware/akida.md
+    - Intel Loihi: hardware/loihi.md
+    - Teensy Edge: hardware/teensy-edge.md
+  - Self-Hosting:
+    - Docker Compose: self-hosting/docker-compose.md
+    - Environment Variables: self-hosting/environment-variables.md
+    - Monitoring Stack: self-hosting/monitoring.md
+    - Security: self-hosting/security.md
+  - Contributing:
+    - Development Setup: contributing/development-setup.md
+    - Adding a Module: contributing/adding-a-module.md
+    - Testing: contributing/testing.md
+    - ADR Process: contributing/adr-process.md
+  - Troubleshooting: troubleshooting.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Completed-Spoon-6/NeuroMorphicToolKit

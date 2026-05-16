@@ -1,7 +1,11 @@
 """Centralised configuration for suite_api.
 All values are read from environment variables with safe defaults.
 """
+import os
+
 from pydantic_settings import BaseSettings
+
+_data_dir = os.environ.get("NEUROCNL_DATA_DIR", ".")
 
 
 class Settings(BaseSettings):
@@ -16,8 +20,9 @@ class Settings(BaseSettings):
     neurosense_url: str = "http://localhost:8004"
     neurohub_url: str = "http://localhost:8005"
 
-    # Neurohub database — default points to the Neurohub submodule's SQLite DB
-    neurohub_db_url: str = "sqlite:///./Neurohub/neurohub.db"
+    # Neurohub database — writable path resolved from NEUROCNL_DATA_DIR (Docker)
+    # or cwd (local dev)
+    neurohub_db_url: str = f"sqlite:///{_data_dir}/neurohub.db"
 
     # Phase 4: optional worker URLs (started only with the matching Docker profile)
     neurosense_hw_worker_url: str = "http://localhost:8004"   # profile: hardware

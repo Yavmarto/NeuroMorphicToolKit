@@ -16,6 +16,7 @@ services:
       - NEUROCNL_LAVA_WORKER_URL=${NEUROCNL_LAVA_WORKER_URL:-}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/suite/health')"]
+      start_period: 90s
       interval: 10s
       timeout: 5s
       retries: 5
@@ -73,7 +74,7 @@ services:
       context: .
       dockerfile: workers/neurochip_hw/Dockerfile
     ports:
-      - "${NEUROCHIP_PORT:-8002}:8002"
+      - "${NEUROCHIP_PORT:-18002}:8002"
     environment:
       - PYTHONUNBUFFERED=1
       - NEUROCHIP_LAVA_BACKEND_URL=http://lava-backend:8012

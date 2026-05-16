@@ -41,6 +41,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.watch(settingsStateProvider);
     final moduleProvider = ref.watch(moduleStateProvider);
     final analytics = ref.watch(analyticsServiceProvider);
+    final controlApi = ref.watch(controlApiServiceProvider);
     final theme = Theme.of(context);
 
     return ListView(
@@ -237,6 +238,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         const SizedBox(height: 16),
 
+        // ── Backend Logs ─────────────────────────────────────────────────────
+        NmtkSurfaceCard(
+          title: 'Backend Logs',
+          subtitle: 'View everything happening across launcher backends.',
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              NmtkPrimaryButton(
+                onPressed: () async {
+                  final logs = await controlApi.fetchBackendLogs();
+                  if (!context.mounted) return;
+                  _showBackendLogDialog(context, logs);
+                },
+                icon: Icons.terminal,
+                label: 'View Backend Logs',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
         // ── Modules Configuration ────────────────────────────────────────────
         NmtkSurfaceCard(
           title: 'Modules Configuration',
@@ -272,6 +295,78 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showBackendLogDialog(BuildContext context, List<String> logs) {
+    showShadDialog<void>(
+      context: context,
+      builder: (dialogContext) => _BackendLogDialog(logs: logs),
+    );
+  }
+}
+
+class _BackendLogDialog extends StatefulWidget {
+  final List<String> logs;
+
+  const _BackendLogDialog({required this.logs});
+
+  @override
+  State<_BackendLogDialog> createState() => _BackendLogDialogState();
+}
+
+class _BackendLogDialogState extends State<_BackendLogDialog> {
+  bool _errorOnly = false;
+
+  List<String> get _filteredLogs {
+    if (!_errorOnly) return widget.logs;
+    return widget.logs.where((line) => line.contains('[stderr]')).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _filteredLogs;
+    return ShadDialog(
+      title: const Text('Backend Logs'),
+      actions: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Error Only',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(width: 8),
+            ShadSwitch(
+              value: _errorOnly,
+              onChanged: (value) => setState(() => _errorOnly = value),
+            ),
+            const SizedBox(width: 16),
+            ShadButton.ghost(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      ],
+      child: SizedBox(
+        width: double.maxFinite,
+        height: 400,
+        child: filtered.isEmpty
+            ? const Center(child: Text('No logs to display.'))
+            : ListView.builder(
+                itemCount: filtered.length,
+                itemBuilder: (context, index) {
+                  return Text(
+                    filtered[index],
+                    style: const TextStyle(
+                      fontFamily: 'JetBrainsMono',
+                      fontSize: 12,
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }

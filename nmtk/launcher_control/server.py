@@ -4807,6 +4807,20 @@ class LauncherControlState:
             lines = managed.logs if managed is not None else self._logs[module_id]
             return {"moduleId": module_id, "lines": list(lines)}
 
+    def get_all_logs(self, *, filter_error: bool = False) -> dict[str, Any]:
+        with self._lock:
+            lines: list[str] = []
+            # Suite API logs first
+            for line in self._suite_api_logs:
+                if not filter_error or line.startswith("[stderr] "):
+                    lines.append(f"[suite_api] {line}")
+            # Module logs alphabetically by module ID
+            for module_id in sorted(self._logs.keys()):
+                for line in self._logs[module_id]:
+                    if not filter_error or line.startswith("[stderr] "):
+                        lines.append(f"[{module_id}] {line}")
+            return {"lines": lines}
+
     def _task_running(self, module_id: str) -> bool:
         task = self._tasks.get(module_id)
         return task is not None and task.is_alive()
@@ -6203,6 +6217,14 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                         self.server.state.delete_workspace_session(module_id),
                     )
                     return
+
+            if method == "GET" and path == "/api/launcher/logs":
+                filter_error = query.get("filter", [""])[0].lower() == "error"
+                self._send_json(
+                    HTTPStatus.OK,
+                    self.server.state.get_all_logs(filter_error=filter_error),
+                )
+                return
 
             if len(segments) >= 4 and segments[:3] == ["api", "launcher", "modules"]:
                 module_id = segments[3]

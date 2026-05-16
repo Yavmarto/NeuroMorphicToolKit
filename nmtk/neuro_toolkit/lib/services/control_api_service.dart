@@ -619,4 +619,19 @@ class ControlApiService {
     await _ensureSuccess(response);
     return Module.fromJson(await _readJsonResponse(response));
   }
+
+  Future<List<String>> fetchBackendLogs({bool errorOnly = false}) async {
+    final response = await _client.get(
+      _uri('/api/launcher/logs').replace(
+        queryParameters: errorOnly ? const <String, String>{'filter': 'error'} : null,
+      ),
+    );
+    await _ensureSuccess(response);
+    final decoded = await _readJsonResponse(response);
+    final lines = decoded['lines'];
+    if (lines is List) {
+      return lines.cast<String>();
+    }
+    throw Exception('Unexpected logs payload: ${response.body}');
+  }
 }

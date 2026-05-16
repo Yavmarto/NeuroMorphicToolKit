@@ -91,7 +91,12 @@ class AnalyticsService {
     if (_logFile == null || !await _logFile!.exists()) {
       return 'No logs found.';
     }
-    return await _logFile!.readAsString();
+    try {
+      return await _logFile!.readAsString();
+    } catch (e) {
+      debugPrint('Failed to read local crash log: $e');
+      return 'Failed to read logs: $e';
+    }
   }
 
   Future<void> clearLocalLogs() async {
