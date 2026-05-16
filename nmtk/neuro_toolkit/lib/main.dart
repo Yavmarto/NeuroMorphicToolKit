@@ -162,7 +162,10 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
         overrides: [
           launcherBootstrapStateProvider.overrideWithValue(bootstrap),
           controlApiServiceProvider.overrideWithValue(
-            ControlApiService(baseUri: bootstrap.baseUri),
+            ControlApiService(
+              baseUri: bootstrap.baseUri,
+              analyticsService: ref.read(analyticsServiceProvider),
+            ),
           ),
         ],
         child: const NeuroToolkitApp(),

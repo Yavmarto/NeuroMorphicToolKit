@@ -20,6 +20,7 @@ class NmtkBackendSupportBanner extends StatelessWidget {
     this.title,
     this.compact = false,
     this.details,
+    this.onDismiss,
   });
 
   /// The verdict string. Controls the banner tone.
@@ -41,6 +42,9 @@ class NmtkBackendSupportBanner extends StatelessWidget {
   /// Optional module-specific content rendered below the warnings.
   /// Ignored when [compact] is true.
   final Widget? details;
+
+  /// If provided, an X button is shown and this callback is invoked on tap.
+  final VoidCallback? onDismiss;
 
   Color _background(ColorScheme cs) => switch (verdict) {
     'faithful' => cs.primaryContainer,
@@ -73,30 +77,46 @@ class NmtkBackendSupportBanner extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title ?? 'Backend Support',
-                  style: theme.textTheme.titleSmall!.copyWith(
-                    color: fg,
-                    fontWeight: FontWeight.w700,
+                Expanded(
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        title ?? 'Backend Support',
+                        style: theme.textTheme.titleSmall!.copyWith(
+                          color: fg,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Chip(
+                        label: Text(
+                          verdict.toUpperCase(),
+                          style: theme.textTheme.labelSmall,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      Text(
+                        backend,
+                        style: theme.textTheme.labelMedium!.copyWith(color: fg),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Chip(
-                  label: Text(
-                    verdict.toUpperCase(),
-                    style: theme.textTheme.labelSmall,
+                if (onDismiss != null)
+                  IconButton(
+                    icon: Icon(Icons.close, size: 16, color: fg),
+                    tooltip: 'Dismiss',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: onDismiss,
                   ),
-                  visualDensity: VisualDensity.compact,
-                ),
-                Text(
-                  backend,
-                  style: theme.textTheme.labelMedium!.copyWith(color: fg),
-                ),
               ],
             ),
             if (warnings.isNotEmpty) ...[

@@ -2,6 +2,8 @@
 
 Start with: uvicorn suite_api.main:app --port 9000 --reload
 """
+import logging
+import traceback
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
@@ -9,7 +11,8 @@ from suite_api.bootstrap import validate_runtime_dependencies
 
 validate_runtime_dependencies()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from suite_api.config import settings
 from suite_api.middleware import attach_middleware
 from suite_api.routers import health
@@ -37,6 +40,16 @@ app = FastAPI(
 )
 
 attach_middleware(app)
+
+_logger = logging.getLogger("suite_api")
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all handler: log full traceback and return structured JSON 500."""
+    _logger.error("Unhandled exception: %s\n%s", str(exc), traceback.format_exc())
+    return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
+
 
 app.include_router(health.router, prefix="/api/suite", tags=["health"])
 

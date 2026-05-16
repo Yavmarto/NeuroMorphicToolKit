@@ -6,6 +6,7 @@ import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
+import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 class LauncherControlSettings {
@@ -68,8 +69,13 @@ class LauncherControlSettings {
 }
 
 class ControlApiService {
-  ControlApiService({http.Client? client, Uri? baseUri})
-      : _client = client ?? http.Client(),
+  ControlApiService({
+    http.Client? client,
+    Uri? baseUri,
+    AnalyticsService? analyticsService,
+  }) : _client = analyticsService == null
+            ? (client ?? http.Client())
+            : _LoggedHttpClient(client ?? http.Client(), analyticsService),
         _baseUri = baseUri ?? resolveBaseUri();
 
   final http.Client _client;
@@ -633,5 +639,70 @@ class ControlApiService {
       return lines.cast<String>();
     }
     throw Exception('Unexpected logs payload: ${response.body}');
+  }
+}
+
+class _LoggedHttpClient extends http.BaseClient {
+  _LoggedHttpClient(this._inner, this._analytics);
+
+  final http.Client _inner;
+  final AnalyticsService _analytics;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final stopwatch = Stopwatch()..start();
+    final requestBody = _requestBody(request);
+    try {
+      final response = await _inner.send(request);
+      final bytes = await response.stream.toBytes();
+      stopwatch.stop();
+      final responseBody = utf8.decode(bytes, allowMalformed: true);
+      await _analytics.recordBackendActivity(
+        method: request.method,
+        uri: request.url,
+        statusCode: response.statusCode,
+        requestBody: requestBody,
+        responseBody: responseBody,
+        duration: stopwatch.elapsed,
+      );
+      return http.StreamedResponse(
+        http.ByteStream(Stream<List<int>>.value(bytes)),
+        response.statusCode,
+        contentLength: bytes.length,
+        request: response.request,
+        headers: response.headers,
+        isRedirect: response.isRedirect,
+        persistentConnection: response.persistentConnection,
+        reasonPhrase: response.reasonPhrase,
+      );
+    } catch (error) {
+      stopwatch.stop();
+      await _analytics.recordBackendActivity(
+        method: request.method,
+        uri: request.url,
+        requestBody: requestBody,
+        error: error,
+        duration: stopwatch.elapsed,
+      );
+      rethrow;
+    }
+  }
+
+  @override
+  void close() {
+    _inner.close();
+  }
+
+  String? _requestBody(http.BaseRequest request) {
+    if (request is http.Request) {
+      return request.body;
+    }
+    if (request is http.MultipartRequest) {
+      return jsonEncode({
+        'fields': request.fields,
+        'files': request.files.map((file) => file.filename).toList(),
+      });
+    }
+    return null;
   }
 }

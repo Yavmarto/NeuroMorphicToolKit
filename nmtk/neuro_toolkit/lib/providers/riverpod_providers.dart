@@ -29,7 +29,10 @@ final launcherBootstrapStateProvider = Provider<LauncherBootstrapState>((ref) {
 
 final controlApiServiceProvider = Provider<ControlApiService>((ref) {
   final bootstrapState = ref.watch(launcherBootstrapStateProvider);
-  return ControlApiService(baseUri: bootstrapState.baseUri);
+  return ControlApiService(
+    baseUri: bootstrapState.baseUri,
+    analyticsService: ref.watch(analyticsServiceProvider),
+  );
 });
 
 final appStateProvider = ChangeNotifierProvider<AppProvider>((ref) {

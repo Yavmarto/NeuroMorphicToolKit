@@ -6,7 +6,7 @@
 > **Update style**: keep the work-done note very short and concise.
 > **Latest concise update**: T1-1 NIR semantic coverage is now verified complete for the supported approximate/metadata subset.
 
-> **Updated**: 2026-05-14
+> **Updated**: 2026-05-16
 > **Scope decision**: Active product support is centered on authoring, validating, exporting, and simulator-running `CNL -> IR -> NIR`, with two simulator targets in scope: Lava simulator and snnTorch simulator. Hardware deployment remains out of scope except for NeuroChip backend truthfulness needed by the CNL Studio deployment flow.
 >
 > **Sources merged**:
@@ -340,6 +340,51 @@ Unsupported semantic subcases remain fail-closed or explicitly metadata-only, an
 
 ---
 
+---
+
+### T0-NC-VERIFY: Confirm T0-NC Exit Criteria Are Actually Green
+
+**Status**: Active.
+**Why now**: T0-NC was marked complete on 2026-05-14 — the same day as the code review that identified the issues. Before building new Neurochip work on top, the exit criteria must be confirmed to hold in the current repo state.
+
+**Primary task doc**: `docs/current tasks/2026-05-16-neurochip-next-steps.md`
+
+Exit criteria to verify:
+
+1. `cd Neurochip && poetry run python -c "import neurochip.app.main"` succeeds with all optional SDKs absent.
+2. `poetry run pytest neurochip/tests -q`, `poetry run ruff check .`, and `poetry run mypy .` are all green.
+3. PYNQ export cannot return a ZIP that `validate_pynq_compile_artifact()` rejects.
+4. PYNQ analyzer, export, handoff, and CNL Studio UI all agree on the 15,360-synapse overlay-v1.0.1 limit.
+5. CNL Studio deployment UI cannot mistake simulator for real PYNQ hardware deployment.
+6. NeuroChip docs no longer describe a standalone frontend as the active owner.
+
+---
+
+### T1-NC: Neurochip Next Phase — Provenance, Partition Wiring, Hardening
+
+**Status**: Active (starts after T0-NC-VERIFY passes).
+**Why now**: T1-x (API provenance) is unblocked since T0-CR completed. Neurochip's hardware control routes need auth/CORS hardening. The `/partition` endpoint has a real implementation that just needs wiring.
+
+**Primary task doc**: `docs/current tasks/2026-05-16-neurochip-next-steps.md`
+
+| Phase | Task | Priority | Key files |
+|-------|------|----------|-----------|
+| 1 | Fail startup when auth is enabled with default key; narrow CORS to loopback by default | P1 | `Neurochip/neurochip/app/auth.py`, `app/main.py` |
+| 2 | Add Akida `remote_server` allowlist; block private/loopback/metadata targets by default | P1 | `Neurochip/neurochip/app/routers/akida.py` |
+| 3 | Add `generated_at`, `neurochip_version`, `validation_status` provenance to export/deploy responses | P1 | `Neurochip/neurochip/app/schemas/`, affected routers |
+| 4 | Wire `/api/neurochip/analysis/partition` to `suggest_partitions()` | P1 | `Neurochip/neurochip/app/routers/analysis.py`, `services/partitioner.py` |
+| 5 | Mount or explicitly deprecate `spinnaker2.py` router in `main.py` | P2 | `Neurochip/neurochip/app/main.py`, `routers/spinnaker2.py` |
+
+**Exit criteria**:
+
+1. `NEUROCHIP_AUTH_ENABLED=true` with default key refuses to start.
+2. Akida remote dispatch cannot POST to loopback/private/metadata targets.
+3. Export responses carry provenance fields.
+4. `/partition` returns a real `PartitionResult`, not a placeholder 501.
+5. SpiNNaker 2 router is either mounted and tested or explicitly deprecated.
+
+---
+
 ## Tier 2 — Later, If Tier 1 Stabilizes
 
 ### T2-1: Quantization-Aware Lowering
@@ -377,6 +422,7 @@ Unsupported semantic subcases remain fail-closed or explicitly metadata-only, an
 | 0    | T0-CR | NeuroCNL contract stabilization from critical review                             | Complete | —               |
 | 0    | T0-NS | NeuroSim canvas, simulation, and package truthfulness from code review           | Complete | —               |
 | 0    | T0-NC | NeuroChip deployment truthfulness and backend stabilization from critical review | Complete | —               |
+| 0    | T0-NC-VERIFY | Confirm T0-NC exit criteria are green in current repo state               | Active   | —               |
 | 0    | T0-A  | Workspace file I/O and NIR artifact persistence                                  | Active   | —               |
 | 0    | T0-B  | Actionable error diagnostics                                                     | Complete | —               |
 | 0    | T0-C  | Quick wins and bugfixes                                                          | Active   | —               |
@@ -386,6 +432,7 @@ Unsupported semantic subcases remain fail-closed or explicitly metadata-only, an
 | 1    | T1-2  | NIR as canonical Studio graph model                                              | Complete | —               |
 | 1    | T1-3  | NIR to CNL translation bridge                                                    | Complete | —               |
 | 1    | T1-4  | Public `compile_to_nir()` surface                                              | Complete | —               |
+| 0    | T1-NC | Neurochip next phase: provenance, partition wiring, hardening                    | Active   | T0-NC-VERIFY     |
 | 1    | T1-x  | API provenance and production-safe defaults                                      | Queued   | T0-CR            |
 | 1    | T1-5  | Shared `CNL -> NIR -> Simulator` contract                                      | Complete | 2026-05-15       |
 | 1    | T1-6  | Lava simulator E2E                                                               | Complete | 2026-05-15       |

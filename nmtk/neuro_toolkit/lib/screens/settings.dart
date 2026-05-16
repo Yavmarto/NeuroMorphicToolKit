@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -41,7 +42,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.watch(settingsStateProvider);
     final moduleProvider = ref.watch(moduleStateProvider);
     final analytics = ref.watch(analyticsServiceProvider);
-    final controlApi = ref.watch(controlApiServiceProvider);
     final theme = Theme.of(context);
 
     return ListView(
@@ -216,18 +216,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               NmtkPrimaryButton(
                 onPressed: () async {
-                  final logs = await analytics.getLocalLogs();
-                  if (!context.mounted) return;
-                  _showLogDialog(context, logs);
+                  try {
+                    final logs = await analytics.getLocalLogLines();
+                    if (!context.mounted) return;
+                    _showLogDialog(
+                      context,
+                      title: 'Local Crash Logs',
+                      logs: logs,
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    NmtkToasts.error(
+                      context,
+                      'Could not fetch local logs: $e',
+                    );
+                  }
                 },
                 icon: Icons.history,
                 label: 'View Local Logs',
               ),
               NmtkOutlinedButton(
                 onPressed: () async {
-                  await analytics.clearLocalLogs();
-                  if (!context.mounted) return;
-                  NmtkToasts.success(context, 'Local logs cleared');
+                  try {
+                    await analytics.clearLocalLogs();
+                    if (!context.mounted) return;
+                    NmtkToasts.success(context, 'Local logs cleared');
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    NmtkToasts.error(
+                      context,
+                      'Could not clear local logs: $e',
+                    );
+                  }
                 },
                 icon: Icons.delete_outline,
                 label: 'Clear Local Logs',
@@ -248,12 +268,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               NmtkPrimaryButton(
                 onPressed: () async {
-                  final logs = await controlApi.fetchBackendLogs();
-                  if (!context.mounted) return;
-                  _showBackendLogDialog(context, logs);
+                  try {
+                    final logs = await analytics.getBackendActivityLogLines();
+                    if (!context.mounted) return;
+                    _showLogDialog(
+                      context,
+                      title: 'Backend Activity',
+                      logs: logs,
+                      showErrorOnlyToggle: true,
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    NmtkToasts.error(
+                      context,
+                      'Could not fetch backend activity: $e',
+                    );
+                  }
                 },
                 icon: Icons.terminal,
-                label: 'View Backend Logs',
+                label: 'View Backend Activity',
               ),
             ],
           ),
@@ -275,74 +308,106 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showLogDialog(BuildContext context, String logs) {
+  void _showLogDialog(
+    BuildContext context, {
+    required String title,
+    required List<String> logs,
+    bool showErrorOnlyToggle = false,
+  }) {
     showShadDialog<void>(
       context: context,
-      builder: (dialogContext) => ShadDialog(
-        title: const Text('Local Crash Logs'),
-        actions: [
-          ShadButton.ghost(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Close'),
-          ),
-        ],
-        child: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Text(
-              logs,
-              style: const TextStyle(fontFamily: 'JetBrainsMono', fontSize: 12),
-            ),
-          ),
-        ),
+      builder: (dialogContext) => _LogDialog(
+        title: title,
+        logs: logs,
+        showErrorOnlyToggle: showErrorOnlyToggle,
       ),
     );
   }
-
-  void _showBackendLogDialog(BuildContext context, List<String> logs) {
-    showShadDialog<void>(
-      context: context,
-      builder: (dialogContext) => _BackendLogDialog(logs: logs),
-    );
-  }
 }
 
-class _BackendLogDialog extends StatefulWidget {
+class _LogDialog extends StatefulWidget {
+  final String title;
   final List<String> logs;
+  final bool showErrorOnlyToggle;
 
-  const _BackendLogDialog({required this.logs});
+  const _LogDialog({
+    required this.title,
+    required this.logs,
+    this.showErrorOnlyToggle = false,
+  });
 
   @override
-  State<_BackendLogDialog> createState() => _BackendLogDialogState();
+  State<_LogDialog> createState() => _LogDialogState();
 }
 
-class _BackendLogDialogState extends State<_BackendLogDialog> {
+class _LogDialogState extends State<_LogDialog> {
   bool _errorOnly = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<String> get _filteredLogs {
-    if (!_errorOnly) return widget.logs;
-    return widget.logs.where((line) => line.contains('[stderr]')).toList();
+    var lines = widget.showErrorOnlyToggle && _errorOnly
+        ? widget.logs
+            .where(
+              (l) =>
+                  l.toLowerCase().contains('error') ||
+                  l.toLowerCase().contains('exception') ||
+                  l.toLowerCase().contains('failed') ||
+                  l.contains('-> 4') ||
+                  l.contains('-> 5'),
+            )
+            .toList()
+        : List<String>.from(widget.logs);
+    final q = _searchController.text.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      lines = lines.where((l) => l.toLowerCase().contains(q)).toList();
+    }
+    return lines;
   }
 
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredLogs;
+    final text = filtered.join('\n');
+
     return ShadDialog(
-      title: const Text('Backend Logs'),
+      title: Text(widget.title),
       actions: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Error Only',
-              style: Theme.of(context).textTheme.bodySmall,
+            if (widget.showErrorOnlyToggle) ...[
+              Text(
+                'Error Only',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(width: 8),
+              ShadSwitch(
+                value: _errorOnly,
+                onChanged: (value) => setState(() => _errorOnly = value),
+              ),
+              const SizedBox(width: 16),
+            ],
+            ShadButton.ghost(
+              onPressed: () async {
+                await Clipboard.setData(ClipboardData(text: text));
+                if (!context.mounted) return;
+                NmtkToasts.success(context, 'Logs copied to clipboard');
+              },
+              child: const Text('Copy All'),
             ),
-            const SizedBox(width: 8),
-            ShadSwitch(
-              value: _errorOnly,
-              onChanged: (value) => setState(() => _errorOnly = value),
-            ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 4),
             ShadButton.ghost(
               onPressed: () => Navigator.pop(context),
               child: const Text('Close'),
@@ -353,20 +418,30 @@ class _BackendLogDialogState extends State<_BackendLogDialog> {
       child: SizedBox(
         width: double.maxFinite,
         height: 400,
-        child: filtered.isEmpty
-            ? const Center(child: Text('No logs to display.'))
-            : ListView.builder(
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  return Text(
-                    filtered[index],
-                    style: const TextStyle(
-                      fontFamily: 'JetBrainsMono',
-                      fontSize: 12,
+        child: Column(
+          children: [
+            ShadInput(
+              controller: _searchController,
+              placeholder: const Text('Filter logs…'),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: text.isEmpty
+                  ? const Center(child: Text('No logs to display.'))
+                  : Scrollbar(
+                      child: SingleChildScrollView(
+                        child: SelectableText(
+                          text,
+                          style: const TextStyle(
+                            fontFamily: 'JetBrainsMono',
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     ),
-                  );
-                },
-              ),
+            ),
+          ],
+        ),
       ),
     );
   }
