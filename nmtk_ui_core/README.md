@@ -1,39 +1,90 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# nmtk_ui_core
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+Shared Dart/Flutter widget library for the NeuroMorphicToolKit (NMTK) suite. All module frontends (`neurocnl`, `Neurohub`, `Neurobench`, `Neurosense`) depend on this package for design tokens, theming, and reusable UI components.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+**Version:** `0.6.0+3` — SDK `^3.11.0`, Flutter `>=3.41.0`
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+---
 
-## Features
+## What's in here
 
-TODO: List what your package can do. Maybe include images, gifs, or videos.
+### Design tokens
+- **Border radius** — Use only the sanctioned token values:
+  - `radiusSm` (12 px) — inline chips, tags, input fields
+  - `radiusMd` (16 px) — buttons, small cards, search fields
+  - `radiusLg` (22 px) — section cards, summary tiles, large containers
+  - `chipRadius` (999 px) — pill-shaped badges
+  - `dialogShape` (28 px) — dialogs
+  - Values of 8, 10, 14, or 18 px are **not sanctioned**; replace with the nearest token.
+- **Status colours** — semantic palette used suite-wide:
+  - `NmtkShellTokens.healthyColor` (#22C55E) — healthy / success
+  - `NmtkShellTokens.errorColor` (#EF4444) — error
+  - `NmtkShellTokens.warningColor` (#F59E0B) — warning / degraded
+  - `NmtkShellTokens.runningColor` (#38BDF8) — running
+  - `NmtkShellTokens.liveColor` (#E11D48) — live / recording
+- **Motion tokens** — animation durations and curves in `MotionTokens`.
 
-## Getting started
+### Shell modes
+Each module frontend must pass the correct shell mode:
 
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
+| Mode | Colour | Modules |
+|------|--------|---------|
+| `NmtkShellMode.command` | Navy | Launcher, NeuroHub, NeuroBench |
+| `NmtkShellMode.studio` | Violet | neurocnl (CNL Studio + NeuroSim canvas) |
+| `NmtkShellMode.instrument` | Cyan | NeuroSense, NeuroChip |
+
+### Theme
+- `AppTheme` (800 lines) — suite-wide colour palette, typography scale, spacing, shadow definitions.
+- `ShadTheme` — shadcn/UI integration layer (`shadcn_ui ^0.54.0`).
+
+### Widgets (40+ components)
+- **Scaffolding:** `DesktopScaffold`, `TopAppBar`, `WorkspaceSwitcherBar`
+- **Navigation:** `CommandPalette`, `ShortcutScope`
+- **Pipeline:** `PipelineStepper`, `ValidationChip`
+- **Charts:** `EnergyBarChart`, `QuantizationCurveChart`
+- **Modals:** `LoadingScreen`, confirmation dialogs
+- **Status:** `StatusDisplay`, badges, chips
+
+### Deployment models
+Typed Dart models shared across modules:
+- `PynqDeploymentModel` (821 lines) — PYNQ Z2 deployment configuration
+- `AkidaDeploymentModel` (770 lines) — Akida NSoC deployment configuration
+- `TeensyDeploymentModel` (225 lines) — Teensy board deployment configuration
+- `EnergyReport` — energy analysis reporting
+
+---
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+Add to `pubspec.yaml`:
 
-```dart
-const like = 'sample';
+```yaml
+dependencies:
+  nmtk_ui_core:
+    path: ../../nmtk_ui_core   # adjust relative path per module location
 ```
 
-## Additional information
+Import the barrel export:
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+```dart
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+```
+
+Use tokens directly:
+
+```dart
+Container(
+  decoration: BoxDecoration(
+    borderRadius: BorderRadius.circular(NmtkShellTokens.radiusMd),
+    color: NmtkShellTokens.healthyColor,
+  ),
+)
+```
+
+---
+
+## Rules (enforced by `CODING_STYLE_GUIDE.md`)
+
+- Never use non-token border radius values (8, 10, 14, 18 px). Replace on sight.
+- Always pass `NmtkShellMode` to scaffolding widgets — do not leave it at the default.
+- Use `NmtkShellTokens` colour constants for all status indicators; do not inline hex values.

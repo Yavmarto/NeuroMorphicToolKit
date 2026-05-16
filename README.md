@@ -39,25 +39,23 @@ NMTK orchestrates the following specialized modules, which can be dynamically do
 5. **[Neurohub](./Neurohub)**
    * *Purpose:* Community registry for sharing and discovering pre-trained SNN models, neuromorphic datasets, hardware profiles, NeuroCNL spec templates, encoding presets, and benchmark baselines.
    * *Best for:* Researchers publishing work, engineers looking for a starting point, and anyone who wants to reuse community-validated artefacts across the suite.
-6. **[NeuroDash](./NeuroDash)**
-   * *Purpose:* Central orchestration dashboard for managing cross-app projects, pipelines, milestones, and team collaboration across the full suite.
-   * *Best for:* Team leads and project managers coordinating work across multiple Neuro-space apps.
-7. **[Neuro-Dream-Hand](./Neuro-Dream-Hand)**
+6. **[Neuro-Dream-Hand](./Neuro-Dream-Hand)**
    * *Purpose:* Applied hardware robotics and edge integration (e.g., controlling a robotic hand via SNNs and Teensy microcontrollers).
    * *Best for:* Applied robotics, edge AI, and end-to-end physical demonstrations.
 
-### 📊 Current Module Status (March 2026)
+### 📊 Current Module Status (May 2026)
 
 | Module                           | Status | Backend | Frontend | Tests | Docker | CI |
 | :------------------------------- | :----: | :-----: | :------: | :---: | :----: | :-: |
-| **neurocnl / NeuroStudio** |  97%  |   ✅   |    ✅    |  ✅  |   ✅   | ✅ |
-| **Neurosense**             |  85%  |   ✅   |    ✅    |  ✅  |  ⚠️  | ✅ |
-| **Neurohub**               |   0%   |   ❌   |    ❌    |  ❌  |   ❌   | ❌ |
-| **NeuroDash**              |  80%  |   ✅   |    ✅    |  ✅  |  ⚠️  | ✅ |
-| **Neurochip**              |  90%  |   ✅   |    ✅    |  ✅  |   ✅   | ✅ |
-| **Neurobench**             |  70%  |  ⚠️  |   ⚠️   |  ✅  |   ✅   | ✅ |
+| **neurocnl / NeuroStudio** (incl. Neurosim canvas) | 99% | ✅ | ✅ | ✅ | ✅ | ⚠️ |
+| **Neurosense**             |  97%  |   ✅   |    ✅    |  ✅  |   ✅   | ✅ |
+| **Neurohub**               |  85%  |   ✅   |    ✅    |  ⚠️  |   ✅   | ❌ |
+| **Neurochip**              |  60%  |   ✅   |   ❌¹   |  ✅  |   ✅   | ✅ |
+| **Neurobench**             |  95%  |   ✅   |    ✅    |  ✅  |   ✅   | ✅ |
 | **Neuro-Dream-Hand**       |  95%  |   ✅   |   N/A   |  ✅  |  N/A  | ✅ |
-| **NMTK Launcher**          |  85%  |   ✅   |    ✅    |  ✅  |  N/A  | ❌ |
+| **NMTK Launcher**          |  95%  |   ✅   |    ✅    |  ✅  |  N/A  | ⚠️ |
+
+> ¹ Neurochip has no standalone frontend. CNL Studio (NeuroStudio) owns the deployment and diagnostics UI via the [ADR 0021 handoff contract](./docs/ADR-claude/0021-studio-neurochip-handoff-contract.md). The Neurosim visual canvas is embedded inside NeuroStudio at the `/canvas` route — it is not a separate launcher card. NeuroDash has been deferred and is not in the active `modules.json` manifest.
 
 ---
 
