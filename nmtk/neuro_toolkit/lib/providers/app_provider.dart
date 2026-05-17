@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:neuro_toolkit/services/preferences_service.dart';
 
 class AppProvider with ChangeNotifier {
-  AppProvider({PreferencesService? preferencesService})
-      : _prefs = preferencesService ?? PreferencesService() {
+  /// [preferencesService] must be provided. Use [preferencesServiceProvider]
+  /// from riverpod_providers.dart (or inject directly in tests).
+  AppProvider({required PreferencesService preferencesService})
+      : _prefs = preferencesService {
     _init();
   }
 

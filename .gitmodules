@@ -10,6 +10,9 @@
 [submodule "Neurosense"]
 	path = Neurosense
 	url = ../Neurosense.git
+[submodule "Neurosim"]
+	path = Neurosim
+	url = ../Neurosim.git
 [submodule "Neurochip"]
 	path = Neurochip
 	url = ../Neurochip.git

@@ -1,6 +1,31 @@
+// TODO(riverpod-migration): Migrate ModuleProvider to AsyncNotifier<List<Module>>.
+//
+// ModuleProvider is the most complex provider (498 lines) because it owns:
+//   • the 3-second polling timer (_startRefreshTimer)
+//   • module lifecycle (install, launch, stop, update, uninstall)
+//   • active-module tracking (_activeModuleIds)
+//   • cross-provider dependency on SettingsProvider
+//   • legacy ProcessManager compatibility layer
+//
+// Steps:
+//   1. Replace the polling Timer with `ref.keepAlive()` + a Timer inside build()
+//      that calls `ref.invalidateSelf()` or updates state directly.
+//   2. Expose `List<Module>` as the state value; isLoading and error move into
+//      AsyncValue's native loading/error states.
+//   3. Active module IDs can be a separate `StateProvider<List<String>>`.
+//   4. Remove `updateSettingsProvider()` — use `ref.watch(settingsStateProvider)`
+//      inside the notifier instead.
+//   5. Update riverpod_providers.dart to remove moduleStateProvider's
+//      ChangeNotifierProvider and use AsyncNotifierProvider.
+//   6. Update all call sites in tool_view.dart, settings.dart, etc.
+//
+// The polling + test coverage prerequisites make this at least a 2-day effort.
+// Tackle only after WorkspaceProvider and SettingsProvider are migrated first.
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
@@ -74,7 +99,7 @@ class ModuleProvider with ChangeNotifier {
     } catch (e) {
       // A connection failure (e.g. control API not yet running) does not mean
       // Python is absent — do not set _pythonAvailable = false here.
-      _error = 'Failed to load modules: $e';
+      _error = nmtkUserFacingError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -169,7 +194,7 @@ class ModuleProvider with ChangeNotifier {
       await _reloadFromControlApi(includeLauncherUpdate: false);
     } catch (e) {
       // Connection failure ≠ Python missing; don't set _pythonAvailable = false.
-      _error = 'Failed to load modules: $e';
+      _error = nmtkUserFacingError(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -257,7 +282,7 @@ class ModuleProvider with ChangeNotifier {
     } catch (e) {
       _modules[index] = _modules[index].copyWith(
         status: ModuleStatus.error,
-        healthStatus: e.toString(),
+        healthStatus: nmtkUserFacingError(e),
       );
       notifyListeners();
       debugPrint('Installation failed for $moduleId: $e');
@@ -290,7 +315,7 @@ class ModuleProvider with ChangeNotifier {
     } catch (e) {
       _modules[index] = _modules[index].copyWith(
         status: ModuleStatus.error,
-        healthStatus: e.toString(),
+        healthStatus: nmtkUserFacingError(e),
       );
       notifyListeners();
       debugPrint('Launch failed for $moduleId: $e');
@@ -318,7 +343,7 @@ class ModuleProvider with ChangeNotifier {
     } catch (e) {
       _modules[index] = _modules[index].copyWith(
         status: ModuleStatus.error,
-        healthStatus: e.toString(),
+        healthStatus: nmtkUserFacingError(e),
       );
       notifyListeners();
       debugPrint('Stop failed for $moduleId: $e');
@@ -364,7 +389,7 @@ class ModuleProvider with ChangeNotifier {
     } catch (e) {
       _modules[index] = _modules[index].copyWith(
         status: ModuleStatus.error,
-        healthStatus: e.toString(),
+        healthStatus: nmtkUserFacingError(e),
       );
       notifyListeners();
       debugPrint('Update failed for $moduleId: $e');
@@ -451,18 +476,47 @@ class ModuleProvider with ChangeNotifier {
       refreshUpdates: includeLauncherUpdate,
     );
 
-    _pythonAvailable = settings.pythonAvailable;
-    _mujocoAvailable = settings.mujocoAvailable;
-    _error = null;
-    _modules = fetchedModules;
-    _activeModuleIds.removeWhere(
-      (id) => !_modules.any((module) => module.id == id),
-    );
+    // Only notify listeners when something actually changed to avoid
+    // rebuilding the entire widget tree on every 3-second polling tick.
+    bool changed = false;
+
+    if (settings.pythonAvailable != _pythonAvailable) {
+      _pythonAvailable = settings.pythonAvailable;
+      changed = true;
+    }
+    if (settings.mujocoAvailable != _mujocoAvailable) {
+      _mujocoAvailable = settings.mujocoAvailable;
+      changed = true;
+    }
+    if (_error != null) {
+      _error = null;
+      changed = true;
+    }
+
+    // listEquals uses Module.== so this only triggers a rebuild when
+    // id/status/healthStatus/installProgress/version actually changes.
+    if (!listEquals(_modules, fetchedModules)) {
+      _modules = fetchedModules;
+      changed = true;
+    }
+
+    final staleIds = _activeModuleIds
+        .where((id) => !_modules.any((module) => module.id == id))
+        .toList();
+    if (staleIds.isNotEmpty) {
+      _activeModuleIds.removeWhere((id) => staleIds.contains(id));
+      changed = true;
+    }
 
     if (includeLauncherUpdate) {
-      _pendingLauncherUpdate = await _updateService.checkForLauncherUpdate();
+      final update = await _updateService.checkForLauncherUpdate();
+      if (update != _pendingLauncherUpdate) {
+        _pendingLauncherUpdate = update;
+        changed = true;
+      }
     }
-    notifyListeners();
+
+    if (changed) notifyListeners();
   }
 
   void _startRefreshTimer() {

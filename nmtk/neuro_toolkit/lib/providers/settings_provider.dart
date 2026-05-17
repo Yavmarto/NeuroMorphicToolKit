@@ -1,3 +1,19 @@
+// TODO(riverpod-migration): Migrate SettingsProvider to AsyncNotifier<SettingsState>.
+//
+// The main complication: main.dart calls `settings.init()` before runApp()
+// to know the launcherControlApiBaseUrl for bootstrap. Steps:
+//   1. Create immutable SettingsState with all current fields
+//   2. Replace `class SettingsProvider with ChangeNotifier` with
+//      `class SettingsNotifier extends AsyncNotifier<SettingsState>`
+//   3. Move init() logic into build()
+//   4. Refactor main.dart so bootstrap reads from the provider instead of
+//      a pre-built object (use a FutureProvider or earlyInitProvider).
+//   5. Remove `settingsStateProvider.overrideWith((ref) => settings)` from main.dart
+//   6. All set*() methods become `state = state.whenData((s) => s.copyWith(...))`
+//
+// This requires coordinated changes to main.dart and settings.dart.
+// Tackle on a dedicated branch after verifying all bootstrap tests pass.
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';

@@ -5,27 +5,35 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Persistent key–value store for lightweight user preferences.
+///
+/// **Instantiate via Riverpod**, not directly:
+/// ```dart
+/// final prefs = ref.read(preferencesServiceProvider);
+/// await prefs.init();
+/// ```
+///
+/// For tests, construct directly and pass as a Riverpod override:
+/// ```dart
+/// preferencesServiceProvider.overrideWithValue(
+///   PreferencesService(basePath: tempDir.path),
+/// )
+/// ```
 class PreferencesService {
-  static final PreferencesService _instance = PreferencesService._internal();
-  factory PreferencesService({
+  PreferencesService({
     String? basePath,
     @visibleForTesting bool useSharedPreferencesForTesting = false,
-  }) {
-    if (basePath != null) {
-      _instance._basePath = basePath;
-    }
-    _instance._useSharedPreferencesForTesting = useSharedPreferencesForTesting;
-    return _instance;
-  }
-  PreferencesService._internal();
+  })  : _basePath = basePath,
+        _useSharedPreferencesForTesting = useSharedPreferencesForTesting;
 
   static const String _fileName = 'preferences.json';
   static const String _hasSeenOnboardingKey = 'hasSeenOnboarding';
+
   File? _file;
   Map<String, dynamic> _data = {};
   SharedPreferences? _sharedPreferences;
-  String? _basePath;
-  bool _useSharedPreferencesForTesting = false;
+  final String? _basePath;
+  final bool _useSharedPreferencesForTesting;
 
   bool get _usesSharedPreferences =>
       _basePath == null && (kIsWeb || _useSharedPreferencesForTesting);
@@ -80,12 +88,11 @@ class PreferencesService {
     }
   }
 
+  /// Resets all in-memory data. Intended for use in tests only.
   @visibleForTesting
   void clear() {
     _data = {};
     _file = null;
     _sharedPreferences = null;
-    _basePath = null;
-    _useSharedPreferencesForTesting = false;
   }
 }

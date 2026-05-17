@@ -17,7 +17,11 @@ import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
+import 'package:neuro_toolkit/widgets/module_error_view.dart';
+import 'package:neuro_toolkit/widgets/module_icon.dart';
+import 'package:neuro_toolkit/widgets/module_loading_view.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
+import 'package:neuro_toolkit/widgets/tool_view_header_actions.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 import 'package:neuro_toolkit/providers/command_provider.dart';
 
@@ -34,8 +38,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   final Map<String, WebViewController> _controllers =
       <String, WebViewController>{};
   final Map<String, Uri> _pendingModuleRequests = <String, Uri>{};
-  final Map<String, _ModuleLoadFailure> _moduleLoadFailures =
-      <String, _ModuleLoadFailure>{};
+  final Map<String, ModuleLoadFailure> _moduleLoadFailures =
+      <String, ModuleLoadFailure>{};
 
   String _activeModuleId = '';
   bool _workspaceInitialized = false;
@@ -379,7 +383,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       return;
     }
     setState(() {
-      _moduleLoadFailures[moduleId] = _ModuleLoadFailure(
+      _moduleLoadFailures[moduleId] = ModuleLoadFailure(
         uri: uri,
         message: message,
       );
@@ -388,44 +392,20 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   Widget _buildModuleLoadFailureState(
     Module module,
-    _ModuleLoadFailure failure,
+    ModuleLoadFailure failure,
   ) {
-    final hostHint = _usesRemoteHostedServices()
-        ? 'Confirm that ${failure.uri} is reachable from the Android device and that the suite API is serving the module frontend on that host.'
-        : 'Confirm that the launcher host is configured correctly for mobile and that the suite API is reachable from this device.';
-    return NmtkEmptyState(
-      title: '${module.name} Page Could Not Load',
-      message: [
-        failure.message,
-        'Requested URL: ${failure.uri}',
-        hostHint,
-      ].join('\n\n'),
-      icon: Icons.language_outlined,
-      tone: NmtkTone.warning,
-      action: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          NmtkPrimaryButton(
-            onPressed: () async {
-              setState(() {
-                _moduleLoadFailures.remove(module.id);
-                _controllers.remove(module.id);
-              });
-              await _activateModule(module.id, requestFocus: false);
-            },
-            icon: Icons.refresh,
-            label: 'Retry Load',
-            tone: NmtkTone.warning,
-          ),
-          const SizedBox(height: 12),
-          NmtkOutlinedButton(
-            onPressed: () => _launchInBrowser(module),
-            icon: Icons.open_in_browser,
-            label: 'Open in Browser',
-            tone: NmtkTone.warning,
-          ),
-        ],
-      ),
+    return ModuleErrorView(
+      module: module,
+      failure: failure,
+      isRemoteHosted: _usesRemoteHostedServices(),
+      onRetry: () async {
+        setState(() {
+          _moduleLoadFailures.remove(module.id);
+          _controllers.remove(module.id);
+        });
+        await _activateModule(module.id, requestFocus: false);
+      },
+      onOpenInBrowser: () => _launchInBrowser(module),
     );
   }
 
@@ -523,185 +503,24 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Widget _buildLoadingState(Module module) {
-    final theme = Theme.of(context);
-    final tokens = NmtkShellTokens.of(context);
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: NmtkSurfaceCard(
-          tone: NmtkTone.info,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (kDebugMode)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: NmtkStatusBadge(
-                      label: 'Debug',
-                      tone: NmtkTone.warning,
-                      icon: Icons.bug_report_outlined,
-                    ),
-                  ),
-                ),
-              Text(
-                'Waiting for ${module.name}',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                kDebugMode
-                    ? [
-                        if (module.statusMessage != null) module.statusMessage!,
-                        if (module.status == ModuleStatus.starting)
-                          'Backend: ${_moduleUri(module, healthCheck: true)}'
-                        else
-                          'Starting ${module.name} backend for this tab',
-                        'Some modules take a little longer to warm up.',
-                      ].join('\n\n')
-                    : 'Starting up, this may take a moment.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(tokens.radiusSm),
-                child: const LinearProgressIndicator(),
-              ),
-              const SizedBox(height: 14),
-              NmtkOutlinedButton(
-                onPressed: () => _launchInBrowser(module),
-                icon: Icons.open_in_browser,
-                label: 'Open in Browser instead',
-                tone: NmtkTone.info,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return ModuleLoadingView(
+      module: module,
+      healthCheckUri: _moduleUri(module, healthCheck: true),
+      onOpenInBrowser: () => _launchInBrowser(module),
     );
   }
 
-  /// Maps a module icon name string to a MaterialIcon for the sidebar.
-  ///
-  /// Pass [selected] = true for the filled/active variant.
-  IconData _iconForModule(Module module, {bool selected = false}) {
-    return switch (module.icon) {
-      'code'                    => selected ? Icons.code_rounded                    : Icons.code_outlined,
-      'architecture'            => selected ? Icons.architecture                    : Icons.architecture_outlined,
-      'memory'                  => selected ? Icons.memory_rounded                  : Icons.memory_outlined,
-      'speed'                   => selected ? Icons.speed_rounded                   : Icons.speed_outlined,
-      'sensors'                 => selected ? Icons.sensors_rounded                 : Icons.sensors_outlined,
-      'hub'                     => selected ? Icons.hub_rounded                     : Icons.hub_outlined,
-      'precision_manufacturing' => selected ? Icons.precision_manufacturing         : Icons.precision_manufacturing_outlined,
-      _                         => selected
-          ? (module.hasFrontend ? Icons.web_rounded : Icons.api_rounded)
-          : (module.hasFrontend ? Icons.web_outlined : Icons.api_outlined),
-    };
-  }
 
   Widget _buildHeaderActions(
     BuildContext context,
     ModuleProvider moduleProvider,
     Module? activeModule,
   ) {
-    final appProvider = ref.watch(appStateProvider);
-    final developerMode = appProvider.developerMode;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Developer-mode toggle — always visible (wrench icon).
-        Semantics(
-          label: developerMode
-              ? 'Hide developer controls'
-              : 'Show developer controls',
-          button: true,
-          child: IconButton(
-            icon: Icon(
-              developerMode
-                  ? Icons.handyman_rounded
-                  : Icons.handyman_outlined,
-              color: developerMode
-                  ? ShadTheme.of(context).colorScheme.primary
-                  : null,
-            ),
-            onPressed: () => appProvider.toggleDeveloperMode(),
-            tooltip: developerMode
-                ? 'Hide module internals'
-                : 'Show module internals',
-          ),
-        ),
-        // Search Commands button (H7)
-        Semantics(
-          label: 'Search commands',
-          button: true,
-          child: IconButton(
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () {
-              final commands = ref.read(commandStateProvider);
-              NmtkCommandPalette.show(context, commands: commands);
-            },
-            tooltip: 'Search commands (${defaultTargetPlatform == TargetPlatform.macOS ? '⌘K' : 'Ctrl+K'})',
-          ),
-        ),
-        // Module management controls — developer mode only.
-        if (developerMode) ...[
-          Semantics(
-            label: 'Open a module',
-            button: true,
-            child: IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () => _showModulePicker(context),
-              tooltip: 'Open a Module',
-            ),
-          ),
-          Semantics(
-            label: 'Open module in system browser',
-            button: true,
-            child: IconButton(
-              icon: const Icon(Icons.open_in_browser),
-              onPressed: activeModule != null
-                  ? () => _launchInBrowser(activeModule)
-                  : null,
-              tooltip: 'Open in System Browser',
-            ),
-          ),
-          Semantics(
-            label: 'Stop currently active module',
-            button: true,
-            child: IconButton(
-              icon: Icon(
-                Icons.stop_circle,
-                color: ShadTheme.of(context).colorScheme.destructive,
-              ),
-              onPressed: activeModule == null
-                  ? null
-                  : () {
-                      unawaited(moduleProvider.stopModule(activeModule.id));
-                    },
-              tooltip: 'Stop Module',
-            ),
-          ),
-          Semantics(
-            label: 'Check for Updates',
-            button: true,
-            child: IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              onPressed: () => moduleProvider.checkForUpdates(),
-              tooltip: 'Check for Updates',
-            ),
-          ),
-        ],
-      ],
+    return ToolViewHeaderActions(
+      moduleProvider: moduleProvider,
+      activeModule: activeModule,
+      onShowModulePicker: () => _showModulePicker(context),
+      onOpenInBrowser: _launchInBrowser,
     );
   }
 
@@ -728,8 +547,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           (module) => NmtkSidebarItem(
             id: module.id,
             label: module.name,
-            icon: _iconForModule(module),
-            selectedIcon: _iconForModule(module, selected: true),
+            icon: ModuleIcon.forModule(module),
+            selectedIcon: ModuleIcon.forModule(module, selected: true),
           ),
         )
         .toList(growable: false);
@@ -882,12 +701,3 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 }
 
-class _ModuleLoadFailure {
-  const _ModuleLoadFailure({
-    required this.uri,
-    required this.message,
-  });
-
-  final Uri uri;
-  final String message;
-}

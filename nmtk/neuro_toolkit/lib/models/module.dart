@@ -629,4 +629,37 @@ class Module {
         'installProgress': installProgress,
         'healthStatus': healthStatus,
       };
+
+  /// Equality based on the fields that change during the 3-second polling
+  /// cycle. Two [Module] instances are considered equal when no UI-visible
+  /// state has changed, allowing [ModuleProvider] to skip [notifyListeners].
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Module) return false;
+    return id == other.id &&
+        status == other.status &&
+        healthStatus == other.healthStatus &&
+        installProgress == other.installProgress &&
+        version == other.version &&
+        remoteVersion == other.remoteVersion &&
+        isEnabled == other.isEnabled &&
+        customPort == other.customPort &&
+        preflightStatus == other.preflightStatus &&
+        preflightMessage == other.preflightMessage;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        status,
+        healthStatus,
+        installProgress,
+        version,
+        remoteVersion,
+        isEnabled,
+        customPort,
+        preflightStatus,
+        preflightMessage,
+      );
 }

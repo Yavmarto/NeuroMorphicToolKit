@@ -616,7 +616,7 @@ jobs:
           flutter analyze --directory nmtk_ui_core
       - name: Run tests
         run: |
-          cd nmtk_ui_core && flutter test
+          cd nmtk_ui_core && flutter test --coverage
 
   test-neurotoolkit:
     needs: detect-changes
@@ -650,7 +650,7 @@ jobs:
           flutter analyze --directory nmtk/neuro_toolkit
       - name: Run tests
         run: |
-          cd nmtk/neuro_toolkit && flutter test
+          cd nmtk/neuro_toolkit && flutter test --coverage
 
   test-neurocnl-frontend:
     needs: detect-changes
@@ -692,7 +692,7 @@ jobs:
       - name: Run tests
         run: |
           if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
-            cd neurocnl/frontend && flutter test
+            cd neurocnl/frontend && flutter test --coverage
           fi
 
   test-neurochip-frontend:

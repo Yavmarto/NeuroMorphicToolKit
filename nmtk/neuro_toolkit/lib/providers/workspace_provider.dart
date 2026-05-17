@@ -1,3 +1,18 @@
+// TODO(riverpod-migration): Migrate WorkspaceProvider to AsyncNotifier<WorkspaceState>.
+//
+// Steps:
+//   1. Create immutable WorkspaceState {sessions, focusedModuleId, isLoading, hasSessions}
+//   2. Replace `class WorkspaceProvider with ChangeNotifier` with
+//      `class WorkspaceNotifier extends AsyncNotifier<WorkspaceState>`
+//   3. Move _init() logic into build() — notifyListeners() calls become
+//      `state = AsyncData(newState)`
+//   4. Update workspaceStateProvider from ChangeNotifierProvider to AsyncNotifierProvider
+//   5. Update all call sites in tool_view.dart (24+ references) to use
+//      `ref.watch(workspaceStateProvider).valueOrNull?.sessions` etc.
+//   6. Update module_tab_bar.dart similarly
+//
+// Do this on a dedicated branch; tool_view.dart needs simultaneous changes.
+
 import 'package:flutter/foundation.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
