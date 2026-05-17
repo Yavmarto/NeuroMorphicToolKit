@@ -591,47 +591,21 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   /// Maps a module icon name string to a MaterialIcon for the sidebar.
-  IconData _iconForModule(Module module) {
-    switch (module.icon) {
-      case 'code':
-        return Icons.code_outlined;
-      case 'architecture':
-        return Icons.architecture_outlined;
-      case 'memory':
-        return Icons.memory_outlined;
-      case 'speed':
-        return Icons.speed_outlined;
-      case 'sensors':
-        return Icons.sensors_outlined;
-      case 'hub':
-        return Icons.hub_outlined;
-      case 'precision_manufacturing':
-        return Icons.precision_manufacturing_outlined;
-      default:
-        return module.hasFrontend ? Icons.web_outlined : Icons.api_outlined;
-    }
-  }
-
-  /// Filled variant for the active/selected sidebar item.
-  IconData _iconForModuleSelected(Module module) {
-    switch (module.icon) {
-      case 'code':
-        return Icons.code_rounded;
-      case 'architecture':
-        return Icons.architecture;
-      case 'memory':
-        return Icons.memory_rounded;
-      case 'speed':
-        return Icons.speed_rounded;
-      case 'sensors':
-        return Icons.sensors_rounded;
-      case 'hub':
-        return Icons.hub_rounded;
-      case 'precision_manufacturing':
-        return Icons.precision_manufacturing;
-      default:
-        return module.hasFrontend ? Icons.web_rounded : Icons.api_rounded;
-    }
+  ///
+  /// Pass [selected] = true for the filled/active variant.
+  IconData _iconForModule(Module module, {bool selected = false}) {
+    return switch (module.icon) {
+      'code'                    => selected ? Icons.code_rounded                    : Icons.code_outlined,
+      'architecture'            => selected ? Icons.architecture                    : Icons.architecture_outlined,
+      'memory'                  => selected ? Icons.memory_rounded                  : Icons.memory_outlined,
+      'speed'                   => selected ? Icons.speed_rounded                   : Icons.speed_outlined,
+      'sensors'                 => selected ? Icons.sensors_rounded                 : Icons.sensors_outlined,
+      'hub'                     => selected ? Icons.hub_rounded                     : Icons.hub_outlined,
+      'precision_manufacturing' => selected ? Icons.precision_manufacturing         : Icons.precision_manufacturing_outlined,
+      _                         => selected
+          ? (module.hasFrontend ? Icons.web_rounded : Icons.api_rounded)
+          : (module.hasFrontend ? Icons.web_outlined : Icons.api_outlined),
+    };
   }
 
   Widget _buildHeaderActions(
@@ -755,7 +729,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             id: module.id,
             label: module.name,
             icon: _iconForModule(module),
-            selectedIcon: _iconForModuleSelected(module),
+            selectedIcon: _iconForModule(module, selected: true),
           ),
         )
         .toList(growable: false);

@@ -7,6 +7,8 @@
 > **Latest concise update**: T1-1 NIR semantic coverage is now verified complete for the supported approximate/metadata subset.
 
 > **Updated**: 2026-05-16
+> **Latest concise update**: T1-NC complete — auth hardening, CORS narrowing, Akida SSRF allowlist, provenance headers, `/partition` wired to real partitioner, SpiNNaker 2 router mounted. 382 tests passing, ruff clean.
+>
 > **Scope decision**: Active product support is centered on authoring, validating, exporting, and simulator-running `CNL -> IR -> NIR`, with two simulator targets in scope: Lava simulator and snnTorch simulator. Hardware deployment remains out of scope except for NeuroChip backend truthfulness needed by the CNL Studio deployment flow.
 >
 > **Sources merged**:
@@ -367,21 +369,28 @@ Exit criteria to verify:
 
 **Primary task doc**: `docs/current tasks/2026-05-16-neurochip-next-steps.md`
 
-| Phase | Task | Priority | Key files |
-|-------|------|----------|-----------|
-| 1 | Fail startup when auth is enabled with default key; narrow CORS to loopback by default | P1 | `Neurochip/neurochip/app/auth.py`, `app/main.py` |
-| 2 | Add Akida `remote_server` allowlist; block private/loopback/metadata targets by default | P1 | `Neurochip/neurochip/app/routers/akida.py` |
-| 3 | Add `generated_at`, `neurochip_version`, `validation_status` provenance to export/deploy responses | P1 | `Neurochip/neurochip/app/schemas/`, affected routers |
-| 4 | Wire `/api/neurochip/analysis/partition` to `suggest_partitions()` | P1 | `Neurochip/neurochip/app/routers/analysis.py`, `services/partitioner.py` |
-| 5 | Mount or explicitly deprecate `spinnaker2.py` router in `main.py` | P2 | `Neurochip/neurochip/app/main.py`, `routers/spinnaker2.py` |
+| Phase | Task | Priority | Key files | Status |
+|-------|------|----------|-----------|--------|
+| 1 | Fail startup when auth is enabled with default key; narrow CORS to loopback by default | P1 | `Neurochip/neurochip/app/auth.py`, `app/main.py` | ✅ Done 2026-05-16 |
+| 2 | Add Akida `remote_server` allowlist; block private/loopback/metadata targets by default | P1 | `Neurochip/neurochip/app/routers/akida.py` | ✅ Done 2026-05-16 |
+| 3 | Add `generated_at`, `neurochip_version`, `validation_status` provenance to export/deploy responses | P1 | `Neurochip/neurochip/app/utils/provenance.py` (new), affected routers | ✅ Done 2026-05-16 |
+| 4 | Wire `/api/neurochip/analysis/partition` to `suggest_partitions()` | P1 | `Neurochip/neurochip/app/routers/analysis.py`, `services/partitioner.py` | ✅ Done 2026-05-16 |
+| 5 | Mount or explicitly deprecate `spinnaker2.py` router in `main.py` | P2 | `Neurochip/neurochip/app/main.py`, `routers/spinnaker2.py` | ✅ Done 2026-05-16 (mounted) |
 
 **Exit criteria**:
 
-1. `NEUROCHIP_AUTH_ENABLED=true` with default key refuses to start.
-2. Akida remote dispatch cannot POST to loopback/private/metadata targets.
-3. Export responses carry provenance fields.
-4. `/partition` returns a real `PartitionResult`, not a placeholder 501.
-5. SpiNNaker 2 router is either mounted and tested or explicitly deprecated.
+1. ✅ `NEUROCHIP_AUTH_ENABLED=true` with default key refuses to start.
+2. ✅ Akida remote dispatch cannot POST to loopback/private/metadata targets.
+3. ✅ Export responses carry provenance fields.
+4. ✅ `/partition` returns a real `PartitionResult`, not a placeholder 501.
+5. ✅ SpiNNaker 2 router is mounted and available at `/api/neurochip/hardware/spinnaker2`.
+
+**Implementation docs**: `docs/current tasks/2026-05-16-neurochip-impl-tasks.md`
+
+**Verification result (2026-05-16)**:
+- `ruff check .` — clean (0 errors)
+- `pytest neurochip/tests/ -q` — 382 passed, 1 pre-existing failure in `test_targets_router.py::test_list_targets_skips_malformed_file` (not introduced by this work; confirmed by git stash check)
+- `mypy` — 1 pre-existing error in `lava_backend.py` (not introduced by this work)
 
 ---
 
@@ -432,7 +441,7 @@ Exit criteria to verify:
 | 1    | T1-2  | NIR as canonical Studio graph model                                              | Complete | —               |
 | 1    | T1-3  | NIR to CNL translation bridge                                                    | Complete | —               |
 | 1    | T1-4  | Public `compile_to_nir()` surface                                              | Complete | —               |
-| 0    | T1-NC | Neurochip next phase: provenance, partition wiring, hardening                    | Active   | T0-NC-VERIFY     |
+| 0    | T1-NC | Neurochip next phase: provenance, partition wiring, hardening                    | Complete | 2026-05-16       |
 | 1    | T1-x  | API provenance and production-safe defaults                                      | Queued   | T0-CR            |
 | 1    | T1-5  | Shared `CNL -> NIR -> Simulator` contract                                      | Complete | 2026-05-15       |
 | 1    | T1-6  | Lava simulator E2E                                                               | Complete | 2026-05-15       |
