@@ -1,18 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/backend_deployment_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/screens/server_setup.dart';
 
-class BackendSetupScreen extends ConsumerStatefulWidget {
+class BackendSetupScreen extends StatelessWidget {
   const BackendSetupScreen({super.key});
 
   @override
-  ConsumerState<BackendSetupScreen> createState() => _BackendSetupScreenState();
+  Widget build(BuildContext context) {
+    return ServerSetupScreen(
+      message: 'Provision a backend target for this launcher.',
+      allowConnect: false,
+      initialMode: ServerSetupMode.setup,
+      onSetupCompleted: () {
+        if (context.mounted) {
+          context.go('/workspace');
+        }
+      },
+    );
+  }
 }
 
-class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
+class BackendSetupForm extends ConsumerStatefulWidget {
+  const BackendSetupForm({
+    super.key,
+    this.onDeploymentReady,
+  });
+
+  final VoidCallback? onDeploymentReady;
+
+  @override
+  ConsumerState<BackendSetupForm> createState() => _BackendSetupFormState();
+}
+
+class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   String _targetType = 'local';
   String _mode = 'standalone';
   final TextEditingController _displayName =
@@ -27,6 +53,7 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
   final TextEditingController _apiServer = TextEditingController();
   DeploymentPreflightResult? _preflight;
   bool _isWorking = false;
+  bool _completionQueued = false;
 
   @override
   void dispose() {
@@ -46,48 +73,31 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
     final provider = ref.watch(backendDeploymentStateProvider);
     final tokens = NmtkShellTokens.of(context);
 
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 980),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Backend Setup',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Choose where the backend should run, validate the path, then deploy with visible progress.',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildTargetSection(tokens),
-                  const SizedBox(height: 16),
-                  _buildModeSection(tokens),
-                  const SizedBox(height: 16),
-                  _buildDetailsSection(tokens),
-                  const SizedBox(height: 16),
-                  if (_preflight != null)
-                    _buildPreflightCard(_preflight!, tokens),
-                  if (provider.activeJob != null) ...[
-                    const SizedBox(height: 16),
-                    _buildProgressCard(provider.activeJob!, tokens),
-                  ],
-                  const SizedBox(height: 24),
-                  _buildActions(provider),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    if (provider.isReady && !_completionQueued) {
+      _completionQueued = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.onDeploymentReady?.call();
+      });
+    }
+
+    return Column(
+      key: const ValueKey<String>('backend-setup-form'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildTargetSection(tokens),
+        const SizedBox(height: 16),
+        _buildModeSection(tokens),
+        const SizedBox(height: 16),
+        _buildDetailsSection(tokens),
+        const SizedBox(height: 16),
+        if (_preflight != null) _buildPreflightCard(_preflight!, tokens),
+        if (provider.activeJob != null) ...[
+          const SizedBox(height: 16),
+          _buildProgressCard(provider.activeJob!, tokens),
+        ],
+        const SizedBox(height: 24),
+        _buildActions(provider),
+      ],
     );
   }
 
@@ -102,6 +112,7 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
             const SizedBox(height: 12),
             Wrap(
               spacing: 12,
+              runSpacing: 12,
               children: [
                 _choice('This machine', 'local'),
                 _choice('Remote server', 'remote_host'),
@@ -131,6 +142,7 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
             const SizedBox(height: 12),
             Wrap(
               spacing: 12,
+              runSpacing: 12,
               children: [
                 for (final mode in modes)
                   _choice(_modeLabel(mode), mode, isMode: true),
@@ -193,7 +205,7 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
             const SizedBox(height: 8),
             for (final finding in [
               ...preflight.blockingFindings,
-              ...preflight.degradedFindings
+              ...preflight.degradedFindings,
             ])
               Text('- $finding'),
             if (preflight.suggestedRecovery.isNotEmpty) ...[
@@ -226,14 +238,15 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
   }
 
   Widget _buildActions(BackendDeploymentProvider backendProvider) {
-    final job = providerJob(backendProvider);
-    return Row(
+    final job = backendProvider.activeJob;
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
       children: [
         FilledButton(
           onPressed: _isWorking ? null : _runPreflight,
           child: const Text('Validate connection'),
         ),
-        const SizedBox(width: 12),
         FilledButton.tonal(
           onPressed: _isWorking ||
                   (_preflight != null && _preflight!.status == 'failed')
@@ -241,7 +254,6 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
               : _deploy,
           child: const Text('Review and deploy'),
         ),
-        const SizedBox(width: 12),
         if (job != null && !job.isTerminal)
           TextButton(
             onPressed: () => backendProvider.cancelActiveJob(),
@@ -249,10 +261,6 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
           ),
       ],
     );
-  }
-
-  DeploymentJob? providerJob(BackendDeploymentProvider provider) {
-    return provider.activeJob;
   }
 
   Widget _choice(String label, String value, {bool isMode = false}) {
@@ -276,6 +284,7 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
             }
           }
           _preflight = null;
+          _completionQueued = false;
         });
       },
     );
@@ -313,7 +322,10 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
   }
 
   Future<void> _deploy() async {
-    setState(() => _isWorking = true);
+    setState(() {
+      _isWorking = true;
+      _completionQueued = false;
+    });
     final provider = ref.read(backendDeploymentStateProvider);
     await provider.deploy(
       targetType: _targetType,
@@ -327,12 +339,18 @@ class _BackendSetupScreenState extends ConsumerState<BackendSetupScreen> {
       context: _context.text,
       apiServer: _apiServer.text,
     );
-    setState(() => _isWorking = false);
+    if (mounted) {
+      setState(() => _isWorking = false);
+    }
   }
 
   String _modeLabel(String mode) {
-    if (mode == 'docker') return 'Docker';
-    if (mode == 'kubernetes') return 'Kubernetes';
+    if (mode == 'docker') {
+      return 'Docker';
+    }
+    if (mode == 'kubernetes') {
+      return 'Kubernetes';
+    }
     return 'Standalone';
   }
 

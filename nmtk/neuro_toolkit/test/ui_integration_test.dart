@@ -6,8 +6,10 @@ import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 
@@ -113,10 +115,16 @@ class _FakeWorkspaceControlApiService extends ControlApiService {
 void main() {
   testWidgets('ToolViewScreen shows persisted workspace sidebar items',
       (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final moduleProvider =
         ModuleProvider(processManager: _MockProcessManager());
+    final controlApiService = _FakeWorkspaceControlApiService();
     final workspaceProvider = WorkspaceProvider(
-      controlApiService: _FakeWorkspaceControlApiService(),
+      controlApiService: controlApiService,
     );
     moduleProvider.modules = [
       Module(
@@ -154,7 +162,10 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          analyticsServiceProvider.overrideWithValue(AnalyticsService()),
           moduleStateProvider.overrideWith((ref) => moduleProvider),
+          controlApiServiceProvider.overrideWithValue(controlApiService),
+          settingsStateProvider.overrideWith((ref) => SettingsProvider()),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
         child: ShadApp(

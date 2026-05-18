@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +9,7 @@ import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/providers/command_provider.dart';
+import 'package:neuro_toolkit/screens/server_setup.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +52,8 @@ class LauncherBootstrapHost extends ConsumerStatefulWidget {
 class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   final TextEditingController _controlApiController = TextEditingController();
   LauncherBootstrapState? _bootstrapState;
+  ControlApiService? _controlApiService;
+  bool _backendDeploymentReady = false;
   bool _isLoading = true;
   String? _setupMessage;
 
@@ -87,6 +89,8 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
     if (_isMobilePlatform && explicitBaseUri == null) {
       setState(() {
         _bootstrapState = null;
+        _controlApiService = null;
+        _backendDeploymentReady = false;
         _isLoading = false;
         _setupMessage =
             'Set the launcher control API host before opening the workspace.';
@@ -107,15 +111,41 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
     }
 
     if (bootstrap.canUseControlApi) {
-      setState(() {
-        _bootstrapState = bootstrap;
-        _isLoading = false;
-      });
+      final controlApiService = ControlApiService(
+        baseUri: bootstrap.baseUri,
+        analyticsService: ref.read(analyticsServiceProvider),
+      );
+      try {
+        final launcherSettings = await controlApiService.fetchSettings();
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _bootstrapState = bootstrap;
+          _controlApiService = controlApiService;
+          _backendDeploymentReady = launcherSettings.backendDeploymentReady;
+          _isLoading = false;
+          _setupMessage = launcherSettings.backendDeploymentReady
+              ? null
+              : 'Connect to another launcher server or set up a new one here.';
+        });
+      } catch (error) {
+        setState(() {
+          _bootstrapState = null;
+          _controlApiService = null;
+          _backendDeploymentReady = false;
+          _isLoading = false;
+          _setupMessage =
+              'Preflight failed: could not load launcher settings: $error';
+        });
+      }
       return;
     }
 
     setState(() {
       _bootstrapState = null;
+      _controlApiService = null;
+      _backendDeploymentReady = false;
       _isLoading = false;
       _setupMessage = bootstrap.message;
     });
@@ -144,9 +174,7 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
         input = '${uri.scheme}://${uri.host}:8090${uri.path}';
       }
     }
-    await ref
-        .read(settingsStateProvider)
-        .setLauncherControlApiBaseUrl(input);
+    await ref.read(settingsStateProvider).setLauncherControlApiBaseUrl(input);
     if (!mounted) {
       return;
     }
@@ -157,16 +185,12 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsStateProvider);
     final bootstrap = _bootstrapState;
-    if (bootstrap != null) {
+    final controlApiService = _controlApiService;
+    if (bootstrap != null && _backendDeploymentReady) {
       return ProviderScope(
         overrides: [
           launcherBootstrapStateProvider.overrideWithValue(bootstrap),
-          controlApiServiceProvider.overrideWithValue(
-            ControlApiService(
-              baseUri: bootstrap.baseUri,
-              analyticsService: ref.read(analyticsServiceProvider),
-            ),
-          ),
+          controlApiServiceProvider.overrideWithValue(controlApiService!),
         ],
         child: const NeuroToolkitApp(),
       );
@@ -201,16 +225,36 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
       home: Scaffold(
         body: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 640),
+            constraints: const BoxConstraints(maxWidth: 980),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: _isLoading
                   ? const _BootstrapLoadingView()
-                  : _BootstrapSetupView(
-                      controller: _controlApiController,
-                      message: _setupMessage,
-                      onRetry: _saveAndRetry,
-                    ),
+                  : bootstrap != null && controlApiService != null
+                      ? ProviderScope(
+                          overrides: [
+                            launcherBootstrapStateProvider
+                                .overrideWithValue(bootstrap),
+                            controlApiServiceProvider
+                                .overrideWithValue(controlApiService),
+                          ],
+                          child: ServerSetupScreen(
+                            controller: _controlApiController,
+                            message: _setupMessage,
+                            onConnect: _saveAndRetry,
+                            setupAvailable: true,
+                            initialMode: ServerSetupMode.setup,
+                            onSetupCompleted: _bootstrap,
+                          ),
+                        )
+                      : ServerSetupScreen(
+                          controller: _controlApiController,
+                          message: _setupMessage,
+                          onConnect: _saveAndRetry,
+                          setupAvailable: false,
+                          setupUnavailableMessage:
+                              'Set the launcher control API host first. Once this device can reach a launcher server, you can provision a new backend from the same screen.',
+                        ),
             ),
           ),
         ),
@@ -270,53 +314,6 @@ class _BootstrapLoadingView extends StatelessWidget {
     return NmtkShellReadinessStateView.fromState(
       NmtkShellReadinessState.warmingUp,
       message: 'Connecting to the launcher control API…',
-    );
-  }
-}
-
-class _BootstrapSetupView extends StatelessWidget {
-  const _BootstrapSetupView({
-    required this.controller,
-    required this.message,
-    required this.onRetry,
-  });
-
-  final TextEditingController controller;
-  final String? message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return NmtkSurfaceCard(
-      title: 'Launcher Server',
-      subtitle: 'Connect this device to the launcher control API first.',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          NmtkShellReadinessStateView.fromState(
-            NmtkShellReadinessState.error,
-            message: message ??
-                'Enter the host or IP address for the launcher control API.',
-          ),
-          const SizedBox(height: 16),
-          ShadInputFormField(
-            label: const Text('CONTROL API HOST IP'),
-            controller: controller,
-            placeholder: const Text('192.168.2.192'),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090` on the host machine, then retry. Use `10.0.2.2` for an Android emulator or the host machine IP for a physical device.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 16),
-          NmtkPrimaryButton(
-            onPressed: onRetry,
-            icon: Icons.wifi_find_rounded,
-            label: 'Save & Retry',
-          ),
-        ],
-      ),
     );
   }
 }

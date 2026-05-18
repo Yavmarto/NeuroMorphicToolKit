@@ -145,6 +145,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
+              const SizedBox(height: 12),
+              NmtkOutlinedButton(
+                onPressed: () => context.go('/backend-setup'),
+                icon: Icons.dns_outlined,
+                label: 'Server Setup',
+              ),
             ],
           ),
         ),

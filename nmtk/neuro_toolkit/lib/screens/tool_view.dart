@@ -510,7 +510,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 
-
   Widget _buildHeaderActions(
     BuildContext context,
     ModuleProvider moduleProvider,
@@ -621,7 +620,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           selectedIcon: Icons.settings_rounded,
         ),
       ],
-      onFooterNavItemSelected: (_) => setState(() => _activeModuleId = 'settings'),
+      onFooterNavItemSelected: (_) =>
+          setState(() => _activeModuleId = 'settings'),
       headerActions: _buildHeaderActions(context, moduleProvider, activeModule),
       mode: NmtkShellMode.command,
       child: IndexedStack(
@@ -693,7 +693,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           ..add(
             Container(
               key: const ValueKey('settings'),
-              child: const SettingsScreen(),
+              child: _activeModuleId == 'settings'
+                  ? const SettingsScreen()
+                  : const SizedBox.shrink(),
             ),
           ),
       ),

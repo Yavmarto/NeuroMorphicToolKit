@@ -7,30 +7,15 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
-import 'package:neuro_toolkit/screens/onboarding.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/providers/app_provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
-GoRouter createGoRouter(AppProvider appProvider) {
+GoRouter createGoRouter() {
   return GoRouter(
     initialLocation: '/workspace',
-    refreshListenable: appProvider,
-    redirect: (context, state) {
-      if (!appProvider.isInitialized) return null;
-      if (!appProvider.hasSeenOnboarding && state.uri.path != '/onboarding') {
-        return '/onboarding';
-      }
-      return null;
-    },
     routes: [
-      GoRoute(
-        path: '/onboarding',
-        name: 'onboarding',
-        builder: (context, state) => const OnboardingScreen(),
-      ),
       ShellRoute(
         builder: (context, state, child) => MainScreen(child: child),
         routes: [
@@ -134,7 +119,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final provider = ref.watch(moduleStateProvider);
-    final backendDeployment = ref.watch(backendDeploymentStateProvider);
     final bootstrapState = ref.watch(launcherBootstrapStateProvider);
 
     // Queue the launcher-update dialog exactly once per available update.
@@ -173,10 +157,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
         ),
       );
-    }
-
-    if (!backendDeployment.isLoading && !backendDeployment.isReady) {
-      return const BackendSetupScreen();
     }
 
     // Normal operation: the child route provides its own chrome via

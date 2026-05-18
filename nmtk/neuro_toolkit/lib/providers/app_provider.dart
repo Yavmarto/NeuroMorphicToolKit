@@ -1,40 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'package:neuro_toolkit/services/preferences_service.dart';
 
 class AppProvider with ChangeNotifier {
-  /// [preferencesService] must be provided. Use [preferencesServiceProvider]
-  /// from riverpod_providers.dart (or inject directly in tests).
-  AppProvider({required PreferencesService preferencesService})
-      : _prefs = preferencesService {
-    _init();
-  }
-
-  final PreferencesService _prefs;
-
-  bool _hasSeenOnboarding = false;
-  bool _isInitialized = false;
+  AppProvider();
   bool _developerMode = false;
-
-  Future<void> _init() async {
-    if (_isInitialized) return;
-    await _prefs.init();
-    _hasSeenOnboarding = _prefs.hasSeenOnboarding;
-    _isInitialized = true;
-    notifyListeners();
-  }
-
-  bool get hasSeenOnboarding => _hasSeenOnboarding;
-  bool get isInitialized => _isInitialized;
   bool get developerMode => _developerMode;
 
   void toggleDeveloperMode() {
     _developerMode = !_developerMode;
-    notifyListeners();
-  }
-
-  Future<void> completeOnboarding() async {
-    await _prefs.setHasSeenOnboarding(true);
-    _hasSeenOnboarding = true;
     notifyListeners();
   }
 }

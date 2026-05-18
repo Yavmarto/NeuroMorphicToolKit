@@ -10,7 +10,6 @@ import 'package:neuro_toolkit/routing/router.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
-import 'package:neuro_toolkit/services/preferences_service.dart';
 
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   throw UnimplementedError(
@@ -36,20 +35,8 @@ final controlApiServiceProvider = Provider<ControlApiService>((ref) {
   );
 });
 
-/// Provides the [PreferencesService] instance.
-///
-/// Override at bootstrap (or in tests) to inject a custom instance:
-/// ```dart
-/// preferencesServiceProvider.overrideWithValue(
-///   PreferencesService(basePath: tempDir.path),
-/// )
-/// ```
-final preferencesServiceProvider = Provider<PreferencesService>((ref) {
-  return PreferencesService();
-});
-
 final appStateProvider = ChangeNotifierProvider<AppProvider>((ref) {
-  return AppProvider(preferencesService: ref.read(preferencesServiceProvider));
+  return AppProvider();
 });
 
 final moduleStateProvider = ChangeNotifierProvider<ModuleProvider>((ref) {
@@ -81,8 +68,7 @@ final backendDeploymentStateProvider =
 // `Neurochip/frontend/lib/providers/riverpod_providers.dart`.
 
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final appState = ref.read(appStateProvider);
-  final router = createGoRouter(appState);
+  final router = createGoRouter();
   ref.onDispose(router.dispose);
   return router;
 });
