@@ -14,12 +14,12 @@ from neurocnl.converter.akida_adapter import nir_to_akida
 # graph = nir.read("my_trained_model.nir")
 
 # Scenario B: For testing, let's just create a mock NIR graph manually.
-# Let's say it takes an input of size 10, passes it to a dense layer of 20, 
+# Let's say it takes an input of size 10, passes it to a dense layer of 20,
 # and fires spiking neurons.
 nodes = {
     "input": nir.Input(input_type={'input': np.array([10])}),
     "linear": nir.Affine(
-        weight=np.random.randn(20, 10).astype(np.float32), 
+        weight=np.random.randn(20, 10).astype(np.float32),
         bias=np.zeros(20)
     ),
     "lif": nir.IF(r=np.array([1.0]), v_threshold=np.array([1.0])),

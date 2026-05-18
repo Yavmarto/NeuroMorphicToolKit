@@ -700,4 +700,3 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 }
-

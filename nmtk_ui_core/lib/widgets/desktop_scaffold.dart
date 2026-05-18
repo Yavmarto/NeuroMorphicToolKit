@@ -359,30 +359,88 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
 
   Widget _buildMobileLayout(BuildContext context) {
     final scheme = ShadTheme.of(context).colorScheme;
+    final mobileNavItems = _mobileNavigationItems;
+    final useBottomNavigation = _shouldUseBottomNavigation;
 
     return Scaffold(
       backgroundColor: scheme.background,
       appBar: _NmtkMobileAppBar(
         scheme: scheme,
+        title: widget.pageTitle,
         showBackButton: widget.showBackButton,
         onBack: widget.onBack,
         fileActions: widget.fileActions,
-        onSettingsPressed: widget.onSettingsPressed,
+        onSettingsPressed: useBottomNavigation
+            ? null
+            : widget.onSettingsPressed,
         userProfile: widget.userProfile,
+        showMenuButton: !useBottomNavigation,
       ),
-      drawer: _NmtkMobileDrawer(
-        navItems: widget.navItems,
-        selectedIndex: widget.selectedIndex,
-        onNavItemSelected: widget.onNavItemSelected,
-        footerNavItems: widget.footerNavItems,
-        onFooterNavItemSelected: widget.onFooterNavItemSelected,
-        onSettingsPressed: widget.onSettingsPressed,
-        userProfile: widget.userProfile,
-        brand: widget.sidebarBrand,
-        scheme: scheme,
+      drawer: useBottomNavigation
+          ? null
+          : _NmtkMobileDrawer(
+              navItems: widget.navItems,
+              selectedIndex: widget.selectedIndex,
+              onNavItemSelected: widget.onNavItemSelected,
+              footerNavItems: widget.footerNavItems,
+              onFooterNavItemSelected: widget.onFooterNavItemSelected,
+              onSettingsPressed: widget.onSettingsPressed,
+              userProfile: widget.userProfile,
+              brand: widget.sidebarBrand,
+              scheme: scheme,
+            ),
+      body: SafeArea(
+        top: false,
+        child: ColoredBox(color: scheme.background, child: widget.child),
       ),
-      body: ColoredBox(color: scheme.background, child: widget.child),
+      bottomNavigationBar: useBottomNavigation
+          ? NavigationBar(
+              selectedIndex: _selectedMobileNavigationIndex,
+              onDestinationSelected: _handleMobileDestinationSelected,
+              destinations: [
+                for (final item in mobileNavItems)
+                  NavigationDestination(
+                    icon: Icon(item.icon),
+                    selectedIcon: Icon(item.selectedIcon ?? item.icon),
+                    label: item.label,
+                  ),
+              ],
+            )
+          : null,
     );
+  }
+
+  bool get _shouldUseBottomNavigation {
+    return widget.footerNavItems.length <= 1 &&
+        widget.navItems.length + widget.footerNavItems.length <= 5;
+  }
+
+  List<NmtkSidebarItem> get _mobileNavigationItems => [
+    ...widget.navItems,
+    ...widget.footerNavItems,
+  ];
+
+  int get _selectedMobileNavigationIndex {
+    final navCount = widget.navItems.length;
+    if (widget.selectedIndex >= 0 && widget.selectedIndex < navCount) {
+      return widget.selectedIndex;
+    }
+    if (widget.selectedIndex < 0 && widget.footerNavItems.isNotEmpty) {
+      return navCount;
+    }
+    return 0;
+  }
+
+  void _handleMobileDestinationSelected(int index) {
+    if (index < widget.navItems.length) {
+      widget.onNavItemSelected?.call(index);
+      return;
+    }
+
+    final footerIndex = index - widget.navItems.length;
+    if (footerIndex >= 0 && footerIndex < widget.footerNavItems.length) {
+      widget.onFooterNavItemSelected?.call(footerIndex);
+    }
   }
 }
 
@@ -393,19 +451,23 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
 class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
   const _NmtkMobileAppBar({
     required this.scheme,
+    required this.showMenuButton,
     required this.showBackButton,
     this.onBack,
     this.fileActions,
     this.onSettingsPressed,
     this.userProfile,
+    this.title,
   });
 
   final ShadColorScheme scheme;
+  final bool showMenuButton;
   final bool showBackButton;
   final VoidCallback? onBack;
   final NmtkFileActionDelegate? fileActions;
   final VoidCallback? onSettingsPressed;
   final NmtkUserProfile? userProfile;
+  final String? title;
 
   @override
   Size get preferredSize => const Size.fromHeight(_kContentHeaderHeight);
@@ -423,18 +485,18 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Row(
             children: [
-              // Hamburger menu button
-              Builder(
-                builder: (ctx) => IconButton(
-                  icon: Icon(
-                    Icons.menu_rounded,
-                    color: scheme.foreground,
-                    size: 20,
+              if (showMenuButton)
+                Builder(
+                  builder: (ctx) => IconButton(
+                    icon: Icon(
+                      Icons.menu_rounded,
+                      color: scheme.foreground,
+                      size: 20,
+                    ),
+                    onPressed: () => Scaffold.of(ctx).openDrawer(),
+                    tooltip: 'Open navigation',
                   ),
-                  onPressed: () => Scaffold.of(ctx).openDrawer(),
-                  tooltip: 'Open navigation',
                 ),
-              ),
 
               // Optional back arrow
               if (showBackButton)
@@ -448,7 +510,21 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                   tooltip: 'Back',
                 ),
 
-              const Spacer(),
+              if (title != null && title!.isNotEmpty) ...[
+                if (showMenuButton || showBackButton) const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    title!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: scheme.foreground,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ] else
+                const Spacer(),
 
               // Optional file action icons
               if (fileActions != null) ...[

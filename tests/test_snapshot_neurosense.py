@@ -15,7 +15,6 @@ PYTHONPATH must include NeuroMorphicToolKit/Neurosense so that
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 # ---------------------------------------------------------------------------
 # Fixed test signal: 2 channels × 50 samples, amplitude 0–100 µV

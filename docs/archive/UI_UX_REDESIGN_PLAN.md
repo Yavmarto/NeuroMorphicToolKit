@@ -805,4 +805,3 @@ Start by changing the UI architecture:
 - clearer workflow progression
 
 If you do that well, the visual design work will finally have something solid to sit on.
-

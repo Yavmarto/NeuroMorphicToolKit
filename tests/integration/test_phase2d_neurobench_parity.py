@@ -9,7 +9,6 @@ import json
 import pathlib
 
 import httpx
-import pytest
 
 ORIGINAL = "http://localhost:8003"
 SUITE    = "http://localhost:9000"

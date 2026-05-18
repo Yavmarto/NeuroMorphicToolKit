@@ -119,4 +119,3 @@ Before handing work back:
 If the issue changes a cross-repo contract after explicit approval, escalate
 back to a full-workspace agent instead of changing the root shell contract in
 the module repo.
-

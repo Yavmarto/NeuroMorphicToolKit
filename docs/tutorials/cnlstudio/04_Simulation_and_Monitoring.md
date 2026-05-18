@@ -16,7 +16,7 @@ Once a simulation is running or completed, the **Simulation Dashboard** becomes 
 ### Sensor Time Series Chart
 - **Visual:** A line chart plotting activity over time.
 - **Content:** It displays spike rasters, membrane potentials, or external sensor inputs (if connected to a simulator stream like MuJoCo).
-- **Usage:** Use this chart to verify that your populations are spiking as expected in response to stimuli. 
+- **Usage:** Use this chart to verify that your populations are spiking as expected in response to stimuli.
 
 ### Energy Bar Chart
 - **Visual:** A bar or pie chart detailing power metrics.

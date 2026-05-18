@@ -13,8 +13,6 @@ import shlex
 import shutil
 import stat
 import subprocess
-from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 

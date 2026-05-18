@@ -26,7 +26,7 @@ We have decided to relax the "standalone edge deployment" constraint in favor of
 
 ## 2. Cognitive Architectures (NeuroCNL SPA)
 
-To support state machines and cognitive architectures, we will map new CNL grammar constructs to Vector Symbolic Architectures (VSAs) using the standalone `nengo_spa` package. 
+To support state machines and cognitive architectures, we will map new CNL grammar constructs to Vector Symbolic Architectures (VSAs) using the standalone `nengo_spa` package.
 
 ### Natural Language Grammar for CNL
 To maintain the "natural" requirements-driven structure of CNL (e.g., *The sensory neuron MUST fire...*), we will introduce new semantic rules that read like behavioral specifications.
@@ -467,4 +467,3 @@ The motor neuron MUST NOT fire DURING the refractory period of 0.002 seconds
 The motor neuron membrane potential MUST decay WITH time constant of 0.02 seconds
 The connection from sensory neuron to motor neuron MUST transmit WITH synaptic weight of 15.0
 ```
-

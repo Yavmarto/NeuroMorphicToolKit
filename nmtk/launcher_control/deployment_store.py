@@ -164,6 +164,9 @@ class DeploymentStore:
         target.updated_at = utc_now_iso()
         self._persist()
 
+    def resolve_secret(self, ref: str) -> str:
+        return self._secret_store.get(ref)
+
     def _extract_secrets(self, payload: dict[str, Any]) -> dict[str, Any]:
         target_id = str(payload.get("id") or payload.get("displayName") or "target")
         secret_refs = dict(payload.get("secretRefs") or {})
@@ -187,4 +190,3 @@ class DeploymentStore:
                 "selectedTargetId": self._selected_target_id,
             },
         )
-

@@ -18,7 +18,6 @@ from __future__ import annotations
 from collections.abc import Generator
 from datetime import datetime, timezone
 from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy import create_engine

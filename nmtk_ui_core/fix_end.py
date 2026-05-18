@@ -9,7 +9,6 @@ if idx != -1:
     end_idx = text.rfind('// ─────────────────────────────────────────────────────────────────────────────', 0, idx)
     if end_idx != -1:
         text = text[:end_idx].rstrip() + '\n'
-        
+
 with open('lib/widgets/desktop_scaffold.dart', 'w') as f:
     f.write(text)
-

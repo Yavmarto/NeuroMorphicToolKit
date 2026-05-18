@@ -1,82 +1,77 @@
-# NMTK: Long-Horizon & Standalone Development Opportunities
+# NMTK: Long-Horizon Strategic Initiatives
 
-This document identifies high-impact, long-horizon tasks that can be executed independently of the main NeuroMorphicToolKit (NMTK) repository. These tasks are designed to be **security-safe** (requiring no project secrets or proprietary data) and **architecturally decoupled** to allow for seamless re-integration.
+This document identifies high-impact, long-horizon tasks that advance the core capabilities of the NeuroMorphicToolKit (NMTK) repository. These initiatives represent major architectural expansions and require deep integration across the monorepo's modules.
 
 ---
 
 ## 1. The Neurohub Global Registry
 
-**Nature:** Infrastructure / Community Service  
-**Status in NMTK:** 0% (Conceptual Spec Ready)  
-**Security Boundary:** Built entirely on the updated `neurohub_spec.md`. Requires no access to NMTK's internal backend logic or private data.  
-**Re-integration Path:** NMTK's internal `Neurohub` module will act as a client. Supports sharing `.cnl` templates and full `.cnlspace` workspace sessions.
+**Nature:** Infrastructure / Service  
+**Status:** Conceptual Spec Ready (`neurohub_spec.md`)  
+**Architectural Integration:** Developed within the NMTK monorepo, expanding the existing `Neurohub` module into a full-fledged backend service and frontend portal. Supports native integration for sharing `.cnl` templates and full `.cnlspace` workspace sessions directly from the NMTK UI.
 
 ### Key Workstreams:
-*   **Scalable Web Registry Backend:** A production-grade FastAPI service for artifact metadata, supporting models, datasets, and `.cnlspace` files.
-*   **Community Portal (Next.js):** A standalone web frontend for model discovery and "Model Cards."
-*   **Universal Artifact CLI (`neurohub-cli`):** A tool for publishing/pulling artifacts via `neurohub://` URIs.
+*   **Scalable Web Registry Backend:** Implement a production-grade FastAPI service handling artifact metadata, models, datasets, and `.cnlspace` files.
+*   **Community Portal (Next.js/Flutter):** Build out the web frontend for model discovery, incorporating "Model Cards" and community features.
+*   **Universal Artifact CLI (`neurohub-cli`):** Extend the `neurocli` or create a dedicated tool for publishing/pulling artifacts via `neurohub://` URIs seamlessly within the development workflow.
 
 ---
 
 ## 2. Universal Sensory Encoding Library (NeuroSense-Lib)
 
-**Nature:** Research / Software Library  
-**Status in NMTK:** Neurosense Submodule (85%)  
-**Security Boundary:** Purely algorithmic and mathematical. Based on public neuroscience papers regarding spike encoding (Rate, Temporal, TTFS). No access to proprietary sensor hardware or internal datasets required.  
-**Re-integration Path:** This becomes a standard Python dependency for the `Neurosense` module, replacing fragmented internal encoding scripts.
+**Nature:** Core Library / Research  
+**Status:** Neurosense Submodule (85%)  
+**Architectural Integration:** Consolidating fragmented internal encoding scripts into a robust, unified Python library within the `Neurosense` module. This library will serve as the standard dependency for all sensory transformations across NMTK.
 
 ### Key Workstreams:
-*   **Multi-Modal Encoder Suite:** Implementing advanced encoders for Lidar, Radar, and bio-sensors (EMG/EEG).
-*   **Hardware-Aware Quantization:** Algorithms that optimize spike density for 4-bit/8-bit hardware constraints (e.g., Akida).
+*   **Multi-Modal Encoder Suite:** Implement and optimize advanced encoders for Lidar, Radar, and bio-sensors (EMG/EEG), leveraging the existing codebase context.
+*   **Hardware-Aware Quantization:** Develop algorithms that optimize spike density for 4-bit/8-bit hardware constraints (e.g., Akida, Loihi), directly hooking into the `Neurochip` hardware profiles.
 
 ---
 
 ## 3. NIR-Native Virtual Hardware (NIR-VM)
 
 **Nature:** Software Engineering / Emulation  
-**Status in NMTK:** Core Architecture (NIR-focused)  
-**Security Boundary:** Based strictly on the public **Neuromorphic Intermediate Representation (NIR)** specification. Requires no access to physical Loihi/Akida chips or proprietary SDKs.  
-**Re-integration Path:** Integrated as a "Virtual Backend" in the `Neurochip` and `Neurosim` modules, enabling users to "Run on Virtual Akida" without physical hardware.
+**Status:** Core Architecture (NIR-focused)  
+**Architectural Integration:** Deeply embedded as a "Virtual Backend" within the `Neurochip` and `neurocnl` modules. This allows users to test and profile models natively within NMTK without requiring physical hardware deployment.
 
 ### Key Workstreams:
-*   **Bit-Accurate NIR Executor:** A standalone runtime that executes `.nir` graphs with cycle-accurate timing simulation.
-*   **Telemetry Dashboard:** A visualizer for spike-train activity and power consumption estimates during virtual execution.
+*   **Bit-Accurate NIR Executor:** Build a standalone runtime within the repository that executes `.nir` graphs with cycle-accurate timing simulation, validating against our existing hardware interfaces.
+*   **Telemetry Dashboard:** Extend the `nmtk_ui_core` and `neurocnl` frontend to visualize spike-train activity and power consumption estimates during virtual execution.
 
 ---
 
 ## 4. NeuroTrain: Optimization for NeuroStudio
 
-**Nature:** Research / ML Engineering  
-**Status in NMTK:** 0% (Conceptual Spec Ready)  
-**Security Boundary:** Operates on public SNN frameworks (snnTorch, Norse, Lava) and the NIR specification. No access to NeuroStudio internal UI code needed.  
-**Re-integration Path:** Integrated as a sequence of optimization passes within the `neurocnl` (NeuroStudio) compilation pipeline, alongside NeuroSim and NeuroChip.
+**Nature:** ML Engineering / Compilation Pipeline  
+**Status:** Conceptual Spec Ready  
+**Architectural Integration:** Integrated as a sequence of optimization passes directly within the `neurocnl` compilation pipeline. This bridges the gap between public SNN frameworks (snnTorch, Norse, Lava) and NMTK's hardware backends.
 
 ### Key Workstreams:
-*   **ANN-to-SNN Converter:** Converting standard models into NIR-compatible optimized SNNs.
-*   **Quantization-Aware Fine-Tuning:** Hardware-specific weight optimization (Akida, Loihi, Xylo).
-*   **Structural Optimization:** Pruning and topology merging for energy efficiency.
+*   **ANN-to-SNN Converter:** Build native tooling for converting standard models into NIR-compatible optimized SNNs within the toolkit.
+*   **Quantization-Aware Fine-Tuning:** Implement hardware-specific weight optimization utilizing NMTK's internal hardware configuration profiles (Akida, Loihi, Xylo).
+*   **Structural Optimization:** Add pruning and topology merging algorithms for energy efficiency directly to the CNL materializer.
 
 ---
 
 ## 5. Standardized Neuromorphic Datasets
 
-**Nature:** Data Science / Curation  
-**Status in NMTK:** Distributed  
-**Security Boundary:** Uses public datasets (ImageNet, LibriSpeech) and public encoding algorithms. No private data involved.  
-**Re-integration Path:** Datasets are published to the Global Neurohub and become "One-Click Downloads" inside the NMTK UI.
+**Nature:** Data Engineering / Pipeline Automation  
+**Status:** Distributed (Active Development in Neurobench)  
+**Architectural Integration:** Tightly coupled with the `Neurobench` module for validation and the `Neurohub` module for hosting. Integrated directly into the NMTK UI for "One-Click Downloads" and seamless experiment tracking.
 
 ### Key Workstreams:
-*   **"Event-ification" Pipelines:** Massive-scale conversion of legacy datasets into high-quality event streams.
-*   **Synthetic Data Generators:** Building physics-informed generators for robotic tactile and proprioceptive spike data.
+*   **"Event-ification" Pipelines:** Centralize and scale the conversion of legacy datasets into high-quality event streams using NMTK's internal processing utilities.
+*   **Synthetic Data Generators:** Integrate physics-informed generators for robotic tactile and proprioceptive spike data into the `Neurobench` CLI and validation suites.
 
 ---
 
-## Summary of Security & Re-integration
+## Summary of Strategic Initiatives
 
-| Task | Security Exposure | Primary Input | Integration Method |
+| Task | Primary Module | Core Focus | Architectural Impact |
 | :--- | :--- | :--- | :--- |
-| **Global Neurohub** | Low (Public Specs) | `neurohub_spec.md` | API Client in NMTK |
-| **NeuroSense-Lib** | Zero (Math/Alg) | Neuroscience Papers | Python Package |
-| **NIR-VM** | Zero (NIR Spec) | `nir` Specification | Virtual Backend Plugin |
-| **NeuroTrain** | Zero (Frameworks) | Public SNN Frameworks | Compiler Optimization Pass |
-| **Datasets** | Zero (Public Data) | ImageNet / LibriSpeech | Neurohub Registry URI |
+| **Global Neurohub** | `Neurohub` | Ecosystem scaling | Registry service & artifact sharing |
+| **NeuroSense-Lib** | `Neurosense` | Sensory encoding | Unified library for signal-to-spike |
+| **NIR-VM** | `Neurochip` / `neurocnl` | Hardware emulation | Cycle-accurate virtual execution |
+| **NeuroTrain** | `neurocnl` | Model optimization | Built-in SNN training & compilation passes |
+| **Datasets** | `Neurobench` | Benchmarking | Standardized data pipelines & hosting |

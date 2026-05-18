@@ -17,7 +17,7 @@ Before deploying, the system must know *where* to deploy.
 If you simply want the compiled artifact without deploying immediately, use the **Export Menu**.
 
 - **Formats:** You can export the raw CNL, the compiled NIR graph, or hardware-specific binaries.
-- **Quantization:** Physical chips often require lower precision (e.g., 4-bit or 8-bit integers) than the 32-bit floats used in simulation. 
+- **Quantization:** Physical chips often require lower precision (e.g., 4-bit or 8-bit integers) than the 32-bit floats used in simulation.
 - **Quantization Curve Chart:** When preparing an export, this chart shows the degradation in performance as precision drops. You must balance accuracy against the hardware constraints.
 
 ## Dedicated Deployment Panels

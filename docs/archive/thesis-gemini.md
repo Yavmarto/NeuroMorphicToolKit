@@ -7,14 +7,14 @@ _Based on analysis of `thesis-claude.md`, `Thesis analysis.md`, and the `NeuroMo
 
 ## 1. The Core Insight: Platform vs. Product
 
-The most critical distinction to make when framing this repository as a Master's Thesis in Applied AI at JKU is separating the **Engineering Platform** from the **Scientific Contribution**. 
+The most critical distinction to make when framing this repository as a Master's Thesis in Applied AI at JKU is separating the **Engineering Platform** from the **Scientific Contribution**.
 
 *   **The Engineering Platform**: The Flutter launcher, Docker-compose orchestration, FastAPI backends, and UI components (`nmtk`, `nmtk_ui_core`). This is excellent software engineering, but it is **not** an Applied AI research thesis.
 *   **The Scientific Contribution**: The `Neuro-Dream-Hand` module, supported by the neuromorphic pipelines (`neurocnl`, `Neurosense`, `Neurochip`, `Neurobench`). This represents a cohesive, end-to-end framework for adaptive neuromorphic control of a prosthetic hand. **This is your thesis.**
 
 ## 2. What Constitutes the Thesis?
 
-The core of your thesis is the **Neuro-Dream-Hand**. It is a closed-loop Spiking Neural Network (SNN) control system featuring Online Continual Learning (OCL) via the PES learning rule. 
+The core of your thesis is the **Neuro-Dream-Hand**. It is a closed-loop Spiking Neural Network (SNN) control system featuring Online Continual Learning (OCL) via the PES learning rule.
 
 ### What is Empirically Defensible (Validated in Simulation)
 You have strong, reproducible simulation results that form the backbone of your thesis:
@@ -42,7 +42,7 @@ Your thesis should present the `Neuro-Dream-Hand` not in isolation, but as the c
 
 ## 4. Suggested Research Questions
 
-To align with an Applied AI thesis, focus on the intersection of biological plausibility, machine learning (OCL), and physical system control. 
+To align with an Applied AI thesis, focus on the intersection of biological plausibility, machine learning (OCL), and physical system control.
 
 **Primary RQ Formulation (Simulation Focus):**
 > _"To what extent can a biologically constrained Spiking Neural Network utilizing PES online learning maintain stable grasp control under zero-shot perturbations in a simulated physical environment, and what are the implications of weight quantization on the stability of this continuous learning? "_
@@ -54,24 +54,24 @@ To align with an Applied AI thesis, focus on the intersection of biological plau
 
 This structure highlights the AI research while pushing the software platforming out of the spotlight:
 
-*   **Chapter 1: Introduction** 
+*   **Chapter 1: Introduction**
     *   The challenge of neuromorphic prosthetics and sim-to-real scaling.
-*   **Chapter 2: Background** 
+*   **Chapter 2: Background**
     *   SNNs, PES Learning Rule, Catastrophic Forgetting, and Neuromorphic Hardware targets.
 *   **Chapter 3: End-to-End Pipeline Methodology**
     *   `neurocnl` (Interpretability via NLP) -> `Neurosense` (Encoding) -> `Neurochip`/`Neurobench` (Deployment constraints & Metrics).
 *   **Chapter 4: The Neuro-Dream-Hand Controller Architecture**
     *   The reflex arc, Online Continual Learning (OCL), and sleep consolidation mechanisms.
-*   **Chapter 5: Simulation Experiments & Results** 
+*   **Chapter 5: Simulation Experiments & Results**
     *   MuJoCo evaluation: Slip survival, learning convergence speed, and the 30-day sleep consolidation results.
     *   Ablation studies: Quantization sweeps (4-bit INT degradation).
 *   **Chapter 6: Hardware Deployment Strategy (Discussion)**
     *   Sim-to-real gap analysis, Teensy/EMG mock-interfaces, and Loihi 2 deployment plans.
-*   **Chapter 7: Conclusion** 
+*   **Chapter 7: Conclusion**
     *   Summary of contributions and the future roadmap for physical validation.
 
 ## 6. Gemini's Final Takeaway
 
-You have built a massive, impressive ecosystem. The danger is diluting your core AI contribution (the Dream Hand & SNN control) with the sheer volume of software engineering (the NMTK launcher). 
+You have built a massive, impressive ecosystem. The danger is diluting your core AI contribution (the Dream Hand & SNN control) with the sheer volume of software engineering (the NMTK launcher).
 
 **Keep the thesis rigorously focused on the SNN, the online learning, and the simulation results.** Let the NMTK UI just be a neat footnote about how your lab runs experiments, rather than a focus of the document. You have a solid, defensible Applied AI thesis ready to write.

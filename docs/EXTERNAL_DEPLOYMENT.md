@@ -12,7 +12,7 @@ Add the following to your root `Makefile`:
 
 ```makefile
 # Deployment variables (can be overridden on command line)
-REMOTE_HOST ?= 
+REMOTE_HOST ?=
 DEPLOY_DIR ?= ~/nmtk-deploy
 
 docker-ex:
@@ -56,24 +56,83 @@ docker-ex-i: docker-ex
 ---
 
 ## 2. Kubernetes Deployment
-**Status:** In Development (Architecture defined in `nmtk/launcher_control`).
+**Status:** Implemented in `nmtk/launcher_control`.
 
-The project is currently building a "First-Run" wizard that will handle Kubernetes deployments natively. If you wish to deploy manually now:
+The launcher control service can render and apply Kubernetes manifests automatically. You can trigger this through the NMTK Desktop UI or programmatically via the launcher control API.
 
-### Manual Steps
-1. **Create Manifests:** Define `Deployment` and `Service` resources for `suite_api` (port 9000).
-2. **Context:** Ensure your local `kubectl` context is set to your local network cluster.
-3. **Execute:**
+### Prerequisites
+1. **kubectl:** Installed and configured with access to your target cluster.
+2. **Cluster Access:** Your kubeconfig context must have permissions to create Namespaces, Deployments, Services, ConfigMaps, and Secrets.
+3. **Container Images:** The `suite_api` image must be available in a registry accessible by the cluster (default: `ghcr.io/completed-spoon-6/neurocnl`).
+
+### Via Launcher Control API
+1. **Create a Kubernetes target:**
    ```bash
-   kubectl create namespace nmtk-backend
-   kubectl apply -f ./k8s/ -n nmtk-backend
+   curl -X POST http://localhost:8090/api/launcher/deployment/targets \
+     -H "Content-Type: application/json" \
+     -d '{
+       "displayName": "Production K8s",
+       "targetType": "kubernetes_cluster",
+       "mode": "kubernetes",
+       "namespace": "nmtk-backend",
+       "context": "production",
+       "backendPort": 9000,
+       "imageTag": "latest",
+       "authMode": "kubeconfig"
+     }'
    ```
+
+2. **Run preflight:**
+   ```bash
+   curl -X POST http://localhost:8090/api/launcher/deployment/preflight \
+     -H "Content-Type: application/json" \
+     -d '{"targetId": "<target-id>"}'
+   ```
+
+3. **Start deployment job:**
+   ```bash
+   curl -X POST http://localhost:8090/api/launcher/deployment/jobs \
+     -H "Content-Type: application/json" \
+     -d '{"targetId": "<target-id>"}'
+   ```
+
+4. **Stream progress:**
+   ```bash
+   curl http://localhost:8090/api/launcher/deployment/jobs/<job-id>/events
+   ```
+
+### Manual Manifest Generation
+If you prefer to manage manifests yourself, the launcher control renderer can generate them:
+
+```python
+from pathlib import Path
+from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+from nmtk.launcher_control.deployment_k8s_renderer import render_manifests, write_manifests
+
+target = DeploymentTarget(
+    id="manual-k8s",
+    display_name="Manual K8s",
+    target_type="kubernetes_cluster",
+    mode="kubernetes",
+    namespace="nmtk-backend",
+    backend_port=9000,
+    image_tag="v1.0.0",
+)
+
+manifests = render_manifests(target, app_name="nmtk-suite-api")
+write_manifests(manifests, Path("./k8s-output"))
+```
+
+Then apply:
+```bash
+kubectl apply -f ./k8s-output/
+```
 
 ---
 
 ## 3. Project Context & Roadmap
 
-The toolkit is moving towards an automated deployment flow managed by `launcher_control`. 
+The toolkit is moving towards an automated deployment flow managed by `launcher_control`.
 
 - **Key Plan:** `docs/archive/2026-05-04-first-run-backend-deployment-standalone-docker-kubernetes-plan.md`
 - **Current Backend Orchestrator:** `nmtk/launcher_control/deployment_service.py`

@@ -71,4 +71,3 @@ lanes implement against it; they do not redefine it locally.
 - [Shell Adapter Contract And Package Conventions](../2026-04-24-shell-adapter-contract-and-package-conventions.md)
 - [Desktop-Only Module Migration Subplans](../2026-04-24-desktop-module-migration-subplans.md)
 - [Multi-Agent Desktop Migration Execution Map](../2026-04-24-multi-agent-desktop-migration-execution-map.md)
-

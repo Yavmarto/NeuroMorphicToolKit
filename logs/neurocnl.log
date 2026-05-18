@@ -17798,3 +17798,123 @@ Using selector: KqueueSelector
 [1;91mRuntimeError: [0mlava payload exploded
 
 HTTP Request: POST http://testserver/api/deploy/lava/network "HTTP/1.1 500 Internal Server Error"
+matplotlib data path: /Users/yoshimartodihardjo/anaconda/anaconda3/lib/python3.12/site-packages/matplotlib/mpl-data
+CONFIGDIR=/Users/yoshimartodihardjo/.matplotlib
+interactive is False
+platform is darwin
+CACHEDIR=/Users/yoshimartodihardjo/.matplotlib
+Using fontManager instance from /Users/yoshimartodihardjo/.matplotlib/fontlist-v390.json
+Starting preview simulation - nodes=1 edges=0 duration_ms=100
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+Using NeuroSim local preview model builder for approximate or unsupported fidelity.
+Network step 1: Building ensembles and nodes
+Network step 2: Building subnetworks
+Network step 3: Building connections
+Network step 4: Building probes
+Optimizing model...
+[views]: Reduced 9 to 9 operators in 0.000747s.
+[non-views]: Reduced 9 to 9 operators in 0.001666s.
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Preview simulation completed - wall_clock_ms=483.64 sim_execution_ms=100.00 setup_overhead_ms=383.64
+Starting preview simulation - nodes=2 edges=1 duration_ms=100
+Using NeuroSim local preview model builder for approximate or unsupported fidelity.
+Network step 1: Building ensembles and nodes
+Network step 2: Building subnetworks
+Network step 3: Building connections
+Network step 4: Building probes
+Optimizing model...
+[views]: Reduced 19 to 19 operators in 0.000591s.
+[non-views]: Reduced 19 to 18 operators in 0.000897s.
+[views]: Reduced 18 to 17 operators in 0.001600s.
+[views]: Reduced 17 to 16 operators in 0.001171s.
+[views]: Reduced 16 to 15 operators in 0.006024s.
+[views]: Reduced 15 to 14 operators in 0.001185s.
+[views]: Reduced 14 to 14 operators in 0.000683s.
+[non-views]: Reduced 14 to 14 operators in 0.000387s.
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Preview simulation completed - wall_clock_ms=174.04 sim_execution_ms=100.00 setup_overhead_ms=74.04
+Using selector: KqueueSelector
+Starting preview simulation - nodes=1 edges=0 duration_ms=500
+Using NeuroSim local preview model builder for approximate or unsupported fidelity.
+Network step 1: Building ensembles and nodes
+Network step 2: Building subnetworks
+Network step 3: Building connections
+Network step 4: Building probes
+Optimizing model...
+[views]: Reduced 9 to 9 operators in 0.000749s.
+[non-views]: Reduced 9 to 9 operators in 0.005337s.
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Preview simulation completed - wall_clock_ms=1046.95 sim_execution_ms=500.00 setup_overhead_ms=546.95
+{"job_id": "6fb67044-d3b0-490f-8c38-072a71da8898", "event": "websocket_client_disconnected", "level": "info", "timestamp": "2026-05-17T19:04:36.261485Z"}
+matplotlib data path: /Users/yoshimartodihardjo/anaconda/anaconda3/lib/python3.12/site-packages/matplotlib/mpl-data
+CONFIGDIR=/Users/yoshimartodihardjo/.matplotlib
+interactive is False
+platform is darwin
+CACHEDIR=/Users/yoshimartodihardjo/.matplotlib
+Using fontManager instance from /Users/yoshimartodihardjo/.matplotlib/fontlist-v390.json
+Starting preview simulation - nodes=1 edges=0 duration_ms=100
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+Using NeuroSim local preview model builder for approximate or unsupported fidelity.
+Network step 1: Building ensembles and nodes
+Network step 2: Building subnetworks
+Network step 3: Building connections
+Network step 4: Building probes
+Optimizing model...
+[views]: Reduced 9 to 9 operators in 0.000421s.
+[non-views]: Reduced 9 to 9 operators in 0.008402s.
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Preview simulation completed - wall_clock_ms=63.66 sim_execution_ms=100.00 setup_overhead_ms=-36.34
+Starting preview simulation - nodes=2 edges=1 duration_ms=100
+Using NeuroSim local preview model builder for approximate or unsupported fidelity.
+Network step 1: Building ensembles and nodes
+Network step 2: Building subnetworks
+Network step 3: Building connections
+Network step 4: Building probes
+Optimizing model...
+[views]: Reduced 19 to 19 operators in 0.000344s.
+[non-views]: Reduced 19 to 18 operators in 0.000465s.
+[views]: Reduced 18 to 17 operators in 0.000604s.
+[views]: Reduced 17 to 16 operators in 0.000348s.
+[views]: Reduced 16 to 15 operators in 0.000480s.
+[views]: Reduced 15 to 14 operators in 0.000239s.
+[views]: Reduced 14 to 14 operators in 0.000147s.
+[non-views]: Reduced 14 to 14 operators in 0.000142s.
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Preview simulation completed - wall_clock_ms=55.76 sim_execution_ms=100.00 setup_overhead_ms=-44.24
+Using selector: KqueueSelector
+Starting preview simulation - nodes=1 edges=0 duration_ms=500
+Using NeuroSim local preview model builder for approximate or unsupported fidelity.
+Network step 1: Building ensembles and nodes
+Network step 2: Building subnetworks
+Network step 3: Building connections
+Network step 4: Building probes
+Optimizing model...
+[views]: Reduced 9 to 9 operators in 0.000161s.
+[non-views]: Reduced 9 to 9 operators in 0.000181s.
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
+Preview simulation completed - wall_clock_ms=428.52 sim_execution_ms=500.00 setup_overhead_ms=-71.48
+{"job_id": "1d9091b1-a3ac-4292-9e36-69d986df2e25", "event": "websocket_client_disconnected", "level": "info", "timestamp": "2026-05-17T19:17:04.489232Z"}

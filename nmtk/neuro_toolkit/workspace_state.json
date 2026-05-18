@@ -4,21 +4,21 @@
     {
       "deepLink": null,
       "moduleId": "neurocnl",
-      "readinessState": "ready",
+      "readinessState": "warming_up",
       "restoreState": {},
       "surfaceMode": "native"
     },
     {
       "deepLink": null,
       "moduleId": "Neurobench",
-      "readinessState": "ready",
+      "readinessState": "opening",
       "restoreState": {},
       "surfaceMode": "native"
     },
     {
       "deepLink": null,
       "moduleId": "Neurohub",
-      "readinessState": "ready",
+      "readinessState": "opening",
       "restoreState": {},
       "surfaceMode": "native"
     }

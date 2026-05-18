@@ -262,5 +262,83 @@ void main() {
       // Legacy title is NOT rendered in the UI.
       expect(find.text('Legacy Title'), findsNothing);
     });
+
+    testWidgets('mobile layout renders bottom navigation when tabs fit', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      int? tappedIndex;
+
+      await tester.pumpWidget(
+        _buildHarness(
+          NmtkDesktopScaffold(
+            navItems: _kNavItems,
+            selectedIndex: 0,
+            pageTitle: 'Workspace',
+            onNavItemSelected: (i) => tappedIndex = i,
+            footerNavItems: const [
+              NmtkSidebarItem(
+                id: 'settings',
+                label: 'Settings',
+                icon: Icons.settings_outlined,
+                selectedIcon: Icons.settings_rounded,
+              ),
+            ],
+            onFooterNavItemSelected: (_) {},
+            child: const Text('Content'),
+          ),
+        ),
+      );
+
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(find.byIcon(Icons.menu_rounded), findsNothing);
+      expect(find.text('Workspace'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.code_outlined));
+      await tester.pumpAndSettle();
+
+      expect(tappedIndex, 1);
+    });
+
+    testWidgets(
+      'mobile bottom navigation routes footer items through callback',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        int? tappedFooterIndex;
+
+        await tester.pumpWidget(
+          _buildHarness(
+            NmtkDesktopScaffold(
+              navItems: _kNavItems,
+              selectedIndex: -1,
+              pageTitle: 'Settings',
+              footerNavItems: const [
+                NmtkSidebarItem(
+                  id: 'settings',
+                  label: 'Settings',
+                  icon: Icons.settings_outlined,
+                  selectedIcon: Icons.settings_rounded,
+                ),
+              ],
+              onFooterNavItemSelected: (i) => tappedFooterIndex = i,
+              child: const Text('Content'),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Settings').last);
+        await tester.pumpAndSettle();
+
+        expect(tappedFooterIndex, 0);
+      },
+    );
   });
 }

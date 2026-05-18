@@ -291,4 +291,3 @@ See also:
 
 - [ADR 0017: Desktop Shell Adapter Contract](./ADR-claude/0017-desktop-shell-adapter-contract.md)
 - [neurocnl Shell Adapter Execution Packet](./agents/neurocnl-shell-adapter-execution-packet.md)
-

@@ -192,7 +192,7 @@ start_control_api() {
     --host "$host"
     --port "$CONTROL_API_PORT"
   )
-  
+
   if [[ "$manage_suite_api" == "false" ]]; then
     control_api_cmd+=(--no-manage-suite-api)
   fi

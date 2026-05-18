@@ -3,7 +3,6 @@ Run with: python3 -m pytest tests/integration/test_phase1_suite_api.py -v
 Requires suite_api running on port 9000.
 """
 import httpx
-import pytest
 
 SUITE_BASE = "http://localhost:9000"
 

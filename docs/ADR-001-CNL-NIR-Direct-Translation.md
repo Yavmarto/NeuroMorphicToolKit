@@ -2,14 +2,14 @@
 
 **Date:** 2026-05-14
 **Status:** Accepted
-**Context:** 
+**Context:**
 Historically, the NeuroMorphicToolKit relied on Nengo as an intermediary layer for simulation and compilation. The pipeline operated as `CNL -> Nengo -> NIR`, meaning that any CNL specification had to be parsed and constructed into a Nengo network before it could be exported to the Neuromorphic Intermediate Representation (NIR). This caused several issues:
 1. We were bottlenecked by Nengo's specific primitive coverage and idiosyncrasies.
 2. The compilation path was heavier and more prone to errors.
 3. Bidirectional translation (NIR -> CNL) was significantly harder due to Nengo's stateful simulation objects.
 
 **Decision:**
-We have shifted the core architecture to a direct `CNL <-> NIR` bidirectional translation pathway, completely deprecating the mandatory `Nengo` intermediary step for the core export and generation path. 
+We have shifted the core architecture to a direct `CNL <-> NIR` bidirectional translation pathway, completely deprecating the mandatory `Nengo` intermediary step for the core export and generation path.
 - `compile_to_nir()` now lowers CNL directly into our internal typed IR, and then exports strictly to `nir.NIRGraph`.
 - The system now supports bidirectional translation, allowing NIR graphs to be translated back into CNL text.
 - Nengo is retained strictly as an optional execution backend for simulation purposes, but is no longer structurally bound to the compilation or translation pipeline.

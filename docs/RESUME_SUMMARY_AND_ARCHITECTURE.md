@@ -39,7 +39,7 @@ The suite is designed as a **Hybrid Micro-Service Desktop application**.
 
 ### **3. Engineering Excellence**
 *   **Contract-Driven Development (CDD):** Used **Pydantic v2** to define strict boundaries between modules. Build-time verification ensures changes in one module (e.g., a compiler update) don't break downstream consumers (e.g., a hardware flasher).
-*   **Property-Based Testing (PBT):** Leveraged **Hypothesis** to fuzz-test physics pipelines. 
+*   **Property-Based Testing (PBT):** Leveraged **Hypothesis** to fuzz-test physics pipelines.
     *   *Verification:* Ensuring "Dale's Law" (neurons are purely excitatory/inhibitory) and membrane potential decay are maintained regardless of input edge cases.
 *   **Agentic Governance:** Implemented `AGENTS.md` and `GUARDRAILS.md` to guide AI-driven implementation, ensuring automated code generation adheres to project-specific architecture patterns.
 

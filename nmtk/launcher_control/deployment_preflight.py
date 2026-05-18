@@ -8,7 +8,6 @@ import socket
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
 
 from .deployment_contracts import DeploymentPreflightResult, DeploymentTarget
 
@@ -124,9 +123,14 @@ def _kubernetes_preflight(
         return
     if not target.namespace:
         degraded.append("degraded optional capability: namespace defaults to current context")
+
     env = dict(os.environ)
+    base_cmd = [kubectl]
+    if target.context:
+        base_cmd.extend(["--context", target.context])
+
     result = subprocess.run(
-        [kubectl, "config", "current-context"],
+        base_cmd + ["config", "current-context"],
         capture_output=True,
         text=True,
         check=False,
@@ -135,4 +139,51 @@ def _kubernetes_preflight(
     )
     if result.returncode != 0 and not target.context:
         blocking.append("preflight failed: kubeconfig current context could not be resolved")
+        return
 
+    cluster_result = subprocess.run(
+        base_cmd + ["cluster-info"],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=15,
+        env=env,
+    )
+    if cluster_result.returncode != 0:
+        blocking.append("preflight failed: kubectl cannot reach the cluster")
+        return
+
+    if target.namespace:
+        ns_result = subprocess.run(
+            base_cmd + ["get", "namespace", target.namespace],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+            env=env,
+        )
+        if ns_result.returncode != 0:
+            degraded.append(
+                f"degraded optional capability: namespace '{target.namespace}' does not exist; it will be created during deployment"
+            )
+
+        auth_result = subprocess.run(
+            base_cmd
+            + [
+                "--namespace",
+                target.namespace,
+                "auth",
+                "can-i",
+                "create",
+                "deployments",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+            env=env,
+        )
+        if auth_result.returncode != 0 or "yes" not in auth_result.stdout.lower():
+            degraded.append(
+                f"degraded optional capability: cannot confirm create permission in namespace '{target.namespace}'"
+            )

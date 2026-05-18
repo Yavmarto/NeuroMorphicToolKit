@@ -13,7 +13,7 @@ Users can configure the test harness to inject noise into the benchmark dataset:
 ### The Curves
 Once robustness tests are run, the results are visualized in specific charts:
 1. **Perturbation Curve Chart (`perturbation_curve_chart`):**
-   - Plots the intensity of the noise (x-axis) against the network's accuracy (y-axis). 
+   - Plots the intensity of the noise (x-axis) against the network's accuracy (y-axis).
 2. **Robustness Curve Chart (`robustness_curve_chart`):**
    - Compares the resilience of your network against the established Baseline. A good neuromorphic network should degrade *gracefully* compared to standard ANNs.
 

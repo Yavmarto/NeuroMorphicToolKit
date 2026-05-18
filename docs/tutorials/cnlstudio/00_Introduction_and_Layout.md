@@ -1,6 +1,6 @@
 # 00: Introduction to CNLStudio
 
-CNLStudio is the primary User Interface (UI) for the Neuromorphic Toolkit's Computational Network Language (`neurocnl`) suite. It provides a visual environment for designing, simulating, validating, and deploying neuromorphic architectures. 
+CNLStudio is the primary User Interface (UI) for the Neuromorphic Toolkit's Computational Network Language (`neurocnl`) suite. It provides a visual environment for designing, simulating, validating, and deploying neuromorphic architectures.
 
 This guide introduces the core layout and viewing modes of the Studio.
 

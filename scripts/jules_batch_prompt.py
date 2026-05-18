@@ -450,7 +450,7 @@ Examples:
     parser.add_argument("--prompt", help="Inline prompt/task text for Jules")
     parser.add_argument("--task-file", metavar="FILE", help="Path to a .md file whose contents are used as the prompt")
     parser.add_argument("--title-prefix", default="Batch Script", help="Prefix for the PR title (default: 'Batch Script')")
-    
+
 >>>>>>> Stashed changes
     args = parser.parse_args()
 

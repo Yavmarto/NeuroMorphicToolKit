@@ -294,4 +294,3 @@ If you do the same for Akida and it succeeds in the default mode, the most likel
 1. Your network passed the offline Akida compatibility checks.
 2. The toolkit generated a valid Akida package.
 3. The runtime may also have verified SDK support, but package generation itself does not guarantee physical-device deployment.
-

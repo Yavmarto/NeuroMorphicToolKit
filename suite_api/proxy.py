@@ -9,7 +9,6 @@ Usage in a domain router:
         return await proxy_to_worker(request, settings.neurosense_hw_worker_url)
 """
 import logging
-from typing import Any
 
 import httpx
 from fastapi import Request

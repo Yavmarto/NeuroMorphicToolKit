@@ -11,7 +11,6 @@ PYTHONPATH must include NeuroMorphicToolKit/Neurochip so that
 
 from __future__ import annotations
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # Shared network fixture — small, well-under-capacity LIF network

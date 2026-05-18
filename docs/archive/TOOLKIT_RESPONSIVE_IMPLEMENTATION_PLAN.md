@@ -49,7 +49,7 @@ Already completed first-pass shell work:
 
 ### Final Summary
 - **Shared Primitives**: `NmtkSurfaceCard` and `NmtkPipelineStepper` are fully responsive and verified.
-- **Neurohub**: Hardened `Dashboard`, `New Project`, and `Project Detail` screens. 
+- **Neurohub**: Hardened `Dashboard`, `New Project`, and `Project Detail` screens.
 - **Neurocnl**: Hardened all pipeline panes (Parse, Validation, Generation, Simulation, Deployment).
 - **Neurosense**: Hardened `SignalMonitor`, `DeviceConfig`, `FilterPipeline`, and `Sessions/Replay` screens.
 - **Toolkit Coverage**: Zero `RenderFlex` overflows detected at 390px across all modules.

@@ -21,3 +21,11 @@ def test_validate_runtime_dependencies_reports_full_missing_set() -> None:
     assert "httpx" in message
     assert "sqlalchemy" in message
     assert "python -m pip install -e suite_api/" in message
+
+
+def test_suite_api_main_import_exposes_health_routes() -> None:
+    from suite_api.main import app
+
+    paths = {route.path for route in app.routes}
+    assert "/api/suite/health" in paths
+    assert "/api/neurobench/health" in paths

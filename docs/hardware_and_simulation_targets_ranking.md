@@ -48,7 +48,7 @@ These targets operate using physical physics (voltages/currents), introducing no
 
 ### 7. BrainScaleS-2
 *   **Difficulty:** ⭐⭐⭐⭐⭐⭐⭐
-*   **Reasoning:** 
+*   **Reasoning:**
     *   **Mismatch:** Requires complex calibration for physical silicon variance.
     *   **Time Scaling:** Operates 1,000x-10,000x faster than real-time; time constants must be converted to analog biases.
     *   **Stochasticity:** Outputs are inherently noisy, making bit-accurate validation impossible.

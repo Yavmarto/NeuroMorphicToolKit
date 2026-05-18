@@ -3,9 +3,9 @@
 After auditing the actual Python and Dart source code (excluding documentation), here are the corrected findings regarding `snnTorch` integration:
 
 ## 1. Where is `snntorch` support implemented?
-**It is not currently implemented in the codebase.** 
+**It is not currently implemented in the codebase.**
 
-While the architecture documentation (`docs/unified_toolkit_architecture.md`) heavily describes an `snnTorchBackend` and an integration pipeline, a search across all functional code (including `Neurochip`, `Neurosim`, and the backend APIs) reveals **zero** actual implementation of these concepts. 
+While the architecture documentation (`docs/unified_toolkit_architecture.md`) heavily describes an `snnTorchBackend` and an integration pipeline, a search across all functional code (including `Neurochip`, `Neurosim`, and the backend APIs) reveals **zero** actual implementation of these concepts.
 
 The only functional reference to `snnTorch` in the entire source tree is a single check in `scripts/backend_endpoint_smoke.py` that simply tests if the module can be imported (`import snntorch`). The `SNNTorchWrapper` and `snnTorchBackend` classes described in the docs do not exist in the code.
 

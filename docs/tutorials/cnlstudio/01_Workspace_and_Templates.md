@@ -15,7 +15,7 @@ A "Workspace" in CNLStudio encapsulates the active CNL specification, the curren
 
 ## The Template Gallery
 
-Instead of starting from scratch, users can load predefined, hardware-ready network models using the **Template Gallery**. 
+Instead of starting from scratch, users can load predefined, hardware-ready network models using the **Template Gallery**.
 
 ### Accessing the Gallery
 - **Visual:** Click the "Templates" or "Gallery" icon in the main UI (often presented as a grid icon or a dedicated `template_gallery.dart` widget).

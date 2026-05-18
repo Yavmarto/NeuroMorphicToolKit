@@ -176,4 +176,3 @@ Found 1 error in 1 file (errors prevented further checking)
 - Remove residual Ruff hygiene issues outside the merge-conflict blast radius (`I001`, `UP037`, `ANN*`, `F401`, `C420`).
 - Broaden contract extraction where the generated issue queue still points to under-modeled surfaces, especially in `Neuro-Dream-Hand`.
 - Re-run the root audit after the branch is merge-clean to separate permanent code health debt from temporary branch-state noise.
-

@@ -346,8 +346,8 @@ stdp = sim.STDPMechanism(
     timing_dependence=sim.SpikePairRule(tau_plus=20.0, tau_minus=20.0),
     weight_dependence=sim.AdditiveWeightDependence(w_min=0.0, w_max=0.02)
 )
-connections = sim.Projection(hidden_layer, output_layer, 
-                              sim.AllToAllConnector(), 
+connections = sim.Projection(hidden_layer, output_layer,
+                              sim.AllToAllConnector(),
                               synapse_type=stdp)
 
 sim.run(1000.0)  # Run for 1000ms
@@ -430,9 +430,9 @@ void lif_neuron(
     int num_neurons
 ) {
     #pragma HLS PIPELINE
-    
+
     static fixed_t membrane[MAX_NEURONS];
-    
+
     for (int i = 0; i < num_neurons; i++) {
         // Integrate incoming spikes
         if (!spike_in.empty()) {

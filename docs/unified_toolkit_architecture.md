@@ -1329,12 +1329,12 @@ class NeuromorphicBackend(ABC):
     def compile(self, nir_graph: NIRGraph) -> CompiledModel:
         """Compile NIR graph to backend-specific format."""
         pass
-    
+
     @abstractmethod
     def deploy(self, model: CompiledModel, input_data) -> Results:
         """Deploy and execute model on backend."""
         pass
-    
+
     @abstractmethod
     def get_capabilities(self) -> BackendCapabilities:
         """Return backend capabilities and constraints."""
@@ -1370,29 +1370,29 @@ class Loihi2Backend(NeuromorphicBackend):
         # Use Lava's NIR import
         import lava.lib.dl.netx as netx
         lava_net = netx.from_nir(nir_graph)
-        
+
         # Apply Loihi-specific optimizations
         lava_net = self._optimize_for_loihi(lava_net)
-        
+
         # Compile to Loihi executable
         executable = lava_net.compile(target="loihi2")
-        
+
         return CompiledModel(
             backend="loihi2",
             executable=executable,
             metadata=self._extract_metadata(lava_net)
         )
-    
+
     def _optimize_for_loihi(self, net):
         # Quantize weights to Loihi precision (8-bit)
         net = quantize_weights(net, bits=8)
-        
+
         # Map to neurocores efficiently
         net = optimize_neurocore_mapping(net)
-        
+
         # Configure learning rules if present
         net = configure_learning(net)
-        
+
         return net
 ```
 
@@ -1404,19 +1404,19 @@ class XyloBackend(NeuromorphicBackend):
         # Use Rockpool's NIR import
         from rockpool.devices import xylo
         rockpool_net = xylo.from_nir(nir_graph)
-        
+
         # Quantization-aware optimization
         rockpool_net = self._quantize_for_xylo(rockpool_net)
-        
+
         # Generate Xylo configuration
         config = rockpool_net.to_xylo_config()
-        
+
         return CompiledModel(
             backend="xylo",
             executable=config,
             metadata={"power_estimate": self._estimate_power(config)}
         )
-    
+
     def _quantize_for_xylo(self, net):
         # Xylo uses 16-bit fixed-point
         return quantize_network(net, bits=16, fixed_point=True)
@@ -1430,14 +1430,14 @@ class snnTorchBackend(NeuromorphicBackend):
         # Use snnTorch's NIR import
         import snntorch.import_nir as import_nir
         snntorch_net = import_nir.from_nir(nir_graph)
-        
+
         # Wrap in PyTorch module
         model = SNNTorchWrapper(snntorch_net)
-        
+
         # Optional: JIT compilation
         if self.use_jit:
             model = torch.jit.script(model)
-        
+
         return CompiledModel(
             backend="snntorch",
             executable=model,
@@ -1477,7 +1477,7 @@ class snnTorchBackend(NeuromorphicBackend):
 def optimize_neurocore_mapping(network, num_neurocores=128):
     """
     Map network to Loihi 2 neurocores to minimize communication.
-    
+
     Strategy:
     1. Partition graph into clusters (spectral clustering)
     2. Assign clusters to neurocores
@@ -1485,18 +1485,18 @@ def optimize_neurocore_mapping(network, num_neurocores=128):
     """
     # Build adjacency matrix
     adj_matrix = build_adjacency(network)
-    
+
     # Spectral clustering
     clusters = spectral_clustering(adj_matrix, n_clusters=num_neurocores)
-    
+
     # Assign neurons to neurocores
     mapping = {}
     for neuron_id, cluster_id in enumerate(clusters):
         mapping[neuron_id] = cluster_id
-    
+
     # Compute communication cost
     comm_cost = compute_communication_cost(network, mapping)
-    
+
     return mapping, comm_cost
 ```
 
@@ -1508,12 +1508,12 @@ def optimize_neurocore_mapping(network, num_neurocores=128):
 class ExecutionEngine:
     def __init__(self, backend: str):
         self.backend = get_backend(backend)
-    
+
     def run(self, model: CompiledModel, input_data, num_steps: int):
         """Execute model on backend."""
         results = self.backend.deploy(model, input_data)
         return results
-    
+
     def benchmark(self, model: CompiledModel, input_data):
         """Benchmark model performance."""
         metrics = {
@@ -1536,14 +1536,14 @@ class ExecutionEngine:
 ```python
 def cross_platform_validate(nir_graph, backends=["snntorch", "lava_cpu"]):
     """Validate model produces consistent results across backends."""
-    
+
     results = {}
     for backend_name in backends:
         backend = get_backend(backend_name)
         model = backend.compile(nir_graph)
         output = backend.deploy(model, test_input)
         results[backend_name] = output
-    
+
     # Compare outputs
     reference = results[backends[0]]
     for backend_name, output in results.items():
@@ -1553,7 +1553,7 @@ def cross_platform_validate(nir_graph, backends=["snntorch", "lava_cpu"]):
                 f"Backend '{backend_name}' output differs from reference "
                 f"(similarity: {similarity:.2f})"
             )
-    
+
     return results
 ```
 
@@ -1703,21 +1703,21 @@ graph TD
     A[User Model in CNL] --> B{Training Required?}
     B -->|Yes| C{Training Method?}
     B -->|No| D{Deployment Target?}
-    
+
     C -->|Surrogate Gradients| E[snnTorch/Norse GPU]
     C -->|STDP| F[Lava CPU → Loihi 2]
     C -->|Hardware-in-Loop| G[BrainScaleS-2]
-    
+
     D -->|Research| H{Scale?}
     D -->|Edge Production| I{Modality?}
-    
+
     H -->|<1M neurons| J[Loihi 2]
     H -->|>1M neurons| K[SpiNNaker2]
-    
+
     I -->|Audio| L[SynSense Xylo]
     I -->|Vision| M[SynSense Speck]
     I -->|General| N[BrainChip Akida]
-    
+
     E --> O[Export to NIR]
     F --> O
     G --> O
@@ -1726,7 +1726,7 @@ graph TD
     L --> O
     M --> O
     N --> P[Custom Bridge Required]
-    
+
     O --> Q[Deploy via Toolkit]
 ```
 
@@ -2375,7 +2375,7 @@ nir.LIF(tau=20.0, v_threshold=1.0, ...)
 **Risk 1: NIR Primitive Coverage Insufficient**
 - **Likelihood**: Medium
 - **Impact**: High (blocks model translation)
-- **Mitigation**: 
+- **Mitigation**:
   - Start with simple models (feedforward, basic recurrent)
   - Contribute to NIR specification (propose new primitives)
   - Implement approximation strategies (e.g., Izhikevich ≈ complex models)

@@ -8,7 +8,7 @@ The user requested an analysis of unused Flutter code and technical debt left be
 After analyzing the repository using Flutter/Dart tooling and code search:
 
 ### 1. Massive Unused Flutter Codebase (Tech Debt)
-The original source code directories for both the standalone `NeuroSim` and `NeuroChip` frontends are still present in the repository, even though their functionality has been merged into `neurocnl/frontend` (NeuroStudio). 
+The original source code directories for both the standalone `NeuroSim` and `NeuroChip` frontends are still present in the repository, even though their functionality has been merged into `neurocnl/frontend` (NeuroStudio).
 
 - **Neurosim/frontend**: Contains **68 Dart files** and **~9,900 lines of code**.
 - **Neurochip/frontend**: Contains **101 Dart files** and **~20,100 lines of code**.
@@ -28,6 +28,6 @@ Running `dart analyze` on these legacy directories reveals unresolved warnings a
 
 ## Conclusion
 
-**Yes, the hypothesis is entirely true.** There is significant technical debt due to the deprecation of the standalone NeuroSim and NeuroChip frontends. 
+**Yes, the hypothesis is entirely true.** There is significant technical debt due to the deprecation of the standalone NeuroSim and NeuroChip frontends.
 
 Roughly **30,000 lines of Flutter/Dart code** remain completely unused in the `Neurosim/frontend` and `Neurochip/frontend` directories. Since their features and workflows are now fully consolidated inside the `neurocnl/frontend` (NeuroStudio) application, these legacy directories are dead code and should be safely deleted to remove tech debt, speed up local code analysis, and reduce repository size.

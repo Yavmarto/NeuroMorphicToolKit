@@ -4,7 +4,7 @@ These tasks are urgent, high-impact usability fixes and minor bugs that should b
 
 ## 1. Workspace Load Performance / Animation
 **Issue**: Loading a workspace feels slow or unresponsive.
-**Task**: 
+**Task**:
 - Profile the `load workspace` operation to identify bottlenecks.
 - If the delay is structural, add a sleek loading animation/overlay in the UI to provide feedback.
 - Use the "Obsidian Flow" aesthetic for the loader.
@@ -15,7 +15,7 @@ These tasks are urgent, high-impact usability fixes and minor bugs that should b
 
 ## 3. Layer 1 Validation Copy Cleanup
 **Issue**: The UI currently duplicates the pass state by showing both the raw property label and the sentence, for example: `threshold_above_resting Invariant 'threshold_above_resting' satisfied`.
-**Task**: 
+**Task**:
 - Locate the validation/diagnostic output code for Layer 1.
 - Keep the success text, but render it only once.
 - Normalize the display label so it reads with whitespace instead of underscores.

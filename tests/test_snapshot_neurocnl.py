@@ -10,10 +10,8 @@ and pytest.ini so that `backend.app.*` and `neurocnl.*` are importable).
 
 from __future__ import annotations
 
-import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # Valid CNL specifications — these match the neurocnl grammar

@@ -35,6 +35,7 @@ ENV PYTHONPATH="/repo/neurocnl:/repo/Neurochip"
 
 # ── Neurobench: no pyproject.toml — directory only, accessed via sys.path ─────
 COPY Neurobench/neurobench/ Neurobench/neurobench/
+RUN pip install --no-cache-dir Neurobench/neurobench/
 
 # ── suite_api ─────────────────────────────────────────────────────────────────
 COPY suite_api/ suite_api/

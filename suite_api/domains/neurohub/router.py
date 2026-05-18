@@ -7,7 +7,6 @@ Neurohub's lifespan (Alembic + workflow worker) is handled separately in
 suite_api/main.py's asynccontextmanager.
 """
 import logging
-from typing import Any
 
 from fastapi import APIRouter
 from neurohub.app.routers import (

@@ -85,7 +85,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       icon: Icons.refresh_rounded,
       category: 'Actions',
       onExecute: () {
-        // Just trigger a rebuild/refresh if needed, 
+        // Just trigger a rebuild/refresh if needed,
         // or re-navigate to same path to trigger refresh
         final current = router.state?.uri.toString() ?? '/';
         router.go(current);

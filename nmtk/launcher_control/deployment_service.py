@@ -113,7 +113,11 @@ class DeploymentService:
     def _run_job(self, job_id: str) -> None:
         job = self._store.get_job(job_id)
         target = self._store.get_target(job.target_id)
-        executor = executor_for_mode(job.mode, repo_root=self._repo_root)
+        executor = executor_for_mode(
+            job.mode,
+            repo_root=self._repo_root,
+            secret_resolver=self._store.resolve_secret,
+        )
         try:
             executor.run(target, lambda stage, message, percent: self._emit(job, stage, message, percent))
             if self._is_cancelled(job.id):
@@ -164,4 +168,3 @@ class DeploymentService:
     def _is_cancelled(self, job_id: str) -> bool:
         with self._lock:
             return job_id in self._cancelled
-

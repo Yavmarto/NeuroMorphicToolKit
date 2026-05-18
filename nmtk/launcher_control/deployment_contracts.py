@@ -325,4 +325,3 @@ class DeploymentJob:
             "error": self.error,
             "events": list(self.events[-200:]),
         }
-
