@@ -42,6 +42,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.watch(settingsStateProvider);
     final moduleProvider = ref.watch(moduleStateProvider);
     final analytics = ref.watch(analyticsServiceProvider);
+    final controlApi = ref.watch(controlApiServiceProvider);
     final theme = Theme.of(context);
 
     return ListView(
@@ -223,7 +224,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               NmtkPrimaryButton(
                 onPressed: () async {
                   try {
-                    final logs = await analytics.getLocalLogLines();
+                    List<String> logs;
+                    try {
+                      // Prefer the API path — works regardless of sandbox.
+                      logs = await controlApi.fetchCrashLogLines();
+                    } catch (_) {
+                      // Fallback: direct file read (works on non-sandboxed
+                      // desktop builds and in tests).
+                      logs = await analytics.getLocalLogLines();
+                    }
                     if (!context.mounted) return;
                     _showLogDialog(
                       context,
@@ -275,7 +284,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               NmtkPrimaryButton(
                 onPressed: () async {
                   try {
-                    final logs = await analytics.getBackendActivityLogLines();
+                    List<String> logs;
+                    try {
+                      // Prefer the API path — the launcher control service
+                      // reads ~/Documents/ outside the app sandbox.
+                      logs = await controlApi.fetchBackendActivityLogLines();
+                    } catch (_) {
+                      // Fallback: direct file read for unsandboxed builds.
+                      logs = await analytics.getBackendActivityLogLines();
+                    }
                     if (!context.mounted) return;
                     _showLogDialog(
                       context,

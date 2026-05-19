@@ -628,6 +628,17 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         key: const ValueKey('WorkspaceStack'),
         index: clampedIndex,
         children: eligibleModules.map((module) {
+          // When a module's backend recovers (status transitions back to
+          // running/degraded), auto-clear any stale WebView load failure so
+          // the user doesn't have to click Retry manually. Also evict the
+          // stale controller so the page reloads fresh from the recovered URL.
+          if (_moduleLoadFailures.containsKey(module.id) &&
+              (module.status == ModuleStatus.running ||
+                  module.status == ModuleStatus.degraded)) {
+            _moduleLoadFailures.remove(module.id);
+            _controllers.remove(module.id);
+          }
+
           final session = sessionsByModuleId[module.id];
           final loadFailure = _moduleLoadFailures[module.id];
           final supported = _isWebViewSupported();

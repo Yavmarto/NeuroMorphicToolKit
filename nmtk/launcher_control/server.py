@@ -4821,6 +4821,57 @@ class LauncherControlState:
                         lines.append(f"[{module_id}] {line}")
             return {"lines": lines}
 
+    # ------------------------------------------------------------------
+    # File-backed log endpoints
+    # These serve the logs that the Flutter AnalyticsService writes to
+    # ~/Documents/ — a path the sandboxed macOS app cannot read back
+    # from itself, but the launcher control service (unsandboxed) can.
+    # ------------------------------------------------------------------
+
+    _LOG_FILE_MAX_BYTES: int = 262144  # 256 KiB tail
+    _LOG_FILE_MAX_LINES: int = 2000
+
+    @staticmethod
+    def _read_log_file_tail(path: Path) -> list[str]:
+        """Return up to _LOG_FILE_MAX_LINES lines from the tail of *path*.
+
+        Returns a single-element list with an explanatory message when the
+        file does not exist or cannot be read — identical sentinel behaviour to
+        the Dart counterpart so the Flutter UI can handle both code paths
+        identically.
+        """
+        if not path.exists():
+            return ["No logs found."]
+        try:
+            size = path.stat().st_size
+            max_bytes = LauncherControlState._LOG_FILE_MAX_BYTES
+            max_lines = LauncherControlState._LOG_FILE_MAX_LINES
+            start = max(0, size - max_bytes)
+            with path.open("rb") as fh:
+                fh.seek(start)
+                raw = fh.read(size - start)
+            text = raw.decode("utf-8", errors="replace")
+            if start > 0:
+                first_newline = text.find("\n")
+                if 0 <= first_newline < len(text) - 1:
+                    text = text[first_newline + 1:]
+            lines = text.splitlines()
+            if not lines:
+                return ["No logs found."]
+            return lines[-max_lines:] if len(lines) > max_lines else lines
+        except OSError as exc:
+            return [f"Failed to read logs: {exc}"]
+
+    def get_crash_log_lines(self) -> dict[str, Any]:
+        """Serve the Dart AnalyticsService crash.log from ~/Documents/."""
+        log_path = Path.home() / "Documents" / "crash.log"
+        return {"lines": self._read_log_file_tail(log_path)}
+
+    def get_backend_activity_log_lines(self) -> dict[str, Any]:
+        """Serve the Dart AnalyticsService launcher_backend_activity.log."""
+        log_path = Path.home() / "Documents" / "launcher_backend_activity.log"
+        return {"lines": self._read_log_file_tail(log_path)}
+
     def _task_running(self, module_id: str) -> bool:
         task = self._tasks.get(module_id)
         return task is not None and task.is_alive()
@@ -6224,6 +6275,30 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     HTTPStatus.OK,
                     self.server.state.get_all_logs(filter_error=filter_error),
                 )
+                return
+
+            if method == "GET" and path == "/api/launcher/crash-log":
+                self._send_json(
+                    HTTPStatus.OK,
+                    self.server.state.get_crash_log_lines(),
+                )
+                return
+
+            if method == "GET" and path == "/api/launcher/backend-activity-log":
+                filter_error = query.get("filter", [""])[0].lower() == "error"
+                lines = self.server.state.get_backend_activity_log_lines()["lines"]
+                if filter_error:
+                    lines = [
+                        line
+                        for line in lines
+                        if any(
+                            token in line.lower()
+                            for token in ("error", "exception", "failed")
+                        )
+                        or "-> 4" in line
+                        or "-> 5" in line
+                    ]
+                self._send_json(HTTPStatus.OK, {"lines": lines})
                 return
 
             if len(segments) >= 4 and segments[:3] == ["api", "launcher", "modules"]:

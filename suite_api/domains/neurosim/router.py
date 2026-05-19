@@ -11,6 +11,7 @@ from neurosim.app.routers import (
     components,
     export,
     generation,
+    nir_canvas,
     preview,
     projects,
     simulation_ws,
@@ -34,6 +35,7 @@ router = APIRouter()
 
 for _r in [
     components.router,
+    nir_canvas.router,
     simulation_ws.router,
     templates.router,
     validation.router,

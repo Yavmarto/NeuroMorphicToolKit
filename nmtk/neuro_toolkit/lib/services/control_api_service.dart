@@ -640,6 +640,39 @@ class ControlApiService {
     }
     throw Exception('Unexpected logs payload: ${response.body}');
   }
+
+  /// Fetches the Dart AnalyticsService crash.log via the launcher control
+  /// service, which can read ~/Documents/ regardless of app sandbox state.
+  Future<List<String>> fetchCrashLogLines() async {
+    final response = await _client.get(_uri('/api/launcher/crash-log'));
+    await _ensureSuccess(response);
+    final decoded = await _readJsonResponse(response);
+    final lines = decoded['lines'];
+    if (lines is List) {
+      return lines.cast<String>();
+    }
+    throw Exception('Unexpected crash-log payload: ${response.body}');
+  }
+
+  /// Fetches the launcher_backend_activity.log via the launcher control
+  /// service. Pass [errorOnly] to receive only error/4xx/5xx lines.
+  Future<List<String>> fetchBackendActivityLogLines({
+    bool errorOnly = false,
+  }) async {
+    final response = await _client.get(
+      _uri('/api/launcher/backend-activity-log').replace(
+        queryParameters:
+            errorOnly ? const <String, String>{'filter': 'error'} : null,
+      ),
+    );
+    await _ensureSuccess(response);
+    final decoded = await _readJsonResponse(response);
+    final lines = decoded['lines'];
+    if (lines is List) {
+      return lines.cast<String>();
+    }
+    throw Exception('Unexpected backend-activity-log payload: ${response.body}');
+  }
 }
 
 class _LoggedHttpClient extends http.BaseClient {
