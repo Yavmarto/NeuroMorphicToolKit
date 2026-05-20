@@ -47,7 +47,7 @@ def _default_neurosense_artifact_path() -> str:
 @pytest.mark.asyncio
 async def test_neurocnl_to_neurosim():
     """Test neurocnl -> Neurosim pipeline (CNL design -> simulation)"""
-    spec = "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.5"
+    spec = "Define an input port named sensory with shape (1,).\nDefine an output port named motor with shape (1,).\nConnect sensory to motor."
 
     # 1. Validate in neurocnl
     async with httpx.AsyncClient() as client:
@@ -60,7 +60,7 @@ async def test_neurocnl_to_neurosim():
             client,
             "POST",
             f"{NEUROSIM_URL}/api/neurosim/parse-cnl",
-            json={"cnl_spec": spec, "import_mode": "repair"},
+            json={"cnl_spec": spec},
         )
         assert resp.status_code == 200
         graph = resp.json()
