@@ -9,6 +9,8 @@ For current suite behavior, start with:
 - [`ADR-claude/`](./ADR-claude/)
 - [`api/README.md`](./api/README.md)
 - [`agents/`](./agents/)
+- [`2026-05-feasibility-review.md`](./2026-05-feasibility-review.md)
+- [`snn_topologies_and_expansion.md`](./snn_topologies_and_expansion.md) (SNN Reflex & Multi-Layer Topology Expansion)
 - dated consolidation and roadmap docs in the root of `docs/`
 
 The current architecture to keep in mind while reading the repo is:

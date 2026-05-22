@@ -10,13 +10,16 @@ The toolkit centralizes several specialized applications into a single, cohesive
 
 ## 🎯 The Vision & Problem Statement
 
-Neuromorphic computing is inherently multidisciplinary.
+Neuromorphic computing is inherently multidisciplinary, yet most of its tooling is fragmented, SDK-specific, and assumes deep expertise from every user.
 
-* **Neuroscientists** understand the biological mechanisms but may lack the software engineering background for complex pipelines.
-* **Software Developers** know how to build robust systems but struggle with the biological constraints (invariants) and specialized hardware.
-* **Hardware Engineers** build the physical neuromorphic chips and robots but need accessible interfaces and compilers to test their designs.
+**NMTK is built for people who want to learn and work with SNNs and neuromorphic hardware without needing to be experts in every layer of the stack.** This includes:
 
-**The Solution:** The NeuroMorphicToolkit app serves as the single entry point. Instead of juggling a dozen fragmented repositories, users install one native toolkit application. From this app, professionals can browse, download, and launch specialized modules tailored to their immediate needs, completely hiding the complex setup, dependency management, and interoperability issues.
+* **Students and early-stage researchers** exploring spiking neural networks, biological modelling, or edge AI for the first time.
+* **Computational and systems neuroscientists** who understand the biology but don't want to manage SDK toolchains, Docker infrastructure, or low-level hardware configuration.
+* **ML engineers and software practitioners** entering the neuromorphic space who need a structured environment to prototype, benchmark, and validate SNN designs.
+* **Applied researchers and teams** working with real neuromorphic hardware — where one team member (or an IT/lab admin) sets up and maintains the hardware backend (e.g. an Akida board, a PYNQ-Z2, or a Loihi node), and others connect to it remotely to author, simulate, and benchmark without touching the hardware directly.
+
+**The Solution:** The NeuroMorphicToolKit app is a downloadable desktop executable that serves as a single entry point to the entire suite. Users download NMTK, configure a backend connection (local or remote), and access all modules without juggling separate repositories, Python environments, or terminal commands.
 
 ---
 
@@ -61,33 +64,31 @@ NMTK orchestrates the following specialized modules, which can be dynamically do
 
 ## 🚀 Architecture & Deployment Strategy
 
-To achieve the goal of a single deployable desktop app with self-hosted downloadable modules (macOS, Windows, Linux), we employ a **"Launcher + Micro-Service Container"** architecture.
+NMTK uses a **"Downloadable Launcher + Backend-as-a-Service"** model. The desktop app and its mobile companion are thin clients that connect to a backend suite which can be hosted anywhere — on the same machine, on a lab server, or on a remote cloud instance.
 
-### 1. The Core Desktop App: NMTK Flutter Client (`neuro_toolkit` + `nmtk`)
+### 1. The Desktop App & Mobile Companion
 
-The main repository (`neuro_toolkit`) is a desktop Flutter application.
+* **Download and run.** The NMTK desktop app is a native executable for macOS, Windows, and Linux — no build tools, no Python environment, no SDK required to install it.
+* **Connect to a backend.** On first launch, the app walks the user through connecting to a backend suite. This can be a local instance deployed from within the app, or a remote server that a lab admin or team member has already set up.
+* **Module UI is embedded.** All module interfaces (NeuroStudio, NeuroBench, Neurohub, etc.) are surfaced inside the NMTK app shell. Users navigate between modules from a single sidebar.
+* **Mobile companion.** The NMTK mobile app offers the same core functionality as the desktop app — it connects to the same backend and can be used as a remote dashboard or on-the-go interface.
 
-* **Unified Dashboard:** Acts as an "App Store" and launcher for the user. It manages user profiles, general settings, and global state.
-* **Self-Hosted Desktop Delivery:** Compiles natively to Windows, macOS, and Linux to provide a robust, self-hosted environment.
-* **Module Manager:** Handles downloading, version control, and storage of the submodules locally.
+### 2. Backend Deployment
 
-### 2. Module Delivery System (Local Orchestration)
+The backend suite is a set of Python/FastAPI services containerised with Docker. It can be deployed in multiple ways:
 
-Because the sub-apps require heavy Python environments, Docker containers, and complex scientific libraries, deploying them as simple plugins isn't feasible. Instead, NMTK uses a local micro-service orchestration approach:
+* **From within the NMTK app** (guided setup): the app provides a backend deployment wizard that orchestrates Docker on the current machine or targets a remote host. This is the recommended path for individual researchers.
+* **By a lab admin or IT operator** (server deployment): deploy the backend once to a shared server using `docker compose up`. Team members then point their NMTK desktop or mobile app at that server URL and work collaboratively without any local setup.
+* **On Kubernetes** for institutional or multi-user deployments.
 
-* **Process Orchestration (Docker / Virtual Environments)**
-  * When a user clicks "Install Neurobench", the Flutter app downloads the `Neurobench` module package (which contains its `docker-compose.yml`, Python backend, and compiled frontend assets).
-  * The NMTK desktop app acts as a local daemon manager. It spins up the necessary Docker containers (or isolated Python `venv`s via the `nmtk/installer` scripts) directly on the host machine in the background.
-  * The UI of the submodule is presented seamlessly inside the Flutter desktop app using a **Web View** (pointing to the module's localized frontend ports) or native Flutter UI communicating via a local REST/gRPC API.
+> **Note on hardware**: NMTK does not install or configure physical neuromorphic hardware (Akida boards, PYNQ-Z2 FPGAs, Loihi nodes, etc.). Hardware setup is the responsibility of the person or team who owns the hardware. Once the hardware and its SDK are operational on the server, NMTK's Neurochip backend can communicate with it and surface diagnostics in the UI.
 
-### 3. Workflow Example
+### 3. Typical Team Workflow
 
-1. A hardware engineer opens the NMTK app (Flutter).
-2. They navigate to the "Module Hub" and download **NeuroCNL** and **Neuro-Dream-Hand**.
-3. Behind the scenes, NMTK pulls the Docker containers/dependencies and starts the local backend servers for these modules.
-4. The engineer clicks "Open NeuroCNL". The Flutter app opens a new tab displaying the NeuroCNL interface natively. They write an English spec.
-5. They switch to the "Neuro-Dream-Hand" tab, pass the generated model from NeuroCNL, and click "Deploy to Hardware".
-6. Everything happens seamlessly without the engineer ever opening a terminal, managing a `.env` file, or running a `pip install`.
+1. **Lab admin** deploys the NMTK backend suite to a shared server (`docker compose up`). The server has an Akida board connected and the MetaTF SDK installed.
+2. **Researcher A** downloads the NMTK desktop app, points it at the lab server URL, and opens NeuroStudio. They write a CNL specification, simulate it, and export a validated NIR artifact.
+3. **Researcher B** on a different machine (or on mobile) connects to the same server, opens NeuroBench, loads Researcher A's artifact, and runs a standardized benchmark against it.
+4. Neither researcher needed to touch a terminal, configure a Python environment, or know anything about the underlying Docker infrastructure.
 
 ---
 
@@ -105,7 +106,17 @@ For users and developers:
 
 ## 🛠 Getting Started
 
-### Quick Start (Developers)
+### End Users
+
+Download the latest NMTK desktop app from the [Releases page](https://github.com/Completed-Spoon-6/NeuroMorphicToolKit/releases). Open it and follow the guided backend setup to deploy the suite locally or connect to an existing server.
+
+The mobile companion app is available on the App Store and Google Play.
+
+---
+
+### NMTK Contributors (Source Build)
+
+> These instructions are for developers contributing to NMTK itself — not for end users.
 
 1. **Clone the Repository**:
 

@@ -17918,3 +17918,182 @@ Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 st
 Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
 Preview simulation completed - wall_clock_ms=428.52 sim_execution_ms=500.00 setup_overhead_ms=-71.48
 {"job_id": "1d9091b1-a3ac-4292-9e36-69d986df2e25", "event": "websocket_client_disconnected", "level": "info", "timestamp": "2026-05-17T19:17:04.489232Z"}
+
+──────────────────────────────────────────────────────────────────────────────
+  Spec                                Sentences    L1    L2   Result
+──────────────────────────────────────────────────────────────────────────────
+  f1.cnl                                      5   2/2   1/1   [32mPASS[0m
+  f2.cnl                                      5   2/2   1/1   [32mPASS[0m
+──────────────────────────────────────────────────────────────────────────────
+  2/2 specs passed
+
+
+──────────────────────────────────────────────────────────────────────────────
+  Spec                                Sentences    L1    L2   Result
+──────────────────────────────────────────────────────────────────────────────
+  f1.cnl                                      5   2/2   1/1   [31mFAIL[0m
+    [31mErr[0m
+──────────────────────────────────────────────────────────────────────────────
+  0/1 specs passed
+
+Report written to simulation_report.json
+
+────────────────────────────────────────────────────────────
+  Spec: /private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-79/test_main_simulation_success0/test.cnl  |  Backend: nengo
+────────────────────────────────────────────────────────────
+
+  [32m✓ OVERALL PASS[0m
+────────────────────────────────────────────────────────────
+
+
+✓ OVERALL PASS — report written to simulation_report.json
+
+──────────────────────────────────────────────────────────────────────────────
+  Spec                                Sentences    L1    L2   Result
+──────────────────────────────────────────────────────────────────────────────
+  test.cnl                                    5   2/2   1/1   [32mPASS[0m
+──────────────────────────────────────────────────────────────────────────────
+  1/1 specs passed
+
+Report written to simulation_report.json
+{
+  "spec_file": "/private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-79/test_main_validate_only0/test.cnl",
+  "backend": "nengo",
+  "layer1_validation": {
+    "overall": true,
+    "passed": [
+      "check1",
+      "check2"
+    ],
+    "failed": []
+  },
+  "layer2_validation": {
+    "overall": true,
+    "checks_passed": [
+      "checkA"
+    ],
+    "checks_failed": []
+  },
+  "simulation_duration": 1.5,
+  "mujoco_steps": 27,
+  "assertions_passed": 2,
+  "assertions_failed": 0,
+  "overall_pass": true
+}
+
+✓ OVERALL PASS — report written to simulation_report.json
+Report written to simulation_report.json
+{
+  "overall_pass": false,
+  "spec_file": "/private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-79/test_main_simulation_fail0/test.cnl",
+  "backend": "nengo"
+}
+
+✗ OVERALL FAIL — report written to simulation_report.json
+Report written to simulation_report.json
+{
+  "overall_pass": true,
+  "spec_file": "/private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-79/test_main_verbose0/test.cnl",
+  "backend": "nengo"
+}
+
+✓ OVERALL PASS — report written to simulation_report.json
+Multiple spec files given without --validate-only; using first: /private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-79/test_main_multiple_files_warni0/f1.cnl
+Report written to simulation_report.json
+{
+  "overall_pass": true,
+  "spec_file": "/private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-79/test_main_multiple_files_warni0/f1.cnl",
+  "backend": "nengo"
+}
+
+✓ OVERALL PASS — report written to simulation_report.json
+
+──────────────────────────────────────────────────────────────────────────────
+  Spec                                Sentences    L1    L2   Result
+──────────────────────────────────────────────────────────────────────────────
+  f1.cnl                                      5   2/2   1/1   [32mPASS[0m
+  f2.cnl                                      5   2/2   1/1   [32mPASS[0m
+──────────────────────────────────────────────────────────────────────────────
+  2/2 specs passed
+
+
+──────────────────────────────────────────────────────────────────────────────
+  Spec                                Sentences    L1    L2   Result
+──────────────────────────────────────────────────────────────────────────────
+  f1.cnl                                      5   2/2   1/1   [31mFAIL[0m
+    [31mErr[0m
+──────────────────────────────────────────────────────────────────────────────
+  0/1 specs passed
+
+Report written to simulation_report.json
+
+────────────────────────────────────────────────────────────
+  Spec: /private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-81/test_main_simulation_success0/test.cnl  |  Backend: nengo
+────────────────────────────────────────────────────────────
+
+  [32m✓ OVERALL PASS[0m
+────────────────────────────────────────────────────────────
+
+
+✓ OVERALL PASS — report written to simulation_report.json
+
+──────────────────────────────────────────────────────────────────────────────
+  Spec                                Sentences    L1    L2   Result
+──────────────────────────────────────────────────────────────────────────────
+  test.cnl                                    5   2/2   1/1   [32mPASS[0m
+──────────────────────────────────────────────────────────────────────────────
+  1/1 specs passed
+
+Report written to simulation_report.json
+{
+  "spec_file": "/private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-81/test_main_validate_only0/test.cnl",
+  "backend": "nengo",
+  "layer1_validation": {
+    "overall": true,
+    "passed": [
+      "check1",
+      "check2"
+    ],
+    "failed": []
+  },
+  "layer2_validation": {
+    "overall": true,
+    "checks_passed": [
+      "checkA"
+    ],
+    "checks_failed": []
+  },
+  "simulation_duration": 1.5,
+  "mujoco_steps": 0,
+  "assertions_passed": 2,
+  "assertions_failed": 0,
+  "overall_pass": true,
+  "mujoco_note": "MuJoCo integration: No module named 'mujoco'"
+}
+
+✓ OVERALL PASS — report written to simulation_report.json
+Report written to simulation_report.json
+{
+  "overall_pass": false,
+  "spec_file": "/private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-81/test_main_simulation_fail0/test.cnl",
+  "backend": "nengo"
+}
+
+✗ OVERALL FAIL — report written to simulation_report.json
+Report written to simulation_report.json
+{
+  "overall_pass": true,
+  "spec_file": "/private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-81/test_main_verbose0/test.cnl",
+  "backend": "nengo"
+}
+
+✓ OVERALL PASS — report written to simulation_report.json
+Multiple spec files given without --validate-only; using first: /private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-81/test_main_multiple_files_warni0/f1.cnl
+Report written to simulation_report.json
+{
+  "overall_pass": true,
+  "spec_file": "/private/var/folders/l0/7y17nx9n1yzgd1wwwv_sqpjc0000gn/T/pytest-of-yoshimartodihardjo/pytest-81/test_main_multiple_files_warni0/f1.cnl",
+  "backend": "nengo"
+}
+
+✓ OVERALL PASS — report written to simulation_report.json

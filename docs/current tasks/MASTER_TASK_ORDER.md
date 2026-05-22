@@ -4,27 +4,30 @@
 
 > **Plan maintenance**: this plan needs to be updated after each meaningful task change.
 > **Update style**: keep the work-done note very short and concise.
-> **Latest concise update**: T1-1 NIR semantic coverage is now verified complete for the supported approximate/metadata subset.
-
-> **Updated**: 2026-05-16
-> **Latest concise update**: T1-NC complete — auth hardening, CORS narrowing, Akida SSRF allowlist, provenance headers, `/partition` wired to real partitioner, SpiNNaker 2 router mounted. 382 tests passing, ruff clean.
+> **Updated**: 2026-05-22
+> **Latest concise update**: Assessed full spec + current-task status. Archived 8 finished/superseded docs. Active gaps: `nir-cnl-editor-sync` (NIR-native CNL doesn't round-trip through the canvas editor), `studio-target-first-workflow` (TargetChip/TargetPopover not built), sentence picker/autocomplete still using forbidden legacy grammar, T0-A workspace file I/O, T0-C item 1 profiling, T0-NC-VERIFY sign-off, and the `neurotraining-extensions` + `neurohub-global-registry` extension specs not yet started.
 >
 > **Scope decision**: Active product support is centered on authoring, validating, exporting, and simulator-running `CNL -> IR -> NIR`, with two simulator targets in scope: Lava simulator and snnTorch simulator. Hardware deployment remains out of scope except for NeuroChip backend truthfulness needed by the CNL Studio deployment flow.
 >
-> **Sources merged**:
+> **Sources merged** (originals archived to `docs/archive/`):
 >
-> - `docs/current tasks/neurocnl_status_and_priorities.md`
+> - `docs/current tasks/neurocnl_status_and_priorities.md` → archived
 > - `docs/unified_toolkit_architecture.md`
-> - `docs/current tasks/2026-05-10-neurocnl-workspace-simulation-persistence-plan.md`
-> - `docs/current tasks/2026-05-13-quick-wins-and-bugfixes.md`
-> - `docs/current tasks/2026-05-13-cnl-matrix-and-phase-2-plan.md`
-> - `docs/current tasks/2026-05-13-clean-bidirectional-cnl-canvas-plan.md`
+> - `docs/current tasks/2026-05-10-neurocnl-workspace-simulation-persistence-plan.md` → archived
+> - `docs/current tasks/2026-05-13-quick-wins-and-bugfixes.md` → archived
+> - `docs/current tasks/2026-05-13-cnl-matrix-and-phase-2-plan.md` → archived
+> - `docs/current tasks/2026-05-13-clean-bidirectional-cnl-canvas-plan.md` → archived
 > - `neurocnl/docs/CODE_REVIEW_CRITICAL_2026-05-14.md`
 > - `Neurosim/CODE_REVIEW_2026-05-14.md`
 > - `Neurochip/docs/CODE_REVIEW_CRITICAL_2026-05-14.md`
-> - `docs/current tasks/2026-05-14-cnl-nir-simulator-contract-plan.md`
-> - `docs/current tasks/2026-05-14-lava-simulator-e2e-plan.md`
-> - `docs/current tasks/2026-05-14-snntorch-simulator-e2e-plan.md`
+> - `docs/current tasks/2026-05-14-cnl-nir-simulator-contract-plan.md` → archived
+> - `docs/current tasks/2026-05-14-lava-simulator-e2e-plan.md` → archived
+> - `docs/current tasks/2026-05-14-snntorch-simulator-e2e-plan.md` → archived
+> - `docs/current tasks/2026-05-16-neurochip-impl-tasks.md` → archived (T1-NC done)
+> - `docs/current tasks/2026-05-16-neurochip-next-steps.md` → archived (T1-NC done; T2-x tracked below)
+> - `docs/current tasks/weight_init_option_b_handoff.md` → archived (spec fully done)
+> - `docs/current tasks/neurotraining_handoff.md` → archived (infrastructure implemented)
+> - `docs/current tasks/nengo_fpga_and_spa_plan.md` → archived (Nengo-era, superseded by NIR-native)
 
 ---
 
@@ -38,16 +41,22 @@
 
 ---
 
-## Current Status
+## Current Status (as of 2026-05-22)
 
 - Confirmed complete: direct `CNL -> IR -> NIR` export exists for the currently supported subset.
 - Confirmed complete: NIR export still fails closed for unsupported concepts instead of exporting dishonestly.
 - Confirmed complete: actionable validation/export diagnostics are already normalized enough to support UI cleanup work.
-- Remaining active gaps are now concentrated in four areas:
-  1. Workspace/file persistence around NIR artifacts
-  2. Outstanding workspace-load profiling evidence from T0-C item 1
-  3. Honest expansion of the supported NIR subset
-  4. First-class simulator execution of generated NIR in Lava and snnTorch
+- Confirmed complete: Lava and snnTorch simulator E2E (T1-5, T1-6, T1-7).
+- Confirmed complete: NIR-native CNL compiler (`nir-native-cnl` spec — production code done; optional PBT tasks remain unchecked).
+- Confirmed complete: weight-init Option B (`weight-init-option-b` spec — all tasks done).
+- Confirmed complete: NIR editor sync bugs (`nir-cnl-editor-bugs`, `nir-editor-sync`, `nir-simulator-support-matrix`, `nir-target-aware-preflight` specs — all fully done).
+- **Active gaps** are now concentrated in five areas:
+  1. **`nir-cnl-editor-sync`** — NIR-native CNL does not round-trip through the Studio canvas editor yet (spec defined, no tasks started)
+  2. **`studio-target-first-workflow`** — TargetChip / TargetPopover / deploy-target first-class placement not built (spec defined, no tasks started)
+  3. **Sentence picker / autocomplete alignment** — `cnl_sentence_builder_dialog.dart` and `cnl_editor.dart` still emit forbidden legacy biological grammar that the new NIR-native parser rejects (see `docs/current tasks/2026-05-22-neurocnl-sentence-picker-nir-alignment.md`)
+  4. **T0-A** — Workspace file I/O and NIR artifact persistence (native open/save, `.neurocnl-workspace.json` round-trip) not yet started
+  5. **T0-C item 1** — workspace load performance profiling evidence still outstanding
+  6. **`neurotraining-extensions`** and **`neurohub-global-registry`** specs — fully defined, zero tasks started
 
 ---
 
@@ -171,10 +180,10 @@
 
 ### T0-C: Quick Wins and Bugfixes
 
-**Status**: Active / High Priority. Items 2–5 complete. Item 1 profiling evidence still outstanding.
+**Status**: Active / Partially complete. Items 2–5 done. Item 1 profiling evidence still outstanding.
 **Why now**: These are the highest-signal usability issues still relevant to a `CNL -> NIR` product.
 
-1. **Workspace Load Performance**: profile the load path and add the "Obsidian Flow" loading treatment when delay is structural. *(loader + overlay exist, profiling evidence not yet captured)*
+1. **Workspace Load Performance**: profile the load path and add the "Obsidian Flow" loading treatment when delay is structural. *(loader + overlay exist, profiling evidence not yet captured — still active)*
 2. **Template Popup**: use a normal modal/popup for template selection. ✅ complete
 3. **Layer 1 Validation Copy Cleanup**: keep the success text once, not twice, and render labels without underscores. ✅ complete
 4. **Label Readability**: replace underscores with whitespace in Layer 1 and Layer 2 labels throughout the UI. ✅ complete
@@ -344,6 +353,82 @@ Unsupported semantic subcases remain fail-closed or explicitly metadata-only, an
 
 ---
 
+### T1-8: NIR-Native CNL Editor Round-Trip (nir-cnl-editor-sync)
+
+**Status**: Active — spec defined, no tasks started.
+**Why now**: NIR-native CNL authored in the editor does not round-trip through the Studio canvas. This breaks the core authoring → canvas → edit → re-validate loop for NIR-native specs.
+
+**Kiro spec**: `.kiro/specs/nir-cnl-editor-sync/`
+
+Two bugs to fix:
+1. **Fix 1 (backend)**: `parse-cnl-canonical` routes NIR-native CNL to the biological path, returning an empty canvas instead of parsing via `NIR_CNL_Parser → NIR_Compiler → serialize_nir_to_canvas_graph`.
+2. **Fix 2 (frontend)**: `CanvasNode` Dart model and `sync_provider.dart` hardcode `componentId = 'lif_population'` regardless of the node's actual NIR type.
+
+**Exit criteria**:
+1. NIR-native CNL sent to `parse-cnl-canonical` returns HTTP 200 with a populated canvas whose nodes carry correct `nir_type` and `componentId`.
+2. Non-LIF NIR nodes (Input, Output, Conv2d, etc.) appear on the canvas with the correct type badge.
+3. Biological CNL path is unchanged.
+
+---
+
+### T1-9: Studio Target-First Workflow (studio-target-first-workflow)
+
+**Status**: Active — spec defined, no tasks started.
+**Why now**: Deploy-target selection is buried in the deploy panel. Users should be able to see and change the active target from the main toolbar before they click Run.
+
+**Kiro spec**: `.kiro/specs/studio-target-first-workflow/`
+
+Key deliverables:
+1. Extract `DeployTargetData` model and `kDeployTargets` to a shared file.
+2. `TargetChip` widget in the `_PipelineWorkspaceHeader` toolbar showing the active target with a `CompatibilityDot` for simulator targets.
+3. `TargetPopover` overlay opened by tapping the chip, listing all six targets.
+4. `PipelineBar` Deploy step shows "Select a target" and opens the popover when no target is selected.
+5. `_BackendSupportCard` subtitle enriched with the selected simulator target label.
+
+**Exit criteria**: Tapping the TargetChip changes the active target across Studio, PipelineBar, and the deploy panel without navigating away.
+
+---
+
+### T1-10: Sentence Picker and Autocomplete NIR Alignment
+
+**Status**: Active — gap identified 2026-05-22, no spec created yet.
+**Why now**: The CNL Sentence Builder dialog and editor autocomplete still emit legacy biological grammar (MUST, sensory, motor, STDP, threshold_firing, refractory_period) that the NIR-native parser's denylist immediately rejects. Every sentence added via the picker is a parse error.
+
+**Gap doc**: `docs/current tasks/2026-05-22-neurocnl-sentence-picker-nir-alignment.md`
+
+Key files:
+- `neurocnl/frontend/lib/widgets/cnl_sentence_builder_dialog.dart` — `_kConcepts` list
+- `neurocnl/frontend/lib/widgets/cnl_editor.dart` — `_kAllTemplates` list
+
+**Exit criteria**:
+1. Every sentence inserted by the picker or autocomplete is valid NIR-native CNL that passes `NIR_CNL_Parser().parse()` without raising `ParseError`.
+2. Picker categories map to NIR primitives: Input/Output ports, LIF, LI, Linear transformation, Connections.
+3. Autocomplete suggestions are valid `Define ...` and `Connect ... to ...` forms.
+
+---
+
+### T2-EXT: Neurotraining Extensions (neurotraining-extensions)
+
+**Status**: Spec defined, no tasks started. Lower priority than T1-8 through T1-10.
+
+**Kiro spec**: `.kiro/specs/neurotraining-extensions/`
+
+Key deliverables: `DatasetLoader`, `NorseAdapter`, `SpikingJellyAdapter`, `WeightInjector`, `POST /api/training/jobs/{job_id}/export-nir` endpoint, Flutter `TrainingInspectorPanel` dataset source toggle and Export NIR button.
+
+---
+
+### T2-HUB: Neurohub Global Registry (neurohub-global-registry)
+
+**Status**: Spec defined, no tasks started. Out of active priority until T1-8 through T1-10 stabilize.
+
+**Kiro spec**: `.kiro/specs/neurohub-global-registry/`
+
+Key deliverables: Registry FastAPI backend (artefacts, search, auth, community, ratings), neurohub-CLI (`neurohub push/pull/search`), Flutter in-app discovery panel, Next.js public site.
+
+---
+
+---
+
 ### T0-NC-VERIFY: Confirm T0-NC Exit Criteria Are Actually Green
 
 **Status**: Active.
@@ -434,7 +519,7 @@ Exit criteria to verify:
 | 0    | T0-NC-VERIFY | Confirm T0-NC exit criteria are green in current repo state               | Active   | —               |
 | 0    | T0-A  | Workspace file I/O and NIR artifact persistence                                  | Active   | —               |
 | 0    | T0-B  | Actionable error diagnostics                                                     | Complete | —               |
-| 0    | T0-C  | Quick wins and bugfixes                                                          | Active   | —               |
+| 0    | T0-C  | Quick wins and bugfixes (item 1 profiling outstanding)                           | Active   | —               |
 | 0    | T0-D  | STP NIR type mismatch and round-trip fix                                         | Complete | —               |
 | 0    | T0-E  | Matrix-native CNL on top of IR                                                   | Complete | —               |
 | 1    | T1-1  | NIR semantic coverage expansion                                                  | Complete | —               |
@@ -446,6 +531,11 @@ Exit criteria to verify:
 | 1    | T1-5  | Shared `CNL -> NIR -> Simulator` contract                                      | Complete | 2026-05-15       |
 | 1    | T1-6  | Lava simulator E2E                                                               | Complete | 2026-05-15       |
 | 1    | T1-7  | snnTorch simulator E2E                                                           | Complete | 2026-05-15       |
+| 1    | T1-8  | NIR-native CNL editor round-trip (`nir-cnl-editor-sync`)                       | Active   | —               |
+| 1    | T1-9  | Studio target-first workflow (`studio-target-first-workflow`)                    | Active   | —               |
+| 1    | T1-10 | Sentence picker and autocomplete NIR alignment                                   | Active   | —               |
+| 2    | T2-EXT | Neurotraining extensions                                                        | Queued   | T1-8 stable      |
+| 2    | T2-HUB | Neurohub global registry                                                        | Queued   | T1-8 stable      |
 | 2    | T2-x  | Quantization, hybrid tags, partitioning                                          | Later    | Tier 1 stability |
 
 ---
