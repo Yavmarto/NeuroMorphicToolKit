@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "{{ project_name }}"
+version = "0.1.0"
+description = "{{ task }} SNN project — Akida + BrainChip MetaTF"
+requires-python = ">=3.10"
+dependencies = ["nir>=1.0.0", "numpy>=1.24.0"]
+
+[project.optional-dependencies]
+akida = [
+    "tensorflow==2.19.*",
+    "akida==2.19.1",
+    "cnn2snn==2.19.1",
+    "akida-models==1.13.1",
+]
+dev = ["pytest>=8.0.0"]

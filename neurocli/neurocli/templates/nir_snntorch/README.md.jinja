@@ -1,0 +1,23 @@
+# {{ project_name }}
+
+**Framework**: NIR → snnTorch simulator  
+**Task**: {{ task }}
+
+## Getting started
+
+```bash
+uv sync
+uv run python src/main.py
+```
+
+## What this scaffold gives you
+
+- A minimal NIR graph compiled with `neurocnl.compile_to_nir()`
+- Fixed-weight simulation via `snntorch` (no training)
+- Deterministic spike-train stimulus from the shared NMTK simulator contract
+
+## Next steps
+
+1. Edit `src/main.py` to describe your network in NIR-native CNL.
+2. Run `neuro run neurocnl` to start the NeuroCNL backend.
+3. Use `neuro hub push` to share your model once ready.
