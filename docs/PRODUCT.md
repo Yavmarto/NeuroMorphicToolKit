@@ -57,3 +57,15 @@ Do not let NMTK feel like any of the following:
 ## Accessibility & Inclusion
 
 WCAG AA as the baseline for all surfaces. Both user personas may include people with reduced motion sensitivity or color vision differences; state communication should never rely on color alone. Dense technical surfaces (instrument mode, benchmark comparisons) must remain readable at the compact sizes they require without sacrificing contrast.
+
+## Design System Foundation
+
+NMTK Flutter uses **Zeta** (Zebra's design system, `zeta_flutter ^1.4.5`) as its foundation layer. Zeta provides the primitive color swatches, semantic color tokens, spacing primitives, radius primitives, and ready-made components (ZetaButton, ZetaTextInput, ZetaAvatar, ZetaStatusLabel, etc.).
+
+NMTK extends Zeta with its own identity layer: Command Blue (`#1337EC`) replaces Zeta's default primary; the three workbench-mode accents (command blue, studio violet, instrument cyan) and the six semantic status colors are NMTK-specific overrides applied on top of Zeta's semantic token structure.
+
+**What Zeta owns:** primitives (blue, green, red, teal, purple, orange, yellow, cool, warm swatches); semantic structure (mainPrimary, mainPositive, mainNegative, mainWarning, mainInfo, surface*, border*, state*); base component styling (ZetaButton, etc.); IBM Plex Sans as the Zeta-spec typeface reference.
+
+**What NMTK overrides:** primary color seed to Command Blue; UI font to Space Grotesk (retains IBM Plex as fallback); module-mode accents; shell surface stack (dark navy / light silver-blue); status color palette (healthy, running, degraded, warning, error, live); workbench chrome tokens (NmtkShellTokens).
+
+**Usage pattern:** every module MaterialApp is wrapped in `NmtkZetaTheme.wrap(...)`, which injects a ZetaProvider pre-configured with the NMTK custom theme. Module widgets may call `Zeta.of(context).colors` for semantic tokens or `NmtkShellTokens.of(context)` for shell-specific tokens.

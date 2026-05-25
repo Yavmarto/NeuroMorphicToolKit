@@ -4,8 +4,8 @@
 
 > **Plan maintenance**: this plan needs to be updated after each meaningful task change.
 > **Update style**: keep the work-done note very short and concise.
-> **Updated**: 2026-05-22
-> **Latest concise update**: Assessed full spec + current-task status. Archived 8 finished/superseded docs. Active gaps: `nir-cnl-editor-sync` (NIR-native CNL doesn't round-trip through the canvas editor), `studio-target-first-workflow` (TargetChip/TargetPopover not built), sentence picker/autocomplete still using forbidden legacy grammar, T0-A workspace file I/O, T0-C item 1 profiling, T0-NC-VERIFY sign-off, and the `neurotraining-extensions` + `neurohub-global-registry` extension specs not yet started.
+> **Updated**: 2026-05-25
+> **Latest concise update**: Added two new task specs. **T-BUNDLE** (`docs/current tasks/2026-05-24-nir-bundle-architecture.md`): architecture and implementation plan for the `.nmtk` project bundle format (NIR + learning rules + `internal_ir.json`), covering canvas gaps, NIR framework online-learning constraints (Lava-only), Phase 0 adapter–canvas disconnect fix, and a Lava `online_learn` adapter path. **T-LAYER** (`docs/current tasks/2026-05-24-layer-editor-view.md`): spec for a sequential row/column layer editor view in Studio (PyTorch-style `nn.Sequential` UX), where each layer card maps to one or two CNL sentences, layers can be grouped/expanded, and the view complements (does not replace) the graph canvas. T-LAYER is gated on T1-8 and T1-10.
 >
 > **Scope decision**: Active product support is centered on authoring, validating, exporting, and simulator-running `CNL -> IR -> NIR`, with two simulator targets in scope: Lava simulator and snnTorch simulator. Hardware deployment remains out of scope except for NeuroChip backend truthfulness needed by the CNL Studio deployment flow.
 >
@@ -50,13 +50,15 @@
 - Confirmed complete: NIR-native CNL compiler (`nir-native-cnl` spec — production code done; optional PBT tasks remain unchecked).
 - Confirmed complete: weight-init Option B (`weight-init-option-b` spec — all tasks done).
 - Confirmed complete: NIR editor sync bugs (`nir-cnl-editor-bugs`, `nir-editor-sync`, `nir-simulator-support-matrix`, `nir-target-aware-preflight` specs — all fully done).
-- **Active gaps** are now concentrated in five areas:
+- **Active gaps** are now concentrated in six areas:
   1. **`nir-cnl-editor-sync`** — NIR-native CNL does not round-trip through the Studio canvas editor yet (spec defined, no tasks started)
   2. **`studio-target-first-workflow`** — TargetChip / TargetPopover / deploy-target first-class placement not built (spec defined, no tasks started)
   3. **Sentence picker / autocomplete alignment** — `cnl_sentence_builder_dialog.dart` and `cnl_editor.dart` still emit forbidden legacy biological grammar that the new NIR-native parser rejects (see `docs/current tasks/2026-05-22-neurocnl-sentence-picker-nir-alignment.md`)
   4. **T0-A** — Workspace file I/O and NIR artifact persistence (native open/save, `.neurocnl-workspace.json` round-trip) not yet started
   5. **T0-C item 1** — workspace load performance profiling evidence still outstanding
   6. **`neurotraining-extensions`** and **`neurohub-global-registry`** specs — fully defined, zero tasks started
+  7. **T-UI Flutter UI migration** — `shadcn_ui` → `zeta_flutter ^1.4.5` across all 6 Flutter packages; partial moon_design revert required first (see `docs/current tasks/2026-05-24-shadcn-to-zeta-flutter-migration.md`)
+  8. **T-DEBT tech debt cleanup** — ✅ Tasks 1–4 done (stale worktree removed, Nengo surface deleted, all 5 app roots on `NmtkZetaTheme.wrap`, loading_screen button). 🔄 Tasks 5–8 deferred: 138 `ElevatedButton`/`TextButton`/`OutlinedButton` hits remain across 5 frontends — follow-on session. See `docs/current tasks/2026-05-24-tech-debt-cleanup-material-deprecated.md`
 
 ---
 
@@ -427,6 +429,46 @@ Key deliverables: Registry FastAPI backend (artefacts, search, auth, community, 
 
 ---
 
+### T-BUNDLE: NIR + Training Bundle Architecture
+
+**Status**: Spec defined, no tasks started. Gated on T1-8 (canvas model must be correct first).
+**Why**: Formalises the `.nmtk` ZIP bundle format (NIR + learning rules + `internal_ir.json`), fixes the adapter–canvas disconnect, and defines the Lava online-learning path as the only NIR-portable STDP route.
+
+**Full spec**: `docs/current tasks/2026-05-24-nir-bundle-architecture.md`
+
+| Phase | Deliverable | Key files |
+|---|---|---|
+| 0 | Fix adapter–canvas disconnect: adapters read user NIR graph from payload | `neurocnl/training/snntorch_adapter.py`, `training_inspector_panel.dart` |
+| 1 | `NetworkIR.to_dict()` + `ProjectBundle` ZIP container | `neurocnl/ir/types.py`, new `neurocnl/bundle.py` |
+| 2 | `LearningRuleProjection` on `CanvasEdge`; plastic edge visual style | `canonical_editor_document.dart`, `network_graph_view.dart` |
+| 3 | `reward_signal` on `LearningRuleIR`; `deployment_mode` on `TrainingRequest` | `neurocnl/ir/types.py`, `training_registry.py` |
+| 4 | `BindsNETAdapter` (simulation-only, no NIR export) | `neurocnl/training/bindsnet_adapter.py` |
+| 4b | `LavaOnlineAdapter` — the only NIR-portable `online_learn` path | `neurocnl/training/lava_online_adapter.py`, `lava_exporter.py` |
+| 5 | Studio works against `ProjectBundle`; reward node in palette | `studio_screen.dart`, `nmtk_ui_core` |
+
+**Critical constraint**: `deployment_mode = "online_learn"` is **Lava → Loihi 2 only**. BindsNET and SpikingJelly have no NIR bridge.
+
+---
+
+### T-LAYER: Sequential Layer Editor View
+
+**Status**: Spec defined, no tasks started. **Gated on T1-8 and T1-10**.
+**Why**: Adds a `nn.Sequential`-style layer list view to Studio. Each layer card = one or two CNL sentences. Layers group/expand to reveal parameters and learning rules. Rows = feedforward depth; columns = parallel pathways. Complements the graph canvas — does not replace it.
+
+**Full spec**: `docs/current tasks/2026-05-24-layer-editor-view.md`
+
+| Phase | Deliverable |
+|---|---|
+| 1 | `CanvasProjection` gains `orientation` + `groups`; `CanvasNotifier` gets `addLayer`/`reorderLayer` |
+| 2 | `LayerCard` + `LayerEditorShell` widgets (display-only); Studio view-mode toggle (Graph ⇔ Layers) |
+| 3 | Editable layer forms; drag-to-reorder; learning rule sub-section |
+| 4 | Column orientation; groups; branch/merge nodes |
+| 5 | Teaching mode: live CNL preview, grammar tooltips |
+
+**Framework alignment**: snnTorch `Leaky`, Norse `LIFCell`, Lava `Dense+LIF`, PyTorch `nn.Sequential` all map to the same layer-card schema — the math is identical.
+
+**Exit criteria**: Build a feedforward SNN in the layer editor, read the generated CNL, export valid NIR — without writing CNL manually.
+
 ---
 
 ### T0-NC-VERIFY: Confirm T0-NC Exit Criteria Are Actually Green
@@ -536,6 +578,8 @@ Exit criteria to verify:
 | 1    | T1-10 | Sentence picker and autocomplete NIR alignment                                   | Active   | —               |
 | 2    | T2-EXT | Neurotraining extensions                                                        | Queued   | T1-8 stable      |
 | 2    | T2-HUB | Neurohub global registry                                                        | Queued   | T1-8 stable      |
+| 2    | T-BUNDLE | NIR + training bundle architecture (`.nmtk` format, adapter–canvas fix)    | Queued   | T1-8             |
+| 2    | T-LAYER  | Sequential layer editor view (row/column, group/expand, CNL preview)         | Queued   | T1-8 + T1-10     |
 | 2    | T2-x  | Quantization, hybrid tags, partitioning                                          | Later    | Tier 1 stability |
 
 ---
@@ -551,3 +595,33 @@ Exit criteria to verify:
 7. **Canvas meaning must be stable.** NeuroSim must never silently rewrite a canvas graph into a different canonical CNL graph, and the suite must import one unambiguous `neurosim` package.
 8. **Simulation support levels must be explicit.** NeuroSim must label approximate, local-only, mock, degraded, and unsupported preview/export/hardware paths instead of returning completed-looking results for behavior it did not faithfully simulate.
 9. **Hardware readiness must be explicit.** NeuroChip must never return or surface deployment success without saying whether the path used scaffold generation, simulation, SDK simulator mapping, or real hardware.
+
+---
+
+## T-UI: Flutter UI — shadcn_ui → zeta_flutter Migration
+
+**Status**: ✅ Complete (2026-05-24).
+**Full plan**: `docs/current tasks/2026-05-24-shadcn-to-zeta-flutter-migration.md`
+**Why now**: A partial moon_design migration left `nmtk_ui_core` in a broken mid-flight state. Switched to `zeta_flutter ^1.4.5` (Zebra Design System, MIT).
+
+| Task | Description | Status |
+|------|-------------|--------|
+| T-UI-1 | Revert nmtk_ui_core to pre-moon shadcn baseline | ✅ |
+| T-UI-2 | Add `zeta_flutter: ^1.4.5` to nmtk_ui_core; create `NmtkZetaTheme` | ✅ |
+| T-UI-3 | Replace all Shadcn components in `nmtk_ui_core/lib/` with Zeta | ✅ |
+| T-UI-4 | Delete `shad_theme.dart`; remove `shadcn_ui` from nmtk_ui_core pubspec | ✅ |
+| T-UI-5 | Migrate `neurocnl/frontend` | ✅ |
+| T-UI-6 | Migrate `Neurobench/frontend` | ✅ |
+| T-UI-7 | Migrate `nmtk/neuro_toolkit` | ✅ |
+| T-UI-8 | Migrate `Neurohub/frontend` + `Neurosense/frontend` | ✅ |
+| T-UI-9 | Full suite verification — zero `shadcn_ui` references | ✅ |
+
+**Exit criteria met**: `grep -r "shadcn_ui" --include="*.dart" --include="*.yaml" . --exclude-dir=.claude` returns nothing; all 6 Flutter packages pass `flutter analyze` (0 errors each).
+
+**Key implementation notes**:
+- `ZetaButton` takes `label: String` + `leadingIcon: IconData?` (no Widget child)
+- `ZetaTooltip` is a display widget, not a hover wrapper — used Material `Tooltip` instead
+- `ZetaBadge` does not exist in 1.4.5 — used `Container` pill instead
+- `ZetaCustomTheme` is not const-constructible
+- `ShadCard` props (`padding`, `border`, `radius`) → converted to `Container(decoration: BoxDecoration(...))`
+- Complex `leading: Widget` buttons (loading spinners) → converted to `ElevatedButton` with `Row` child

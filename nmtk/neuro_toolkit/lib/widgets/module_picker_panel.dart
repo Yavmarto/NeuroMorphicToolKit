@@ -457,9 +457,9 @@ class _StatusMessageBar extends StatelessWidget {
         title: Text('$moduleName — Status'),
         content: SingleChildScrollView(child: Text(message)),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            label: 'Close',
           ),
         ],
       ),

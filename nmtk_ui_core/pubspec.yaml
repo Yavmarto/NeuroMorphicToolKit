@@ -9,11 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  # Shadcn/UI Flutter port — provides ShadApp, ShadThemeData, ShadColorScheme,
-  # and the full Shadcn component library. Pin with ^ so minor updates are
-  # picked up automatically; bump the major when the team is ready for a
-  # breaking-change migration. Run `flutter pub upgrade shadcn_ui` to refresh.
-  shadcn_ui: ^0.54.0
+  zeta_flutter: ^1.4.5
 
 dev_dependencies:
   flutter_lints: ^6.0.0

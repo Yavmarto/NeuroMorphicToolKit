@@ -2,11 +2,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/models/commands.dart';
 import 'package:nmtk_ui_core/motion_tokens.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LAYOUT CONSTANTS
@@ -81,7 +82,7 @@ class NmtkUserProfileAction {
   /// Renders this action in the destructive colour (error).
   final bool isDestructive;
 
-  /// When true the row renders as a [ShadSeparator] — other fields ignored.
+  /// When true the row renders as a [Divider] — other fields ignored.
   final bool isDivider;
 }
 
@@ -157,20 +158,20 @@ abstract class NmtkFileActionDelegate {
 ///
 /// ## Colour contract
 ///
-/// All colours come from [ShadTheme.of(context).colorScheme] — no
+/// All colours come from [Theme.of(context).colorScheme] — no
 /// `Colors.*` references appear in this file.
 ///
 /// | Surface                | Token                  |
 /// |------------------------|------------------------|
-/// | Rail                   | `scheme.card`          |
-/// | Rail border            | `scheme.border`        |
-/// | Content header         | `scheme.card`          |
-/// | Content header border  | `scheme.border`        |
-/// | Content area           | `scheme.background`    |
+/// | Rail                   | `scheme.surfaceContainer`          |
+/// | Rail border            | `scheme.outlineVariant`        |
+/// | Content header         | `scheme.surfaceContainer`          |
+/// | Content header border  | `scheme.outlineVariant`        |
+/// | Content area           | `scheme.surface`    |
 /// | Active nav item fill   | `scheme.primary` @ 10% |
 /// | Active nav icon        | `scheme.primary`       |
-/// | Nav item hover         | `scheme.muted`         |
-/// | Destructive actions    | `scheme.destructive`   |
+/// | Nav item hover         | `scheme.surfaceContainerHighest`         |
+/// | Destructive actions    | `scheme.error`   |
 ///
 /// ## Minimal usage
 ///
@@ -304,7 +305,7 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     final showHeader = widget.showBackButton || widget.fileActions != null;
 
     Widget contentColumn = Column(
@@ -317,7 +318,7 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
             fileActions: widget.fileActions,
           ),
         Expanded(
-          child: ColoredBox(color: scheme.background, child: widget.child),
+          child: ColoredBox(color: scheme.surface, child: widget.child),
         ),
       ],
     );
@@ -331,7 +332,7 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
     }
 
     return Scaffold(
-      backgroundColor: scheme.background,
+      backgroundColor: scheme.surface,
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -349,6 +350,7 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
               onFooterNavItemSelected: widget.onFooterNavItemSelected,
               isExpanded: _isExpanded,
               onToggleExpanded: _toggleSidebar,
+              mode: widget.mode,
             ),
           ),
           Expanded(child: contentColumn),
@@ -358,12 +360,12 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
   }
 
   Widget _buildMobileLayout(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     final mobileNavItems = _mobileNavigationItems;
     final useBottomNavigation = _shouldUseBottomNavigation;
 
     return Scaffold(
-      backgroundColor: scheme.background,
+      backgroundColor: scheme.surface,
       appBar: _NmtkMobileAppBar(
         scheme: scheme,
         title: widget.pageTitle,
@@ -388,10 +390,11 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
               userProfile: widget.userProfile,
               brand: widget.sidebarBrand,
               scheme: scheme,
+              mode: widget.mode,
             ),
       body: SafeArea(
         top: false,
-        child: ColoredBox(color: scheme.background, child: widget.child),
+        child: ColoredBox(color: scheme.surface, child: widget.child),
       ),
       bottomNavigationBar: useBottomNavigation
           ? NavigationBar(
@@ -460,7 +463,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.title,
   });
 
-  final ShadColorScheme scheme;
+  final ColorScheme scheme;
   final bool showMenuButton;
   final bool showBackButton;
   final VoidCallback? onBack;
@@ -476,8 +479,8 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: scheme.card,
-        border: Border(bottom: BorderSide(color: scheme.border)),
+        color: scheme.surfaceContainer,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
       ),
       child: SizedBox(
         height: _kContentHeaderHeight,
@@ -490,7 +493,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                   builder: (ctx) => IconButton(
                     icon: Icon(
                       Icons.menu_rounded,
-                      color: scheme.foreground,
+                      color: scheme.onSurface,
                       size: 20,
                     ),
                     onPressed: () => Scaffold.of(ctx).openDrawer(),
@@ -503,7 +506,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                 IconButton(
                   icon: Icon(
                     Icons.arrow_back_ios_new_rounded,
-                    color: scheme.foreground,
+                    color: scheme.onSurface,
                     size: 18,
                   ),
                   onPressed: onBack,
@@ -518,7 +521,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: scheme.foreground,
+                      color: scheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -555,7 +558,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                 IconButton(
                   icon: Icon(
                     Icons.settings_outlined,
-                    color: scheme.foreground.withOpacity(0.65),
+                    color: scheme.onSurface.withOpacity(0.65),
                     size: 18,
                   ),
                   onPressed: onSettingsPressed,
@@ -584,6 +587,7 @@ class _NmtkMobileDrawer extends StatelessWidget {
     required this.footerNavItems,
     required this.onFooterNavItemSelected,
     required this.scheme,
+    required this.mode,
     this.onSettingsPressed,
     this.userProfile,
     this.brand,
@@ -594,7 +598,8 @@ class _NmtkMobileDrawer extends StatelessWidget {
   final ValueChanged<int>? onNavItemSelected;
   final List<NmtkSidebarItem> footerNavItems;
   final ValueChanged<int>? onFooterNavItemSelected;
-  final ShadColorScheme scheme;
+  final ColorScheme scheme;
+  final NmtkShellMode mode;
   final VoidCallback? onSettingsPressed;
   final NmtkUserProfile? userProfile;
   final Widget? brand;
@@ -602,7 +607,7 @@ class _NmtkMobileDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Drawer(
-      backgroundColor: scheme.card,
+      backgroundColor: scheme.surfaceContainer,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -612,8 +617,9 @@ class _NmtkMobileDrawer extends StatelessWidget {
               brand: brand,
               isExpanded: true,
               onToggle: () => Navigator.of(context).pop(),
+              mode: mode,
             ),
-            const ShadSeparator.horizontal(),
+            const Divider(height: 1),
 
             // Primary nav items
             Expanded(
@@ -630,6 +636,7 @@ class _NmtkMobileDrawer extends StatelessWidget {
                         item: navItems[i],
                         isSelected: i == selectedIndex,
                         isExpanded: true,
+                        mode: mode,
                         onTap: () {
                           Navigator.of(context).pop();
                           onNavItemSelected?.call(i);
@@ -642,7 +649,7 @@ class _NmtkMobileDrawer extends StatelessWidget {
 
             // Footer nav items
             if (footerNavItems.isNotEmpty) ...[
-              const ShadSeparator.horizontal(),
+              const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: _kNavItemHPad,
@@ -656,6 +663,7 @@ class _NmtkMobileDrawer extends StatelessWidget {
                         item: footerNavItems[i],
                         isSelected: false,
                         isExpanded: true,
+                        mode: mode,
                         onTap: () {
                           Navigator.of(context).pop();
                           onFooterNavItemSelected?.call(i);
@@ -667,7 +675,7 @@ class _NmtkMobileDrawer extends StatelessWidget {
             ],
 
             // Settings + profile at bottom
-            const ShadSeparator.horizontal(),
+            const Divider(height: 1),
             if (onSettingsPressed != null)
               _RailIconButton(
                 icon: Icons.settings_outlined,
@@ -694,6 +702,7 @@ class _NmtkRailColumn extends StatelessWidget {
     required this.onItemSelected,
     required this.isExpanded,
     required this.onToggleExpanded,
+    required this.mode,
     this.brand,
     this.userProfile,
     this.onSettingsPressed,
@@ -711,15 +720,16 @@ class _NmtkRailColumn extends StatelessWidget {
   final ValueChanged<int>? onFooterNavItemSelected;
   final bool isExpanded;
   final VoidCallback onToggleExpanded;
+  final NmtkShellMode mode;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: scheme.card,
-        border: Border(right: BorderSide(color: scheme.border)),
+        color: scheme.surfaceContainer,
+        border: Border(right: BorderSide(color: scheme.outlineVariant)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -729,8 +739,9 @@ class _NmtkRailColumn extends StatelessWidget {
             brand: brand,
             isExpanded: isExpanded,
             onToggle: onToggleExpanded,
+            mode: mode,
           ),
-          const ShadSeparator.horizontal(),
+          const Divider(height: 1),
 
           // ── Primary nav items (scrollable) ────────────────────────
           Expanded(
@@ -747,6 +758,7 @@ class _NmtkRailColumn extends StatelessWidget {
                       item: items[i],
                       isSelected: i == selectedIndex,
                       isExpanded: isExpanded,
+                      mode: mode,
                       onTap: () => onItemSelected?.call(i),
                     ),
                 ],
@@ -756,7 +768,7 @@ class _NmtkRailColumn extends StatelessWidget {
 
           // ── Footer nav items ──────────────────────────────────────
           if (footerNavItems.isNotEmpty) ...[
-            const ShadSeparator.horizontal(),
+            const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: _kNavItemHPad,
@@ -772,6 +784,7 @@ class _NmtkRailColumn extends StatelessWidget {
                           selectedIndex < 0 &&
                           footerNavItems[i].id == 'settings',
                       isExpanded: isExpanded,
+                      mode: mode,
                       onTap: () => onFooterNavItemSelected?.call(i),
                     ),
                 ],
@@ -780,7 +793,7 @@ class _NmtkRailColumn extends StatelessWidget {
           ],
 
           // ── Bottom anchored: settings + profile ───────────────────
-          const ShadSeparator.horizontal(),
+          const Divider(height: 1),
           if (onSettingsPressed != null)
             _RailIconButton(
               icon: Icons.settings_outlined,
@@ -802,15 +815,19 @@ class _RailBrandRow extends StatelessWidget {
     this.brand,
     required this.isExpanded,
     required this.onToggle,
+    required this.mode,
   });
 
   final Widget? brand;
   final bool isExpanded;
   final VoidCallback onToggle;
+  final NmtkShellMode mode;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = NmtkShellTokens.of(context);
+    final palette = tokens.paletteForMode(mode);
 
     Widget logoWidget;
     if (brand != null) {
@@ -823,14 +840,14 @@ class _RailBrandRow extends StatelessWidget {
           width: isExpanded ? 72 : 28,
           height: 28,
           decoration: BoxDecoration(
-            color: scheme.primary,
-            borderRadius: BorderRadius.circular(6),
+            color: palette.accent,
+            borderRadius: BorderRadius.circular(tokens.radiusSm),
           ),
           alignment: Alignment.center,
           child: Text(
             isExpanded ? 'NMTK' : 'N',
             style: TextStyle(
-              color: scheme.primaryForeground,
+              color: scheme.onPrimary,
               fontSize: isExpanded ? 12 : 14,
               fontWeight: FontWeight.w800,
               letterSpacing: isExpanded ? 1.0 : -0.5,
@@ -851,7 +868,7 @@ class _RailBrandRow extends StatelessWidget {
             IconButton(
               icon: Icon(
                 Icons.chevron_left_rounded,
-                color: scheme.foreground.withOpacity(0.65),
+                color: scheme.onSurface.withOpacity(0.65),
                 size: 20,
               ),
               onPressed: onToggle,
@@ -862,8 +879,8 @@ class _RailBrandRow extends StatelessWidget {
       );
     } else {
       // Collapsed: clicking the logo expands sidebar
-      return ShadTooltip(
-        builder: (ctx) => const Text('Expand sidebar'),
+      return Tooltip(
+        message: 'Expand sidebar',
         child: Semantics(
           label: 'Expand sidebar',
           button: true,
@@ -903,10 +920,10 @@ class _RailIconButtonState extends State<_RailIconButton> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
-    return ShadTooltip(
-      builder: (ctx) => Text(widget.tooltip),
+    return Tooltip(
+      message: widget.tooltip,
       child: Semantics(
         label: widget.tooltip,
         button: true,
@@ -918,12 +935,12 @@ class _RailIconButtonState extends State<_RailIconButton> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 100),
               height: 40,
-              color: _hovered ? scheme.muted : null,
+              color: _hovered ? scheme.surfaceContainerHighest : null,
               child: Center(
                 child: Icon(
                   widget.icon,
                   size: 18,
-                  color: scheme.foreground.withOpacity(0.65),
+                  color: scheme.onSurface.withOpacity(0.65),
                 ),
               ),
             ),
@@ -946,13 +963,7 @@ class _RailProfileChip extends StatefulWidget {
 }
 
 class _RailProfileChipState extends State<_RailProfileChip> {
-  final _popover = ShadPopoverController();
-
-  @override
-  void dispose() {
-    _popover.dispose();
-    super.dispose();
-  }
+  final _menuController = MenuController();
 
   String _initials(NmtkUserProfile p) {
     if (p.avatarFallback != null) return p.avatarFallback!;
@@ -966,34 +977,40 @@ class _RailProfileChipState extends State<_RailProfileChip> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     final profile = widget.profile;
 
-    return ShadPopover(
-      controller: _popover,
-      popover: (ctx) =>
-          _ProfilePopover(profile: profile, onClose: _popover.hide),
+    return MenuAnchor(
+      controller: _menuController,
+      menuChildren: [
+        _ProfilePopover(
+          profile: profile,
+          onClose: () => _menuController.close(),
+        ),
+      ],
       child: Semantics(
         label: 'User profile: ${profile.displayName}',
         button: true,
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            onTap: _popover.toggle,
+            onTap: () {
+              if (_menuController.isOpen) {
+                _menuController.close();
+              } else {
+                _menuController.open();
+              }
+            },
             mouseCursor: SystemMouseCursors.click,
             child: SizedBox(
               height: 40,
               child: Center(
-                child: ShadAvatar(
-                  profile.avatarUrl,
-                  placeholder: Text(
-                    _initials(profile),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.primaryForeground,
-                    ),
-                  ),
+                child: ZetaAvatar(
+                  initials: _initials(profile),
+                  image: profile.avatarUrl != null
+                      ? Image.network(profile.avatarUrl!)
+                      : null,
+                  size: ZetaAvatarSize.xs,
                 ),
               ),
             ),
@@ -1014,12 +1031,14 @@ class _SidebarNavItem extends StatefulWidget {
     required this.isSelected,
     required this.isExpanded,
     required this.onTap,
+    required this.mode,
   });
 
   final NmtkSidebarItem item;
   final bool isSelected;
   final bool isExpanded;
   final VoidCallback onTap;
+  final NmtkShellMode mode;
 
   @override
   State<_SidebarNavItem> createState() => _SidebarNavItemState();
@@ -1030,22 +1049,24 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
+    final tokens = NmtkShellTokens.of(context);
+    final palette = tokens.paletteForMode(widget.mode);
     final item = widget.item;
     final isSelected = widget.isSelected;
     final isExpanded = widget.isExpanded;
 
     final bgColor = isSelected
-        ? scheme.primary.withOpacity(0.10)
+        ? palette.accent.withOpacity(0.10)
         : _hovered
-        ? scheme.muted
+        ? scheme.surfaceContainerHighest
         : null;
 
     final iconColor = isSelected
-        ? scheme.primary
-        : scheme.foreground.withOpacity(0.70);
+        ? palette.accent
+        : scheme.onSurface.withOpacity(0.70);
 
-    final textColor = isSelected ? scheme.primary : scheme.foreground;
+    final textColor = isSelected ? palette.accent : scheme.onSurface;
 
     final effectiveIcon = isSelected
         ? (item.selectedIcon ?? item.icon)
@@ -1078,10 +1099,19 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
               ),
             ),
             if (item.badgeCount != null && item.badgeCount! > 0)
-              ShadBadge.secondary(
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(tokens.radiusChip),
+                ),
                 child: Text(
                   '${item.badgeCount}',
-                  style: const TextStyle(fontSize: 10, height: 1),
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.4,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
                 ),
               ),
           ],
@@ -1091,7 +1121,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 
     // Tooltip always shown in rail (icon-only) mode.
     if (!isExpanded) {
-      inner = ShadTooltip(builder: (ctx) => Text(item.label), child: inner);
+      inner = Tooltip(message: item.label, child: inner);
     }
 
     return Padding(
@@ -1133,12 +1163,12 @@ class _NmtkContentHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: scheme.card,
-        border: Border(bottom: BorderSide(color: scheme.border)),
+        color: scheme.surfaceContainer,
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
       ),
       child: SizedBox(
         height: _kContentHeaderHeight,
@@ -1162,7 +1192,7 @@ class _NmtkContentHeader extends StatelessWidget {
                       icon: const Icon(Icons.arrow_back_ios_new_rounded),
                       iconSize: 18,
                       tooltip: 'Back',
-                      color: scheme.foreground,
+                      color: scheme.onSurface,
                       onPressed: showBackButton ? onBack : null,
                     ),
                   ),
@@ -1218,14 +1248,14 @@ class _FileActionIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
-    return ShadTooltip(
-      builder: (ctx) => Text(tooltip),
+    return Tooltip(
+      message: tooltip,
       child: IconButton(
         icon: Icon(icon),
         iconSize: 18,
-        color: scheme.foreground.withOpacity(0.75),
+        color: scheme.onSurface.withOpacity(0.75),
         tooltip: tooltip,
         onPressed: onPressed,
         splashRadius: 18,
@@ -1287,7 +1317,7 @@ class _ProfilePopover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minWidth: 200, maxWidth: 240),
@@ -1306,7 +1336,7 @@ class _ProfilePopover extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: scheme.foreground,
+                    color: scheme.onSurface,
                   ),
                 ),
                 if (profile.email != null) ...[
@@ -1315,20 +1345,20 @@ class _ProfilePopover extends StatelessWidget {
                     profile.email!,
                     style: TextStyle(
                       fontSize: 12,
-                      color: scheme.mutedForeground,
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ],
             ),
           ),
-          const ShadSeparator.horizontal(),
+          const Divider(height: 1),
           // ── Actions ───────────────────────────────────────────────
           for (final action in profile.actions)
             if (action.isDivider)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 4),
-                child: ShadSeparator.horizontal(),
+                child: const Divider(height: 1),
               )
             else
               _ProfileActionRow(action: action, onClose: onClose),
@@ -1354,11 +1384,11 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = ShadTheme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
     final action = widget.action;
     final fgColor = action.isDestructive
-        ? scheme.destructive
-        : scheme.foreground;
+        ? scheme.error
+        : scheme.onSurface;
 
     return Semantics(
       label: action.label,
@@ -1374,7 +1404,7 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 100),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            color: _hovered ? scheme.accent.withOpacity(0.12) : null,
+            color: _hovered ? scheme.secondary.withOpacity(0.12) : null,
             child: Row(
               children: [
                 if (action.icon != null) ...[

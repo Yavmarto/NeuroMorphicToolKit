@@ -1,5 +1,5 @@
-export 'app_theme.dart';
-export 'shad_theme.dart'; // NmtkShadTheme + re-exports: ShadApp, ShadTheme, ShadThemeData, ShadColorScheme
+export 'app_theme.dart'; // TODO(T-DEBT): migrate test harnesses to NmtkZetaTheme, then delete
+export 'zeta_theme.dart'; // NmtkZetaTheme + re-exports: ZetaProvider, Zeta, ZetaColors, ZetaButton, etc.
 export 'models/host_navigation_models.dart';
 export 'models/shell_models.dart';
 export 'models/energy_report.dart';
@@ -38,6 +38,7 @@ export 'widgets/snack_bars.dart';
 export 'widgets/toasts.dart';
 export 'widgets/status_badge.dart';
 export 'widgets/desktop_scaffold.dart'; // NmtkDesktopScaffold, NmtkSidebarItem, NmtkUserProfile, NmtkUserProfileAction
+export 'widgets/mobile_bottom_bar.dart'; // NmtkMobileBottomBar
 export 'widgets/host_navigation_scope.dart';
 export 'widgets/surface_card.dart';
 export 'widgets/tone.dart';

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/surface_card.dart';
 
 enum NmtkWorkflowStageState { upcoming, active, done, error }
@@ -54,6 +55,7 @@ class _NmtkWorkflowStageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
     final color = switch (stage.state) {
       NmtkWorkflowStageState.done => Colors.green,
       NmtkWorkflowStageState.active => theme.colorScheme.primary,
@@ -71,7 +73,7 @@ class _NmtkWorkflowStageTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
         border: Border.all(color: color.withOpacity(0.5)),
         color: color.withOpacity(0.08),
       ),

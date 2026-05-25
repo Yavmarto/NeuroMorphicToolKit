@@ -8,13 +8,13 @@ import 'package:nmtk_ui_core/widgets/top_app_bar.dart';
 /// ----------------------------------------------------------------------------
 
 class NmtkDesignTokens {
-  static const Color primarySeed = Color(0xFF38BDF8); // Sky Blue
-  static const Color backgroundLight = Color(0xFFF8FAFC); // Slate-50
-  static const Color backgroundDark = Color(0xFF08090A); // Midnight
+  static const Color primarySeed = Color(0xFF1337EC); // Zebra Blue
+  static const Color backgroundLight = Color(0xFFF6F6F8); // Slate tint light
+  static const Color backgroundDark = Color(0xFF101322); // Midnight tint dark
   static const Color surfaceDark = Color(0xFF111827); // Deep Navy
 
-  static final BorderRadius buttonShape = BorderRadius.circular(12.0);
-  static final BorderRadius cardShape = BorderRadius.circular(16.0);
+  static final BorderRadius buttonShape = BorderRadius.circular(16.0);
+  static final BorderRadius cardShape = BorderRadius.circular(24.0);
   static final BorderRadius dialogShape = BorderRadius.circular(20.0);
   static final BorderRadius inputShape = BorderRadius.circular(8.0);
 }
@@ -41,22 +41,16 @@ class NmtkNeurocnlTokens {
   static const Color primary = Color(0xFF38BDF8);
   static const Color primaryDim = Color(0xFF0EA5E9);
 
-  /// CNL **syntax-diagnostic colours only** (Dracula-derived palette).
-  ///
-  /// These colours are used exclusively by:
-  ///   - CNL editor syntax highlighting (`synKeyword`, `synSubject`, etc.)
-  ///   - CNL compiler diagnostic overlays shown inside the editor pane
-  ///   - Node/edge colour vocabulary in the network graph canvas
-  ///
-  /// For any module-level status UI — run buttons, pipeline step states,
-  /// health badges, toast notifications, status strips — use the shared
-  /// semantic palette from [NmtkShellTokens] instead:
-  ///   - [NmtkShellTokens.healthyColor]  for success / healthy state
-  ///   - [NmtkShellTokens.errorColor]    for error / failure state
-  ///   - [NmtkShellTokens.warningColor]  for warning / caution state
-  ///   - [NmtkShellTokens.runningColor]  for active / in-progress state
+  /// Restricted to CNL-editor syntax diagnostics and network-graph canvas
+  /// elements only. For module-level status UI, use [NmtkShellTokens] instead.
   static const Color success = Color(0xFF4ADE80);
+
+  /// Restricted to CNL-editor syntax diagnostics and network-graph canvas
+  /// elements only. For module-level status UI, use [NmtkShellTokens] instead.
   static const Color error = Color(0xFFFF5C7A);
+
+  /// Restricted to CNL-editor syntax diagnostics and network-graph canvas
+  /// elements only. For module-level status UI, use [NmtkShellTokens] instead.
   static const Color warning = Color(0xFFFFB347);
   static const Color info = Color(0xFF60A5FA);
 
@@ -243,7 +237,7 @@ Color _seedForVariant(NmtkThemeVariant variant) {
     case NmtkThemeVariant.defaultNavy:
       return NmtkDesignTokens.primarySeed;
     case NmtkThemeVariant.neurocnl:
-      return NmtkNeurocnlTokens.primary;
+      return const Color(0xFF8B5CF6); // Studio Violet (NmtkShellTokens.dark.studioPalette.accent)
     case NmtkThemeVariant.neurohub:
       return const Color(0xFF0D9488);
     case NmtkThemeVariant.neurochip:
@@ -424,7 +418,7 @@ class AppTheme {
 
   static ThemeData _neurocnlDarkTheme() {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: NmtkNeurocnlTokens.primary,
+      seedColor: const Color(0xFF8B5CF6), // NmtkShellTokens.dark.studioPalette.accent
       brightness: Brightness.dark,
       surface: NmtkNeurocnlTokens.surface,
       onSurface: NmtkNeurocnlTokens.textPrimary,
@@ -463,7 +457,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: NmtkNeurocnlTokens.primary,
+          backgroundColor: const Color(0xFF8B5CF6), // Studio Violet
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: NmtkDesignTokens.buttonShape,
@@ -474,8 +468,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: NmtkNeurocnlTokens.primary,
-          side: const BorderSide(color: NmtkNeurocnlTokens.primary),
+          foregroundColor: const Color(0xFF8B5CF6), // Studio Violet
+          side: const BorderSide(color: Color(0xFF8B5CF6)),
           shape: RoundedRectangleBorder(
             borderRadius: NmtkDesignTokens.buttonShape,
           ),
@@ -541,7 +535,7 @@ class AppTheme {
     const textSecondary = Color(0xFF52525B);
 
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: NmtkNeurocnlTokens.primary,
+      seedColor: const Color(0xFF7C3AED), // NmtkShellTokens.light.studioPalette.accent
       brightness: Brightness.light,
       surface: surface,
       onSurface: textPrimary,
@@ -580,7 +574,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: NmtkNeurocnlTokens.primary,
+          backgroundColor: const Color(0xFF7C3AED), // NmtkShellTokens.light.studioPalette.accent
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: NmtkDesignTokens.buttonShape,

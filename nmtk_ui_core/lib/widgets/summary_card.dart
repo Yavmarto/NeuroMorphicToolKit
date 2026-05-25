@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 class NmtkSummaryCard extends StatelessWidget {
   const NmtkSummaryCard({
@@ -14,14 +16,28 @@ class NmtkSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    ZetaColors? colors;
+    try {
+      colors = Zeta.of(context).colors;
+    } catch (_) {}
+
+    final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
+
+    final bg = colors != null
+        ? colors.surfacePrimarySubtle
+        : tokens.runningColor.withOpacity(0.08);
+
+    final border = colors != null
+        ? colors.borderPrimary
+        : tokens.runningColor.withOpacity(0.35);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Theme.of(
-          context,
-        ).colorScheme.surfaceVariant.withOpacity(0.35),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        color: bg,
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
+        border: Border.all(color: border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,24 +1,26 @@
-import 'package:flutter/widgets.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:flutter/material.dart';
 
 class NmtkToasts {
   NmtkToasts._();
 
   static void success(BuildContext context, String message) {
-    ShadToaster.of(context).show(ShadToast(description: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   static void error(BuildContext context, String message) {
-    ShadToaster.of(
-      context,
-    ).show(ShadToast.destructive(description: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
   }
 
   static void warning(BuildContext context, String message) {
-    ShadToaster.of(context).show(
-      ShadToast(
-        description: Text(message),
-      ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 }

@@ -8,10 +8,10 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 // Test helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Wraps [child] in a [ShadApp] so that [ShadTheme.of(context)] resolves
-/// correctly for all widgets in [NmtkDesktopScaffold].
+
+
 Widget _buildHarness(Widget child) {
-  return ShadApp(home: child);
+  return MaterialApp(home: child);
 }
 
 const _kNavItems = [

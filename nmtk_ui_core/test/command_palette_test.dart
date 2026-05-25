@@ -8,7 +8,7 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 Widget _wrap(Widget child, {Size size = const Size(1000, 700)}) {
   return MediaQuery(
     data: MediaQueryData(size: size),
-    child: ShadApp(home: Scaffold(body: child)),
+    child: MaterialApp(home: Scaffold(body: child)),
   );
 }
 

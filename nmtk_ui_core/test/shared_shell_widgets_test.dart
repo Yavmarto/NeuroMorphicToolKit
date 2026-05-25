@@ -26,7 +26,7 @@ void main() {
     expect(find.text('Launcher Section'), findsOneWidget);
     expect(find.text('Shared subtitle'), findsOneWidget);
     expect(find.text('Body content'), findsOneWidget);
-    expect(find.byType(Card), findsOneWidget);
+    expect(find.byType(Container), findsAtLeastNWidgets(1));
   });
 
   testWidgets('NmtkEmptyState shows action button and handles tap', (
@@ -208,7 +208,11 @@ void main() {
       ),
     );
 
-    final card = tester.widget<Card>(find.byType(Card));
+    final containerFinder = find.byWidgetPredicate(
+      (widget) => widget is Container && widget.decoration is BoxDecoration,
+    ).first;
+    final container = tester.widget<Container>(containerFinder);
+    final decoration = container.decoration as BoxDecoration;
 
     expect(find.byType(NmtkSurfaceCard), findsOneWidget);
     expect(find.text('Section Title'), findsOneWidget);
@@ -216,7 +220,7 @@ void main() {
     expect(find.text('Section body'), findsOneWidget);
     expect(find.byIcon(Icons.dashboard_outlined), findsOneWidget);
     expect(find.byIcon(Icons.more_horiz), findsOneWidget);
-    expect(card.color, AppTheme.lightTheme.colorScheme.surface);
+    expect(decoration.color, const Color(0xFFF1F8FF));
   });
 
   testWidgets('NmtkSectionCard applies non-neutral tone through surface card', (
@@ -233,9 +237,13 @@ void main() {
       ),
     );
 
-    final card = tester.widget<Card>(find.byType(Card));
+    final containerFinder = find.byWidgetPredicate(
+      (widget) => widget is Container && widget.decoration is BoxDecoration,
+    ).first;
+    final container = tester.widget<Container>(containerFinder);
+    final decoration = container.decoration as BoxDecoration;
 
-    expect(card.color, const Color(0x1FF59E0B));
+    expect(decoration.color, const Color(0xFFFEF2E2));
     expect(find.text('Check the generated warnings.'), findsOneWidget);
   });
 

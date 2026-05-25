@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
@@ -152,13 +151,13 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   }
 
   Uri? _configuredBaseUri(SettingsProvider settings) {
-    final stored = settings.launcherControlApiBaseUrl?.trim() ?? '';
-    if (stored.isNotEmpty) {
-      return Uri.parse(stored);
-    }
     final configured = ControlApiService.configuredBaseUrl.trim();
     if (configured.isNotEmpty) {
       return Uri.parse(configured);
+    }
+    final stored = settings.launcherControlApiBaseUrl?.trim() ?? '';
+    if (stored.isNotEmpty) {
+      return Uri.parse(stored);
     }
     return null;
   }
@@ -196,33 +195,25 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
       );
     }
 
-    return ShadApp(
-      title: 'NeuroToolkit',
-      theme: NmtkShadTheme.light,
-      darkTheme: NmtkShadTheme.dark,
-      materialThemeBuilder: (_, mTheme) {
-        final isDark = mTheme.brightness == Brightness.dark;
-        final b = isDark ? AppTheme.darkTheme : AppTheme.lightTheme;
-        return settings.isHighContrast
-            ? (isDark
-                ? AppTheme.highContrastDarkTheme
-                : AppTheme.highContrastLightTheme)
-            : b;
-      },
-      themeMode: settings.themeMode,
-      builder: (BuildContext ctx, Widget? child) {
-        final commands = ref.watch(commandStateProvider);
-        return NmtkShortcutScope(
-          globalCommands: commands,
-          child: MediaQuery(
-            data: MediaQuery.of(ctx).copyWith(
-              textScaler: TextScaler.linear(settings.fontSizeFactor),
+    return NmtkZetaTheme.wrap(
+      builder: (context, light, dark, mode) => MaterialApp(
+        title: 'NeuroToolkit',
+        theme: settings.isHighContrast ? AppTheme.highContrastLightTheme : light,
+        darkTheme: settings.isHighContrast ? AppTheme.highContrastDarkTheme : dark,
+        themeMode: settings.isHighContrast ? settings.themeMode : mode,
+        builder: (BuildContext ctx, Widget? child) {
+          final commands = ref.watch(commandStateProvider);
+          return NmtkShortcutScope(
+            globalCommands: commands,
+            child: MediaQuery(
+              data: MediaQuery.of(ctx).copyWith(
+                textScaler: TextScaler.linear(settings.fontSizeFactor),
+              ),
+              child: child!,
             ),
-            child: ShadToaster(child: child!),
-          ),
-        );
-      },
-      home: Scaffold(
+          );
+        },
+        home: Scaffold(
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 980),
@@ -259,6 +250,7 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
           ),
         ),
       ),
+    ),
     );
   }
 }
@@ -271,37 +263,26 @@ class NeuroToolkitApp extends ConsumerWidget {
     final settings = ref.watch(settingsStateProvider);
     final router = ref.watch(goRouterProvider);
 
-    return ShadApp.router(
-      title: 'NeuroToolkit',
-      // Shadcn layer — controls Shadcn components suite-wide.
-      theme: NmtkShadTheme.light,
-      darkTheme: NmtkShadTheme.dark,
-      // Material 3 layer — controls native Flutter widgets.
-      materialThemeBuilder: (_, mTheme) {
-        final isDark = mTheme.brightness == Brightness.dark;
-        final b = isDark ? AppTheme.darkTheme : AppTheme.lightTheme;
-        return settings.isHighContrast
-            ? (isDark
-                ? AppTheme.highContrastDarkTheme
-                : AppTheme.highContrastLightTheme)
-            : b;
-      },
-      themeMode: settings.themeMode,
-      routerConfig: router,
-      builder: (BuildContext ctx, Widget? child) {
-        final commands = ref.watch(commandStateProvider);
-        // Apply font scaling and inject ShadToaster so NmtkToasts can find it
-        // in the widget tree via ShadToaster.of(context).
-        return NmtkShortcutScope(
-          globalCommands: commands,
-          child: MediaQuery(
-            data: MediaQuery.of(ctx).copyWith(
-              textScaler: TextScaler.linear(settings.fontSizeFactor),
+    return NmtkZetaTheme.wrap(
+      builder: (context, light, dark, mode) => MaterialApp.router(
+        title: 'NeuroToolkit',
+        theme: settings.isHighContrast ? AppTheme.highContrastLightTheme : light,
+        darkTheme: settings.isHighContrast ? AppTheme.highContrastDarkTheme : dark,
+        themeMode: settings.isHighContrast ? settings.themeMode : mode,
+        routerConfig: router,
+        builder: (BuildContext ctx, Widget? child) {
+          final commands = ref.watch(commandStateProvider);
+          return NmtkShortcutScope(
+            globalCommands: commands,
+            child: MediaQuery(
+              data: MediaQuery.of(ctx).copyWith(
+                textScaler: TextScaler.linear(settings.fontSizeFactor),
+              ),
+              child: child!,
             ),
-            child: ShadToaster(child: child!),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

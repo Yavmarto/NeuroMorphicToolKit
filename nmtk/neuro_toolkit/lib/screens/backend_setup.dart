@@ -243,21 +243,22 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       spacing: 12,
       runSpacing: 12,
       children: [
-        FilledButton(
+        ZetaButton(
           onPressed: _isWorking ? null : _runPreflight,
-          child: const Text('Validate connection'),
+          label: 'Validate connection',
         ),
-        FilledButton.tonal(
+        ZetaButton(
           onPressed: _isWorking ||
                   (_preflight != null && _preflight!.status == 'failed')
               ? null
               : _deploy,
-          child: const Text('Review and deploy'),
+          label: 'Review and deploy',
+          type: ZetaButtonType.subtle,
         ),
         if (job != null && !job.isTerminal)
-          TextButton(
+          ZetaButton.text(
             onPressed: () => backendProvider.cancelActiveJob(),
-            child: const Text('Cancel'),
+            label: 'Cancel',
           ),
       ],
     );
@@ -291,12 +292,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   }
 
   Widget _field(TextEditingController controller, String label) {
-    return TextField(
+    return ZetaTextInput(
       controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
+      label: label,
+      // ZETA-MIGRATION-TODO: border dropped
     );
   }
 

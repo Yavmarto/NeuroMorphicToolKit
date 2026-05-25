@@ -103,7 +103,7 @@ class _MockProvider extends ChangeNotifier implements ModuleProvider {
 void main() {
   Widget wrap(_MockProvider mock) => ProviderScope(
         overrides: [moduleStateProvider.overrideWith((ref) => mock)],
-        child: const ShadApp(home: Scaffold(body: ModulePickerPanel())),
+        child: const MaterialApp(home: Scaffold(body: ModulePickerPanel())),
       );
 
   testWidgets('shows empty state when no modules are loaded', (tester) async {

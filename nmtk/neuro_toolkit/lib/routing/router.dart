@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
@@ -174,30 +174,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final releaseNotes = update.releaseNotes.trim().isEmpty
         ? 'No published release notes were found for this version.'
         : update.releaseNotes;
-    showShadDialog<void>(
+    showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => ShadDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Launcher Update Available'),
-        actions: [
-          ShadButton.ghost(
-            onPressed: () {
-              provider.dismissLauncherUpdate();
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Later'),
-          ),
-          ShadButton(
-            onPressed: () async {
-              final url = Uri.parse(update.url);
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url);
-              }
-            },
-            child: const Text('Download Now'),
-          ),
-        ],
-        child: Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -212,6 +194,24 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             Text(releaseNotes),
           ],
         ),
+        actions: [
+          ZetaButton.text(
+            onPressed: () {
+              provider.dismissLauncherUpdate();
+              Navigator.of(dialogContext).pop();
+            },
+            label: 'Later',
+          ),
+          ZetaButton(
+            onPressed: () async {
+              final url = Uri.parse(update.url);
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url);
+              }
+            },
+            label: 'Download Now',
+          ),
+        ],
       ),
     );
   }

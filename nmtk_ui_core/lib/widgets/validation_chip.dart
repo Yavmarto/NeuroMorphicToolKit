@@ -2,17 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import '../motion_tokens.dart';
-
-// ── Inline color constants ──────────────────────────────────────────────────
-const Color _kErrorFg = Color(0xFFEF4444);
-const Color _kErrorBg = Color(0x1AEF4444);
-const Color _kErrorBorder = Color(0x55EF4444);
-
-const Color _kValidFg = Color(0xFF22C55E);
-const Color _kValidBg = Color(0x1A22C55E);
-const Color _kValidBorder = Color(0x5522C55E);
+import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 const Duration _kExpandCollapseDuration = Duration(milliseconds: 220);
 const Duration _kFadeInDelay = Duration(milliseconds: 40);
@@ -188,9 +179,30 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
       return const SizedBox.shrink();
     }
 
-    final fg = hasErrors ? _kErrorFg : _kValidFg;
-    final bg = hasErrors ? _kErrorBg : _kValidBg;
-    final border = hasErrors ? _kErrorBorder : _kValidBorder;
+    ZetaColors? colors;
+    try {
+      colors = Zeta.of(context).colors;
+    } catch (_) {}
+
+    final tokens = NmtkShellTokens.of(context);
+
+    final fg = colors != null
+        ? (hasErrors ? colors.mainNegative : colors.mainPositive)
+        : (hasErrors
+            ? tokens.errorColor
+            : tokens.healthyColor);
+
+    final bg = colors != null
+        ? (hasErrors ? colors.surfaceNegativeSubtle : colors.surfacePositiveSubtle)
+        : (hasErrors
+            ? tokens.errorColor.withOpacity(0.12)
+            : tokens.healthyColor.withOpacity(0.12));
+
+    final border = colors != null
+        ? (hasErrors ? colors.borderNegative : colors.borderPositive)
+        : (hasErrors
+            ? tokens.errorColor.withOpacity(0.5)
+            : tokens.healthyColor.withOpacity(0.5));
 
     final errorLabel = widget.errorCount == 1
         ? '✗ 1 error'
@@ -210,7 +222,7 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
           decoration: BoxDecoration(
             color: bg,
             border: Border.all(color: border),
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(tokens.radiusChip),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -273,21 +285,40 @@ class _ErrorDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    ZetaColors? colors;
+    try {
+      colors = Zeta.of(context).colors;
+    } catch (_) {}
+
+    final tokens = NmtkShellTokens.of(context);
+
+    final bg = colors != null
+        ? colors.surfaceNegativeSubtle
+        : tokens.errorColor.withOpacity(0.12);
+
+    final border = colors != null
+        ? colors.borderNegative
+        : tokens.errorColor.withOpacity(0.5);
+
+    final fg = colors != null
+        ? colors.mainNegative
+        : tokens.errorColor;
+
     return Container(
       margin: const EdgeInsets.only(top: 6),
       constraints: const BoxConstraints(maxHeight: 220),
       decoration: BoxDecoration(
-        color: _kErrorBg,
-        border: Border.all(color: _kErrorBorder),
-        borderRadius: BorderRadius.circular(12),
+        color: bg,
+        border: Border.all(color: border),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
         child: ListView.separated(
           shrinkWrap: true,
           padding: const EdgeInsets.symmetric(vertical: 6),
           itemCount: errors.length,
-          separatorBuilder: (_, __) => Divider(height: 1, color: _kErrorBorder),
+          separatorBuilder: (_, __) => Divider(height: 1, color: border),
           itemBuilder: (context, index) {
             final error = errors[index];
             return Padding(
@@ -298,10 +329,10 @@ class _ErrorDropdown extends StatelessWidget {
                   if (error.line != null) ...[
                     Text(
                       'L${error.line}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'monospace',
                         fontSize: 11,
-                        color: _kErrorFg,
+                        color: fg,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -310,10 +341,10 @@ class _ErrorDropdown extends StatelessWidget {
                   Expanded(
                     child: Text(
                       error.message,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontFamily: 'monospace',
                         fontSize: 12,
-                        color: _kErrorFg,
+                        color: fg,
                       ),
                     ),
                   ),

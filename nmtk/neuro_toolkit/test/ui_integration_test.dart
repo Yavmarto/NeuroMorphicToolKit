@@ -168,11 +168,9 @@ void main() {
           settingsStateProvider.overrideWith((ref) => SettingsProvider()),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
-        child: ShadApp(
-          theme: NmtkShadTheme.light,
-          darkTheme: NmtkShadTheme.dark,
+        child: MaterialApp(
+          theme: AppTheme.darkTheme,
           themeMode: ThemeMode.dark,
-          materialThemeBuilder: (_, __) => AppTheme.darkTheme,
           home: const ToolViewScreen(),
         ),
       ),

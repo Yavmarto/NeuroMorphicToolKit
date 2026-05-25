@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
+import '../shell_tokens.dart';
 
 enum NmtkTone { neutral, info, success, warning, danger }
 
@@ -16,52 +17,84 @@ class NmtkTonePalette {
 }
 
 NmtkTonePalette resolveNmtkTonePalette(BuildContext context, NmtkTone tone) {
-  final scheme = Theme.of(context).colorScheme;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
+  ZetaColors? colors;
+  try {
+    colors = Zeta.of(context).colors;
+  } catch (_) {
+    // ZetaProvider is not in the tree; fall back gracefully to NmtkShellTokens and Theme
+  }
+
+  if (colors != null) {
+    switch (tone) {
+      case NmtkTone.neutral:
+        return NmtkTonePalette(
+          foreground: colors.mainPrimary,
+          background: colors.surfacePrimarySubtle,
+          border: colors.borderPrimary,
+        );
+      case NmtkTone.info:
+        return NmtkTonePalette(
+          foreground: colors.mainInfo,
+          background: colors.surfaceInfoSubtle,
+          border: colors.borderInfo,
+        );
+      case NmtkTone.success:
+        return NmtkTonePalette(
+          foreground: colors.mainPositive,
+          background: colors.surfacePositiveSubtle,
+          border: colors.borderPositive,
+        );
+      case NmtkTone.warning:
+        return NmtkTonePalette(
+          foreground: colors.mainWarning,
+          background: colors.surfaceWarningSubtle,
+          border: colors.borderWarning,
+        );
+      case NmtkTone.danger:
+        return NmtkTonePalette(
+          foreground: colors.mainNegative,
+          background: colors.surfaceNegativeSubtle,
+          border: colors.borderNegative,
+        );
+    }
+  }
+
+  // Fallback to standard theme and shell tokens
+  final theme = Theme.of(context);
   final tokens = NmtkShellTokens.of(context);
 
   switch (tone) {
     case NmtkTone.neutral:
       return NmtkTonePalette(
-        foreground: scheme.onSurfaceVariant,
-        background: scheme.surfaceVariant.withOpacity(0.75),
-        border: scheme.outlineVariant,
+        foreground: theme.colorScheme.primary,
+        background: theme.colorScheme.primaryContainer.withOpacity(0.08),
+        border: theme.colorScheme.primary.withOpacity(0.35),
       );
     case NmtkTone.info:
       return NmtkTonePalette(
-        foreground: scheme.primary,
-        background: scheme.primaryContainer.withOpacity(0.45),
-        border: scheme.primary.withOpacity(0.35),
+        foreground: tokens.runningColor,
+        background: tokens.runningColor.withOpacity(0.12),
+        border: tokens.runningColor.withOpacity(0.5),
       );
     case NmtkTone.success:
-      return isDark
-          ? NmtkTonePalette(
-              foreground: tokens.healthyColor,
-              background: tokens.healthyColor.withOpacity(0.12),
-              border: tokens.healthyColor.withOpacity(0.35),
-            )
-          : const NmtkTonePalette(
-              foreground: Color(0xFF1B5E20),
-              background: Color(0x1F4CAF50),
-              border: Color(0x664CAF50),
-            );
+      return NmtkTonePalette(
+        foreground: tokens.healthyColor,
+        background: tokens.healthyColor.withOpacity(0.12),
+        border: tokens.healthyColor.withOpacity(0.5),
+      );
     case NmtkTone.warning:
-      return isDark
-          ? NmtkTonePalette(
-              foreground: tokens.warningColor,
-              background: tokens.warningColor.withOpacity(0.12),
-              border: tokens.warningColor.withOpacity(0.35),
-            )
-          : const NmtkTonePalette(
-              foreground: Color(0xFF9A5B00),
-              background: Color(0x1FF59E0B),
-              border: Color(0x66F59E0B),
-            );
+      return NmtkTonePalette(
+        foreground: tokens.warningColor,
+        background: tokens.warningColor.withOpacity(0.12),
+        border: tokens.warningColor.withOpacity(0.5),
+      );
     case NmtkTone.danger:
       return NmtkTonePalette(
-        foreground: scheme.error,
-        background: scheme.errorContainer.withOpacity(0.55),
-        border: scheme.error.withOpacity(0.35),
+        foreground: tokens.errorColor,
+        background: tokens.errorColor.withOpacity(0.12),
+        border: tokens.errorColor.withOpacity(0.5),
       );
   }
 }
+
+

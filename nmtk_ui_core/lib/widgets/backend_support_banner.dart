@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 /// A verdict-toned banner for displaying backend support status.
 ///
@@ -62,6 +63,7 @@ class NmtkBackendSupportBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final tokens = NmtkShellTokens.of(context);
     final fg = _foreground(cs);
 
     return Container(
@@ -69,7 +71,7 @@ class NmtkBackendSupportBanner extends StatelessWidget {
       padding: EdgeInsets.all(compact ? 12 : 16),
       decoration: BoxDecoration(
         color: _background(cs),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
         border: Border.all(color: cs.outlineVariant),
       ),
       child: DefaultTextStyle(

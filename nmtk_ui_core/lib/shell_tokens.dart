@@ -20,6 +20,18 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
   static const double normalBreakpoint = 1080;
   static const double wideBreakpoint = 1280;
 
+  /// Canonical 8-color palette for multi-channel instrument signal visualizations.
+  static const List<Color> instrumentChannelPalette = [
+    Color(0xFF06B6D4), // cyan-500
+    Color(0xFF65C4C4), // cyan-400 muted
+    Color(0xFF91E1E1), // cyan-300 muted
+    Color(0xFFBCFBFB), // cyan-200 muted
+    Color(0xFF0F766E), // teal-700
+    Color(0xFF1A8080), // teal-600 muted
+    Color(0xFF003535), // teal-900
+    Color(0xFF0A1616), // teal-950
+  ];
+
   final double topAppBarHeight;
   final double workspaceBarHeight;
   final double utilityPanelWidth;

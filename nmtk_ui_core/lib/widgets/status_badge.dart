@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 class NmtkStatusBadge extends StatelessWidget {
   final String label;
@@ -17,35 +18,24 @@ class NmtkStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = resolveNmtkTonePalette(context, tone);
+    final status = switch (tone) {
+      NmtkTone.neutral => ZetaWidgetStatus.neutral,
+      NmtkTone.info => ZetaWidgetStatus.info,
+      NmtkTone.success => ZetaWidgetStatus.positive,
+      NmtkTone.warning => ZetaWidgetStatus.warning,
+      NmtkTone.danger => ZetaWidgetStatus.negative,
+    };
 
     return Semantics(
       label: semanticsLabel ?? label,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: palette.background,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: palette.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 14, color: palette.foreground),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                color: palette.foreground,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
+      child: ZetaStatusLabel(
+        label: label,
+        status: status,
+        icon: icon,
+        rounded: Zeta.of(context).rounded,
       ),
     );
   }
 }
+
+

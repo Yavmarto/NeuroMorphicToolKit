@@ -600,11 +600,9 @@ void main() {
 }
 
 Widget _buildTestShell(Widget home) {
-  return ShadApp(
-    theme: NmtkShadTheme.light,
-    darkTheme: NmtkShadTheme.dark,
+  return MaterialApp(
+    theme: AppTheme.darkTheme,
     themeMode: ThemeMode.dark,
-    materialThemeBuilder: (_, __) => AppTheme.darkTheme,
     home: home,
   );
 }

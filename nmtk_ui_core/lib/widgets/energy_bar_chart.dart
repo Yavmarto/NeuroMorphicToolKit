@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/models/energy_report.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 /// Horizontal bar chart showing per-ensemble energy consumption.
 class NmtkEnergyBarChart extends StatelessWidget {
@@ -18,6 +19,7 @@ class NmtkEnergyBarChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final entries = report.perEnsemblePj.entries.toList();
     final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
 
     if (entries.isEmpty) {
       return Center(
@@ -40,7 +42,7 @@ class NmtkEnergyBarChart extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceVariant,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(tokens.radiusSm),
             border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
           child: Row(
@@ -144,6 +146,7 @@ class _EnergyBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -170,7 +173,7 @@ class _EnergyBar extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(tokens.radiusSm),
           child: LinearProgressIndicator(
             value: fraction,
             minHeight: 10,

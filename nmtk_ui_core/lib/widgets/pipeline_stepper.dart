@@ -204,7 +204,7 @@ class _PipelineStep extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: _getBgColor(context, theme, tokens),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
         border: Border.all(
           color: _getBorderColor(context, theme, tokens),
           width: selected ? 1.6 : 1,

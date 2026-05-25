@@ -35,7 +35,7 @@ Each module frontend must pass the correct shell mode:
 
 ### Theme
 - `AppTheme` (800 lines) — suite-wide colour palette, typography scale, spacing, shadow definitions.
-- `ShadTheme` — shadcn/UI integration layer (`shadcn_ui ^0.54.0`).
+- `NmtkZetaTheme` — Zeta Flutter design system integration (`zeta_flutter ^1.4.5`, Zebra Design System, MIT). Provides `ZetaProvider`, `ZetaButton`, `ZetaAvatar`, `ZetaTextInput`, and `Zeta.of(context).colors.*` token access.
 
 ### Widgets (40+ components)
 - **Scaffolding:** `DesktopScaffold`, `TopAppBar`, `WorkspaceSwitcherBar`

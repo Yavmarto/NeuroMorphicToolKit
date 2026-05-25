@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
@@ -51,7 +51,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
                   ? Icons.handyman_rounded
                   : Icons.handyman_outlined,
               color: developerMode
-                  ? ShadTheme.of(context).colorScheme.primary
+                  ? Theme.of(context).colorScheme.primary
                   : null,
             ),
             onPressed: () => appProvider.toggleDeveloperMode(),
@@ -102,7 +102,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
             child: IconButton(
               icon: Icon(
                 Icons.stop_circle,
-                color: ShadTheme.of(context).colorScheme.destructive,
+                color: Theme.of(context).colorScheme.error,
               ),
               onPressed: activeModule == null
                   ? null

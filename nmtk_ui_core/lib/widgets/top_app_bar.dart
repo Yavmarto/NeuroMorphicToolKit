@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
@@ -122,22 +122,10 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                             onPressed: action.onPressed,
                             icon: Icon(action.icon, size: 18),
                           )
-                        : ShadButton.outline(
+                        : ZetaButton.outline(
+                            label: action.label!,
                             onPressed: action.onPressed,
-                            leading: Icon(action.icon, size: 16),
-                            child: Text(action.label!),
-                            backgroundColor: isSelected
-                                ? palette.accentContainer
-                                : theme.colorScheme.surface.withOpacity(
-                                    0.6,
-                                  ),
-                            foregroundColor: isSelected
-                                ? palette.accentForeground
-                                : theme.colorScheme.onSurfaceVariant,
-                            // Apply stadium shape logic through decoration
-                            decoration: ShadDecoration(
-                              border: ShadBorder(radius: BorderRadius.circular(20)),
-                            ),
+                            leadingIcon: action.icon,
                           ),
                   ),
                 );

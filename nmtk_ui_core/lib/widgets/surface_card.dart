@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/app_theme.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 class NmtkSurfaceCard extends StatelessWidget {
   final Widget child;
@@ -36,18 +35,16 @@ class NmtkSurfaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
     final palette = resolveNmtkTonePalette(context, tone);
-    final isNeutral = tone == NmtkTone.neutral;
 
     return Container(
       margin: margin,
       decoration: BoxDecoration(
-        color: isNeutral ? theme.colorScheme.surface : palette.background,
-        borderRadius: BorderRadius.circular(12), // Matching NmtkShadTheme radius
+        color: palette.background,
+        borderRadius: BorderRadius.circular(tokens.radiusSm), // Matching NmtkShadTheme radius
         border: Border.all(
-          color: isNeutral
-              ? theme.colorScheme.outlineVariant.withOpacity(0.65)
-              : palette.border,
+          color: palette.border,
         ),
       ),
       child: Padding(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
 
 class NmtkWorkflowStepRow extends StatelessWidget {
@@ -21,6 +22,7 @@ class NmtkWorkflowStepRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = resolveNmtkTonePalette(context, tone);
     final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
 
     return Padding(
       padding: padding,
@@ -32,7 +34,7 @@ class NmtkWorkflowStepRow extends StatelessWidget {
             height: 28,
             decoration: BoxDecoration(
               color: palette.background,
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(tokens.radiusChip),
             ),
             child: Icon(icon, size: 16, color: palette.foreground),
           ),

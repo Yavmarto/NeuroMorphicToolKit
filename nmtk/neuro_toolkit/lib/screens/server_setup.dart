@@ -127,17 +127,11 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
             style: Theme.of(context).textTheme.labelMedium,
           ),
           const SizedBox(height: 6),
-          TextField(
+          ZetaTextInput(
             controller: _controller,
-            decoration: const InputDecoration(
-              hintText: 'http://192.168.1.50:8090',
-              border: OutlineInputBorder(),
-            ),
-            onTap: () {
-              if (_mode != ServerSetupMode.connect) {
-                setState(() => _mode = ServerSetupMode.connect);
-              }
-            },
+            placeholder: 'http://192.168.1.50:8090',
+            // ZETA-MIGRATION-TODO: border dropped
+            // ZETA-MIGRATION-TODO: onTap dropped
           ),
           const SizedBox(height: 8),
           Text(

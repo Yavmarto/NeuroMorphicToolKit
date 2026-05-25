@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 class NmtkPrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
-  final Widget? leading;
   final NmtkTone tone;
 
   const NmtkPrimaryButton({
@@ -14,46 +13,25 @@ class NmtkPrimaryButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
-    this.leading,
     this.tone = NmtkTone.info,
-  }) : assert(
-         icon == null || leading == null,
-         'Provide either icon or leading, not both.',
-       );
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final palette = resolveNmtkTonePalette(context, tone);
+    final type = switch (tone) {
+      NmtkTone.danger => ZetaButtonType.negative,
+      NmtkTone.success => ZetaButtonType.positive,
+      NmtkTone.neutral => ZetaButtonType.outlineSubtle,
+      NmtkTone.info => ZetaButtonType.primary,
+      NmtkTone.warning => ZetaButtonType.primary,
+    };
 
-    final leadingWidget =
-        leading ?? (icon != null ? Icon(icon, size: 18) : null);
-
-    switch (tone) {
-      case NmtkTone.danger:
-        return ShadButton.destructive(
-          onPressed: onPressed,
-          leading: leadingWidget,
-          child: Text(label),
-        );
-      case NmtkTone.neutral:
-        return ShadButton.secondary(
-          onPressed: onPressed,
-          leading: leadingWidget,
-          child: Text(label),
-        );
-      case NmtkTone.info:
-      default:
-        // Use primary for info or as default
-        return ShadButton(
-          onPressed: onPressed,
-          leading: leadingWidget,
-          child: Text(label),
-          // If it's a non-standard tone (success/warning), we apply palette overrides
-          backgroundColor: tone == NmtkTone.info ? null : palette.foreground,
-          foregroundColor: tone == NmtkTone.info ? null : Colors.white,
-        );
-    }
+    return ZetaButton(
+      label: label,
+      onPressed: onPressed,
+      leadingIcon: icon,
+      type: type,
+    );
   }
 }
 
@@ -61,7 +39,6 @@ class NmtkOutlinedButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
-  final Widget? leading;
   final NmtkTone tone;
 
   const NmtkOutlinedButton({
@@ -69,26 +46,22 @@ class NmtkOutlinedButton extends StatelessWidget {
     required this.label,
     this.onPressed,
     this.icon,
-    this.leading,
     this.tone = NmtkTone.neutral,
-  }) : assert(
-         icon == null || leading == null,
-         'Provide either icon or leading, not both.',
-       );
+  });
 
   @override
   Widget build(BuildContext context) {
-    final palette = resolveNmtkTonePalette(context, tone);
-    final leadingWidget =
-        leading ?? (icon != null ? Icon(icon, size: 18) : null);
+    final type = switch (tone) {
+      NmtkTone.neutral => ZetaButtonType.outlineSubtle,
+      _ => ZetaButtonType.outline,
+    };
 
-    return ShadButton.outline(
+    return ZetaButton(
+      label: label,
       onPressed: onPressed,
-      leading: leadingWidget,
-      child: Text(label),
-      // Apply tone-specific outline/text colors
-      foregroundColor: tone == NmtkTone.neutral ? null : palette.foreground,
-      // radius: NmtkDesignTokens.buttonShape.topLeft.x, // Already handled by NmtkShadTheme
+      leadingIcon: icon,
+      type: type,
     );
   }
 }
+

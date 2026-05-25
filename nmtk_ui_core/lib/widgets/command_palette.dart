@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
 
 /// ----------------------------------------------------------------------------
 /// NMTK COMMAND PALETTE
@@ -24,8 +23,9 @@ class NmtkCommandPalette extends StatefulWidget {
     BuildContext context, {
     required List<NmtkCommand> commands,
   }) {
-    return showShadDialog(
+    return showDialog(
       context: context,
+      barrierColor: Colors.black54,
       builder: (context) => NmtkCommandPalette(
         commands: commands,
         onDismiss: () => Navigator.of(context).pop(),
@@ -140,13 +140,17 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(16),
-                      child: ShadInput(
+                      child: TextField(
                         controller: _searchController,
                         focusNode: _focusNode,
-                        placeholder: const Text('Search commands...'),
-                        leading: const Padding(
-                          padding: EdgeInsets.only(right: 8),
-                          child: Icon(Icons.search, size: 18),
+                        decoration: const InputDecoration(
+                          hintText: 'Search commands...',
+                          prefixIcon: Icon(Icons.search, size: 18),
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                         ),
                       ),
                     ),

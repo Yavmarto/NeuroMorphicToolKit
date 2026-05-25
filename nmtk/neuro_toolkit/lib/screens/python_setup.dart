@@ -187,7 +187,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
-                                ?.copyWith(fontFamily: 'monospace'),
+                                ?.copyWith(fontFamily: NmtkFontFamilies.monospace, package: NmtkFontFamilies.package),
                           ),
                         ),
                       ),
@@ -210,7 +210,8 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                           ? 'brew install python'
                           : 'sudo apt install python3 python3-venv',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontFamily: 'monospace',
+                            fontFamily: NmtkFontFamilies.monospace,
+                            package: NmtkFontFamilies.package,
                             fontWeight: FontWeight.w700,
                           ),
                     ),

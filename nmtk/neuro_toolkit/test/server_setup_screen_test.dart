@@ -9,7 +9,7 @@ import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:nmtk_ui_core/app_theme.dart';
 import 'package:nmtk_ui_core/models/akida_deployment_model.dart';
 import 'package:nmtk_ui_core/models/pynq_deployment_model.dart';
-import 'package:nmtk_ui_core/shad_theme.dart';
+
 
 void main() {
   testWidgets('shows setup unavailable guidance until control API is reachable',
@@ -64,14 +64,10 @@ Widget _buildTestApp(
 }) {
   return ProviderScope(
     overrides: overrides,
-    child: ShadApp(
+    child: MaterialApp(
       title: 'Server setup test',
-      theme: NmtkShadTheme.light,
-      darkTheme: NmtkShadTheme.dark,
-      materialThemeBuilder: (_, materialTheme) {
-        final isDark = materialTheme.brightness == Brightness.dark;
-        return isDark ? AppTheme.darkTheme : AppTheme.lightTheme;
-      },
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       home: Scaffold(body: child),
     ),
   );

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shadcn_ui/shadcn_ui.dart';
+
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
@@ -69,23 +69,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Theme', style: theme.textTheme.bodyMedium),
-              ShadSelect<ThemeMode>(
-                selectedOptionBuilder: (context, value) => Text(
-                  switch (value) {
-                    ThemeMode.system => 'System',
-                    ThemeMode.light => 'Light',
-                    ThemeMode.dark => 'Dark',
-                  },
-                ),
-                options: const [
-                  ShadOption(value: ThemeMode.system, child: Text('System')),
-                  ShadOption(value: ThemeMode.light, child: Text('Light')),
-                  ShadOption(value: ThemeMode.dark, child: Text('Dark')),
-                ],
-                initialValue: settings.themeMode,
+              DropdownButton<ThemeMode>(
+                value: settings.themeMode,
                 onChanged: (ThemeMode? newValue) {
                   if (newValue != null) settings.setThemeMode(newValue);
                 },
+                items: const [
+                  DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
+                  DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                  DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+                ],
               ),
             ],
           ),
@@ -100,21 +93,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Log Level', style: theme.textTheme.bodyMedium),
-              ShadSelect<LogLevel>(
-                selectedOptionBuilder: (context, value) =>
-                    Text(value.name.toUpperCase()),
-                options: LogLevel.values
+              DropdownButton<LogLevel>(
+                value: settings.logLevel,
+                onChanged: (LogLevel? newValue) {
+                  if (newValue != null) settings.setLogLevel(newValue);
+                },
+                items: LogLevel.values
                     .map(
-                      (level) => ShadOption<LogLevel>(
+                      (level) => DropdownMenuItem<LogLevel>(
                         value: level,
                         child: Text(level.name.toUpperCase()),
                       ),
                     )
                     .toList(),
-                initialValue: settings.logLevel,
-                onChanged: (LogLevel? newValue) {
-                  if (newValue != null) settings.setLogLevel(newValue);
-                },
               ),
             ],
           ),
@@ -133,10 +124,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 style: theme.textTheme.labelMedium,
               ),
               const SizedBox(height: 6),
-              ShadInput(
+              ZetaTextInput(
                 controller: _launcherControlController,
-                placeholder: const Text('http://192.168.1.50:8090'),
-                onChanged: settings.setLauncherControlApiBaseUrl,
+                placeholder: 'http://192.168.1.50:8090',
+                onChange: settings.setLauncherControlApiBaseUrl,
               ),
               const SizedBox(height: 8),
               Text(
@@ -186,7 +177,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  ShadSwitch(
+                  Switch(
                     value: settings.telemetryEnabled,
                     onChanged: settings.setTelemetryEnabled,
                   ),
@@ -201,10 +192,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     style: theme.textTheme.labelMedium,
                   ),
                   const SizedBox(height: 6),
-                  ShadInput(
+                  ZetaTextInput(
                     controller: _endpointController,
-                    placeholder: const Text('https://example.com/api/logs'),
-                    onChanged: settings.setRemoteEndpoint,
+                    placeholder: 'https://example.com/api/logs',
+                    onChange: settings.setRemoteEndpoint,
                   ),
                 ],
               ),
@@ -337,7 +328,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required List<String> logs,
     bool showErrorOnlyToggle = false,
   }) {
-    showShadDialog<void>(
+    showDialog<void>(
       context: context,
       builder: (dialogContext) => _LogDialog(
         title: title,
@@ -404,7 +395,7 @@ class _LogDialogState extends State<_LogDialog> {
     final filtered = _filteredLogs;
     final text = filtered.join('\n');
 
-    return ShadDialog(
+    return AlertDialog(
       title: Text(widget.title),
       actions: [
         Row(
@@ -416,36 +407,36 @@ class _LogDialogState extends State<_LogDialog> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(width: 8),
-              ShadSwitch(
+              Switch(
                 value: _errorOnly,
                 onChanged: (value) => setState(() => _errorOnly = value),
               ),
               const SizedBox(width: 16),
             ],
-            ShadButton.ghost(
+            ZetaButton.text(
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: text));
                 if (!context.mounted) return;
                 NmtkToasts.success(context, 'Logs copied to clipboard');
               },
-              child: const Text('Copy All'),
+              label: 'Copy All',
             ),
             const SizedBox(width: 4),
-            ShadButton.ghost(
+            ZetaButton.text(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+              label: 'Close',
             ),
           ],
         ),
       ],
-      child: SizedBox(
+      content: SizedBox(
         width: double.maxFinite,
         height: 400,
         child: Column(
           children: [
-            ShadInput(
+            ZetaTextInput(
               controller: _searchController,
-              placeholder: const Text('Filter logs…'),
+              placeholder: 'Filter logs…',
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -542,7 +533,7 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                           style: theme.textTheme.bodyMedium,
                         ),
                       ),
-                      ShadSwitch(
+                      Switch(
                         value: widget.module.isEnabled,
                         onChanged: (bool value) {
                           moduleProvider.updateModuleSettings(
@@ -579,7 +570,7 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      ShadSwitch(
+                      Switch(
                         value: widget.module.startOnLaunch,
                         onChanged: (bool value) {
                           moduleProvider.updateModuleSettings(
@@ -604,25 +595,15 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                         Row(
                           children: [
                             Expanded(
-                              child: ShadInput(
+                              child: ZetaTextInput(
                                 controller: _portController,
-                                placeholder: Text(
-                                  'Default: ${widget.module.port}',
-                                ),
+                                placeholder: 'Default: ${widget.module.port}',
                                 keyboardType: TextInputType.number,
-                                onSubmitted: (value) {
-                                  final parsed = int.tryParse(value);
-                                  moduleProvider.updateModuleSettings(
-                                    widget.module.id,
-                                    isEnabled: widget.module.isEnabled,
-                                    customPort: parsed,
-                                  );
-                                },
+                                // ZETA-MIGRATION-TODO: onSubmitted dropped
                               ),
                             ),
                             const SizedBox(width: 8),
-                            ShadButton.ghost(
-                              size: ShadButtonSize.sm,
+                            IconButton(
                               onPressed: () {
                                 final parsed =
                                     int.tryParse(_portController.text);
@@ -633,7 +614,8 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                                 );
                                 NmtkToasts.success(context, 'Port updated');
                               },
-                              child: const Icon(Icons.save, size: 16),
+                              icon: const Icon(Icons.save, size: 16),
+                              tooltip: 'Save port',
                             ),
                           ],
                         ),

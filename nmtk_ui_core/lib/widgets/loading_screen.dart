@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/motion_tokens.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 /// Readiness state for the [NmtkLoadingScreen].
 enum NmtkReadinessState {
@@ -172,13 +174,14 @@ class _LogoBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tokens = NmtkShellTokens.of(context);
 
     return Container(
       width: 64,
       height: 64,
       decoration: BoxDecoration(
         color: scheme.primary,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(tokens.radiusMd),
       ),
       alignment: Alignment.center,
       child: Text(
@@ -285,13 +288,14 @@ class _FailedContent extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth.clamp(0.0, 320.0).toDouble();
+        final tokens = NmtkShellTokens.of(context);
         return Container(
           width: width,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: _kRed.withValues(alpha: 0.08),
             border: Border.all(color: _kRed.withValues(alpha: 0.35)),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(tokens.radiusMd),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -305,16 +309,9 @@ class _FailedContent extends StatelessWidget {
               ),
               if (onRetry != null) ...[
                 const SizedBox(height: 16),
-                OutlinedButton(
+                ZetaButton.negative(
                   onPressed: onRetry,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: _kRed,
-                    side: const BorderSide(color: _kRed),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text('Retry'),
+                  label: 'Retry',
                 ),
               ],
             ],
