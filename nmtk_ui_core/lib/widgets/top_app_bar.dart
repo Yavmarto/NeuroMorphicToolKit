@@ -112,7 +112,9 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                             style: IconButton.styleFrom(
                               backgroundColor: isSelected
                                   ? palette.accentContainer
-                                  : Colors.transparent,
+                                  : Zeta.of(
+                                      context,
+                                    ).colors.surfaceDefault.withOpacity(0),
                               foregroundColor: isSelected
                                   ? palette.accentForeground
                                   : theme.colorScheme.onSurfaceVariant,
@@ -163,7 +165,7 @@ class _DestinationChip extends StatelessWidget {
     final tokens = NmtkShellTokens.of(context);
 
     return Material(
-      color: Colors.transparent,
+      color: Zeta.of(context).colors.surfaceDefault.withOpacity(0),
       child: InkWell(
         borderRadius: BorderRadius.circular(tokens.radiusChip),
         onTap: onTap,

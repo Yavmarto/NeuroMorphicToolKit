@@ -188,21 +188,21 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
 
     final fg = colors != null
         ? (hasErrors ? colors.mainNegative : colors.mainPositive)
-        : (hasErrors
-            ? tokens.errorColor
-            : tokens.healthyColor);
+        : (hasErrors ? tokens.errorColor : tokens.healthyColor);
 
     final bg = colors != null
-        ? (hasErrors ? colors.surfaceNegativeSubtle : colors.surfacePositiveSubtle)
+        ? (hasErrors
+              ? colors.surfaceNegativeSubtle
+              : colors.surfacePositiveSubtle)
         : (hasErrors
-            ? tokens.errorColor.withOpacity(0.12)
-            : tokens.healthyColor.withOpacity(0.12));
+              ? tokens.errorColor.withOpacity(0.12)
+              : tokens.healthyColor.withOpacity(0.12));
 
     final border = colors != null
         ? (hasErrors ? colors.borderNegative : colors.borderPositive)
         : (hasErrors
-            ? tokens.errorColor.withOpacity(0.5)
-            : tokens.healthyColor.withOpacity(0.5));
+              ? tokens.errorColor.withOpacity(0.5)
+              : tokens.healthyColor.withOpacity(0.5));
 
     final errorLabel = widget.errorCount == 1
         ? '✗ 1 error'
@@ -231,7 +231,7 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
               const SizedBox(width: 6),
               Text(
                 chipLabel,
-                style: TextStyle(
+                style: ZetaTextStyles.bodyMedium.copyWith(
                   fontSize: 13,
                   color: fg,
                   fontWeight: FontWeight.w600,
@@ -300,9 +300,7 @@ class _ErrorDropdown extends StatelessWidget {
         ? colors.borderNegative
         : tokens.errorColor.withOpacity(0.5);
 
-    final fg = colors != null
-        ? colors.mainNegative
-        : tokens.errorColor;
+    final fg = colors != null ? colors.mainNegative : tokens.errorColor;
 
     return Container(
       margin: const EdgeInsets.only(top: 6),
@@ -312,47 +310,44 @@ class _ErrorDropdown extends StatelessWidget {
         border: Border.all(color: border),
         borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(tokens.radiusSm),
-        child: ListView.separated(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          itemCount: errors.length,
-          separatorBuilder: (_, __) => Divider(height: 1, color: border),
-          itemBuilder: (context, index) {
-            final error = errors[index];
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (error.line != null) ...[
-                    Text(
-                      'L${error.line}',
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                        color: fg,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: Text(
-                      error.message,
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        color: fg,
-                      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        itemCount: errors.length,
+        separatorBuilder: (_, __) => Divider(height: 1, color: border),
+        itemBuilder: (context, index) {
+          final error = errors[index];
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (error.line != null) ...[
+                  Text(
+                    'L${error.line}',
+                    style: ZetaTextStyles.bodyMedium.copyWith(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                      color: fg,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(width: 8),
                 ],
-              ),
-            );
-          },
-        ),
+                Expanded(
+                  child: Text(
+                    error.message,
+                    style: ZetaTextStyles.bodyMedium.copyWith(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      color: fg,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

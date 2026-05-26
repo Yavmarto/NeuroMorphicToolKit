@@ -26,6 +26,19 @@ This guide only covers cross-repo defaults that are not already enforced by the 
 
 ## Flutter UI design system
 
+### Zeta Design System Migration
+
+The suite strictly uses the `zeta_flutter` design system. Mixing different design paradigms or using raw Material widgets is prohibited.
+
+- **Eradicate Material Widgets**: Use Zeta equivalents instead of standard Material components. For example:
+  - `ZetaButton` instead of `ElevatedButton`, `TextButton`, or `OutlinedButton`.
+  - `ZetaCard` instead of `Card`.
+  - `ZetaCheckbox` instead of `Checkbox`.
+- **Purge Hardcoded Colors**: Do not use hardcoded colors like `Colors.red`, `Colors.grey`, or `HexColor`. Always use Zeta's semantic color system via `Zeta.of(context).colors`.
+- **Purge Hardcoded Typography**: Do not use manual `TextStyle` definitions (e.g., `TextStyle(fontSize: 14, fontWeight: FontWeight.bold)`). Use `ZetaTextStyles` exclusively (e.g., `ZetaTextStyles.bodyMedium`, `ZetaTextStyles.titleLarge`).
+- **Layout and Spacing**: Avoid deeply nested `Container` and `Padding` widgets used as layout hacks. Rely on clean `Column`, `Row`, and `SizedBox` for spacing. Ensure all spacing follows an 8px grid system.
+- **No Visual Gimmicks**: Do not apply custom `BoxShadow`, `ClipRRect` blurs, or custom `BorderRadius` to standard containers. If a container needs styling, use a `ZetaCard` or a basic `Container` mapped to Zeta theme colors.
+
 ### Border radius
 
 All Flutter widgets must use one of the five sanctioned radius values from `NmtkShellTokens` and `NmtkDesignTokens`. Do not use any other radius value.

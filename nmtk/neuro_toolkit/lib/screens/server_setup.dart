@@ -130,8 +130,6 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
           ZetaTextInput(
             controller: _controller,
             placeholder: 'http://192.168.1.50:8090',
-            // ZETA-MIGRATION-TODO: border dropped
-            // ZETA-MIGRATION-TODO: onTap dropped
           ),
           const SizedBox(height: 8),
           Text(

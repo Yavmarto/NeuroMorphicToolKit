@@ -117,7 +117,7 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
           : const Color(0xFFF8FAFC),
       topBarBackground: isDark
           ? const Color(0xFF0F172A)
-          : Colors.white.withValues(alpha: 0.94),
+          : const Color(0xFFFFFFFF).withValues(alpha: 0.94),
       workspaceBarBackground: isDark
           ? const Color(0xFF0D1424)
           : const Color(0xFFF1F5F9),

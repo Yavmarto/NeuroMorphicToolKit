@@ -37,5 +37,3 @@ class NmtkStatusBadge extends StatelessWidget {
     );
   }
 }
-
-

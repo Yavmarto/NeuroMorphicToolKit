@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/surface_card.dart';
 
@@ -57,7 +58,7 @@ class _NmtkWorkflowStageTile extends StatelessWidget {
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
     final color = switch (stage.state) {
-      NmtkWorkflowStageState.done => Colors.green,
+      NmtkWorkflowStageState.done => Zeta.of(context).colors.mainPositive,
       NmtkWorkflowStageState.active => theme.colorScheme.primary,
       NmtkWorkflowStageState.error => theme.colorScheme.error,
       NmtkWorkflowStageState.upcoming => theme.colorScheme.outlineVariant,

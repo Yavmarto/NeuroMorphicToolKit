@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/pipeline_stepper.dart';
 
@@ -38,8 +39,10 @@ class NmtkWorkspaceShell extends StatelessWidget {
                       flex: 7,
                       child: SingleChildScrollView(
                         key: Key('$layoutId-left-pane'),
-                        // ZETA-MIGRATION-TODO: asymmetric padding replaced with symmetric; verify visually
-                        padding: EdgeInsets.symmetric(horizontal: tokens.sectionGap, vertical: tokens.sectionGap),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: tokens.sectionGap,
+                          vertical: tokens.sectionGap,
+                        ),
                         child: leftPane,
                       ),
                     ),
@@ -47,8 +50,10 @@ class NmtkWorkspaceShell extends StatelessWidget {
                       flex: 5,
                       child: SingleChildScrollView(
                         key: Key('$layoutId-right-pane'),
-                        // ZETA-MIGRATION-TODO: asymmetric padding replaced with symmetric; verify visually
-                        padding: EdgeInsets.symmetric(horizontal: tokens.sectionGap, vertical: tokens.sectionGap),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: tokens.sectionGap,
+                          vertical: tokens.sectionGap,
+                        ),
                         child: rightPane,
                       ),
                     ),

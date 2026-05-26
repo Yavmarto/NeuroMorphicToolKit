@@ -24,8 +24,9 @@ class NativeSurfaceRegistry {
     'Neurochip': (WorkspaceSession session) {
       return NeurocnlShellAdapter(
         initialLocation: session.deepLink ?? '/?panel=deploy',
-        initialRestoreState:
-            session.restoreState.isEmpty ? const <String, Object?>{} : session.restoreState,
+        initialRestoreState: session.restoreState.isEmpty
+            ? const <String, Object?>{}
+            : session.restoreState,
       );
     },
     'Neurobench': (WorkspaceSession session) {

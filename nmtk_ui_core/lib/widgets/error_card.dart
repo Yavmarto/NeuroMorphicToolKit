@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/section_card.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
@@ -35,8 +36,14 @@ class NmtkErrorCard extends StatelessWidget {
         children: [
           if (prefix != null) ...[prefix!, const SizedBox(height: 8)],
           selectable
-              ? SelectableText(message, style: TextStyle(color: errColor))
-              : Text(message, style: TextStyle(color: errColor)),
+              ? SelectableText(
+                  message,
+                  style: ZetaTextStyles.bodyMedium.copyWith(color: errColor),
+                )
+              : Text(
+                  message,
+                  style: ZetaTextStyles.bodyMedium.copyWith(color: errColor),
+                ),
         ],
       ),
     );

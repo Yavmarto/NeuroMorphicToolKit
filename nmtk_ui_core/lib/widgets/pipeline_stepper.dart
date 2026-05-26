@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import '../shell_tokens.dart';
+import '../zeta_theme.dart';
 
 enum NmtkStepStatus { idle, running, success, error }
 
@@ -31,6 +33,7 @@ class NmtkPipelineStepper extends StatefulWidget {
   final String? selectedStepId;
   final ValueChanged<String>? onSelected;
   final bool bare;
+  final Color stepAccentColor;
 
   const NmtkPipelineStepper({
     super.key,
@@ -38,6 +41,7 @@ class NmtkPipelineStepper extends StatefulWidget {
     this.selectedStepId,
     this.onSelected,
     this.bare = false,
+    this.stepAccentColor = NmtkZetaTheme.primary,
   });
 
   @override
@@ -163,6 +167,7 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
           key: _stepKeys[step.id],
           data: step,
           selected: widget.selectedStepId == step.id,
+          accentColor: widget.stepAccentColor,
           onTap:
               step.onTap ??
               (widget.onSelected != null
@@ -186,12 +191,14 @@ class _PipelineStep extends StatelessWidget {
   final NmtkPipelineStepData data;
   final bool selected;
   final VoidCallback? onTap;
+  final Color accentColor;
 
   const _PipelineStep({
     super.key,
     required this.data,
     this.selected = false,
     this.onTap,
+    required this.accentColor,
   });
 
   @override
@@ -217,7 +224,7 @@ class _PipelineStep extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             data.label,
-            style: TextStyle(
+            style: ZetaTextStyles.bodyMedium.copyWith(
               color: theme.colorScheme.onSurface,
               fontSize: 11,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
@@ -253,10 +260,7 @@ class _PipelineStep extends StatelessWidget {
       return SizedBox(
         width: 14,
         height: 14,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: theme.colorScheme.primary,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
       );
     }
 
@@ -266,9 +270,7 @@ class _PipelineStep extends StatelessWidget {
     switch (data.status) {
       case NmtkStepStatus.idle:
         iconData = data.icon ?? Icons.circle_outlined;
-        iconColor = selected
-            ? theme.colorScheme.primary
-            : theme.colorScheme.onSurfaceVariant;
+        iconColor = selected ? accentColor : theme.colorScheme.onSurfaceVariant;
       case NmtkStepStatus.success:
         iconData = Icons.check_circle;
         iconColor = tokens.healthyColor;
@@ -290,17 +292,12 @@ class _PipelineStep extends StatelessWidget {
   ) {
     final base = switch (data.status) {
       NmtkStepStatus.idle => theme.colorScheme.surface,
-      NmtkStepStatus.running => theme.colorScheme.primary.withValues(
-        alpha: 0.12,
-      ),
+      NmtkStepStatus.running => accentColor.withValues(alpha: 0.12),
       NmtkStepStatus.success => tokens.healthyColor.withOpacity(0.1),
       NmtkStepStatus.error => tokens.errorColor.withOpacity(0.1),
     };
     return selected
-        ? Color.alphaBlend(
-            theme.colorScheme.primary.withOpacity(0.06),
-            base,
-          )
+        ? Color.alphaBlend(accentColor.withOpacity(0.06), base)
         : base;
   }
 
@@ -310,13 +307,13 @@ class _PipelineStep extends StatelessWidget {
     NmtkShellTokens tokens,
   ) {
     if (selected) {
-      return theme.colorScheme.primary;
+      return accentColor;
     }
     switch (data.status) {
       case NmtkStepStatus.idle:
         return theme.colorScheme.outlineVariant;
       case NmtkStepStatus.running:
-        return theme.colorScheme.primary;
+        return accentColor;
       case NmtkStepStatus.success:
         return tokens.healthyColor.withOpacity(0.3);
       case NmtkStepStatus.error:

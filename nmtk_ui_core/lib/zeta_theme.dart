@@ -3,6 +3,11 @@ import 'package:zeta_flutter/zeta_flutter.dart';
 
 export 'package:zeta_flutter/zeta_flutter.dart'
     show
+        ZetaTextStyles,
+        ZetaCard,
+        ZetaCheckbox,
+        ZetaIcon,
+        ZetaIconTheme,
         ZetaProvider,
         Zeta,
         ZetaColors,
@@ -18,7 +23,6 @@ export 'package:zeta_flutter/zeta_flutter.dart'
         ZetaWidgetBorder,
         ZetaStatusLabel,
         ZetaWidgetStatus,
-        ZetaBadge,
         ZetaColorSwatch;
 
 /// Central Zeta theme configuration for the NeuroMorphicToolKit suite.
@@ -57,10 +61,8 @@ class NmtkZetaTheme {
   static const Color primary = Color(0xFF1337EC);
 
   /// Returns the [ZetaCustomTheme] pre-configured for NMTK.
-  static ZetaCustomTheme get customTheme => ZetaCustomTheme(
-        id: id,
-        primary: primary,
-      );
+  static ZetaCustomTheme get customTheme =>
+      ZetaCustomTheme(id: id, primary: primary);
 
   /// Wraps [builder] in a [ZetaProvider] pre-configured with the NMTK theme.
   ///
@@ -71,7 +73,8 @@ class NmtkZetaTheme {
       ThemeData light,
       ThemeData dark,
       ThemeMode mode,
-    ) builder,
+    )
+    builder,
     ThemeMode initialThemeMode = ThemeMode.dark,
   }) {
     return ZetaProvider(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 /// Displays recent values as a sparkline using [CustomPaint].
 class NmtkSparklineChart extends StatelessWidget {
@@ -24,7 +25,9 @@ class NmtkSparklineChart extends StatelessWidget {
         child: Center(
           child: Text(
             'No data',
-            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+            style: ZetaTextStyles.bodyMedium.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       );

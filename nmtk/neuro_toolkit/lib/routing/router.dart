@@ -187,9 +187,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               'A new version of NeuroToolkit (${update.version}) is available.',
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Release Notes:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: ZetaTextStyles.bodyMedium
+                  .copyWith(fontWeight: FontWeight.bold),
             ),
             Text(releaseNotes),
           ],

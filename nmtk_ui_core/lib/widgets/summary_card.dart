@@ -21,7 +21,6 @@ class NmtkSummaryCard extends StatelessWidget {
       colors = Zeta.of(context).colors;
     } catch (_) {}
 
-    final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
 
     final bg = colors != null
@@ -44,9 +43,9 @@ class NmtkSummaryCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            style: ZetaTextStyles.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 8),
           Text(description),

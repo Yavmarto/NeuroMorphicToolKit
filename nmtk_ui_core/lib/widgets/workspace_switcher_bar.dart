@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 
@@ -93,7 +94,7 @@ class NmtkWorkspaceChip extends StatelessWidget {
       selected: isActive,
       button: true,
       child: Material(
-        color: Colors.transparent,
+        color: Zeta.of(context).colors.surfaceDefault.withOpacity(0),
         child: InkWell(
           borderRadius: BorderRadius.circular(tokens.radiusChip),
           onTap: onSelected,

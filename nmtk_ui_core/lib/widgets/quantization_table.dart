@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/models/quantization_report.dart';
 
 /// Table/visual showing bit-width vs accuracy drop and sparsity.
@@ -14,38 +15,44 @@ class NmtkQuantizationTable extends StatelessWidget {
       return Center(
         child: Text(
           'No quantization data',
-          style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+          style: ZetaTextStyles.bodyMedium.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }
 
     return DataTable(
-      headingRowColor: WidgetStatePropertyAll(
-        theme.colorScheme.surfaceVariant,
-      ),
+      headingRowColor: WidgetStatePropertyAll(theme.colorScheme.surfaceVariant),
       dataRowColor: WidgetStatePropertyAll(theme.colorScheme.surface),
       border: TableBorder.all(
         color: theme.colorScheme.outlineVariant,
         width: 1,
       ),
       columnSpacing: 24,
-      columns: const [
+      columns: [
         DataColumn(
           label: Text(
             'Bit Width',
-            style: TextStyle(fontWeight: FontWeight.w600),
+            style: ZetaTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         DataColumn(
           label: Text(
             'Accuracy Drop',
-            style: TextStyle(fontWeight: FontWeight.w600),
+            style: ZetaTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         DataColumn(
           label: Text(
             'Sparsity',
-            style: TextStyle(fontWeight: FontWeight.w600),
+            style: ZetaTextStyles.bodyMedium.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -59,7 +66,7 @@ class NmtkQuantizationTable extends StatelessWidget {
             DataCell(
               Text(
                 '$bits-bit',
-                style: TextStyle(
+                style: ZetaTextStyles.bodyMedium.copyWith(
                   color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
@@ -69,7 +76,9 @@ class NmtkQuantizationTable extends StatelessWidget {
             DataCell(
               Text(
                 '${(sparsity * 100).toStringAsFixed(1)}%',
-                style: TextStyle(color: theme.colorScheme.onSurface),
+                style: ZetaTextStyles.bodyMedium.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
               ),
             ),
           ],
@@ -91,9 +100,9 @@ class _AccuracyDropIndicator extends StatelessWidget {
     final pct = drop * 100;
     final Color color;
     if (pct < 2) {
-      color = Colors.green;
+      color = Zeta.of(context).colors.mainPositive;
     } else if (pct < 5) {
-      color = Colors.orange;
+      color = Zeta.of(context).colors.mainWarning;
     } else {
       color = theme.colorScheme.error;
     }
@@ -106,10 +115,13 @@ class _AccuracyDropIndicator extends StatelessWidget {
           height: 10,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8),
         Text(
           '${pct.toStringAsFixed(2)}%',
-          style: TextStyle(color: color, fontWeight: FontWeight.w600),
+          style: ZetaTextStyles.bodyMedium.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );

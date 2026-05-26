@@ -96,5 +96,3 @@ NmtkTonePalette resolveNmtkTonePalette(BuildContext context, NmtkTone tone) {
       );
   }
 }
-
-

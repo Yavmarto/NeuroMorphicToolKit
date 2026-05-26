@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/widgets/section_card.dart';
 
 class NmtkProgressCard extends StatelessWidget {
@@ -36,7 +37,9 @@ class NmtkProgressCard extends StatelessWidget {
         children: [
           LinearProgressIndicator(
             value: progress,
-            color: errorText != null ? Colors.red : null,
+            color: errorText != null
+                ? Zeta.of(context).colors.mainNegative
+                : null,
           ),
           const SizedBox(height: 12),
           Row(
@@ -46,9 +49,11 @@ class NmtkProgressCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   statusLabel,
-                  style: TextStyle(
+                  style: ZetaTextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: errorText != null ? Colors.red : null,
+                    color: errorText != null
+                        ? Zeta.of(context).colors.mainNegative
+                        : null,
                   ),
                 ),
               ),
@@ -56,7 +61,12 @@ class NmtkProgressCard extends StatelessWidget {
           ),
           if (errorText != null) ...[
             const SizedBox(height: 8),
-            Text(errorText!, style: const TextStyle(color: Colors.red)),
+            Text(
+              errorText!,
+              style: ZetaTextStyles.bodyMedium.copyWith(
+                color: Zeta.of(context).colors.mainNegative,
+              ),
+            ),
           ],
           if (details.isNotEmpty) ...[const SizedBox(height: 8), ...details],
         ],

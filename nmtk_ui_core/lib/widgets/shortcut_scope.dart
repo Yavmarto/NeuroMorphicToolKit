@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
@@ -48,12 +49,11 @@ class NmtkShortcutScope extends StatelessWidget {
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
-          ToggleCommandPaletteIntent: CallbackAction<ToggleCommandPaletteIntent>(
-            onInvoke: (_) => NmtkCommandPalette.show(
-              context,
-              commands: globalCommands,
-            ),
-          ),
+          ToggleCommandPaletteIntent:
+              CallbackAction<ToggleCommandPaletteIntent>(
+                onInvoke: (_) =>
+                    NmtkCommandPalette.show(context, commands: globalCommands),
+              ),
           // Other intents can be handled here or further down the tree
           ToggleSidebarIntent: CallbackAction<ToggleSidebarIntent>(
             onInvoke: (_) {

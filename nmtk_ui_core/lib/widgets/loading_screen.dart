@@ -19,15 +19,12 @@ enum NmtkReadinessState {
 }
 
 // Inline semantic colors keep this widget self-contained inside ui_core.
-const Color _kGreen = Color(0xFF22C55E);
-const Color _kYellow = Color(0xFFF59E0B);
-const Color _kRed = Color(0xFFEF4444);
 
 /// Full-screen loading/readiness screen shown while backend modules start up.
 ///
 /// This widget is purely callback-based with no Provider or Riverpod dependency.
 class NmtkLoadingScreen extends StatefulWidget {
-  const NmtkLoadingScreen({
+  NmtkLoadingScreen({
     super.key,
     required this.state,
     this.progressMessage,
@@ -119,11 +116,11 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _LogoBox(),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       Text(
                         widget.appName,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: ZetaTextStyles.bodyMedium.copyWith(
                           fontFamily: 'Space Grotesk',
                           fontSize: 18,
                           color: fg,
@@ -134,7 +131,7 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: 32),
                 _buildStateContent(widget.state, fg),
               ],
             ),
@@ -186,7 +183,7 @@ class _LogoBox extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         'N',
-        style: TextStyle(
+        style: ZetaTextStyles.bodyMedium.copyWith(
           color: scheme.onPrimary,
           fontSize: 32,
           fontWeight: FontWeight.bold,
@@ -219,11 +216,14 @@ class _WaitingContent extends StatelessWidget {
                 minHeight: 3,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: textColor),
+              style: ZetaTextStyles.bodyMedium.copyWith(
+                fontSize: 14,
+                color: textColor,
+              ),
             ),
           ],
         );
@@ -237,7 +237,11 @@ class _ReadyContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Icon(Icons.check_circle_outline, color: _kGreen, size: 36);
+    return Icon(
+      Icons.check_circle_outline,
+      color: Zeta.of(context).colors.mainPositive,
+      size: 36,
+    );
   }
 }
 
@@ -255,14 +259,21 @@ class _DegradedContent extends StatelessWidget {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.warning_amber_rounded, color: _kYellow, size: 36),
-            const SizedBox(height: 10),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Zeta.of(context).colors.mainWarning,
+              size: 36,
+            ),
+            SizedBox(height: 10),
             SizedBox(
               width: width,
               child: Text(
                 message,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: textColor),
+                style: ZetaTextStyles.bodyMedium.copyWith(
+                  fontSize: 13,
+                  color: textColor,
+                ),
               ),
             ),
           ],
@@ -293,26 +304,34 @@ class _FailedContent extends StatelessWidget {
           width: width,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: _kRed.withValues(alpha: 0.08),
-            border: Border.all(color: _kRed.withValues(alpha: 0.35)),
+            color: Zeta.of(context).colors.mainNegative.withValues(alpha: 0.08),
+            border: Border.all(
+              color: Zeta.of(
+                context,
+              ).colors.mainNegative.withValues(alpha: 0.35),
+            ),
             borderRadius: BorderRadius.circular(tokens.radiusMd),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: _kRed, size: 36),
-              const SizedBox(height: 12),
+              Icon(
+                Icons.error_outline,
+                color: Zeta.of(context).colors.mainNegative,
+                size: 36,
+              ),
+              SizedBox(height: 12),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: textColor),
+                style: ZetaTextStyles.bodyMedium.copyWith(
+                  fontSize: 14,
+                  color: textColor,
+                ),
               ),
               if (onRetry != null) ...[
-                const SizedBox(height: 16),
-                ZetaButton.negative(
-                  onPressed: onRetry,
-                  label: 'Retry',
-                ),
+                SizedBox(height: 16),
+                ZetaButton.negative(onPressed: onRetry, label: 'Retry'),
               ],
             ],
           ),

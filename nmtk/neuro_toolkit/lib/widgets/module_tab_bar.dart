@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:neuro_toolkit/models/module.dart';
@@ -20,8 +21,8 @@ class ModuleTabBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final zeta = Zeta.of(context);
+    final colors = zeta.colors;
     final tokens = NmtkShellTokens.of(context);
     final workspace = ref.watch(workspaceStateProvider);
     final modules = ref.watch(moduleStateProvider).modules;
@@ -64,15 +65,14 @@ class ModuleTabBar extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final module = activeModules[index];
                 final isActive = module.id == activeModuleId;
-                final foregroundColor = isActive
-                    ? colorScheme.onSurface
-                    : colorScheme.onSurfaceVariant;
+                final foregroundColor =
+                    isActive ? colors.mainDefault : colors.mainSubtle;
                 final backgroundColor = isActive
-                    ? colorScheme.surface
-                    : colorScheme.surface.withOpacity(0.18);
+                    ? colors.surfaceDefault
+                    : colors.surfaceDefault.withOpacity(0.18);
                 final borderColor = isActive
-                    ? colorScheme.primary.withOpacity(0.4)
-                    : colorScheme.outlineVariant.withOpacity(0.22);
+                    ? colors.mainPrimary.withOpacity(0.4)
+                    : colors.borderSubtle.withOpacity(0.22);
 
                 return Padding(
                   padding: EdgeInsets.only(
@@ -85,7 +85,7 @@ class ModuleTabBar extends ConsumerWidget {
                     selected: isActive,
                     button: true,
                     child: Material(
-                      color: Colors.transparent,
+                      color: colors.surfaceDefault.withOpacity(0),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(tokens.radiusMd),
                         onTap: () => onTabSelected(module.id),
@@ -109,7 +109,7 @@ class ModuleTabBar extends ConsumerWidget {
                               const SizedBox(width: 8),
                               Text(
                                 module.name,
-                                style: theme.textTheme.bodyMedium?.copyWith(
+                                style: ZetaTextStyles.bodyMedium.copyWith(
                                   fontWeight: isActive
                                       ? FontWeight.w700
                                       : FontWeight.w600,

@@ -187,7 +187,9 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
-                                ?.copyWith(fontFamily: NmtkFontFamilies.monospace, package: NmtkFontFamilies.package),
+                                ?.copyWith(
+                                    fontFamily: NmtkFontFamilies.monospace,
+                                    package: NmtkFontFamilies.package),
                           ),
                         ),
                       ),

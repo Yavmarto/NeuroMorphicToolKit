@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
 
@@ -19,6 +20,16 @@ class NmtkSurfaceCard extends StatelessWidget {
   /// compatibility.
   final bool expandChild;
 
+  /// Gap between the header row and [child]. Pass `0` to suppress the gap
+  /// entirely — useful when [child] is empty or the card header is the only
+  /// content.
+  final double childGap;
+
+  /// Override for the title [TextStyle]. Defaults to [TextTheme.titleMedium]
+  /// with [FontWeight.w700]. Pass a smaller style (e.g. [TextTheme.titleSmall])
+  /// for compact card layouts.
+  final TextStyle? titleStyle;
+
   const NmtkSurfaceCard({
     super.key,
     required this.child,
@@ -30,6 +41,8 @@ class NmtkSurfaceCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(14),
     this.tone = NmtkTone.neutral,
     this.expandChild = false,
+    this.childGap = 10,
+    this.titleStyle,
   });
 
   @override
@@ -42,10 +55,10 @@ class NmtkSurfaceCard extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         color: palette.background,
-        borderRadius: BorderRadius.circular(tokens.radiusSm), // Matching NmtkShadTheme radius
-        border: Border.all(
-          color: palette.border,
-        ),
+        borderRadius: BorderRadius.circular(
+          tokens.radiusSm,
+        ), // Matching NmtkShadTheme radius
+        border: Border.all(color: palette.border),
       ),
       child: Padding(
         padding: padding,
@@ -79,8 +92,11 @@ class NmtkSurfaceCard extends StatelessWidget {
                                 if (title != null)
                                   Text(
                                     title!,
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                    style:
+                                        titleStyle ??
+                                        theme.textTheme.titleMedium?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                   ),
                                 if (subtitle != null) ...[
                                   if (title != null) const SizedBox(height: 4),
@@ -120,7 +136,7 @@ class NmtkSurfaceCard extends StatelessWidget {
                 subtitle != null ||
                 leading != null ||
                 trailing != null)
-              const SizedBox(height: 10),
+              if (childGap > 0) SizedBox(height: childGap),
             if (expandChild) Expanded(child: child) else child,
           ],
         ),

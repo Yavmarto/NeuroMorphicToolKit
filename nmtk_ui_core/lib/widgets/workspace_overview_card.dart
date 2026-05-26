@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/widgets/surface_card.dart';
 
 class NmtkWorkspaceOverviewCard extends StatelessWidget {
@@ -30,7 +31,7 @@ class NmtkWorkspaceOverviewCard extends StatelessWidget {
             Wrap(spacing: 8, runSpacing: 8, children: chips),
             const SizedBox(height: 16),
           ],
-          Text(message, style: Theme.of(context).textTheme.bodyMedium),
+          Text(message, style: ZetaTextStyles.bodyMedium),
         ],
       ),
     );

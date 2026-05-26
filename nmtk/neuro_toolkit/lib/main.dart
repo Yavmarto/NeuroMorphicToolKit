@@ -198,8 +198,10 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
     return NmtkZetaTheme.wrap(
       builder: (context, light, dark, mode) => MaterialApp(
         title: 'NeuroToolkit',
-        theme: settings.isHighContrast ? AppTheme.highContrastLightTheme : light,
-        darkTheme: settings.isHighContrast ? AppTheme.highContrastDarkTheme : dark,
+        theme:
+            settings.isHighContrast ? AppTheme.highContrastLightTheme : light,
+        darkTheme:
+            settings.isHighContrast ? AppTheme.highContrastDarkTheme : dark,
         themeMode: settings.isHighContrast ? settings.themeMode : mode,
         builder: (BuildContext ctx, Widget? child) {
           final commands = ref.watch(commandStateProvider);
@@ -214,43 +216,43 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
           );
         },
         home: Scaffold(
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 980),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: _isLoading
-                  ? const _BootstrapLoadingView()
-                  : bootstrap != null && controlApiService != null
-                      ? ProviderScope(
-                          overrides: [
-                            launcherBootstrapStateProvider
-                                .overrideWithValue(bootstrap),
-                            controlApiServiceProvider
-                                .overrideWithValue(controlApiService),
-                          ],
-                          child: ServerSetupScreen(
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 980),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: _isLoading
+                    ? const _BootstrapLoadingView()
+                    : bootstrap != null && controlApiService != null
+                        ? ProviderScope(
+                            overrides: [
+                              launcherBootstrapStateProvider
+                                  .overrideWithValue(bootstrap),
+                              controlApiServiceProvider
+                                  .overrideWithValue(controlApiService),
+                            ],
+                            child: ServerSetupScreen(
+                              controller: _controlApiController,
+                              message: _setupMessage,
+                              onConnect: _saveAndRetry,
+                              setupAvailable: true,
+                              initialMode: ServerSetupMode.setup,
+                              onSetupCompleted: _bootstrap,
+                            ),
+                          )
+                        : ServerSetupScreen(
                             controller: _controlApiController,
                             message: _setupMessage,
                             onConnect: _saveAndRetry,
-                            setupAvailable: true,
-                            initialMode: ServerSetupMode.setup,
-                            onSetupCompleted: _bootstrap,
+                            setupAvailable: false,
+                            setupUnavailableMessage:
+                                'Set the launcher control API host first. Once this device can reach a launcher server, you can provision a new backend from the same screen.',
                           ),
-                        )
-                      : ServerSetupScreen(
-                          controller: _controlApiController,
-                          message: _setupMessage,
-                          onConnect: _saveAndRetry,
-                          setupAvailable: false,
-                          setupUnavailableMessage:
-                              'Set the launcher control API host first. Once this device can reach a launcher server, you can provision a new backend from the same screen.',
-                        ),
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 }
@@ -266,8 +268,10 @@ class NeuroToolkitApp extends ConsumerWidget {
     return NmtkZetaTheme.wrap(
       builder: (context, light, dark, mode) => MaterialApp.router(
         title: 'NeuroToolkit',
-        theme: settings.isHighContrast ? AppTheme.highContrastLightTheme : light,
-        darkTheme: settings.isHighContrast ? AppTheme.highContrastDarkTheme : dark,
+        theme:
+            settings.isHighContrast ? AppTheme.highContrastLightTheme : light,
+        darkTheme:
+            settings.isHighContrast ? AppTheme.highContrastDarkTheme : dark,
         themeMode: settings.isHighContrast ? settings.themeMode : mode,
         routerConfig: router,
         builder: (BuildContext ctx, Widget? child) {

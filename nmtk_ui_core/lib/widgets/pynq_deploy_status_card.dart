@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/models/pynq_deployment_model.dart';
 
 /// Displays a [PynqSupportState] as a coloured summary card.
@@ -27,8 +28,11 @@ class PynqSupportStateCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = supportState.color;
 
-    return Card(
-      color: color.withOpacity(0.08),
+    return Container(
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -41,9 +45,7 @@ class PynqSupportStateCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     supportState.label,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(color: color),
+                    style: ZetaTextStyles.titleMedium?.copyWith(color: color),
                   ),
                 ),
               ],
@@ -55,7 +57,9 @@ class PynqSupportStateCard extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
                   child: Text(
                     '⚠ $w',
-                    style: const TextStyle(color: Color(0xFFFFA000)),
+                    style: ZetaTextStyles.bodyMedium.apply(
+                      color: Zeta.of(context).colors.mainWarning,
+                    ),
                   ),
                 ),
               ),
@@ -67,7 +71,9 @@ class PynqSupportStateCard extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
                   child: Text(
                     '✗ $r',
-                    style: const TextStyle(color: Color(0xFFD32F2F)),
+                    style: ZetaTextStyles.bodyMedium.apply(
+                      color: Zeta.of(context).colors.mainNegative,
+                    ),
                   ),
                 ),
               ),
@@ -78,7 +84,7 @@ class PynqSupportStateCard extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 36),
                 child: Text(
                   _formatNetworkSummary(networkSummary!),
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: ZetaTextStyles.bodySmall,
                 ),
               ),
             ],

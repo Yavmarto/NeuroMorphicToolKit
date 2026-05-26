@@ -58,7 +58,9 @@ class NmtkNeurocnlTokens {
   static const Color textSecondary = Color(0xFF94A3B8);
   static const Color border = Color(0xFF1E293B);
 
-  static const Color synKeyword = Color(0xFF818CF8); // Indigo-400 (Distinguished from Graph Blue)
+  static const Color synKeyword = Color(
+    0xFF818CF8,
+  ); // Indigo-400 (Distinguished from Graph Blue)
   static const Color synSubject = Color(0xFFF1F5F9); // White
   static const Color synNumber = Color(0xFF22D3EE); // Cyan
   static const Color synVerb = Color(0xFF34D399); // Emerald (Action/Relation)
@@ -237,7 +239,9 @@ Color _seedForVariant(NmtkThemeVariant variant) {
     case NmtkThemeVariant.defaultNavy:
       return NmtkDesignTokens.primarySeed;
     case NmtkThemeVariant.neurocnl:
-      return const Color(0xFF8B5CF6); // Studio Violet (NmtkShellTokens.dark.studioPalette.accent)
+      return const Color(
+        0xFF8B5CF6,
+      ); // Studio Violet (NmtkShellTokens.dark.studioPalette.accent)
     case NmtkThemeVariant.neurohub:
       return const Color(0xFF0D9488);
     case NmtkThemeVariant.neurochip:
@@ -304,25 +308,6 @@ class AppTheme {
         _suiteExtension(colorScheme, Brightness.light, variant),
         NmtkShellTokens.fromColorScheme(colorScheme, Brightness.light),
       ],
-      cardTheme: CardThemeData(
-        shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.cardShape),
-        elevation: 0,
-        clipBehavior: Clip.antiAlias,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: NmtkDesignTokens.buttonShape,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          minimumSize: const Size(48, 48),
-        ),
-      ),
-      navigationRailTheme: NavigationRailThemeData(
-        indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
     );
   }
 
@@ -349,29 +334,6 @@ class AppTheme {
         _suiteExtension(colorScheme, Brightness.dark, variant),
         NmtkShellTokens.fromColorScheme(colorScheme, Brightness.dark),
       ],
-      cardTheme: CardThemeData(
-        color: colorScheme.surfaceContainerHighest,
-        shape: RoundedRectangleBorder(
-          borderRadius: NmtkDesignTokens.cardShape,
-          side: const BorderSide(color: Color(0xFF1E293B), width: 1),
-        ),
-        elevation: 0,
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(
-            borderRadius: NmtkDesignTokens.buttonShape,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          minimumSize: const Size(48, 48),
-        ),
-      ),
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: NmtkDesignTokens.surfaceDark,
-        indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
     );
   }
 
@@ -418,7 +380,9 @@ class AppTheme {
 
   static ThemeData _neurocnlDarkTheme() {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF8B5CF6), // NmtkShellTokens.dark.studioPalette.accent
+      seedColor: const Color(
+        0xFF8B5CF6,
+      ), // NmtkShellTokens.dark.studioPalette.accent
       brightness: Brightness.dark,
       surface: NmtkNeurocnlTokens.surface,
       onSurface: NmtkNeurocnlTokens.textPrimary,
@@ -435,94 +399,6 @@ class AppTheme {
         _neurocnlExtension(Brightness.dark, colorScheme),
         NmtkShellTokens.fromColorScheme(colorScheme, Brightness.dark),
       ],
-      cardTheme: CardThemeData(
-        color: NmtkNeurocnlTokens.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: NmtkDesignTokens.cardShape,
-          side: const BorderSide(color: NmtkNeurocnlTokens.border),
-        ),
-        elevation: 0,
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: NmtkNeurocnlTokens.surface,
-        foregroundColor: NmtkNeurocnlTokens.textPrimary,
-        elevation: 0,
-        titleTextStyle: TextStyle(
-          fontFamily: NmtkFontFamilies.ui,
-          package: NmtkFontFamilies.package,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: NmtkNeurocnlTokens.textPrimary,
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF8B5CF6), // Studio Violet
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: NmtkDesignTokens.buttonShape,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          minimumSize: const Size(48, 48),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: const Color(0xFF8B5CF6), // Studio Violet
-          side: const BorderSide(color: Color(0xFF8B5CF6)),
-          shape: RoundedRectangleBorder(
-            borderRadius: NmtkDesignTokens.buttonShape,
-          ),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: NmtkNeurocnlTokens.surfaceVariant,
-        border: OutlineInputBorder(
-          borderRadius: NmtkDesignTokens.inputShape,
-          borderSide: const BorderSide(color: NmtkNeurocnlTokens.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: NmtkDesignTokens.inputShape,
-          borderSide: const BorderSide(color: NmtkNeurocnlTokens.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: NmtkDesignTokens.inputShape,
-          borderSide: const BorderSide(
-            color: NmtkNeurocnlTokens.primary,
-            width: 2,
-          ),
-        ),
-      ),
-      dividerTheme: const DividerThemeData(
-        color: NmtkNeurocnlTokens.border,
-        thickness: 1,
-      ),
-      chipTheme: ChipThemeData(
-        backgroundColor: NmtkNeurocnlTokens.surfaceVariant,
-        labelStyle: const TextStyle(
-          fontFamily: NmtkFontFamilies.ui,
-          package: NmtkFontFamilies.package,
-          fontSize: 12,
-          color: NmtkNeurocnlTokens.textSecondary,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: NmtkNeurocnlTokens.border),
-        ),
-      ),
-      tabBarTheme: const TabBarThemeData(
-        labelColor: NmtkNeurocnlTokens.primary,
-        unselectedLabelColor: NmtkNeurocnlTokens.textSecondary,
-        indicatorColor: NmtkNeurocnlTokens.primary,
-        dividerColor: NmtkNeurocnlTokens.border,
-      ),
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: NmtkNeurocnlTokens.surface,
-        indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
     );
   }
 
@@ -535,7 +411,9 @@ class AppTheme {
     const textSecondary = Color(0xFF52525B);
 
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF7C3AED), // NmtkShellTokens.light.studioPalette.accent
+      seedColor: const Color(
+        0xFF7C3AED,
+      ), // NmtkShellTokens.light.studioPalette.accent
       brightness: Brightness.light,
       surface: surface,
       onSurface: textPrimary,
@@ -552,91 +430,6 @@ class AppTheme {
         _neurocnlExtension(Brightness.light, colorScheme),
         NmtkShellTokens.fromColorScheme(colorScheme, Brightness.light),
       ],
-      cardTheme: CardThemeData(
-        color: surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: NmtkDesignTokens.cardShape,
-          side: const BorderSide(color: border),
-        ),
-        elevation: 0,
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: surface,
-        foregroundColor: textPrimary,
-        elevation: 0,
-        titleTextStyle: TextStyle(
-          fontFamily: NmtkFontFamilies.ui,
-          package: NmtkFontFamilies.package,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: textPrimary,
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF7C3AED), // NmtkShellTokens.light.studioPalette.accent
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: NmtkDesignTokens.buttonShape,
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          minimumSize: const Size(48, 48),
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: NmtkNeurocnlTokens.primaryDim,
-          side: const BorderSide(color: border),
-          shape: RoundedRectangleBorder(
-            borderRadius: NmtkDesignTokens.buttonShape,
-          ),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: surfaceVariant,
-        border: OutlineInputBorder(
-          borderRadius: NmtkDesignTokens.inputShape,
-          borderSide: const BorderSide(color: border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: NmtkDesignTokens.inputShape,
-          borderSide: const BorderSide(color: border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: NmtkDesignTokens.inputShape,
-          borderSide: const BorderSide(
-            color: NmtkNeurocnlTokens.primary,
-            width: 2,
-          ),
-        ),
-      ),
-      dividerTheme: const DividerThemeData(color: border, thickness: 1),
-      chipTheme: ChipThemeData(
-        backgroundColor: surfaceVariant,
-        labelStyle: const TextStyle(
-          fontFamily: NmtkFontFamilies.ui,
-          package: NmtkFontFamilies.package,
-          fontSize: 12,
-          color: textSecondary,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: const BorderSide(color: border),
-        ),
-      ),
-      tabBarTheme: const TabBarThemeData(
-        labelColor: NmtkNeurocnlTokens.primaryDim,
-        unselectedLabelColor: textSecondary,
-        indicatorColor: NmtkNeurocnlTokens.primary,
-        dividerColor: border,
-      ),
-      navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: surface,
-        indicatorShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
     );
   }
 
@@ -675,11 +468,11 @@ class AppTheme {
     final base = _suiteLightTheme(NmtkThemeVariant.defaultNavy);
     return base.copyWith(
       colorScheme: base.colorScheme.copyWith(
-        primary: Colors.blue.shade900,
-        secondary: Colors.blue.shade900,
-        surface: Colors.white,
-        onSurface: Colors.black,
-        outline: Colors.black,
+        primary: const Color(0xFF0D47A1),
+        secondary: const Color(0xFF0D47A1),
+        surface: const Color(0xFFFFFFFF),
+        onSurface: const Color(0xFF000000),
+        outline: const Color(0xFF000000),
       ),
       visualDensity: VisualDensity.comfortable,
     );
@@ -689,11 +482,11 @@ class AppTheme {
     final base = _suiteDarkTheme(NmtkThemeVariant.defaultNavy);
     return base.copyWith(
       colorScheme: base.colorScheme.copyWith(
-        primary: Colors.yellowAccent,
-        secondary: Colors.yellowAccent,
-        surface: Colors.black,
-        onSurface: Colors.white,
-        outline: Colors.white,
+        primary: const Color(0xFFFFFF00),
+        secondary: const Color(0xFFFFFF00),
+        surface: const Color(0xFF000000),
+        onSurface: const Color(0xFFFFFFFF),
+        outline: const Color(0xFFFFFFFF),
       ),
       visualDensity: VisualDensity.comfortable,
     );

@@ -26,7 +26,8 @@ class ModuleLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final zeta = Zeta.of(context);
+    final colors = zeta.colors;
     final tokens = NmtkShellTokens.of(context);
 
     return Center(
@@ -53,7 +54,7 @@ class ModuleLoadingView extends StatelessWidget {
               Text(
                 'Waiting for ${module.name}',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: ZetaTextStyles.titleMedium.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -71,15 +72,12 @@ class ModuleLoadingView extends StatelessWidget {
                       ].join('\n\n')
                     : 'Starting up, this may take a moment.',
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                style: ZetaTextStyles.bodyMedium.copyWith(
+                  color: colors.mainSubtle,
                 ),
               ),
               const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(tokens.radiusSm),
-                child: const LinearProgressIndicator(),
-              ),
+              const LinearProgressIndicator(),
               const SizedBox(height: 14),
               NmtkOutlinedButton(
                 onPressed: onOpenInBrowser,

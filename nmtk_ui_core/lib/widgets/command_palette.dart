@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
@@ -25,7 +26,7 @@ class NmtkCommandPalette extends StatefulWidget {
   }) {
     return showDialog(
       context: context,
-      barrierColor: Colors.black54,
+      barrierColor: Zeta.of(context).colors.mainDefault.withOpacity(0.54),
       builder: (context) => NmtkCommandPalette(
         commands: commands,
         onDismiss: () => Navigator.of(context).pop(),
@@ -299,7 +300,10 @@ class _ShortcutHint extends StatelessWidget {
       children: [
         _KeyCap(label: keyLabel),
         const SizedBox(width: 4),
-        Text(actionLabel, style: const TextStyle(fontSize: 10)),
+        Text(
+          actionLabel,
+          style: ZetaTextStyles.bodyMedium.copyWith(fontSize: 10),
+        ),
       ],
     );
   }
@@ -323,7 +327,7 @@ class _KeyCap extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
+        style: ZetaTextStyles.bodyMedium.copyWith(
           fontSize: 9,
           fontWeight: FontWeight.bold,
           color: theme.colorScheme.onSurfaceVariant,

@@ -43,7 +43,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final moduleProvider = ref.watch(moduleStateProvider);
     final analytics = ref.watch(analyticsServiceProvider);
     final controlApi = ref.watch(controlApiServiceProvider);
-    final theme = Theme.of(context);
+    final zeta = Zeta.of(context);
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -54,8 +54,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Adjust shell behavior, logging, telemetry, and per-module overrides here.',
           child: Text(
             'Launcher configuration and global preferences.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            style: ZetaTextStyles.bodyMedium.apply(
+              color: zeta.colors.mainSubtle,
             ),
           ),
         ),
@@ -68,15 +68,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Theme', style: theme.textTheme.bodyMedium),
+              Text('Theme', style: ZetaTextStyles.bodyMedium),
               DropdownButton<ThemeMode>(
                 value: settings.themeMode,
                 onChanged: (ThemeMode? newValue) {
                   if (newValue != null) settings.setThemeMode(newValue);
                 },
                 items: const [
-                  DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
-                  DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                  DropdownMenuItem(
+                      value: ThemeMode.system, child: Text('System')),
+                  DropdownMenuItem(
+                      value: ThemeMode.light, child: Text('Light')),
                   DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
                 ],
               ),
@@ -92,7 +94,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Log Level', style: theme.textTheme.bodyMedium),
+              Text('Log Level', style: ZetaTextStyles.bodyMedium),
               DropdownButton<LogLevel>(
                 value: settings.logLevel,
                 onChanged: (LogLevel? newValue) {
@@ -121,7 +123,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               Text(
                 'Launcher Control API Base URL',
-                style: theme.textTheme.labelMedium,
+                style: ZetaTextStyles.labelMedium,
               ),
               const SizedBox(height: 6),
               ZetaTextInput(
@@ -133,8 +135,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Text(
                 'On Android and iOS, point this at the machine running '
                 '`scripts/launcher_control_service.py --host 0.0.0.0 --port 8090`.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                style: ZetaTextStyles.bodySmall.apply(
+                  color: zeta.colors.mainSubtle,
                 ),
               ),
               const SizedBox(height: 12),
@@ -164,13 +166,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         Text(
                           'Opt-in Telemetry',
-                          style: theme.textTheme.bodyMedium,
+                          style: ZetaTextStyles.bodyMedium,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Share anonymous usage data and performance metrics.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                          style: ZetaTextStyles.bodySmall.apply(
+                            color: zeta.colors.mainSubtle,
                           ),
                         ),
                       ],
@@ -189,7 +191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Text(
                     'Remote Reporting Endpoint',
-                    style: theme.textTheme.labelMedium,
+                    style: ZetaTextStyles.labelMedium,
                   ),
                   const SizedBox(height: 6),
                   ZetaTextInput(
@@ -404,7 +406,7 @@ class _LogDialogState extends State<_LogDialog> {
             if (widget.showErrorOnlyToggle) ...[
               Text(
                 'Error Only',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: ZetaTextStyles.bodySmall,
               ),
               const SizedBox(width: 8),
               Switch(
@@ -446,7 +448,7 @@ class _LogDialogState extends State<_LogDialog> {
                       child: SingleChildScrollView(
                         child: SelectableText(
                           text,
-                          style: const TextStyle(
+                          style: ZetaTextStyles.bodySmall.copyWith(
                             fontFamily: 'JetBrainsMono',
                             fontSize: 12,
                           ),
@@ -507,7 +509,7 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
   @override
   Widget build(BuildContext context) {
     final moduleProvider = ref.read(moduleStateProvider);
-    final theme = Theme.of(context);
+    final zeta = Zeta.of(context);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -530,7 +532,7 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                       Expanded(
                         child: Text(
                           'Enabled',
-                          style: theme.textTheme.bodyMedium,
+                          style: ZetaTextStyles.bodyMedium,
                         ),
                       ),
                       Switch(
@@ -556,14 +558,14 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                           children: [
                             Text(
                               'Start on Launch',
-                              style: theme.textTheme.bodyMedium,
+                              style: ZetaTextStyles.bodyMedium,
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'Automatically start this module when the app opens '
                               '(adds ~3–8 s to startup if cold).',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+                              style: ZetaTextStyles.bodySmall.apply(
+                                color: zeta.colors.mainSubtle,
                               ),
                             ),
                           ],
@@ -589,7 +591,7 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                       children: [
                         Text(
                           'Custom Port (default: ${widget.module.port})',
-                          style: theme.textTheme.labelMedium,
+                          style: ZetaTextStyles.labelMedium,
                         ),
                         const SizedBox(height: 6),
                         Row(
@@ -599,7 +601,16 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                                 controller: _portController,
                                 placeholder: 'Default: ${widget.module.port}',
                                 keyboardType: TextInputType.number,
-                                // ZETA-MIGRATION-TODO: onSubmitted dropped
+                                onFieldSubmitted: (_) {
+                                  final parsed =
+                                      int.tryParse(_portController.text);
+                                  moduleProvider.updateModuleSettings(
+                                    widget.module.id,
+                                    isEnabled: widget.module.isEnabled,
+                                    customPort: parsed,
+                                  );
+                                  NmtkToasts.success(context, 'Port updated');
+                                },
                               ),
                             ),
                             const SizedBox(width: 8),

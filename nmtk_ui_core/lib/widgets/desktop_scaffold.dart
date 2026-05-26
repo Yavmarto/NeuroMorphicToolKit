@@ -520,7 +520,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                     title!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: ZetaTextStyles.bodyMedium.copyWith(
                       color: scheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
@@ -846,7 +846,7 @@ class _RailBrandRow extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             isExpanded ? 'NMTK' : 'N',
-            style: TextStyle(
+            style: ZetaTextStyles.bodyMedium.copyWith(
               color: scheme.onPrimary,
               fontSize: isExpanded ? 12 : 14,
               fontWeight: FontWeight.w800,
@@ -1091,7 +1091,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                 item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: ZetaTextStyles.bodyMedium.copyWith(
                   color: textColor,
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -1107,7 +1107,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                 ),
                 child: Text(
                   '${item.badgeCount}',
-                  style: TextStyle(
+                  style: ZetaTextStyles.bodyMedium.copyWith(
                     fontSize: 10,
                     height: 1.4,
                     color: Theme.of(context).colorScheme.onPrimary,
@@ -1333,7 +1333,7 @@ class _ProfilePopover extends StatelessWidget {
               children: [
                 Text(
                   profile.displayName,
-                  style: TextStyle(
+                  style: ZetaTextStyles.bodyMedium.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: scheme.onSurface,
@@ -1343,7 +1343,7 @@ class _ProfilePopover extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     profile.email!,
-                    style: TextStyle(
+                    style: ZetaTextStyles.bodyMedium.copyWith(
                       fontSize: 12,
                       color: scheme.onSurfaceVariant,
                     ),
@@ -1386,9 +1386,7 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final action = widget.action;
-    final fgColor = action.isDestructive
-        ? scheme.error
-        : scheme.onSurface;
+    final fgColor = action.isDestructive ? scheme.error : scheme.onSurface;
 
     return Semantics(
       label: action.label,
@@ -1413,7 +1411,7 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
                 ],
                 Text(
                   action.label ?? '',
-                  style: TextStyle(
+                  style: ZetaTextStyles.bodyMedium.copyWith(
                     fontSize: 13,
                     color: fgColor,
                     fontWeight: FontWeight.w500,

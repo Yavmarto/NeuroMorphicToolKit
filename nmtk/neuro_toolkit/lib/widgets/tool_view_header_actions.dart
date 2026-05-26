@@ -47,12 +47,9 @@ class ToolViewHeaderActions extends ConsumerWidget {
           button: true,
           child: IconButton(
             icon: Icon(
-              developerMode
-                  ? Icons.handyman_rounded
-                  : Icons.handyman_outlined,
-              color: developerMode
-                  ? Theme.of(context).colorScheme.primary
-                  : null,
+              developerMode ? Icons.handyman_rounded : Icons.handyman_outlined,
+              color:
+                  developerMode ? Theme.of(context).colorScheme.primary : null,
             ),
             onPressed: () => appProvider.toggleDeveloperMode(),
             tooltip: developerMode

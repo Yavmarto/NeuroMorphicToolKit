@@ -73,7 +73,7 @@ class ControlApiService {
     http.Client? client,
     Uri? baseUri,
     AnalyticsService? analyticsService,
-  }) : _client = analyticsService == null
+  })  : _client = analyticsService == null
             ? (client ?? http.Client())
             : _LoggedHttpClient(client ?? http.Client(), analyticsService),
         _baseUri = baseUri ?? resolveBaseUri();
@@ -629,7 +629,8 @@ class ControlApiService {
   Future<List<String>> fetchBackendLogs({bool errorOnly = false}) async {
     final response = await _client.get(
       _uri('/api/launcher/logs').replace(
-        queryParameters: errorOnly ? const <String, String>{'filter': 'error'} : null,
+        queryParameters:
+            errorOnly ? const <String, String>{'filter': 'error'} : null,
       ),
     );
     await _ensureSuccess(response);
@@ -671,7 +672,8 @@ class ControlApiService {
     if (lines is List) {
       return lines.cast<String>();
     }
-    throw Exception('Unexpected backend-activity-log payload: ${response.body}');
+    throw Exception(
+        'Unexpected backend-activity-log payload: ${response.body}');
   }
 }
 

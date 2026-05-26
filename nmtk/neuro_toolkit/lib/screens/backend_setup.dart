@@ -295,7 +295,6 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     return ZetaTextInput(
       controller: controller,
       label: label,
-      // ZETA-MIGRATION-TODO: border dropped
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/models/energy_report.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 
@@ -25,7 +26,9 @@ class NmtkEnergyBarChart extends StatelessWidget {
       return Center(
         child: Text(
           'No ensemble data',
-          style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+          style: ZetaTextStyles.bodyMedium.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
       );
     }
@@ -111,14 +114,14 @@ class _SummaryChip extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: TextStyle(
+                style: ZetaTextStyles.bodyMedium.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontSize: 11,
                 ),
               ),
               Text(
                 value,
-                style: TextStyle(
+                style: ZetaTextStyles.bodyMedium.copyWith(
                   color: color,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -155,7 +158,7 @@ class _EnergyBar extends StatelessWidget {
           children: [
             Text(
               name,
-              style: TextStyle(
+              style: ZetaTextStyles.bodyMedium.copyWith(
                 color: theme.colorScheme.onSurface,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -163,7 +166,7 @@ class _EnergyBar extends StatelessWidget {
             ),
             Text(
               '${valuePj.toStringAsFixed(2)} pJ',
-              style: TextStyle(
+              style: ZetaTextStyles.bodyMedium.copyWith(
                 color: theme.colorScheme.primary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -172,20 +175,17 @@ class _EnergyBar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(tokens.radiusSm),
-          child: LinearProgressIndicator(
-            value: fraction,
-            minHeight: 10,
-            backgroundColor: theme.colorScheme.surfaceVariant,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Color.lerp(
-                    theme.colorScheme.primary,
-                    theme.colorScheme.error,
-                    fraction,
-                  ) ??
+        LinearProgressIndicator(
+          value: fraction,
+          minHeight: 10,
+          backgroundColor: theme.colorScheme.surfaceVariant,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Color.lerp(
                   theme.colorScheme.primary,
-            ),
+                  theme.colorScheme.error,
+                  fraction,
+                ) ??
+                theme.colorScheme.primary,
           ),
         ),
       ],

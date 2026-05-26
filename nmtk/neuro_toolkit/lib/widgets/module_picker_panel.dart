@@ -406,6 +406,7 @@ class _StatusMessageBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = NmtkShellTokens.of(context);
     final palette = resolveNmtkTonePalette(context, tone);
     final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
           color: palette.foreground,
@@ -415,7 +416,7 @@ class _StatusMessageBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: palette.background,
         border: Border.all(color: palette.border),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -433,7 +434,7 @@ class _StatusMessageBar extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             InkWell(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(tokens.radiusSm),
               onTap: () => _showInfoDialog(context),
               child: Padding(
                 padding: const EdgeInsets.all(2),
