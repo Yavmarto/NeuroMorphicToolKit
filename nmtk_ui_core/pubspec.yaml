@@ -1,6 +1,6 @@
 name: nmtk_ui_core
 description: "Core UI components for the Neuromorphic Toolkit."
-version: 0.6.0+3
+version: 0.7.0+0
 
 environment:
   sdk: ^3.11.0
