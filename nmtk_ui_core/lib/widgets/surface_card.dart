@@ -47,6 +47,26 @@ class NmtkSurfaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug-only nesting guard (zeta-card-reduction Task 3): NmtkSurfaceCard
+    // is a single-topic surface — never nest one inside another. The right
+    // place to group sub-content is `NmtkSection` (no frame). For status
+    // surfaces use `NmtkStatusBanner`. This assert turns the historical
+    // "_NeuronsFound inside Layer 2" class of bugs into an immediate runtime
+    // failure under debug builds; release builds skip the check.
+    assert(() {
+      final ancestor =
+          context.findAncestorWidgetOfExactType<NmtkSurfaceCard>();
+      if (ancestor != null) {
+        throw FlutterError(
+          'NmtkSurfaceCard must not be nested inside another NmtkSurfaceCard. '
+          'Use NmtkSection for grouping; reserve NmtkSurfaceCard for genuine '
+          'single-topic elevated surfaces. See nmtk_ui_core/docs/'
+          'section_header.md for the migration guide.',
+        );
+      }
+      return true;
+    }());
+
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
     final palette = resolveNmtkTonePalette(context, tone);

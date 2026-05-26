@@ -23,7 +23,15 @@ export 'package:zeta_flutter/zeta_flutter.dart'
         ZetaWidgetBorder,
         ZetaStatusLabel,
         ZetaWidgetStatus,
-        ZetaColorSwatch;
+        ZetaColorSwatch,
+        ZetaSegmentedControl,
+        ZetaButtonSegment,
+        ZetaInPageBanner,
+        ZetaListItem,
+        ZetaAccordion,
+        ZetaAccordionItem,
+        ZetaAssistChip,
+        ZetaInputChip;
 
 /// Central Zeta theme configuration for the NeuroMorphicToolKit suite.
 ///

@@ -15,7 +15,6 @@ export 'widgets/empty_state.dart';
 export 'widgets/energy_bar_chart.dart';
 export 'widgets/error_card.dart';
 export 'widgets/info_chip.dart';
-export 'widgets/item_card.dart'; // NmtkItemCard, NmtkItemCardDensity
 export 'widgets/key_value_row.dart';
 export 'widgets/pipeline_stepper.dart';
 export 'widgets/pynq_deploy_status_card.dart';
@@ -24,6 +23,8 @@ export 'widgets/quantization_table.dart';
 export 'widgets/progress_card.dart';
 export 'widgets/result_card.dart';
 export 'widgets/section_card.dart';
+export 'widgets/section_header.dart'; // NmtkSectionHeader, NmtkSection
+export 'widgets/status_banner.dart'; // NmtkStatusBanner
 export 'widgets/sparkline_chart.dart';
 export 'widgets/nmtk_navigation_rail.dart';
 export 'widgets/summary_card.dart';
