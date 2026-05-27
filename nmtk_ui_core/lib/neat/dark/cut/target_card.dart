@@ -1,0 +1,31 @@
+import 'package:flutter/material.dart';
+
+/// Single-line goal/target callout (number + descriptor) used on the overview
+/// page.
+class TargetCard extends StatelessWidget {
+  const TargetCard({super.key, required this.value, required this.label});
+  final String value, label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 343,
+      padding: const EdgeInsets.all(20),
+      clipBehavior: Clip.antiAlias,
+      decoration: ShapeDecoration(
+        color: const Color(0xFF1D1D25),
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: Row(
+        spacing: 16,
+        children: [
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 24, fontFamily: 'Inter', fontWeight: FontWeight.w700, height: 1.25)),
+          Expanded(child: Text(label, style: const TextStyle(color: Color(0xFF808D9E), fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w400, height: 1.57, letterSpacing: -0.50))),
+        ],
+      ),
+    );
+  }
+}

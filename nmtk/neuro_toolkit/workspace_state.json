@@ -11,7 +11,7 @@
     {
       "deepLink": null,
       "moduleId": "Neurobench",
-      "readinessState": "opening",
+      "readinessState": "warming_up",
       "restoreState": {},
       "surfaceMode": "native"
     },
