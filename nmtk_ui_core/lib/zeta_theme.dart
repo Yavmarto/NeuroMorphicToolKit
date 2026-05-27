@@ -31,7 +31,12 @@ export 'package:zeta_flutter/zeta_flutter.dart'
         ZetaAccordion,
         ZetaAccordionItem,
         ZetaAssistChip,
-        ZetaInputChip;
+        ZetaInputChip,
+        ZetaDropdown,
+        ZetaDropdownItem,
+        ZetaDropdownMenuPosition,
+        ZetaDropdownMenuType,
+        ZetaDropdownSize;
 
 /// Central Zeta theme configuration for the NeuroMorphicToolKit suite.
 ///
