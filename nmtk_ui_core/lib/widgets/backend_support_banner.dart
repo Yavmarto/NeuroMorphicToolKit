@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:nmtk_ui_core/widgets/tone.dart';
 
 /// A verdict-toned banner for displaying backend support status.
 ///
-/// The background and foreground colours are derived from [verdict]:
-/// - `'faithful'` → primary container / on-primary-container
-/// - `'unsupported'` → error container / on-error-container
-/// - any other string → tertiary container / on-tertiary-container
+/// The background and foreground colours are derived from [verdict] via
+/// [resolveNmtkTonePalette]:
+/// - `'faithful'` → [NmtkTone.success]
+/// - `'unsupported'` → [NmtkTone.danger]
+/// - any other string → [NmtkTone.warning]
 ///
 /// Use [details] to pass module-specific trailing content such as fidelity
 /// annotations or concept chip groups. When [compact] is true the banner
@@ -48,32 +49,26 @@ class NmtkBackendSupportBanner extends StatelessWidget {
   /// If provided, an X button is shown and this callback is invoked on tap.
   final VoidCallback? onDismiss;
 
-  Color _background(ColorScheme cs) => switch (verdict) {
-    'faithful' => cs.primaryContainer,
-    'unsupported' => cs.errorContainer,
-    _ => cs.tertiaryContainer,
-  };
-
-  Color _foreground(ColorScheme cs) => switch (verdict) {
-    'faithful' => cs.onPrimaryContainer,
-    'unsupported' => cs.onErrorContainer,
-    _ => cs.onTertiaryContainer,
+  NmtkTone _tone() => switch (verdict) {
+    'faithful'    => NmtkTone.success,
+    'unsupported' => NmtkTone.danger,
+    _             => NmtkTone.warning,
   };
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final tokens = NmtkShellTokens.of(context);
-    final fg = _foreground(cs);
+    final palette = resolveNmtkTonePalette(context, _tone());
+    final fg = palette.foreground;
 
     return Container(
       margin: compact ? EdgeInsets.zero : const EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(compact ? 12 : 16),
       decoration: BoxDecoration(
-        color: _background(cs),
+        color: palette.background,
         borderRadius: BorderRadius.circular(tokens.radiusSm),
-        border: Border.all(color: cs.outlineVariant),
+        border: Border.all(color: palette.border),
       ),
       child: DefaultTextStyle(
         style: theme.textTheme.bodyMedium!.copyWith(color: fg),
@@ -98,10 +93,13 @@ class NmtkBackendSupportBanner extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Chip(
-                        label: Text(
-                          verdict.toUpperCase(),
-                          style: theme.textTheme.labelSmall,
+                        label: Text(verdict.toUpperCase()),
+                        labelStyle: theme.textTheme.labelSmall!.copyWith(
+                          color: fg,
+                          fontWeight: FontWeight.w700,
                         ),
+                        backgroundColor: palette.background,
+                        side: BorderSide(color: palette.border),
                         visualDensity: VisualDensity.compact,
                       ),
                       Text(
