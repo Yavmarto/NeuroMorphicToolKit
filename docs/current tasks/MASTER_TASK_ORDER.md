@@ -4,8 +4,8 @@
 
 > **Plan maintenance**: this plan needs to be updated after each meaningful task change.
 > **Update style**: keep the work-done note very short and concise.
-> **Updated**: 2026-05-25
-> **Latest concise update**: Added two new task specs. **T-BUNDLE** (`docs/current tasks/2026-05-24-nir-bundle-architecture.md`): architecture and implementation plan for the `.nmtk` project bundle format (NIR + learning rules + `internal_ir.json`), covering canvas gaps, NIR framework online-learning constraints (Lava-only), Phase 0 adapter–canvas disconnect fix, and a Lava `online_learn` adapter path. **T-LAYER** (`docs/current tasks/2026-05-24-layer-editor-view.md`): spec for a sequential row/column layer editor view in Studio (PyTorch-style `nn.Sequential` UX), where each layer card maps to one or two CNL sentences, layers can be grouped/expanded, and the view complements (does not replace) the graph canvas. T-LAYER is gated on T1-8 and T1-10.
+> **Updated**: 2026-05-26
+> **Latest concise update**: **T-ICON added at the front of the active queue.** Material `Icons.*` → `ZetaIcons.*` sweep across all six Flutter packages (631 hits, 112 files, 263 distinct icon names). Three-tier strategy: Tier A mechanical normalisation, Tier B curated semantic mapping, Tier C1 documented exemption (custom NMTK icon font deferred). Spec: `.kiro/specs/material-to-zeta-icons-sweep/`. Scope doc: `docs/current tasks/2026-05-26-material-icons-to-zeta-icons-migration.md`. NIR product priorities (T1-8 / T1-10 / T0-A) are paused for the duration of this UI migration window per user direction; they resume after T-ICON-6 lands. Previous update: T-BUNDLE and T-LAYER specs (still queued).
 >
 > **Scope decision**: Active product support is centered on authoring, validating, exporting, and simulator-running `CNL -> IR -> NIR`, with two simulator targets in scope: Lava simulator and snnTorch simulator. Hardware deployment remains out of scope except for NeuroChip backend truthfulness needed by the CNL Studio deployment flow.
 >
@@ -41,7 +41,9 @@
 
 ---
 
-## Current Status (as of 2026-05-22)
+## Current Status (as of 2026-05-26)
+
+**Active priority window**: T-ICON (Material Icons → ZetaIcons sweep). NIR product priorities below are paused until T-ICON-6 lands; status of those items is otherwise unchanged.
 
 - Confirmed complete: direct `CNL -> IR -> NIR` export exists for the currently supported subset.
 - Confirmed complete: NIR export still fails closed for unsupported concepts instead of exporting dishonestly.
@@ -580,6 +582,7 @@ Exit criteria to verify:
 | 2    | T2-HUB | Neurohub global registry                                                        | Queued   | T1-8 stable      |
 | 2    | T-BUNDLE | NIR + training bundle architecture (`.nmtk` format, adapter–canvas fix)    | Queued   | T1-8             |
 | 2    | T-LAYER  | Sequential layer editor view (row/column, group/expand, CNL preview)         | Queued   | T1-8 + T1-10     |
+| —   | T-ICON | Material Icons → ZetaIcons migration (front of queue, NIR work paused)        | Active   | —               |
 | 2    | T2-x  | Quantization, hybrid tags, partitioning                                          | Later    | Tier 1 stability |
 
 ---
@@ -595,6 +598,31 @@ Exit criteria to verify:
 7. **Canvas meaning must be stable.** NeuroSim must never silently rewrite a canvas graph into a different canonical CNL graph, and the suite must import one unambiguous `neurosim` package.
 8. **Simulation support levels must be explicit.** NeuroSim must label approximate, local-only, mock, degraded, and unsupported preview/export/hardware paths instead of returning completed-looking results for behavior it did not faithfully simulate.
 9. **Hardware readiness must be explicit.** NeuroChip must never return or surface deployment success without saying whether the path used scaffold generation, simulation, SDK simulator mapping, or real hardware.
+
+---
+
+## T-ICON: Material Icons → ZetaIcons Migration (active — front of queue)
+
+**Status**: Active (started 2026-05-26). T-ICON-1 (spec PR) and T-ICON-2 (governance tests) land first; sweep follows.
+**Why front of queue**: User has prioritized completing the suite-wide UI/Zeta migration (T-UI complete, T-DEBT 5–8 deferred, this is the iconography piece) before resuming NIR product work. NIR product priorities (T1-8 / T1-10 / T0-A) are paused for this window.
+**Full plan**: `docs/current tasks/2026-05-26-material-icons-to-zeta-icons-migration.md`
+**Kiro spec**: `.kiro/specs/material-to-zeta-icons-sweep/`
+
+Scope: 631 raw `Icons.*` references in 112 files across six packages, 263 distinct icon names. ZetaIcons covers ~51 % of call sites; the rest split between Tier B semantic mapping (~70 sites) and Tier C1 documented exemption (~225 sites).
+
+| Task | Description | Status |
+|---|---|---|
+| T-ICON-1 | Spec PR (requirements/design/tasks + scope doc + master order update) | ✅ |
+| T-ICON-2 | Governance tests with current-state baseline in all six packages | ⬜ |
+| T-ICON-3 | Tier A mechanical sweep (normalisation rules → ~335 sites converted) | ⬜ |
+| T-ICON-4 | Tier B curated sweep (semantic mapping → ~70 sites converted) | ⬜ |
+| T-ICON-5 | Tier C1 annotation pass (~225 sites annotated with exemption marker) | ⬜ |
+| T-ICON-6 | Final cross-package verification + manual smoke pass | ⬜ |
+| T-ICON-7 | (Deferred) Tier C2 — custom NMTK icon font | ⬜ |
+
+**Per-package baselines (T-ICON-2 starting state)**: neurocnl/frontend 316, nmtk/neuro_toolkit 84, Neurohub/frontend 64, Neurosense/frontend 60, nmtk_ui_core 59, Neurobench/frontend 48.
+
+**Exit criteria**: cross-package grep `grep -rE '\bIcons\.' lib/ | grep -v 'ZETA-MIGRATION-EXEMPT'` returns zero hits across all six `lib/` directories; all six governance tests pass with `kIconsBaseline = 0`; all six packages pass `flutter test` at baseline failure count.
 
 ---
 
