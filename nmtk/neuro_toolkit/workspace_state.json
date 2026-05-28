@@ -1,5 +1,5 @@
 {
-  "focusedModuleId": "neurocnl",
+  "focusedModuleId": "Neurobench",
   "sessions": [
     {
       "deepLink": null,
@@ -11,14 +11,14 @@
     {
       "deepLink": null,
       "moduleId": "Neurobench",
-      "readinessState": "opening",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     },
     {
       "deepLink": null,
       "moduleId": "Neurohub",
-      "readinessState": "opening",
+      "readinessState": "warming_up",
       "restoreState": {},
       "surfaceMode": "native"
     }
