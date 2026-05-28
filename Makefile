@@ -127,11 +127,11 @@ docker-ex-all:
 		--exclude '__pycache__' --exclude 'node_modules' \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Tearing down any existing stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs down --remove-orphans 2>/dev/null || true"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs --profile notebooks down --remove-orphans 2>/dev/null || true"
 	@echo "==> Building all images in parallel on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs build --parallel"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs --profile notebooks build --parallel"
 	@echo "==> Starting full stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012 docker compose --profile hardware --profile physics --profile jobs up -d --wait --remove-orphans"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012 docker compose --profile hardware --profile physics --profile jobs --profile notebooks up -d --wait --remove-orphans"
 	@echo "==> Full stack ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-m: docker-ex
@@ -153,7 +153,7 @@ docker-ex-down:
 		exit 1; \
 	fi
 	@echo "==> Stopping Docker containers on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs down"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs --profile notebooks down"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload
