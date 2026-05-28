@@ -1678,6 +1678,28 @@ def _module_start_strategy(module: dict[str, Any]) -> str:
     return strategy or "uvicorn"
 
 
+def _is_externally_managed_service(module: dict[str, Any]) -> bool:
+    """Return True for 'none'-strategy modules that live on their own port.
+
+    These are services started outside the launcher (e.g. via Docker Compose)
+    rather than monolith modules whose traffic is proxied through suite_api on
+    DEFAULT_SUITE_API_PORT.  Jupyter and lava_backend are examples.
+    """
+    if _module_start_strategy(module) != "none":
+        return False
+    port = _effective_port(module)
+    return port is not None and port != DEFAULT_SUITE_API_PORT
+
+
+def _external_service_health_url(module: dict[str, Any]) -> str:
+    """Build the health-probe URL for an externally managed service."""
+    port = _effective_port(module)
+    deployment = module.get("deployment") or {}
+    raw_path = deployment.get("healthPath", "") if isinstance(deployment, dict) else ""
+    health_path = str(raw_path).strip() or "/health"
+    return f"http://127.0.0.1:{port}{health_path}"
+
+
 def _normalized_import_list(raw: Any) -> list[str]:
     if not isinstance(raw, list):
         return []
@@ -5325,6 +5347,39 @@ class LauncherControlState:
 
         start_strategy = _module_start_strategy(module)
         if start_strategy == "none":
+            if _is_externally_managed_service(module):
+                # Standalone external service (e.g. Jupyter, lava_backend running in
+                # Docker).  Probe its actual health endpoint instead of assuming it is
+                # managed by suite_api.
+                ok, status_code, health_text = self._probe_health(module)
+                if ok:
+                    next_status = _status_for_health_response(
+                        status_code, PREFLIGHT_OK
+                    )
+                    self._update_module_fields(
+                        module_id,
+                        status=next_status,
+                        healthStatus=health_text,
+                    )
+                else:
+                    deployment = module.get("deployment") or {}
+                    compose_profile = (
+                        deployment.get("composeProfile", "") if isinstance(deployment, dict) else ""
+                    )
+                    hint = (
+                        f" Start it with: docker compose --profile {compose_profile} up"
+                        if compose_profile
+                        else " Start the external service before launching this module."
+                    )
+                    msg = f"Service not reachable on port {_effective_port(module)}.{hint}"
+                    self._update_module_fields(
+                        module_id,
+                        status=STATUS_INDEX["error"],
+                        healthStatus=msg,
+                    )
+                    raise RuntimeError(msg)
+                return
+
             suite_api_result = self._suite_api_ready_result()
             self._update_module_fields(module_id, **suite_api_result.state_fields())
             if suite_api_result.status == PREFLIGHT_FAILED:
@@ -5476,9 +5531,12 @@ class LauncherControlState:
         if port is None:
             return False, 0, None
 
-        start_strategy = _module_start_strategy(module)
-        if start_strategy == "none":
-            # Native feature modules in the monolith have their own health path
+        if _is_externally_managed_service(module):
+            # Standalone service on its own port (e.g. Jupyter, lava_backend).
+            # Use the health path from the deployment manifest.
+            url = _external_service_health_url(module)
+        elif _module_start_strategy(module) == "none":
+            # Native feature module proxied through suite_api on the monolith port.
             # All mounted domain prefixes in suite_api are lowercase.
             url = f"http://127.0.0.1:{port}/api/{module['id'].lower()}/health"
         else:
@@ -5535,6 +5593,47 @@ class LauncherControlState:
                         module_id,
                         status=STATUS_INDEX["error"],
                         healthStatus="Health probe failed",
+                    )
+
+            # Also poll externally managed services (those not in _processes).
+            # These are started outside the launcher (e.g. via Docker) and need
+            # their own health tracking so the UI can recover when the service
+            # comes back up or detect when it goes away.
+            with self._lock:
+                external_snapshots = [
+                    (mid, dict(m))
+                    for mid, m in self._modules.items()
+                    if _is_externally_managed_service(m)
+                    and mid not in self._processes
+                    and int(m.get("status", STATUS_INDEX["notInstalled"]))
+                    in (
+                        STATUS_INDEX["running"],
+                        STATUS_INDEX["degraded"],
+                        STATUS_INDEX["error"],
+                    )
+                ]
+            for module_id, module in external_snapshots:
+                ok, status_code, health_text = self._probe_health(module)
+                if ok:
+                    next_status = _status_for_health_response(
+                        status_code, str(module.get("preflightStatus", PREFLIGHT_OK))
+                    )
+                    self._update_module_fields(
+                        module_id,
+                        status=next_status,
+                        healthStatus=health_text
+                        if health_text
+                        else (
+                            "No /health endpoint (server is up)"
+                            if status_code == 404
+                            else None
+                        ),
+                    )
+                else:
+                    self._update_module_fields(
+                        module_id,
+                        status=STATUS_INDEX["error"],
+                        healthStatus="External service is not reachable",
                     )
 
     def _run_command(self, command: list[str], cwd: Path, module_id: str) -> None:
@@ -5646,6 +5745,33 @@ class LauncherControlState:
                     status=PREFLIGHT_OK,
                     message="Module not installed",
                 )
+            elif _is_externally_managed_service(module):
+                # Probe the external service's own health endpoint.
+                ok, status_code, health_text = self._probe_health(module)
+                if ok:
+                    result = PreflightResult(
+                        status=PREFLIGHT_OK,
+                        message=health_text or "External service is reachable",
+                    )
+                else:
+                    deployment = module.get("deployment") or {}
+                    compose_profile = (
+                        deployment.get("composeProfile", "")
+                        if isinstance(deployment, dict)
+                        else ""
+                    )
+                    hint = (
+                        f"Start it with: docker compose --profile {compose_profile} up"
+                        if compose_profile
+                        else "Start the external service before launching this module."
+                    )
+                    result = PreflightResult(
+                        status=PREFLIGHT_DEGRADED,
+                        message=f"External service not reachable on port {_effective_port(module)}. {hint}",
+                        capability_warnings=[
+                            f"{module.get('name', module['id'])} is not running."
+                        ],
+                    )
             elif _module_start_strategy(module) == "none":
                 result = self._suite_api_ready_result()
             else:

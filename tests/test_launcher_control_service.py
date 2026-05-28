@@ -3691,6 +3691,7 @@ class LauncherControlServiceTest(unittest.TestCase):
     def test_start_module_requires_suite_api_ready_for_monolith_modules(self) -> None:
         module = self.state._get_module("dummy")
         module["startStrategy"] = "none"
+        module["port"] = launcher_server.DEFAULT_SUITE_API_PORT  # monolith port
         self.state._manage_suite_api = True
         self.state._suite_api_status = launcher_server.SUITE_API_STATUS_PREFLIGHT_FAILED
         self.state._suite_api_message = "suite_api runtime dependencies are missing"
@@ -3734,6 +3735,7 @@ class LauncherControlServiceTest(unittest.TestCase):
         module = self.state._get_module("dummy")
         module["status"] = launcher_server.STATUS_INDEX["installed"]
         module["startStrategy"] = "none"
+        module["port"] = launcher_server.DEFAULT_SUITE_API_PORT  # monolith port
         self.state._manage_suite_api = True
         self.state._suite_api_status = launcher_server.SUITE_API_STATUS_PREFLIGHT_FAILED
         self.state._suite_api_message = "suite_api port 9000 is occupied by another process"
@@ -3778,6 +3780,155 @@ class LauncherControlServiceTest(unittest.TestCase):
             report["modules"][0]["capabilityWarnings"],
             ["Optional capability unavailable: lava.magma.core.run_conditions"],
         )
+
+    # ── Externally managed service (e.g. Jupyter) ──────────────────────────
+
+    def test_start_sync_external_service_marks_running_when_healthy(self) -> None:
+        """When an externally managed standalone service responds to health,
+        _start_sync should mark it running without any suite_api interaction."""
+        module = self.state._get_module("dummy")
+        # Remove uvicornTarget so _module_start_strategy returns "none";
+        # port 8123 != DEFAULT_SUITE_API_PORT so it becomes externally managed.
+        module["uvicornTarget"] = ""
+        module["startStrategy"] = "none"
+
+        with mock.patch.object(
+            self.state, "_probe_health", return_value=(True, 200, "healthy")
+        ):
+            self.state._start_sync("dummy")
+
+        payload = self.state.serialize_module("dummy")
+        self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["running"])
+        self.assertEqual(payload["healthStatus"], "healthy")
+
+    def test_start_sync_external_service_marks_error_when_not_reachable(self) -> None:
+        """When an externally managed service is not reachable, _start_sync
+        should raise RuntimeError and mark the module as error."""
+        module = self.state._get_module("dummy")
+        module["uvicornTarget"] = ""
+        module["startStrategy"] = "none"
+        module["deployment"] = {"composeProfile": "notebooks", "healthPath": "/api/status"}
+
+        with (
+            mock.patch.object(self.state, "_probe_health", return_value=(False, 0, None)),
+            self.assertRaises(RuntimeError) as exc_info,
+        ):
+            self.state._start_sync("dummy")
+
+        self.assertIn("notebooks", str(exc_info.exception))
+        payload = self.state.serialize_module("dummy")
+        self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["error"])
+        self.assertIn("port", payload["healthStatus"])
+
+    def test_start_sync_external_service_does_not_check_suite_api(self) -> None:
+        """Externally managed services must not gate on suite_api readiness."""
+        module = self.state._get_module("dummy")
+        module["uvicornTarget"] = ""
+        module["startStrategy"] = "none"
+        self.state._manage_suite_api = True
+        self.state._suite_api_status = launcher_server.SUITE_API_STATUS_PREFLIGHT_FAILED
+
+        with mock.patch.object(
+            self.state, "_probe_health", return_value=(True, 200, "ok")
+        ):
+            self.state._start_sync("dummy")
+
+        payload = self.state.serialize_module("dummy")
+        # Should be running despite suite_api being down
+        self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["running"])
+
+    def test_probe_health_uses_deployment_health_path_for_external_service(self) -> None:
+        """_probe_health should use deployment.healthPath for externally managed
+        services, not the monolith /api/<id>/health pattern."""
+        module = self.state._get_module("dummy")
+        module["uvicornTarget"] = ""
+        module["startStrategy"] = "none"
+        module["deployment"] = {"healthPath": "/api/status"}
+
+        captured_urls: list[str] = []
+
+        def fake_urlopen(url: str, timeout: float = 2.0) -> object:
+            captured_urls.append(url)
+            raise urllib.error.URLError("connection refused")
+
+        with mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            self.state._probe_health(module)
+
+        self.assertEqual(len(captured_urls), 1)
+        self.assertIn("/api/status", captured_urls[0])
+        self.assertNotIn(f"/api/{module['id']}/health", captured_urls[0])
+
+    def test_doctor_report_external_service_reachable_is_ok(self) -> None:
+        """doctor_report should report PREFLIGHT_OK for a reachable external service."""
+        module = self.state._get_module("dummy")
+        module["status"] = launcher_server.STATUS_INDEX["installed"]
+        module["uvicornTarget"] = ""
+        module["startStrategy"] = "none"
+
+        with (
+            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(
+                self.state, "_probe_health", return_value=(True, 200, "ok")
+            ),
+        ):
+            report = self.state.doctor_report()
+
+        self.assertEqual(report["modules"][0]["preflightStatus"], launcher_server.PREFLIGHT_OK)
+        self.assertEqual(report["fatalCount"], 0)
+        self.assertEqual(report["degradedCount"], 0)
+
+    def test_doctor_report_external_service_not_reachable_is_degraded(self) -> None:
+        """doctor_report should report PREFLIGHT_DEGRADED (not fatal) when an
+        external service is not running — it is optional and externally managed."""
+        module = self.state._get_module("dummy")
+        module["status"] = launcher_server.STATUS_INDEX["installed"]
+        module["uvicornTarget"] = ""
+        module["startStrategy"] = "none"
+        module["deployment"] = {"composeProfile": "notebooks", "healthPath": "/api/status"}
+
+        with (
+            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(self.state, "_probe_health", return_value=(False, 0, None)),
+        ):
+            report = self.state.doctor_report()
+
+        self.assertEqual(
+            report["modules"][0]["preflightStatus"], launcher_server.PREFLIGHT_DEGRADED
+        )
+        self.assertIn("notebooks", report["modules"][0]["preflightMessage"])
+        self.assertEqual(report["fatalCount"], 0)
+        self.assertEqual(report["degradedCount"], 1)
+
+    def test_health_poll_loop_recovers_external_service_from_error(self) -> None:
+        """The health poll loop should transition an external service from error
+        back to running when it becomes reachable again."""
+        module = self.state._get_module("dummy")
+        module["uvicornTarget"] = ""
+        module["startStrategy"] = "none"
+        module["status"] = launcher_server.STATUS_INDEX["error"]
+
+        call_count = 0
+
+        def probe_side_effect(m: dict) -> tuple[bool, int, str | None]:
+            nonlocal call_count
+            call_count += 1
+            if launcher_server._is_externally_managed_service(m):
+                return (True, 200, "recovered")
+            return (False, 0, None)
+
+        with (
+            mock.patch.object(self.state, "_suite_api_health_probe" if False else "_probe_health",
+                               side_effect=probe_side_effect),
+            mock.patch.object(self.state, "_shutdown") as mock_shutdown,
+        ):
+            # Simulate one poll tick: wait returns False (not shut down), then True
+            mock_shutdown.wait.side_effect = [False, True]
+            self.state._manage_suite_api = False
+            self.state._health_poll_loop()
+
+        payload = self.state.serialize_module("dummy")
+        self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["running"])
+        self.assertEqual(payload["healthStatus"], "recovered")
 
     def test_doctor_report_handles_akida_hosts_without_cached_host_field(self) -> None:
         self.state._settings["akidaHosts"] = [
