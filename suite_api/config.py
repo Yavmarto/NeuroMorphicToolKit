@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     neurobench_runner_url: str = "http://localhost:8003"       # profile: jobs
     neurochip_hw_worker_url: str = "http://localhost:8002"    # profile: hardware
     neurocnl_physics_worker_url: str = "http://localhost:8006" # profile: physics
+    jupyter_worker_url: str = "http://localhost:8008"          # profile: notebooks
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

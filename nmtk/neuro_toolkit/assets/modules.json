@@ -10,20 +10,33 @@
     "sourcePath": ".",
     "runPath": ".",
     "installStrategy": "pip",
-    "installExtras": ["training", "lava"],
+    "installExtras": [
+      "training",
+      "lava",
+      "rockpool",
+      "synsense",
+      "norse"
+    ],
     "startStrategy": "none",
     "uvicornTarget": "",
-    "localDeps": ["Neuro-Dream-Hand/"],
+    "localDeps": [
+      "Neuro-Dream-Hand/"
+    ],
     "hasFrontend": true,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
-    "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/neurocnl",
     "required": true,
     "deployment": {
-      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
       "healthPath": "/health",
-      "requiredPorts": [9000],
+      "requiredPorts": [
+        9000
+      ],
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurocnl:latest",
@@ -31,6 +44,9 @@
       "chartTemplateId": "nmtk-backend",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
+    },
+    "jupyterKernel": {
+      "displayName": "Python (NeuroStudio)"
     }
   },
   {
@@ -47,9 +63,14 @@
     "startStrategy": "none",
     "uvicornTarget": "",
     "showInLauncherNav": false,
-    "optionalImports": ["lava.magma.core.run_conditions"],
+    "optionalImports": [
+      "lava.magma.core.run_conditions"
+    ],
     "akidaRuntime": {
-      "supportedPlatforms": ["linux", "windows"],
+      "supportedPlatforms": [
+        "linux",
+        "windows"
+      ],
       "pythonRange": ">=3.10,<3.13",
       "requiredPackages": [
         "tensorflow==2.19.*",
@@ -96,15 +117,22 @@
     "hasFrontend": true,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
-    "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurochip",
     "required": false,
     "deployment": {
-      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
       "healthPath": "/health",
-      "requiredPorts": [9000],
+      "requiredPorts": [
+        9000
+      ],
       "requiredEnvironment": [],
-      "secretFields": ["NEUROCHIP_API_KEY"],
+      "secretFields": [
+        "NEUROCHIP_API_KEY"
+      ],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurochip:latest",
       "composeProfile": "core",
       "chartTemplateId": "nmtk-backend",
@@ -128,13 +156,18 @@
     "hasFrontend": true,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
-    "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurobench",
     "required": false,
     "deployment": {
-      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
       "healthPath": "/health",
-      "requiredPorts": [9000],
+      "requiredPorts": [
+        9000
+      ],
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurobench:latest",
@@ -142,6 +175,12 @@
       "chartTemplateId": "nmtk-backend",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
+    },
+    "installExtras": [
+      "executor"
+    ],
+    "jupyterKernel": {
+      "displayName": "Python (NeuroBench)"
     }
   },
   {
@@ -160,13 +199,18 @@
     "hasFrontend": false,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
-    "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurosense",
     "required": false,
     "deployment": {
-      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
       "healthPath": "/health",
-      "requiredPorts": [9000],
+      "requiredPorts": [
+        9000
+      ],
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurosense:latest",
@@ -192,13 +236,18 @@
     "hasFrontend": true,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
-    "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurohub",
     "required": false,
     "deployment": {
-      "supportedModes": ["standalone", "docker", "kubernetes"],
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
       "healthPath": "/health",
-      "requiredPorts": [9000],
+      "requiredPorts": [
+        9000
+      ],
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurohub:latest",
@@ -224,11 +273,12 @@
     "hasFrontend": false,
     "frontendStatus": "No",
     "requiresMuJoCo": true,
-    "version": "1.0.0",
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neuro-Dream-Hand",
     "required": false,
     "deployment": {
-      "supportedModes": ["standalone"],
+      "supportedModes": [
+        "standalone"
+      ],
       "healthPath": "",
       "requiredPorts": [],
       "requiredEnvironment": [],
@@ -260,9 +310,13 @@
     "remoteUrl": "",
     "required": false,
     "deployment": {
-      "supportedModes": ["docker"],
+      "supportedModes": [
+        "docker"
+      ],
       "healthPath": "/health",
-      "requiredPorts": [8012],
+      "requiredPorts": [
+        8012
+      ],
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "",
@@ -270,6 +324,43 @@
       "chartTemplateId": "",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
+    }
+  },
+  {
+    "id": "jupyter",
+    "name": "Notebooks",
+    "description": "Interactive Jupyter notebook editor",
+    "icon": "book",
+    "port": 8008,
+    "version": "1.0.0",
+    "installPath": "workers/jupyter_server/",
+    "sourcePath": ".",
+    "runPath": ".",
+    "installStrategy": "pip",
+    "startStrategy": "none",
+    "uvicornTarget": "",
+    "showInLauncherNav": true,
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
+    "requiresMuJoCo": false,
+    "remoteUrl": "",
+    "required": false,
+    "deployment": {
+      "supportedModes": [
+        "standalone",
+        "docker"
+      ],
+      "healthPath": "/api/status",
+      "requiredPorts": [
+        8008
+      ],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "",
+      "composeProfile": "notebooks",
+      "chartTemplateId": "",
+      "startupTimeoutSeconds": 60,
+      "readinessTimeoutSeconds": 60
     }
   }
 ]

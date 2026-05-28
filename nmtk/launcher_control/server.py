@@ -1691,13 +1691,19 @@ def _is_externally_managed_service(module: dict[str, Any]) -> bool:
     return port is not None and port != DEFAULT_SUITE_API_PORT
 
 
-def _external_service_health_url(module: dict[str, Any]) -> str:
-    """Build the health-probe URL for an externally managed service."""
+def _external_service_health_url(module: dict[str, Any], host: str = "127.0.0.1") -> str:
+    """Build the health-probe URL for an externally managed service.
+    
+    Args:
+        module: Module configuration dict.
+        host: Hostname or IP to probe. Defaults to 127.0.0.1 for local deployment;
+              should be set to the remote hostname when the service runs on a remote host.
+    """
     port = _effective_port(module)
     deployment = module.get("deployment") or {}
     raw_path = deployment.get("healthPath", "") if isinstance(deployment, dict) else ""
     health_path = str(raw_path).strip() or "/health"
-    return f"http://127.0.0.1:{port}{health_path}"
+    return f"http://{host}:{port}{health_path}"
 
 
 def _normalized_import_list(raw: Any) -> list[str]:
@@ -2109,6 +2115,7 @@ class LauncherControlState:
         remote_version_resolver: Callable[[dict[str, Any]], str | None] | None = None,
         *,
         manage_suite_api: bool = False,
+        external_probe_host: str | None = None,
     ) -> None:
         self._lock = threading.RLock()
         self._terminal_lock = threading.Lock()
@@ -2116,6 +2123,7 @@ class LauncherControlState:
             remote_version_resolver or _resolve_remote_module_version
         )
         self._manage_suite_api = manage_suite_api
+        self._external_probe_host = external_probe_host or "127.0.0.1"
         self._suite_api_status = (
             SUITE_API_STATUS_STARTING
             if manage_suite_api
@@ -5533,8 +5541,8 @@ class LauncherControlState:
 
         if _is_externally_managed_service(module):
             # Standalone service on its own port (e.g. Jupyter, lava_backend).
-            # Use the health path from the deployment manifest.
-            url = _external_service_health_url(module)
+            # Use the health path from the deployment manifest and external probe host.
+            url = _external_service_health_url(module, host=self._external_probe_host)
         elif _module_start_strategy(module) == "none":
             # Native feature module proxied through suite_api on the monolith port.
             # All mounted domain prefixes in suite_api are lowercase.
@@ -6579,9 +6587,9 @@ class LauncherControlServer(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(
-        self, server_address: tuple[str, int], manage_suite_api: bool = True
+        self, server_address: tuple[str, int], manage_suite_api: bool = True, external_probe_host: str | None = None
     ) -> None:
-        self.state = LauncherControlState(manage_suite_api=manage_suite_api)
+        self.state = LauncherControlState(manage_suite_api=manage_suite_api, external_probe_host=external_probe_host)
         super().__init__(server_address, LauncherControlHandler)
 
     def server_close(self) -> None:
@@ -6590,9 +6598,9 @@ class LauncherControlServer(ThreadingHTTPServer):
 
 
 def create_server(
-    host: str, port: int, manage_suite_api: bool = True
+    host: str, port: int, manage_suite_api: bool = True, external_probe_host: str | None = None
 ) -> LauncherControlServer:
-    return LauncherControlServer((host, port), manage_suite_api=manage_suite_api)
+    return LauncherControlServer((host, port), manage_suite_api=manage_suite_api, external_probe_host=external_probe_host)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -6621,6 +6629,11 @@ def main(argv: list[str] | None = None) -> int:
         dest="manage_suite_api",
         help="Do not manage the suite_api lifecycle",
     )
+    parser.add_argument(
+        "--external-probe-host",
+        default=None,
+        help="Hostname or IP to use when probing externally managed services (e.g. Jupyter on a remote host). Defaults to 127.0.0.1.",
+    )
     args = parser.parse_args(argv)
     os.environ.setdefault("NMTK_UVICORN_HOST", str(args.host).strip() or "0.0.0.0")
 
@@ -6636,7 +6649,7 @@ def main(argv: list[str] | None = None) -> int:
             print(_render_doctor_report(report))
         return 1 if report["fatalCount"] else 0
 
-    server = create_server(args.host, args.port, manage_suite_api=args.manage_suite_api)
+    server = create_server(args.host, args.port, manage_suite_api=args.manage_suite_api, external_probe_host=args.external_probe_host)
     print(f"Launcher control service listening on http://{args.host}:{args.port}")
     try:
         server.serve_forever()

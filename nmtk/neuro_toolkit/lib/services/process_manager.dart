@@ -610,6 +610,16 @@ class ProcessManager {
       debugPrint('[${module.id}] pip install SUCCESS');
       onProgress?.call(1.0);
 
+      if (module.jupyterKernel != null) {
+        final pythonPath = _pythonExecutableForEnv(venvPath);
+        await _registerJupyterKernel(
+          module: module,
+          installDir: installDir,
+          pipPath: pipPath,
+          pythonPath: pythonPath,
+        );
+      }
+
       final updatedModule = module.copyWith(
         status: ModuleStatus.installed,
         installProgress: 1.0,
@@ -624,6 +634,60 @@ class ProcessManager {
       );
       _updateModuleStatus(updatedModule);
       rethrow;
+    }
+  }
+
+  /// Registers the module venv as a named Jupyter kernel visible to any
+  /// Jupyter server running as the same OS user.  Both steps are non-fatal:
+  /// if they fail the module is still marked as installed and the kernel can
+  /// be re-registered on the next install attempt.
+  Future<void> _registerJupyterKernel({
+    required Module module,
+    required String installDir,
+    required String pipPath,
+    required String pythonPath,
+  }) async {
+    final kernelConfig = module.jupyterKernel!;
+    debugPrint('[${module.id}] Installing ipykernel in module venv…');
+    try {
+      final ipykernelResult = await _processRunner.run(
+        pipPath,
+        ['install', 'ipykernel'],
+        workingDirectory: installDir,
+      );
+      if (ipykernelResult.exitCode != 0) {
+        debugPrint(
+          '[${module.id}] ipykernel install failed (non-fatal): ${ipykernelResult.stderr}',
+        );
+        return;
+      }
+      final registerResult = await _processRunner.run(
+        pythonPath,
+        [
+          '-m',
+          'ipykernel',
+          'install',
+          '--user',
+          '--name',
+          module.id.toLowerCase(),
+          '--display-name',
+          kernelConfig.displayName,
+        ],
+        workingDirectory: installDir,
+      );
+      if (registerResult.exitCode != 0) {
+        debugPrint(
+          '[${module.id}] Jupyter kernel registration failed (non-fatal): ${registerResult.stderr}',
+        );
+      } else {
+        debugPrint(
+          '[${module.id}] Jupyter kernel registered: "${kernelConfig.displayName}"',
+        );
+      }
+    } catch (e) {
+      debugPrint(
+        '[${module.id}] Jupyter kernel registration error (non-fatal): $e',
+      );
     }
   }
 

@@ -70,6 +70,9 @@ app.include_router(neurosense_router)
 from suite_api.domains.neurohub.router import router as neurohub_router
 app.include_router(neurohub_router)
 
+from suite_api.domains.jupyter.router import router as jupyter_router
+app.include_router(jupyter_router)
+
 
 # ── Static Frontend Mounting ────────────────────────────────────────────────
 # Each module frontend is mounted at /{module_id}/.

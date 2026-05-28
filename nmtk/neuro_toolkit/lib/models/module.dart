@@ -253,6 +253,20 @@ class LauncherRuntimeConfig {
       };
 }
 
+class JupyterKernelConfig {
+  const JupyterKernelConfig({required this.displayName});
+
+  final String displayName;
+
+  factory JupyterKernelConfig.fromJson(Map<String, dynamic> json) {
+    return JupyterKernelConfig(
+      displayName: json['displayName'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {'displayName': displayName};
+}
+
 class DeploymentCapability {
   const DeploymentCapability({
     this.supportedModes = const <String>[
@@ -361,6 +375,7 @@ class Module {
   final LauncherRuntimeConfig? launcherRuntime;
   final DeploymentCapability? deployment;
   final AkidaRuntimeState? akidaRuntimeState;
+  final JupyterKernelConfig? jupyterKernel;
   String preflightStatus;
   String? preflightMessage;
   List<String> capabilityWarnings;
@@ -401,6 +416,7 @@ class Module {
     this.launcherRuntime,
     this.deployment,
     this.akidaRuntimeState,
+    this.jupyterKernel,
     this.preflightStatus = 'ok',
     this.preflightMessage,
     this.capabilityWarnings = const [],
@@ -467,6 +483,11 @@ class Module {
               json['akidaRuntimeState'] as Map<String, dynamic>,
             )
           : null,
+      jupyterKernel: json['jupyterKernel'] is Map<String, dynamic>
+          ? JupyterKernelConfig.fromJson(
+              json['jupyterKernel'] as Map<String, dynamic>,
+            )
+          : null,
       preflightStatus: json['preflightStatus'] as String? ?? 'ok',
       preflightMessage: json['preflightMessage'] as String?,
       capabilityWarnings:
@@ -513,6 +534,7 @@ class Module {
     Object? launcherRuntime = const Object(),
     Object? deployment = const Object(),
     Object? akidaRuntimeState = const Object(),
+    Object? jupyterKernel = const Object(),
     String? preflightStatus,
     Object? preflightMessage = const Object(),
     List<String>? capabilityWarnings,
@@ -560,6 +582,9 @@ class Module {
       akidaRuntimeState: akidaRuntimeState is AkidaRuntimeState?
           ? akidaRuntimeState
           : this.akidaRuntimeState,
+      jupyterKernel: jupyterKernel is JupyterKernelConfig?
+          ? jupyterKernel
+          : this.jupyterKernel,
       preflightStatus: preflightStatus ?? this.preflightStatus,
       preflightMessage: preflightMessage is String?
           ? preflightMessage
@@ -621,6 +646,7 @@ class Module {
         'launcherRuntime': launcherRuntime?.toJson(),
         'deployment': deployment?.toJson(),
         'akidaRuntimeState': akidaRuntimeState?.toJson(),
+        'jupyterKernel': jupyterKernel?.toJson(),
         'preflightStatus': preflightStatus,
         'preflightMessage': preflightMessage,
         'capabilityWarnings': capabilityWarnings,

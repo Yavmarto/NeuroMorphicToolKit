@@ -85,6 +85,12 @@ GoRouter createGoRouter() {
             builder: (context, state) =>
                 const ToolViewScreen(initialModuleId: 'Neurohub'),
           ),
+          GoRoute(
+            path: '/module/jupyter',
+            name: 'module-jupyter',
+            builder: (context, state) =>
+                const ToolViewScreen(initialModuleId: 'jupyter'),
+          ),
           // Hardware deploy routes (/deploy/akida, /deploy/pynq,
           // /deploy/teensy) were removed when the deploy UIs were relocated
           // to the Neurochip module frontend in ADR-claude/0007. Reach them

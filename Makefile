@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -39,6 +39,9 @@ help:
 	@echo "  make docker-ex-m REMOTE_HOST=user@ip - Deploy to remote and run frontend on macOS"
 	@echo "  make docker-ex-a REMOTE_HOST=user@ip - Deploy to remote and run frontend on Android"
 	@echo "  make docker-ex-i REMOTE_HOST=user@ip - Deploy to remote and run frontend on iOS"
+	@echo "  make docker-ex-all-m REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote and run frontend on macOS"
+	@echo "  make docker-ex-all-a REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote and run frontend on Android"
+	@echo "  make docker-ex-all-i REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote and run frontend on iOS"
 	@echo "  make docker-ex-down REMOTE_HOST=user@ip - Stop and remove remote Docker containers"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
@@ -143,6 +146,19 @@ docker-ex-a: docker-ex
 	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
 docker-ex-i: docker-ex
+	@$(MAKE) check-devices
+	@echo "==> Using iOS device: $(IOS_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-all-m: docker-ex-all
+	@./scripts/run_dev.sh --flutter-device macos --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-all-a: docker-ex-all
+	@$(MAKE) check-devices
+	@echo "==> Using Android device: $(ANDROID_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-all-i: docker-ex-all
 	@$(MAKE) check-devices
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"

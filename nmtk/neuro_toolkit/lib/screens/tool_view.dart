@@ -41,6 +41,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   final Map<String, ModuleLoadFailure> _moduleLoadFailures =
       <String, ModuleLoadFailure>{};
 
+  // Tracks each module's status from the previous build so we can detect
+  // non-running → running transitions and auto-clear only *stale* failures
+  // (those recorded while the module was down). Failures that occurred while
+  // the module was already running are kept until the user clicks Retry.
+  final Map<String, ModuleStatus> _prevModuleStatuses =
+      <String, ModuleStatus>{};
+
   String _activeModuleId = '';
   bool _workspaceInitialized = false;
 
@@ -101,8 +108,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       );
     }
 
-    // Legacy fallback for standalone modules
-    final path = healthCheck ? '/health' : (module.hasFrontend ? '' : '/docs');
+    // Standalone modules on non-monolith ports.
+    // Use deployment.healthPath when available so modules like Jupyter (which
+    // expose /api/health rather than /health) are polled correctly.
+    final String healthPath =
+        module.deployment?.healthPath.isNotEmpty == true
+            ? module.deployment!.healthPath
+            : '/health';
+    final path = healthCheck ? healthPath : (module.hasFrontend ? '' : '/docs');
     return Uri(
       scheme: _serviceScheme(),
       host: _serviceHost(),
@@ -628,15 +641,43 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         key: const ValueKey('WorkspaceStack'),
         index: clampedIndex,
         children: eligibleModules.map((module) {
-          // When a module's backend recovers (status transitions back to
-          // running/degraded), auto-clear any stale WebView load failure so
-          // the user doesn't have to click Retry manually. Also evict the
-          // stale controller so the page reloads fresh from the recovered URL.
-          if (_moduleLoadFailures.containsKey(module.id) &&
-              (module.status == ModuleStatus.running ||
-                  module.status == ModuleStatus.degraded)) {
-            _moduleLoadFailures.remove(module.id);
-            _controllers.remove(module.id);
+          // Auto-clear stale WebView failures when a module *recovers* — i.e.
+          // transitions from a non-ready state back to running/degraded.  We
+          // deliberately do NOT clear failures that were recorded while the
+          // module was already running (those are fresh errors, not stale ones
+          // from a prior crash), because clearing them would restart the WebView
+          // and cause an infinite flicker loop.
+          //
+          // Strategy: compare current status against the status we saw in the
+          // previous build.  A non-ready → ready transition signals recovery.
+          // The failure object itself is captured so the postFrameCallback only
+          // removes it if a newer failure has not already replaced it.
+          final prevStatus = _prevModuleStatuses[module.id];
+          final currentStatus = module.status;
+          _prevModuleStatuses[module.id] = currentStatus;
+
+          final isNowReady = currentStatus == ModuleStatus.running ||
+              currentStatus == ModuleStatus.degraded;
+          final wasPreviouslyReady = prevStatus == ModuleStatus.running ||
+              prevStatus == ModuleStatus.degraded;
+
+          if (isNowReady &&
+              !wasPreviouslyReady &&
+              prevStatus != null &&
+              _moduleLoadFailures.containsKey(module.id)) {
+            final staleFailure = _moduleLoadFailures[module.id];
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              // Guard: only clear the exact failure that triggered this recovery.
+              // If the user navigated away and a newer failure was recorded,
+              // leave it in place.
+              if (_moduleLoadFailures[module.id] == staleFailure) {
+                setState(() {
+                  _moduleLoadFailures.remove(module.id);
+                  _controllers.remove(module.id);
+                });
+              }
+            });
           }
 
           final session = sessionsByModuleId[module.id];

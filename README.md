@@ -19,13 +19,38 @@ Neuromorphic computing is inherently multidisciplinary, yet most of its tooling 
 * **ML engineers and software practitioners** entering the neuromorphic space who need a structured environment to prototype, benchmark, and validate SNN designs.
 * **Applied researchers and teams** working with real neuromorphic hardware — where one team member (or an IT/lab admin) sets up and maintains the hardware backend (e.g. an Akida board, a PYNQ-Z2, or a Loihi node), and others connect to it remotely to author, simulate, and benchmark without touching the hardware directly.
 
-**The Solution:** The NeuroMorphicToolKit app is a downloadable desktop executable that serves as a single entry point to the entire suite. Users download NMTK, configure a backend connection (local or remote), and access all modules without juggling separate repositories, Python environments, or terminal commands.
+**The Solution:** The NeuroMorphicToolKit app is a downloadable desktop executable that serves as a single entry point to the entire suite. Download NMTK, install the backend with one click (or connect to an existing server), and everything works — no juggling separate repositories, Python environments, or terminal commands.
 
 ---
 
-## 🧩 The Submodule Ecosystem (The Apps)
+## 🚀 Getting Started
 
-NMTK orchestrates the following specialized modules, which can be dynamically downloaded into the main toolkit:
+### 1. Download the app
+
+Grab the latest NMTK desktop app from the [Releases page](https://github.com/Completed-Spoon-6/NeuroMorphicToolKit/releases) for macOS, Windows, or Linux. A mobile companion app is available on the App Store and Google Play.
+
+### 2. Install the backend — or connect to one
+
+On first launch the app walks you through a one-time backend setup. Choose whichever option fits your situation:
+
+| Option | When to use |
+|--------|-------------|
+| **Local (standalone)** | Running everything on your own machine. The app installs and starts the backend for you. |
+| **Docker** | Prefer containerised services, or want a clean and reproducible environment on your machine or a lab server. |
+| **Kubernetes** | Institutional or multi-user deployments where the backend runs in a shared cluster. |
+| **Connect to existing** | A lab admin or teammate already set up a backend. Enter the server URL and you are ready to go. |
+
+### 3. Start working
+
+Once the backend is running the full suite is available in the sidebar — no further setup required.
+
+> **Note on hardware**: NMTK does not install or configure physical neuromorphic hardware (Akida boards, PYNQ-Z2 FPGAs, Loihi nodes, etc.). Hardware setup is the responsibility of the person or team who owns the hardware. Once the hardware and its SDK are operational on the server, NMTK's Neurochip backend can communicate with it and surface diagnostics in the UI.
+
+---
+
+## 🧩 The Suite
+
+NMTK ships with the following modules. All are started automatically when the backend is running.
 
 1. **[neurocnl / NeuroStudio](./neurocnl)**
    * *Purpose:* Translates plain-English specifications into verified Spiking Neural Networks (SNNs) and hosts the merged visual canvas workflow under the NeuroStudio launcher surface.
@@ -45,6 +70,9 @@ NMTK orchestrates the following specialized modules, which can be dynamically do
 6. **[Neuro-Dream-Hand](./Neuro-Dream-Hand)**
    * *Purpose:* Applied hardware robotics and edge integration (e.g., controlling a robotic hand via SNNs and Teensy microcontrollers).
    * *Best for:* Applied robotics, edge AI, and end-to-end physical demonstrations.
+7. **Notebooks** *(Jupyter)*
+   * *Purpose:* A full JupyterLab environment embedded in the app, backed by the suite's Jupyter Server worker. Pre-configured kernels for SNNTorch, Lava, and PyTorch are registered automatically when the relevant modules are installed.
+   * *Best for:* Exploratory analysis, writing reproducible experiments, and interactive prototyping without leaving the app.
 
 ### 📊 Current Module Status (May 2026)
 
@@ -56,45 +84,31 @@ NMTK orchestrates the following specialized modules, which can be dynamically do
 | **Neurochip**              |  60%  |   ✅   |   ❌¹   |  ✅  |   ✅   | ✅ |
 | **Neurobench**             |  95%  |   ✅   |    ✅    |  ✅  |   ✅   | ✅ |
 | **Neuro-Dream-Hand**       |  95%  |   ✅   |   N/A   |  ✅  |  N/A  | ✅ |
+| **Notebooks (Jupyter)**    |  90%  |   ✅   |    ✅    |  ✅  |   ✅   | N/A |
 | **NMTK Launcher**          |  95%  |   ✅   |    ✅    |  ✅  |  N/A  | ⚠️ |
 
 > ¹ Neurochip has no standalone frontend. CNL Studio (NeuroStudio) owns the deployment and diagnostics UI via the [ADR 0021 handoff contract](./docs/ADR-claude/0021-studio-neurochip-handoff-contract.md). The Neurosim visual canvas is embedded inside NeuroStudio at the `/canvas` route — it is not a separate launcher card. NeuroDash has been deferred and is not in the active `modules.json` manifest.
 
 ---
 
-## 🚀 Architecture & Deployment Strategy
+## 🏗 Architecture
 
-NMTK uses a **"Downloadable Launcher + Backend-as-a-Service"** model. The desktop app and its mobile companion are thin clients that connect to a backend suite which can be hosted anywhere — on the same machine, on a lab server, or on a remote cloud instance.
+NMTK uses a **"Downloadable App + Backend-as-a-Service"** model. The desktop and mobile apps are thin clients that connect to a backend suite which can run anywhere — on the same machine, on a lab server, or in a cloud cluster.
 
-### 1. The Desktop App & Mobile Companion
+* **The app** is a native executable. No build tools, Python environment, or SDK required to install it.
+* **The backend** is a set of Python/FastAPI services (containerised with Docker) that the app installs and manages, or that a lab admin deploys centrally for a team.
+* **All module UIs** are surfaced inside the NMTK app shell. Users navigate between modules from a single sidebar — there is nothing else to open or install separately.
 
-* **Download and run.** The NMTK desktop app is a native executable for macOS, Windows, and Linux — no build tools, no Python environment, no SDK required to install it.
-* **Connect to a backend.** On first launch, the app walks the user through connecting to a backend suite. This can be a local instance deployed from within the app, or a remote server that a lab admin or team member has already set up.
-* **Module UI is embedded.** All module interfaces (NeuroStudio, NeuroBench, Neurohub, etc.) are surfaced inside the NMTK app shell. Users navigate between modules from a single sidebar.
-* **Mobile companion.** The NMTK mobile app offers the same core functionality as the desktop app — it connects to the same backend and can be used as a remote dashboard or on-the-go interface.
+### Typical team workflow
 
-### 2. Backend Deployment
-
-The backend suite is a set of Python/FastAPI services containerised with Docker. It can be deployed in multiple ways:
-
-* **From within the NMTK app** (guided setup): the app provides a backend deployment wizard that orchestrates Docker on the current machine or targets a remote host. This is the recommended path for individual researchers.
-* **By a lab admin or IT operator** (server deployment): deploy the backend once to a shared server using `docker compose up`. Team members then point their NMTK desktop or mobile app at that server URL and work collaboratively without any local setup.
-* **On Kubernetes** for institutional or multi-user deployments.
-
-> **Note on hardware**: NMTK does not install or configure physical neuromorphic hardware (Akida boards, PYNQ-Z2 FPGAs, Loihi nodes, etc.). Hardware setup is the responsibility of the person or team who owns the hardware. Once the hardware and its SDK are operational on the server, NMTK's Neurochip backend can communicate with it and surface diagnostics in the UI.
-
-### 3. Typical Team Workflow
-
-1. **Lab admin** deploys the NMTK backend suite to a shared server (`docker compose up`). The server has an Akida board connected and the MetaTF SDK installed.
-2. **Researcher A** downloads the NMTK desktop app, points it at the lab server URL, and opens NeuroStudio. They write a CNL specification, simulate it, and export a validated NIR artifact.
+1. **Lab admin** deploys the NMTK backend to a shared server (`docker compose up`). The server has an Akida board connected and the MetaTF SDK installed.
+2. **Researcher A** downloads the NMTK desktop app, enters the lab server URL, and opens NeuroStudio. They write a CNL specification, simulate it, and export a validated NIR artifact.
 3. **Researcher B** on a different machine (or on mobile) connects to the same server, opens NeuroBench, loads Researcher A's artifact, and runs a standardized benchmark against it.
-4. Neither researcher needed to touch a terminal, configure a Python environment, or know anything about the underlying Docker infrastructure.
+4. Neither researcher needed to touch a terminal, configure a Python environment, or know anything about the underlying infrastructure.
 
 ---
 
 ## 📚 Documentation
-
-For users and developers:
 
 - **[API Reference Index](./docs/api/README.md)** — Suite-level API entrypoint with service ports, live OpenAPI links, auth notes, and module API guides.
 - **[User Guide: Installation](./docs/user/installation.md)** — Getting started with NMTK.
@@ -104,17 +118,7 @@ For users and developers:
 
 ---
 
-## 🛠 Getting Started
-
-### End Users
-
-Download the latest NMTK desktop app from the [Releases page](https://github.com/Completed-Spoon-6/NeuroMorphicToolKit/releases). Open it and follow the guided backend setup to deploy the suite locally or connect to an existing server.
-
-The mobile companion app is available on the App Store and Google Play.
-
----
-
-### NMTK Contributors (Source Build)
+## 🛠 NMTK Contributors (Source Build)
 
 > These instructions are for developers contributing to NMTK itself — not for end users.
 
