@@ -17,6 +17,8 @@ services:
       # Remote Lava timeout — must exceed Lava's cold-start compilation (30–90 s).
       # Increase this if the warm-up isn't active or the network is unusually large.
       - NEUROCNL_LAVA_REMOTE_TIMEOUT_S=${NEUROCNL_LAVA_REMOTE_TIMEOUT_S:-120}
+      # Jupyter worker — only active when notebooks profile is running
+      - JUPYTER_WORKER_URL=http://jupyter-server:8008
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/suite/health')"]
       start_period: 90s
@@ -63,10 +65,12 @@ services:
       - "${NEUROBENCH_PORT:-8003}:8003"
     environment:
       - PYTHONUNBUFFERED=1
+      - NEUROCNL_DATA_DIR=/tmp
     volumes:
       - .:/repo:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      start_period: 90s
       interval: 10s
       timeout: 5s
       retries: 5
@@ -222,6 +226,28 @@ services:
     profiles:
       - monitoring
 
+  jupyter-server:
+    build:
+      context: .
+      dockerfile: workers/jupyter_server/Dockerfile
+    ports:
+      - "${JUPYTER_PORT:-8008}:8008"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - jupyter_notebooks:/root
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/api/status')"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend-net
+    profiles:
+      - notebooks
+
 networks:
   frontend-net:
     driver: bridge
@@ -233,3 +259,4 @@ networks:
 volumes:
   prometheus_data:
   grafana_data:
+  jupyter_notebooks:
