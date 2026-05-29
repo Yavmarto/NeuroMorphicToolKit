@@ -66,4 +66,5 @@ If `semble` is not on `$PATH`, use `uvx --from "semble[mcp]" semble` in its plac
 3. Inspect full files only when the returned chunk is not enough context.
 4. Optionally use `semble find-related` with a promising result's `file_path` and `line` to discover related implementations.
 5. Use grep only when you need exhaustive literal matches or quick confirmation of an exact string.
-6. **Update Open Brain** with any new durable knowledge or architectural changes upon task completion.
+6. **Apply autofixers and run tests** for the language you are working in (e.g., `ruff check --fix .` and `ruff format .` for Python, `dart fix --apply` and `dart format .` for Dart) to ensure the codebase remains green before finishing a task.
+7. **Update Open Brain** with any new durable knowledge or architectural changes upon task completion.

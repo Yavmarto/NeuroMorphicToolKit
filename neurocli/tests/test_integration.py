@@ -38,8 +38,7 @@ def test_status_returns_without_error() -> None:
     assert result.exit_code == 0
 
 
-def test_new_all_five_combos_json(tmp_path: "Path") -> None:  # type: ignore[name-defined]  # noqa: F821
-    from pathlib import Path
+def test_new_all_five_combos_json(tmp_path: Path) -> None:  # type: ignore[name-defined]  # noqa: F821
 
     combos = [
         ("nir", "snntorch"),

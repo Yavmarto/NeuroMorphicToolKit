@@ -40,9 +40,8 @@ def test_manifest_returns_module_entries() -> None:
 
 def test_manifest_missing_raises(tmp_path: Path) -> None:
     # tmp_path has no NMTK_ROOT and no modules.json ancestor
-    with patch.dict("os.environ", {"NMTK_ROOT": str(tmp_path)}, clear=False):
-        with pytest.raises(ManifestNotFoundError):
-            load_manifest(tmp_path)
+    with patch.dict("os.environ", {"NMTK_ROOT": str(tmp_path)}, clear=False), pytest.raises(ManifestNotFoundError):
+        load_manifest(tmp_path)
 
 
 def test_find_module_returns_entry() -> None:

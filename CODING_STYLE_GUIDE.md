@@ -81,7 +81,7 @@ Suite-wide status signals (pipeline states, health badges, run buttons, toasts) 
 
 ## Validation defaults
 
-- Run the owning module's local checks from its own config first.
+- Run the owning module's local checks and apply autofixers (e.g., `ruff check --fix .` and `ruff format .` for Python, `dart fix --apply` and `dart format .` for Dart) from its own config first before finalizing any code.
 - Also run `python3 -m pytest tests/integration/test_cross_module.py` and `python3 -m pytest tests/integration/test_teensy_e2e.py` when a suite-visible contract or integration boundary changes.
 
 ## Launcher and runtime integrity

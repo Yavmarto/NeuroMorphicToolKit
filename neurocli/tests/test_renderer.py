@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
@@ -46,12 +45,8 @@ def test_renderer_jinja_substitution(tmp_path: Path) -> None:
 def test_renderer_pyproject_parseable(tmp_path: Path) -> None:
     render_template("nir_snntorch", _VARS, tmp_path)
     content = (tmp_path / "pyproject.toml").read_text()
-    if sys.version_info >= (3, 11):
-        import tomllib
-        tomllib.loads(content)
-    else:
-        # tomllib available as tomli on older pythons — just check it's non-empty
-        assert len(content) > 10
+    import tomllib
+    tomllib.loads(content)
 
 
 def test_renderer_unknown_bundle_raises(tmp_path: Path) -> None:

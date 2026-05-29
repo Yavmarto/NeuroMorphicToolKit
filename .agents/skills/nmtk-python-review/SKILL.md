@@ -136,7 +136,7 @@ Whenever you generate or review Python code, you must:
 
 1. **Verify module context** — read the owning module's `AGENTS.md` and
    `pyproject.toml` before editing.
-2. **Run the owning module's checks** — `ruff check .`, `mypy .`, and
+2. **Run the owning module's checks and autofixes** — first run `ruff check --fix .` and `ruff format .`, then run `mypy .` and
    `pytest` from the module directory.
 3. **Cross-module gate** — if the change touches a contract, manifest, or
    public route, run:

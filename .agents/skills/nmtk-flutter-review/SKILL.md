@@ -83,6 +83,8 @@ When the user types these commands, execute the exact behavior:
 10. **No nmtk_ui_core State Dependencies:** `nmtk_ui_core` widgets MUST remain
     state-management-agnostic. Do NOT import `provider`, `flutter_riverpod`,
     or module-specific app code inside `nmtk_ui_core/`.
+11. **One Widget Per File:** NEVER define more than one widget in a single Dart
+    file. Each file MUST contain exactly one widget class (the only exception is a `StatefulWidget` and its corresponding `State` class, which must live together).
 
 ### AI Slop Tells (P1 — Major)
 
@@ -106,7 +108,7 @@ Score each dimension 0–4. A score of 0 or 1 is blocking.
 | Dimension | 4 (Excellent) | 3 (Good) | 2 (Acceptable) | 1 (Poor) | 0 (Critical) |
 |-----------|-------------|----------|----------------|----------|--------------|
 | **Design System Compliance** | 100% token usage; zero raw radii/colours; correct shell mode | One minor inline colour (non-status) | One non-token radius | Wrong shell mode | Hard-coded status colour or banned radius |
-| **Widget Architecture** | Pure `build()`; logic in Notifiers/Providers; <60 line widgets | One minor logic leak into build() | Business logic in build(); widget >100 lines | API call inside build() | StatefulWidget with massive build and no decomposition |
+| **Widget Architecture** | Pure `build()`; logic in Notifiers/Providers; <60 line widgets; one widget per file | One minor logic leak into build() | Business logic in build(); widget >100 lines; multiple widgets in file | API call inside build() | StatefulWidget with massive build and no decomposition |
 | **State Management** | Riverpod `StateNotifier`/`AsyncNotifier` with `select()`; no setState | Minor `setState` in leaf widget | Mixed Provider + Riverpod without clear boundary | Global mutable state | `setState` driving cross-widget communication |
 | **Performance** | `const` everywhere; `select()` used; no unnecessary rebuilds | One missed `const` | Missing `select()` causing parent rebuilds | `ListView` without `itemBuilder` optimisation | Blocking main thread with sync computation |
 | **Error Handling** | Every async path has typed error state; UI shows error widgets | One missing empty state | Generic `ErrorWidget` for all failures | Empty catch block | Silent failure with no UI feedback |
@@ -161,7 +163,7 @@ Whenever you generate or review Dart code, you must:
 
 1. **Verify module context** — read the owning module's `AGENTS.md` and
    `analysis_options.yaml` before editing.
-2. **Run static analysis** — `flutter analyze` from the module directory.
+2. **Run static analysis and autofixes** — first run `dart fix --apply` and `dart format .`, then run `flutter analyze` from the module directory.
 3. **Run widget tests** — `flutter test` from the module directory.
 4. **Design-system gate** — manually inspect every new/modified widget for:
    - Correct `NmtkShellMode`

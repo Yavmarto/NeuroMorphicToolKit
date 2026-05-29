@@ -1177,7 +1177,7 @@ def _runtime_request_error_kind(exc: Exception) -> str:
 
 def _describe_akida_preflight(verification: dict[str, Any]) -> str:
     sdk_status = str(verification.get("sdk_status") or "").strip().lower()
-    sdk_available = bool(verification.get("sdk_available"))
+    bool(verification.get("sdk_available"))
     sdk_issue_detail = str(verification.get("sdk_issue_detail") or "").strip()
     raw_sdk_issues = verification.get("sdk_issues", [])
     if not isinstance(raw_sdk_issues, list):

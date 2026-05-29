@@ -3,12 +3,9 @@
 from __future__ import annotations
 
 import json
-import subprocess
-from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from neurocli.cli import app
@@ -115,7 +112,7 @@ def test_run_invokes_uvicorn() -> None:
     )
     with patch("neurocli.lifecycle.load_manifest", return_value=[fake_entry]):
         with patch("neurocli.lifecycle.subprocess.run") as mock_run:
-            result = runner.invoke(app, ["run", "test_svc"])
+            runner.invoke(app, ["run", "test_svc"])
 
     mock_run.assert_called_once()
     cmd = mock_run.call_args[0][0]

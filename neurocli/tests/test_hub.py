@@ -7,7 +7,6 @@ import stat
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from neurocli.cli import app

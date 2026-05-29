@@ -1,10 +1,50 @@
-INFO:     Started server process [32594]
+INFO:     Started server process [88090]
 INFO:     Waiting for application startup.
-[2m2026-05-14T18:11:24.191931Z[0m [[32m[1minfo     [0m] [1mneurosim_package_resolved     [0m [36mpath[0m=[35m/Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/__init__.py[0m
-[2m2026-05-14T18:11:24.192577Z[0m [[33m[1mwarning  [0m] [1mcors_open_to_all_origins      [0m [36mmessage[0m=[35m'CORS is open to all origins. Set CORS_ALLOWED_ORIGINS for production deployments.'[0m
-[2m2026-05-14T18:11:24.192770Z[0m [[33m[1mwarning  [0m] [1mauth_disabled                 [0m [36mmessage[0m=[35m'API key authentication is disabled. Set AUTH_ENABLED=true for production deployments.'[0m
+[2m2026-05-29T16:39:42.231748Z[0m [[32m[1minfo     [0m] [1mneurosim_package_resolved     [0m [36mpath[0m=[35m/Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/__init__.py[0m
+[2m2026-05-29T16:39:42.232255Z[0m [[33m[1mwarning  [0m] [1mcors_open_to_all_origins      [0m [36mmessage[0m=[35m'CORS is open to all origins. Set CORS_ALLOWED_ORIGINS for production deployments.'[0m
+[2m2026-05-29T16:39:42.232337Z[0m [[33m[1mwarning  [0m] [1mauth_disabled                 [0m [36mmessage[0m=[35m'API key authentication is disabled. Set AUTH_ENABLED=true for production deployments.'[0m
+executing <function connect.<locals>.connector at 0x168691940>
+operation <function connect.<locals>.connector at 0x168691940> completed
+executing functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a14400>, '\n                CREATE TABLE IF NOT EXISTS jobs (\n                    job_id TEXT PRIMARY KEY,\n                    status TEXT NOT NULL,\n                    result TEXT,\n                    error TEXT,\n                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n                )\n                ', [])
+operation functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a14400>, '\n                CREATE TABLE IF NOT EXISTS jobs (\n                    job_id TEXT PRIMARY KEY,\n                    status TEXT NOT NULL,\n                    result TEXT,\n                    error TEXT,\n                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n                )\n                ', []) completed
+executing functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a14400>, 'ALTER TABLE jobs ADD COLUMN request_id TEXT', [])
+returning exception duplicate column name: request_id
+executing functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a14400>, 'CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at)', [])
+operation functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a14400>, 'CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at)', []) completed
+executing functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a14400>, 'CREATE INDEX IF NOT EXISTS idx_jobs_updated_at ON jobs(updated_at)', [])
+operation functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a14400>, 'CREATE INDEX IF NOT EXISTS idx_jobs_updated_at ON jobs(updated_at)', []) completed
+executing functools.partial(<built-in method commit of sqlite3.Connection object at 0x168a14400>)
+operation functools.partial(<built-in method commit of sqlite3.Connection object at 0x168a14400>) completed
+executing functools.partial(<built-in method close of sqlite3.Connection object at 0x168a14400>)
+operation functools.partial(<built-in method close of sqlite3.Connection object at 0x168a14400>) completed
+executing <function Connection.stop.<locals>.close_and_stop at 0x106277ec0>
+operation <function Connection.stop.<locals>.close_and_stop at 0x106277ec0> completed
+executing <function connect.<locals>.connector at 0x168913380>
+operation <function connect.<locals>.connector at 0x168913380> completed
+executing functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a147c0>, 'UPDATE jobs SET status = ?, error = ?, updated_at = CURRENT_TIMESTAMP WHERE status = ?', (<JobStatus.failed: 'failed'>, 'server_restart: job was running when server shut down', <JobStatus.running: 'running'>))
+operation functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a147c0>, 'UPDATE jobs SET status = ?, error = ?, updated_at = CURRENT_TIMESTAMP WHERE status = ?', (<JobStatus.failed: 'failed'>, 'server_restart: job was running when server shut down', <JobStatus.running: 'running'>)) completed
+executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x16899fb40>)
+operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x16899fb40>) completed
+executing functools.partial(<built-in method commit of sqlite3.Connection object at 0x168a147c0>)
+operation functools.partial(<built-in method commit of sqlite3.Connection object at 0x168a147c0>) completed
+executing functools.partial(<built-in method close of sqlite3.Connection object at 0x168a147c0>)
+operation functools.partial(<built-in method close of sqlite3.Connection object at 0x168a147c0>) completed
+executing <function Connection.stop.<locals>.close_and_stop at 0x106b05080>
+operation <function Connection.stop.<locals>.close_and_stop at 0x106b05080> completed
 INFO:     Application startup complete.
+executing <function connect.<locals>.connector at 0x1689132e0>
+operation <function connect.<locals>.connector at 0x1689132e0> completed
 INFO:     Uvicorn running on http://127.0.0.1:8005 (Press CTRL+C to quit)
+executing functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a145e0>, "DELETE FROM jobs WHERE updated_at < datetime('now', ?)", ('-86400 seconds',))
+operation functools.partial(<built-in method execute of sqlite3.Connection object at 0x168a145e0>, "DELETE FROM jobs WHERE updated_at < datetime('now', ?)", ('-86400 seconds',)) completed
+executing functools.partial(<built-in method close of sqlite3.Cursor object at 0x1689940c0>)
+operation functools.partial(<built-in method close of sqlite3.Cursor object at 0x1689940c0>) completed
+executing functools.partial(<built-in method commit of sqlite3.Connection object at 0x168a145e0>)
+operation functools.partial(<built-in method commit of sqlite3.Connection object at 0x168a145e0>) completed
+executing functools.partial(<built-in method close of sqlite3.Connection object at 0x168a145e0>)
+operation functools.partial(<built-in method close of sqlite3.Connection object at 0x168a145e0>) completed
+executing <function Connection.stop.<locals>.close_and_stop at 0x16860ef20>
+operation <function Connection.stop.<locals>.close_and_stop at 0x16860ef20> completed
 Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
 Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
 Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
@@ -14,30 +54,10 @@ Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neuroc
 Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
 Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
 Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
-INFO:     127.0.0.1:59655 - "GET /api/neurosim/components HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59656 - "POST /api/neurosim/generate-cnl HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59656 - "POST /api/neurosim/parse-cnl HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59656 - "POST /api/neurosim/validate HTTP/1.1" 200 OK
-Starting preview simulation - nodes=2 edges=1 duration_ms=100
-Using NeuroSim local preview model builder for approximate or unsupported fidelity.
-INFO:     127.0.0.1:59656 - "POST /api/neurosim/preview HTTP/1.1" 200 OK
-Running <Network "Preview Network">, dt=0.001000 for 0.100000 seconds, or 100 steps
-Preview simulation completed - wall_clock_ms=42.04 sim_execution_ms=100.00 setup_overhead_ms=-57.96
-INFO:     127.0.0.1:59656 - "GET /api/neurosim/simulations/b036ffea-4cb4-4077-b7cb-ed3349c9d78e HTTP/1.1" 200 OK
-Starting preview simulation - nodes=2 edges=1 duration_ms=50
-Using NeuroSim local preview model builder for approximate or unsupported fidelity.
-INFO:     127.0.0.1:59656 - "POST /api/neurosim/sweep HTTP/1.1" 200 OK
-Running <Network "Preview Network">, dt=0.001000 for 0.050000 seconds, or 50 steps
-Preview simulation completed - wall_clock_ms=24.08 sim_execution_ms=50.00 setup_overhead_ms=-25.92
-Starting preview simulation - nodes=2 edges=1 duration_ms=50
-Using NeuroSim local preview model builder for approximate or unsupported fidelity.
-Running <Network "Preview Network">, dt=0.001000 for 0.050000 seconds, or 50 steps
-Preview simulation completed - wall_clock_ms=26.84 sim_execution_ms=50.00 setup_overhead_ms=-23.16
-INFO:     127.0.0.1:59656 - "GET /api/neurosim/sweep/cd99932b-f023-48ba-9066-6e6cce6e046d HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59656 - "POST /api/neurosim/export/cnl HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59656 - "GET /api/neurosim/export/sweep/cd99932b-f023-48ba-9066-6e6cce6e046d/json HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59656 - "GET /api/neurosim/export/sweep/cd99932b-f023-48ba-9066-6e6cce6e046d/csv HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61856 - "GET /api/neurosim/components HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61857 - "POST /api/neurosim/generate-cnl HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61857 - "POST /api/neurosim/parse-cnl HTTP/1.1" 422 Unprocessable Entity
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [32594]
+INFO:     Finished server process [88090]
