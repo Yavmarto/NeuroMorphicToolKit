@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -39,6 +39,9 @@ help:
 	@echo "  make docker-ex-m REMOTE_HOST=user@ip - Deploy to remote and run frontend on macOS"
 	@echo "  make docker-ex-a REMOTE_HOST=user@ip - Deploy to remote and run frontend on Android"
 	@echo "  make docker-ex-i REMOTE_HOST=user@ip - Deploy to remote and run frontend on iOS"
+	@echo "  make docker-ex-all-m REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote and run frontend on macOS"
+	@echo "  make docker-ex-all-a REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote and run frontend on Android"
+	@echo "  make docker-ex-all-i REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote and run frontend on iOS"
 	@echo "  make docker-ex-down REMOTE_HOST=user@ip - Stop and remove remote Docker containers"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
@@ -127,11 +130,11 @@ docker-ex-all:
 		--exclude '__pycache__' --exclude 'node_modules' \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Tearing down any existing stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs down --remove-orphans 2>/dev/null || true"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs --profile notebooks down --remove-orphans 2>/dev/null || true"
 	@echo "==> Building all images in parallel on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs build --parallel"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs --profile notebooks build --parallel"
 	@echo "==> Starting full stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012 docker compose --profile hardware --profile physics --profile jobs up -d --wait --remove-orphans"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012 docker compose --profile hardware --profile physics --profile jobs --profile notebooks up -d --wait --remove-orphans"
 	@echo "==> Full stack ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-m: docker-ex
@@ -147,13 +150,26 @@ docker-ex-i: docker-ex
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
+docker-ex-all-m: docker-ex-all
+	@./scripts/run_dev.sh --flutter-device macos --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-all-a: docker-ex-all
+	@$(MAKE) check-devices
+	@echo "==> Using Android device: $(ANDROID_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
+docker-ex-all-i: docker-ex-all
+	@$(MAKE) check-devices
+	@echo "==> Using iOS device: $(IOS_DEVICE)"
+	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
+
 docker-ex-down:
 	@if [ -z "$(REMOTE_HOST)" ]; then \
 		echo "Error: REMOTE_HOST is not set. Example: make docker-ex-down REMOTE_HOST=user@192.168.1.50"; \
 		exit 1; \
 	fi
 	@echo "==> Stopping Docker containers on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs down"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs --profile notebooks down"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload

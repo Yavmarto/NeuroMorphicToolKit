@@ -1,5 +1,5 @@
 {
-  "focusedModuleId": "Neurobench",
+  "focusedModuleId": "jupyter",
   "sessions": [
     {
       "deepLink": null,
@@ -21,6 +21,13 @@
       "readinessState": "warming_up",
       "restoreState": {},
       "surfaceMode": "native"
+    },
+    {
+      "deepLink": null,
+      "moduleId": "jupyter",
+      "readinessState": "warming_up",
+      "restoreState": {},
+      "surfaceMode": "embedded"
     }
   ]
 }

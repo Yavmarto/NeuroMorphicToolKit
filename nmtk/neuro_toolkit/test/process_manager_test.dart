@@ -114,6 +114,60 @@ class MockProcessRunner implements ProcessRunner {
   }
 }
 
+/// A [ProcessRunner] that succeeds for venv creation and the main pip install,
+/// but returns exit code 1 for all subsequent `pip install ipykernel` and
+/// `python -m ipykernel` calls.  Used to verify that kernel registration
+/// failure does not prevent a module from being marked as [ModuleStatus.installed].
+class _FailAfterPipRunner implements ProcessRunner {
+  int _pipInstallCount = 0;
+
+  @override
+  Future<Process> start(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment = true,
+    bool runInShell = false,
+    ProcessStartMode mode = ProcessStartMode.normal,
+  }) async {
+    return MockProcess();
+  }
+
+  @override
+  Future<ProcessResult> run(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment = true,
+    bool runInShell = false,
+    Encoding? stdoutEncoding = systemEncoding,
+    Encoding? stderrEncoding = systemEncoding,
+  }) async {
+    // Simulate venv creation
+    if (arguments.contains('venv') && workingDirectory != null) {
+      final venvPath = p.join(workingDirectory, 'venv');
+      Directory(venvPath).createSync(recursive: true);
+      final pythonBin = Platform.isWindows
+          ? p.join(venvPath, 'Scripts', 'python.exe')
+          : p.join(venvPath, 'bin', 'python');
+      File(pythonBin).createSync(recursive: true);
+    }
+    if (executable == 'lsof') {
+      return ProcessResult(0, 1, '', '');
+    }
+    // First pip install (the main module) succeeds; ipykernel install fails
+    if (arguments.contains('install')) {
+      _pipInstallCount++;
+      if (_pipInstallCount > 1) {
+        return ProcessResult(0, 1, '', 'simulated ipykernel failure');
+      }
+    }
+    return ProcessResult(0, 0, 'ok', '');
+  }
+}
+
 class InvocationRecord {
   final String method;
   final String executable;
@@ -219,6 +273,134 @@ void main() {
             c.arguments.contains('.[training,lava]'),
       ),
       isTrue,
+    );
+
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test('installModule registers Jupyter kernel when jupyterKernel is set',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('nmtk_test_install_kernel');
+    final installDir = p.join(tempDir.path, 'src');
+    Directory(installDir).createSync(recursive: true);
+
+    final module = Module(
+      id: 'neurocnl',
+      name: 'NeuroStudio',
+      description: 'Test',
+      directory: tempDir.path,
+      sourcePath: 'src',
+      jupyterKernel: const JupyterKernelConfig(
+        displayName: 'Python (NeuroStudio)',
+      ),
+    );
+
+    await processManager.installModule(module);
+
+    final venvPath = p.join(installDir, 'venv');
+    final pipExe = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'pip.exe')
+        : p.join(venvPath, 'bin', 'pip');
+    final pythonExe = Platform.isWindows
+        ? p.join(venvPath, 'Scripts', 'python.exe')
+        : p.join(venvPath, 'bin', 'python');
+
+    // ipykernel must be installed in the module venv
+    expect(
+      mockRunner.calls.any(
+        (c) =>
+            c.executable == pipExe &&
+            c.arguments.contains('install') &&
+            c.arguments.contains('ipykernel'),
+      ),
+      isTrue,
+    );
+    // kernel must be registered for user-level Jupyter discovery
+    expect(
+      mockRunner.calls.any(
+        (c) =>
+            c.executable == pythonExe &&
+            c.arguments.contains('-m') &&
+            c.arguments.contains('ipykernel') &&
+            c.arguments.contains('--user') &&
+            c.arguments.contains('neurocnl') &&
+            c.arguments.contains('Python (NeuroStudio)'),
+      ),
+      isTrue,
+    );
+
+    tempDir.deleteSync(recursive: true);
+  });
+
+  test(
+    'installModule marks module installed even when kernel registration fails',
+    () async {
+      final tempDir = Directory.systemTemp.createTempSync(
+        'nmtk_test_kernel_fail',
+      );
+      final installDir = p.join(tempDir.path, 'src');
+      Directory(installDir).createSync(recursive: true);
+
+      // Make every pip/python run fail after the main pip install succeeds by
+      // overriding runResult — then restore it during venv creation so the
+      // venv setup itself succeeds.
+      final localRunner = _FailAfterPipRunner();
+      final manager = ProcessManager(
+        processRunner: localRunner,
+        httpClient: MockClient(
+          (request) async => http.Response('{"status":"ok"}', 200),
+        ),
+      );
+      manager.resetForTesting();
+
+      final module = Module(
+        id: 'bench_kernel_fail',
+        name: 'Bench',
+        description: 'Test',
+        directory: tempDir.path,
+        sourcePath: 'src',
+        jupyterKernel: const JupyterKernelConfig(
+          displayName: 'Python (NeuroBench)',
+        ),
+      );
+
+      final completer = Completer<ModuleStatus>();
+      manager.statusUpdates.listen((m) {
+        if (m.id == 'bench_kernel_fail' && !completer.isCompleted) {
+          completer.complete(m.status);
+        }
+      });
+
+      await manager.installModule(module);
+
+      final status = await completer.future.timeout(const Duration(seconds: 5));
+      expect(status, ModuleStatus.installed);
+
+      tempDir.deleteSync(recursive: true);
+    },
+  );
+
+  test('installModule does not run ipykernel when jupyterKernel is null',
+      () async {
+    final tempDir =
+        Directory.systemTemp.createTempSync('nmtk_test_no_kernel');
+    final installDir = p.join(tempDir.path, 'src');
+    Directory(installDir).createSync(recursive: true);
+
+    final module = Module(
+      id: 'no_kernel_module',
+      name: 'No Kernel',
+      description: 'Test',
+      directory: tempDir.path,
+      sourcePath: 'src',
+    );
+
+    await processManager.installModule(module);
+
+    expect(
+      mockRunner.calls.any((c) => c.arguments.contains('ipykernel')),
+      isFalse,
     );
 
     tempDir.deleteSync(recursive: true);

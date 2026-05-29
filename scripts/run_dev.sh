@@ -182,6 +182,7 @@ reserve_suite_api_port() {
 start_control_api() {
   local host="$1"
   local manage_suite_api="$2"
+  local external_probe_host="${3:-}"
 
   reserve_control_api_port
 
@@ -197,10 +198,17 @@ start_control_api() {
     control_api_cmd+=(--no-manage-suite-api)
   fi
 
+  if [[ -n "$external_probe_host" ]]; then
+    control_api_cmd+=(--external-probe-host "$external_probe_host")
+  fi
+
   echo "------------------------------------------------------------"
   echo "==> Starting launcher control API on $host:$CONTROL_API_PORT"
   if [[ "$manage_suite_api" == "false" ]]; then
     echo "    (Suite API management disabled — assuming external/docker start)"
+  fi
+  if [[ -n "$external_probe_host" ]]; then
+    echo "    (External probe host: $external_probe_host)"
   fi
   echo "------------------------------------------------------------"
 
@@ -310,7 +318,7 @@ if [[ "$USE_DOCKER" == "true" ]] || [[ -n "$REMOTE_HOST_IP" ]]; then
   MANAGE_SUITE_API="false"
 fi
 
-start_control_api "$CONTROL_API_BIND_HOST" "$MANAGE_SUITE_API"
+start_control_api "$CONTROL_API_BIND_HOST" "$MANAGE_SUITE_API" "$REMOTE_HOST_IP"
 CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
 
 if [[ -z "$REMOTE_HOST_IP" ]]; then
@@ -338,5 +346,8 @@ flutter_args=(
 )
 if [[ -n "$SUITE_API_URL" ]]; then
   flutter_args+=(--dart-define="SUITE_API_URL=$SUITE_API_URL")
+fi
+if [[ -n "$REMOTE_HOST_IP" ]]; then
+  flutter_args+=(--dart-define="NMTK_SERVICES_HOST=$REMOTE_HOST_IP")
 fi
 flutter "${flutter_args[@]}"

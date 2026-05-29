@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nmtk-env-manager"
+version = "0.1.0"
+description = "Jupyter Server extension to clone the immutable NeuroStudio kernel into customisable Python environments."
+requires-python = ">=3.10"
+dependencies = [
+    "jupyter_server>=2.0,<3.0",
+    "ipykernel>=6.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0"]
+
+[tool.setuptools]
+packages = ["nmtk_env_manager"]
+package-dir = { "nmtk_env_manager" = "." }

@@ -8,19 +8,21 @@ FROM python:3.11-slim
 WORKDIR /repo
 
 # ── neurocnl: heavy deps BEFORE source copy ───────────────────────────────────
-# Installing torch and snntorch before any COPY keeps this layer cache-stable
-# across all source edits. Previously COPY neurocnl/ appeared first, so any
-# .py change busted the cache and forced a full ~10-minute reinstall every
-# deploy. Now that only happens when you deliberately change torch/snntorch
-# versions in this RUN line.
+# Installing torch and the SNN framework stack before any COPY keeps these
+# layers cache-stable across all source edits.  Only rebuild when you
+# deliberately bump a version in this RUN block.
 RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
     torch \
- && pip install --no-cache-dir snntorch
+ && pip install --no-cache-dir \
+    snntorch \
+    rockpool \
+    sinabs \
+    norse
 
-# Copy source and install the package — torch already present so pip skips it
+# Copy source and install the package — heavy deps above already present
 COPY neurocnl/ neurocnl/
-RUN pip install --no-cache-dir "neurocnl/[training]"
+RUN pip install --no-cache-dir "neurocnl/[training,rockpool,synsense,norse]"
 
 # ── Modules installed as top-level packages ───────────────────────────────────
 COPY Neurohub/ Neurohub/

@@ -13,106 +13,6 @@ import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
-
-class _FakeWebViewPlatform extends WebViewPlatform {
-  @override
-  PlatformNavigationDelegate createPlatformNavigationDelegate(
-    PlatformNavigationDelegateCreationParams params,
-  ) {
-    return _FakePlatformNavigationDelegate(params);
-  }
-
-  @override
-  PlatformWebViewController createPlatformWebViewController(
-    PlatformWebViewControllerCreationParams params,
-  ) {
-    return _FakePlatformWebViewController(params);
-  }
-
-  @override
-  PlatformWebViewWidget createPlatformWebViewWidget(
-    PlatformWebViewWidgetCreationParams params,
-  ) {
-    return _FakePlatformWebViewWidget(params);
-  }
-
-  @override
-  PlatformWebViewCookieManager createPlatformCookieManager(
-    PlatformWebViewCookieManagerCreationParams params,
-  ) {
-    return _FakePlatformWebViewCookieManager(params);
-  }
-}
-
-class _FakePlatformNavigationDelegate extends PlatformNavigationDelegate {
-  _FakePlatformNavigationDelegate(
-      PlatformNavigationDelegateCreationParams params)
-      : super.implementation(params);
-
-  @override
-  Future<void> setOnNavigationRequest(
-    NavigationRequestCallback onNavigationRequest,
-  ) async {}
-
-  @override
-  Future<void> setOnPageStarted(PageEventCallback onPageStarted) async {}
-
-  @override
-  Future<void> setOnPageFinished(PageEventCallback onPageFinished) async {}
-
-  @override
-  Future<void> setOnProgress(ProgressCallback onProgress) async {}
-
-  @override
-  Future<void> setOnWebResourceError(
-    WebResourceErrorCallback onWebResourceError,
-  ) async {}
-
-  @override
-  Future<void> setOnUrlChange(UrlChangeCallback onUrlChange) async {}
-
-  @override
-  Future<void> setOnHttpError(HttpResponseErrorCallback onHttpError) async {}
-
-  @override
-  Future<void> setOnHttpAuthRequest(
-    HttpAuthRequestCallback onHttpAuthRequest,
-  ) async {}
-
-  @override
-  Future<void> setOnSSlAuthError(SslAuthErrorCallback onSslAuthError) async {}
-}
-
-class _FakePlatformWebViewController extends PlatformWebViewController {
-  _FakePlatformWebViewController(PlatformWebViewControllerCreationParams params)
-      : super.implementation(params);
-
-  @override
-  Future<void> loadRequest(LoadRequestParams params) async {}
-
-  @override
-  Future<void> setJavaScriptMode(JavaScriptMode javaScriptMode) async {}
-
-  @override
-  Future<void> setPlatformNavigationDelegate(
-    PlatformNavigationDelegate handler,
-  ) async {}
-}
-
-class _FakePlatformWebViewWidget extends PlatformWebViewWidget {
-  _FakePlatformWebViewWidget(PlatformWebViewWidgetCreationParams params)
-      : super.implementation(params);
-
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
-}
-
-class _FakePlatformWebViewCookieManager extends PlatformWebViewCookieManager {
-  _FakePlatformWebViewCookieManager(
-    PlatformWebViewCookieManagerCreationParams params,
-  ) : super.implementation(params);
-}
 
 class _NoopProcessManager implements ProcessManager {
   final _statusController = StreamController<Module>.broadcast();
@@ -242,7 +142,6 @@ class _FakeWorkspaceControlApiService extends ControlApiService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  WebViewPlatform.instance = _FakeWebViewPlatform();
 
   testWidgets('ToolView seeds all launcher tabs on startup',
       (WidgetTester tester) async {

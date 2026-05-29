@@ -8,6 +8,7 @@ import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
+import 'package:neuro_toolkit/screens/environment_editor.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
@@ -49,6 +50,11 @@ GoRouter createGoRouter() {
             name: 'backend-setup',
             builder: (context, state) => const BackendSetupScreen(),
           ),
+          GoRoute(
+            path: '/environments',
+            name: 'environments',
+            builder: (context, state) => const EnvironmentEditorScreen(),
+          ),
           // Native module routes currently delegate to the workspace surface.
           // This keeps deep links working even when feature wrapper packages
           // are absent from the checkout.
@@ -84,6 +90,12 @@ GoRouter createGoRouter() {
             name: 'module-neurohub',
             builder: (context, state) =>
                 const ToolViewScreen(initialModuleId: 'Neurohub'),
+          ),
+          GoRoute(
+            path: '/module/jupyter',
+            name: 'module-jupyter',
+            builder: (context, state) =>
+                const ToolViewScreen(initialModuleId: 'jupyter'),
           ),
           // Hardware deploy routes (/deploy/akida, /deploy/pynq,
           // /deploy/teensy) were removed when the deploy UIs were relocated

@@ -1678,6 +1678,34 @@ def _module_start_strategy(module: dict[str, Any]) -> str:
     return strategy or "uvicorn"
 
 
+def _is_externally_managed_service(module: dict[str, Any]) -> bool:
+    """Return True for 'none'-strategy modules that live on their own port.
+
+    These are services started outside the launcher (e.g. via Docker Compose)
+    rather than monolith modules whose traffic is proxied through suite_api on
+    DEFAULT_SUITE_API_PORT.  Jupyter and lava_backend are examples.
+    """
+    if _module_start_strategy(module) != "none":
+        return False
+    port = _effective_port(module)
+    return port is not None and port != DEFAULT_SUITE_API_PORT
+
+
+def _external_service_health_url(module: dict[str, Any], host: str = "127.0.0.1") -> str:
+    """Build the health-probe URL for an externally managed service.
+    
+    Args:
+        module: Module configuration dict.
+        host: Hostname or IP to probe. Defaults to 127.0.0.1 for local deployment;
+              should be set to the remote hostname when the service runs on a remote host.
+    """
+    port = _effective_port(module)
+    deployment = module.get("deployment") or {}
+    raw_path = deployment.get("healthPath", "") if isinstance(deployment, dict) else ""
+    health_path = str(raw_path).strip() or "/health"
+    return f"http://{host}:{port}{health_path}"
+
+
 def _normalized_import_list(raw: Any) -> list[str]:
     if not isinstance(raw, list):
         return []
@@ -2087,6 +2115,7 @@ class LauncherControlState:
         remote_version_resolver: Callable[[dict[str, Any]], str | None] | None = None,
         *,
         manage_suite_api: bool = False,
+        external_probe_host: str | None = None,
     ) -> None:
         self._lock = threading.RLock()
         self._terminal_lock = threading.Lock()
@@ -2094,6 +2123,7 @@ class LauncherControlState:
             remote_version_resolver or _resolve_remote_module_version
         )
         self._manage_suite_api = manage_suite_api
+        self._external_probe_host = external_probe_host or "127.0.0.1"
         self._suite_api_status = (
             SUITE_API_STATUS_STARTING
             if manage_suite_api
@@ -5325,6 +5355,36 @@ class LauncherControlState:
 
         start_strategy = _module_start_strategy(module)
         if start_strategy == "none":
+            if _is_externally_managed_service(module):
+                # Standalone external service (e.g. Jupyter, lava_backend running in
+                # Docker).  Probe its actual health endpoint instead of assuming it is
+                # managed by suite_api.
+                ok, status_code, health_text = self._probe_health(module)
+                if ok:
+                    next_status = _status_for_health_response(
+                        status_code, PREFLIGHT_OK
+                    )
+                    self._update_module_fields(
+                        module_id,
+                        status=next_status,
+                        healthStatus=health_text,
+                    )
+                else:
+                    deployment = module.get("deployment") or {}
+                    compose_profile = (
+                        deployment.get("composeProfile", "") if isinstance(deployment, dict) else ""
+                    )
+                    hint = (
+                        f" Start it with: docker compose --profile {compose_profile} up"
+                        if compose_profile
+                        else " Start the external service before launching this module."
+                    )
+                    msg = f"Waiting for service on port {_effective_port(module)}.{hint}"
+                    self._update_module_fields(module_id, healthStatus=msg)
+                    # Status remains 'starting'; health poll will transition to running when available.
+                    return
+                return
+
             suite_api_result = self._suite_api_ready_result()
             self._update_module_fields(module_id, **suite_api_result.state_fields())
             if suite_api_result.status == PREFLIGHT_FAILED:
@@ -5476,9 +5536,12 @@ class LauncherControlState:
         if port is None:
             return False, 0, None
 
-        start_strategy = _module_start_strategy(module)
-        if start_strategy == "none":
-            # Native feature modules in the monolith have their own health path
+        if _is_externally_managed_service(module):
+            # Standalone service on its own port (e.g. Jupyter, lava_backend).
+            # Use the health path from the deployment manifest and external probe host.
+            url = _external_service_health_url(module, host=self._external_probe_host)
+        elif _module_start_strategy(module) == "none":
+            # Native feature module proxied through suite_api on the monolith port.
             # All mounted domain prefixes in suite_api are lowercase.
             url = f"http://127.0.0.1:{port}/api/{module['id'].lower()}/health"
         else:
@@ -5535,6 +5598,48 @@ class LauncherControlState:
                         module_id,
                         status=STATUS_INDEX["error"],
                         healthStatus="Health probe failed",
+                    )
+
+            # Also poll externally managed services (those not in _processes).
+            # These are started outside the launcher (e.g. via Docker) and need
+            # their own health tracking so the UI can recover when the service
+            # comes back up or detect when it goes away.
+            with self._lock:
+                external_snapshots = [
+                    (mid, dict(m))
+                    for mid, m in self._modules.items()
+                    if _is_externally_managed_service(m)
+                    and mid not in self._processes
+                    and int(m.get("status", STATUS_INDEX["notInstalled"]))
+                    in (
+                        STATUS_INDEX["running"],
+                        STATUS_INDEX["degraded"],
+                        STATUS_INDEX["error"],
+                        STATUS_INDEX["starting"],
+                    )
+                ]
+            for module_id, module in external_snapshots:
+                ok, status_code, health_text = self._probe_health(module)
+                if ok:
+                    next_status = _status_for_health_response(
+                        status_code, str(module.get("preflightStatus", PREFLIGHT_OK))
+                    )
+                    self._update_module_fields(
+                        module_id,
+                        status=next_status,
+                        healthStatus=health_text
+                        if health_text
+                        else (
+                            "No /health endpoint (server is up)"
+                            if status_code == 404
+                            else None
+                        ),
+                    )
+                else:
+                    self._update_module_fields(
+                        module_id,
+                        status=STATUS_INDEX["error"],
+                        healthStatus="External service is not reachable",
                     )
 
     def _run_command(self, command: list[str], cwd: Path, module_id: str) -> None:
@@ -5646,6 +5751,33 @@ class LauncherControlState:
                     status=PREFLIGHT_OK,
                     message="Module not installed",
                 )
+            elif _is_externally_managed_service(module):
+                # Probe the external service's own health endpoint.
+                ok, status_code, health_text = self._probe_health(module)
+                if ok:
+                    result = PreflightResult(
+                        status=PREFLIGHT_OK,
+                        message=health_text or "External service is reachable",
+                    )
+                else:
+                    deployment = module.get("deployment") or {}
+                    compose_profile = (
+                        deployment.get("composeProfile", "")
+                        if isinstance(deployment, dict)
+                        else ""
+                    )
+                    hint = (
+                        f"Start it with: docker compose --profile {compose_profile} up"
+                        if compose_profile
+                        else "Start the external service before launching this module."
+                    )
+                    result = PreflightResult(
+                        status=PREFLIGHT_DEGRADED,
+                        message=f"External service not reachable on port {_effective_port(module)}. {hint}",
+                        capability_warnings=[
+                            f"{module.get('name', module['id'])} is not running."
+                        ],
+                    )
             elif _module_start_strategy(module) == "none":
                 result = self._suite_api_ready_result()
             else:
@@ -6453,9 +6585,9 @@ class LauncherControlServer(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(
-        self, server_address: tuple[str, int], manage_suite_api: bool = True
+        self, server_address: tuple[str, int], manage_suite_api: bool = True, external_probe_host: str | None = None
     ) -> None:
-        self.state = LauncherControlState(manage_suite_api=manage_suite_api)
+        self.state = LauncherControlState(manage_suite_api=manage_suite_api, external_probe_host=external_probe_host)
         super().__init__(server_address, LauncherControlHandler)
 
     def server_close(self) -> None:
@@ -6464,9 +6596,9 @@ class LauncherControlServer(ThreadingHTTPServer):
 
 
 def create_server(
-    host: str, port: int, manage_suite_api: bool = True
+    host: str, port: int, manage_suite_api: bool = True, external_probe_host: str | None = None
 ) -> LauncherControlServer:
-    return LauncherControlServer((host, port), manage_suite_api=manage_suite_api)
+    return LauncherControlServer((host, port), manage_suite_api=manage_suite_api, external_probe_host=external_probe_host)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -6495,6 +6627,11 @@ def main(argv: list[str] | None = None) -> int:
         dest="manage_suite_api",
         help="Do not manage the suite_api lifecycle",
     )
+    parser.add_argument(
+        "--external-probe-host",
+        default=None,
+        help="Hostname or IP to use when probing externally managed services (e.g. Jupyter on a remote host). Defaults to 127.0.0.1.",
+    )
     args = parser.parse_args(argv)
     os.environ.setdefault("NMTK_UVICORN_HOST", str(args.host).strip() or "0.0.0.0")
 
@@ -6510,7 +6647,7 @@ def main(argv: list[str] | None = None) -> int:
             print(_render_doctor_report(report))
         return 1 if report["fatalCount"] else 0
 
-    server = create_server(args.host, args.port, manage_suite_api=args.manage_suite_api)
+    server = create_server(args.host, args.port, manage_suite_api=args.manage_suite_api, external_probe_host=args.external_probe_host)
     print(f"Launcher control service listening on http://{args.host}:{args.port}")
     try:
         server.serve_forever()

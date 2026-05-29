@@ -1,0 +1,52 @@
+# NeuroStudio Jupyter kernel environment.
+#
+# This file is the single source of truth for the "Python (NeuroStudio)" kernel
+# in BOTH deployment modes:
+#   • standalone — the launcher runs `pip install -r requirements.txt` into the
+#     module venv (installStrategy "pip" in modules.json).
+#   • docker     — workers/jupyter_server/Dockerfile installs it into the image.
+#
+# Dependencies are intentionally left UNPINNED (no `==`). The Jupyter stack
+# keeps major-version upper bounds only to guard against known-breaking majors.
+# Everything else floats so that:
+#   • each rebuild / fresh install picks up the latest mutually-compatible set,
+#   • a user can `pip install --upgrade <pkg>` in the kernel without colliding
+#     with a hard pin.
+# If a specific version ever needs to be held back, add a lower/upper bound here
+# (e.g. `numpy>=1.26,<3`) rather than an exact pin.
+
+# ── Jupyter server stack ──────────────────────────────────────────────────────
+jupyterlab>=4.0,<5.0
+jupyter_server>=2.0,<3.0
+ipykernel>=6.0
+
+# ── Scientific / data / plotting ──────────────────────────────────────────────
+numpy
+pandas
+matplotlib
+seaborn
+tqdm
+
+# ── Deep learning ─────────────────────────────────────────────────────────────
+# NOTE: in the Docker image, torch is installed FIRST from the CPU-only wheel
+# index (see Dockerfile) so the container stays CPU-only; this line then resolves
+# as already-satisfied. In standalone mode torch installs the build that matches
+# the user's platform (GPU where available), which is the desired behaviour.
+torch
+pytorch-lightning
+jax
+
+# ── Neuromorphic / SNN frameworks ─────────────────────────────────────────────
+snntorch
+norse
+rockpool
+sinabs
+spyx
+nengo
+lava-nc
+spinnaker2
+tonic
+
+# ── NIR interchange + bindings ────────────────────────────────────────────────
+nir
+nirtorch

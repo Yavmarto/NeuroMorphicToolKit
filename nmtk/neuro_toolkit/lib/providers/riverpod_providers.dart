@@ -3,12 +3,14 @@ import 'package:go_router/go_router.dart';
 
 import 'package:neuro_toolkit/providers/app_provider.dart';
 import 'package:neuro_toolkit/providers/backend_deployment_provider.dart';
+import 'package:neuro_toolkit/providers/environment_provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/routing/router.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/environment_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
@@ -61,6 +63,17 @@ final backendDeploymentStateProvider =
   return BackendDeploymentProvider(
     controlApiService: ref.read(controlApiServiceProvider),
   );
+});
+
+final environmentApiServiceProvider = Provider<EnvironmentApiService>((ref) {
+  return EnvironmentApiService(
+    controlApi: ref.watch(controlApiServiceProvider),
+  );
+});
+
+final environmentStateProvider =
+    ChangeNotifierProvider<EnvironmentProvider>((ref) {
+  return EnvironmentProvider(ref.watch(environmentApiServiceProvider));
 });
 
 // The Teensy / PYNQ / Akida deploy providers were relocated to the Neurochip

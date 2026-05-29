@@ -1,13 +1,12 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/widget_previews.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
@@ -23,7 +22,6 @@ import 'package:neuro_toolkit/widgets/module_loading_view.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 import 'package:neuro_toolkit/widgets/tool_view_header_actions.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
-import 'package:neuro_toolkit/providers/command_provider.dart';
 
 class ToolViewScreen extends ConsumerStatefulWidget {
   const ToolViewScreen({super.key, this.initialModuleId});
@@ -35,11 +33,18 @@ class ToolViewScreen extends ConsumerStatefulWidget {
 }
 
 class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
-  final Map<String, WebViewController> _controllers =
-      <String, WebViewController>{};
+  final Map<String, InAppWebViewController> _controllers =
+      <String, InAppWebViewController>{};
   final Map<String, Uri> _pendingModuleRequests = <String, Uri>{};
   final Map<String, ModuleLoadFailure> _moduleLoadFailures =
       <String, ModuleLoadFailure>{};
+
+  // Tracks each module's status from the previous build so we can detect
+  // non-running → running transitions and auto-clear only *stale* failures
+  // (those recorded while the module was down). Failures that occurred while
+  // the module was already running are kept until the user clicks Retry.
+  final Map<String, ModuleStatus> _prevModuleStatuses =
+      <String, ModuleStatus>{};
 
   String _activeModuleId = '';
   bool _workspaceInitialized = false;
@@ -53,8 +58,15 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return !ControlApiService.isLoopbackHost(_launcherBaseUri().host);
   }
 
+  static String get _configuredServicesHost =>
+      const String.fromEnvironment('NMTK_SERVICES_HOST', defaultValue: '');
+
   String _serviceHost() {
     if (!kIsWeb) {
+      final override = _configuredServicesHost.trim();
+      if (override.isNotEmpty && !ControlApiService.isLoopbackHost(override)) {
+        return override;
+      }
       final baseUri = _launcherBaseUri();
       if (_usesRemoteHostedServices()) {
         return baseUri.host;
@@ -101,8 +113,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       );
     }
 
-    // Legacy fallback for standalone modules
-    final path = healthCheck ? '/health' : (module.hasFrontend ? '' : '/docs');
+    // Standalone modules on non-monolith ports.
+    // Use deployment.healthPath when available so modules like Jupyter (which
+    // expose /api/health rather than /health) are polled correctly.
+    final String healthPath =
+        module.deployment?.healthPath.isNotEmpty == true
+            ? module.deployment!.healthPath
+            : '/health';
+    final path = healthCheck ? healthPath : (module.hasFrontend ? '' : '/docs');
     return Uri(
       scheme: _serviceScheme(),
       host: _serviceHost(),
@@ -300,68 +318,88 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return null;
   }
 
-  WebViewController _getController(Module module) {
-    if (_controllers.containsKey(module.id)) {
-      return _controllers[module.id]!;
-    }
-
+  /// Builds the embedded module surface backed by `flutter_inappwebview`.
+  ///
+  /// We use `flutter_inappwebview` rather than `webview_flutter` because the
+  /// latter's macOS/WKWebView backend (a) never implements the native file
+  /// open-panel delegate, so any in-page `<input type="file">` — e.g.
+  /// JupyterLab's *Upload Files* button — silently does nothing, and (b) has
+  /// long-standing compositing repaint issues that make hovering the embedded
+  /// toolbar flicker. `flutter_inappwebview` wires up the WKUIDelegate open
+  /// panel (and the Android file chooser) and composites cleanly, fixing both
+  /// at the platform level — no CSS/JS injection workaround required.
+  ///
+  /// The widget is keyed by module id and lives inside the [IndexedStack], so
+  /// the underlying native webview is created once and preserved across tab
+  /// switches and provider rebuilds (no reload on rebuild).
+  Widget _buildWebView(Module module) {
     final initialUri =
         _pendingModuleRequests.remove(module.id) ?? _moduleUri(module);
-    final controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (url) {
-            if (!mounted) {
-              return;
-            }
-            setState(() {
-              _moduleLoadFailures.remove(module.id);
-            });
-          },
-          onNavigationRequest: (request) async {
-            final handled = await _handleCrossModuleNavigation(
-              module,
-              Uri.parse(request.url),
-            );
-            return handled
-                ? NavigationDecision.prevent
-                : NavigationDecision.navigate;
-          },
-          onHttpError: (HttpResponseError error) {
-            final response = error.response;
-            final request = error.request;
-            final uri = response?.uri ?? request?.uri ?? _moduleUri(module);
-            final statusCode = response?.statusCode;
-            final message = statusCode == null
-                ? 'Embedded module request failed before the page could load.'
-                : 'Embedded module returned HTTP $statusCode instead of a frontend page.';
-            _recordModuleLoadFailure(
-              module.id,
-              uri,
-              message,
-            );
-          },
-          onWebResourceError: (WebResourceError error) {
-            debugPrint(
-              'WebView error for ${module.name}: ${error.description}',
-            );
-            if (error.isForMainFrame == false) {
-              return;
-            }
-            final failedUrl = error.url;
-            _recordModuleLoadFailure(
-              module.id,
-              failedUrl == null ? _moduleUri(module) : Uri.parse(failedUrl),
-              error.description,
-            );
-          },
-        ),
-      )
-      ..loadRequest(initialUri);
-
-    _controllers[module.id] = controller;
-    return controller;
+    return InAppWebView(
+      key: ValueKey<String>('webview-${module.id}'),
+      initialUrlRequest: URLRequest(url: WebUri.uri(initialUri)),
+      initialSettings: InAppWebViewSettings(
+        javaScriptEnabled: true,
+        useShouldOverrideUrlLoading: true,
+        transparentBackground: false,
+        isInspectable: kDebugMode,
+      ),
+      onWebViewCreated: (controller) {
+        _controllers[module.id] = controller;
+      },
+      onLoadStart: (controller, url) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _moduleLoadFailures.remove(module.id);
+        });
+      },
+      shouldOverrideUrlLoading: (controller, navigationAction) async {
+        final requestUrl = navigationAction.request.url;
+        if (requestUrl == null) {
+          return NavigationActionPolicy.ALLOW;
+        }
+        final handled = await _handleCrossModuleNavigation(
+          module,
+          Uri.parse(requestUrl.toString()),
+        );
+        return handled
+            ? NavigationActionPolicy.CANCEL
+            : NavigationActionPolicy.ALLOW;
+      },
+      onReceivedError: (controller, request, error) {
+        debugPrint('WebView error for ${module.name}: ${error.description}');
+        // Only main-frame failures should surface the module error view.
+        // Embedded SPAs like JupyterLab routinely fire sub-resource errors
+        // (optional extension probes, favicons) that must not be treated as a
+        // page load failure.
+        if (request.isForMainFrame == false) {
+          return;
+        }
+        _recordModuleLoadFailure(
+          module.id,
+          request.url,
+          error.description,
+        );
+      },
+      onReceivedHttpError: (controller, request, errorResponse) {
+        // Same main-frame guard as above: a 404 on a JupyterLab sub-resource
+        // is not a frontend load failure.
+        if (request.isForMainFrame == false) {
+          return;
+        }
+        final statusCode = errorResponse.statusCode;
+        final message = statusCode == null
+            ? 'Embedded module request failed before the page could load.'
+            : 'Embedded module returned HTTP $statusCode instead of a frontend page.';
+        _recordModuleLoadFailure(
+          module.id,
+          request.url,
+          message,
+        );
+      },
+    );
   }
 
   Future<void> _launchInBrowser(Module module) async {
@@ -454,7 +492,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     if (_controllers.containsKey(targetModule.id)) {
       _pendingModuleRequests.remove(targetModule.id);
-      await _controllers[targetModule.id]!.loadRequest(navigation.targetUri);
+      await _controllers[targetModule.id]!.loadUrl(
+        urlRequest: URLRequest(url: WebUri.uri(navigation.targetUri)),
+      );
     }
 
     await _activateModule(targetModule.id, requestFocus: true);
@@ -515,12 +555,27 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     ModuleProvider moduleProvider,
     Module? activeModule,
   ) {
-    return ToolViewHeaderActions(
+    final actions = ToolViewHeaderActions(
       moduleProvider: moduleProvider,
       activeModule: activeModule,
       onShowModulePicker: () => _showModulePicker(context),
       onOpenInBrowser: _launchInBrowser,
     );
+    // The environment editor is Jupyter-specific: only surface it on the
+    // Notebooks tool so it stays close to where the kernels are used.
+    if (activeModule?.id.toLowerCase() == 'jupyter') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ZetaButton.text(
+            label: 'Environments',
+            onPressed: () => context.push('/environments'),
+          ),
+          actions,
+        ],
+      );
+    }
+    return actions;
   }
 
   @override
@@ -628,15 +683,43 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         key: const ValueKey('WorkspaceStack'),
         index: clampedIndex,
         children: eligibleModules.map((module) {
-          // When a module's backend recovers (status transitions back to
-          // running/degraded), auto-clear any stale WebView load failure so
-          // the user doesn't have to click Retry manually. Also evict the
-          // stale controller so the page reloads fresh from the recovered URL.
-          if (_moduleLoadFailures.containsKey(module.id) &&
-              (module.status == ModuleStatus.running ||
-                  module.status == ModuleStatus.degraded)) {
-            _moduleLoadFailures.remove(module.id);
-            _controllers.remove(module.id);
+          // Auto-clear stale WebView failures when a module *recovers* — i.e.
+          // transitions from a non-ready state back to running/degraded.  We
+          // deliberately do NOT clear failures that were recorded while the
+          // module was already running (those are fresh errors, not stale ones
+          // from a prior crash), because clearing them would restart the WebView
+          // and cause an infinite flicker loop.
+          //
+          // Strategy: compare current status against the status we saw in the
+          // previous build.  A non-ready → ready transition signals recovery.
+          // The failure object itself is captured so the postFrameCallback only
+          // removes it if a newer failure has not already replaced it.
+          final prevStatus = _prevModuleStatuses[module.id];
+          final currentStatus = module.status;
+          _prevModuleStatuses[module.id] = currentStatus;
+
+          final isNowReady = currentStatus == ModuleStatus.running ||
+              currentStatus == ModuleStatus.degraded;
+          final wasPreviouslyReady = prevStatus == ModuleStatus.running ||
+              prevStatus == ModuleStatus.degraded;
+
+          if (isNowReady &&
+              !wasPreviouslyReady &&
+              prevStatus != null &&
+              _moduleLoadFailures.containsKey(module.id)) {
+            final staleFailure = _moduleLoadFailures[module.id];
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              // Guard: only clear the exact failure that triggered this recovery.
+              // If the user navigated away and a newer failure was recorded,
+              // leave it in place.
+              if (_moduleLoadFailures[module.id] == staleFailure) {
+                setState(() {
+                  _moduleLoadFailures.remove(module.id);
+                  _controllers.remove(module.id);
+                });
+              }
+            });
           }
 
           final session = sessionsByModuleId[module.id];
@@ -683,9 +766,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                                 ),
                               )
                             : supported
-                                ? WebViewWidget(
-                                    controller: _getController(module),
-                                  )
+                                ? _buildWebView(module)
                                 : NmtkEmptyState(
                                     title: 'WebView Not Supported',
                                     message:
