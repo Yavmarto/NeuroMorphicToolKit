@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   desktop_webview_window
+  flutter_inappwebview_windows
   record_windows
   url_launcher_windows
 )

@@ -605,6 +605,18 @@ class Module {
 
   bool get isPreflightDegraded => preflightStatus == 'degraded';
 
+  /// Mirrors the launcher control service's notion of an externally managed
+  /// service (`_is_externally_managed_service` in server.py): a `none`-strategy
+  /// module on its own, non-monolith port (the monolith/suite-API port is
+  /// 9000). These are started outside the launcher — e.g. Jupyter or
+  /// lava_backend running via Docker Compose — so the launcher only
+  /// health-probes them; it never installs or starts them, and their first
+  /// bring-up can include a multi-minute environment build done at deploy time.
+  bool get isExternallyManaged =>
+      startStrategy == 'none' &&
+      effectivePort != null &&
+      effectivePort != 9000;
+
   String? get statusMessage {
     if (preflightMessage != null && preflightMessage!.isNotEmpty) {
       return preflightMessage;

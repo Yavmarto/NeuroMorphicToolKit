@@ -5379,13 +5379,10 @@ class LauncherControlState:
                         if compose_profile
                         else " Start the external service before launching this module."
                     )
-                    msg = f"Service not reachable on port {_effective_port(module)}.{hint}"
-                    self._update_module_fields(
-                        module_id,
-                        status=STATUS_INDEX["error"],
-                        healthStatus=msg,
-                    )
-                    raise RuntimeError(msg)
+                    msg = f"Waiting for service on port {_effective_port(module)}.{hint}"
+                    self._update_module_fields(module_id, healthStatus=msg)
+                    # Status remains 'starting'; health poll will transition to running when available.
+                    return
                 return
 
             suite_api_result = self._suite_api_ready_result()
@@ -5618,6 +5615,7 @@ class LauncherControlState:
                         STATUS_INDEX["running"],
                         STATUS_INDEX["degraded"],
                         STATUS_INDEX["error"],
+                        STATUS_INDEX["starting"],
                     )
                 ]
             for module_id, module in external_snapshots:

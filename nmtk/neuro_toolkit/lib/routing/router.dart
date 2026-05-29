@@ -8,6 +8,7 @@ import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/python_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
+import 'package:neuro_toolkit/screens/environment_editor.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
@@ -48,6 +49,11 @@ GoRouter createGoRouter() {
             path: '/backend-setup',
             name: 'backend-setup',
             builder: (context, state) => const BackendSetupScreen(),
+          ),
+          GoRoute(
+            path: '/environments',
+            name: 'environments',
+            builder: (context, state) => const EnvironmentEditorScreen(),
           ),
           // Native module routes currently delegate to the workspace surface.
           // This keeps deep links working even when feature wrapper packages

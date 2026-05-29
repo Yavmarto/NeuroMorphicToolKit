@@ -22,6 +22,7 @@ c.ServerApp.allow_root = True
 
 # ── Browser ──────────────────────────────────────────────────────────────────
 c.ServerApp.open_browser = False
+c.ServerApp.default_url = '/lab'
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
 # Allow the Flutter WebView (and any local tooling) to talk to the server.
@@ -30,3 +31,9 @@ c.ServerApp.allow_origin = "*"
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 c.Application.log_level = "INFO"
+
+# ── NMTK environment manager ───────────────────────────────────────────────────
+# Server extension exposing /nmtk-envs/api/* for cloning the immutable
+# NeuroStudio kernel into customisable environments. See workers/jupyter_server/
+# nmtk_env_manager/.
+c.ServerApp.jpserver_extensions = {"nmtk_env_manager": True}

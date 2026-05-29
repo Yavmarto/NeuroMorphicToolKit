@@ -347,4 +347,7 @@ flutter_args=(
 if [[ -n "$SUITE_API_URL" ]]; then
   flutter_args+=(--dart-define="SUITE_API_URL=$SUITE_API_URL")
 fi
+if [[ -n "$REMOTE_HOST_IP" ]]; then
+  flutter_args+=(--dart-define="NMTK_SERVICES_HOST=$REMOTE_HOST_IP")
+fi
 flutter "${flutter_args[@]}"

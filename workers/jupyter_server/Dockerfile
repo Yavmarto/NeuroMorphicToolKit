@@ -2,23 +2,29 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Jupyter server
+# Build tooling for any framework that ships only an sdist (no prebuilt wheel)
+# on python:3.11-slim. Kept in one layer and cleaned up to limit image size.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential git \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install CPU-only torch FIRST, from PyTorch's CPU wheel index, so every
+# torch-dependent package in requirements.txt below binds to this CPU build
+# instead of pulling the default (CUDA) wheel from PyPI. Unpinned so a rebuild
+# tracks the latest CPU release; this layer only rebuilds when the base image
+# changes, keeping the heavy download cached.
+RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch
+
+# Full NeuroStudio kernel environment: Jupyter stack + scientific stack + all
+# neuromorphic/SNN frameworks. Single source of truth shared with standalone
+# mode (see requirements.txt header).
 COPY workers/jupyter_server/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Install torch (CPU-only) first for cache stability, then all SNN frameworks.
-# These layers only rebuild when you deliberately bump a version below.
-RUN pip install --no-cache-dir \
-    --index-url https://download.pytorch.org/whl/cpu \
-    torch \
- && pip install --no-cache-dir \
-    snntorch \
-    rockpool \
-    sinabs \
-    norse
-
 # Install neurocnl with all extras (brings nir and framework bindings).
-# Heavy torch layer above is already cached so this is fast.
+# Heavy torch/framework layers above are already cached so this is fast.
 COPY neurocnl/ /tmp/neurocnl/
 RUN pip install --no-cache-dir "/tmp/neurocnl/[training,rockpool,synsense,norse]" \
  && rm -rf /tmp/neurocnl
@@ -29,6 +35,18 @@ RUN pip install --no-cache-dir "/tmp/neurocnl/[training,rockpool,synsense,norse]
 RUN python -m ipykernel install --sys-prefix \
     --name neurocnl \
     --display-name "Python (NeuroStudio)"
+
+# NMTK environment manager — a Jupyter Server extension that clones this
+# immutable base kernel into customisable per-user environments. Installed into
+# the base env so it runs in-process with the server. User environments and
+# their kernelspecs live under /root (the persisted notebooks volume).
+COPY workers/jupyter_server/nmtk_env_manager/ /tmp/nmtk_env_manager/
+RUN pip install --no-cache-dir /tmp/nmtk_env_manager \
+ && rm -rf /tmp/nmtk_env_manager
+
+# Pin the Jupyter data dir under the persisted /root volume so the --user
+# kernelspecs written by cloned environments survive container restarts.
+ENV JUPYTER_DATA_DIR=/root/.local/share/jupyter
 
 COPY workers/jupyter_server/jupyter_server_config.py /app/jupyter_server_config.py
 
