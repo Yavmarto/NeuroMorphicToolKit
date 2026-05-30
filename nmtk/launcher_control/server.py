@@ -50,13 +50,16 @@ STATUS_INDEX: dict[str, int] = {
     "updating": 8,
 }
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-MODULES_MANIFEST = REPO_ROOT / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
-STATE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "module_states.json"
-SETTINGS_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "launcher_settings.json"
-WORKSPACE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "workspace_state.json"
-DEPLOYMENT_STATE_FILE = REPO_ROOT / "nmtk" / "neuro_toolkit" / "deployment_state.json"
-DEPLOYMENT_SECRET_FILE = REPO_ROOT / ".nmtk" / "deployment_secrets.json"
+from .config import (
+    REPO_ROOT,
+    MODULES_MANIFEST,
+    STATE_FILE,
+    SETTINGS_FILE,
+    WORKSPACE_FILE,
+    DEPLOYMENT_STATE_FILE,
+    DEPLOYMENT_SECRET_FILE,
+    SUITE_API_ENV_ROOT,
+)
 
 DEFAULT_CONTROL_LOG_LEVEL = "info"
 DEFAULT_SUITE_API_PORT = 9000
@@ -145,7 +148,6 @@ PRERELEASE_VERSION_PATTERN = re.compile(
     r"(?:^|[.\-])(alpha|beta|rc|dev|nightly|snapshot|canary|preview)(?:[.\-\d]|$)",
     re.IGNORECASE,
 )
-SUITE_API_ENV_ROOT = REPO_ROOT / ".nmtk" / "suite_api_env"
 PYNQ_BOARD_STATES = {
     "unpaired",
     "reachable",
@@ -210,7 +212,7 @@ IMPORT_PROBE_SCRIPT = textwrap.dedent(
     """
 ).strip()
 
-EXPECTED_PYNQ_OVERLAY_MANIFEST = {
+EXPECTED_PYNQ_OVERLAY_MANIFEST: dict[str, Any] = {
     "overlay_id": "snn_overlay_v1",
     "overlay_version": "1.0.1",
     "target_part": "xc7z020clg400-1",
@@ -2445,10 +2447,10 @@ class LauncherControlState:
         with self._lock:
             changed = False
             for module_id, remote_version in refreshed_versions.items():
-                module = self._modules.get(module_id)
-                if module is None or module.get("remoteVersion") == remote_version:
+                mod = self._modules.get(module_id)
+                if mod is None or mod.get("remoteVersion") == remote_version:
                     continue
-                module["remoteVersion"] = remote_version
+                mod["remoteVersion"] = remote_version
                 changed = True
             if changed:
                 self._persist_states()
@@ -2498,7 +2500,7 @@ class LauncherControlState:
         return defaults
 
     def _load_workspace(self) -> dict[str, Any]:
-        defaults = {
+        defaults: dict[str, Any] = {
             "sessions": [],
             "focusedModuleId": None,
         }
@@ -4593,11 +4595,8 @@ class LauncherControlState:
                     if isinstance(doctor.get("runtimeStatus"), dict)
                     else {}
                 )
-                preflight = (
-                    doctor.get("preflight")
-                    if isinstance(doctor.get("preflight"), dict)
-                    else {}
-                )
+                from typing import cast
+                preflight = cast(dict[str, Any], doctor.get("preflight") if isinstance(doctor.get("preflight"), dict) else {})
                 updated = self._apply_preflight_to_akida_host(
                     host_id,
                     preflight,
@@ -4719,16 +4718,22 @@ class LauncherControlState:
 
         install_dir = _module_install_dir(module)
         python_path = _module_python_path(module)
-        python_version_result = self._run_command(
-            [
-                str(python_path),
-                "-c",
-                'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")',
-            ],
-            cwd=install_dir,
-            module_id=module_id,
-        )
-        python_version = str(python_version_result.stdout or "").strip()
+        import subprocess
+        try:
+            python_version_result = subprocess.run(
+                [
+                    str(python_path),
+                    "-c",
+                    'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")',
+                ],
+                cwd=install_dir,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            python_version = str(python_version_result.stdout or "").strip()
+        except subprocess.CalledProcessError:
+            python_version = ""
         if not _version_matches_range(python_version, runtime["pythonRange"]):
             self._update_module_fields(
                 module_id,
@@ -5186,11 +5191,11 @@ class LauncherControlState:
         self._update_module_fields(
             module_id, status=STATUS_INDEX["installing"], installProgress=0.1
         )
-        if use_poetry:
+        if poetry is not None and _module_uses_poetry(module):
             # Configure Poetry before any `poetry run ...` command so repairs
             # consistently recreate an in-project `.venv`.
             self._run_command(
-                [poetry, "config", "virtualenvs.in-project", "true", "--local"],
+                [str(poetry), "config", "virtualenvs.in-project", "true", "--local"],
                 cwd=install_dir,
                 module_id=module_id,
             )
@@ -5208,10 +5213,10 @@ class LauncherControlState:
         for dependency in module.get("localDeps", []):
             dep_path = (REPO_ROOT / dependency).resolve()
             if dep_path.exists():
-                if use_poetry:
+                if poetry is not None and _module_uses_poetry(module):
                     self._run_command(
                         [
-                            poetry,
+                            str(poetry),
                             "run",
                             "python",
                             "-m",
@@ -5230,14 +5235,14 @@ class LauncherControlState:
                     )
 
         self._update_module_fields(module_id, installProgress=0.6)
-        if use_poetry:
+        if poetry is not None and _module_uses_poetry(module):
             self._run_command(
-                [poetry, "lock"],
+                [str(poetry), "lock"],
                 cwd=install_dir,
                 module_id=module_id,
             )
             self._run_command(
-                [poetry, "install", "--no-interaction", "--no-root"],
+                [str(poetry), "install", "--no-interaction", "--no-root"],
                 cwd=install_dir,
                 module_id=module_id,
             )
@@ -5719,7 +5724,6 @@ class LauncherControlState:
         modules: list[dict[str, Any]] = []
         akida_hosts: list[dict[str, Any]] = []
         pynq_boards: list[dict[str, Any]] = []
-        akida_hosts: list[dict[str, Any]] = []
         global_checks = _global_preflight_checks()
         fatal_count = 0
         degraded_count = 0
