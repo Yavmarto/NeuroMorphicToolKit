@@ -25,6 +25,14 @@ ENV NMTK_STATE_DIR=/app/state
 ENV NMTK_DATA_DIR=/app/data
 ENV PYTHONUNBUFFERED=1
 
+# Create a non-root user. State/data directories are created here so Docker
+# seeds the named volumes with the correct ownership on first mount.
+RUN addgroup --system appuser \
+ && adduser --system --no-create-home --ingroup appuser appuser \
+ && mkdir -p /app/state /app/data \
+ && chown -R appuser:appuser /app/state /app/data
+USER appuser
+
 EXPOSE 8090
 
 # --no-manage-suite-api: Docker Compose owns suite_api lifecycle, not us.
