@@ -6,13 +6,13 @@ By completing this integration, NMTK will gain:
 1. An ultra-fast Rust-based simulation backend for inference.
 2. A direct deployment path to FPGA hardware via `sc-neurocore`'s equation-to-Verilog compiler.
 
-## User Review Required
+## Design Decisions
 
-> [!IMPORTANT]
-> **FPGA vs Simulation target distinction:** `sc-neurocore` provides both a simulation backend and a hardware (FPGA RTL) generation backend. I propose surfacing both as distinct targets in CNL Studio so the user can clearly choose between "Run in Rust Simulation" vs "Export to FPGA". Please confirm if this split makes sense.
+> [!TIP]
+> **FPGA vs Simulation target distinction:** `sc-neurocore` provides both a simulation backend and a hardware (FPGA RTL) generation backend. As approved, we will surface both as distinct targets in CNL Studio so the user can clearly choose between "Run in Rust Simulation" vs "Export to FPGA".
 
 > [!NOTE]
-> **Installation Dependency:** Like snnTorch, `sc-neurocore` will be treated as an optional runtime dependency for `neurocnl`. If a user selects it without having it installed in their environment, the backend will gracefully fail and prompt them to `pip install sc-neurocore`.
+> **Installation Dependency:** As requested, `sc-neurocore` (and `snntorch`) will be added to the default `dependencies` array in `neurocnl/pyproject.toml`. This ensures it is installed by default for all users, eliminating the need for optional runtime checks or graceful failure messages.
 
 ## Proposed Changes
 
@@ -37,6 +37,9 @@ The entry point script that loads the exported `model.nir` file and runs it thro
 
 We will build an adapter to support running `sc-neurocore` simulations directly from the CNL backend (e.g. for Studio execution).
 
+#### [MODIFY] neurocnl/pyproject.toml
+Move `sc-neurocore` (and `snntorch`) into the main `dependencies` array to ensure it is installed by default across all deployments.
+
 #### [NEW] neurocnl/neurocnl/runtime/sc_neurocore_simulator.py
 A new simulator adapter implementing the CNL → NIR → Simulator contract. It will accept a compiled `nir.NIRGraph`, translate it (or pass it directly if natively supported) to `sc-neurocore`, run the timestep loop, and normalise spikes and voltages into the shared `SimulatorRunResult` schema.
 
@@ -44,7 +47,7 @@ A new simulator adapter implementing the CNL → NIR → Simulator contract. It 
 Add `"sc_neurocore"` to the supported simulator enumeration types.
 
 #### [MODIFY] neurocnl/backend/app/routers/simulators.py
-Register the new `ScNeuroCoreSimulatorAdapter` so the API can route `/simulate` requests to it when requested. Add preflight checks to verify if `sc-neurocore` is installed in the local environment.
+Register the new `ScNeuroCoreSimulatorAdapter` so the API can route `/simulate` requests to it when requested. 
 
 ---
 

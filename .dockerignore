@@ -41,3 +41,12 @@ issues/
 issues-archive/
 docs/
 monitoring/
+
+# Tool caches / editor state (not needed by any Dockerfile)
+.cache/
+.hypothesis/
+.kiro/
+.understand-anything/
+.sisyphus/
+.impeccable/
+.tmp_manual_ui/

@@ -103,9 +103,12 @@ docker-ex:
 		--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
 		--exclude '__pycache__' --exclude 'node_modules' \
 		--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
+		--exclude '.cache' --exclude '.hypothesis' --exclude '.kiro' \
+		--exclude '.understand-anything' --exclude '.sisyphus' \
+		--exclude '.impeccable' --exclude '.tmp_manual_ui' \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Building and starting containers on $(REMOTE_HOST) (rolling update, no downtime)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose up --build -d --wait --remove-orphans"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose up --build -d --wait --remove-orphans"
 	@echo "==> Backend ready at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-all:
@@ -119,13 +122,14 @@ docker-ex-all:
 		--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
 		--exclude '__pycache__' --exclude 'node_modules' \
 		--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
+		--exclude '.cache' --exclude '.hypothesis' --exclude '.kiro' \
+		--exclude '.understand-anything' --exclude '.sisyphus' \
+		--exclude '.impeccable' --exclude '.tmp_manual_ui' \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
-	@echo "==> Stopping existing containers on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose down || true"
 	@echo "==> Evicting any native process on port $(LAUNCHER_CONTROL_PORT) on $(REMOTE_HOST)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(LAUNCHER_CONTROL_PORT)/tcp 2>/dev/null || true"
 	@echo "==> Building and starting full stack on $(REMOTE_HOST) (rolling update, no downtime)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose up --build -d --wait --remove-orphans"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose up --build -d --wait --remove-orphans"
 	@echo "==> Full stack ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-m: docker-ex
