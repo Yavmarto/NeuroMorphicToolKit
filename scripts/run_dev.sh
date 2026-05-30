@@ -38,7 +38,6 @@ fi
 
 FLUTTER_DEVICE=""
 USE_DOCKER="false"
-DOCKER_PROFILE="default"
 CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-8090}"
 CONTROL_API_PID=""
 CONTROL_API_BIND_HOST="127.0.0.1"
@@ -52,8 +51,7 @@ Usage: ./scripts/run_dev.sh --flutter-device <device> [options]
 
 Options:
   --flutter-device <device>  Desktop Flutter target to run.
-  --docker                   Use Docker for the backend services.
-  --profile <name>           Docker profile to use (e.g., physics, hardware, full).
+  --docker                   Use Docker for the backend services (starts all containers).
   --remote-host <ip>         Use an external remote host for the backend.
 EOF
 }
@@ -152,6 +150,37 @@ PY
 }
 
 
+wait_for_control_api() {
+  local url="$1"
+  local timeout_secs=90
+  local start
+  start=$(date +%s)
+
+  echo "==> Waiting for launcher control API at $url (timeout ${timeout_secs}s)..."
+  while true; do
+    local elapsed=$(( $(date +%s) - start ))
+    if [ "$elapsed" -ge "$timeout_secs" ]; then
+      echo "==> Launcher control API did not become ready within ${timeout_secs}s; continuing" >&2
+      return 0
+    fi
+
+    if "$PYTHON3" - "$url" 2>/dev/null <<'PY'
+import sys, urllib.request, urllib.error
+try:
+    urllib.request.urlopen(sys.argv[1] + "/health", timeout=2)
+    sys.exit(0)
+except Exception:
+    sys.exit(1)
+PY
+    then
+      echo "==> Launcher control API is ready"
+      return 0
+    fi
+    sleep 2
+  done
+}
+
+
 reserve_control_api_port() {
   if is_port_in_use "$CONTROL_API_PORT"; then
     echo "==> Port $CONTROL_API_PORT is in use; freeing it..."
@@ -238,10 +267,6 @@ while [ "$#" -gt 0 ]; do
       USE_DOCKER="true"
       shift
       ;;
-    --profile)
-      DOCKER_PROFILE="${2:-default}"
-      shift 2
-      ;;
     --remote-host)
       REMOTE_HOST_IP="$2"
       shift 2
@@ -286,45 +311,35 @@ fi
 
 if [[ "$USE_DOCKER" == "true" ]]; then
   echo "------------------------------------------------------------"
-  echo "==> Starting Docker containers (profile: $DOCKER_PROFILE)"
-  if [[ "$DOCKER_PROFILE" == "default" ]]; then
-    echo "    (Default profile starts only the suite_api container.)"
-  else
-    echo "    (Additional worker containers are enabled by the selected profile.)"
-  fi
+  echo "==> Starting full Docker stack..."
   echo "------------------------------------------------------------"
-  if [[ "$DOCKER_PROFILE" == "default" ]]; then
-    docker compose up --build -d
-  elif [[ "$DOCKER_PROFILE" == "all" ]]; then
-    ALL_PROFILES=$(docker compose config --profiles | tr '\n' ',' | sed 's/,$//')
-    NEUROCNL_LAVA_WORKER_URL="${NEUROCNL_LAVA_WORKER_URL:-http://lava-backend:8012}" \
-      COMPOSE_PROFILES="$ALL_PROFILES" docker compose up --build -d
-  elif [[ "$DOCKER_PROFILE" == "hardware" ]]; then
-    NEUROCNL_LAVA_WORKER_URL="${NEUROCNL_LAVA_WORKER_URL:-http://lava-backend:8012}" \
-      docker compose --profile "$DOCKER_PROFILE" up --build -d
-  else
-    docker compose --profile "$DOCKER_PROFILE" up --build -d
-  fi
+  docker compose up --build -d
 fi
 
 CONTROL_API_URL=""
-# Only reserve suite api port if NOT using docker and NOT using remote host
-if [[ "$USE_DOCKER" == "false" ]] && [[ -z "$REMOTE_HOST_IP" ]]; then
-  reserve_suite_api_port
-fi
 
-MANAGE_SUITE_API="true"
-if [[ "$USE_DOCKER" == "true" ]] || [[ -n "$REMOTE_HOST_IP" ]]; then
-  MANAGE_SUITE_API="false"
-fi
+if [[ "$USE_DOCKER" == "true" ]]; then
+  # Docker Compose manages both suite_api and launcher-control.
+  # Resolve the URL that the Flutter app will use to reach the control service.
+  if [[ "$TARGET_PLATFORM" == android* || "$TARGET_PLATFORM" == ios* || "$FLUTTER_DEVICE" == "ios" ]]; then
+    CONTROL_API_URL="http://$HOST_IP:${LAUNCHER_CONTROL_PORT:-8090}"
+  else
+    CONTROL_API_URL="http://localhost:${LAUNCHER_CONTROL_PORT:-8090}"
+  fi
+  # Docker Compose already started the container; just wait for it to be healthy.
+  wait_for_control_api "$CONTROL_API_URL"
 
-start_control_api "$CONTROL_API_BIND_HOST" "$MANAGE_SUITE_API" "$REMOTE_HOST_IP"
-CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
+elif [[ -n "$REMOTE_HOST_IP" ]]; then
+  # Backend is on a remote server (docker-ex targets).
+  CONTROL_API_URL="http://$REMOTE_HOST_IP:${LAUNCHER_CONTROL_PORT:-8090}"
+  echo "==> Using remote launcher control API at $CONTROL_API_URL"
 
-if [[ -z "$REMOTE_HOST_IP" ]]; then
-  wait_for_suite_api "$CONTROL_API_URL"
 else
-  echo "==> Using remote backend at $REMOTE_HOST_IP; skipping local suite_api readiness check."
+  # Pure local dev — start the control service on this machine as before.
+  reserve_suite_api_port
+  start_control_api "$CONTROL_API_BIND_HOST" "true" ""
+  CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
+  wait_for_suite_api "$CONTROL_API_URL"
 fi
 
 echo "------------------------------------------------------------"
@@ -342,12 +357,16 @@ flutter_args=(
   run
   -d "$FLUTTER_DEVICE"
   --dart-define="NMTK_CONTROL_API_BASE_URL=$CONTROL_API_URL"
-  --dart-define="NMTK_CONTROL_API_PORT=$CONTROL_API_PORT"
+  --dart-define="NMTK_CONTROL_API_PORT=${LAUNCHER_CONTROL_PORT:-8090}"
 )
 if [[ -n "$SUITE_API_URL" ]]; then
   flutter_args+=(--dart-define="SUITE_API_URL=$SUITE_API_URL")
 fi
 if [[ -n "$REMOTE_HOST_IP" ]]; then
   flutter_args+=(--dart-define="NMTK_SERVICES_HOST=$REMOTE_HOST_IP")
+elif [[ "$USE_DOCKER" == "true" ]] && \
+     [[ "$TARGET_PLATFORM" == android* || "$TARGET_PLATFORM" == ios* || "$FLUTTER_DEVICE" == "ios" ]]; then
+  # Docker on mobile: tell Flutter the host IP for direct suite_api access
+  flutter_args+=(--dart-define="NMTK_SERVICES_HOST=$HOST_IP")
 fi
 flutter "${flutter_args[@]}"
