@@ -1,0 +1,34 @@
+# Launcher control service — orchestrates module state, workspace, and
+# hardware provisioning (PYNQ/Akida SSH). Suite_api is managed by Docker
+# Compose, not by this process (--no-manage-suite-api).
+FROM python:3.12-slim
+
+# openssh-client + rsync are required for PYNQ and Akida SSH provisioning.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssh-client rsync \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy the launcher control package and its entry-point script.
+# No extra pip dependencies — the service uses only stdlib + tomllib (3.11+).
+COPY nmtk/launcher_control/ nmtk/launcher_control/
+COPY scripts/launcher_control_service.py scripts/launcher_control_service.py
+
+# modules.json is read at startup to load module definitions.
+# assets/ also contains overlay staging files for PYNQ provisioning.
+COPY nmtk/neuro_toolkit/assets/ nmtk/neuro_toolkit/assets/
+
+# State and secrets are redirected to Docker volumes via these env vars.
+# Matches the volume mount points declared in docker-compose.yml.
+ENV NMTK_STATE_DIR=/app/state
+ENV NMTK_DATA_DIR=/app/data
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8090
+
+# --no-manage-suite-api: Docker Compose owns suite_api lifecycle, not us.
+CMD ["python", "scripts/launcher_control_service.py", \
+     "--host", "0.0.0.0", \
+     "--port", "8090", \
+     "--no-manage-suite-api"]

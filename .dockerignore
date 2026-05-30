@@ -29,6 +29,18 @@ Neurosim/frontend/
 Neurochip/frontend/
 Neurobench/frontend/
 nmtk/
+# Re-include paths required by Dockerfile.control
+!nmtk/launcher_control/
+!nmtk/neuro_toolkit/
+nmtk/neuro_toolkit/lib/
+nmtk/neuro_toolkit/test/
+nmtk/neuro_toolkit/android/
+nmtk/neuro_toolkit/ios/
+nmtk/neuro_toolkit/linux/
+nmtk/neuro_toolkit/macos/
+nmtk/neuro_toolkit/windows/
+nmtk/neuro_toolkit/web/
+nmtk/neuro_toolkit/integration_test/
 nmtk_ui_core/
 
 # Test and demo data
