@@ -79,7 +79,7 @@ SUPPORTED_START_STRATEGIES = {"uvicorn", "none"}
 PREFLIGHT_SENTINEL = "NMTK_PREFLIGHT_JSON="
 INSTALL_STATUS_SENTINEL = "INSTALL_STATUS_JSON="
 DEFAULT_AKIDA_HOST_PORT = 8002
-DEFAULT_AKIDA_CONTROL_PORT = 8090
+DEFAULT_AKIDA_CONTROL_PORT = 8091
 DEFAULT_AKIDA_HOST_SSH_PORT = 22
 DEFAULT_PYNQ_BOARD_PORT = 8002
 DEFAULT_PYNQ_BOARD_SSH_PORT = 22
@@ -304,7 +304,7 @@ class PynqLauncherRuntimeContract:
 @dataclass(frozen=True)
 class AkidaLauncherRuntimeContract:
     runtime_port: int = 8002
-    control_port: int = 8090
+    control_port: int = 8091
     ssh_port: int = 22
     default_state: str = "unknown"
     default_auth_mode: str = "password"
@@ -6608,7 +6608,7 @@ def create_server(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Launcher control service")
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--port", type=int, default=8090)
+    parser.add_argument("--port", type=int, default=8091)
     parser.add_argument(
         "--doctor",
         action="store_true",

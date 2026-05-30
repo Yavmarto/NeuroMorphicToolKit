@@ -177,10 +177,10 @@ void main() {
     expect(activeDecoration.color, isNot(equals(Colors.transparent)));
     expect(inactiveDecoration.color, isNot(equals(Colors.transparent)));
 
-    expect(
-        tester.getSize(find.byTooltip('Close CNL Studio')), const Size(44.0, 41.0));
-    expect(
-        tester.getSize(find.byTooltip('Close NeuroChip')), const Size(44.0, 41.0));
+    expect(tester.getSize(find.byTooltip('Close CNL Studio')),
+        const Size(44.0, 41.0));
+    expect(tester.getSize(find.byTooltip('Close NeuroChip')),
+        const Size(44.0, 41.0));
 
     await tester.tap(find.text('NeuroChip'));
     await tester.pump();
@@ -261,7 +261,7 @@ void main() {
     expect(activeSemantics.flagsCollection.isSelected, ui.Tristate.isTrue);
     expect(inactiveSemantics.label, contains('NeuroChip module tab'));
     expect(inactiveSemantics.flagsCollection.isButton, isTrue);
-    
+
     semanticsHandle.dispose();
   });
 }

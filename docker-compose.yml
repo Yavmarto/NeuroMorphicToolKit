@@ -123,10 +123,15 @@ services:
     ports:
       # LAUNCHER_CONTROL_PORT changes the host-side port only; container always listens on 8091.
       - "${LAUNCHER_CONTROL_PORT:-8091}:8091"
+    extra_hosts:
+      # Allows the launcher to probe externally managed services (Jupyter, lava-backend)
+      # via the host's published port mappings rather than the container loopback.
+      - "host.docker.internal:host-gateway"
     environment:
       - PYTHONUNBUFFERED=1
       - NMTK_STATE_DIR=/app/state
       - NMTK_DATA_DIR=/app/data
+      - NMTK_BACKEND_DEPLOYMENT_READY=1
     volumes:
       - launcher_control_state:/app/state
       - launcher_control_data:/app/data
@@ -250,9 +255,9 @@ services:
     restart: unless-stopped
     depends_on:
       suite_api:
-        condition: service_healthy
+        condition: service_started
       lava-backend:
-        condition: service_healthy
+        condition: service_started
     networks:
       - backend-net
 

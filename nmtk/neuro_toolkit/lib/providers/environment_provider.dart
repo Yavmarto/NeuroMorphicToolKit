@@ -48,10 +48,11 @@ class EnvironmentProvider extends ChangeNotifier {
   Future<String> exportRequirements(String slug, {String mode = 'delta'}) =>
       _api.exportRequirements(slug, mode: mode);
 
-  Future<void> createEnvironment(String displayName) =>
-      _runJob('Cloning environment…', () => _api.createEnvironment(displayName));
+  Future<void> createEnvironment(String displayName) => _runJob(
+      'Cloning environment…', () => _api.createEnvironment(displayName));
 
-  Future<void> importEnvironment(String displayName, String requirements) => _runJob(
+  Future<void> importEnvironment(String displayName, String requirements) =>
+      _runJob(
         'Importing environment…',
         () => _api.importEnvironment(displayName, requirements),
       );
@@ -63,7 +64,8 @@ class EnvironmentProvider extends ChangeNotifier {
       _runJob('Removing packages…', () => _api.uninstallPackages(slug, names));
 
   Future<void> deleteEnvironment(String slug) async {
-    await _withBusy('Deleting environment…', () => _api.deleteEnvironment(slug));
+    await _withBusy(
+        'Deleting environment…', () => _api.deleteEnvironment(slug));
     await refresh();
   }
 
@@ -75,7 +77,10 @@ class EnvironmentProvider extends ChangeNotifier {
         final job = await _api.pollJob(jobId);
         if (job.isError) {
           throw EnvironmentApiException(
-            [job.error, job.log].whereType<String>().where((s) => s.isNotEmpty).join('\n\n'),
+            [job.error, job.log]
+                .whereType<String>()
+                .where((s) => s.isNotEmpty)
+                .join('\n\n'),
           );
         }
         if (job.isDone) return;

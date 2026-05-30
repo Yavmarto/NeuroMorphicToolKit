@@ -12,7 +12,6 @@ import 'package:nmtk_ui_core/models/pynq_deployment_model.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:mocktail/mocktail.dart';
 
-
 class MockAnalyticsService extends Mock implements AnalyticsService {}
 
 void main() {

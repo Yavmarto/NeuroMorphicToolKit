@@ -12,7 +12,7 @@ Use a remote Akida host when any of the following is true:
 
 The remote host should run both:
 
-- the launcher control API on port `8090`
+- the launcher control API on port `8091`
 - the Neurochip backend on port `8002`
 
 ## Remote Host Requirements
@@ -38,7 +38,7 @@ poetry install --extras "akida-metatf"
 
 ```bash
 cd /path/to/NeuroMorphicToolKit
-python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090
+python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8091
 ```
 
 4. Start the Neurochip backend from the `Neurochip/` repository:
@@ -50,7 +50,7 @@ poetry run uvicorn neurochip.app.main:app --host 0.0.0.0 --port 8002
 
 5. Confirm the remote endpoints respond before opening NMTK:
 
-- `http://<host>:8090/health`
+- `http://<host>:8091/health`
 - `http://<host>:8002/api/neurochip/akida/status`
 
 ## Pair The Host From NMTK
@@ -60,7 +60,7 @@ Run the launcher with the remote control and Neurochip base URLs:
 ```bash
 cd /path/to/NeuroMorphicToolKit/nmtk/neuro_toolkit
 flutter run \
-  --dart-define=NMTK_CONTROL_API_BASE_URL=http://<host>:8090 \
+  --dart-define=NMTK_CONTROL_API_BASE_URL=http://<host>:8091 \
   --dart-define=NMTK_NEUROCHIP_BASE_URL=http://<host>:8002
 ```
 

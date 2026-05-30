@@ -109,12 +109,15 @@ class ModuleTabBar extends ConsumerWidget {
                               const SizedBox(width: 8),
                               Text(
                                 module.name,
-                                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                                  fontWeight: isActive
-                                      ? FontWeight.w700
-                                      : FontWeight.w600,
-                                  color: foregroundColor,
-                                ),
+                                style: Zeta.of(context)
+                                    .textStyles
+                                    .bodyMedium
+                                    .copyWith(
+                                      fontWeight: isActive
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
+                                      color: foregroundColor,
+                                    ),
                               ),
                               const SizedBox(width: 10),
                               SizedBox.square(

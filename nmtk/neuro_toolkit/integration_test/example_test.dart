@@ -51,7 +51,7 @@ class _MockProcessManager implements ProcessManager {
 
 class _FakeWorkspaceControlApiService extends ControlApiService {
   _FakeWorkspaceControlApiService()
-      : super(baseUri: Uri.parse('http://127.0.0.1:8090'));
+      : super(baseUri: Uri.parse('http://127.0.0.1:8091'));
 
   WorkspaceSnapshot _snapshot = const WorkspaceSnapshot(
     sessions: <WorkspaceSession>[],

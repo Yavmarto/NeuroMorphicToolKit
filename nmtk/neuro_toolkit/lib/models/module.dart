@@ -189,7 +189,7 @@ class AkidaLauncherRuntimeConfig {
   factory AkidaLauncherRuntimeConfig.fromJson(Map<String, dynamic> json) {
     return AkidaLauncherRuntimeConfig(
       runtimePort: json['runtimePort'] as int? ?? 8002,
-      controlPort: json['controlPort'] as int? ?? 8090,
+      controlPort: json['controlPort'] as int? ?? 8091,
       sshPort: json['sshPort'] as int? ?? 22,
       defaultState: json['defaultState'] as String? ?? 'unknown',
       defaultAuthMode: json['defaultAuthMode'] as String? ?? 'password',
@@ -613,9 +613,7 @@ class Module {
   /// health-probes them; it never installs or starts them, and their first
   /// bring-up can include a multi-minute environment build done at deploy time.
   bool get isExternallyManaged =>
-      startStrategy == 'none' &&
-      effectivePort != null &&
-      effectivePort != 9000;
+      startStrategy == 'none' && effectivePort != null && effectivePort != 9000;
 
   String? get statusMessage {
     if (preflightMessage != null && preflightMessage!.isNotEmpty) {

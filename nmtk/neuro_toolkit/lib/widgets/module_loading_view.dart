@@ -103,16 +103,16 @@ class ModuleLoadingView extends StatelessWidget {
                 title,
                 textAlign: TextAlign.center,
                 style: Zeta.of(context).textStyles.titleMedium.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
               const SizedBox(height: 6),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
                 style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                  color: colors.mainSubtle,
-                ),
+                      color: colors.mainSubtle,
+                    ),
               ),
               const SizedBox(height: 14),
               LinearProgressIndicator(

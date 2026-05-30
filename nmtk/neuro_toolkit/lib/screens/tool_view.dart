@@ -116,10 +116,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     // Standalone modules on non-monolith ports.
     // Use deployment.healthPath when available so modules like Jupyter (which
     // expose /api/health rather than /health) are polled correctly.
-    final String healthPath =
-        module.deployment?.healthPath.isNotEmpty == true
-            ? module.deployment!.healthPath
-            : '/health';
+    final String healthPath = module.deployment?.healthPath.isNotEmpty == true
+        ? module.deployment!.healthPath
+        : '/health';
     final path = healthCheck ? healthPath : (module.hasFrontend ? '' : '/docs');
     return Uri(
       scheme: _serviceScheme(),
@@ -615,9 +614,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     if (eligibleModules.isEmpty) {
       return NmtkDesktopScaffold(
-        pageTitle: 'NeuroToolkit',
+        pageTitle: _activeModuleId == 'settings' ? 'Settings' : 'NeuroToolkit',
         navItems: const [],
-        selectedIndex: 0,
+        selectedIndex: -1,
         mode: NmtkShellMode.command,
         footerNavItems: const [
           NmtkSidebarItem(
@@ -627,8 +626,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             selectedIcon: Icons.settings_rounded,
           ),
         ],
-        onFooterNavItemSelected: (_) => context.go('/settings'),
-        child: const ModulePickerPanel(),
+        onFooterNavItemSelected: (_) =>
+            setState(() => _activeModuleId = 'settings'),
+        child: _activeModuleId == 'settings'
+            ? const SettingsScreen()
+            : const ModulePickerPanel(),
       );
     }
 

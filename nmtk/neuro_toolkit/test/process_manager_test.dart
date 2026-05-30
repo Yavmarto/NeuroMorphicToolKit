@@ -383,8 +383,7 @@ void main() {
 
   test('installModule does not run ipykernel when jupyterKernel is null',
       () async {
-    final tempDir =
-        Directory.systemTemp.createTempSync('nmtk_test_no_kernel');
+    final tempDir = Directory.systemTemp.createTempSync('nmtk_test_no_kernel');
     final installDir = p.join(tempDir.path, 'src');
     Directory(installDir).createSync(recursive: true);
 

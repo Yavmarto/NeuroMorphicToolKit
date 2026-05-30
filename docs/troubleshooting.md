@@ -187,7 +187,7 @@ Check that both services are reachable from the launcher machine:
 
 ```bash
 # Launcher control API (on the remote host)
-python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090
+python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8091
 
 # Neurochip backend (on the remote host)
 poetry run uvicorn neurochip.app.main:app --host 0.0.0.0 --port 8002
@@ -196,7 +196,7 @@ poetry run uvicorn neurochip.app.main:app --host 0.0.0.0 --port 8002
 Set these environment variables on the launcher machine:
 
 ```bash
-export NMTK_CONTROL_API_BASE_URL=http://<remote-host>:8090
+export NMTK_CONTROL_API_BASE_URL=http://<remote-host>:8091
 export NMTK_NEUROCHIP_BASE_URL=http://<remote-host>:8002
 ```
 

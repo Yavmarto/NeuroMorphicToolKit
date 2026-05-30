@@ -86,7 +86,7 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
 void main() {
   testWidgets('App loads smoke test', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
-    
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       ProviderScope(

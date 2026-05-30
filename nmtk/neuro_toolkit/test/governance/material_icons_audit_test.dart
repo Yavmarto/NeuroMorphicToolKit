@@ -129,8 +129,7 @@ void main() {
         expect(
           unannotated,
           lessThanOrEqualTo(kIconsBaseline),
-          reason:
-              'Found ${hits.length} `Icons.*` references in lib/, of which '
+          reason: 'Found ${hits.length} `Icons.*` references in lib/, of which '
               '$markerCount are paired with `// ZETA-MIGRATION-EXEMPT:` '
               'markers. Unannotated count: $unannotated. The baseline for '
               'this package is $kIconsBaseline.\n\n'

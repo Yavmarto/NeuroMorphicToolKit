@@ -90,7 +90,8 @@ class EnvironmentApiException implements Exception {
 /// resolving the host the same way [ToolViewScreen] resolves module URIs so
 /// remote-endpoint settings are honoured.
 class EnvironmentApiService {
-  EnvironmentApiService({required ControlApiService controlApi, http.Client? client})
+  EnvironmentApiService(
+      {required ControlApiService controlApi, http.Client? client})
       : _controlApi = controlApi,
         _client = client ?? http.Client();
 
@@ -102,7 +103,8 @@ class EnvironmentApiService {
   Uri _base() {
     if (kIsWeb) {
       final b = Uri.base;
-      final host = (b.host.isEmpty || b.host == '0.0.0.0') ? 'localhost' : b.host;
+      final host =
+          (b.host.isEmpty || b.host == '0.0.0.0') ? 'localhost' : b.host;
       final scheme = b.scheme.isEmpty ? 'http' : b.scheme;
       return Uri(scheme: scheme, host: host, port: _suiteApiPort);
     }
@@ -152,13 +154,15 @@ class EnvironmentApiService {
       _postJob('/environments', {'displayName': displayName});
 
   Future<String> importEnvironment(String displayName, String requirements) =>
-      _postJob('/environments', {'displayName': displayName, 'requirements': requirements});
+      _postJob('/environments',
+          {'displayName': displayName, 'requirements': requirements});
 
-  Future<String> installPackages(String slug, List<String> specs) =>
-      _postJob('/environments/$slug/packages', {'action': 'install', 'packages': specs});
+  Future<String> installPackages(String slug, List<String> specs) => _postJob(
+      '/environments/$slug/packages', {'action': 'install', 'packages': specs});
 
-  Future<String> uninstallPackages(String slug, List<String> names) =>
-      _postJob('/environments/$slug/packages', {'action': 'uninstall', 'packages': names});
+  Future<String> uninstallPackages(String slug, List<String> names) => _postJob(
+      '/environments/$slug/packages',
+      {'action': 'uninstall', 'packages': names});
 
   Future<String> _postJob(String path, Map<String, dynamic> payload) async {
     final r = await _client.post(
@@ -169,7 +173,8 @@ class EnvironmentApiService {
     if (r.statusCode != 202) throw EnvironmentApiException(_errorFrom(r));
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     final jobId = body['jobId'] as String?;
-    if (jobId == null) throw EnvironmentApiException('Backend did not return a job id.');
+    if (jobId == null)
+      throw EnvironmentApiException('Backend did not return a job id.');
     return jobId;
   }
 
@@ -178,8 +183,10 @@ class EnvironmentApiService {
     if (r.statusCode != 204) throw EnvironmentApiException(_errorFrom(r));
   }
 
-  Future<String> exportRequirements(String slug, {String mode = 'delta'}) async {
-    final r = await _client.get(_uri('/environments/$slug/requirements', {'mode': mode}));
+  Future<String> exportRequirements(String slug,
+      {String mode = 'delta'}) async {
+    final r = await _client
+        .get(_uri('/environments/$slug/requirements', {'mode': mode}));
     if (r.statusCode != 200) throw EnvironmentApiException(_errorFrom(r));
     return r.body;
   }

@@ -13,7 +13,8 @@ class ServerSetupScreen extends ConsumerStatefulWidget {
   const ServerSetupScreen({
     super.key,
     required this.message,
-    this.controller,
+    this.initialValue,
+    this.onChanged,
     this.onConnect,
     this.connectLabel = 'Save & Retry',
     this.allowConnect = true,
@@ -24,7 +25,13 @@ class ServerSetupScreen extends ConsumerStatefulWidget {
     this.setupUnavailableMessage,
   });
 
-  final TextEditingController? controller;
+  /// Initial text for the host input field.  The widget owns its controller
+  /// internally so there are no cross-widget controller lifetimes to manage.
+  final String? initialValue;
+
+  /// Called whenever the host input text changes.
+  final ValueChanged<String?>? onChanged;
+
   final String? message;
   final Future<void> Function()? onConnect;
   final String connectLabel;
@@ -41,15 +48,13 @@ class ServerSetupScreen extends ConsumerStatefulWidget {
 
 class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
   late ServerSetupMode _mode = widget.initialMode;
-  TextEditingController? _internalController;
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialValue ?? '');
   bool _isConnecting = false;
-
-  TextEditingController get _controller =>
-      widget.controller ?? (_internalController ??= TextEditingController());
 
   @override
   void dispose() {
-    _internalController?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -129,11 +134,12 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
           const SizedBox(height: 6),
           ZetaTextInput(
             controller: _controller,
-            placeholder: 'http://192.168.1.50:8090',
+            placeholder: 'http://192.168.1.50:8091',
+            onChange: widget.onChanged,
           ),
           const SizedBox(height: 8),
           Text(
-            'Run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8090` on the target machine if the launcher server is not already running.',
+            'Run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8091` on the target machine if the launcher server is not already running.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),

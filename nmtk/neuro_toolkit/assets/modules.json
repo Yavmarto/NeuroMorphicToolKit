@@ -100,7 +100,7 @@
       },
       "akida": {
         "runtimePort": 8002,
-        "controlPort": 8090,
+        "controlPort": 8091,
         "sshPort": 22,
         "defaultState": "unknown",
         "defaultAuthMode": "password",

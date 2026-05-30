@@ -21,3 +21,8 @@ NMTK_SIDE/.opencode
 NMTK_SIDE
 nmtk/packages
 recordings
+scratch_test*.py
+shared_assets/
+recordings_smoke_test/
+reports/
+output/

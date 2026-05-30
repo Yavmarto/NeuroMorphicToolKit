@@ -176,5 +176,82 @@ void main() {
 
       expect(find.byType(Row), findsOneWidget);
     });
+
+    testWidgets(
+      'pulseTick increment on a running step does not throw',
+      (WidgetTester tester) async {
+        // First render: running step with pulseTick=0
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NmtkPipelineStepper(
+                steps: const [
+                  NmtkPipelineStepData(
+                    id: 'train',
+                    label: 'Train',
+                    status: NmtkStepStatus.running,
+                    pulseTick: 0,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+        // Second render: pulseTick increments — should animate without crash.
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NmtkPipelineStepper(
+                steps: const [
+                  NmtkPipelineStepData(
+                    id: 'train',
+                    label: 'Train',
+                    status: NmtkStepStatus.running,
+                    pulseTick: 1,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        // Advance the pulse animation fully (800 ms). Do NOT use pumpAndSettle:
+        // CircularProgressIndicator animates forever, so pumpAndSettle times out.
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump(const Duration(milliseconds: 400));
+
+        // Still running — no crash.
+        expect(find.text('Train'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'pulseTick on non-running step does not trigger scale animation',
+      (WidgetTester tester) async {
+        // Idle step with pulseTick — must not crash or scale.
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: NmtkPipelineStepper(
+                steps: const [
+                  NmtkPipelineStepData(
+                    id: 's',
+                    label: 'S',
+                    status: NmtkStepStatus.idle,
+                    pulseTick: 5,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('S'), findsOneWidget);
+        // No Transform.scale widgets for idle steps.
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
   });
 }

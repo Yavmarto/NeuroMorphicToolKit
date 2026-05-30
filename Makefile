@@ -87,6 +87,7 @@ docker-all:
 REMOTE_HOST ?=
 DEPLOY_DIR ?= ~/nmtk-deploy
 DOCKER_EX_SERVICES ?= suite_api lava-backend
+LAUNCHER_CONTROL_PORT ?= 8091
 # SSH ControlMaster: reuses a single TCP connection across all ssh/rsync calls in one make run.
 # The %h/%p/%r tokens are expanded by ssh itself, so this is safe when REMOTE_HOST is empty.
 SSH_OPTS ?= -o ControlMaster=auto -o ControlPath=/tmp/nmtk-ssh-%h-%p-%r -o ControlPersist=60s
@@ -101,13 +102,10 @@ docker-ex:
 	rsync -av --delete -e "ssh $(SSH_OPTS)" \
 		--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
 		--exclude '__pycache__' --exclude 'node_modules' \
+		--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
-	@echo "==> Tearing down any existing stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose down --remove-orphans 2>/dev/null || true"
-	@echo "==> Building all images in parallel on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose build --parallel"
-	@echo "==> Starting containers on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose up -d --wait --remove-orphans"
+	@echo "==> Building and starting containers on $(REMOTE_HOST) (rolling update, no downtime)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose up --build -d --wait --remove-orphans"
 	@echo "==> Backend ready at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-all:
@@ -120,13 +118,14 @@ docker-ex-all:
 	rsync -av --delete -e "ssh $(SSH_OPTS)" \
 		--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
 		--exclude '__pycache__' --exclude 'node_modules' \
+		--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
-	@echo "==> Tearing down any existing stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose down --remove-orphans 2>/dev/null || true"
-	@echo "==> Building all images in parallel on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose build --parallel"
-	@echo "==> Starting full stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose up -d --wait --remove-orphans"
+	@echo "==> Stopping existing containers on $(REMOTE_HOST)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose down || true"
+	@echo "==> Evicting any native process on port $(LAUNCHER_CONTROL_PORT) on $(REMOTE_HOST)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(LAUNCHER_CONTROL_PORT)/tcp 2>/dev/null || true"
+	@echo "==> Building and starting full stack on $(REMOTE_HOST) (rolling update, no downtime)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose up --build -d --wait --remove-orphans"
 	@echo "==> Full stack ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-m: docker-ex

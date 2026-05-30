@@ -201,7 +201,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             const SizedBox(height: 16),
             Text(
               'Release Notes:',
-              style: Zeta.of(context).textStyles.bodyMedium
+              style: Zeta.of(context)
+                  .textStyles
+                  .bodyMedium
                   .copyWith(fontWeight: FontWeight.bold),
             ),
             Text(releaseNotes),

@@ -49,7 +49,10 @@ class LauncherBootstrapHost extends ConsumerStatefulWidget {
 }
 
 class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
-  final TextEditingController _controlApiController = TextEditingController();
+  /// Plain string — no controller shared with child widgets to avoid the
+  /// ZetaTextFormField listener-leak bug (upstream zeta_flutter never calls
+  /// removeListener in dispose). ServerSetupScreen owns its controller locally.
+  String _controlApiInput = '';
   LauncherBootstrapState? _bootstrapState;
   ControlApiService? _controlApiService;
   bool _backendDeploymentReady = false;
@@ -72,14 +75,8 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
         saved = uri.host;
       }
     }
-    _controlApiController.text = saved;
+    _controlApiInput = saved;
     WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
-  }
-
-  @override
-  void dispose() {
-    _controlApiController.dispose();
-    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -163,14 +160,14 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   }
 
   Future<void> _saveAndRetry() async {
-    var input = _controlApiController.text.trim();
+    var input = _controlApiInput.trim();
     if (input.isNotEmpty) {
       if (!input.startsWith('http://') && !input.startsWith('https://')) {
         input = 'http://$input';
       }
       final uri = Uri.tryParse(input);
       if (uri != null && !uri.hasPort) {
-        input = '${uri.scheme}://${uri.host}:8090${uri.path}';
+        input = '${uri.scheme}://${uri.host}:8091${uri.path}';
       }
     }
     await ref.read(settingsStateProvider).setLauncherControlApiBaseUrl(input);
@@ -232,7 +229,8 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
                                   .overrideWithValue(controlApiService),
                             ],
                             child: ServerSetupScreen(
-                              controller: _controlApiController,
+                              initialValue: _controlApiInput,
+                              onChanged: (v) => _controlApiInput = v ?? '',
                               message: _setupMessage,
                               onConnect: _saveAndRetry,
                               setupAvailable: true,
@@ -241,7 +239,8 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
                             ),
                           )
                         : ServerSetupScreen(
-                            controller: _controlApiController,
+                            initialValue: _controlApiInput,
+                            onChanged: (v) => _controlApiInput = v ?? '',
                             message: _setupMessage,
                             onConnect: _saveAndRetry,
                             setupAvailable: false,

@@ -18,23 +18,15 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  final TextEditingController _endpointController = TextEditingController();
-  final TextEditingController _launcherControlController =
-      TextEditingController();
+  // No external TextEditingControllers: passing an external controller to
+  // ZetaTextInput causes the upstream ZetaTextFormFieldState to add a listener
+  // in initState but never remove it in dispose, accumulating zombie listeners
+  // across rebuilds. Instead we pass initialValue once and let onChange handle
+  // persistence — ZetaTextInput owns its controller internally.
 
   @override
   void initState() {
     super.initState();
-    final settings = ref.read(settingsStateProvider);
-    _endpointController.text = settings.remoteEndpoint ?? '';
-    _launcherControlController.text = settings.launcherControlApiBaseUrl ?? '';
-  }
-
-  @override
-  void dispose() {
-    _endpointController.dispose();
-    _launcherControlController.dispose();
-    super.dispose();
   }
 
   @override
@@ -55,8 +47,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Text(
             'Launcher configuration and global preferences.',
             style: Zeta.of(context).textStyles.bodyMedium.apply(
-              color: zeta.colors.mainSubtle,
-            ),
+                  color: zeta.colors.mainSubtle,
+                ),
           ),
         ),
         const SizedBox(height: 16),
@@ -127,17 +119,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(height: 6),
               ZetaTextInput(
-                controller: _launcherControlController,
-                placeholder: 'http://192.168.1.50:8090',
+                key: const ValueKey('launcher-control-url'),
+                initialValue: ref.read(settingsStateProvider).launcherControlApiBaseUrl ?? '',
+                placeholder: 'http://192.168.1.50:8091',
                 onChange: settings.setLauncherControlApiBaseUrl,
               ),
               const SizedBox(height: 8),
               Text(
                 'On Android and iOS, point this at the machine running '
-                '`scripts/launcher_control_service.py --host 0.0.0.0 --port 8090`.',
+                '`scripts/launcher_control_service.py --host 0.0.0.0 --port 8091`.',
                 style: Zeta.of(context).textStyles.bodySmall.apply(
-                  color: zeta.colors.mainSubtle,
-                ),
+                      color: zeta.colors.mainSubtle,
+                    ),
               ),
               const SizedBox(height: 12),
               NmtkOutlinedButton(
@@ -172,8 +165,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         Text(
                           'Share anonymous usage data and performance metrics.',
                           style: Zeta.of(context).textStyles.bodySmall.apply(
-                            color: zeta.colors.mainSubtle,
-                          ),
+                                color: zeta.colors.mainSubtle,
+                              ),
                         ),
                       ],
                     ),
@@ -195,7 +188,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: 6),
                   ZetaTextInput(
-                    controller: _endpointController,
+                    key: const ValueKey('remote-endpoint-url'),
+                    initialValue: ref.read(settingsStateProvider).remoteEndpoint ?? '',
                     placeholder: 'https://example.com/api/logs',
                     onChange: settings.setRemoteEndpoint,
                   ),
@@ -449,9 +443,9 @@ class _LogDialogState extends State<_LogDialog> {
                         child: SelectableText(
                           text,
                           style: Zeta.of(context).textStyles.bodySmall.copyWith(
-                            fontFamily: 'JetBrainsMono',
-                            fontSize: 12,
-                          ),
+                                fontFamily: 'JetBrainsMono',
+                                fontSize: 12,
+                              ),
                         ),
                       ),
                     ),
@@ -564,9 +558,10 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                             Text(
                               'Automatically start this module when the app opens '
                               '(adds ~3–8 s to startup if cold).',
-                              style: Zeta.of(context).textStyles.bodySmall.apply(
-                                color: zeta.colors.mainSubtle,
-                              ),
+                              style:
+                                  Zeta.of(context).textStyles.bodySmall.apply(
+                                        color: zeta.colors.mainSubtle,
+                                      ),
                             ),
                           ],
                         ),

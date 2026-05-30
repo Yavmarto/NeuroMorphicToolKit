@@ -13,6 +13,15 @@ class NmtkPipelineStepData {
   final IconData? icon;
   final VoidCallback? onTap;
 
+  /// Monotonically increasing counter — increment this to trigger a brief
+  /// scale-pulse on the step chip while it is in [NmtkStepStatus.running].
+  /// Zero (the default) means "no pulse ever". Incrementing while the step
+  /// is in any other status is safe and silently ignored.
+  ///
+  /// Intended use: wire to a training `epochTick` counter so the chip
+  /// visually heartbeats each time a training epoch completes.
+  final int pulseTick;
+
   const NmtkPipelineStepData({
     required this.id,
     required this.label,
@@ -20,6 +29,7 @@ class NmtkPipelineStepData {
     this.detail,
     this.icon,
     this.onTap,
+    this.pulseTick = 0,
   });
 }
 
@@ -186,7 +196,7 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
   }
 }
 
-class _PipelineStep extends StatelessWidget {
+class _PipelineStep extends StatefulWidget {
   final NmtkPipelineStepData data;
   final bool selected;
   final VoidCallback? onTap;
@@ -201,19 +211,69 @@ class _PipelineStep extends StatelessWidget {
   });
 
   @override
+  State<_PipelineStep> createState() => _PipelineStepState();
+}
+
+class _PipelineStepState extends State<_PipelineStep>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulseScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseScale = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.06)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.06, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 60,
+      ),
+    ]).animate(_pulseCtrl);
+  }
+
+  @override
+  void didUpdateWidget(covariant _PipelineStep oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Fire a pulse whenever pulseTick increments on a running step, as long
+    // as the user has not enabled reduced motion.
+    final tickChanged = widget.data.pulseTick != oldWidget.data.pulseTick;
+    final isRunning = widget.data.status == NmtkStepStatus.running;
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    if (tickChanged && isRunning && !reduced) {
+      _pulseCtrl.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
-    final enabled = data.status != NmtkStepStatus.idle || data.onTap != null;
+    final enabled =
+        widget.data.status != NmtkStepStatus.idle || widget.onTap != null;
 
-    final child = Container(
+    Widget chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: _getBgColor(context, theme, tokens),
         borderRadius: BorderRadius.circular(tokens.radiusSm),
         border: Border.all(
           color: _getBorderColor(context, theme, tokens),
-          width: selected ? 1.6 : 1,
+          width: widget.selected ? 1.6 : 1,
         ),
       ),
       child: Row(
@@ -222,29 +282,42 @@ class _PipelineStep extends StatelessWidget {
           _buildIcon(context, theme, tokens),
           const SizedBox(width: 8),
           Text(
-            data.label,
+            widget.data.label,
             style: Zeta.of(context).textStyles.bodyMedium.copyWith(
               color: theme.colorScheme.onSurface,
               fontSize: 11,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              fontWeight:
+                  widget.selected ? FontWeight.w700 : FontWeight.w600,
             ),
           ),
         ],
       ),
     );
 
+    // Wrap in scale animation when running and pulseTick has ever been set.
+    if (widget.data.status == NmtkStepStatus.running &&
+        widget.data.pulseTick > 0) {
+      chip = AnimatedBuilder(
+        animation: _pulseScale,
+        builder: (context, child) =>
+            Transform.scale(scale: _pulseScale.value, child: child),
+        child: chip,
+      );
+    }
+
     return Opacity(
       opacity: enabled ? 1.0 : 0.4,
       child: Semantics(
-        button: onTap != null,
-        selected: selected,
-        label:
-            '${data.label} step, status: ${data.status.name}${data.detail != null ? ", ${data.detail}" : ""}',
-        child: onTap == null
-            ? child
+        button: widget.onTap != null,
+        selected: widget.selected,
+        label: '${widget.data.label} step, '
+            'status: ${widget.data.status.name}'
+            '${widget.data.detail != null ? ", ${widget.data.detail}" : ""}',
+        child: widget.onTap == null
+            ? chip
             : MouseRegion(
                 cursor: SystemMouseCursors.click,
-                child: GestureDetector(onTap: onTap, child: child),
+                child: GestureDetector(onTap: widget.onTap, child: chip),
               ),
       ),
     );
@@ -255,21 +328,26 @@ class _PipelineStep extends StatelessWidget {
     ThemeData theme,
     NmtkShellTokens tokens,
   ) {
-    if (data.status == NmtkStepStatus.running) {
+    if (widget.data.status == NmtkStepStatus.running) {
       return SizedBox(
         width: 14,
         height: 14,
-        child: CircularProgressIndicator(strokeWidth: 2, color: accentColor),
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: widget.accentColor,
+        ),
       );
     }
 
     IconData iconData;
     Color iconColor;
 
-    switch (data.status) {
+    switch (widget.data.status) {
       case NmtkStepStatus.idle:
-        iconData = data.icon ?? Icons.circle_outlined;
-        iconColor = selected ? accentColor : theme.colorScheme.onSurfaceVariant;
+        iconData = widget.data.icon ?? Icons.circle_outlined;
+        iconColor = widget.selected
+            ? widget.accentColor
+            : theme.colorScheme.onSurfaceVariant;
       case NmtkStepStatus.success:
         iconData = Icons.check_circle;
         iconColor = tokens.healthyColor;
@@ -277,7 +355,7 @@ class _PipelineStep extends StatelessWidget {
         iconData = Icons.error;
         iconColor = tokens.errorColor;
       default:
-        iconData = data.icon ?? Icons.circle_outlined;
+        iconData = widget.data.icon ?? Icons.circle_outlined;
         iconColor = theme.colorScheme.onSurfaceVariant;
     }
 
@@ -289,14 +367,14 @@ class _PipelineStep extends StatelessWidget {
     ThemeData theme,
     NmtkShellTokens tokens,
   ) {
-    final base = switch (data.status) {
+    final base = switch (widget.data.status) {
       NmtkStepStatus.idle => theme.colorScheme.surface,
-      NmtkStepStatus.running => accentColor.withValues(alpha: 0.12),
+      NmtkStepStatus.running => widget.accentColor.withValues(alpha: 0.12),
       NmtkStepStatus.success => tokens.healthyColor.withValues(alpha: 0.1),
       NmtkStepStatus.error => tokens.errorColor.withValues(alpha: 0.1),
     };
-    return selected
-        ? Color.alphaBlend(accentColor.withValues(alpha: 0.06), base)
+    return widget.selected
+        ? Color.alphaBlend(widget.accentColor.withValues(alpha: 0.06), base)
         : base;
   }
 
@@ -305,14 +383,14 @@ class _PipelineStep extends StatelessWidget {
     ThemeData theme,
     NmtkShellTokens tokens,
   ) {
-    if (selected) {
-      return accentColor;
+    if (widget.selected) {
+      return widget.accentColor;
     }
-    switch (data.status) {
+    switch (widget.data.status) {
       case NmtkStepStatus.idle:
         return theme.colorScheme.outlineVariant;
       case NmtkStepStatus.running:
-        return accentColor;
+        return widget.accentColor;
       case NmtkStepStatus.success:
         return tokens.healthyColor.withValues(alpha: 0.3);
       case NmtkStepStatus.error:

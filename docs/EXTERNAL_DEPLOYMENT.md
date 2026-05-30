@@ -68,7 +68,7 @@ The launcher control service can render and apply Kubernetes manifests automatic
 ### Via Launcher Control API
 1. **Create a Kubernetes target:**
    ```bash
-   curl -X POST http://localhost:8090/api/launcher/deployment/targets \
+   curl -X POST http://localhost:8091/api/launcher/deployment/targets \
      -H "Content-Type: application/json" \
      -d '{
        "displayName": "Production K8s",
@@ -84,21 +84,21 @@ The launcher control service can render and apply Kubernetes manifests automatic
 
 2. **Run preflight:**
    ```bash
-   curl -X POST http://localhost:8090/api/launcher/deployment/preflight \
+   curl -X POST http://localhost:8091/api/launcher/deployment/preflight \
      -H "Content-Type: application/json" \
      -d '{"targetId": "<target-id>"}'
    ```
 
 3. **Start deployment job:**
    ```bash
-   curl -X POST http://localhost:8090/api/launcher/deployment/jobs \
+   curl -X POST http://localhost:8091/api/launcher/deployment/jobs \
      -H "Content-Type: application/json" \
      -d '{"targetId": "<target-id>"}'
    ```
 
 4. **Stream progress:**
    ```bash
-   curl http://localhost:8090/api/launcher/deployment/jobs/<job-id>/events
+   curl http://localhost:8091/api/launcher/deployment/jobs/<job-id>/events
    ```
 
 ### Manual Manifest Generation
