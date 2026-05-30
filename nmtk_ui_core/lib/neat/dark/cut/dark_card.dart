@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 /// Standard bordered rounded card used across all dark Neat screens.
 /// Background: #1D1D25, border: #4B4C57 1px, radius: 8px, padding: 20.
@@ -26,7 +27,7 @@ class DarkCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: Column(

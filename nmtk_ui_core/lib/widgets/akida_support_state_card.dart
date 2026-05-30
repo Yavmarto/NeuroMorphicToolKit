@@ -1,3 +1,4 @@
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/models/akida_deployment_model.dart';
@@ -40,8 +41,8 @@ class AkidaSupportStateCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -55,14 +56,14 @@ class AkidaSupportStateCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     supportState.label,
-                    style: ZetaTextStyles.titleMedium?.copyWith(color: color),
+                    style: Zeta.of(context).textStyles.titleMedium.copyWith(color: color),
                   ),
                 ),
                 if (akidaVersion != null)
                   Chip(
                     label: Text(
                       akidaVersion!,
-                      style: ZetaTextStyles.labelSmall,
+                      style: Zeta.of(context).textStyles.labelSmall,
                     ),
                     padding: EdgeInsets.zero,
                     visualDensity: VisualDensity.compact,
@@ -75,10 +76,10 @@ class AkidaSupportStateCard extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 36),
                 child: Text(
                   'Akida SDK not verified — scaffold package only.',
-                  style: ZetaTextStyles.bodyMedium.apply(
+                  style: Zeta.of(context).textStyles.bodyMedium.apply(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -91,7 +92,7 @@ class AkidaSupportStateCard extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
                   child: Text(
                     '⚠ $w',
-                    style: ZetaTextStyles.bodyMedium.apply(
+                    style: Zeta.of(context).textStyles.bodyMedium.apply(
                       color: Zeta.of(context).colors.mainWarning,
                     ),
                   ),
@@ -105,7 +106,7 @@ class AkidaSupportStateCard extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
                   child: Text(
                     '✗ $r',
-                    style: ZetaTextStyles.bodyMedium.apply(
+                    style: Zeta.of(context).textStyles.bodyMedium.apply(
                       color: Zeta.of(context).colors.mainNegative,
                     ),
                   ),
@@ -118,7 +119,7 @@ class AkidaSupportStateCard extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 36),
                 child: Text(
                   _formatNetworkSummary(networkSummary!),
-                  style: ZetaTextStyles.bodySmall,
+                  style: Zeta.of(context).textStyles.bodySmall,
                 ),
               ),
             ],
@@ -128,10 +129,10 @@ class AkidaSupportStateCard extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 36),
                 child: Text(
                   'Topology: $topologyVerdict',
-                  style: ZetaTextStyles.bodySmall?.copyWith(
+                  style: Zeta.of(context).textStyles.bodySmall.copyWith(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ),

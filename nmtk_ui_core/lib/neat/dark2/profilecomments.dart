@@ -1,4 +1,9 @@
+import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+
 class NeatProfileComments extends StatelessWidget {
+  const NeatProfileComments({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -7,7 +12,7 @@ class NeatProfileComments extends StatelessWidget {
           width: 375,
           height: 1357,
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: const Color(0xFF1D1D25)),
+          decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
           child: Stack(
             children: [
               Positioned(
@@ -20,7 +25,7 @@ class NeatProfileComments extends StatelessWidget {
                   decoration: ShapeDecoration(
                     color: const Color(0xFF1D1D25),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                     ),
                   ),
                   child: Column(
@@ -29,7 +34,7 @@ class NeatProfileComments extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     spacing: 24,
                     children: [
-                      Container(
+                      SizedBox(
                         width: 319,
                         height: 52,
                         child: Stack(
@@ -43,9 +48,9 @@ class NeatProfileComments extends StatelessWidget {
                                 decoration: ShapeDecoration(
                                   color: const Color(0xFF373841),
                                   shape: RoundedRectangleBorder(
-                                    side: BorderSide(
+                                    side: const BorderSide(
                                       width: 1,
-                                      color: const Color(0xFF4B4C57),
+                                      color: Color(0xFF4B4C57),
                                     ),
                                     borderRadius: BorderRadius.circular(50),
                                   ),
@@ -65,7 +70,7 @@ class NeatProfileComments extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                 ),
-                                child: Row(
+                                child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -75,7 +80,7 @@ class NeatProfileComments extends StatelessWidget {
                                       'Products',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        color: const Color(0xFF808D9E),
+                                        color: Color(0xFF808D9E),
                                         fontSize: 14,
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w400,
@@ -99,7 +104,7 @@ class NeatProfileComments extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                 ),
-                                child: Row(
+                                child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -109,7 +114,7 @@ class NeatProfileComments extends StatelessWidget {
                                       'Followers',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        color: const Color(0xFF808D9E),
+                                        color: Color(0xFF808D9E),
                                         fontSize: 14,
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w400,
@@ -134,7 +139,7 @@ class NeatProfileComments extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                 ),
-                                child: Row(
+                                child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -158,7 +163,7 @@ class NeatProfileComments extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Container(
+                      SizedBox(
                         width: 303,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -166,7 +171,7 @@ class NeatProfileComments extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           spacing: 16,
                           children: [
-                            Container(
+                            SizedBox(
                               width: double.infinity,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -174,7 +179,7 @@ class NeatProfileComments extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 spacing: 8,
                                 children: [
-                                  Container(
+                                  SizedBox(
                                     width: double.infinity,
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -184,7 +189,7 @@ class NeatProfileComments extends StatelessWidget {
                                           CrossAxisAlignment.start,
                                       spacing: 12,
                                       children: [
-                                        Container(
+                                        SizedBox(
                                           width: 48,
                                           height: 48,
                                           child: Stack(
@@ -195,8 +200,8 @@ class NeatProfileComments extends StatelessWidget {
                                                 child: Container(
                                                   width: 48,
                                                   height: 48,
-                                                  decoration: ShapeDecoration(
-                                                    color: const Color(
+                                                  decoration: const ShapeDecoration(
+                                                    color: Color(
                                                       0xFFE9ECF2,
                                                     ),
                                                     shape: OvalBorder(),
@@ -215,7 +220,7 @@ class NeatProfileComments extends StatelessWidget {
                                                 CrossAxisAlignment.start,
                                             spacing: 4,
                                             children: [
-                                              Container(
+                                              SizedBox(
                                                 width: double.infinity,
                                                 child: Row(
                                                   mainAxisSize:
@@ -227,7 +232,7 @@ class NeatProfileComments extends StatelessWidget {
                                                       CrossAxisAlignment.start,
                                                   spacing: 12,
                                                   children: [
-                                                    Row(
+                                                    const Row(
                                                       mainAxisSize:
                                                           MainAxisSize.min,
                                                       mainAxisAlignment:
@@ -252,7 +257,7 @@ class NeatProfileComments extends StatelessWidget {
                                                         Text(
                                                           '@renata',
                                                           style: TextStyle(
-                                                            color: const Color(
+                                                            color: Color(
                                                               0xFF808D9E,
                                                             ),
                                                             fontSize: 14,
@@ -279,7 +284,7 @@ class NeatProfileComments extends StatelessWidget {
                                                   ],
                                                 ),
                                               ),
-                                              Container(
+                                              SizedBox(
                                                 width: double.infinity,
                                                 child: Column(
                                                   mainAxisSize:
@@ -290,7 +295,7 @@ class NeatProfileComments extends StatelessWidget {
                                                       CrossAxisAlignment.start,
                                                   spacing: 12,
                                                   children: [
-                                                    SizedBox(
+                                                    const SizedBox(
                                                       width: 243,
                                                       child: Text.rich(
                                                         TextSpan(
@@ -300,7 +305,7 @@ class NeatProfileComments extends StatelessWidget {
                                                                   'commented on',
                                                               style: TextStyle(
                                                                 color:
-                                                                    const Color(
+                                                                    Color(
                                                                       0xFF808D9E,
                                                                     ),
                                                                 fontSize: 14,
@@ -349,7 +354,7 @@ class NeatProfileComments extends StatelessWidget {
                                                         ),
                                                       ),
                                                     ),
-                                                    SizedBox(
+                                                    const SizedBox(
                                                       width: 243,
                                                       child: Text(
                                                         'Stunning and professional looks 😍',
@@ -364,10 +369,10 @@ class NeatProfileComments extends StatelessWidget {
                                                         ),
                                                       ),
                                                     ),
-                                                    Text(
+                                                    const Text(
                                                       '2 mins',
                                                       style: TextStyle(
-                                                        color: const Color(
+                                                        color: Color(
                                                           0xFF808D9E,
                                                         ),
                                                         fontSize: 14,
@@ -377,10 +382,10 @@ class NeatProfileComments extends StatelessWidget {
                                                         height: 1.43,
                                                       ),
                                                     ),
-                                                    Text(
+                                                    const Text(
                                                       'Reply',
                                                       style: TextStyle(
-                                                        color: const Color(
+                                                        color: Color(
                                                           0xFF808D9E,
                                                         ),
                                                         fontSize: 14,
@@ -390,10 +395,10 @@ class NeatProfileComments extends StatelessWidget {
                                                         height: 1.43,
                                                       ),
                                                     ),
-                                                    Text(
+                                                    const Text(
                                                       '13',
                                                       style: TextStyle(
-                                                        color: const Color(
+                                                        color: Color(
                                                           0xFF808D9E,
                                                         ),
                                                         fontSize: 14,
@@ -409,15 +414,15 @@ class NeatProfileComments extends StatelessWidget {
                                                       clipBehavior:
                                                           Clip.antiAlias,
                                                       decoration:
-                                                          BoxDecoration(),
-                                                      child: Stack(),
+                                                          const BoxDecoration(),
+                                                      child: const Stack(),
                                                     ),
                                                     Container(
                                                       width: 4,
                                                       height: 4,
                                                       decoration:
-                                                          ShapeDecoration(
-                                                            color: const Color(
+                                                          const ShapeDecoration(
+                                                            color: Color(
                                                               0xFF808D9E,
                                                             ),
                                                             shape: OvalBorder(),
@@ -427,8 +432,8 @@ class NeatProfileComments extends StatelessWidget {
                                                       width: 4,
                                                       height: 4,
                                                       decoration:
-                                                          ShapeDecoration(
-                                                            color: const Color(
+                                                          const ShapeDecoration(
+                                                            color: Color(
                                                               0xFF808D9E,
                                                             ),
                                                             shape: OvalBorder(),
@@ -460,7 +465,7 @@ class NeatProfileComments extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Container(
+                      SizedBox(
                         width: 303,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -468,7 +473,7 @@ class NeatProfileComments extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           spacing: 16,
                           children: [
-                            Container(
+                            SizedBox(
                               width: double.infinity,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -476,7 +481,7 @@ class NeatProfileComments extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 spacing: 8,
                                 children: [
-                                  Container(
+                                  SizedBox(
                                     width: double.infinity,
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -486,7 +491,7 @@ class NeatProfileComments extends StatelessWidget {
                                           CrossAxisAlignment.start,
                                       spacing: 12,
                                       children: [
-                                        Container(
+                                        SizedBox(
                                           width: 48,
                                           height: 48,
                                           child: Stack(
@@ -497,8 +502,8 @@ class NeatProfileComments extends StatelessWidget {
                                                 child: Container(
                                                   width: 48,
                                                   height: 48,
-                                                  decoration: ShapeDecoration(
-                                                    color: const Color(
+                                                  decoration: const ShapeDecoration(
+                                                    color: Color(
                                                       0xFFE9ECF2,
                                                     ),
                                                     shape: OvalBorder(),
@@ -517,7 +522,7 @@ class NeatProfileComments extends StatelessWidget {
                                                 CrossAxisAlignment.start,
                                             spacing: 4,
                                             children: [
-                                              Container(
+                                              SizedBox(
                                                 width: double.infinity,
                                                 child: Row(
                                                   mainAxisSize:
@@ -529,7 +534,7 @@ class NeatProfileComments extends StatelessWidget {
                                                       CrossAxisAlignment.start,
                                                   spacing: 12,
                                                   children: [
-                                                    Row(
+                                                    const Row(
                                                       mainAxisSize:
                                                           MainAxisSize.min,
                                                       mainAxisAlignment:
@@ -554,7 +559,7 @@ class NeatProfileComments extends StatelessWidget {
                                                         Text(
                                                           '@alex',
                                                           style: TextStyle(
-                                                            color: const Color(
+                                                            color: Color(
                                                               0xFF808D9E,
                                                             ),
                                                             fontSize: 14,
@@ -581,7 +586,7 @@ class NeatProfileComments extends StatelessWidget {
                                                   ],
                                                 ),
                                               ),
-                                              Container(
+                                              SizedBox(
                                                 width: double.infinity,
                                                 child: Column(
                                                   mainAxisSize:
@@ -592,7 +597,7 @@ class NeatProfileComments extends StatelessWidget {
                                                       CrossAxisAlignment.start,
                                                   spacing: 12,
                                                   children: [
-                                                    SizedBox(
+                                                    const SizedBox(
                                                       width: 243,
                                                       child: Text.rich(
                                                         TextSpan(
@@ -602,7 +607,7 @@ class NeatProfileComments extends StatelessWidget {
                                                                   'commented on',
                                                               style: TextStyle(
                                                                 color:
-                                                                    const Color(
+                                                                    Color(
                                                                       0xFF808D9E,
                                                                     ),
                                                                 fontSize: 14,
@@ -651,7 +656,7 @@ class NeatProfileComments extends StatelessWidget {
                                                         ),
                                                       ),
                                                     ),
-                                                    SizedBox(
+                                                    const SizedBox(
                                                       width: 243,
                                                       child: Text(
                                                         'Nice work, worth to buy!',
@@ -666,10 +671,10 @@ class NeatProfileComments extends StatelessWidget {
                                                         ),
                                                       ),
                                                     ),
-                                                    Text(
+                                                    const Text(
                                                       '2 mins',
                                                       style: TextStyle(
-                                                        color: const Color(
+                                                        color: Color(
                                                           0xFF808D9E,
                                                         ),
                                                         fontSize: 14,
@@ -679,10 +684,10 @@ class NeatProfileComments extends StatelessWidget {
                                                         height: 1.43,
                                                       ),
                                                     ),
-                                                    Text(
+                                                    const Text(
                                                       'Reply',
                                                       style: TextStyle(
-                                                        color: const Color(
+                                                        color: Color(
                                                           0xFF808D9E,
                                                         ),
                                                         fontSize: 14,
@@ -692,10 +697,10 @@ class NeatProfileComments extends StatelessWidget {
                                                         height: 1.43,
                                                       ),
                                                     ),
-                                                    Text(
+                                                    const Text(
                                                       '13',
                                                       style: TextStyle(
-                                                        color: const Color(
+                                                        color: Color(
                                                           0xFF808D9E,
                                                         ),
                                                         fontSize: 14,
@@ -711,15 +716,15 @@ class NeatProfileComments extends StatelessWidget {
                                                       clipBehavior:
                                                           Clip.antiAlias,
                                                       decoration:
-                                                          BoxDecoration(),
-                                                      child: Stack(),
+                                                          const BoxDecoration(),
+                                                      child: const Stack(),
                                                     ),
                                                     Container(
                                                       width: 4,
                                                       height: 4,
                                                       decoration:
-                                                          ShapeDecoration(
-                                                            color: const Color(
+                                                          const ShapeDecoration(
+                                                            color: Color(
                                                               0xFF808D9E,
                                                             ),
                                                             shape: OvalBorder(),
@@ -729,8 +734,8 @@ class NeatProfileComments extends StatelessWidget {
                                                       width: 4,
                                                       height: 4,
                                                       decoration:
-                                                          ShapeDecoration(
-                                                            color: const Color(
+                                                          const ShapeDecoration(
+                                                            color: Color(
                                                               0xFF808D9E,
                                                             ),
                                                             shape: OvalBorder(),
@@ -762,7 +767,7 @@ class NeatProfileComments extends StatelessWidget {
                           ],
                         ),
                       ),
-                      Container(
+                      SizedBox(
                         width: 303,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -770,7 +775,7 @@ class NeatProfileComments extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           spacing: 16,
                           children: [
-                            Container(
+                            SizedBox(
                               width: double.infinity,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
@@ -778,7 +783,7 @@ class NeatProfileComments extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 spacing: 8,
                                 children: [
-                                  Container(
+                                  SizedBox(
                                     width: double.infinity,
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -788,7 +793,7 @@ class NeatProfileComments extends StatelessWidget {
                                           CrossAxisAlignment.start,
                                       spacing: 12,
                                       children: [
-                                        Container(
+                                        SizedBox(
                                           width: 48,
                                           height: 48,
                                           child: Stack(
@@ -799,8 +804,8 @@ class NeatProfileComments extends StatelessWidget {
                                                 child: Container(
                                                   width: 48,
                                                   height: 48,
-                                                  decoration: ShapeDecoration(
-                                                    color: const Color(
+                                                  decoration: const ShapeDecoration(
+                                                    color: Color(
                                                       0xFFE9ECF2,
                                                     ),
                                                     shape: OvalBorder(),
@@ -819,7 +824,7 @@ class NeatProfileComments extends StatelessWidget {
                                                 CrossAxisAlignment.start,
                                             spacing: 4,
                                             children: [
-                                              Container(
+                                              SizedBox(
                                                 width: double.infinity,
                                                 child: Row(
                                                   mainAxisSize:
@@ -831,7 +836,7 @@ class NeatProfileComments extends StatelessWidget {
                                                       CrossAxisAlignment.start,
                                                   spacing: 12,
                                                   children: [
-                                                    Row(
+                                                    const Row(
                                                       mainAxisSize:
                                                           MainAxisSize.min,
                                                       mainAxisAlignment:
@@ -856,7 +861,7 @@ class NeatProfileComments extends StatelessWidget {
                                                         Text(
                                                           '@sucatpelat',
                                                           style: TextStyle(
-                                                            color: const Color(
+                                                            color: Color(
                                                               0xFF808D9E,
                                                             ),
                                                             fontSize: 14,
@@ -883,7 +888,7 @@ class NeatProfileComments extends StatelessWidget {
                                                   ],
                                                 ),
                                               ),
-                                              Container(
+                                              SizedBox(
                                                 width: double.infinity,
                                                 child: Column(
                                                   mainAxisSize:
@@ -894,7 +899,7 @@ class NeatProfileComments extends StatelessWidget {
                                                       CrossAxisAlignment.start,
                                                   spacing: 12,
                                                   children: [
-                                                    SizedBox(
+                                                    const SizedBox(
                                                       width: 243,
                                                       child: Text.rich(
                                                         TextSpan(
@@ -904,7 +909,7 @@ class NeatProfileComments extends StatelessWidget {
                                                                   'commented on',
                                                               style: TextStyle(
                                                                 color:
-                                                                    const Color(
+                                                                    Color(
                                                                       0xFF808D9E,
                                                                     ),
                                                                 fontSize: 14,
@@ -953,7 +958,7 @@ class NeatProfileComments extends StatelessWidget {
                                                         ),
                                                       ),
                                                     ),
-                                                    SizedBox(
+                                                    const SizedBox(
                                                       width: 243,
                                                       child: Text(
                                                         'Looks awesome! Good job!',
@@ -968,10 +973,10 @@ class NeatProfileComments extends StatelessWidget {
                                                         ),
                                                       ),
                                                     ),
-                                                    Text(
+                                                    const Text(
                                                       '2 mins',
                                                       style: TextStyle(
-                                                        color: const Color(
+                                                        color: Color(
                                                           0xFF808D9E,
                                                         ),
                                                         fontSize: 14,
@@ -981,10 +986,10 @@ class NeatProfileComments extends StatelessWidget {
                                                         height: 1.43,
                                                       ),
                                                     ),
-                                                    Text(
+                                                    const Text(
                                                       'Reply',
                                                       style: TextStyle(
-                                                        color: const Color(
+                                                        color: Color(
                                                           0xFF808D9E,
                                                         ),
                                                         fontSize: 14,
@@ -994,10 +999,10 @@ class NeatProfileComments extends StatelessWidget {
                                                         height: 1.43,
                                                       ),
                                                     ),
-                                                    Text(
+                                                    const Text(
                                                       '13',
                                                       style: TextStyle(
-                                                        color: const Color(
+                                                        color: Color(
                                                           0xFF808D9E,
                                                         ),
                                                         fontSize: 14,
@@ -1013,15 +1018,15 @@ class NeatProfileComments extends StatelessWidget {
                                                       clipBehavior:
                                                           Clip.antiAlias,
                                                       decoration:
-                                                          BoxDecoration(),
-                                                      child: Stack(),
+                                                          const BoxDecoration(),
+                                                      child: const Stack(),
                                                     ),
                                                     Container(
                                                       width: 4,
                                                       height: 4,
                                                       decoration:
-                                                          ShapeDecoration(
-                                                            color: const Color(
+                                                          const ShapeDecoration(
+                                                            color: Color(
                                                               0xFF808D9E,
                                                             ),
                                                             shape: OvalBorder(),
@@ -1031,8 +1036,8 @@ class NeatProfileComments extends StatelessWidget {
                                                       width: 4,
                                                       height: 4,
                                                       decoration:
-                                                          ShapeDecoration(
-                                                            color: const Color(
+                                                          const ShapeDecoration(
+                                                            color: Color(
                                                               0xFF808D9E,
                                                             ),
                                                             shape: OvalBorder(),
@@ -1073,14 +1078,14 @@ class NeatProfileComments extends StatelessWidget {
                         decoration: ShapeDecoration(
                           color: const Color(0xFF1D1D25),
                           shape: RoundedRectangleBorder(
-                            side: BorderSide(
+                            side: const BorderSide(
                               width: 2,
-                              color: const Color(0xFF4B4C57),
+                              color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                           ),
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
@@ -1110,7 +1115,7 @@ class NeatProfileComments extends StatelessWidget {
                   width: 375,
                   height: 96,
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(color: const Color(0xFFF4F4F4)),
+                  decoration: const BoxDecoration(color: Color(0xFFF4F4F4)),
                   child: Stack(
                     children: [
                       Positioned(
@@ -1119,8 +1124,8 @@ class NeatProfileComments extends StatelessWidget {
                         child: Container(
                           width: 375,
                           padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1D1D25),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1D1D25),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -1131,7 +1136,7 @@ class NeatProfileComments extends StatelessWidget {
                               Container(
                                 width: 48,
                                 height: 48,
-                                decoration: ShapeDecoration(
+                                decoration: const ShapeDecoration(
                                   color: Colors.white,
                                   shape: OvalBorder(),
                                 ),
@@ -1148,13 +1153,13 @@ class NeatProfileComments extends StatelessWidget {
                                       width: 24,
                                       height: 24,
                                       clipBehavior: Clip.antiAlias,
-                                      decoration: BoxDecoration(),
-                                      child: Stack(),
+                                      decoration: const BoxDecoration(),
+                                      child: const Stack(),
                                     ),
                                   ],
                                 ),
                               ),
-                              Container(
+                              SizedBox(
                                 width: 48,
                                 height: 48,
                                 child: Stack(
@@ -1166,8 +1171,8 @@ class NeatProfileComments extends StatelessWidget {
                                         width: 24,
                                         height: 24,
                                         clipBehavior: Clip.antiAlias,
-                                        decoration: BoxDecoration(),
-                                        child: Stack(),
+                                        decoration: const BoxDecoration(),
+                                        child: const Stack(),
                                       ),
                                     ),
                                     Positioned(
@@ -1180,11 +1185,11 @@ class NeatProfileComments extends StatelessWidget {
                                         decoration: ShapeDecoration(
                                           color: const Color(0xFFFF5555),
                                           shape: RoundedRectangleBorder(
-                                            side: BorderSide(
+                                            side: const BorderSide(
                                               width: 2,
                                               strokeAlign:
                                                   BorderSide.strokeAlignOutside,
-                                              color: const Color(0xFF1D1D25),
+                                              color: Color(0xFF1D1D25),
                                             ),
                                             borderRadius: BorderRadius.circular(
                                               12,
@@ -1208,8 +1213,8 @@ class NeatProfileComments extends StatelessWidget {
                                       width: 24,
                                       height: 24,
                                       clipBehavior: Clip.antiAlias,
-                                      decoration: BoxDecoration(),
-                                      child: Stack(),
+                                      decoration: const BoxDecoration(),
+                                      child: const Stack(),
                                     ),
                                   ],
                                 ),
@@ -1235,11 +1240,11 @@ class NeatProfileComments extends StatelessWidget {
                   decoration: ShapeDecoration(
                     color: const Color(0xFF1D1D25),
                     shape: RoundedRectangleBorder(
-                      side: BorderSide(
+                      side: const BorderSide(
                         width: 1,
-                        color: const Color(0xFF4B4C57),
+                        color: Color(0xFF4B4C57),
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                     ),
                   ),
                   child: Column(
@@ -1248,7 +1253,7 @@ class NeatProfileComments extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     spacing: 32,
                     children: [
-                      SizedBox(
+                      const SizedBox(
                         width: 117,
                         child: Text(
                           'Beby Jovanca',
@@ -1261,10 +1266,10 @@ class NeatProfileComments extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Text(
+                      const Text(
                         '@bebyjovanca',
                         style: TextStyle(
-                          color: const Color(0xFF808D9E),
+                          color: Color(0xFF808D9E),
                           fontSize: 14,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w400,
@@ -1272,7 +1277,7 @@ class NeatProfileComments extends StatelessWidget {
                           letterSpacing: -0.50,
                         ),
                       ),
-                      Container(
+                      SizedBox(
                         width: 100,
                         height: 100,
                         child: Stack(
@@ -1283,8 +1288,8 @@ class NeatProfileComments extends StatelessWidget {
                               child: Container(
                                 width: 100,
                                 height: 100,
-                                decoration: ShapeDecoration(
-                                  color: const Color(0xFFE9ECF2),
+                                decoration: const ShapeDecoration(
+                                  color: Color(0xFFE9ECF2),
                                   shape: OvalBorder(),
                                 ),
                               ),
@@ -1295,7 +1300,7 @@ class NeatProfileComments extends StatelessWidget {
                       Container(
                         width: 36,
                         height: 36,
-                        decoration: ShapeDecoration(
+                        decoration: const ShapeDecoration(
                           color: Colors.white,
                           shape: OvalBorder(),
                         ),
@@ -1310,7 +1315,7 @@ class NeatProfileComments extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Text(
+                      const Text(
                         '2.9 M',
                         style: TextStyle(
                           color: Colors.white,
@@ -1321,10 +1326,10 @@ class NeatProfileComments extends StatelessWidget {
                           letterSpacing: -0.50,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Followers',
                         style: TextStyle(
-                          color: const Color(0xFF808D9E),
+                          color: Color(0xFF808D9E),
                           fontSize: 14,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w400,
@@ -1332,7 +1337,7 @@ class NeatProfileComments extends StatelessWidget {
                           letterSpacing: -0.50,
                         ),
                       ),
-                      Text(
+                      const Text(
                         '1,902',
                         style: TextStyle(
                           color: Colors.white,
@@ -1343,10 +1348,10 @@ class NeatProfileComments extends StatelessWidget {
                           letterSpacing: -0.50,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Post',
                         style: TextStyle(
-                          color: const Color(0xFF808D9E),
+                          color: Color(0xFF808D9E),
                           fontSize: 14,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w400,
@@ -1363,11 +1368,11 @@ class NeatProfileComments extends StatelessWidget {
                         decoration: ShapeDecoration(
                           color: const Color(0xFF1D1D25),
                           shape: RoundedRectangleBorder(
-                            side: BorderSide(
+                            side: const BorderSide(
                               width: 2,
-                              color: const Color(0xFF4B4C57),
+                              color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                           ),
                         ),
                         child: Row(
@@ -1380,13 +1385,13 @@ class NeatProfileComments extends StatelessWidget {
                               width: 24,
                               height: 24,
                               clipBehavior: Clip.antiAlias,
-                              decoration: BoxDecoration(),
-                              child: Stack(),
+                              decoration: const BoxDecoration(),
+                              child: const Stack(),
                             ),
-                            Text(
+                            const Text(
                               'Follow',
                               style: TextStyle(
-                                color: const Color(0xFF2180FF),
+                                color: Color(0xFF2180FF),
                                 fontSize: 16,
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w700,
@@ -1405,11 +1410,11 @@ class NeatProfileComments extends StatelessWidget {
                         decoration: ShapeDecoration(
                           color: const Color(0xFF1D1D25),
                           shape: RoundedRectangleBorder(
-                            side: BorderSide(
+                            side: const BorderSide(
                               width: 2,
-                              color: const Color(0xFF4B4C57),
+                              color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                           ),
                         ),
                         child: Row(
@@ -1422,13 +1427,13 @@ class NeatProfileComments extends StatelessWidget {
                               width: 24,
                               height: 24,
                               clipBehavior: Clip.antiAlias,
-                              decoration: BoxDecoration(),
-                              child: Stack(),
+                              decoration: const BoxDecoration(),
+                              child: const Stack(),
                             ),
-                            Text(
+                            const Text(
                               'Chat',
                               style: TextStyle(
-                                color: const Color(0xFF2180FF),
+                                color: Color(0xFF2180FF),
                                 fontSize: 16,
                                 fontFamily: 'Inter',
                                 fontWeight: FontWeight.w700,
@@ -1440,12 +1445,12 @@ class NeatProfileComments extends StatelessWidget {
                       ),
                       Container(
                         width: 303,
-                        decoration: ShapeDecoration(
+                        decoration: const ShapeDecoration(
                           shape: RoundedRectangleBorder(
                             side: BorderSide(
                               width: 1,
                               strokeAlign: BorderSide.strokeAlignCenter,
-                              color: const Color(0xFF4B4C57),
+                              color: Color(0xFF4B4C57),
                             ),
                           ),
                         ),
@@ -1454,8 +1459,8 @@ class NeatProfileComments extends StatelessWidget {
                         width: 303,
                         height: 45,
                         clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(),
-                        child: Stack(
+                        decoration: const BoxDecoration(),
+                        child: const Stack(
                           children: [
                             Positioned(
                               left: 0,
@@ -1482,7 +1487,7 @@ class NeatProfileComments extends StatelessWidget {
                                 child: Text(
                                   'MOBILE',
                                   style: TextStyle(
-                                    color: const Color(0xFF808D9E),
+                                    color: Color(0xFF808D9E),
                                     fontSize: 14,
                                     fontFamily: 'Inter',
                                     fontWeight: FontWeight.w600,
@@ -1498,16 +1503,16 @@ class NeatProfileComments extends StatelessWidget {
                         width: 303,
                         height: 53,
                         clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(),
+                        decoration: const BoxDecoration(),
                         child: Stack(
                           children: [
-                            Positioned(
+                            const Positioned(
                               left: -0.50,
                               top: 0,
                               child: Text(
                                 'SKILL',
                                 style: TextStyle(
-                                  color: const Color(0xFF808D9E),
+                                  color: Color(0xFF808D9E),
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
@@ -1529,13 +1534,13 @@ class NeatProfileComments extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            Positioned(
+                            const Positioned(
                               left: 6.50,
                               top: 31,
                               child: Text(
                                 'UI DESIGN',
                                 style: TextStyle(
-                                  color: const Color(0xFF1D1D25),
+                                  color: Color(0xFF1D1D25),
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
@@ -1557,13 +1562,13 @@ class NeatProfileComments extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            Positioned(
+                            const Positioned(
                               left: 102.50,
                               top: 31,
                               child: Text(
                                 'ICONS',
                                 style: TextStyle(
-                                  color: const Color(0xFF1D1D25),
+                                  color: Color(0xFF1D1D25),
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
@@ -1585,13 +1590,13 @@ class NeatProfileComments extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            Positioned(
+                            const Positioned(
                               left: 171.50,
                               top: 31,
                               child: Text(
                                 'INTERACTION',
                                 style: TextStyle(
-                                  color: const Color(0xFF1D1D25),
+                                  color: Color(0xFF1D1D25),
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
@@ -1612,13 +1617,13 @@ class NeatProfileComments extends StatelessWidget {
                 child: Container(
                   width: 375,
                   height: 44,
-                  decoration: BoxDecoration(color: const Color(0xFF1D1D25)),
+                  decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
                   child: Stack(
                     children: [
-                      Positioned(
+                      const Positioned(
                         left: 0,
                         top: 0,
-                        child: Container(width: 375, height: 44),
+                        child: SizedBox(width: 375, height: 44),
                       ),
                       Positioned(
                         left: 336,
@@ -1630,7 +1635,7 @@ class NeatProfileComments extends StatelessWidget {
                             height: 11.33,
                             decoration: ShapeDecoration(
                               shape: RoundedRectangleBorder(
-                                side: BorderSide(width: 1, color: Colors.white),
+                                side: const BorderSide(width: 1, color: Colors.white),
                                 borderRadius: BorderRadius.circular(2.67),
                               ),
                             ),
@@ -1651,10 +1656,10 @@ class NeatProfileComments extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Positioned(
+                      const Positioned(
                         left: 21,
                         top: 13,
-                        child: Container(
+                        child: SizedBox(
                           width: 54,
                           height: 21,
                           child: Stack(

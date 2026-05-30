@@ -16,7 +16,7 @@ class NmtkDesignTokens {
   static final BorderRadius buttonShape = BorderRadius.circular(16.0);
   static final BorderRadius cardShape = BorderRadius.circular(24.0);
   static final BorderRadius dialogShape = BorderRadius.circular(20.0);
-  static final BorderRadius inputShape = BorderRadius.circular(8.0);
+  static final BorderRadius inputShape = BorderRadius.circular(12.0);
 }
 
 class NmtkFontFamilies {
@@ -406,9 +406,9 @@ class AppTheme {
     const background = Color(0xFFF2F2F2);
     const surface = Color(0xFFFFFFFF);
     const surfaceVariant = Color(0xFFE5E7EB);
-    const border = Color(0xFFD1D5DB);
+    
     const textPrimary = Color(0xFF18181B);
-    const textSecondary = Color(0xFF52525B);
+    
 
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(

@@ -276,7 +276,7 @@ void main() {
       // The running color 0xFF38BDF8 must never be used as the primary accent
       // for the neurocnl studio theme after migration.
       expect(
-        darkTheme.colorScheme.primary.value,
+        darkTheme.colorScheme.primary.toARGB32(),
         isNot(equals(0xFF38BDF8)),
         reason:
             'neurocnl dark theme must not use 0xFF38BDF8 (runningColor) as '

@@ -1,3 +1,4 @@
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/models/pynq_deployment_model.dart';
@@ -30,8 +31,8 @@ class PynqSupportStateCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(8),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -45,7 +46,7 @@ class PynqSupportStateCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     supportState.label,
-                    style: ZetaTextStyles.titleMedium?.copyWith(color: color),
+                    style: Zeta.of(context).textStyles.titleMedium.copyWith(color: color),
                   ),
                 ),
               ],
@@ -57,7 +58,7 @@ class PynqSupportStateCard extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
                   child: Text(
                     '⚠ $w',
-                    style: ZetaTextStyles.bodyMedium.apply(
+                    style: Zeta.of(context).textStyles.bodyMedium.apply(
                       color: Zeta.of(context).colors.mainWarning,
                     ),
                   ),
@@ -71,7 +72,7 @@ class PynqSupportStateCard extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
                   child: Text(
                     '✗ $r',
-                    style: ZetaTextStyles.bodyMedium.apply(
+                    style: Zeta.of(context).textStyles.bodyMedium.apply(
                       color: Zeta.of(context).colors.mainNegative,
                     ),
                   ),
@@ -84,7 +85,7 @@ class PynqSupportStateCard extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 36),
                 child: Text(
                   _formatNetworkSummary(networkSummary!),
-                  style: ZetaTextStyles.bodySmall,
+                  style: Zeta.of(context).textStyles.bodySmall,
                 ),
               ),
             ],

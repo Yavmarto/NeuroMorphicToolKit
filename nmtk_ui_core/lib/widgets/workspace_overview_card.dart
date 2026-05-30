@@ -31,7 +31,7 @@ class NmtkWorkspaceOverviewCard extends StatelessWidget {
             Wrap(spacing: 8, runSpacing: 8, children: chips),
             const SizedBox(height: 16),
           ],
-          Text(message, style: ZetaTextStyles.bodyMedium),
+          Text(message, style: Zeta.of(context).textStyles.bodyMedium),
         ],
       ),
     );

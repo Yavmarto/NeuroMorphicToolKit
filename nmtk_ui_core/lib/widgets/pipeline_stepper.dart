@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
-import '../shell_tokens.dart';
-import '../zeta_theme.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:nmtk_ui_core/zeta_theme.dart';
 
 enum NmtkStepStatus { idle, running, success, error }
 
@@ -224,7 +223,7 @@ class _PipelineStep extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             data.label,
-            style: ZetaTextStyles.bodyMedium.copyWith(
+            style: Zeta.of(context).textStyles.bodyMedium.copyWith(
               color: theme.colorScheme.onSurface,
               fontSize: 11,
               fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
@@ -293,11 +292,11 @@ class _PipelineStep extends StatelessWidget {
     final base = switch (data.status) {
       NmtkStepStatus.idle => theme.colorScheme.surface,
       NmtkStepStatus.running => accentColor.withValues(alpha: 0.12),
-      NmtkStepStatus.success => tokens.healthyColor.withOpacity(0.1),
-      NmtkStepStatus.error => tokens.errorColor.withOpacity(0.1),
+      NmtkStepStatus.success => tokens.healthyColor.withValues(alpha: 0.1),
+      NmtkStepStatus.error => tokens.errorColor.withValues(alpha: 0.1),
     };
     return selected
-        ? Color.alphaBlend(accentColor.withOpacity(0.06), base)
+        ? Color.alphaBlend(accentColor.withValues(alpha: 0.06), base)
         : base;
   }
 
@@ -315,9 +314,9 @@ class _PipelineStep extends StatelessWidget {
       case NmtkStepStatus.running:
         return accentColor;
       case NmtkStepStatus.success:
-        return tokens.healthyColor.withOpacity(0.3);
+        return tokens.healthyColor.withValues(alpha: 0.3);
       case NmtkStepStatus.error:
-        return tokens.errorColor.withOpacity(0.3);
+        return tokens.errorColor.withValues(alpha: 0.3);
     }
   }
 }
@@ -338,7 +337,7 @@ class _StepConnector extends StatelessWidget {
         size: 10,
         color: active
             ? tokens.healthyColor
-            : theme.colorScheme.onSurfaceVariant.withOpacity(0.3),
+            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
       ),
     );
   }

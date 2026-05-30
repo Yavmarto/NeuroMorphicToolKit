@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:flutter/widget_previews.dart';
-import 'cut/dark_status_bar.dart';
-import 'cut/dark_top_bar.dart';
-import 'cut/event_widgets.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_status_bar.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/event_widgets.dart';
 
 class NeatEvent extends StatelessWidget {
   @Preview(name: 'Neat Dark – Event', group: 'Neat Dark Pages', size: Size(375, 1350))
@@ -35,7 +36,7 @@ class NeatEvent extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   decoration: ShapeDecoration(
                     color: const Color(0xFF1D1D25),
-                    shape: RoundedRectangleBorder(side: const BorderSide(width: 2, color: Color(0xFF4B4C57)), borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(side: const BorderSide(width: 2, color: Color(0xFF4B4C57)), borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm)),
                   ),
                   child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Text('Load more', style: TextStyle(color: Colors.white, fontSize: 16, fontFamily: 'Inter', fontWeight: FontWeight.w700, height: 1.25)),

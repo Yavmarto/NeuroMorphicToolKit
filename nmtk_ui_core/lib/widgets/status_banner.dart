@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 
-import 'tone.dart';
+import 'package:nmtk_ui_core/widgets/tone.dart';
 
 /// Maps an [NmtkTone] to its Zeta [ZetaWidgetStatus] equivalent.
 ///

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 /// Monthly / Yearly two-segment switch shown above pricing tiers.
 class BillingToggle extends StatelessWidget {
@@ -9,7 +10,7 @@ class BillingToggle extends StatelessWidget {
     return Container(
       width: 220,
       height: 42,
-      decoration: ShapeDecoration(color: const Color(0xFF383942), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+      decoration: ShapeDecoration(color: const Color(0xFF383942), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm))),
       child: Row(
         children: [
           Container(

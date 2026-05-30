@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'oximeter_value.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/oximeter_value.dart';
 
 /// Red "OXIMETER" tile showing two [OximeterValue] readings side by side.
 class OximeterCard extends StatelessWidget {
@@ -10,12 +11,12 @@ class OximeterCard extends StatelessWidget {
     return Container(
       width: 164,
       height: 174,
-      decoration: ShapeDecoration(color: const Color(0xFFFF5555), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+      decoration: ShapeDecoration(color: const Color(0xFFFF5555), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm))),
       padding: const EdgeInsets.all(16),
-      child: Column(
+      child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 8,
-        children: const [
+        children: [
           Opacity(opacity: 0.50, child: Text('OXIMETER', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w600, height: 1.43))),
           Row(spacing: 16, children: [
             OximeterValue(value: '98', label: 'Sp02%'),

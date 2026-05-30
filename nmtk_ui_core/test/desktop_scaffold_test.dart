@@ -61,10 +61,10 @@ void main() {
 
       await tester.pumpWidget(
         _buildHarness(
-          NmtkDesktopScaffold(
+          const NmtkDesktopScaffold(
             navItems: _kNavItems,
             selectedIndex: 0,
-            child: const Text('Content'),
+            child: Text('Content'),
           ),
         ),
       );
@@ -86,10 +86,10 @@ void main() {
 
       await tester.pumpWidget(
         _buildHarness(
-          NmtkDesktopScaffold(
+          const NmtkDesktopScaffold(
             navItems: _kNavItems,
             selectedIndex: 0,
-            child: const Text('Content'),
+            child: Text('Content'),
           ),
         ),
       );
@@ -109,11 +109,11 @@ void main() {
 
       await tester.pumpWidget(
         _buildHarness(
-          NmtkDesktopScaffold(
+          const NmtkDesktopScaffold(
             navItems: _kNavItems,
             selectedIndex: 0,
             showBackButton: true,
-            child: const Text('Content'),
+            child: Text('Content'),
           ),
         ),
       );
@@ -160,11 +160,11 @@ void main() {
 
       await tester.pumpWidget(
         _buildHarness(
-          NmtkDesktopScaffold(
+          const NmtkDesktopScaffold(
             navItems: _kNavItems,
             selectedIndex: 0,
-            userProfile: const NmtkUserProfile(displayName: 'Yoshi M.'),
-            child: const Text('Content'),
+            userProfile: NmtkUserProfile(displayName: 'Yoshi M.'),
+            child: Text('Content'),
           ),
         ),
       );

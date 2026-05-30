@@ -28,7 +28,7 @@ get_port() {
 }
 
 # 1. Ensure stack is up
-docker compose --profile full up -d
+docker compose up -d
 
 for i in {1..5}; do
   TARGET=${SERVICES[$RANDOM % ${#SERVICES[@]}]}

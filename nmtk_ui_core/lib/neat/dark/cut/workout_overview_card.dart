@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'exercise_type_row.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/exercise_type_row.dart';
 
 /// "Workout overview" card listing cardio/strength/stretch percentages.
 class WorkoutOverviewCard extends StatelessWidget {
@@ -15,7 +16,7 @@ class WorkoutOverviewCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: const Column(

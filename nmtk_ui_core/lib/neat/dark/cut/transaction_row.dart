@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widget_previews.dart';
 
 /// One row inside [TransactionHistoryCard]: a description widget, time, and
 /// signed amount. [positive] flips the amount colour between green and red.

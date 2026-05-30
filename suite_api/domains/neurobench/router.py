@@ -67,7 +67,7 @@ if _synsense_router is not None:
     methods=["GET", "POST"],
 )
 async def proxy_neurobench_run_root(request: Request) -> Response:
-    return await proxy_to_worker(request, settings.neurobench_runner_url, profile_hint="jobs")
+    return await proxy_to_worker(request, settings.neurobench_runner_url)
 
 
 @router.api_route(
@@ -75,7 +75,7 @@ async def proxy_neurobench_run_root(request: Request) -> Response:
     methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
 )
 async def proxy_neurobench_run(request: Request, path: str) -> Response:
-    return await proxy_to_worker(request, settings.neurobench_runner_url, profile_hint="jobs")
+    return await proxy_to_worker(request, settings.neurobench_runner_url)
 
 
 @router.api_route(
@@ -84,7 +84,7 @@ async def proxy_neurobench_run(request: Request, path: str) -> Response:
 )
 async def proxy_neurobench_pynq(request: Request, path: str) -> Response:
     """Proxy PYNQ hardware execution routes to the runner worker."""
-    return await proxy_to_worker(request, settings.neurobench_runner_url, profile_hint="jobs")
+    return await proxy_to_worker(request, settings.neurobench_runner_url)
 
 
 @router.api_route(
@@ -93,7 +93,7 @@ async def proxy_neurobench_pynq(request: Request, path: str) -> Response:
 )
 async def proxy_neurobench_spinnaker2(request: Request, path: str) -> Response:
     """Proxy SpiNNaker2 execution routes to the runner worker."""
-    return await proxy_to_worker(request, settings.neurobench_runner_url, profile_hint="jobs")
+    return await proxy_to_worker(request, settings.neurobench_runner_url)
 
 
 @router.get("/api/neurobench/health")

@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import '../models/host_navigation_models.dart';
+import 'package:nmtk_ui_core/models/host_navigation_models.dart';
 
 class NmtkHostNavigationScope extends InheritedWidget {
   const NmtkHostNavigationScope({

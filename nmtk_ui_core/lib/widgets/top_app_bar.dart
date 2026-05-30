@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:nmtk_ui_core/models/shell_models.dart';
-import 'package:nmtk_ui_core/shell_tokens.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
 
 class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget? leading;
@@ -114,7 +111,7 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                                   ? palette.accentContainer
                                   : Zeta.of(
                                       context,
-                                    ).colors.surfaceDefault.withOpacity(0),
+                                    ).colors.surfaceDefault.withValues(alpha: 0),
                               foregroundColor: isSelected
                                   ? palette.accentForeground
                                   : theme.colorScheme.onSurfaceVariant,
@@ -165,7 +162,7 @@ class _DestinationChip extends StatelessWidget {
     final tokens = NmtkShellTokens.of(context);
 
     return Material(
-      color: Zeta.of(context).colors.surfaceDefault.withOpacity(0),
+      color: Zeta.of(context).colors.surfaceDefault.withValues(alpha: 0),
       child: InkWell(
         borderRadius: BorderRadius.circular(tokens.radiusChip),
         onTap: onTap,
@@ -174,12 +171,12 @@ class _DestinationChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected
                 ? accentContainer
-                : theme.colorScheme.surface.withOpacity(0.18),
+                : theme.colorScheme.surface.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(tokens.radiusChip),
             border: Border.all(
               color: isSelected
-                  ? accentColor.withOpacity(0.4)
-                  : theme.colorScheme.outlineVariant.withOpacity(0.22),
+                  ? accentColor.withValues(alpha: 0.4)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.22),
             ),
           ),
           child: Row(

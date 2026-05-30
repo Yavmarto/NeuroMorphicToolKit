@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'billing_toggle.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/billing_toggle.dart';
 
 /// Header card on the upgrade/pricing page (title + blurb + monthly/yearly toggle).
 class PricingHeaderCard extends StatelessWidget {
@@ -15,15 +16,15 @@ class PricingHeaderCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
-      child: Column(
+      child: const Column(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         spacing: 24,
-        children: const [
+        children: [
           Text('Pricing Plans', style: TextStyle(color: Colors.white, fontSize: 24, fontFamily: 'Inter', fontWeight: FontWeight.w700, height: 1.25)),
           SizedBox(
             width: 293,

@@ -15,7 +15,7 @@ class NmtkQuantizationTable extends StatelessWidget {
       return Center(
         child: Text(
           'No quantization data',
-          style: ZetaTextStyles.bodyMedium.copyWith(
+          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
@@ -23,7 +23,7 @@ class NmtkQuantizationTable extends StatelessWidget {
     }
 
     return DataTable(
-      headingRowColor: WidgetStatePropertyAll(theme.colorScheme.surfaceVariant),
+      headingRowColor: WidgetStatePropertyAll(theme.colorScheme.surfaceContainerHighest),
       dataRowColor: WidgetStatePropertyAll(theme.colorScheme.surface),
       border: TableBorder.all(
         color: theme.colorScheme.outlineVariant,
@@ -34,7 +34,7 @@ class NmtkQuantizationTable extends StatelessWidget {
         DataColumn(
           label: Text(
             'Bit Width',
-            style: ZetaTextStyles.bodyMedium.copyWith(
+            style: Zeta.of(context).textStyles.bodyMedium.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -42,7 +42,7 @@ class NmtkQuantizationTable extends StatelessWidget {
         DataColumn(
           label: Text(
             'Accuracy Drop',
-            style: ZetaTextStyles.bodyMedium.copyWith(
+            style: Zeta.of(context).textStyles.bodyMedium.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -50,7 +50,7 @@ class NmtkQuantizationTable extends StatelessWidget {
         DataColumn(
           label: Text(
             'Sparsity',
-            style: ZetaTextStyles.bodyMedium.copyWith(
+            style: Zeta.of(context).textStyles.bodyMedium.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -66,7 +66,7 @@ class NmtkQuantizationTable extends StatelessWidget {
             DataCell(
               Text(
                 '$bits-bit',
-                style: ZetaTextStyles.bodyMedium.copyWith(
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                   color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
@@ -76,7 +76,7 @@ class NmtkQuantizationTable extends StatelessWidget {
             DataCell(
               Text(
                 '${(sparsity * 100).toStringAsFixed(1)}%',
-                style: ZetaTextStyles.bodyMedium.copyWith(
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                   color: theme.colorScheme.onSurface,
                 ),
               ),
@@ -115,10 +115,10 @@ class _AccuracyDropIndicator extends StatelessWidget {
           height: 10,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         Text(
           '${pct.toStringAsFixed(2)}%',
-          style: ZetaTextStyles.bodyMedium.copyWith(
+          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
             color: color,
             fontWeight: FontWeight.w600,
           ),

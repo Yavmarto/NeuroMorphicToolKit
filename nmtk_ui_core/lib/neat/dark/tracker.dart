@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
-import 'cut/dark_status_bar.dart';
-import 'cut/dark_top_bar.dart';
-import 'cut/tracker_widgets.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_status_bar.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/tracker_widgets.dart';
 
 class NeatTracker extends StatelessWidget {
   @Preview(name: 'Neat Dark – Tracker', group: 'Neat Dark Pages', size: Size(375, 1217))

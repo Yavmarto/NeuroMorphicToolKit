@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 /// Coloured health-metric tile (label + big value + unit).
 class HealthMetricCard extends StatelessWidget {
@@ -11,7 +12,7 @@ class HealthMetricCard extends StatelessWidget {
     return Container(
       width: 164,
       height: 174,
-      decoration: ShapeDecoration(color: color, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+      decoration: ShapeDecoration(color: color, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm))),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

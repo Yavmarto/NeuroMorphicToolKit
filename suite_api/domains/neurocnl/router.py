@@ -7,8 +7,8 @@ Non-MuJoCo prosthetic routes (sleep, export/crossbar, energy, quantize,
 fault-injection, hardware) are served in-process.
 
 The prosthetic/simulate route requires MuJoCo and is proxied to the
-neurocnl-physics-worker (port 8006, Docker profile: physics). When the
-physics worker is not running, /api/neurocnl/prosthetic/simulate returns 503.
+neurocnl-physics-worker (port 8006). When the physics worker is not running,
+/api/neurocnl/prosthetic/simulate returns 503.
 """
 # Ensure neurocnl/backend is importable via sys.path preamble
 import suite_api.domains.neurocnl  # noqa: F401 (side-effect import)
@@ -118,11 +118,9 @@ if _has_prosthetic_hw:
 async def proxy_neurocnl_prosthetic_simulate(request: Request) -> Response:
     """Proxy MuJoCo physics simulation to the physics worker.
 
-    Returns 503 with a helpful message if the physics worker (MuJoCo) is not
-    running. Use: docker compose --profile physics up neurocnl-physics-worker
+    Returns 503 if the physics worker (MuJoCo) is not running.
     """
     return await proxy_to_worker(
         request,
         settings.neurocnl_physics_worker_url,
-        profile_hint="physics",
     )

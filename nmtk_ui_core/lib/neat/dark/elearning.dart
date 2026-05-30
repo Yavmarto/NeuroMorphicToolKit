@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
-import 'cut/dark_status_bar.dart';
-import 'cut/dark_top_bar.dart';
-import 'cut/elearning_widgets.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_status_bar.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/elearning_widgets.dart';
 
 class NeatElearning extends StatelessWidget {
   @Preview(name: 'Neat Dark – E-Learning', group: 'Neat Dark Pages', size: Size(375, 1222))
@@ -17,8 +17,8 @@ class NeatElearning extends StatelessWidget {
           height: 1222,
           clipBehavior: Clip.antiAlias,
           decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
-          child: Stack(
-            children: const [
+          child: const Stack(
+            children: [
               Positioned(left: 0, top: 0, child: DarkStatusBar()),
               Positioned(left: 0, top: 44, child: DarkTopBar()),
               Positioned(left: 16, top: 156, child: AnnouncementCard()),

@@ -13,7 +13,7 @@ class DarkStatusBar extends StatelessWidget {
       decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
       child: Stack(
         children: [
-          Positioned(left: 0, top: 0, child: Container(width: 375, height: 44)),
+          const Positioned(left: 0, top: 0, child: SizedBox(width: 375, height: 44)),
           Positioned(
             left: 336,
             top: 17.33,
@@ -45,7 +45,7 @@ class DarkStatusBar extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
+          const Positioned(
             left: 21,
             top: 13,
             child: SizedBox(
@@ -58,7 +58,7 @@ class DarkStatusBar extends StatelessWidget {
                     top: 2,
                     child: SizedBox(
                       width: 54,
-                      child: const Text(
+                      child: Text(
                         '11:20',
                         textAlign: TextAlign.center,
                         style: TextStyle(

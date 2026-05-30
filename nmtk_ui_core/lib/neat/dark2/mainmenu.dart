@@ -1,4 +1,9 @@
+import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+
 class NeatMainMenu extends StatelessWidget {
+  const NeatMainMenu({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -7,7 +12,7 @@ class NeatMainMenu extends StatelessWidget {
           width: 375,
           height: 832,
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: const Color(0xFF1D1D25)),
+          decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
           child: Stack(
             children: [
               Positioned(
@@ -17,7 +22,7 @@ class NeatMainMenu extends StatelessWidget {
                   width: 375,
                   height: 96,
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(color: const Color(0xFFF4F4F4)),
+                  decoration: const BoxDecoration(color: Color(0xFFF4F4F4)),
                   child: Stack(
                     children: [
                       Positioned(
@@ -29,8 +34,8 @@ class NeatMainMenu extends StatelessWidget {
                             horizontal: 20,
                             vertical: 24,
                           ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1D1D25),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1D1D25),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -38,7 +43,7 @@ class NeatMainMenu extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             spacing: 110,
                             children: [
-                              SizedBox(
+                              const SizedBox(
                                 width: 192,
                                 child: Text(
                                   'Main menu',
@@ -64,8 +69,8 @@ class NeatMainMenu extends StatelessWidget {
                                       width: 24,
                                       height: 24,
                                       clipBehavior: Clip.antiAlias,
-                                      decoration: BoxDecoration(),
-                                      child: Stack(),
+                                      decoration: const BoxDecoration(),
+                                      child: const Stack(),
                                     ),
                                   ],
                                 ),
@@ -88,11 +93,11 @@ class NeatMainMenu extends StatelessWidget {
                   decoration: ShapeDecoration(
                     color: const Color(0xFF1D1D25),
                     shape: RoundedRectangleBorder(
-                      side: BorderSide(
+                      side: const BorderSide(
                         width: 1,
-                        color: const Color(0xFF4B4C57),
+                        color: Color(0xFF4B4C57),
                       ),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                     ),
                   ),
                   child: Column(
@@ -111,7 +116,7 @@ class NeatMainMenu extends StatelessWidget {
                         decoration: ShapeDecoration(
                           color: const Color(0xFF383942),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                           ),
                         ),
                         child: Row(
@@ -120,7 +125,7 @@ class NeatMainMenu extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.center,
                           spacing: 20,
                           children: [
-                            Container(
+                            SizedBox(
                               width: 48,
                               height: 48,
                               child: Stack(
@@ -131,8 +136,8 @@ class NeatMainMenu extends StatelessWidget {
                                     child: Container(
                                       width: 48,
                                       height: 48,
-                                      decoration: ShapeDecoration(
-                                        color: const Color(0xFFE9ECF2),
+                                      decoration: const ShapeDecoration(
+                                        color: Color(0xFFE9ECF2),
                                         shape: OvalBorder(),
                                       ),
                                     ),
@@ -140,12 +145,12 @@ class NeatMainMenu extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            SizedBox(
+                            const SizedBox(
                               width: 130.29,
                               child: Text(
                                 'Informathic Engineering',
                                 style: TextStyle(
-                                  color: const Color(0xFF808D9E),
+                                  color: Color(0xFF808D9E),
                                   fontSize: 12,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w400,
@@ -154,12 +159,12 @@ class NeatMainMenu extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            SizedBox(
+                            const SizedBox(
                               width: 145,
                               child: Text(
                                 'Gabriel Samsudin',
                                 style: TextStyle(
-                                  color: const Color(0xFFF8F8F8),
+                                  color: Color(0xFFF8F8F8),
                                   fontSize: 16,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w700,
@@ -171,13 +176,13 @@ class NeatMainMenu extends StatelessWidget {
                               width: 24,
                               height: 24,
                               clipBehavior: Clip.antiAlias,
-                              decoration: BoxDecoration(),
-                              child: Stack(),
+                              decoration: const BoxDecoration(),
+                              child: const Stack(),
                             ),
                           ],
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Home',
                         style: TextStyle(
                           color: Colors.white,
@@ -187,7 +192,7 @@ class NeatMainMenu extends StatelessWidget {
                           height: 1.25,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Profile',
                         style: TextStyle(
                           color: Colors.white,
@@ -199,17 +204,17 @@ class NeatMainMenu extends StatelessWidget {
                       ),
                       Container(
                         width: 295,
-                        decoration: ShapeDecoration(
+                        decoration: const ShapeDecoration(
                           shape: RoundedRectangleBorder(
                             side: BorderSide(
                               width: 1,
                               strokeAlign: BorderSide.strokeAlignCenter,
-                              color: const Color(0xFF4B4C57),
+                              color: Color(0xFF4B4C57),
                             ),
                           ),
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Overview',
                         style: TextStyle(
                           color: Colors.white,
@@ -229,7 +234,7 @@ class NeatMainMenu extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Products',
                         style: TextStyle(
                           color: Colors.white,
@@ -243,8 +248,8 @@ class NeatMainMenu extends StatelessWidget {
                         width: 24,
                         height: 24,
                         clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(),
-                        child: Stack(),
+                        decoration: const BoxDecoration(),
+                        child: const Stack(),
                       ),
                       Container(
                         width: 6,
@@ -256,7 +261,7 @@ class NeatMainMenu extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Sales Report',
                         style: TextStyle(
                           color: Colors.white,
@@ -276,7 +281,7 @@ class NeatMainMenu extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Customer',
                         style: TextStyle(
                           color: Colors.white,
@@ -298,17 +303,17 @@ class NeatMainMenu extends StatelessWidget {
                       ),
                       Container(
                         width: 295,
-                        decoration: ShapeDecoration(
+                        decoration: const ShapeDecoration(
                           shape: RoundedRectangleBorder(
                             side: BorderSide(
                               width: 1,
                               strokeAlign: BorderSide.strokeAlignCenter,
-                              color: const Color(0xFF4B4C57),
+                              color: Color(0xFF4B4C57),
                             ),
                           ),
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Account Settings',
                         style: TextStyle(
                           color: Colors.white,
@@ -318,10 +323,10 @@ class NeatMainMenu extends StatelessWidget {
                           height: 1.25,
                         ),
                       ),
-                      Text(
+                      const Text(
                         'Logout',
                         style: TextStyle(
-                          color: const Color(0xFFFF5555),
+                          color: Color(0xFFFF5555),
                           fontSize: 16,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,
@@ -338,13 +343,13 @@ class NeatMainMenu extends StatelessWidget {
                 child: Container(
                   width: 375,
                   height: 44,
-                  decoration: BoxDecoration(color: const Color(0xFF1D1D25)),
+                  decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
                   child: Stack(
                     children: [
-                      Positioned(
+                      const Positioned(
                         left: 0,
                         top: 0,
-                        child: Container(width: 375, height: 44),
+                        child: SizedBox(width: 375, height: 44),
                       ),
                       Positioned(
                         left: 336,
@@ -356,7 +361,7 @@ class NeatMainMenu extends StatelessWidget {
                             height: 11.33,
                             decoration: ShapeDecoration(
                               shape: RoundedRectangleBorder(
-                                side: BorderSide(width: 1, color: Colors.white),
+                                side: const BorderSide(width: 1, color: Colors.white),
                                 borderRadius: BorderRadius.circular(2.67),
                               ),
                             ),
@@ -377,10 +382,10 @@ class NeatMainMenu extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Positioned(
+                      const Positioned(
                         left: 21,
                         top: 13,
-                        child: Container(
+                        child: SizedBox(
                           width: 54,
                           height: 21,
                           child: Stack(

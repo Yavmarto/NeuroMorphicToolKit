@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 /// Compact "Info" announcement strip on top of the e-learning page.
 class AnnouncementCard extends StatelessWidget {
@@ -12,7 +13,7 @@ class AnnouncementCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: ShapeDecoration(
         color: const Color(0xFF383942),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm)),
       ),
       child: Row(
         spacing: 12,

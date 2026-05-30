@@ -44,10 +44,10 @@ void main() {
     });
 
     test('lerp works correctly', () {
-      final other = NmtkThemeExtension(
+      final other = const NmtkThemeExtension(
         terminalBackground: Colors.white,
         syntaxHighlightColor: Colors.green,
-        brandGradient: const LinearGradient(
+        brandGradient: LinearGradient(
           colors: [Colors.green, Colors.yellow],
         ),
       );

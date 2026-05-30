@@ -195,14 +195,14 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
               ? colors.surfaceNegativeSubtle
               : colors.surfacePositiveSubtle)
         : (hasErrors
-              ? tokens.errorColor.withOpacity(0.12)
-              : tokens.healthyColor.withOpacity(0.12));
+              ? tokens.errorColor.withValues(alpha: 0.12)
+              : tokens.healthyColor.withValues(alpha: 0.12));
 
     final border = colors != null
         ? (hasErrors ? colors.borderNegative : colors.borderPositive)
         : (hasErrors
-              ? tokens.errorColor.withOpacity(0.5)
-              : tokens.healthyColor.withOpacity(0.5));
+              ? tokens.errorColor.withValues(alpha: 0.5)
+              : tokens.healthyColor.withValues(alpha: 0.5));
 
     final errorLabel = widget.errorCount == 1
         ? '✗ 1 error'
@@ -231,7 +231,7 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
               const SizedBox(width: 6),
               Text(
                 chipLabel,
-                style: ZetaTextStyles.bodyMedium.copyWith(
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                   fontSize: 13,
                   color: fg,
                   fontWeight: FontWeight.w600,
@@ -294,11 +294,11 @@ class _ErrorDropdown extends StatelessWidget {
 
     final bg = colors != null
         ? colors.surfaceNegativeSubtle
-        : tokens.errorColor.withOpacity(0.12);
+        : tokens.errorColor.withValues(alpha: 0.12);
 
     final border = colors != null
         ? colors.borderNegative
-        : tokens.errorColor.withOpacity(0.5);
+        : tokens.errorColor.withValues(alpha: 0.5);
 
     final fg = colors != null ? colors.mainNegative : tokens.errorColor;
 
@@ -314,7 +314,7 @@ class _ErrorDropdown extends StatelessWidget {
         shrinkWrap: true,
         padding: const EdgeInsets.symmetric(vertical: 6),
         itemCount: errors.length,
-        separatorBuilder: (_, __) => Divider(height: 1, color: border),
+        separatorBuilder: (_, _) => Divider(height: 1, color: border),
         itemBuilder: (context, index) {
           final error = errors[index];
           return Padding(
@@ -325,7 +325,7 @@ class _ErrorDropdown extends StatelessWidget {
                 if (error.line != null) ...[
                   Text(
                     'L${error.line}',
-                    style: ZetaTextStyles.bodyMedium.copyWith(
+                    style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                       fontFamily: 'monospace',
                       fontSize: 11,
                       color: fg,
@@ -337,7 +337,7 @@ class _ErrorDropdown extends StatelessWidget {
                 Expanded(
                   child: Text(
                     error.message,
-                    style: ZetaTextStyles.bodyMedium.copyWith(
+                    style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                       fontFamily: 'monospace',
                       fontSize: 12,
                       color: fg,

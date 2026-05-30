@@ -25,7 +25,7 @@ class NmtkSparklineChart extends StatelessWidget {
         child: Center(
           child: Text(
             'No data',
-            style: ZetaTextStyles.bodyMedium.copyWith(
+            style: Zeta.of(context).textStyles.bodyMedium.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),

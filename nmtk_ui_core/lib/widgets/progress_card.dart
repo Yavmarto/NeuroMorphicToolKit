@@ -49,7 +49,7 @@ class NmtkProgressCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   statusLabel,
-                  style: ZetaTextStyles.bodyMedium.copyWith(
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
                     color: errorText != null
                         ? Zeta.of(context).colors.mainNegative
@@ -63,7 +63,7 @@ class NmtkProgressCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               errorText!,
-              style: ZetaTextStyles.bodyMedium.copyWith(
+              style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                 color: Zeta.of(context).colors.mainNegative,
               ),
             ),

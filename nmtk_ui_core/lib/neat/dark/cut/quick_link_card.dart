@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 /// Quick-link tile (icon + label + sub-label) used in the e-learning grid.
 class QuickLinkCard extends StatelessWidget {
@@ -14,7 +15,7 @@ class QuickLinkCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       padding: const EdgeInsets.all(16),

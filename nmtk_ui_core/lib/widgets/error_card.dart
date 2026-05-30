@@ -38,11 +38,11 @@ class NmtkErrorCard extends StatelessWidget {
           selectable
               ? SelectableText(
                   message,
-                  style: ZetaTextStyles.bodyMedium.copyWith(color: errColor),
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: errColor),
                 )
               : Text(
                   message,
-                  style: ZetaTextStyles.bodyMedium.copyWith(color: errColor),
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: errColor),
                 ),
         ],
       ),

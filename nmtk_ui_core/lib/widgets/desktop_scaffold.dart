@@ -520,7 +520,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                     title!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: ZetaTextStyles.bodyMedium.copyWith(
+                    style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                       color: scheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
@@ -558,7 +558,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                 IconButton(
                   icon: Icon(
                     Icons.settings_outlined,
-                    color: scheme.onSurface.withOpacity(0.65),
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                     size: 18,
                   ),
                   onPressed: onSettingsPressed,
@@ -846,7 +846,7 @@ class _RailBrandRow extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             isExpanded ? 'NMTK' : 'N',
-            style: ZetaTextStyles.bodyMedium.copyWith(
+            style: Zeta.of(context).textStyles.bodyMedium.copyWith(
               color: scheme.onPrimary,
               fontSize: isExpanded ? 12 : 14,
               fontWeight: FontWeight.w800,
@@ -868,7 +868,7 @@ class _RailBrandRow extends StatelessWidget {
             IconButton(
               icon: Icon(
                 Icons.chevron_left_rounded,
-                color: scheme.onSurface.withOpacity(0.65),
+                color: scheme.onSurface.withValues(alpha: 0.65),
                 size: 20,
               ),
               onPressed: onToggle,
@@ -940,7 +940,7 @@ class _RailIconButtonState extends State<_RailIconButton> {
                 child: Icon(
                   widget.icon,
                   size: 18,
-                  color: scheme.onSurface.withOpacity(0.65),
+                  color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
               ),
             ),
@@ -977,7 +977,6 @@ class _RailProfileChipState extends State<_RailProfileChip> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final profile = widget.profile;
 
     return MenuAnchor(
@@ -1057,14 +1056,14 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
     final isExpanded = widget.isExpanded;
 
     final bgColor = isSelected
-        ? palette.accent.withOpacity(0.10)
+        ? palette.accent.withValues(alpha: 0.10)
         : _hovered
         ? scheme.surfaceContainerHighest
         : null;
 
     final iconColor = isSelected
         ? palette.accent
-        : scheme.onSurface.withOpacity(0.70);
+        : scheme.onSurface.withValues(alpha: 0.70);
 
     final textColor = isSelected ? palette.accent : scheme.onSurface;
 
@@ -1091,7 +1090,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                 item.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: ZetaTextStyles.bodyMedium.copyWith(
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                   color: textColor,
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -1107,7 +1106,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
                 ),
                 child: Text(
                   '${item.badgeCount}',
-                  style: ZetaTextStyles.bodyMedium.copyWith(
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                     fontSize: 10,
                     height: 1.4,
                     color: Theme.of(context).colorScheme.onPrimary,
@@ -1255,7 +1254,7 @@ class _FileActionIconButton extends StatelessWidget {
       child: IconButton(
         icon: Icon(icon),
         iconSize: 18,
-        color: scheme.onSurface.withOpacity(0.75),
+        color: scheme.onSurface.withValues(alpha: 0.75),
         tooltip: tooltip,
         onPressed: onPressed,
         splashRadius: 18,
@@ -1333,7 +1332,7 @@ class _ProfilePopover extends StatelessWidget {
               children: [
                 Text(
                   profile.displayName,
-                  style: ZetaTextStyles.bodyMedium.copyWith(
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: scheme.onSurface,
@@ -1343,7 +1342,7 @@ class _ProfilePopover extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     profile.email!,
-                    style: ZetaTextStyles.bodyMedium.copyWith(
+                    style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                       fontSize: 12,
                       color: scheme.onSurfaceVariant,
                     ),
@@ -1358,7 +1357,7 @@ class _ProfilePopover extends StatelessWidget {
             if (action.isDivider)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 4),
-                child: const Divider(height: 1),
+                child: Divider(height: 1),
               )
             else
               _ProfileActionRow(action: action, onClose: onClose),
@@ -1402,16 +1401,16 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 100),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            color: _hovered ? scheme.secondary.withOpacity(0.12) : null,
+            color: _hovered ? scheme.secondary.withValues(alpha: 0.12) : null,
             child: Row(
               children: [
                 if (action.icon != null) ...[
-                  Icon(action.icon, size: 15, color: fgColor.withOpacity(0.80)),
+                  Icon(action.icon, size: 15, color: fgColor.withValues(alpha: 0.80)),
                   const SizedBox(width: 10),
                 ],
                 Text(
                   action.label ?? '',
-                  style: ZetaTextStyles.bodyMedium.copyWith(
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                     fontSize: 13,
                     color: fgColor,
                     fontWeight: FontWeight.w500,

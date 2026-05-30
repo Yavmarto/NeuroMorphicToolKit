@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dark_card_header.dart';
-import 'transaction_row.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_card_header.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/transaction_row.dart';
 
 /// "Transaction History" listing card with rich text rows and a "See All" footer.
 class TransactionHistoryCard extends StatelessWidget {
@@ -16,7 +17,7 @@ class TransactionHistoryCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: Column(
@@ -25,24 +26,24 @@ class TransactionHistoryCard extends StatelessWidget {
         spacing: 24,
         children: [
           const DarkCardHeader(title: 'Transaction History', iconColor: Color(0xFFCABDFE)),
-          TransactionRow(
-            description: Text.rich(TextSpan(children: const [
+          const TransactionRow(
+            description: Text.rich(TextSpan(children: [
               TextSpan(text: 'rakabuming ', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w600)),
               TextSpan(text: 'purchased ', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w400)),
               TextSpan(text: 'Epay Wallet App Mobile UI Kit', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w600)),
             ])),
             time: 'Just now', amount: '+ \$34', positive: true,
           ),
-          TransactionRow(
-            description: Text.rich(TextSpan(children: const [
+          const TransactionRow(
+            description: Text.rich(TextSpan(children: [
               TextSpan(text: 'jovanca ', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w600)),
               TextSpan(text: 'purchased ', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w400)),
               TextSpan(text: 'Coca Saas Landing Page UI kit', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w600)),
             ])),
             time: '2 hours ago', amount: '+ \$39', positive: true,
           ),
-          TransactionRow(
-            description: Text.rich(TextSpan(children: const [
+          const TransactionRow(
+            description: Text.rich(TextSpan(children: [
               TextSpan(text: 'Payout ', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w600)),
               TextSpan(text: 'to hello@neat.co ', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w400)),
               TextSpan(text: 'failed', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w600)),
@@ -56,7 +57,7 @@ class TransactionHistoryCard extends StatelessWidget {
               color: const Color(0xFF1D1D25),
               shape: RoundedRectangleBorder(
                 side: const BorderSide(width: 2, color: Color(0xFF4B4C57)),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
               ),
             ),
             child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [

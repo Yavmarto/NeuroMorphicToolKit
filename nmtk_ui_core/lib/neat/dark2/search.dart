@@ -1,4 +1,9 @@
+import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+
 class NeatSearch extends StatelessWidget {
+  const NeatSearch({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -7,7 +12,7 @@ class NeatSearch extends StatelessWidget {
           width: 375,
           height: 832,
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: const Color(0xFF1D1D25)),
+          decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
           child: Stack(
             children: [
               Positioned(
@@ -17,7 +22,7 @@ class NeatSearch extends StatelessWidget {
                   width: 375,
                   height: 133,
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(color: const Color(0xFFF4F4F4)),
+                  decoration: const BoxDecoration(color: Color(0xFFF4F4F4)),
                   child: Stack(
                     children: [
                       Positioned(
@@ -30,8 +35,8 @@ class NeatSearch extends StatelessWidget {
                             left: 20,
                             right: 20,
                           ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1D1D25),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1D1D25),
                           ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -45,11 +50,11 @@ class NeatSearch extends StatelessWidget {
                                 decoration: ShapeDecoration(
                                   color: const Color(0xFF1D1D25),
                                   shape: RoundedRectangleBorder(
-                                    side: BorderSide(
+                                    side: const BorderSide(
                                       width: 2,
-                                      color: const Color(0xFF2180FF),
+                                      color: Color(0xFF2180FF),
                                     ),
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                                   ),
                                 ),
                               ),
@@ -57,10 +62,10 @@ class NeatSearch extends StatelessWidget {
                                 width: 24,
                                 height: 24,
                                 clipBehavior: Clip.antiAlias,
-                                decoration: BoxDecoration(),
-                                child: Stack(),
+                                decoration: const BoxDecoration(),
+                                child: const Stack(),
                               ),
-                              Text(
+                              const Text(
                                 'report',
                                 style: TextStyle(
                                   color: Colors.white,
@@ -72,15 +77,15 @@ class NeatSearch extends StatelessWidget {
                               ),
                               Container(
                                 transform: Matrix4.identity()
-                                  ..translate(0.0, 0.0)
+                                  
                                   ..rotateZ(1.57),
                                 width: 24,
-                                decoration: ShapeDecoration(
+                                decoration: const ShapeDecoration(
                                   shape: RoundedRectangleBorder(
                                     side: BorderSide(
                                       width: 1,
                                       strokeAlign: BorderSide.strokeAlignCenter,
-                                      color: const Color(0xFF808D9E),
+                                      color: Color(0xFF808D9E),
                                     ),
                                   ),
                                 ),
@@ -97,13 +102,13 @@ class NeatSearch extends StatelessWidget {
                                       width: 24,
                                       height: 24,
                                       clipBehavior: Clip.antiAlias,
-                                      decoration: BoxDecoration(),
-                                      child: Stack(),
+                                      decoration: const BoxDecoration(),
+                                      child: const Stack(),
                                     ),
                                   ],
                                 ),
                               ),
-                              Text(
+                              const Text(
                                 'All',
                                 style: TextStyle(
                                   color: Colors.white,
@@ -113,40 +118,40 @@ class NeatSearch extends StatelessWidget {
                                   height: 1.43,
                                 ),
                               ),
-                              Text(
+                              const Text(
                                 'Product',
                                 style: TextStyle(
-                                  color: const Color(0xFF808D9E),
+                                  color: Color(0xFF808D9E),
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
                                   height: 1.43,
                                 ),
                               ),
-                              Text(
+                              const Text(
                                 'Sales',
                                 style: TextStyle(
-                                  color: const Color(0xFF808D9E),
+                                  color: Color(0xFF808D9E),
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
                                   height: 1.43,
                                 ),
                               ),
-                              Text(
+                              const Text(
                                 'Customer',
                                 style: TextStyle(
-                                  color: const Color(0xFF808D9E),
+                                  color: Color(0xFF808D9E),
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
                                   height: 1.43,
                                 ),
                               ),
-                              Text(
+                              const Text(
                                 'Finance',
                                 style: TextStyle(
-                                  color: const Color(0xFF808D9E),
+                                  color: Color(0xFF808D9E),
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w600,
@@ -165,7 +170,7 @@ class NeatSearch extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
-                                child: Row(
+                                child: const Row(
                                   mainAxisSize: MainAxisSize.min,
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -177,7 +182,7 @@ class NeatSearch extends StatelessWidget {
                                       child: Text(
                                         '99+',
                                         style: TextStyle(
-                                          color: const Color(0xFFE9ECF2),
+                                          color: Color(0xFFE9ECF2),
                                           fontSize: 11,
                                           fontFamily: 'Inter',
                                           fontWeight: FontWeight.w500,
@@ -191,8 +196,8 @@ class NeatSearch extends StatelessWidget {
                               Container(
                                 width: 72,
                                 height: 3,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2180FF),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF2180FF),
                                 ),
                               ),
                             ],
@@ -203,13 +208,13 @@ class NeatSearch extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 16,
                 top: 201,
                 child: Text(
                   'Related Topic',
                   style: TextStyle(
-                    color: const Color(0xFF808D9E),
+                    color: Color(0xFF808D9E),
                     fontSize: 14,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -231,7 +236,7 @@ class NeatSearch extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -240,7 +245,7 @@ class NeatSearch extends StatelessWidget {
                       Text(
                         'Overview',
                         style: TextStyle(
-                          color: const Color(0xFF1D1D25),
+                          color: Color(0xFF1D1D25),
                           fontSize: 14,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,
@@ -265,7 +270,7 @@ class NeatSearch extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -274,7 +279,7 @@ class NeatSearch extends StatelessWidget {
                       Text(
                         'Statstic',
                         style: TextStyle(
-                          color: const Color(0xFF1D1D25),
+                          color: Color(0xFF1D1D25),
                           fontSize: 14,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,
@@ -299,7 +304,7 @@ class NeatSearch extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  child: Row(
+                  child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -308,7 +313,7 @@ class NeatSearch extends StatelessWidget {
                       Text(
                         'Avg Total Sales',
                         style: TextStyle(
-                          color: const Color(0xFF1D1D25),
+                          color: Color(0xFF1D1D25),
                           fontSize: 14,
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w600,
@@ -319,13 +324,13 @@ class NeatSearch extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 16,
                 top: 285,
                 child: Text(
                   'Search Result',
                   style: TextStyle(
-                    color: const Color(0xFF808D9E),
+                    color: Color(0xFF808D9E),
                     fontSize: 14,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w600,
@@ -333,7 +338,7 @@ class NeatSearch extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 42,
                 top: 347,
                 child: Text(
@@ -354,11 +359,11 @@ class NeatSearch extends StatelessWidget {
                   width: 24,
                   height: 24,
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(),
-                  child: Stack(),
+                  decoration: const BoxDecoration(),
+                  child: const Stack(),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 42,
                 top: 323,
                 child: SizedBox(
@@ -367,7 +372,7 @@ class NeatSearch extends StatelessWidget {
                   child: Text(
                     'Sales Report',
                     style: TextStyle(
-                      color: const Color(0xFF808D9E),
+                      color: Color(0xFF808D9E),
                       fontSize: 14,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w400,
@@ -391,7 +396,7 @@ class NeatSearch extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 42,
                 top: 419,
                 child: Text(
@@ -405,7 +410,7 @@ class NeatSearch extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 42,
                 top: 395,
                 child: SizedBox(
@@ -414,7 +419,7 @@ class NeatSearch extends StatelessWidget {
                   child: Text(
                     'Finance',
                     style: TextStyle(
-                      color: const Color(0xFF808D9E),
+                      color: Color(0xFF808D9E),
                       fontSize: 14,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w400,
@@ -445,11 +450,11 @@ class NeatSearch extends StatelessWidget {
                   width: 24,
                   height: 24,
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(),
-                  child: Stack(),
+                  decoration: const BoxDecoration(),
+                  child: const Stack(),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 74,
                 top: 519,
                 child: Text(
@@ -470,11 +475,11 @@ class NeatSearch extends StatelessWidget {
                   width: 24,
                   height: 24,
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(),
-                  child: Stack(),
+                  decoration: const BoxDecoration(),
+                  child: const Stack(),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 74,
                 top: 495,
                 child: SizedBox(
@@ -483,7 +488,7 @@ class NeatSearch extends StatelessWidget {
                   child: Text(
                     'Statistic',
                     style: TextStyle(
-                      color: const Color(0xFF808D9E),
+                      color: Color(0xFF808D9E),
                       fontSize: 14,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w400,
@@ -514,11 +519,11 @@ class NeatSearch extends StatelessWidget {
                   width: 24,
                   height: 24,
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(),
-                  child: Stack(),
+                  decoration: const BoxDecoration(),
+                  child: const Stack(),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 74,
                 top: 591,
                 child: Text(
@@ -532,7 +537,7 @@ class NeatSearch extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 74,
                 top: 567,
                 child: SizedBox(
@@ -541,7 +546,7 @@ class NeatSearch extends StatelessWidget {
                   child: Text(
                     'Report',
                     style: TextStyle(
-                      color: const Color(0xFF808D9E),
+                      color: Color(0xFF808D9E),
                       fontSize: 14,
                       fontFamily: 'Inter',
                       fontWeight: FontWeight.w400,
@@ -565,10 +570,10 @@ class NeatSearch extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 25,
                 top: 578,
-                child: Container(width: 24, height: 24, child: Stack()),
+                child: SizedBox(width: 24, height: 24, child: Stack()),
               ),
               Positioned(
                 left: 335,
@@ -577,8 +582,8 @@ class NeatSearch extends StatelessWidget {
                   width: 24,
                   height: 24,
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(),
-                  child: Stack(),
+                  decoration: const BoxDecoration(),
+                  child: const Stack(),
                 ),
               ),
               Positioned(
@@ -586,12 +591,12 @@ class NeatSearch extends StatelessWidget {
                 top: 467,
                 child: Container(
                   width: 343,
-                  decoration: ShapeDecoration(
+                  decoration: const ShapeDecoration(
                     shape: RoundedRectangleBorder(
                       side: BorderSide(
                         width: 1,
                         strokeAlign: BorderSide.strokeAlignCenter,
-                        color: const Color(0xFF4B4C57),
+                        color: Color(0xFF4B4C57),
                       ),
                     ),
                   ),
@@ -603,13 +608,13 @@ class NeatSearch extends StatelessWidget {
                 child: Container(
                   width: 375,
                   height: 44,
-                  decoration: BoxDecoration(color: const Color(0xFF1D1D25)),
+                  decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
                   child: Stack(
                     children: [
-                      Positioned(
+                      const Positioned(
                         left: 0,
                         top: 0,
-                        child: Container(width: 375, height: 44),
+                        child: SizedBox(width: 375, height: 44),
                       ),
                       Positioned(
                         left: 336,
@@ -621,7 +626,7 @@ class NeatSearch extends StatelessWidget {
                             height: 11.33,
                             decoration: ShapeDecoration(
                               shape: RoundedRectangleBorder(
-                                side: BorderSide(width: 1, color: Colors.white),
+                                side: const BorderSide(width: 1, color: Colors.white),
                                 borderRadius: BorderRadius.circular(2.67),
                               ),
                             ),
@@ -642,10 +647,10 @@ class NeatSearch extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Positioned(
+                      const Positioned(
                         left: 21,
                         top: 13,
-                        child: Container(
+                        child: SizedBox(
                           width: 54,
                           height: 21,
                           child: Stack(

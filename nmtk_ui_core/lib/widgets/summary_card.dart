@@ -25,11 +25,11 @@ class NmtkSummaryCard extends StatelessWidget {
 
     final bg = colors != null
         ? colors.surfacePrimarySubtle
-        : tokens.runningColor.withOpacity(0.08);
+        : tokens.runningColor.withValues(alpha: 0.08);
 
     final border = colors != null
         ? colors.borderPrimary
-        : tokens.runningColor.withOpacity(0.35);
+        : tokens.runningColor.withValues(alpha: 0.35);
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -43,7 +43,7 @@ class NmtkSummaryCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: ZetaTextStyles.titleSmall?.copyWith(
+            style: Zeta.of(context).textStyles.titleSmall.copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'choose_plan_button.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/choose_plan_button.dart';
 
 /// One pricing tier card on the upgrade page (price + feature list + CTA).
 class PricingTierCard extends StatelessWidget {
@@ -16,7 +17,7 @@ class PricingTierCard extends StatelessWidget {
         color: isHighlighted ? const Color(0xFF2A85FF) : const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: isHighlighted ? BorderSide.none : const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       padding: const EdgeInsets.all(20),

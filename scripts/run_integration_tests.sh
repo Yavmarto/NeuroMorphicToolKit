@@ -7,7 +7,7 @@ if [ -f .env ]; then
 fi
 
 echo "🚀 Starting NMTK full stack with Docker Compose..."
-docker compose --profile full up -d
+docker compose up -d
 
 # Function to check health of a service
 check_health() {

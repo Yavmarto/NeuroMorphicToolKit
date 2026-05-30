@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'weekly_day_column.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/weekly_day_column.dart';
 
 /// Weekly calendar card showing days S–M with dates 25–31.
 /// Day 28 (K/Thursday) is highlighted red, today marked with a blue dot.
@@ -16,7 +17,7 @@ class WeeklyCalendarCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: Column(
@@ -25,7 +26,7 @@ class WeeklyCalendarCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         spacing: 24,
         children: [
-          SizedBox(
+          const SizedBox(
             width: double.infinity,
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -37,7 +38,7 @@ class WeeklyCalendarCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   spacing: 16,
-                  children: const [
+                  children: [
                     Text(
                       'Weekly Calendar',
                       textAlign: TextAlign.center,
@@ -55,9 +56,9 @@ class WeeklyCalendarCard extends StatelessWidget {
             ),
           ),
           // Day columns
-          Row(
+          const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               WeeklyDayColumn(dayLabel: 'S', dateLabel: '25', isHighlighted: false),
               WeeklyDayColumn(dayLabel: 'S', dateLabel: '26', isHighlighted: false),
               WeeklyDayColumn(dayLabel: 'R', dateLabel: '27', isHighlighted: false),
@@ -77,10 +78,10 @@ class WeeklyCalendarCard extends StatelessWidget {
             ),
           ),
           // Event note
-          Text.rich(
+          const Text.rich(
             TextSpan(
               children: [
-                const TextSpan(
+                TextSpan(
                   text: 'August ',
                   style: TextStyle(
                     color: Color(0xFFFF5555),
@@ -89,7 +90,7 @@ class WeeklyCalendarCard extends StatelessWidget {
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-                const TextSpan(
+                TextSpan(
                   text: '28',
                   style: TextStyle(
                     color: Color(0xFFFF6955),
@@ -98,7 +99,7 @@ class WeeklyCalendarCard extends StatelessWidget {
                     fontWeight: FontWeight.w400,
                   ),
                 ),
-                const TextSpan(
+                TextSpan(
                   text: ' : Designer Day World Wide',
                   style: TextStyle(
                     color: Color(0xFFFF5555),

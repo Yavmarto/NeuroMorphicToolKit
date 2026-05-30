@@ -45,7 +45,6 @@ async def proxy_to_worker(
     worker_base_url: str,
     *,
     timeout: float = 30.0,
-    profile_hint: str = "hardware",
 ) -> Response:
     """Forward an HTTP request to a worker service.
 
@@ -56,11 +55,6 @@ async def proxy_to_worker(
         request:         The incoming FastAPI request.
         worker_base_url: Base URL of the worker (e.g. http://localhost:8004).
         timeout:         httpx request timeout in seconds.
-        profile_hint:    Docker Compose profile name used to start this worker.
-                         Shown in the 503 body so developers know the right command.
-                         Values: "hardware" (neurochip/neurosense),
-                                 "jobs"     (neurobench),
-                                 "physics"  (neurocnl-physics).
     """
     target_url = f"{worker_base_url.rstrip('/')}{request.url.path}"
     if request.url.query:
@@ -88,12 +82,8 @@ async def proxy_to_worker(
         return JSONResponse(
             status_code=503,
             content={
-                "detail": (
-                    f"Worker at {worker_base_url} is not running. "
-                    f"Start it with: docker compose --profile {profile_hint} up"
-                ),
+                "detail": f"Worker at {worker_base_url} is not running.",
                 "worker_url": worker_base_url,
-                "docker_profile": profile_hint,
             },
         )
     except httpx.TimeoutException as exc:

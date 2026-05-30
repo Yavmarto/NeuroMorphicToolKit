@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'chart_legend_row.dart';
-import 'dark_card_header.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/chart_legend_row.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_card_header.dart';
 
 /// Customer Growth card with a placeholder chart area and three legend rows.
 class CustomerGrowthCard extends StatelessWidget {
@@ -16,7 +17,7 @@ class CustomerGrowthCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: const Column(

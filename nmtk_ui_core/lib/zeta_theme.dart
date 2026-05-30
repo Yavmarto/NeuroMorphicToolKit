@@ -3,11 +3,8 @@ import 'package:zeta_flutter/zeta_flutter.dart';
 
 export 'package:zeta_flutter/zeta_flutter.dart'
     show
-        ZetaTextStyles,
-        ZetaCard,
         ZetaCheckbox,
         ZetaIcon,
-        ZetaIconTheme,
         ZetaProvider,
         Zeta,
         ZetaColors,

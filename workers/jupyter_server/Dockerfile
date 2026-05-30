@@ -44,6 +44,18 @@ COPY workers/jupyter_server/nmtk_env_manager/ /tmp/nmtk_env_manager/
 RUN pip install --no-cache-dir /tmp/nmtk_env_manager \
  && rm -rf /tmp/nmtk_env_manager
 
+# NMTK notebook client — thin wrappers for lava-backend and suite_api.
+COPY workers/jupyter_server/nmtk_client/ /tmp/nmtk_client/
+RUN pip install --no-cache-dir /tmp/nmtk_client \
+ && rm -rf /tmp/nmtk_client
+
+# Starter notebooks — seeded into the persistent /root volume by entrypoint.sh
+# only when the file does not already exist (preserves user edits on restart).
+COPY workers/jupyter_server/notebooks/ /app/notebooks/
+
+COPY workers/jupyter_server/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Pin the Jupyter data dir under the persisted /root volume so the --user
 # kernelspecs written by cloned environments survive container restarts.
 ENV JUPYTER_DATA_DIR=/root/.local/share/jupyter
@@ -57,4 +69,4 @@ ENV JUPYTER_NOTEBOOK_DIR=/root
 
 EXPOSE 8008
 
-CMD ["sh", "-c", "jupyter server --config=/app/jupyter_server_config.py --notebook-dir=${JUPYTER_NOTEBOOK_DIR}"]
+CMD ["/app/entrypoint.sh"]

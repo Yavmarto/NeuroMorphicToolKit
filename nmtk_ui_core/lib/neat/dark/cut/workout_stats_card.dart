@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'workout_stat.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/workout_stat.dart';
 
 /// Bottom-of-page workout summary tile: three [WorkoutStat]s side by side.
 class WorkoutStatsCard extends StatelessWidget {
@@ -15,7 +16,7 @@ class WorkoutStatsCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: const Row(

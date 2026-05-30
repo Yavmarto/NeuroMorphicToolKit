@@ -24,7 +24,7 @@ enum NmtkReadinessState {
 ///
 /// This widget is purely callback-based with no Provider or Riverpod dependency.
 class NmtkLoadingScreen extends StatefulWidget {
-  NmtkLoadingScreen({
+  const NmtkLoadingScreen({
     super.key,
     required this.state,
     this.progressMessage,
@@ -116,11 +116,11 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _LogoBox(),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
                       Text(
                         widget.appName,
                         textAlign: TextAlign.center,
-                        style: ZetaTextStyles.bodyMedium.copyWith(
+                        style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                           fontFamily: 'Space Grotesk',
                           fontSize: 18,
                           color: fg,
@@ -131,7 +131,7 @@ class _NmtkLoadingScreenState extends State<NmtkLoadingScreen>
                     ],
                   ),
                 ),
-                SizedBox(height: 32),
+                const SizedBox(height: 32),
                 _buildStateContent(widget.state, fg),
               ],
             ),
@@ -183,7 +183,7 @@ class _LogoBox extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         'N',
-        style: ZetaTextStyles.bodyMedium.copyWith(
+        style: Zeta.of(context).textStyles.bodyMedium.copyWith(
           color: scheme.onPrimary,
           fontSize: 32,
           fontWeight: FontWeight.bold,
@@ -216,11 +216,11 @@ class _WaitingContent extends StatelessWidget {
                 minHeight: 3,
               ),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: ZetaTextStyles.bodyMedium.copyWith(
+              style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                 fontSize: 14,
                 color: textColor,
               ),
@@ -264,13 +264,13 @@ class _DegradedContent extends StatelessWidget {
               color: Zeta.of(context).colors.mainWarning,
               size: 36,
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             SizedBox(
               width: width,
               child: Text(
                 message,
                 textAlign: TextAlign.center,
-                style: ZetaTextStyles.bodyMedium.copyWith(
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                   fontSize: 13,
                   color: textColor,
                 ),
@@ -320,17 +320,17 @@ class _FailedContent extends StatelessWidget {
                 color: Zeta.of(context).colors.mainNegative,
                 size: 36,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: ZetaTextStyles.bodyMedium.copyWith(
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                   fontSize: 14,
                   color: textColor,
                 ),
               ),
               if (onRetry != null) ...[
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 ZetaButton.negative(onPressed: onRetry, label: 'Retry'),
               ],
             ],

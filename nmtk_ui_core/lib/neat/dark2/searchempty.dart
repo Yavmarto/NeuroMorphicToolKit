@@ -1,4 +1,9 @@
+import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+
 class NeatSearchEmpty extends StatelessWidget {
+  const NeatSearchEmpty({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -7,7 +12,7 @@ class NeatSearchEmpty extends StatelessWidget {
           width: 375,
           height: 832,
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(color: const Color(0xFF1D1D25)),
+          decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
           child: Stack(
             children: [
               Positioned(
@@ -17,7 +22,7 @@ class NeatSearchEmpty extends StatelessWidget {
                   width: 375,
                   height: 96,
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(color: const Color(0xFFF4F4F4)),
+                  decoration: const BoxDecoration(color: Color(0xFFF4F4F4)),
                   child: Stack(
                     children: [
                       Positioned(
@@ -29,8 +34,8 @@ class NeatSearchEmpty extends StatelessWidget {
                             horizontal: 20,
                             vertical: 24,
                           ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1D1D25),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1D1D25),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -43,11 +48,11 @@ class NeatSearchEmpty extends StatelessWidget {
                                 decoration: ShapeDecoration(
                                   color: const Color(0xFF1D1D25),
                                   shape: RoundedRectangleBorder(
-                                    side: BorderSide(
+                                    side: const BorderSide(
                                       width: 2,
-                                      color: const Color(0xFF2180FF),
+                                      color: Color(0xFF2180FF),
                                     ),
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                                   ),
                                 ),
                               ),
@@ -55,13 +60,13 @@ class NeatSearchEmpty extends StatelessWidget {
                                 width: 24,
                                 height: 24,
                                 clipBehavior: Clip.antiAlias,
-                                decoration: BoxDecoration(),
-                                child: Stack(),
+                                decoration: const BoxDecoration(),
+                                child: const Stack(),
                               ),
-                              Text(
+                              const Text(
                                 'Search something here',
                                 style: TextStyle(
-                                  color: const Color(0xFF808D9E),
+                                  color: Color(0xFF808D9E),
                                   fontSize: 14,
                                   fontFamily: 'Inter',
                                   fontWeight: FontWeight.w400,
@@ -71,10 +76,10 @@ class NeatSearchEmpty extends StatelessWidget {
                               ),
                               Container(
                                 transform: Matrix4.identity()
-                                  ..translate(0.0, 0.0)
+                                  
                                   ..rotateZ(1.57),
                                 width: 24,
-                                decoration: ShapeDecoration(
+                                decoration: const ShapeDecoration(
                                   shape: RoundedRectangleBorder(
                                     side: BorderSide(
                                       width: 1,
@@ -95,8 +100,8 @@ class NeatSearchEmpty extends StatelessWidget {
                                       width: 24,
                                       height: 24,
                                       clipBehavior: Clip.antiAlias,
-                                      decoration: BoxDecoration(),
-                                      child: Stack(),
+                                      decoration: const BoxDecoration(),
+                                      child: const Stack(),
                                     ),
                                   ],
                                 ),
@@ -109,7 +114,7 @@ class NeatSearchEmpty extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 89,
                 top: 518,
                 child: Text(
@@ -123,14 +128,14 @@ class NeatSearchEmpty extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
+              const Positioned(
                 left: 82,
                 top: 550,
                 child: Text(
                   'Type something on the search bar',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: const Color(0xFF808D9E),
+                    color: Color(0xFF808D9E),
                     fontSize: 14,
                     fontFamily: 'Inter',
                     fontWeight: FontWeight.w400,
@@ -145,13 +150,13 @@ class NeatSearchEmpty extends StatelessWidget {
                 child: Container(
                   width: 375,
                   height: 44,
-                  decoration: BoxDecoration(color: const Color(0xFF1D1D25)),
+                  decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
                   child: Stack(
                     children: [
-                      Positioned(
+                      const Positioned(
                         left: 0,
                         top: 0,
-                        child: Container(width: 375, height: 44),
+                        child: SizedBox(width: 375, height: 44),
                       ),
                       Positioned(
                         left: 336,
@@ -163,7 +168,7 @@ class NeatSearchEmpty extends StatelessWidget {
                             height: 11.33,
                             decoration: ShapeDecoration(
                               shape: RoundedRectangleBorder(
-                                side: BorderSide(width: 1, color: Colors.white),
+                                side: const BorderSide(width: 1, color: Colors.white),
                                 borderRadius: BorderRadius.circular(2.67),
                               ),
                             ),
@@ -184,10 +189,10 @@ class NeatSearchEmpty extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Positioned(
+                      const Positioned(
                         left: 21,
                         top: 13,
-                        child: Container(
+                        child: SizedBox(
                           width: 54,
                           height: 21,
                           child: Stack(

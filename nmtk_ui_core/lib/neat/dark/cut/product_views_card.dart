@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dark_card_header.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_card_header.dart';
 
 /// "Product Views" placeholder chart card.
 class ProductViewsCard extends StatelessWidget {
@@ -15,7 +16,7 @@ class ProductViewsCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: const Column(

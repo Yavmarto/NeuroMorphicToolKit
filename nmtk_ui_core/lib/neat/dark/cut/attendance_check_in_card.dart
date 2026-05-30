@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 /// Greeting + clock + Launch/Break buttons card for the Attendance screen.
 class AttendanceCheckInCard extends StatelessWidget {
@@ -14,7 +15,7 @@ class AttendanceCheckInCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: Column(
@@ -52,9 +53,9 @@ class AttendanceCheckInCard extends StatelessWidget {
           ),
           Container(
             width: 303,
-            decoration: ShapeDecoration(
+            decoration: const ShapeDecoration(
               shape: RoundedRectangleBorder(
-                side: const BorderSide(
+                side: BorderSide(
                   width: 1,
                   strokeAlign: BorderSide.strokeAlignCenter,
                   color: Color(0xFF4B4C57),
@@ -65,10 +66,10 @@ class AttendanceCheckInCard extends StatelessWidget {
           Container(
             width: 48,
             height: 48,
-            decoration: ShapeDecoration(
-              color: const Color(0xFF1D1D25),
+            decoration: const ShapeDecoration(
+              color: Color(0xFF1D1D25),
               shape: OvalBorder(
-                side: const BorderSide(width: 2, color: Color(0xFF4B4C57)),
+                side: BorderSide(width: 2, color: Color(0xFF4B4C57)),
               ),
             ),
           ),
@@ -90,11 +91,11 @@ class AttendanceCheckInCard extends StatelessWidget {
               letterSpacing: -0.36,
             ),
           ),
-          Column(
+          const Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 8,
-            children: const [
+            children: [
               SizedBox(
                 width: 219,
                 child: Text(
@@ -120,15 +121,15 @@ class AttendanceCheckInCard extends StatelessWidget {
                 decoration: ShapeDecoration(
                   color: const Color(0xFF2180FF),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                   ),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   spacing: 8,
-                  children: const [
+                  children: [
                     Text(
                       'Launch',
                       style: TextStyle(
@@ -149,15 +150,15 @@ class AttendanceCheckInCard extends StatelessWidget {
                   color: Colors.white,
                   shape: RoundedRectangleBorder(
                     side: const BorderSide(width: 2, color: Color(0xFFE9ECF2)),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                   ),
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   spacing: 8,
-                  children: const [
+                  children: [
                     Text(
                       'Break',
                       style: TextStyle(

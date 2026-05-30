@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nmtk-client"
+version = "0.1.0"
+description = "Thin HTTP client for NMTK backend services — designed for use inside Jupyter notebooks."
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.0",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7.0", "responses>=0.23"]
+
+[tool.setuptools]
+packages = ["nmtk_client"]
+package-dir = { "nmtk_client" = "." }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'attendance_stat_row.dart';
-import 'dark_card_header.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/attendance_stat_row.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_card_header.dart';
 
 /// Monthly attendance recap card with stats (Present / Paid Leave / Not present).
 class AttendanceRecapCard extends StatelessWidget {
@@ -16,7 +17,7 @@ class AttendanceRecapCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: Column(
@@ -62,10 +63,10 @@ class AttendanceRecapCard extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 width: 97,
                 height: 48,
-                child: const Text(
+                child: Text(
                   'August',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -103,18 +104,18 @@ class AttendanceRecapCard extends StatelessWidget {
             ],
           ),
           // Stats rows
-          AttendanceStatRow(
-            color: const Color(0xFF2180FF),
+          const AttendanceStatRow(
+            color: Color(0xFF2180FF),
             label: 'Present',
             value: '16 days',
           ),
-          AttendanceStatRow(
-            color: const Color(0xFFFFD88D),
+          const AttendanceStatRow(
+            color: Color(0xFFFFD88D),
             label: 'Paid Leave',
             value: '4 days',
           ),
-          AttendanceStatRow(
-            color: const Color(0xFFB0E5FC),
+          const AttendanceStatRow(
+            color: Color(0xFFB0E5FC),
             label: 'Not present',
             value: '2 days',
           ),

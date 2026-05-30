@@ -26,11 +26,11 @@ class NmtkInfoChip extends StatelessWidget {
 
     final bg = colors != null
         ? colors.surfacePrimarySubtle
-        : tokens.runningColor.withOpacity(0.08);
+        : tokens.runningColor.withValues(alpha: 0.08);
 
     final border = colors != null
         ? colors.borderPrimary
-        : tokens.runningColor.withOpacity(0.35);
+        : tokens.runningColor.withValues(alpha: 0.35);
 
     final iconColor = colors != null
         ? colors.mainPrimary

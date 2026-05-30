@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 /// Featured event tile (thumbnail + title + venue/date + CTA) used on the
 /// Neat Events listing page.
@@ -15,13 +16,13 @@ class EventCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         ),
       ),
       child: Row(
         spacing: 16,
         children: [
-          Container(width: 100, height: 100, decoration: ShapeDecoration(color: const Color(0xFFE9ECF2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
+          Container(width: 100, height: 100, decoration: ShapeDecoration(color: const Color(0xFFE9ECF2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm)))),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

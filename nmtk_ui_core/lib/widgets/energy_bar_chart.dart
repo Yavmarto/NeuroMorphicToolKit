@@ -26,7 +26,7 @@ class NmtkEnergyBarChart extends StatelessWidget {
       return Center(
         child: Text(
           'No ensemble data',
-          style: ZetaTextStyles.bodyMedium.copyWith(
+          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
@@ -44,7 +44,7 @@ class NmtkEnergyBarChart extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceVariant,
+            color: theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(tokens.radiusSm),
             border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
@@ -71,7 +71,7 @@ class NmtkEnergyBarChart extends StatelessWidget {
         Expanded(
           child: ListView.separated(
             itemCount: entries.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final entry = entries[index];
               final fraction = maxValue > 0 ? entry.value / maxValue : 0.0;
@@ -114,14 +114,14 @@ class _SummaryChip extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: ZetaTextStyles.bodyMedium.copyWith(
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontSize: 11,
                 ),
               ),
               Text(
                 value,
-                style: ZetaTextStyles.bodyMedium.copyWith(
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                   color: color,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -149,7 +149,6 @@ class _EnergyBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tokens = NmtkShellTokens.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -158,7 +157,7 @@ class _EnergyBar extends StatelessWidget {
           children: [
             Text(
               name,
-              style: ZetaTextStyles.bodyMedium.copyWith(
+              style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                 color: theme.colorScheme.onSurface,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -166,7 +165,7 @@ class _EnergyBar extends StatelessWidget {
             ),
             Text(
               '${valuePj.toStringAsFixed(2)} pJ',
-              style: ZetaTextStyles.bodyMedium.copyWith(
+              style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                 color: theme.colorScheme.primary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -178,7 +177,7 @@ class _EnergyBar extends StatelessWidget {
         LinearProgressIndicator(
           value: fraction,
           minHeight: 10,
-          backgroundColor: theme.colorScheme.surfaceVariant,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
           valueColor: AlwaysStoppedAnimation<Color>(
             Color.lerp(
                   theme.colorScheme.primary,

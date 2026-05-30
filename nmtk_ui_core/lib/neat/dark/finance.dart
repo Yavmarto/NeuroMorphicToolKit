@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
-import 'cut/dark_status_bar.dart';
-import 'cut/dark_top_bar.dart';
-import 'cut/finance_widgets.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_status_bar.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
+import 'package:nmtk_ui_core/neat/dark/cut/finance_widgets.dart';
 
 class NeatFinance extends StatelessWidget {
   @Preview(name: 'Neat Dark – Finance', group: 'Neat Dark Pages', size: Size(375, 1148))

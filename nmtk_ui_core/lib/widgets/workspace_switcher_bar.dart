@@ -94,7 +94,7 @@ class NmtkWorkspaceChip extends StatelessWidget {
       selected: isActive,
       button: true,
       child: Material(
-        color: Zeta.of(context).colors.surfaceDefault.withOpacity(0),
+        color: Zeta.of(context).colors.surfaceDefault.withValues(alpha: 0),
         child: InkWell(
           borderRadius: BorderRadius.circular(tokens.radiusChip),
           onTap: onSelected,
@@ -107,7 +107,7 @@ class NmtkWorkspaceChip extends StatelessWidget {
               borderRadius: BorderRadius.circular(tokens.radiusChip),
               border: Border.all(
                 color: isActive
-                    ? palette.accent.withOpacity(0.55)
+                    ? palette.accent.withValues(alpha: 0.55)
                     : tokens.subtleBorder,
               ),
             ),

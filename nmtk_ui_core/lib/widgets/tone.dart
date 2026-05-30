@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
-import '../shell_tokens.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 enum NmtkTone { neutral, info, success, warning, danger }
 
@@ -67,32 +67,32 @@ NmtkTonePalette resolveNmtkTonePalette(BuildContext context, NmtkTone tone) {
     case NmtkTone.neutral:
       return NmtkTonePalette(
         foreground: theme.colorScheme.primary,
-        background: theme.colorScheme.primaryContainer.withOpacity(0.08),
-        border: theme.colorScheme.primary.withOpacity(0.35),
+        background: theme.colorScheme.primaryContainer.withValues(alpha: 0.08),
+        border: theme.colorScheme.primary.withValues(alpha: 0.35),
       );
     case NmtkTone.info:
       return NmtkTonePalette(
         foreground: tokens.runningColor,
-        background: tokens.runningColor.withOpacity(0.12),
-        border: tokens.runningColor.withOpacity(0.5),
+        background: tokens.runningColor.withValues(alpha: 0.12),
+        border: tokens.runningColor.withValues(alpha: 0.5),
       );
     case NmtkTone.success:
       return NmtkTonePalette(
         foreground: tokens.healthyColor,
-        background: tokens.healthyColor.withOpacity(0.12),
-        border: tokens.healthyColor.withOpacity(0.5),
+        background: tokens.healthyColor.withValues(alpha: 0.12),
+        border: tokens.healthyColor.withValues(alpha: 0.5),
       );
     case NmtkTone.warning:
       return NmtkTonePalette(
         foreground: tokens.warningColor,
-        background: tokens.warningColor.withOpacity(0.12),
-        border: tokens.warningColor.withOpacity(0.5),
+        background: tokens.warningColor.withValues(alpha: 0.12),
+        border: tokens.warningColor.withValues(alpha: 0.5),
       );
     case NmtkTone.danger:
       return NmtkTonePalette(
         foreground: tokens.errorColor,
-        background: tokens.errorColor.withOpacity(0.12),
-        border: tokens.errorColor.withOpacity(0.5),
+        background: tokens.errorColor.withValues(alpha: 0.12),
+        border: tokens.errorColor.withValues(alpha: 0.5),
       );
   }
 }
