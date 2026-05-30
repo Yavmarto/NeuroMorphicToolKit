@@ -108,7 +108,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
   Widget _buildConnectCard(BuildContext context) {
     final isActive = _mode == ServerSetupMode.connect;
 
-    return NmtkSurfaceCard(
+    return NmtkSection(
       title: 'Connect to a server',
       subtitle: 'Use an existing launcher control API host or base URL.',
       child: Column(
@@ -168,7 +168,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
     final tokens = NmtkShellTokens.of(context);
 
     if (!widget.setupAvailable) {
-      return NmtkSurfaceCard(
+      return NmtkSection(
         title: 'Set up a new server',
         subtitle: 'Available after the launcher control API is reachable.',
         child: Column(
@@ -187,7 +187,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
     return AnimatedContainer(
       duration: tokens.fastMotion,
       curve: Curves.easeOutCubic,
-      child: NmtkSurfaceCard(
+      child: NmtkSection(
         title: 'Set up a new server',
         subtitle:
             'Provision a backend target here, then continue automatically when it becomes ready.',

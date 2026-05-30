@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:flutter/widget_previews.dart';
 import 'package:neuro_toolkit/models/module.dart';
 
 /// Tracks a failed WebView page load for a given module.

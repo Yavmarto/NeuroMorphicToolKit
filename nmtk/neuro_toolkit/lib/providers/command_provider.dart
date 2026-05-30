@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 
@@ -87,7 +86,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       onExecute: () {
         // Just trigger a rebuild/refresh if needed,
         // or re-navigate to same path to trigger refresh
-        final current = router.state?.uri.toString() ?? '/';
+        final current = router.state.uri.toString();
         router.go(current);
       },
     ),

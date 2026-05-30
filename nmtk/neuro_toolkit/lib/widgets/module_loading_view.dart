@@ -88,8 +88,8 @@ class ModuleLoadingView extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (kDebugMode)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: NmtkStatusBadge(
@@ -102,7 +102,7 @@ class ModuleLoadingView extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: ZetaTextStyles.titleMedium.copyWith(
+                style: Zeta.of(context).textStyles.titleMedium.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -110,7 +110,7 @@ class ModuleLoadingView extends StatelessWidget {
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: ZetaTextStyles.bodyMedium.copyWith(
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                   color: colors.mainSubtle,
                 ),
               ),

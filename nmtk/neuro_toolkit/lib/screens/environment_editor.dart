@@ -245,7 +245,7 @@ class _BusyBanner extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
           const SizedBox(width: 12),
-          Text(label, style: ZetaTextStyles.bodyMedium),
+          Text(label, style: Zeta.of(context).textStyles.bodyMedium),
         ],
       ),
     );
@@ -422,14 +422,14 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
     if (_packagesError != null) {
       return Text(
         _packagesError!,
-        style: ZetaTextStyles.bodySmall.apply(color: zeta.colors.mainNegative),
+        style: Zeta.of(context).textStyles.bodySmall.apply(color: zeta.colors.mainNegative),
       );
     }
     final pkgs = _packages ?? const <PackageInfo>[];
     if (pkgs.isEmpty) {
       return Text(
         'No packages found.',
-        style: ZetaTextStyles.bodySmall.apply(color: zeta.colors.mainSubtle),
+        style: Zeta.of(context).textStyles.bodySmall.apply(color: zeta.colors.mainSubtle),
       );
     }
     return Column(
@@ -441,7 +441,7 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
               children: [
                 Expanded(
                   child: Text('${pkg.name}  ${pkg.version}',
-                      style: ZetaTextStyles.bodySmall),
+                      style: Zeta.of(context).textStyles.bodySmall),
                 ),
                 if (!env.immutable)
                   ZetaButton.text(
@@ -531,7 +531,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
           children: [
             Row(
               children: [
-                Text('Contents', style: ZetaTextStyles.labelMedium),
+                Text('Contents', style: Zeta.of(context).textStyles.labelMedium),
                 const Spacer(),
                 if (!widget.env.immutable)
                   DropdownButton<String>(
@@ -563,7 +563,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
                           child: SingleChildScrollView(
                             child: SelectableText(
                               _body.isEmpty ? '(no packages)' : _body,
-                              style: ZetaTextStyles.bodySmall.copyWith(
+                              style: Zeta.of(context).textStyles.bodySmall.copyWith(
                                 fontFamily: 'JetBrainsMono',
                                 fontSize: 12,
                               ),
@@ -635,14 +635,14 @@ class _ImportDialogState extends State<_ImportDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Environment name', style: ZetaTextStyles.labelMedium),
+            Text('Environment name', style: Zeta.of(context).textStyles.labelMedium),
             const SizedBox(height: 6),
             ZetaTextInput(
               controller: _nameController,
               placeholder: 'e.g. Shared experiment',
             ),
             const SizedBox(height: 16),
-            Text('requirements.txt', style: ZetaTextStyles.labelMedium),
+            Text('requirements.txt', style: Zeta.of(context).textStyles.labelMedium),
             const SizedBox(height: 6),
             TextField(
               controller: _reqController,

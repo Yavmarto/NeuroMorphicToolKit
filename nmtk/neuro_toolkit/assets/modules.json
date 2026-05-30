@@ -40,7 +40,6 @@
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurocnl:latest",
-      "composeProfile": "core",
       "chartTemplateId": "nmtk-backend",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
@@ -134,7 +133,6 @@
         "NEUROCHIP_API_KEY"
       ],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurochip:latest",
-      "composeProfile": "core",
       "chartTemplateId": "nmtk-backend",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
@@ -171,7 +169,6 @@
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurobench:latest",
-      "composeProfile": "physics",
       "chartTemplateId": "nmtk-backend",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
@@ -214,7 +211,6 @@
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurosense:latest",
-      "composeProfile": "full",
       "chartTemplateId": "nmtk-backend",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
@@ -251,7 +247,6 @@
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurohub:latest",
-      "composeProfile": "core",
       "chartTemplateId": "nmtk-backend",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
@@ -284,7 +279,6 @@
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "",
-      "composeProfile": "",
       "chartTemplateId": "",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
@@ -320,7 +314,6 @@
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "",
-      "composeProfile": "hardware",
       "chartTemplateId": "",
       "startupTimeoutSeconds": 120,
       "readinessTimeoutSeconds": 120
@@ -357,7 +350,6 @@
       "requiredEnvironment": [],
       "secretFields": [],
       "defaultContainerImage": "",
-      "composeProfile": "notebooks",
       "chartTemplateId": "",
       "startupTimeoutSeconds": 60,
       "readinessTimeoutSeconds": 60

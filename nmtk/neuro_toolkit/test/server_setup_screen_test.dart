@@ -9,7 +9,11 @@ import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:nmtk_ui_core/app_theme.dart';
 import 'package:nmtk_ui_core/models/akida_deployment_model.dart';
 import 'package:nmtk_ui_core/models/pynq_deployment_model.dart';
+import 'package:neuro_toolkit/services/analytics_service.dart';
+import 'package:mocktail/mocktail.dart';
 
+
+class MockAnalyticsService extends Mock implements AnalyticsService {}
 
 void main() {
   testWidgets('shows setup unavailable guidance until control API is reachable',
@@ -63,7 +67,10 @@ Widget _buildTestApp(
   List<Override> overrides = const <Override>[],
 }) {
   return ProviderScope(
-    overrides: overrides,
+    overrides: [
+      analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
+      ...overrides,
+    ],
     child: MaterialApp(
       title: 'Server setup test',
       theme: AppTheme.lightTheme,

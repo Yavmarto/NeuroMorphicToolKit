@@ -109,11 +109,7 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         return env
 
     def _compose_down_local(self, docker: str, target: DeploymentTarget) -> None:
-        cmd = [
-            docker, "compose",
-            "--profile", "hardware", "--profile", "physics", "--profile", "jobs",
-            "down", "--remove-orphans",
-        ]
+        cmd = [docker, "compose", "down", "--remove-orphans"]
         subprocess.run(
             cmd,
             cwd=str(self._repo_root),
@@ -125,7 +121,7 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         )
 
     def _compose_build_local(self, docker: str, target: DeploymentTarget) -> None:
-        cmd = [docker, "compose", "build", "--parallel", "suite_api", "lava-backend"]
+        cmd = [docker, "compose", "build", "--parallel"]
         result = subprocess.run(
             cmd,
             cwd=str(self._repo_root),
@@ -140,10 +136,7 @@ class DockerDeploymentExecutor(DeploymentExecutor):
             raise RuntimeError(f"docker compose build failed: {err}")
 
     def _compose_up_local(self, docker: str, target: DeploymentTarget) -> None:
-        cmd = [
-            docker, "compose", "up", "-d", "--wait", "--remove-orphans",
-            "suite_api", "lava-backend",
-        ]
+        cmd = [docker, "compose", "up", "-d", "--wait", "--remove-orphans"]
         result = subprocess.run(
             cmd,
             cwd=str(self._repo_root),
@@ -173,23 +166,19 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         emit("installing", "Tearing down any existing stack on remote", 38)
         self._ssh_run(
             target,
-            f"cd {deploy_dir} && docker compose"
-            " --profile hardware --profile physics --profile jobs"
-            " down --remove-orphans 2>/dev/null || true",
+            f"cd {deploy_dir} && docker compose down --remove-orphans 2>/dev/null || true",
         )
 
         emit("installing", "Building Docker images on remote host", 52)
         self._ssh_run(
             target,
-            f"cd {deploy_dir} && docker compose build --parallel suite_api lava-backend",
+            f"cd {deploy_dir} && docker compose build --parallel",
         )
 
         emit("installing", "Starting backend containers on remote host", 70)
         self._ssh_run(
             target,
-            f"cd {deploy_dir}"
-            " && NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012"
-            " docker compose up -d --wait --remove-orphans suite_api lava-backend",
+            f"cd {deploy_dir} && docker compose up -d --wait --remove-orphans",
         )
 
         emit("verifying", "Polling backend health endpoint", 88)

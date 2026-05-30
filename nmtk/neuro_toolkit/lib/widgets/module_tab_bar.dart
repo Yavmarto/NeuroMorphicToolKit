@@ -69,10 +69,10 @@ class ModuleTabBar extends ConsumerWidget {
                     isActive ? colors.mainDefault : colors.mainSubtle;
                 final backgroundColor = isActive
                     ? colors.surfaceDefault
-                    : colors.surfaceDefault.withOpacity(0.18);
+                    : colors.surfaceDefault.withValues(alpha: 0.18);
                 final borderColor = isActive
-                    ? colors.mainPrimary.withOpacity(0.4)
-                    : colors.borderSubtle.withOpacity(0.22);
+                    ? colors.mainPrimary.withValues(alpha: 0.4)
+                    : colors.borderSubtle.withValues(alpha: 0.22);
 
                 return Padding(
                   padding: EdgeInsets.only(
@@ -85,7 +85,7 @@ class ModuleTabBar extends ConsumerWidget {
                     selected: isActive,
                     button: true,
                     child: Material(
-                      color: colors.surfaceDefault.withOpacity(0),
+                      color: colors.surfaceDefault.withValues(alpha: 0),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(tokens.radiusMd),
                         onTap: () => onTabSelected(module.id),
@@ -109,7 +109,7 @@ class ModuleTabBar extends ConsumerWidget {
                               const SizedBox(width: 8),
                               Text(
                                 module.name,
-                                style: ZetaTextStyles.bodyMedium.copyWith(
+                                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                                   fontWeight: isActive
                                       ? FontWeight.w700
                                       : FontWeight.w600,

@@ -12,7 +12,11 @@ import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
+import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockAnalyticsService extends Mock implements AnalyticsService {}
 
 class _NoopProcessManager implements ProcessManager {
   final _statusController = StreamController<Module>.broadcast();
@@ -183,6 +187,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
@@ -231,6 +236,7 @@ void main() {
           controlApiServiceProvider.overrideWithValue(
             ControlApiService(baseUri: Uri.parse('http://192.168.1.50:8090')),
           ),
+          analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
@@ -299,6 +305,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
@@ -347,6 +354,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
@@ -402,6 +410,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],
@@ -480,6 +489,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
           moduleStateProvider.overrideWith((ref) => moduleProvider),
           workspaceStateProvider.overrideWith((ref) => workspaceProvider),
         ],

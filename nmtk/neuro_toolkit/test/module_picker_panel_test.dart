@@ -6,7 +6,6 @@ import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 // ---------------------------------------------------------------------------
 // Minimal mock — only overrides what the panel touches

@@ -16,24 +16,25 @@ dependencies:
   flutter_riverpod: ^2.6.1
   go_router: ^14.0.0
   http: ^1.2.0
-  nmtk_ui_core:
-    path: ../../nmtk_ui_core # path: ../../nmtk_ui_core # DO NOT CHANGE AND DON'T REMOVE THIS COMMENT Local path to the nmtk_ui_core package
+  neurobench_frontend:
+    path: ../../Neurobench/frontend
   neurocnl_studio:
     path: ../../neurocnl/frontend
   neurohub_shell_adapter:
     path: ../../Neurohub/Neurohub_shell_adapter
   neurosense_shell_adapter:
     path: ../../Neurosense/Neurosense_shell_adapter
-  neurobench_frontend:
-    path: ../../Neurobench/frontend
   nmtk_module_contracts:
     path: ../../nmtk_module_contracts
+  nmtk_ui_core:
+    path: ../../nmtk_ui_core # path: ../../nmtk_ui_core # DO NOT CHANGE AND DON'T REMOVE THIS COMMENT Local path to the nmtk_ui_core package
   package_info_plus: ^9.0.1
   path: ^1.9.0
   path_provider: ^2.1.2
   shared_preferences: ^2.2.3
   url_launcher: ^6.3.0
 
+  zeta_flutter: any
 dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:

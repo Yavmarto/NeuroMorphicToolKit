@@ -9,6 +9,11 @@ import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
+import 'package:neuro_toolkit/services/analytics_service.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class MockAnalyticsService extends Mock implements AnalyticsService {}
 
 class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
@@ -80,10 +85,13 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
 
 void main() {
   testWidgets('App loads smoke test', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
           moduleStateProvider.overrideWith((ref) => LocalMockModuleProvider()),
           settingsStateProvider.overrideWith((ref) => SettingsProvider()),
           goRouterProvider.overrideWith((ref) {

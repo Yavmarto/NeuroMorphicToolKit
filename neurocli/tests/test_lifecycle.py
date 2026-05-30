@@ -59,8 +59,10 @@ def test_status_human_output() -> None:
 
 
 def test_install_invokes_subprocess_with_correct_args() -> None:
-    with patch("neurocli.lifecycle.subprocess.run") as mock_run:
-        with patch("neurocli.lifecycle.shutil.which", return_value=None):  # force pip
+    with (
+        patch("neurocli.lifecycle.subprocess.run") as mock_run,
+        patch("neurocli.lifecycle.shutil.which", return_value=None),  # force pip
+    ):
             result = runner.invoke(app, ["install", "Neurohub"])
 
     assert result.exit_code == 0, result.output
@@ -110,8 +112,10 @@ def test_run_invokes_uvicorn() -> None:
         install_extras=[],
         health_path="/health",
     )
-    with patch("neurocli.lifecycle.load_manifest", return_value=[fake_entry]):
-        with patch("neurocli.lifecycle.subprocess.run") as mock_run:
+    with (
+        patch("neurocli.lifecycle.load_manifest", return_value=[fake_entry]),
+        patch("neurocli.lifecycle.subprocess.run") as mock_run,
+    ):
             runner.invoke(app, ["run", "test_svc"])
 
     mock_run.assert_called_once()

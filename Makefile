@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-physics docker-hardware docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -31,9 +31,7 @@ help:
 	@echo "  make docker                   - Run backend in Docker and native launcher on host"
 	@echo "  make docker-a                 - Run backend in Docker and launcher on Android"
 	@echo "  make docker-i                 - Run backend in Docker and launcher on iOS"
-	@echo "  make docker-physics           - Run backend + physics worker in Docker and native launcher"
-	@echo "  make docker-hardware          - Run backend + hardware workers in Docker and native launcher"
-	@echo "  make docker-all               - Run backend + all active profiles/containers in Docker and native launcher"
+	@echo "  make docker-all               - Run full stack in Docker and native launcher (alias for docker)"
 	@echo "  make docker-ex REMOTE_HOST=user@ip - Deploy backend to a remote server using SSH and Docker"
 	@echo "  make docker-ex-all REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote"
 	@echo "  make docker-ex-m REMOTE_HOST=user@ip - Deploy to remote and run frontend on macOS"
@@ -82,14 +80,8 @@ docker-i:
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@./scripts/run_dev.sh --docker --flutter-device "$(IOS_DEVICE)"
 
-docker-physics:
-	@./scripts/run_dev.sh --docker --profile physics --flutter-device "$(FLUTTER_DEVICE)"
-
-docker-hardware:
-	@./scripts/run_dev.sh --docker --profile hardware --flutter-device "$(FLUTTER_DEVICE)"
-
 docker-all:
-	@./scripts/run_dev.sh --docker --profile all --flutter-device "$(FLUTTER_DEVICE)"
+	@./scripts/run_dev.sh --docker --flutter-device "$(FLUTTER_DEVICE)"
 
 # Deployment variables (can be overridden on command line)
 REMOTE_HOST ?=
@@ -111,11 +103,11 @@ docker-ex:
 		--exclude '__pycache__' --exclude 'node_modules' \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Tearing down any existing stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs down --remove-orphans 2>/dev/null || true"
-	@echo "==> Building images in parallel on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose build --parallel suite_api lava-backend"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose down --remove-orphans 2>/dev/null || true"
+	@echo "==> Building all images in parallel on $(REMOTE_HOST)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose build --parallel"
 	@echo "==> Starting containers on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012 docker compose up -d --wait --remove-orphans suite_api lava-backend"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose up -d --wait --remove-orphans"
 	@echo "==> Backend ready at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-all:
@@ -130,11 +122,11 @@ docker-ex-all:
 		--exclude '__pycache__' --exclude 'node_modules' \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Tearing down any existing stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs --profile notebooks down --remove-orphans 2>/dev/null || true"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose down --remove-orphans 2>/dev/null || true"
 	@echo "==> Building all images in parallel on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs --profile notebooks build --parallel"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose build --parallel"
 	@echo "==> Starting full stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012 docker compose --profile hardware --profile physics --profile jobs --profile notebooks up -d --wait --remove-orphans"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose up -d --wait --remove-orphans"
 	@echo "==> Full stack ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-m: docker-ex
@@ -169,7 +161,7 @@ docker-ex-down:
 		exit 1; \
 	fi
 	@echo "==> Stopping Docker containers on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose --profile hardware --profile physics --profile jobs --profile notebooks down"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose down"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload

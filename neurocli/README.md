@@ -39,24 +39,23 @@ So `neurocli` most likely belongs in the "developer tooling / project bootstrap"
 
 ## Current State
 
-Today this folder has not been started as an implementation module yet.
+`neurocli` is implemented as a Typer-based Python package (`neuro` entry point). Shipped commands:
 
-It currently contains:
+- `neuro new` — scaffold a project from a framework + target template bundle
+- `neuro status` / `neuro install` / `neuro run` — headless module lifecycle helpers
+- `neuro hub login` / `push` / `pull` / `search` — talk to the Neurohub Global Registry
+  over its `/api/v1` API using `neurohub://` URIs
 
-- one archived planning issue
-- no Python package
-- no CLI entry point
-- no templates
-- no tests
+`neuro hub` resolves the registry URL from `nmtk/neuro_toolkit/assets/modules.json`
+(the Neurohub port), an `--registry` flag, the `NEUROHUB_REGISTRY` env var, or the stored
+credentials file, and verifies SHA-256 checksums on every `pull`. The shared
+`neurocli/uri_parser.py` is kept byte-for-byte equivalent with the backend copy at
+`Neurohub/neurohub/app/utils/uri_parser.py`.
 
-## What Belongs Here Next
+## Verification
 
-The first meaningful version of `neurocli` should probably include:
+```bash
+cd neurocli && make verify   # ruff + mypy + pytest (incl. tests/properties/)
+```
 
-1. a small Python package, likely using `typer` or `click`
-2. a `neuro new ...` command for project scaffolding
-3. template bundles for a few supported combinations
-4. generated files such as `pyproject.toml`, `requirements.txt`, example scripts, and README content
-5. commands that can later grow into module install/run/status helpers
-
-If the desktop launcher is the GUI front door to NMTK, `neurocli` should be the scriptable front door.
+If the desktop launcher is the GUI front door to NMTK, `neurocli` is the scriptable front door.

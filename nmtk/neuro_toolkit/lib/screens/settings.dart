@@ -54,7 +54,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               'Adjust shell behavior, logging, telemetry, and per-module overrides here.',
           child: Text(
             'Launcher configuration and global preferences.',
-            style: ZetaTextStyles.bodyMedium.apply(
+            style: Zeta.of(context).textStyles.bodyMedium.apply(
               color: zeta.colors.mainSubtle,
             ),
           ),
@@ -68,7 +68,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Theme', style: ZetaTextStyles.bodyMedium),
+              Text('Theme', style: Zeta.of(context).textStyles.bodyMedium),
               DropdownButton<ThemeMode>(
                 value: settings.themeMode,
                 onChanged: (ThemeMode? newValue) {
@@ -94,7 +94,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Log Level', style: ZetaTextStyles.bodyMedium),
+              Text('Log Level', style: Zeta.of(context).textStyles.bodyMedium),
               DropdownButton<LogLevel>(
                 value: settings.logLevel,
                 onChanged: (LogLevel? newValue) {
@@ -123,7 +123,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               Text(
                 'Launcher Control API Base URL',
-                style: ZetaTextStyles.labelMedium,
+                style: Zeta.of(context).textStyles.labelMedium,
               ),
               const SizedBox(height: 6),
               ZetaTextInput(
@@ -135,7 +135,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Text(
                 'On Android and iOS, point this at the machine running '
                 '`scripts/launcher_control_service.py --host 0.0.0.0 --port 8090`.',
-                style: ZetaTextStyles.bodySmall.apply(
+                style: Zeta.of(context).textStyles.bodySmall.apply(
                   color: zeta.colors.mainSubtle,
                 ),
               ),
@@ -166,12 +166,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         Text(
                           'Opt-in Telemetry',
-                          style: ZetaTextStyles.bodyMedium,
+                          style: Zeta.of(context).textStyles.bodyMedium,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Share anonymous usage data and performance metrics.',
-                          style: ZetaTextStyles.bodySmall.apply(
+                          style: Zeta.of(context).textStyles.bodySmall.apply(
                             color: zeta.colors.mainSubtle,
                           ),
                         ),
@@ -191,7 +191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Text(
                     'Remote Reporting Endpoint',
-                    style: ZetaTextStyles.labelMedium,
+                    style: Zeta.of(context).textStyles.labelMedium,
                   ),
                   const SizedBox(height: 6),
                   ZetaTextInput(
@@ -406,7 +406,7 @@ class _LogDialogState extends State<_LogDialog> {
             if (widget.showErrorOnlyToggle) ...[
               Text(
                 'Error Only',
-                style: ZetaTextStyles.bodySmall,
+                style: Zeta.of(context).textStyles.bodySmall,
               ),
               const SizedBox(width: 8),
               Switch(
@@ -448,7 +448,7 @@ class _LogDialogState extends State<_LogDialog> {
                       child: SingleChildScrollView(
                         child: SelectableText(
                           text,
-                          style: ZetaTextStyles.bodySmall.copyWith(
+                          style: Zeta.of(context).textStyles.bodySmall.copyWith(
                             fontFamily: 'JetBrainsMono',
                             fontSize: 12,
                           ),
@@ -532,7 +532,7 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                       Expanded(
                         child: Text(
                           'Enabled',
-                          style: ZetaTextStyles.bodyMedium,
+                          style: Zeta.of(context).textStyles.bodyMedium,
                         ),
                       ),
                       Switch(
@@ -558,13 +558,13 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                           children: [
                             Text(
                               'Start on Launch',
-                              style: ZetaTextStyles.bodyMedium,
+                              style: Zeta.of(context).textStyles.bodyMedium,
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'Automatically start this module when the app opens '
                               '(adds ~3–8 s to startup if cold).',
-                              style: ZetaTextStyles.bodySmall.apply(
+                              style: Zeta.of(context).textStyles.bodySmall.apply(
                                 color: zeta.colors.mainSubtle,
                               ),
                             ),
@@ -591,7 +591,7 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                       children: [
                         Text(
                           'Custom Port (default: ${widget.module.port})',
-                          style: ZetaTextStyles.labelMedium,
+                          style: Zeta.of(context).textStyles.labelMedium,
                         ),
                         const SizedBox(height: 6),
                         Row(

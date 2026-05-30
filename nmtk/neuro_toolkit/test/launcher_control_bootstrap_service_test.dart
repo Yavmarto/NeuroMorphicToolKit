@@ -9,43 +9,35 @@ import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 class _FakeBootstrapEnvironment implements LauncherControlBootstrapEnvironment {
   _FakeBootstrapEnvironment({
-    this.isWeb = false,
-    this.isNativeDesktop = true,
-    this.isBundled = false,
-    this.currentDirectory = '/repo/nmtk/neuro_toolkit',
-    this.resourcesRootPath = '/bundle/Contents/Resources',
-    this.environment = const <String, String>{},
     this.pythonPath = '/usr/bin/python3',
-    this.scriptExists = true,
   });
 
   @override
-  final bool isWeb;
+  final bool isWeb = false;
 
   @override
-  final bool isNativeDesktop;
+  final bool isNativeDesktop = true;
 
   @override
-  final bool isBundled;
+  final bool isBundled = false;
 
   @override
-  final String currentDirectory;
+  final String currentDirectory = '/tmp';
 
   @override
-  final String resourcesRootPath;
+  final String resourcesRootPath = '/tmp/resources';
 
   @override
-  final Map<String, String> environment;
+  final Map<String, String> environment = const <String, String>{};
 
   final String? pythonPath;
-  final bool scriptExists;
   final List<List<String>> startedCommands = <List<String>>[];
 
   @override
   Future<String?> findPython() async => pythonPath;
 
   @override
-  Future<bool> fileExists(String path) async => scriptExists;
+  Future<bool> fileExists(String path) async => true;
 
   @override
   Future<Process> startProcess(

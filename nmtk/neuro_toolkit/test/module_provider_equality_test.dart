@@ -3,7 +3,7 @@ import 'package:neuro_toolkit/models/module.dart';
 
 void main() {
   group('Module equality', () {
-    Module _base() => Module(
+    Module base() => Module(
           id: 'neurocnl',
           name: 'NeuroCNL',
           description: 'CNL Studio',
@@ -15,34 +15,33 @@ void main() {
         );
 
     test('two modules with identical state are equal', () {
-      final a = _base();
-      final b = _base();
+      final a = base();
+      final b = base();
       expect(a, equals(b));
       expect(a.hashCode, b.hashCode);
     });
 
     test('status change breaks equality', () {
-      final a = _base();
-      final b = _base()..status = ModuleStatus.running;
+      final a = base();
+      final b = base()..status = ModuleStatus.running;
       expect(a, isNot(equals(b)));
     });
 
     test('installProgress change breaks equality', () {
-      final a = _base();
-      final b = _base()..installProgress = 0.5;
+      final a = base();
+      final b = base()..installProgress = 0.5;
       expect(a, isNot(equals(b)));
     });
 
     test('healthStatus change breaks equality', () {
-      final a = _base();
-      final b = _base()..healthStatus = 'degraded';
+      final a = base();
+      final b = base()..healthStatus = 'degraded';
       expect(a, isNot(equals(b)));
     });
 
     test('version change breaks equality', () {
-      final a = _base();
-      final b = _base()
-        ..status = ModuleStatus.installed;
+      final a = base();
+
       // Simulate a version bump coming in from the API.
       final c = Module(
         id: a.id,
@@ -58,7 +57,7 @@ void main() {
     });
 
     test('unrelated field change (description) does not affect equality', () {
-      final a = _base();
+      final a = base();
       final b = Module(
         id: a.id,
         name: a.name,
