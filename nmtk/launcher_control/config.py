@@ -15,6 +15,13 @@ NMTK_STATE_DIR
 NMTK_DATA_DIR
     Directory that holds deployment secrets and the suite_api venv.
     Default: ``<repo_root>/.nmtk/``
+
+Note
+----
+These constants are resolved **once at first import**. Set the env vars
+before the Python process starts (e.g. in Docker ``ENV`` directives or
+``docker compose`` ``environment:`` blocks). Changing them after the
+module is already imported has no effect on the cached ``Path`` values.
 """
 
 from __future__ import annotations

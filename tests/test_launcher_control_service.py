@@ -4658,21 +4658,29 @@ class LauncherControlServiceTest(unittest.TestCase):
 
 
 class TestConfigPaths(unittest.TestCase):
+    def tearDown(self):
+        import importlib
+        import nmtk.launcher_control.config as cfg
+        # Restore module-level constants to their defaults after each test
+        for key in ("NMTK_STATE_DIR", "NMTK_DATA_DIR"):
+            os.environ.pop(key, None)
+        importlib.reload(cfg)
+
     def test_default_paths_use_repo_root(self):
         """Without env vars set, all paths fall under REPO_ROOT."""
         import nmtk.launcher_control.config as cfg
         import importlib
-        with mock.patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("NMTK_STATE_DIR", None)
-            os.environ.pop("NMTK_DATA_DIR", None)
+        # Use empty strings so mock.patch.dict can restore them properly;
+        # config.py strips and checks truthiness, so "" falls through to defaults.
+        with mock.patch.dict(os.environ, {"NMTK_STATE_DIR": "", "NMTK_DATA_DIR": ""}):
             importlib.reload(cfg)
-            assert cfg.STATE_FILE.is_relative_to(PROJECT_ROOT)
-            assert cfg.SETTINGS_FILE.is_relative_to(PROJECT_ROOT)
-            assert cfg.WORKSPACE_FILE.is_relative_to(PROJECT_ROOT)
-            assert cfg.DEPLOYMENT_STATE_FILE.is_relative_to(PROJECT_ROOT)
-            assert cfg.DEPLOYMENT_SECRET_FILE.is_relative_to(PROJECT_ROOT)
-            assert cfg.SUITE_API_ENV_ROOT.is_relative_to(PROJECT_ROOT)
-            assert cfg.MODULES_MANIFEST.is_relative_to(PROJECT_ROOT)
+            assert cfg.STATE_FILE.is_relative_to(cfg.REPO_ROOT)
+            assert cfg.SETTINGS_FILE.is_relative_to(cfg.REPO_ROOT)
+            assert cfg.WORKSPACE_FILE.is_relative_to(cfg.REPO_ROOT)
+            assert cfg.DEPLOYMENT_STATE_FILE.is_relative_to(cfg.REPO_ROOT)
+            assert cfg.DEPLOYMENT_SECRET_FILE.is_relative_to(cfg.REPO_ROOT)
+            assert cfg.SUITE_API_ENV_ROOT.is_relative_to(cfg.REPO_ROOT)
+            assert cfg.MODULES_MANIFEST.is_relative_to(cfg.REPO_ROOT)
 
     def test_nmtk_state_dir_overrides_state_files(self):
         """NMTK_STATE_DIR redirects the 4 module/workspace/settings state files."""
