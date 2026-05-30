@@ -38,8 +38,11 @@ fi
 
 FLUTTER_DEVICE=""
 USE_DOCKER="false"
-CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-8090}"
+CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-${LAUNCHER_CONTROL_PORT:-8091}}"
+LAUNCHER_CONTROL_PORT="${LAUNCHER_CONTROL_PORT:-8091}"
 CONTROL_API_PID=""
+# NOTE: CONTROL_API_BIND_HOST and CONTROL_API_PUBLIC_HOST are only used
+# in the local dev branch (no --docker, no --remote-host).
 CONTROL_API_BIND_HOST="127.0.0.1"
 CONTROL_API_PUBLIC_HOST="127.0.0.1"
 SUITE_API_URL=""
@@ -320,19 +323,22 @@ CONTROL_API_URL=""
 
 if [[ "$USE_DOCKER" == "true" ]]; then
   # Docker Compose manages both suite_api and launcher-control.
+  # Always poll via loopback — the host machine may not route to its own LAN IP.
+  _poll_url="http://localhost:${LAUNCHER_CONTROL_PORT:-8091}"
   # Resolve the URL that the Flutter app will use to reach the control service.
   if [[ "$TARGET_PLATFORM" == android* || "$TARGET_PLATFORM" == ios* || "$FLUTTER_DEVICE" == "ios" ]]; then
-    CONTROL_API_URL="http://$HOST_IP:${LAUNCHER_CONTROL_PORT:-8090}"
+    CONTROL_API_URL="http://$HOST_IP:${LAUNCHER_CONTROL_PORT:-8091}"
   else
-    CONTROL_API_URL="http://localhost:${LAUNCHER_CONTROL_PORT:-8090}"
+    CONTROL_API_URL="http://localhost:${LAUNCHER_CONTROL_PORT:-8091}"
   fi
-  # Docker Compose already started the container; just wait for it to be healthy.
-  wait_for_control_api "$CONTROL_API_URL"
+  # Docker Compose already started the container; poll via loopback.
+  wait_for_control_api "$_poll_url"
 
 elif [[ -n "$REMOTE_HOST_IP" ]]; then
   # Backend is on a remote server (docker-ex targets).
-  CONTROL_API_URL="http://$REMOTE_HOST_IP:${LAUNCHER_CONTROL_PORT:-8090}"
+  CONTROL_API_URL="http://$REMOTE_HOST_IP:${LAUNCHER_CONTROL_PORT:-8091}"
   echo "==> Using remote launcher control API at $CONTROL_API_URL"
+  wait_for_control_api "$CONTROL_API_URL"
 
 else
   # Pure local dev — start the control service on this machine as before.
@@ -357,7 +363,7 @@ flutter_args=(
   run
   -d "$FLUTTER_DEVICE"
   --dart-define="NMTK_CONTROL_API_BASE_URL=$CONTROL_API_URL"
-  --dart-define="NMTK_CONTROL_API_PORT=${LAUNCHER_CONTROL_PORT:-8090}"
+  --dart-define="NMTK_CONTROL_API_PORT=${LAUNCHER_CONTROL_PORT:-8091}"
 )
 if [[ -n "$SUITE_API_URL" ]]; then
   flutter_args+=(--dart-define="SUITE_API_URL=$SUITE_API_URL")

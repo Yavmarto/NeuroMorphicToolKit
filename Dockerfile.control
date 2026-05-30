@@ -33,10 +33,10 @@ RUN addgroup --system appuser \
  && chown -R appuser:appuser /app/state /app/data
 USER appuser
 
-EXPOSE 8090
+EXPOSE 8091
 
 # --no-manage-suite-api: Docker Compose owns suite_api lifecycle, not us.
 CMD ["python", "scripts/launcher_control_service.py", \
      "--host", "0.0.0.0", \
-     "--port", "8090", \
+     "--port", "8091", \
      "--no-manage-suite-api"]
