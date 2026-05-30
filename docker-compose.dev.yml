@@ -4,3 +4,10 @@ services:
       - ./suite_api:/repo/suite_api
     environment:
       - DEBUG=1
+
+  launcher-control:
+    volumes:
+      # Live-reload: edits to launcher_control/ take effect on container restart.
+      - ./nmtk/launcher_control:/app/nmtk/launcher_control
+      - ./scripts/launcher_control_service.py:/app/scripts/launcher_control_service.py
+      - ./nmtk/neuro_toolkit/assets:/app/nmtk/neuro_toolkit/assets
