@@ -35,6 +35,7 @@ The suite strictly uses the `zeta_flutter` design system. Mixing different desig
   - `ZetaCard` instead of `Card`.
   - `ZetaCheckbox` instead of `Checkbox`.
 - **Purge Hardcoded Colors**: Do not use hardcoded colors like `Colors.red`, `Colors.grey`, or `HexColor`. Always use Zeta's semantic color system via `Zeta.of(context).colors`.
+  - **Exception**: The canvas (`network_canvas.dart`) and palette styling (`nir_node_styles.dart`) are explicitly permitted to use `Theme.of(context).colorScheme` and custom colors instead of `Zeta.of(context).colors` to maintain optimal visual distinction and the intended aesthetic design.
 - **Purge Hardcoded Typography**: Do not use manual `TextStyle` definitions (e.g., `TextStyle(fontSize: 14, fontWeight: FontWeight.bold)`). Use `ZetaTextStyles` exclusively (e.g., `ZetaTextStyles.bodyMedium`, `ZetaTextStyles.titleLarge`).
 - **Layout and Spacing**: Avoid deeply nested `Container` and `Padding` widgets used as layout hacks. Rely on clean `Column`, `Row`, and `SizedBox` for spacing. Ensure all spacing follows an 8px grid system.
 - **No Visual Gimmicks**: Do not apply custom `BoxShadow`, `ClipRRect` blurs, or custom `BorderRadius` to standard containers. If a container needs styling, use a `ZetaCard` or a basic `Container` mapped to Zeta theme colors.
