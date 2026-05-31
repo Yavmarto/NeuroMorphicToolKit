@@ -5336,6 +5336,30 @@ class LauncherControlState:
                 or "pip bootstrap failed for the module environment"
             )
 
+    def _prune_docker_build_cache(self, keep_storage: str = "20GB") -> None:
+        """Prune the local Docker BuildKit cache before any docker compose build.
+
+        Accumulated stale cache layers (especially from builds interrupted by
+        disk-full conditions) can corrupt the image store with invalid tar
+        headers on the next build.  Pruning with --keep-storage retains
+        recently-used layers so incremental builds remain fast while evicting
+        old cruft.
+
+        Call this immediately before any ``docker compose up --build`` or
+        ``docker build`` invocation.  When auto-update eventually triggers
+        Docker rebuilds from within the launcher, add the call here.
+        """
+        if shutil.which("docker") is None:
+            return
+        try:
+            subprocess.run(
+                ["docker", "builder", "prune", "-f", f"--keep-storage={keep_storage}"],
+                check=False,
+                timeout=120,
+            )
+        except Exception:
+            pass  # Non-fatal: build proceeds regardless; worst case is a stale cache
+
     def _update_sync(self, module_id: str) -> None:
         module = self._get_module(module_id)
         self.stop_module(module_id)

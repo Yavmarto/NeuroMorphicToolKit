@@ -62,6 +62,7 @@ def test_new_all_bundles_render(tmp_path: Path) -> None:
     combos = [
         ("nir", "snntorch"),
         ("nir", "lava_sim"),
+        ("nir", "sc_neurocore"),
         ("neurocnl", "pynq"),
         ("akida", "brainchip"),
         ("neurocnl", "neurosim"),
@@ -73,3 +74,18 @@ def test_new_all_bundles_render(tmp_path: Path) -> None:
         )
         assert result.exit_code == 0, f"{fw}+{tgt} failed: {result.output}"
         assert (tmp_path / f"proj_{fw}_{tgt}" / "pyproject.toml").exists()
+
+
+def test_new_nir_sc_neurocore_creates_structure(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["new", "sc_proj", "--framework", "nir", "--target", "sc_neurocore", "--output-dir", str(tmp_path)],
+    )
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "sc_proj" / "pyproject.toml").exists()
+    assert (tmp_path / "sc_proj" / "README.md").exists()
+    assert (tmp_path / "sc_proj" / "src" / "main.py").exists()
+    assert (tmp_path / "sc_proj" / "scripts" / "run.sh").exists()
+    # Verify sc-neurocore dep is present
+    content = (tmp_path / "sc_proj" / "pyproject.toml").read_text()
+    assert "sc-neurocore" in content

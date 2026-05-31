@@ -1,11 +1,12 @@
 """neuro new — scaffold a neuromorphic project from a template bundle.
 
 Supported combinations (framework + target → bundle):
-  nir       + snntorch   → nir_snntorch
-  nir       + lava_sim   → nir_lava_sim
-  neurocnl  + pynq       → neurocnl_pynq
-  akida     + brainchip  → akida_brainchip
-  neurocnl  + neurosim   → neurocnl_neurosim
+  nir       + snntorch     → nir_snntorch
+  nir       + lava_sim     → nir_lava_sim
+  nir       + sc_neurocore → nir_sc_neurocore
+  neurocnl  + pynq         → neurocnl_pynq
+  akida     + brainchip    → akida_brainchip
+  neurocnl  + neurosim     → neurocnl_neurosim
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from neurocli.renderer import render_template
 _COMBOS: dict[tuple[str, str], str] = {
     ("nir", "snntorch"): "nir_snntorch",
     ("nir", "lava_sim"): "nir_lava_sim",
+    ("nir", "sc_neurocore"): "nir_sc_neurocore",
     ("neurocnl", "pynq"): "neurocnl_pynq",
     ("akida", "brainchip"): "akida_brainchip",
     ("neurocnl", "neurosim"): "neurocnl_neurosim",
@@ -44,7 +46,7 @@ def new_command(
     """Scaffold a new neuromorphic project from a template bundle.
 
     Supported framework+target combos:
-    nir+snntorch, nir+lava_sim, neurocnl+pynq, akida+brainchip, neurocnl+neurosim
+    nir+snntorch, nir+lava_sim, nir+sc_neurocore, neurocnl+pynq, akida+brainchip, neurocnl+neurosim
     """
     key = (framework.lower(), target.lower())
     bundle = _COMBOS.get(key)

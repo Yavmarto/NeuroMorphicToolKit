@@ -316,6 +316,11 @@ if [[ "$USE_DOCKER" == "true" ]]; then
   echo "------------------------------------------------------------"
   echo "==> Starting full Docker stack..."
   echo "------------------------------------------------------------"
+  # Prune stale BuildKit cache before building to prevent layer corruption
+  # from accumulating (invalid tar headers caused by prior disk-full builds).
+  # --keep-storage retains recently-used layers so incremental builds stay fast.
+  echo "==> Pruning stale build cache (keeping 20GB most-recent)..."
+  docker builder prune -f --keep-storage=20GB
   docker compose up --build -d
 fi
 
