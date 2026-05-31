@@ -4656,6 +4656,60 @@ class LauncherControlServiceTest(unittest.TestCase):
             any("namespace defaults to current context" in f for f in result.degraded_findings)
         )
 
+    def test_repair_module_returns_installing_state_immediately(self) -> None:
+        """repair_module() returns the module in 'installing' state immediately."""
+        # Prevent the background thread from running so we see the initial state.
+        with mock.patch.object(self.state, "_repair_sync", return_value=None):
+            result = self.state.repair_module("dummy")
+
+        self.assertEqual(result["status"], launcher_server.STATUS_INDEX["installing"])
+        self.assertIsNone(result["healthStatus"])
+        self.assertEqual(result["preflightStatus"], launcher_server.PREFLIGHT_OK)
+
+    def test_repair_module_sets_installed_when_preflight_ok(self) -> None:
+        """After a successful repair (preflight OK), module ends in 'installed' state."""
+        # Put the module in error first.
+        module = self.state._get_module("dummy")
+        module["status"] = launcher_server.STATUS_INDEX["error"]
+        module["healthStatus"] = "import probe failed"
+
+        ok_result = launcher_server.PreflightResult(
+            status=launcher_server.PREFLIGHT_OK,
+            message=None,
+            capability_warnings=[],
+            environment_fingerprint="abc123",
+        )
+        with mock.patch.object(self.state, "_preflight_module", return_value=ok_result):
+            self.state.repair_module("dummy")
+            task = self.state._tasks.get("dummy")
+            if task:
+                task.join(timeout=5.0)
+
+        module = self.state._get_module("dummy")
+        self.assertEqual(module["status"], launcher_server.STATUS_INDEX["installed"])
+        self.assertIsNone(module["healthStatus"])
+
+    def test_repair_module_sets_error_when_preflight_fails(self) -> None:
+        """After a failed repair (preflight FAILED), module ends in 'error' state."""
+        module = self.state._get_module("dummy")
+        module["status"] = launcher_server.STATUS_INDEX["error"]
+
+        failed_result = launcher_server.PreflightResult(
+            status=launcher_server.PREFLIGHT_FAILED,
+            message="Cannot find required dependency: torch",
+            capability_warnings=[],
+            environment_fingerprint=None,
+        )
+        with mock.patch.object(self.state, "_preflight_module", return_value=failed_result):
+            self.state.repair_module("dummy")
+            task = self.state._tasks.get("dummy")
+            if task:
+                task.join(timeout=5.0)
+
+        module = self.state._get_module("dummy")
+        self.assertEqual(module["status"], launcher_server.STATUS_INDEX["error"])
+        self.assertEqual(module["healthStatus"], "Cannot find required dependency: torch")
+
 
 class TestConfigPaths(unittest.TestCase):
     def tearDown(self):
