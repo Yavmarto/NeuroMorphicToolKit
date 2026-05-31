@@ -16,6 +16,7 @@ class _MockProvider extends ChangeNotifier implements ModuleProvider {
   final List<String> installCalls = [];
   final List<String> launchCalls = [];
   final List<String> stopCalls = [];
+  final List<String> repairCalls = [];
 
   @override
   List<Module> get modules => _modules;
@@ -63,7 +64,8 @@ class _MockProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> installModule(String moduleId) async =>
       installCalls.add(moduleId);
   @override
-  Future<void> repairModule(String moduleId) async {}
+  Future<void> repairModule(String moduleId) async =>
+      repairCalls.add(moduleId);
   @override
   Future<void> launchModule(String moduleId) async => launchCalls.add(moduleId);
   @override
@@ -245,5 +247,30 @@ void main() {
     expect(find.text('Neurochip'), findsWidgets);
     expect(find.text('Neurobench'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'shows Repair button for error module and calls repairModule on tap',
+      (tester) async {
+    final mock = _MockProvider();
+    mock.setModules([
+      Module(
+        id: 'neurocnl',
+        name: 'CNL Studio',
+        description: 'CNL parser',
+        directory: 'neurocnl/',
+        status: ModuleStatus.error,
+        healthStatus: 'Import probe failed: ModuleNotFoundError',
+      ),
+    ]);
+    await tester.pumpWidget(wrap(mock));
+    await tester.pump();
+
+    expect(find.text('Repair'), findsOneWidget);
+
+    await tester.tap(find.text('Repair'));
+    await tester.pump();
+
+    expect(mock.repairCalls, contains('neurocnl'));
   });
 }
