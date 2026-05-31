@@ -37,7 +37,10 @@ def attach_middleware(app: FastAPI) -> None:
     # allow_credentials=True is incompatible with allow_origins=["*"] per the
     # CORS spec; Starlette silently drops credentials when origins is a wildcard,
     # so we only enable it when specific origins are configured.
-    _allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "*")
+    _allowed_origins_str = os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:9000,http://127.0.0.1:9000,http://localhost:3000",
+    )
     _origins = [o.strip() for o in _allowed_origins_str.split(",") if o.strip()]
     _allow_credentials = "*" not in _origins
     if "*" in _origins:
