@@ -5426,7 +5426,7 @@ class LauncherControlState:
         self._update_module_fields(
             module_id,
             status=next_status,
-            healthStatus=None,
+            healthStatus=preflight.message if preflight.status == PREFLIGHT_DEGRADED else None,
         )
 
     def _start_sync(self, module_id: str) -> None:
