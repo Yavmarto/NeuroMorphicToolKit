@@ -4710,6 +4710,32 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(module["status"], launcher_server.STATUS_INDEX["error"])
         self.assertEqual(module["healthStatus"], "Cannot find required dependency: torch")
 
+    def test_install_sync_cleans_venv_on_pip_failure(self) -> None:
+        """When pip install fails, _install_sync removes the partial venv directory."""
+        # Create a fake partial venv as if a previous install was interrupted.
+        venv_path = self.repo_root / "dummy_module" / "venv"
+        venv_path.mkdir(parents=True, exist_ok=True)
+        (venv_path / "pyvenv.cfg").write_text("home = /usr/bin\n", encoding="utf-8")
+
+        # Make _run_command raise to simulate a pip failure.
+        call_count: dict[str, int] = {"n": 0}
+        original_run_cmd = self.state._run_command
+
+        def fail_on_pip(command: list, cwd: object, module_id: str) -> None:
+            call_count["n"] += 1
+            if "pip" in command or "install" in command:
+                raise RuntimeError("pip install failed: network error")
+            return original_run_cmd(command, cwd, module_id)  # type: ignore[return-value]
+
+        with mock.patch.object(self.state, "_run_command", side_effect=fail_on_pip):
+            with self.assertRaises(RuntimeError):
+                self.state._install_sync("dummy")
+
+        self.assertFalse(
+            venv_path.exists(),
+            "Partial venv directory must be removed after a failed pip install",
+        )
+
 
 class TestConfigPaths(unittest.TestCase):
     def tearDown(self):

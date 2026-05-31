@@ -5256,38 +5256,49 @@ class LauncherControlState:
                     )
 
         self._update_module_fields(module_id, installProgress=0.6)
-        if poetry is not None and _module_uses_poetry(module):
-            self._run_command(
-                [str(poetry), "lock"],
-                cwd=install_dir,
-                module_id=module_id,
+        try:
+            if poetry is not None and _module_uses_poetry(module):
+                self._run_command(
+                    [str(poetry), "lock"],
+                    cwd=install_dir,
+                    module_id=module_id,
+                )
+                self._run_command(
+                    [str(poetry), "install", "--no-interaction", "--no-root"],
+                    cwd=install_dir,
+                    module_id=module_id,
+                )
+            else:
+                install_extras = _module_install_extras(module)
+                install_target = (
+                    f".[{','.join(install_extras)}]" if install_extras else "."
+                )
+                self._run_command(
+                    [str(venv_python), "-m", "pip", "install", install_target],
+                    cwd=install_dir,
+                    module_id=module_id,
+                )
+            environment_fingerprint = self._compute_environment_fingerprint(module)
+            self._update_module_fields(
+                module_id,
+                status=STATUS_INDEX["installed"],
+                installProgress=1.0,
+                healthStatus=None,
+                preflightStatus=PREFLIGHT_OK,
+                preflightMessage=None,
+                capabilityWarnings=[],
+                environmentFingerprint=environment_fingerprint,
             )
-            self._run_command(
-                [str(poetry), "install", "--no-interaction", "--no-root"],
-                cwd=install_dir,
-                module_id=module_id,
+        except Exception:
+            # Rollback: remove any partial venv so the next install starts clean.
+            self._append_log(
+                module_id,
+                "Installation failed — removing partial environment so the next install starts fresh.",
+                stderr=True,
+                emit_terminal=True,
             )
-        else:
-            install_extras = _module_install_extras(module)
-            install_target = (
-                f".[{','.join(install_extras)}]" if install_extras else "."
-            )
-            self._run_command(
-                [str(venv_python), "-m", "pip", "install", install_target],
-                cwd=install_dir,
-                module_id=module_id,
-            )
-        environment_fingerprint = self._compute_environment_fingerprint(module)
-        self._update_module_fields(
-            module_id,
-            status=STATUS_INDEX["installed"],
-            installProgress=1.0,
-            healthStatus=None,
-            preflightStatus=PREFLIGHT_OK,
-            preflightMessage=None,
-            capabilityWarnings=[],
-            environmentFingerprint=environment_fingerprint,
-        )
+            self._cleanup_module_environment(module_id)
+            raise
 
     def _ensure_module_pip(self, python_path: Path, cwd: Path, module_id: str) -> None:
         probe = subprocess.run(
