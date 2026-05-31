@@ -597,6 +597,14 @@ class ControlApiService {
     return Module.fromJson(await _readJsonResponse(response));
   }
 
+  Future<Module> repairModule(String moduleId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/modules/$moduleId/repair'),
+    );
+    await _ensureSuccess(response);
+    return Module.fromJson(await _readJsonResponse(response));
+  }
+
   Future<Module> prepareAkidaRuntime(String moduleId) async {
     final response = await _client.post(
       _uri('/api/launcher/modules/$moduleId/akida-runtime/prepare'),

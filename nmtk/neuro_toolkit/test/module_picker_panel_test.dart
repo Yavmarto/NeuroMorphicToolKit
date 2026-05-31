@@ -63,6 +63,8 @@ class _MockProvider extends ChangeNotifier implements ModuleProvider {
   Future<void> installModule(String moduleId) async =>
       installCalls.add(moduleId);
   @override
+  Future<void> repairModule(String moduleId) async {}
+  @override
   Future<void> launchModule(String moduleId) async => launchCalls.add(moduleId);
   @override
   Future<void> stopModule(String moduleId) async => stopCalls.add(moduleId);

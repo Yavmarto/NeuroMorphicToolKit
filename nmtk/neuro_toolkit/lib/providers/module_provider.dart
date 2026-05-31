@@ -296,6 +296,33 @@ class ModuleProvider with ChangeNotifier {
     }
   }
 
+  Future<void> repairModule(String moduleId) async {
+    final index = _modules.indexWhere((Module module) => module.id == moduleId);
+    if (index == -1) {
+      return;
+    }
+
+    _modules[index] = _modules[index].copyWith(
+      status: ModuleStatus.installing,
+      installProgress: 0.0,
+      healthStatus: null,
+    );
+    notifyListeners();
+
+    try {
+      _modules[index] = await _controlApiService.repairModule(moduleId);
+      notifyListeners();
+      await _reloadFromControlApi(includeLauncherUpdate: false);
+    } catch (e) {
+      _modules[index] = _modules[index].copyWith(
+        status: ModuleStatus.error,
+        healthStatus: nmtkUserFacingError(e),
+      );
+      notifyListeners();
+      debugPrint('Repair failed for $moduleId: $e');
+    }
+  }
+
   Future<void> launchModule(String moduleId) async {
     final index = _modules.indexWhere((Module module) => module.id == moduleId);
     if (index == -1) {
