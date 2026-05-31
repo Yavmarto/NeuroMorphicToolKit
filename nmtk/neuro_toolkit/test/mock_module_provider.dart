@@ -83,6 +83,9 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
   }
 
   @override
+  Future<void> repairModule(String moduleId) async {}
+
+  @override
   Future<void> launchModule(String moduleId) async {}
 
   @override

@@ -91,6 +91,7 @@ class ModulePickerPanel extends ConsumerWidget {
                       onUpdate: _hasUpdateAvailable(module)
                           ? () => unawaited(controller.updateModule(module.id))
                           : null,
+                      onRepair: () => controller.repairModule(module.id),
                     ),
                   );
                 }).toList(),
@@ -119,6 +120,7 @@ class _ModuleCard extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback onStop;
   final VoidCallback? onUpdate;
+  final VoidCallback? onRepair;
 
   const _ModuleCard({
     required this.module,
@@ -128,6 +130,7 @@ class _ModuleCard extends StatelessWidget {
     required this.onOpen,
     required this.onStop,
     required this.onUpdate,
+    this.onRepair,
   });
 
   @override
@@ -281,14 +284,31 @@ class _ModuleCard extends StatelessWidget {
         );
 
       case ModuleStatus.error:
-        return Semantics(
-          label: 'Retry starting ${module.name}',
-          button: true,
-          child: NmtkPrimaryButton(
-            onPressed: onLaunch,
-            icon: Icons.play_arrow,
-            label: 'Start',
-          ),
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            if (onRepair != null)
+              Semantics(
+                label: 'Repair ${module.name}',
+                button: true,
+                child: NmtkPrimaryButton(
+                  onPressed: onRepair,
+                  icon: Icons.build_outlined,
+                  label: 'Repair',
+                  tone: NmtkTone.warning,
+                ),
+              ),
+            Semantics(
+              label: 'Retry starting ${module.name}',
+              button: true,
+              child: NmtkPrimaryButton(
+                onPressed: onLaunch,
+                icon: Icons.play_arrow,
+                label: 'Start',
+              ),
+            ),
+          ],
         );
     }
   }

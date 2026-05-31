@@ -48,6 +48,8 @@ class MockDashboardProvider extends ChangeNotifier implements ModuleProvider {
   @override
   Future<void> installModule(String moduleId) async {}
   @override
+  Future<void> repairModule(String moduleId) async {}
+  @override
   void closeTab(String moduleId) {}
   @override
   Stream<String>? getModuleOutput(String moduleId) => null;

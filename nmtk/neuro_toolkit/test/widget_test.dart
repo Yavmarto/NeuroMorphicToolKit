@@ -48,6 +48,8 @@ class LocalMockModuleProvider extends ChangeNotifier implements ModuleProvider {
   @override
   Future<void> installModule(String moduleId) async {}
   @override
+  Future<void> repairModule(String moduleId) async {}
+  @override
   Future<void> launchModule(String moduleId) async {}
   @override
   Future<void> stopModule(String moduleId) async {}

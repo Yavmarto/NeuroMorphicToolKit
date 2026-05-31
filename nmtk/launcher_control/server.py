@@ -4681,6 +4681,27 @@ class LauncherControlState:
             self._spawn_task(module_id, lambda: self._update_sync(module_id))
             return self._serialize_module(module)
 
+    def repair_module(self, module_id: str) -> dict[str, Any]:
+        """Repair a module by running preflight with allow_repair=True.
+
+        Sets the module to 'installing' state immediately and spawns a background
+        thread.  On completion the module lands in 'installed' (ok), 'degraded',
+        or 'error' state — but is never started.
+        """
+        with self._lock:
+            module = self._get_module(module_id)
+            if self._task_running(module_id):
+                return self._serialize_module(module)
+            module["status"] = STATUS_INDEX["installing"]
+            module["installProgress"] = 0.0
+            module["healthStatus"] = None
+            module["preflightStatus"] = PREFLIGHT_OK
+            module["preflightMessage"] = None
+            module["capabilityWarnings"] = []
+            self._persist_states()
+            self._spawn_task(module_id, lambda: self._repair_sync(module_id))
+            return self._serialize_module(module)
+
     def prepare_akida_runtime(self, module_id: str) -> dict[str, Any]:
         module = self._get_module(module_id)
         runtime = _normalize_akida_runtime_config(module.get("akidaRuntime"))
@@ -5235,38 +5256,49 @@ class LauncherControlState:
                     )
 
         self._update_module_fields(module_id, installProgress=0.6)
-        if poetry is not None and _module_uses_poetry(module):
-            self._run_command(
-                [str(poetry), "lock"],
-                cwd=install_dir,
-                module_id=module_id,
+        try:
+            if poetry is not None and _module_uses_poetry(module):
+                self._run_command(
+                    [str(poetry), "lock"],
+                    cwd=install_dir,
+                    module_id=module_id,
+                )
+                self._run_command(
+                    [str(poetry), "install", "--no-interaction", "--no-root"],
+                    cwd=install_dir,
+                    module_id=module_id,
+                )
+            else:
+                install_extras = _module_install_extras(module)
+                install_target = (
+                    f".[{','.join(install_extras)}]" if install_extras else "."
+                )
+                self._run_command(
+                    [str(venv_python), "-m", "pip", "install", install_target],
+                    cwd=install_dir,
+                    module_id=module_id,
+                )
+            environment_fingerprint = self._compute_environment_fingerprint(module)
+            self._update_module_fields(
+                module_id,
+                status=STATUS_INDEX["installed"],
+                installProgress=1.0,
+                healthStatus=None,
+                preflightStatus=PREFLIGHT_OK,
+                preflightMessage=None,
+                capabilityWarnings=[],
+                environmentFingerprint=environment_fingerprint,
             )
-            self._run_command(
-                [str(poetry), "install", "--no-interaction", "--no-root"],
-                cwd=install_dir,
-                module_id=module_id,
+        except Exception:
+            # Rollback: remove any partial venv so the next install starts clean.
+            self._append_log(
+                module_id,
+                "Installation failed — removing partial environment so the next install starts fresh.",
+                stderr=True,
+                emit_terminal=True,
             )
-        else:
-            install_extras = _module_install_extras(module)
-            install_target = (
-                f".[{','.join(install_extras)}]" if install_extras else "."
-            )
-            self._run_command(
-                [str(venv_python), "-m", "pip", "install", install_target],
-                cwd=install_dir,
-                module_id=module_id,
-            )
-        environment_fingerprint = self._compute_environment_fingerprint(module)
-        self._update_module_fields(
-            module_id,
-            status=STATUS_INDEX["installed"],
-            installProgress=1.0,
-            healthStatus=None,
-            preflightStatus=PREFLIGHT_OK,
-            preflightMessage=None,
-            capabilityWarnings=[],
-            environmentFingerprint=environment_fingerprint,
-        )
+            self._cleanup_module_environment(module_id)
+            raise
 
     def _ensure_module_pip(self, python_path: Path, cwd: Path, module_id: str) -> None:
         probe = subprocess.run(
@@ -5376,6 +5408,37 @@ class LauncherControlState:
                 module["version"] = remote_version
                 module["remoteVersion"] = remote_version
                 self._persist_states()
+
+    def _repair_sync(self, module_id: str) -> None:
+        """Background worker for repair_module().
+
+        Runs _preflight_module with allow_repair=True.  Unlike _start_sync,
+        does not attempt to start the service after a successful repair.
+        """
+        with self._lock:
+            module = dict(self._get_module(module_id))
+
+        preflight = self._preflight_module(module, allow_repair=True)
+        self._update_module_fields(module_id, **preflight.state_fields())
+
+        if preflight.status == PREFLIGHT_FAILED:
+            self._update_module_fields(
+                module_id,
+                status=STATUS_INDEX["error"],
+                healthStatus=preflight.message,
+            )
+            raise RuntimeError(preflight.message or "Module repair failed")
+
+        next_status = (
+            STATUS_INDEX["degraded"]
+            if preflight.status == PREFLIGHT_DEGRADED
+            else STATUS_INDEX["installed"]
+        )
+        self._update_module_fields(
+            module_id,
+            status=next_status,
+            healthStatus=preflight.message if preflight.status == PREFLIGHT_DEGRADED else None,
+        )
 
     def _start_sync(self, module_id: str) -> None:
         module = self._get_module(module_id)
@@ -6505,6 +6568,12 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         HTTPStatus.ACCEPTED,
                         self.server.state.update_module(module_id),
+                    )
+                    return
+                if len(segments) == 5 and segments[4] == "repair" and method == "POST":
+                    self._send_json(
+                        HTTPStatus.ACCEPTED,
+                        self.server.state.repair_module(module_id),
                     )
                     return
                 if (
