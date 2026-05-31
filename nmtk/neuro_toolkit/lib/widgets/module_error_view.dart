@@ -12,15 +12,14 @@ class ModuleLoadFailure {
 
 /// Displays a user-friendly error state when a module's WebView fails to load.
 ///
-/// Provides a Retry button (clears the cached controller so the URL is
-/// re-fetched) and an Open-in-Browser fallback.
+/// Provides a Retry button that clears the cached controller so the URL is
+/// re-fetched.
 class ModuleErrorView extends StatelessWidget {
   const ModuleErrorView({
     required this.module,
     required this.failure,
     required this.isRemoteHosted,
     required this.onRetry,
-    required this.onOpenInBrowser,
     super.key,
   });
 
@@ -33,7 +32,6 @@ class ModuleErrorView extends StatelessWidget {
   final bool isRemoteHosted;
 
   final VoidCallback onRetry;
-  final VoidCallback onOpenInBrowser;
 
   @override
   Widget build(BuildContext context) {
@@ -52,23 +50,11 @@ class ModuleErrorView extends StatelessWidget {
       ].join('\n\n'),
       icon: Icons.language_outlined,
       tone: NmtkTone.warning,
-      action: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          NmtkPrimaryButton(
-            onPressed: onRetry,
-            icon: Icons.refresh,
-            label: 'Retry Load',
-            tone: NmtkTone.warning,
-          ),
-          const SizedBox(height: 12),
-          NmtkOutlinedButton(
-            onPressed: onOpenInBrowser,
-            icon: Icons.open_in_browser,
-            label: 'Open in Browser',
-            tone: NmtkTone.warning,
-          ),
-        ],
+      action: NmtkPrimaryButton(
+        onPressed: onRetry,
+        icon: Icons.refresh,
+        label: 'Retry Load',
+        tone: NmtkTone.warning,
       ),
     );
   }

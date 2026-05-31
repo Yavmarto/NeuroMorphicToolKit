@@ -120,7 +120,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 6),
               ZetaTextInput(
                 key: const ValueKey('launcher-control-url'),
-                initialValue: ref.read(settingsStateProvider).launcherControlApiBaseUrl ?? '',
+                initialValue:
+                    ref.read(settingsStateProvider).launcherControlApiBaseUrl ??
+                        '',
                 placeholder: 'http://192.168.1.50:8091',
                 onChange: settings.setLauncherControlApiBaseUrl,
               ),
@@ -189,7 +191,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 6),
                   ZetaTextInput(
                     key: const ValueKey('remote-endpoint-url'),
-                    initialValue: ref.read(settingsStateProvider).remoteEndpoint ?? '',
+                    initialValue:
+                        ref.read(settingsStateProvider).remoteEndpoint ?? '',
                     placeholder: 'https://example.com/api/logs',
                     onChange: settings.setRemoteEndpoint,
                   ),
@@ -503,7 +506,6 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
   @override
   Widget build(BuildContext context) {
     final moduleProvider = ref.read(moduleStateProvider);
-    final zeta = Zeta.of(context);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -536,43 +538,6 @@ class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
                             widget.module.id,
                             isEnabled: value,
                             customPort: widget.module.customPort,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // ── Start on Launch toggle ───────────────────────────────
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Start on Launch',
-                              style: Zeta.of(context).textStyles.bodyMedium,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Automatically start this module when the app opens '
-                              '(adds ~3–8 s to startup if cold).',
-                              style:
-                                  Zeta.of(context).textStyles.bodySmall.apply(
-                                        color: zeta.colors.mainSubtle,
-                                      ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Switch(
-                        value: widget.module.startOnLaunch,
-                        onChanged: (bool value) {
-                          moduleProvider.updateModuleSettings(
-                            widget.module.id,
-                            startOnLaunch: value,
                           );
                         },
                       ),

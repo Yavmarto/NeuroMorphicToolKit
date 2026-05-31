@@ -32,6 +32,7 @@ import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
+import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 
 class ModuleProvider with ChangeNotifier {
   ModuleProvider({
@@ -95,7 +96,7 @@ class ModuleProvider with ChangeNotifier {
         return;
       }
       await _reloadFromControlApi(includeLauncherUpdate: true);
-      await _launchOnStartModules();
+      await _startSwitchableNavModules();
     } catch (e) {
       // A connection failure (e.g. control API not yet running) does not mean
       // Python is absent — do not set _pythonAvailable = false here.
@@ -112,14 +113,20 @@ class ModuleProvider with ChangeNotifier {
     }
   }
 
-  /// Starts all installed modules that have [Module.startOnLaunch] enabled.
-  /// Modules are started concurrently to minimise wall-clock startup time.
-  Future<void> _launchOnStartModules() async {
+  /// Eagerly starts every installed module that the workspace can switch
+  /// to as a tab, so the user never waits for a cold start when first
+  /// switching between modules. The start set mirrors `_shouldOpenModule`
+  /// in `tool_view.dart`: enabled, nav-visible, and backed by either a web
+  /// frontend or a registered native surface. Modules are started
+  /// concurrently to minimise wall-clock startup time.
+  Future<void> _startSwitchableNavModules() async {
     final toLaunch = _modules
         .where(
           (module) =>
-              module.startOnLaunch &&
               module.isEnabled &&
+              module.showInLauncherNav &&
+              (module.hasFrontend ||
+                  NativeSurfaceRegistry.supportsModule(module.id)) &&
               module.status == ModuleStatus.installed,
         )
         .map((module) => module.id)

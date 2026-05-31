@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
@@ -401,16 +400,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 
-  Future<void> _launchInBrowser(Module module) async {
-    final uri = _moduleUri(module);
-    final url = uri.toString();
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        NmtkToasts.error(context, 'Could not launch $url');
-      }
-    }
-  }
-
   void _recordModuleLoadFailure(
     String moduleId,
     Uri uri,
@@ -442,7 +431,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         });
         await _activateModule(module.id, requestFocus: false);
       },
-      onOpenInBrowser: () => _launchInBrowser(module),
     );
   }
 
@@ -545,7 +533,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return ModuleLoadingView(
       module: module,
       healthCheckUri: _moduleUri(module, healthCheck: true),
-      onOpenInBrowser: () => _launchInBrowser(module),
     );
   }
 
@@ -558,7 +545,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       moduleProvider: moduleProvider,
       activeModule: activeModule,
       onShowModulePicker: () => _showModulePicker(context),
-      onOpenInBrowser: _launchInBrowser,
     );
     // The environment editor is Jupyter-specific: only surface it on the
     // Notebooks tool so it stays close to where the kernels are used.
@@ -772,15 +758,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                                 : NmtkEmptyState(
                                     title: 'WebView Not Supported',
                                     message:
-                                        'Open ${module.name} in your system browser on this platform.',
+                                        '${module.name} cannot be displayed on this platform.',
                                     icon: Icons.warning_amber_rounded,
                                     tone: NmtkTone.warning,
-                                    action: NmtkPrimaryButton(
-                                      onPressed: () => _launchInBrowser(module),
-                                      icon: Icons.open_in_browser,
-                                      label: 'Open in System Browser',
-                                      tone: NmtkTone.warning,
-                                    ),
                                   ),
           );
         }).toList()

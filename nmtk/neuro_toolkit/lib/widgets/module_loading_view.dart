@@ -12,7 +12,6 @@ class ModuleLoadingView extends StatelessWidget {
   const ModuleLoadingView({
     required this.module,
     required this.healthCheckUri,
-    required this.onOpenInBrowser,
     super.key,
   });
 
@@ -21,8 +20,6 @@ class ModuleLoadingView extends StatelessWidget {
   /// The URI that the launcher polls to detect when the backend is ready.
   /// Only shown in debug builds.
   final Uri? healthCheckUri;
-
-  final VoidCallback onOpenInBrowser;
 
   @override
   Widget build(BuildContext context) {
@@ -117,13 +114,6 @@ class ModuleLoadingView extends StatelessWidget {
               const SizedBox(height: 14),
               LinearProgressIndicator(
                 value: hasProgress ? module.installProgress : null,
-              ),
-              const SizedBox(height: 14),
-              NmtkOutlinedButton(
-                onPressed: onOpenInBrowser,
-                icon: Icons.open_in_browser,
-                label: 'Open in Browser instead',
-                tone: NmtkTone.info,
               ),
             ],
           ),

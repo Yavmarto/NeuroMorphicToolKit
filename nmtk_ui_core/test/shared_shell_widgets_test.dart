@@ -208,9 +208,11 @@ void main() {
       ),
     );
 
-    final containerFinder = find.byWidgetPredicate(
-      (widget) => widget is Container && widget.decoration is BoxDecoration,
-    ).first;
+    final containerFinder = find
+        .byWidgetPredicate(
+          (widget) => widget is Container && widget.decoration is BoxDecoration,
+        )
+        .first;
     final container = tester.widget<Container>(containerFinder);
     final decoration = container.decoration as BoxDecoration;
 
@@ -237,9 +239,11 @@ void main() {
       ),
     );
 
-    final containerFinder = find.byWidgetPredicate(
-      (widget) => widget is Container && widget.decoration is BoxDecoration,
-    ).first;
+    final containerFinder = find
+        .byWidgetPredicate(
+          (widget) => widget is Container && widget.decoration is BoxDecoration,
+        )
+        .first;
     final container = tester.widget<Container>(containerFinder);
     final decoration = container.decoration as BoxDecoration;
 
@@ -331,7 +335,27 @@ void main() {
     expect(find.text('Reconnect the device and retry.'), findsOneWidget);
   });
 
-  testWidgets('NmtkErrorCard renders plain text without selectable mode', (
+  testWidgets('NmtkErrorCard renders plain text when selectable is disabled', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      buildHarness(
+        const NmtkErrorCard(
+          message: 'The deploy command returned exit code 1.',
+          selectable: false,
+        ),
+      ),
+    );
+
+    expect(find.text('Workflow Error'), findsOneWidget);
+    expect(
+      find.text('The deploy command returned exit code 1.'),
+      findsOneWidget,
+    );
+    expect(find.byType(SelectableText), findsNothing);
+  });
+
+  testWidgets('NmtkErrorCard renders selectable text by default', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -343,11 +367,11 @@ void main() {
     );
 
     expect(find.text('Workflow Error'), findsOneWidget);
+    expect(find.byType(SelectableText), findsOneWidget);
     expect(
       find.text('The deploy command returned exit code 1.'),
       findsOneWidget,
     );
-    expect(find.byType(SelectableText), findsNothing);
   });
 
   testWidgets('NmtkErrorCard renders selectable text with prefix and action', (

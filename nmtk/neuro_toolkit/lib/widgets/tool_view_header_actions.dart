@@ -13,20 +13,18 @@ import 'package:neuro_toolkit/providers/command_provider.dart';
 /// Toolbar actions shown in the [ToolViewScreen] header.
 ///
 /// Includes: developer-mode toggle, command palette, and (in developer mode)
-/// open-in-browser, stop-module, and check-for-updates buttons.
+/// open-module, stop-module, and check-for-updates buttons.
 class ToolViewHeaderActions extends ConsumerWidget {
   const ToolViewHeaderActions({
     required this.moduleProvider,
     required this.activeModule,
     required this.onShowModulePicker,
-    required this.onOpenInBrowser,
     super.key,
   });
 
   final ModuleProvider moduleProvider;
   final Module? activeModule;
   final VoidCallback onShowModulePicker;
-  final void Function(Module module) onOpenInBrowser;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -77,17 +75,6 @@ class ToolViewHeaderActions extends ConsumerWidget {
               icon: const Icon(Icons.add),
               onPressed: onShowModulePicker,
               tooltip: 'Open a Module',
-            ),
-          ),
-          Semantics(
-            label: 'Open module in system browser',
-            button: true,
-            child: IconButton(
-              icon: const Icon(Icons.open_in_browser),
-              onPressed: activeModule != null
-                  ? () => onOpenInBrowser(activeModule!)
-                  : null,
-              tooltip: 'Open in System Browser',
             ),
           ),
           Semantics(

@@ -1,0 +1,39 @@
+name: License Notices
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - '**/pyproject.toml'
+      - '**/pubspec.yaml'
+      - 'scripts/generate_third_party_notices.py'
+      - 'THIRD_PARTY_NOTICES.md'
+      - '.github/workflows/license-notices.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - '**/pyproject.toml'
+      - '**/pubspec.yaml'
+      - 'scripts/generate_third_party_notices.py'
+      - 'THIRD_PARTY_NOTICES.md'
+      - '.github/workflows/license-notices.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  notices-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: python -m pip install --upgrade pyyaml
+
+      - name: Verify THIRD_PARTY_NOTICES.md is current
+        run: python3 scripts/generate_third_party_notices.py --check

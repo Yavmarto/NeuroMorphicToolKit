@@ -148,3 +148,23 @@ NMTK uses a **"Downloadable App + Backend-as-a-Service"** model. The desktop and
    ```
 
 For detailed module-specific development, explore the subdirectories (e.g., `neurocnl/`, `Neurochip/`) which contain their own `README.md` files.
+
+## 📜 License
+
+NeuroMorphicToolKit and all of its first-party modules are licensed under the
+**GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**.
+
+Copyright (C) 2026 Yoshimar Todihardjo and NeuroMorphicToolKit contributors.
+
+The AGPL is a strong copyleft license. In particular, its **network-use clause
+(Section 13)** means that if you run a modified version of this software and let
+users interact with it over a network, you must also offer those users the
+complete corresponding source code of your modified version. Distributing the
+software, modified or not, carries the usual GPL source-offer obligations.
+
+- Full license text: [`LICENSE`](./LICENSE) (a verbatim copy ships in every package root).
+- Third-party dependency licenses and attribution: [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md).
+- Some optional hardware integrations depend on proprietary vendor SDKs that are
+  **not** distributed with this project and remain under their own licenses; see
+  the Compliance Notes in `THIRD_PARTY_NOTICES.md` before redistributing builds
+  that bundle them.

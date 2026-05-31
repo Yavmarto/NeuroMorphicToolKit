@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -45,6 +45,8 @@ help:
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
 	@echo "  make clean-all                - Deep clean the entire monorepo"
+	@echo "  make notices                  - Regenerate THIRD_PARTY_NOTICES.md from manifests"
+	@echo "  make notices-check            - Fail if THIRD_PARTY_NOTICES.md is stale"
 	@echo ""
 
 dev:
@@ -176,6 +178,13 @@ suite_api_dev:
 ci:
 	@chmod +x scripts/run_ci_local.sh
 	@./scripts/run_ci_local.sh --all
+	@$(MAKE) notices-check
+
+notices:
+	@python3 scripts/generate_third_party_notices.py
+
+notices-check:
+	@python3 scripts/generate_third_party_notices.py --check
 
 clean-all:
 	@chmod +x scripts/deep_clean.sh

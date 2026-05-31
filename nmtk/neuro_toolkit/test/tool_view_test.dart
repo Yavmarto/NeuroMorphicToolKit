@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
+import 'package:neuro_toolkit/providers/app_provider.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/widgets/tool_view_header_actions.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
@@ -505,6 +507,83 @@ void main() {
       'Neurobench',
     ]);
     expect(moduleProvider.launchedModuleIds, contains('neurocnl'));
+  });
+
+  testWidgets(
+      'ToolViewHeaderActions omit open-in-browser action in developer mode',
+      (WidgetTester tester) async {
+    final moduleProvider = _TrackingModuleProvider();
+    final appProvider = AppProvider()..toggleDeveloperMode();
+    final activeModule = Module(
+      id: 'neurocnl',
+      name: 'NeuroStudio',
+      description: 'Studio',
+      directory: '/tmp/neurocnl',
+      port: 8000,
+      hasFrontend: true,
+      startStrategy: 'uvicorn',
+      status: ModuleStatus.running,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appStateProvider.overrideWith((ref) => appProvider),
+        ],
+        child: _buildTestShell(
+          Scaffold(
+            body: ToolViewHeaderActions(
+              moduleProvider: moduleProvider,
+              activeModule: activeModule,
+              onShowModulePicker: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Developer-mode controls are visible, but open-in-browser is gone.
+    expect(find.byIcon(Icons.stop_circle), findsOneWidget);
+    expect(find.byIcon(Icons.open_in_browser), findsNothing);
+    expect(find.text('Open in System Browser'), findsNothing);
+  });
+
+  testWidgets('ToolView loading state has no open-in-browser fallback',
+      (WidgetTester tester) async {
+    final moduleProvider = _TrackingModuleProvider();
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(),
+    );
+    // Installed (not yet running) → the loading card is shown.
+    moduleProvider.modules = [
+      Module(
+        id: 'neurocnl',
+        name: 'NeuroStudio',
+        description: 'Studio',
+        directory: '/tmp/neurocnl',
+        port: 8000,
+        hasFrontend: true,
+        startStrategy: 'uvicorn',
+        status: ModuleStatus.installed,
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+        ],
+        child: _buildTestShell(const ToolViewScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Open in Browser instead'), findsNothing);
+    expect(find.byIcon(Icons.open_in_browser), findsNothing);
   });
 }
 

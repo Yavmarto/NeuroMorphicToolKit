@@ -106,5 +106,27 @@ For more details on the unified pipeline scripts, see [docs/unified-dev-pipeline
 
 ---
 
+## 📜 Licensing of Contributions
+
+NeuroMorphicToolKit is licensed under the **GNU Affero General Public License
+v3.0 or later (AGPL-3.0-or-later)**. By submitting a contribution (pull request,
+patch, or any other change) you agree that your contribution is licensed under
+the same AGPL-3.0-or-later terms as the project — inbound license equals
+outbound license. Do not contribute code you do not have the right to license
+this way, and do not add dependencies under terms incompatible with AGPL-3.0.
+
+When you add or update a dependency, regenerate the attribution file so it stays
+current:
+
+```bash
+make notices
+```
+
+CI runs `make notices-check` and will fail if `THIRD_PARTY_NOTICES.md` is stale.
+See its Compliance Notes section for dependencies that require explicit human
+review before redistribution.
+
+---
+
 ## 🤝 Questions?
 If you're unsure about a contract or architectural decision, open a GitHub Issue or reach out to the project maintainers.

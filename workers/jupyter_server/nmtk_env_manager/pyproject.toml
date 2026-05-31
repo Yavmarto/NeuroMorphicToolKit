@@ -7,6 +7,10 @@ name = "nmtk-env-manager"
 version = "0.1.0"
 description = "Jupyter Server extension to clone the immutable NeuroStudio kernel into customisable Python environments."
 requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
 dependencies = [
     "jupyter_server>=2.0,<3.0",
     "ipykernel>=6.0",

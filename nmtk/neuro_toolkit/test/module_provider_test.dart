@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/services/process_manager.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
 
 class MockProcessManager implements ProcessManager {
   final _statusController = StreamController<Module>.broadcast();
@@ -64,6 +67,47 @@ class MockProcessManager implements ProcessManager {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeControlApiService extends ControlApiService {
+  _FakeControlApiService(List<Module> modules)
+      : _modules = List<Module>.from(modules),
+        super(baseUri: Uri.parse('http://127.0.0.1:8090'));
+
+  final List<Module> _modules;
+  final List<String> startCalls = <String>[];
+
+  @override
+  Future<List<Module>> fetchModules({bool refreshUpdates = false}) async =>
+      List<Module>.from(_modules);
+
+  @override
+  Future<LauncherControlSettings> fetchSettings() async =>
+      LauncherControlSettings.fromJson(const <String, dynamic>{
+        'logLevel': 'info',
+        'pythonAvailable': true,
+        'mujocoAvailable': true,
+      });
+
+  @override
+  Future<Module> startModule(String moduleId) async {
+    startCalls.add(moduleId);
+    final index = _modules.indexWhere((module) => module.id == moduleId);
+    final updated = _modules[index].copyWith(status: ModuleStatus.running);
+    _modules[index] = updated;
+    return updated;
+  }
+}
+
+class _NoopUpdateService extends UpdateService {
+  @override
+  Future<LauncherUpdate?> checkForLauncherUpdate() async => null;
+}
+
+Future<void> _waitForInit(ModuleProvider provider) async {
+  for (var i = 0; i < 200 && provider.isLoading; i++) {
+    await Future<void>.delayed(const Duration(milliseconds: 1));
+  }
 }
 
 void main() {
@@ -228,5 +272,80 @@ void main() {
     expect(provider.isLoading, isTrue);
     await future;
     expect(provider.isLoading, isFalse);
+  });
+
+  test(
+      'ModuleProvider auto-starts only installed switchable nav modules on init',
+      () async {
+    final fake = _FakeControlApiService([
+      // Installed + enabled + nav-visible + frontend → should auto-start.
+      Module(
+        id: 'neurocnl',
+        name: 'NeuroStudio',
+        description: 'Studio',
+        directory: 'neurocnl',
+        port: 9000,
+        hasFrontend: true,
+        status: ModuleStatus.installed,
+      ),
+      // Installed + nav-visible + native surface (no frontend) → should start.
+      Module(
+        id: 'Neurohub',
+        name: 'Share',
+        description: 'Hub',
+        directory: 'Neurohub',
+        port: 9000,
+        hasFrontend: false,
+        status: ModuleStatus.installed,
+      ),
+      // Nav-hidden → should NOT auto-start.
+      Module(
+        id: 'Neurochip',
+        name: 'NeuroChip',
+        description: 'Chip',
+        directory: 'Neurochip',
+        port: 9000,
+        hasFrontend: true,
+        showInLauncherNav: false,
+        status: ModuleStatus.installed,
+      ),
+      // Headless (no frontend, no native surface) → should NOT auto-start.
+      Module(
+        id: 'Neurosense',
+        name: 'NeuroSense',
+        description: 'Sense',
+        directory: 'Neurosense',
+        port: 9000,
+        hasFrontend: false,
+        status: ModuleStatus.installed,
+      ),
+      // Not installed → should NOT auto-start.
+      Module(
+        id: 'jupyter',
+        name: 'Notebooks',
+        description: 'Notebooks',
+        directory: 'jupyter',
+        port: 8008,
+        hasFrontend: true,
+        status: ModuleStatus.notInstalled,
+      ),
+    ]);
+
+    final provider = ModuleProvider(
+      controlApiService: fake,
+      updateService: _NoopUpdateService(),
+      bootstrapState:
+          LauncherBootstrapState.ready(Uri.parse('http://127.0.0.1:8090')),
+    );
+    addTearDown(provider.dispose);
+
+    await _waitForInit(provider);
+
+    expect(fake.startCalls, containsAll(<String>['neurocnl', 'Neurohub']));
+    expect(fake.startCalls, isNot(contains('Neurochip')));
+    expect(fake.startCalls, isNot(contains('Neurosense')));
+    expect(fake.startCalls, isNot(contains('jupyter')));
+    expect(provider.activeModuleIds,
+        containsAll(<String>['neurocnl', 'Neurohub']));
   });
 }
