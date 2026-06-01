@@ -26,3 +26,14 @@ shared_assets/
 recordings_smoke_test/
 reports/
 output/
+
+# Runtime artifacts (root)
+server.log
+simulation_report.json
+
+# Root scratch / notes (not product source)
+.tmp_manual_ui/
+Auto agentic workflows (Jules)/
+UI - issues/
+pitches/
+workflow-errors/
