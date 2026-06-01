@@ -1,66 +1,66 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:nmtk_ui_core/cupertino_kit/primitives/kit_button.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
 
+/// Public NMTK primary button.
+///
+/// Pre-migration this wrapped `ZetaButton`; post-migration it wraps
+/// the kit's [KitButton]. Constructor parameter names are preserved
+/// so submodule call sites don't need to change.
 class NmtkPrimaryButton extends StatelessWidget {
-  final String label;
-  final VoidCallback? onPressed;
-  final IconData? icon;
-  final NmtkTone tone;
-
   const NmtkPrimaryButton({
-    super.key,
     required this.label,
     this.onPressed,
     this.icon,
     this.tone = NmtkTone.info,
+    super.key,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final type = switch (tone) {
-      NmtkTone.danger => ZetaButtonType.negative,
-      NmtkTone.success => ZetaButtonType.positive,
-      NmtkTone.neutral => ZetaButtonType.outlineSubtle,
-      NmtkTone.info => ZetaButtonType.primary,
-      NmtkTone.warning => ZetaButtonType.primary,
-    };
-
-    return ZetaButton(
-      label: label,
-      onPressed: onPressed,
-      leadingIcon: icon,
-      type: type,
-    );
-  }
-}
-
-class NmtkOutlinedButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final NmtkTone tone;
 
+  @override
+  Widget build(BuildContext context) {
+    final style = switch (tone) {
+      NmtkTone.danger => KitButtonStyle.destructive,
+      NmtkTone.success => KitButtonStyle.tinted,
+      NmtkTone.neutral => KitButtonStyle.outline,
+      NmtkTone.info => KitButtonStyle.filled,
+      NmtkTone.warning => KitButtonStyle.filled,
+    };
+    return KitButton(
+      label: label,
+      onPressed: onPressed,
+      leadingIcon: icon,
+      style: style,
+    );
+  }
+}
+
+/// Public NMTK outlined / secondary button.
+class NmtkOutlinedButton extends StatelessWidget {
   const NmtkOutlinedButton({
-    super.key,
     required this.label,
     this.onPressed,
     this.icon,
     this.tone = NmtkTone.neutral,
+    super.key,
   });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final NmtkTone tone;
 
   @override
   Widget build(BuildContext context) {
-    final type = switch (tone) {
-      NmtkTone.neutral => ZetaButtonType.outlineSubtle,
-      _ => ZetaButtonType.outline,
-    };
-
-    return ZetaButton(
+    return KitButton(
       label: label,
       onPressed: onPressed,
       leadingIcon: icon,
-      type: type,
+      style: KitButtonStyle.outline,
     );
   }
 }
