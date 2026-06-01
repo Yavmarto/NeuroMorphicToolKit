@@ -117,7 +117,20 @@ docker-ex:
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose up --build -d --wait --remove-orphans"
 	@echo "==> Backend ready at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
-docker-ex-all:
+## Initialise required secrets on the remote host if they are missing.
+## Safe to re-run — only fills gaps, never overwrites existing values.
+secrets-init:
+	@if [ -z "$(REMOTE_HOST)" ]; then \
+		echo "Error: REMOTE_HOST is not set."; exit 1; \
+	fi
+	@echo "==> Initialising required secrets on $(REMOTE_HOST)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) '\
+	  touch ~/nmtk-deploy/.env; \
+	  grep -q GRAFANA_ADMIN_PASSWORD ~/nmtk-deploy/.env || \
+	    echo "GRAFANA_ADMIN_PASSWORD=$$(openssl rand -base64 32)" >> ~/nmtk-deploy/.env; \
+	  echo "secrets-init: OK (GRAFANA_ADMIN_PASSWORD present)"'
+
+docker-ex-all: secrets-init
 	@if [ -z "$(REMOTE_HOST)" ]; then \
 		echo "Error: REMOTE_HOST is not set. Example: make docker-ex-all REMOTE_HOST=user@192.168.1.50"; \
 		exit 1; \
