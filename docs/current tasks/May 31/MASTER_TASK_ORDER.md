@@ -69,7 +69,7 @@ Based on an audit of the documents in this folder, here is the recommended execu
 **Plan:** [`docs/superpowers/plans/2026-05-31-tier1-fluff-cuts.md`](../../superpowers/plans/2026-05-31-tier1-fluff-cuts.md)
 **Why:** The fluff cut analysis provides a ranked list of safe, high-yield tech debt removals (Tier 1). The deprecated audit provides the exact context for the `deprecated/` folders mentioned in the fluff cuts.
 
-**Status:** Tier 1 **done** (2026-05-31). Changes are staged across the parent repo and module submodules; commit per submodule, then bump submodule pointers in the parent.
+**Status:** Tier 1 **done and committed** (2026-05-31). Submodule cleanup commits landed in `neurocnl`, `Neurobench`, `Neurochip`, `Neurohub`, `Neurosense`, `Neurosim`, and `Neuro-Dream-Hand`; parent repo commits cover gitignore/artifact untracking, scratch-dir removal, and submodule pointer bump on `dev`.
 
 **Tier 1 completed:**
 1. Deleted all module `deprecated/` folders (49 archived issue files across 7 submodules).
