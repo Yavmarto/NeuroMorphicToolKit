@@ -1,38 +1,55 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/widgets.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
 
+/// Colored pill badge with optional icon and accessible label.
+///
+/// Replaces the legacy `ZetaStatusLabel`-backed implementation.
+/// Visual styling derives from [resolveNmtkTonePalette] so badges and
+/// banners share identical colour semantics across the suite.
 class NmtkStatusBadge extends StatelessWidget {
+  const NmtkStatusBadge({
+    required this.label,
+    this.tone = NmtkTone.neutral,
+    this.icon,
+    this.semanticsLabel,
+    super.key,
+  });
+
   final String label;
   final NmtkTone tone;
   final IconData? icon;
   final String? semanticsLabel;
 
-  const NmtkStatusBadge({
-    super.key,
-    required this.label,
-    this.tone = NmtkTone.neutral,
-    this.icon,
-    this.semanticsLabel,
-  });
-
   @override
   Widget build(BuildContext context) {
-    final status = switch (tone) {
-      NmtkTone.neutral => ZetaWidgetStatus.neutral,
-      NmtkTone.info => ZetaWidgetStatus.info,
-      NmtkTone.success => ZetaWidgetStatus.positive,
-      NmtkTone.warning => ZetaWidgetStatus.warning,
-      NmtkTone.danger => ZetaWidgetStatus.negative,
-    };
-
+    final palette = resolveNmtkTonePalette(context, tone);
     return Semantics(
       label: semanticsLabel ?? label,
-      child: ZetaStatusLabel(
-        label: label,
-        status: status,
-        icon: icon,
-        rounded: Zeta.of(context).rounded,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: palette.background,
+          border: Border.all(color: palette.border, width: 0.5),
+          borderRadius: const BorderRadius.all(Radius.circular(999)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 12, color: palette.foreground),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: palette.foreground,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
