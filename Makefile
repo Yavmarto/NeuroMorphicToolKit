@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i macos-signing-check build-macos-dmg-signed
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -47,6 +47,8 @@ help:
 	@echo "  make clean-all                - Deep clean the entire monorepo"
 	@echo "  make notices                  - Regenerate THIRD_PARTY_NOTICES.md from manifests"
 	@echo "  make notices-check            - Fail if THIRD_PARTY_NOTICES.md is stale"
+	@echo "  make macos-signing-check      - Report macOS signing/notarization env readiness"
+	@echo "  make build-macos-dmg-signed   - Build a signed/notarized macOS DMG when secrets are set"
 	@echo ""
 
 dev:
@@ -209,3 +211,17 @@ check-devices:
 	@echo "==> Checking for connected devices..."
 	@flutter devices | grep -E "connected device|wirelessly|•" || true
 	@echo ""
+
+macos-signing-check:
+	@bash nmtk/installer/macos/sign-and-notarize.sh --check
+
+build-macos-dmg-signed:
+	@BUILD_ARGS=(--dmg); \
+	if [ -n "$${MACOS_SIGNING_IDENTITY:-}" ]; then BUILD_ARGS+=(--sign "$$MACOS_SIGNING_IDENTITY"); fi; \
+	if [ -n "$${MACOS_SIGNING_IDENTITY:-}" ] && [ -n "$${APPLE_ID:-}" ] \
+	  && { [ -n "$${APPLE_PASSWORD:-}" ] || [ -n "$${APPLE_APP_SPECIFIC_PASSWORD:-}" ]; } \
+	  && [ -n "$${APPLE_TEAM_ID:-}" ]; then \
+	  BUILD_ARGS+=(--notarize); \
+	  export MACOS_NOTARIZE=true; \
+	fi; \
+	bash nmtk/installer/macos/build-standalone.sh "$${BUILD_ARGS[@]}"

@@ -26,8 +26,9 @@ PYTHON_MAJ_MIN=$(echo "$PYTHON_VERSION" | cut -d. -f1,2)
 
 SKIP_FLUTTER=false
 CREATE_DMG=false
-SIGNING_IDENTITY=""
+SIGNING_IDENTITY="${MACOS_SIGNING_IDENTITY:-}"
 NOTARIZE=false
+SIGN_HELPER="$SCRIPT_DIR/sign-and-notarize.sh"
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -38,6 +39,12 @@ while [[ $# -gt 0 ]]; do
     *) echo "Unknown argument: $1"; exit 1 ;;
   esac
 done
+
+if [ "$NOTARIZE" = false ]; then
+  case "${MACOS_NOTARIZE:-}" in
+    1|true|TRUE|yes|YES) NOTARIZE=true ;;
+  esac
+fi
 
 # --- Detect architecture ---
 ARCH="$(uname -m)"
@@ -210,9 +217,8 @@ du -sh "$APP_PATH" | awk '{print "  Total .app: " $1}'
 
 # --- Code sign ---
 if [ -n "$SIGNING_IDENTITY" ]; then
-  echo "==> Code signing with identity: $SIGNING_IDENTITY..."
-  # Use hardened runtime for notarization
-  codesign --force --options runtime --deep --sign "$SIGNING_IDENTITY" "$APP_PATH"
+  export MACOS_SIGNING_IDENTITY="$SIGNING_IDENTITY"
+  bash "$SIGN_HELPER" sign-app "$APP_PATH"
 else
   echo "==> Code signing (ad-hoc)..."
   codesign --force --deep --sign - "$APP_PATH" 2>/dev/null || {
@@ -226,45 +232,18 @@ echo "==> Build complete: $APP_PATH"
 # --- Notarize .app (if no DMG) ---
 # Usually it's better to notarize the DMG, but if user just wants the .app:
 if [ "$NOTARIZE" = true ] && [ "$CREATE_DMG" = false ]; then
-  echo "==> Notarizing .app bundle..."
-  if [ -z "${APPLE_ID:-}" ] || [ -z "${APPLE_PASSWORD:-}" ] || [ -z "${APPLE_TEAM_ID:-}" ]; then
-    echo "Error: APPLE_ID, APPLE_PASSWORD, and APPLE_TEAM_ID env vars required for notarization"
-    exit 1
-  fi
-
-  # Compress app for notarization
-  ZIP_PATH="${APP_PATH}.zip"
-  ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_PATH"
-
-  xcrun notarytool submit "$ZIP_PATH" \
-    --apple-id "$APPLE_ID" \
-    --password "$APPLE_PASSWORD" \
-    --team-id "$APPLE_TEAM_ID" \
-    --wait
-
-  xcrun stapler staple "$APP_PATH"
-  rm "$ZIP_PATH"
+  export MACOS_NOTARIZE=true
+  bash "$SIGN_HELPER" notarize "$APP_PATH"
 fi
 
 # --- Optionally create DMG ---
 if [ "$CREATE_DMG" = true ]; then
   echo "==> Creating DMG..."
-  # create-dmg.sh will be updated to accept signing identity as 3rd arg
   bash "$SCRIPT_DIR/create-dmg.sh" "$APP_PATH" "dev" "$SIGNING_IDENTITY"
 
   DMG_FILE="NeuroMorphicToolKit-dev-macos.dmg"
   if [ "$NOTARIZE" = true ]; then
-    echo "==> Notarizing DMG..."
-    if [ -z "${APPLE_ID:-}" ] || [ -z "${APPLE_PASSWORD:-}" ] || [ -z "${APPLE_TEAM_ID:-}" ]; then
-        echo "Error: APPLE_ID, APPLE_PASSWORD, and APPLE_TEAM_ID env vars required for notarization"
-        exit 1
-    fi
-    xcrun notarytool submit "$DMG_FILE" \
-        --apple-id "$APPLE_ID" \
-        --password "$APPLE_PASSWORD" \
-        --team-id "$APPLE_TEAM_ID" \
-        --wait
-
-    xcrun stapler staple "$DMG_FILE"
+    export MACOS_NOTARIZE=true
+    bash "$SIGN_HELPER" notarize "$DMG_FILE"
   fi
 fi

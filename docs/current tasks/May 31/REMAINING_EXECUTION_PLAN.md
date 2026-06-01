@@ -99,36 +99,53 @@ cd neurocnl/frontend && flutter test
 
 **What the gap analysis says:** "Codesigning/notarization (macOS), signed installers (Windows), and a signed module-delivery/update pipeline."
 
+#### Task 1 — macOS (✅ DONE 2026-06-01)
+
+**Shipped:**
+- `sign-and-notarize.sh` — Developer ID signing, `notarytool` submission/stapling, `--check` and `--dry-run` modes
+- `import-signing-cert.sh` — CI keychain import from base64 `.p12` secrets
+- `build-standalone.sh` — delegates to signing helper; reads `MACOS_SIGNING_IDENTITY` / `MACOS_NOTARIZE`
+- `Makefile` targets: `macos-signing-check`, `build-macos-dmg-signed`
+- `.github/workflows/release-desktop.yml` — conditional sign + notarize when secrets are set
+- `.github/workflows/ci.yml` — `test-macos-installer-signing` job (dry-run plumbing verification)
+- `nmtk/installer/macos/CODE_SIGNING.md` — certificate setup and GitHub secrets documentation
+- `tests/test_macos_installer_signing.py` — 7 pytest cases (no real certs required)
+
+**End-to-end signing still requires:** Apple Developer Program cert + repository secrets (`MACOS_CERTIFICATE_P12`, `MACOS_SIGNING_IDENTITY`, `APPLE_*`).
+
+#### Task 2 — Windows (⬜ PENDING)
+
 **Current state:**
-- `nmtk/installer/macos/build-standalone.sh` has ad-hoc code signing (`codesign --deep --force --sign -`) and notarization stubs (`APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` env vars referenced but not enforced in CI)
 - `nmtk/installer/windows/setup.iss` (Inno Setup) has no signing step
-- `nmtk/installer/linux/appimage.sh` creates unsigned AppImage
-- No automated signing in CI (GitHub Actions or local)
+- `nmtk/installer/windows/build-standalone.ps1` has no `signtool.exe` integration
 
 **What to implement:**
-1. **macOS:** Add a CI step (or Makefile target) that calls `codesign` with a developer ID and `xcrun notarytool` for notarization when `APPLE_ID` is set; document the required certificate + keychain setup
-2. **Windows:** Add a `signtool.exe` call in `build-standalone.ps1` using a code-signing certificate; document cert import steps
-3. **Update channel:** Verify that the launcher's `UpdateService` checks a signed manifest (not just a plain GitHub releases URL); add SHA-256 checksum verification on downloaded update payloads
+1. Add a `signtool.exe` call in `build-standalone.ps1` using a code-signing certificate
+2. Document cert import steps for local and CI release builds
+3. Wire conditional signing into `.github/workflows/release-desktop.yml` when Windows signing secrets are set
 
 **Key files:**
-- `nmtk/installer/macos/build-standalone.sh`
 - `nmtk/installer/windows/build-standalone.ps1`, `setup.iss`
+
+#### Task 3 — Update channel (⬜ PENDING)
+
+**What to implement:**
+1. Verify that the launcher's `UpdateService` checks a signed manifest (not just a plain GitHub releases URL)
+2. Add SHA-256 checksum verification on downloaded update payloads
+
+**Key files:**
 - `nmtk/neuro_toolkit/lib/services/update_service.dart`
 - `nmtk/AGENTS.md` — launcher change rules
 
-**Note:** Requires actual signing certificates to test end-to-end. The plan should add the CI plumbing and document the secret management, with tests verifying the signing *would* run (mocked cert in CI).
-
 ---
 
-### D2 — Neurohub CI to green (P1 #13)
+### D2 — Neurohub CI to green (P1 #13) ✅ DONE (2026-06-01)
 
 **What the gap analysis says:** "For the module that brokers shared artifacts, a passing test+CI gate is a release prerequisite."
 
-**Current state (from README):** Tests ⚠️, CI ❌  
-**Known pre-existing failures:** 23 tests fail with `bcrypt ValueError: password cannot be longer than 72 bytes` (passlib internal test + bcrypt version mismatch)  
-**Additional unknown failures:** CI may have further failures not exposed by local pytest
+**Shipped:** `passlib` removed; `bcrypt` 4.x used directly; `pytest-asyncio` via `[dev]` + `asyncio_mode = "auto"`; CI installs `Neurohub[dev]`. Verified `226 passed, 3 skipped` locally.
 
-**What to implement:**
+**Original plan (for reference):**
 1. Run `cd Neurohub && python -m pytest neurohub/tests/ -v` to get the full failure list
 2. Fix the bcrypt/passlib version mismatch — likely `passlib` 1.7.x vs `bcrypt` 4.x incompatibility; fix by pinning `bcrypt<4` or replacing `passlib` with `bcrypt` directly
 3. Fix any remaining test failures (likely auth flow tests, DB migration tests)
@@ -220,7 +237,7 @@ find docs/ -iname "*teensy*" -o -iname "*pynq*" -o -iname "*hardware*" 2>/dev/nu
 
 | Step | Plan | Effort | Prerequisite |
 |------|------|--------|--------------|
-| 1 | **D2 (Neurohub CI)** | Medium | None — isolated |
+| 1 | **D2 (Neurohub CI)** | Medium | ✅ Done 2026-06-01 |
 | 2 | **C2 (neurocnl honesty)** | Medium | None — isolated |
 | 3 | **D3 (Golden path CI gate)** | Small | neurocnl + neurobench running |
 | 4 | **D1 (Signed builds)** | Medium | Signing certs available |

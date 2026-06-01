@@ -63,8 +63,8 @@ rm -rf "$STAGING_DIR"
 
 # Sign DMG if identity provided
 if [ -n "$SIGNING_IDENTITY" ]; then
-  echo "==> Signing DMG with identity: $SIGNING_IDENTITY..."
-  codesign --force --sign "$SIGNING_IDENTITY" "$OUTPUT_PATH"
+  export MACOS_SIGNING_IDENTITY="$SIGNING_IDENTITY"
+  bash "$SCRIPT_DIR/sign-and-notarize.sh" sign-dmg "$OUTPUT_PATH"
 fi
 
 echo "Created $OUTPUT_FILE ($(du -sh "$OUTPUT_PATH" | awk '{print $1}'))"

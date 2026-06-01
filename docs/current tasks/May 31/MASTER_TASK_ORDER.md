@@ -30,9 +30,9 @@ Based on an audit of the documents in this folder, here is the recommended execu
 | **A — Trust & Safety** | P0 #1–3, #7–8 | ✅ **DONE** | Merged to `dev` 2026-05-31 |
 | **B — Front-Door Reliability** | P0 #4, #9 | ✅ **DONE** | Merged to `dev` 2026-05-31 |
 | **C1 — Neurobench Metric Provenance** | P0 #6 | ✅ **DONE** | Merged to `dev` 2026-05-31 |
-| **C2 — neurocnl Honesty** | P1 #11, #12 | ⬜ **PENDING** | See REMAINING_EXECUTION_PLAN.md |
-| **D1 — Signed Builds** | P1 #10 | ⬜ **PENDING** | Requires signing certs |
-| **D2 — Neurohub CI Green** | P1 #13 | ⬜ **PENDING** | bcrypt/passlib fix needed |
+| **C2 — neurocnl Honesty** | P1 #11, #12 | ✅ **DONE** | Validation deploy-blocked UI, export preflight API, planner alignment |
+| **D1 — Signed Builds** | P1 #10 | 🟡 **IN PROGRESS** | Task 1 (macOS) done — CI plumbing + docs; Tasks 2–3 pending |
+| **D2 — Neurohub CI Green** | P1 #13 | ✅ **DONE** | bcrypt 4.x + pytest-asyncio; CI installs `[dev]` |
 | **D3 — Golden-path CI gate** | P1 #14 | ⬜ **PENDING** | See REMAINING_EXECUTION_PLAN.md |
 | **P0 #5 — Hardware Path** | P0 #5 | 🔍 **INVESTIGATE** | Requires device access |
 
@@ -49,6 +49,20 @@ Based on an audit of the documents in this folder, here is the recommended execu
 - `ControlApiService.repairModule()` + `ModuleProvider.repairModule()` in Dart
 - "Repair" button in Flutter `_ModuleCard` error state with `NmtkTone.warning`
 - 4 new Python unit tests + 1 Flutter widget test
+
+### What Plan C2 delivered (2026-06-01)
+- `neurocnl/backend/app/services/neurocnl_bridge.py`: NIR-native validate uses `plan_backend_support()` via deploy IR (no synthetic planner verdict)
+- `neurocnl/frontend/lib/widgets/validation_panel.dart`: Deploy Blocked banner when `backend_support.verdict == "unsupported"`; overall status turns red in that case
+- `neurocnl/frontend/lib/providers/pipeline_provider.dart`: Validate step fails when deploy is blocked even if L1/L2 pass
+- `POST /api/export/preflight`: format-aware capability check without generating artifacts
+- `neurocnl/frontend/lib/services/api_client.dart`: `exportPreflight()` for studio export flows
+- Layer 1 label renamed to structural invariants (`app_en.arb`, HTML export report)
+
+### What Plan D2 delivered (2026-06-01)
+- Replaced unmaintained `passlib` with direct `bcrypt>=4.0.1,<5` in `auth_service.py` (fixes bcrypt 4.x `ValueError` on hash)
+- `pyproject.toml`: `asyncio_mode = "auto"` so async route/service tests run without extra markers
+- Root `.github/workflows/ci.yml`: Neurohub job installs `pip install -e "./Neurohub[dev]"` (includes `pytest-asyncio`, `hypothesis`, etc.)
+- Local verification: `226 passed, 3 skipped` with bcrypt 4.3.0
 
 ### What Plan C1 delivered (merged 2026-05-31)
 - `MetricProvenance(StrEnum)` with `CPU_ESTIMATED` / `ON_DEVICE` values in `benchmark_contracts.py`

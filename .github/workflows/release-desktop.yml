@@ -51,11 +51,36 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Import macOS signing certificate
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: bash nmtk/installer/macos/import-signing-cert.sh
+
+      - name: Check macOS signing configuration
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: bash nmtk/installer/macos/sign-and-notarize.sh --check
+
       - name: Build macOS DMG
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          # The script expects VERSION as arg for DMG creation if called manually
-          # but here we just pass --dmg
-          ./nmtk/installer/macos/build-standalone.sh --dmg
+          BUILD_ARGS=(--dmg)
+          if [ -n "${MACOS_SIGNING_IDENTITY:-}" ]; then
+            BUILD_ARGS+=(--sign "$MACOS_SIGNING_IDENTITY")
+            if [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
+              BUILD_ARGS+=(--notarize)
+              export MACOS_NOTARIZE=true
+            fi
+          fi
+          ./nmtk/installer/macos/build-standalone.sh "${BUILD_ARGS[@]}"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
