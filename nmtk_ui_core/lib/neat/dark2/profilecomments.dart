@@ -25,7 +25,9 @@ class NeatProfileComments extends StatelessWidget {
                   decoration: ShapeDecoration(
                     color: const Color(0xFF1D1D25),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                      borderRadius: BorderRadius.circular(
+                        NmtkShellTokens.of(context).radiusSm,
+                      ),
                     ),
                   ),
                   child: Column(
@@ -200,12 +202,13 @@ class NeatProfileComments extends StatelessWidget {
                                                 child: Container(
                                                   width: 48,
                                                   height: 48,
-                                                  decoration: const ShapeDecoration(
-                                                    color: Color(
-                                                      0xFFE9ECF2,
-                                                    ),
-                                                    shape: OvalBorder(),
-                                                  ),
+                                                  decoration:
+                                                      const ShapeDecoration(
+                                                        color: Color(
+                                                          0xFFE9ECF2,
+                                                        ),
+                                                        shape: OvalBorder(),
+                                                      ),
                                                 ),
                                               ),
                                             ],
@@ -304,10 +307,9 @@ class NeatProfileComments extends StatelessWidget {
                                                               text:
                                                                   'commented on',
                                                               style: TextStyle(
-                                                                color:
-                                                                    Color(
-                                                                      0xFF808D9E,
-                                                                    ),
+                                                                color: Color(
+                                                                  0xFF808D9E,
+                                                                ),
                                                                 fontSize: 14,
                                                                 fontFamily:
                                                                     'Inter',
@@ -502,12 +504,13 @@ class NeatProfileComments extends StatelessWidget {
                                                 child: Container(
                                                   width: 48,
                                                   height: 48,
-                                                  decoration: const ShapeDecoration(
-                                                    color: Color(
-                                                      0xFFE9ECF2,
-                                                    ),
-                                                    shape: OvalBorder(),
-                                                  ),
+                                                  decoration:
+                                                      const ShapeDecoration(
+                                                        color: Color(
+                                                          0xFFE9ECF2,
+                                                        ),
+                                                        shape: OvalBorder(),
+                                                      ),
                                                 ),
                                               ),
                                             ],
@@ -606,10 +609,9 @@ class NeatProfileComments extends StatelessWidget {
                                                               text:
                                                                   'commented on',
                                                               style: TextStyle(
-                                                                color:
-                                                                    Color(
-                                                                      0xFF808D9E,
-                                                                    ),
+                                                                color: Color(
+                                                                  0xFF808D9E,
+                                                                ),
                                                                 fontSize: 14,
                                                                 fontFamily:
                                                                     'Inter',
@@ -804,12 +806,13 @@ class NeatProfileComments extends StatelessWidget {
                                                 child: Container(
                                                   width: 48,
                                                   height: 48,
-                                                  decoration: const ShapeDecoration(
-                                                    color: Color(
-                                                      0xFFE9ECF2,
-                                                    ),
-                                                    shape: OvalBorder(),
-                                                  ),
+                                                  decoration:
+                                                      const ShapeDecoration(
+                                                        color: Color(
+                                                          0xFFE9ECF2,
+                                                        ),
+                                                        shape: OvalBorder(),
+                                                      ),
                                                 ),
                                               ),
                                             ],
@@ -908,10 +911,9 @@ class NeatProfileComments extends StatelessWidget {
                                                               text:
                                                                   'commented on',
                                                               style: TextStyle(
-                                                                color:
-                                                                    Color(
-                                                                      0xFF808D9E,
-                                                                    ),
+                                                                color: Color(
+                                                                  0xFF808D9E,
+                                                                ),
                                                                 fontSize: 14,
                                                                 fontFamily:
                                                                     'Inter',
@@ -1082,7 +1084,9 @@ class NeatProfileComments extends StatelessWidget {
                               width: 2,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                         child: const Row(
@@ -1244,7 +1248,9 @@ class NeatProfileComments extends StatelessWidget {
                         width: 1,
                         color: Color(0xFF4B4C57),
                       ),
-                      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                      borderRadius: BorderRadius.circular(
+                        NmtkShellTokens.of(context).radiusSm,
+                      ),
                     ),
                   ),
                   child: Column(
@@ -1372,7 +1378,9 @@ class NeatProfileComments extends StatelessWidget {
                               width: 2,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -1414,7 +1422,9 @@ class NeatProfileComments extends StatelessWidget {
                               width: 2,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -1635,7 +1645,10 @@ class NeatProfileComments extends StatelessWidget {
                             height: 11.33,
                             decoration: ShapeDecoration(
                               shape: RoundedRectangleBorder(
-                                side: const BorderSide(width: 1, color: Colors.white),
+                                side: const BorderSide(
+                                  width: 1,
+                                  color: Colors.white,
+                                ),
                                 borderRadius: BorderRadius.circular(2.67),
                               ),
                             ),

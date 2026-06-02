@@ -33,6 +33,30 @@ jobs:
           Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
           & ./nmtk/installer/windows/build-standalone.ps1
 
+      - name: Import Windows signing certificate
+        if: env.WINDOWS_CERTIFICATE_P12 != ''
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_P12: ${{ secrets.WINDOWS_CERTIFICATE_P12 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $certBytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_P12)
+          $certPath = Join-Path $env:RUNNER_TEMP "signing_cert.p12"
+          [IO.File]::WriteAllBytes($certPath, $certBytes)
+          $securePass = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          Import-PfxCertificate -FilePath $certPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePass
+          Remove-Item $certPath
+
+      - name: Sign Windows installer
+        if: env.WINDOWS_SIGNING_THUMBPRINT != ''
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_THUMBPRINT: ${{ secrets.WINDOWS_SIGNING_THUMBPRINT }}
+        run: |
+          $exe = Get-ChildItem -Path "nmtk\installer\windows" -Filter "*.exe" | Select-Object -First 1
+          if (-not $exe) { Write-Error "No .exe found to sign"; exit 1 }
+          .\nmtk\installer\windows\sign-installer.ps1 -InstallerPath $exe.FullName -Thumbprint $env:WINDOWS_SIGNING_THUMBPRINT
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:

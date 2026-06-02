@@ -1405,7 +1405,11 @@ class _ProfileActionRowState extends State<_ProfileActionRow> {
             child: Row(
               children: [
                 if (action.icon != null) ...[
-                  Icon(action.icon, size: 15, color: fgColor.withValues(alpha: 0.80)),
+                  Icon(
+                    action.icon,
+                    size: 15,
+                    color: fgColor.withValues(alpha: 0.80),
+                  ),
                   const SizedBox(width: 10),
                 ],
                 Text(

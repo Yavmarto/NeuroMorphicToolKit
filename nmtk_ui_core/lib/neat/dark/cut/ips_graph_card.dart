@@ -16,7 +16,9 @@ class IpsGraphCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
         ),
       ),
       child: const Column(
@@ -29,8 +31,28 @@ class IpsGraphCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('4th Semester', style: TextStyle(color: Color(0xFF808D9E), fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w400, height: 1.57, letterSpacing: -0.50)),
-              Text('3.7', style: TextStyle(color: Colors.white, fontSize: 30, fontFamily: 'Inter', fontWeight: FontWeight.w700, height: 1.20, letterSpacing: -0.30)),
+              Text(
+                '4th Semester',
+                style: TextStyle(
+                  color: Color(0xFF808D9E),
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w400,
+                  height: 1.57,
+                  letterSpacing: -0.50,
+                ),
+              ),
+              Text(
+                '3.7',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                  height: 1.20,
+                  letterSpacing: -0.30,
+                ),
+              ),
             ],
           ),
         ],

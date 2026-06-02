@@ -50,9 +50,9 @@ class NmtkBackendSupportBanner extends StatelessWidget {
   final VoidCallback? onDismiss;
 
   NmtkTone _tone() => switch (verdict) {
-    'faithful'    => NmtkTone.success,
+    'faithful' => NmtkTone.success,
     'unsupported' => NmtkTone.danger,
-    _             => NmtkTone.warning,
+    _ => NmtkTone.warning,
   };
 
   @override

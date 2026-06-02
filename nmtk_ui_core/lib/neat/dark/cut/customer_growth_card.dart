@@ -17,7 +17,9 @@ class CustomerGrowthCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
         ),
       ),
       child: const Column(
@@ -26,7 +28,10 @@ class CustomerGrowthCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         spacing: 24,
         children: [
-          DarkCardHeader(title: 'Customer Growth', iconColor: Color(0xFFCABDFE)),
+          DarkCardHeader(
+            title: 'Customer Growth',
+            iconColor: Color(0xFFCABDFE),
+          ),
           SizedBox(height: 120),
           ChartLegendRow(color: Color(0xFF2180FF), label: '10-20 yo'),
           ChartLegendRow(color: Color(0xFF20BFF7), label: '21-30 yo'),

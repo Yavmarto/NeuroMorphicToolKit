@@ -53,8 +53,7 @@ class NmtkSurfaceCard extends StatelessWidget {
     // "_NeuronsFound inside Layer 2" class of bugs into an immediate runtime
     // failure under debug builds; release builds skip the check.
     assert(() {
-      final ancestor =
-          context.findAncestorWidgetOfExactType<NmtkSurfaceCard>();
+      final ancestor = context.findAncestorWidgetOfExactType<NmtkSurfaceCard>();
       if (ancestor != null) {
         throw FlutterError(
           'NmtkSurfaceCard must not be nested inside another NmtkSurfaceCard. '

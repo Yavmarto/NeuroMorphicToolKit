@@ -13,7 +13,11 @@ class DarkStatusBar extends StatelessWidget {
       decoration: const BoxDecoration(color: Color(0xFF1D1D25)),
       child: Stack(
         children: [
-          const Positioned(left: 0, top: 0, child: SizedBox(width: 375, height: 44)),
+          const Positioned(
+            left: 0,
+            top: 0,
+            child: SizedBox(width: 375, height: 44),
+          ),
           Positioned(
             left: 336,
             top: 17.33,

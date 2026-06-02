@@ -25,7 +25,9 @@ class NeatProfileFollowers extends StatelessWidget {
                   decoration: ShapeDecoration(
                     color: const Color(0xFF1D1D25),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                      borderRadius: BorderRadius.circular(
+                        NmtkShellTokens.of(context).radiusSm,
+                      ),
                     ),
                   ),
                   child: Column(
@@ -199,12 +201,13 @@ class NeatProfileFollowers extends StatelessWidget {
                                                 child: Container(
                                                   width: 48,
                                                   height: 48,
-                                                  decoration: const ShapeDecoration(
-                                                    color: Color(
-                                                      0xFFE9ECF2,
-                                                    ),
-                                                    shape: OvalBorder(),
-                                                  ),
+                                                  decoration:
+                                                      const ShapeDecoration(
+                                                        color: Color(
+                                                          0xFFE9ECF2,
+                                                        ),
+                                                        shape: OvalBorder(),
+                                                      ),
                                                 ),
                                               ),
                                             ],
@@ -320,12 +323,13 @@ class NeatProfileFollowers extends StatelessWidget {
                                                           0xFF1D1D25,
                                                         ),
                                                         shape: RoundedRectangleBorder(
-                                                          side: const BorderSide(
-                                                            width: 2,
-                                                            color: Color(
-                                                              0xFF4B4C57,
-                                                            ),
-                                                          ),
+                                                          side:
+                                                              const BorderSide(
+                                                                width: 2,
+                                                                color: Color(
+                                                                  0xFF4B4C57,
+                                                                ),
+                                                              ),
                                                           borderRadius:
                                                               BorderRadius.circular(
                                                                 8,
@@ -350,15 +354,15 @@ class NeatProfileFollowers extends StatelessWidget {
                                                                 Clip.antiAlias,
                                                             decoration:
                                                                 const BoxDecoration(),
-                                                            child: const Stack(),
+                                                            child:
+                                                                const Stack(),
                                                           ),
                                                           const Text(
                                                             'Chat',
                                                             style: TextStyle(
-                                                              color:
-                                                                  Color(
-                                                                    0xFF2180FF,
-                                                                  ),
+                                                              color: Color(
+                                                                0xFF2180FF,
+                                                              ),
                                                               fontSize: 14,
                                                               fontFamily:
                                                                   'Inter',
@@ -383,12 +387,13 @@ class NeatProfileFollowers extends StatelessWidget {
                                                           0xFF1D1D25,
                                                         ),
                                                         shape: RoundedRectangleBorder(
-                                                          side: const BorderSide(
-                                                            width: 2,
-                                                            color: Color(
-                                                              0xFF4B4C57,
-                                                            ),
-                                                          ),
+                                                          side:
+                                                              const BorderSide(
+                                                                width: 2,
+                                                                color: Color(
+                                                                  0xFF4B4C57,
+                                                                ),
+                                                              ),
                                                           borderRadius:
                                                               BorderRadius.circular(
                                                                 8,
@@ -409,10 +414,9 @@ class NeatProfileFollowers extends StatelessWidget {
                                                           Text(
                                                             'Following',
                                                             style: TextStyle(
-                                                              color:
-                                                                  Color(
-                                                                    0xFF808D9E,
-                                                                  ),
+                                                              color: Color(
+                                                                0xFF808D9E,
+                                                              ),
                                                               fontSize: 14,
                                                               fontFamily:
                                                                   'Inter',
@@ -487,12 +491,13 @@ class NeatProfileFollowers extends StatelessWidget {
                                                 child: Container(
                                                   width: 48,
                                                   height: 48,
-                                                  decoration: const ShapeDecoration(
-                                                    color: Color(
-                                                      0xFFE9ECF2,
-                                                    ),
-                                                    shape: OvalBorder(),
-                                                  ),
+                                                  decoration:
+                                                      const ShapeDecoration(
+                                                        color: Color(
+                                                          0xFFE9ECF2,
+                                                        ),
+                                                        shape: OvalBorder(),
+                                                      ),
                                                 ),
                                               ),
                                             ],
@@ -608,12 +613,13 @@ class NeatProfileFollowers extends StatelessWidget {
                                                           0xFF1D1D25,
                                                         ),
                                                         shape: RoundedRectangleBorder(
-                                                          side: const BorderSide(
-                                                            width: 2,
-                                                            color: Color(
-                                                              0xFF4B4C57,
-                                                            ),
-                                                          ),
+                                                          side:
+                                                              const BorderSide(
+                                                                width: 2,
+                                                                color: Color(
+                                                                  0xFF4B4C57,
+                                                                ),
+                                                              ),
                                                           borderRadius:
                                                               BorderRadius.circular(
                                                                 8,
@@ -634,10 +640,9 @@ class NeatProfileFollowers extends StatelessWidget {
                                                           Text(
                                                             'Follow',
                                                             style: TextStyle(
-                                                              color:
-                                                                  Color(
-                                                                    0xFF2180FF,
-                                                                  ),
+                                                              color: Color(
+                                                                0xFF2180FF,
+                                                              ),
                                                               fontSize: 14,
                                                               fontFamily:
                                                                   'Inter',
@@ -712,12 +717,13 @@ class NeatProfileFollowers extends StatelessWidget {
                                                 child: Container(
                                                   width: 48,
                                                   height: 48,
-                                                  decoration: const ShapeDecoration(
-                                                    color: Color(
-                                                      0xFFE9ECF2,
-                                                    ),
-                                                    shape: OvalBorder(),
-                                                  ),
+                                                  decoration:
+                                                      const ShapeDecoration(
+                                                        color: Color(
+                                                          0xFFE9ECF2,
+                                                        ),
+                                                        shape: OvalBorder(),
+                                                      ),
                                                 ),
                                               ),
                                             ],
@@ -833,12 +839,13 @@ class NeatProfileFollowers extends StatelessWidget {
                                                           0xFF1D1D25,
                                                         ),
                                                         shape: RoundedRectangleBorder(
-                                                          side: const BorderSide(
-                                                            width: 2,
-                                                            color: Color(
-                                                              0xFF4B4C57,
-                                                            ),
-                                                          ),
+                                                          side:
+                                                              const BorderSide(
+                                                                width: 2,
+                                                                color: Color(
+                                                                  0xFF4B4C57,
+                                                                ),
+                                                              ),
                                                           borderRadius:
                                                               BorderRadius.circular(
                                                                 8,
@@ -859,10 +866,9 @@ class NeatProfileFollowers extends StatelessWidget {
                                                           Text(
                                                             'Follow',
                                                             style: TextStyle(
-                                                              color:
-                                                                  Color(
-                                                                    0xFF2180FF,
-                                                                  ),
+                                                              color: Color(
+                                                                0xFF2180FF,
+                                                              ),
                                                               fontSize: 14,
                                                               fontFamily:
                                                                   'Inter',
@@ -914,7 +920,9 @@ class NeatProfileFollowers extends StatelessWidget {
                               width: 2,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                         child: const Row(
@@ -1076,7 +1084,9 @@ class NeatProfileFollowers extends StatelessWidget {
                         width: 1,
                         color: Color(0xFF4B4C57),
                       ),
-                      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                      borderRadius: BorderRadius.circular(
+                        NmtkShellTokens.of(context).radiusSm,
+                      ),
                     ),
                   ),
                   child: Column(
@@ -1204,7 +1214,9 @@ class NeatProfileFollowers extends StatelessWidget {
                               width: 2,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -1246,7 +1258,9 @@ class NeatProfileFollowers extends StatelessWidget {
                               width: 2,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -1467,7 +1481,10 @@ class NeatProfileFollowers extends StatelessWidget {
                             height: 11.33,
                             decoration: ShapeDecoration(
                               shape: RoundedRectangleBorder(
-                                side: const BorderSide(width: 1, color: Colors.white),
+                                side: const BorderSide(
+                                  width: 1,
+                                  color: Colors.white,
+                                ),
                                 borderRadius: BorderRadius.circular(2.67),
                               ),
                             ),

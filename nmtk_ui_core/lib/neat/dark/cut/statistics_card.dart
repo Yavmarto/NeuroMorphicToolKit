@@ -17,7 +17,9 @@ class StatisticsCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
         ),
       ),
       child: const Column(
@@ -26,10 +28,30 @@ class StatisticsCard extends StatelessWidget {
         spacing: 24,
         children: [
           DarkCardHeader(title: 'Statistic', iconColor: Color(0xFFFFBC99)),
-          StatisticRow(value: '\$31,092', label: 'Sales', change: '4.2%', positive: true),
-          StatisticRow(value: '\$29,128', label: 'Marketing', change: '2.1%', positive: true),
-          StatisticRow(value: '\$8,094', label: 'Purchase', change: '1.4%', positive: false),
-          StatisticRow(value: '\$18,891', label: 'Return', change: '1.9%', positive: true),
+          StatisticRow(
+            value: '\$31,092',
+            label: 'Sales',
+            change: '4.2%',
+            positive: true,
+          ),
+          StatisticRow(
+            value: '\$29,128',
+            label: 'Marketing',
+            change: '2.1%',
+            positive: true,
+          ),
+          StatisticRow(
+            value: '\$8,094',
+            label: 'Purchase',
+            change: '1.4%',
+            positive: false,
+          ),
+          StatisticRow(
+            value: '\$18,891',
+            label: 'Return',
+            change: '1.9%',
+            positive: true,
+          ),
         ],
       ),
     );

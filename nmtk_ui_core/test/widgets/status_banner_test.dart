@@ -67,8 +67,9 @@ void main() {
   });
 
   group('NmtkStatusBanner', () {
-    testWidgets('renders exactly one ZetaInPageBanner per banner',
-        (tester) async {
+    testWidgets('renders exactly one ZetaInPageBanner per banner', (
+      tester,
+    ) async {
       await _pumpBanner(tester, tone: NmtkTone.success);
       expect(find.byType(ZetaInPageBanner), findsOneWidget);
     });
@@ -96,8 +97,7 @@ void main() {
       expect(find.text('content-payload'), findsOneWidget);
     });
 
-    testWidgets('forwards status to ZetaInPageBanner per tone',
-        (tester) async {
+    testWidgets('forwards status to ZetaInPageBanner per tone', (tester) async {
       for (final pair in const <(NmtkTone, ZetaWidgetStatus)>[
         (NmtkTone.neutral, ZetaWidgetStatus.info),
         (NmtkTone.info, ZetaWidgetStatus.info),
@@ -106,8 +106,9 @@ void main() {
         (NmtkTone.danger, ZetaWidgetStatus.negative),
       ]) {
         await _pumpBanner(tester, tone: pair.$1);
-        final banner =
-            tester.widget<ZetaInPageBanner>(find.byType(ZetaInPageBanner));
+        final banner = tester.widget<ZetaInPageBanner>(
+          find.byType(ZetaInPageBanner),
+        );
         expect(
           banner.status,
           pair.$2,
@@ -116,16 +117,19 @@ void main() {
       }
     });
 
-    testWidgets('canClose: false suppresses the close affordance',
-        (tester) async {
+    testWidgets('canClose: false suppresses the close affordance', (
+      tester,
+    ) async {
       await _pumpBanner(tester, tone: NmtkTone.info);
-      final banner =
-          tester.widget<ZetaInPageBanner>(find.byType(ZetaInPageBanner));
+      final banner = tester.widget<ZetaInPageBanner>(
+        find.byType(ZetaInPageBanner),
+      );
       expect(banner.onClose, isNull);
     });
 
-    testWidgets('canClose: true wires onClose through to ZetaInPageBanner',
-        (tester) async {
+    testWidgets('canClose: true wires onClose through to ZetaInPageBanner', (
+      tester,
+    ) async {
       var closed = false;
       await _pumpBanner(
         tester,
@@ -133,8 +137,9 @@ void main() {
         canClose: true,
         onClose: () => closed = true,
       );
-      final banner =
-          tester.widget<ZetaInPageBanner>(find.byType(ZetaInPageBanner));
+      final banner = tester.widget<ZetaInPageBanner>(
+        find.byType(ZetaInPageBanner),
+      );
       expect(banner.onClose, isNotNull);
       banner.onClose?.call();
       expect(closed, isTrue);

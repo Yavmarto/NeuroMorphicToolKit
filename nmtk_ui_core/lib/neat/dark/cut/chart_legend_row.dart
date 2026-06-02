@@ -14,10 +14,25 @@ class ChartLegendRow extends StatelessWidget {
       spacing: 8,
       children: [
         Container(
-          width: 10, height: 10,
-          decoration: ShapeDecoration(color: color, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2))),
+          width: 10,
+          height: 10,
+          decoration: ShapeDecoration(
+            color: color,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
         ),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w600, height: 1.43)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w600,
+            height: 1.43,
+          ),
+        ),
       ],
     );
   }

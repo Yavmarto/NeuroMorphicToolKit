@@ -406,9 +406,8 @@ class AppTheme {
     const background = Color(0xFFF2F2F2);
     const surface = Color(0xFFFFFFFF);
     const surfaceVariant = Color(0xFFE5E7EB);
-    
+
     const textPrimary = Color(0xFF18181B);
-    
 
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(

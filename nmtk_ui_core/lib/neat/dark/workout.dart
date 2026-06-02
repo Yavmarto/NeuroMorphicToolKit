@@ -5,7 +5,11 @@ import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
 import 'package:nmtk_ui_core/neat/dark/cut/workout_widgets.dart';
 
 class NeatWorkOut extends StatelessWidget {
-  @Preview(name: 'Neat Dark – Workout', group: 'Neat Dark Pages', size: Size(375, 1072))
+  @Preview(
+    name: 'Neat Dark – Workout',
+    group: 'Neat Dark Pages',
+    size: Size(375, 1072),
+  )
   const NeatWorkOut({super.key});
 
   @override

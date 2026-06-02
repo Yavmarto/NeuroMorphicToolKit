@@ -54,7 +54,9 @@ class NeatSearch extends StatelessWidget {
                                       width: 2,
                                       color: Color(0xFF2180FF),
                                     ),
-                                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                                    borderRadius: BorderRadius.circular(
+                                      NmtkShellTokens.of(context).radiusSm,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -76,9 +78,7 @@ class NeatSearch extends StatelessWidget {
                                 ),
                               ),
                               Container(
-                                transform: Matrix4.identity()
-                                  
-                                  ..rotateZ(1.57),
+                                transform: Matrix4.identity()..rotateZ(1.57),
                                 width: 24,
                                 decoration: const ShapeDecoration(
                                   shape: RoundedRectangleBorder(
@@ -626,7 +626,10 @@ class NeatSearch extends StatelessWidget {
                             height: 11.33,
                             decoration: ShapeDecoration(
                               shape: RoundedRectangleBorder(
-                                side: const BorderSide(width: 1, color: Colors.white),
+                                side: const BorderSide(
+                                  width: 1,
+                                  color: Colors.white,
+                                ),
                                 borderRadius: BorderRadius.circular(2.67),
                               ),
                             ),

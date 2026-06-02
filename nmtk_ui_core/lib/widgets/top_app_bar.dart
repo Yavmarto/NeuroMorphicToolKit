@@ -109,9 +109,8 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                             style: IconButton.styleFrom(
                               backgroundColor: isSelected
                                   ? palette.accentContainer
-                                  : Zeta.of(
-                                      context,
-                                    ).colors.surfaceDefault.withValues(alpha: 0),
+                                  : Zeta.of(context).colors.surfaceDefault
+                                        .withValues(alpha: 0),
                               foregroundColor: isSelected
                                   ? palette.accentForeground
                                   : theme.colorScheme.onSurfaceVariant,

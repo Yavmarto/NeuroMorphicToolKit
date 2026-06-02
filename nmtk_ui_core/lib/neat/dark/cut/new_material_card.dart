@@ -17,7 +17,9 @@ class NewMaterialCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
         ),
       ),
       child: Column(
@@ -25,10 +27,16 @@ class NewMaterialCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         spacing: 24,
         children: [
-          const DarkCardHeader(title: 'New Material', iconColor: Color(0xFFFFBC99)),
+          const DarkCardHeader(
+            title: 'New Material',
+            iconColor: Color(0xFFFFBC99),
+          ),
           const MaterialFileRow(name: 'Kemanan Data Bab 3', size: '290.23 KB'),
           const Divider(color: Color(0xFF4B4C57), thickness: 1),
-          const MaterialFileRow(name: 'Database Administration', size: '290.23 KB'),
+          const MaterialFileRow(
+            name: 'Database Administration',
+            size: '290.23 KB',
+          ),
           const Divider(color: Color(0xFF4B4C57), thickness: 1),
           const MaterialFileRow(name: 'MPD-Bab III-Komjar', size: '290.23 KB'),
           const Divider(color: Color(0xFF4B4C57), thickness: 1),
@@ -39,12 +47,26 @@ class NewMaterialCard extends StatelessWidget {
               color: const Color(0xFF1D1D25),
               shape: RoundedRectangleBorder(
                 side: const BorderSide(width: 2, color: Color(0xFF4B4C57)),
-                borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                borderRadius: BorderRadius.circular(
+                  NmtkShellTokens.of(context).radiusSm,
+                ),
               ),
             ),
-            child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text('See All Material', style: TextStyle(color: Colors.white, fontSize: 16, fontFamily: 'Inter', fontWeight: FontWeight.w700, height: 1.25)),
-            ]),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'See All Material',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    height: 1.25,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

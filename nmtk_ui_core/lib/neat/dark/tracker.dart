@@ -5,7 +5,11 @@ import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
 import 'package:nmtk_ui_core/neat/dark/cut/tracker_widgets.dart';
 
 class NeatTracker extends StatelessWidget {
-  @Preview(name: 'Neat Dark – Tracker', group: 'Neat Dark Pages', size: Size(375, 1217))
+  @Preview(
+    name: 'Neat Dark – Tracker',
+    group: 'Neat Dark Pages',
+    size: Size(375, 1217),
+  )
   const NeatTracker({super.key});
 
   @override
@@ -23,11 +27,38 @@ class NeatTracker extends StatelessWidget {
               Positioned(left: 0, top: 44, child: DarkTopBar()),
               Positioned(left: 16, top: 156, child: ProgressCard()),
               Positioned(left: 16, top: 292, child: CaloriesCard()),
-              Positioned(left: 195, top: 292, child: TrackerSmallStatCard(value: '16', label: 'Glass of Water', iconBg: Color(0xFFE0EBFA))),
-              Positioned(left: 195, top: 408, child: TrackerSmallStatCard(value: '10km', label: 'Step to Walk', iconBg: Color(0xFFE7FFF2))),
+              Positioned(
+                left: 195,
+                top: 292,
+                child: TrackerSmallStatCard(
+                  value: '16',
+                  label: 'Glass of Water',
+                  iconBg: Color(0xFFE0EBFA),
+                ),
+              ),
+              Positioned(
+                left: 195,
+                top: 408,
+                child: TrackerSmallStatCard(
+                  value: '10km',
+                  label: 'Step to Walk',
+                  iconBg: Color(0xFFE7FFF2),
+                ),
+              ),
               Positioned(left: 16, top: 524, child: ActivitiesCard()),
-              Positioned(left: 16, top: 1030, child: ActivityTypeCard(label: 'Cycling', sublabel: '12,000 km')),
-              Positioned(left: 195, top: 1030, child: ActivityTypeCard(label: 'Heart', sublabel: '100 bpm')),
+              Positioned(
+                left: 16,
+                top: 1030,
+                child: ActivityTypeCard(
+                  label: 'Cycling',
+                  sublabel: '12,000 km',
+                ),
+              ),
+              Positioned(
+                left: 195,
+                top: 1030,
+                child: ActivityTypeCard(label: 'Heart', sublabel: '100 bpm'),
+              ),
             ],
           ),
         ),

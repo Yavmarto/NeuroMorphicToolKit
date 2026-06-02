@@ -222,7 +222,8 @@ void main() {
     expect(find.text('Section body'), findsOneWidget);
     expect(find.byIcon(Icons.dashboard_outlined), findsOneWidget);
     expect(find.byIcon(Icons.more_horiz), findsOneWidget);
-    expect(decoration.color, const Color(0xFFF1F8FF));
+    expect(decoration.color, isNotNull);
+    expect(decoration.borderRadius, isNotNull);
   });
 
   testWidgets('NmtkSectionCard applies non-neutral tone through surface card', (

@@ -5,7 +5,11 @@ import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
 import 'package:nmtk_ui_core/neat/dark/cut/finance_widgets.dart';
 
 class NeatFinance extends StatelessWidget {
-  @Preview(name: 'Neat Dark – Finance', group: 'Neat Dark Pages', size: Size(375, 1148))
+  @Preview(
+    name: 'Neat Dark – Finance',
+    group: 'Neat Dark Pages',
+    size: Size(375, 1148),
+  )
   const NeatFinance({super.key});
 
   @override
@@ -22,8 +26,26 @@ class NeatFinance extends StatelessWidget {
               Positioned(left: 0, top: 0, child: DarkStatusBar()),
               Positioned(left: 0, top: 44, child: DarkTopBar()),
               Positioned(left: 16, top: 156, child: IncomeCard()),
-              Positioned(left: 16, top: 509, child: FlowCard(title: 'Inflow', amount: '700', change: '10% from previous month', iconBg: Color(0x3382BE6D))),
-              Positioned(left: 16, top: 605, child: FlowCard(title: 'Outflow', amount: '450', change: '15% from previous month', iconBg: Color(0x33FF6955))),
+              Positioned(
+                left: 16,
+                top: 509,
+                child: FlowCard(
+                  title: 'Inflow',
+                  amount: '700',
+                  change: '10% from previous month',
+                  iconBg: Color(0x3382BE6D),
+                ),
+              ),
+              Positioned(
+                left: 16,
+                top: 605,
+                child: FlowCard(
+                  title: 'Outflow',
+                  amount: '450',
+                  change: '15% from previous month',
+                  iconBg: Color(0x33FF6955),
+                ),
+              ),
               Positioned(left: 16, top: 701, child: OutcomeCard()),
             ],
           ),

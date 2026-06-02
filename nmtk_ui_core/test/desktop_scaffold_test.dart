@@ -8,8 +8,6 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 // Test helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-
-
 Widget _buildHarness(Widget child) {
   return MaterialApp(home: child);
 }

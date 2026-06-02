@@ -62,16 +62,12 @@ class NmtkSectionHeader extends StatelessWidget {
       padding: padding,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final stackTrailing =
-              trailing != null && constraints.maxWidth < 360;
+          final stackTrailing = trailing != null && constraints.maxWidth < 360;
 
           final headerRow = Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (leading != null) ...[
-                leading!,
-                const SizedBox(width: 8),
-              ],
+              if (leading != null) ...[leading!, const SizedBox(width: 8)],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

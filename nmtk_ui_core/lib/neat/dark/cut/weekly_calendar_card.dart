@@ -17,7 +17,9 @@ class WeeklyCalendarCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
         ),
       ),
       child: Column(
@@ -59,13 +61,41 @@ class WeeklyCalendarCard extends StatelessWidget {
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              WeeklyDayColumn(dayLabel: 'S', dateLabel: '25', isHighlighted: false),
-              WeeklyDayColumn(dayLabel: 'S', dateLabel: '26', isHighlighted: false),
-              WeeklyDayColumn(dayLabel: 'R', dateLabel: '27', isHighlighted: false),
-              WeeklyDayColumn(dayLabel: 'K', dateLabel: '28', isHighlighted: true),
-              WeeklyDayColumn(dayLabel: 'J', dateLabel: '29', isHighlighted: false),
-              WeeklyDayColumn(dayLabel: 'S', dateLabel: '30', isHighlighted: false),
-              WeeklyDayColumn(dayLabel: 'M', dateLabel: '31', isHighlighted: false),
+              WeeklyDayColumn(
+                dayLabel: 'S',
+                dateLabel: '25',
+                isHighlighted: false,
+              ),
+              WeeklyDayColumn(
+                dayLabel: 'S',
+                dateLabel: '26',
+                isHighlighted: false,
+              ),
+              WeeklyDayColumn(
+                dayLabel: 'R',
+                dateLabel: '27',
+                isHighlighted: false,
+              ),
+              WeeklyDayColumn(
+                dayLabel: 'K',
+                dateLabel: '28',
+                isHighlighted: true,
+              ),
+              WeeklyDayColumn(
+                dayLabel: 'J',
+                dateLabel: '29',
+                isHighlighted: false,
+              ),
+              WeeklyDayColumn(
+                dayLabel: 'S',
+                dateLabel: '30',
+                isHighlighted: false,
+              ),
+              WeeklyDayColumn(
+                dayLabel: 'M',
+                dateLabel: '31',
+                isHighlighted: false,
+              ),
             ],
           ),
           // Today dot
@@ -124,4 +154,3 @@ class WeeklyCalendarCard extends StatelessWidget {
     );
   }
 }
-

@@ -29,7 +29,9 @@ class NeatProfileProduct extends StatelessWidget {
                         width: 1,
                         color: Color(0xFF4B4C57),
                       ),
-                      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                      borderRadius: BorderRadius.circular(
+                        NmtkShellTokens.of(context).radiusSm,
+                      ),
                     ),
                   ),
                   child: Column(
@@ -177,7 +179,9 @@ class NeatProfileProduct extends StatelessWidget {
                               width: 1,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                       ),
@@ -205,7 +209,9 @@ class NeatProfileProduct extends StatelessWidget {
                         decoration: ShapeDecoration(
                           color: const Color(0xFFE9ECF2),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                       ),
@@ -283,7 +289,9 @@ class NeatProfileProduct extends StatelessWidget {
                         decoration: ShapeDecoration(
                           color: const Color(0xFFE9ECF2),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                       ),
@@ -361,7 +369,9 @@ class NeatProfileProduct extends StatelessWidget {
                         decoration: ShapeDecoration(
                           color: const Color(0xFFE9ECF2),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                       ),
@@ -435,7 +445,9 @@ class NeatProfileProduct extends StatelessWidget {
                               width: 2,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                         child: const Row(
@@ -597,7 +609,9 @@ class NeatProfileProduct extends StatelessWidget {
                         width: 1,
                         color: Color(0xFF4B4C57),
                       ),
-                      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                      borderRadius: BorderRadius.circular(
+                        NmtkShellTokens.of(context).radiusSm,
+                      ),
                     ),
                   ),
                   child: Column(
@@ -725,7 +739,9 @@ class NeatProfileProduct extends StatelessWidget {
                               width: 2,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -767,7 +783,9 @@ class NeatProfileProduct extends StatelessWidget {
                               width: 2,
                               color: Color(0xFF4B4C57),
                             ),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                         ),
                         child: Row(
@@ -988,7 +1006,10 @@ class NeatProfileProduct extends StatelessWidget {
                             height: 11.33,
                             decoration: ShapeDecoration(
                               shape: RoundedRectangleBorder(
-                                side: const BorderSide(width: 1, color: Colors.white),
+                                side: const BorderSide(
+                                  width: 1,
+                                  color: Colors.white,
+                                ),
                                 borderRadius: BorderRadius.circular(2.67),
                               ),
                             ),

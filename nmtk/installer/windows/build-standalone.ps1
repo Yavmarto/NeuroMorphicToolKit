@@ -135,6 +135,25 @@ if (-not $NoInstaller) {
         $IssPath = Join-Path $ScriptDir "setup.iss"
         & $ISCC $IssPath
         Write-Host "==> Installer created successfully!" -ForegroundColor Green
+
+        # --- Code signing (conditional on WINDOWS_SIGNING_THUMBPRINT) ---
+        if ($env:WINDOWS_SIGNING_THUMBPRINT) {
+            Write-Host "Signing installer..."
+            $InstallerExe = Get-ChildItem -Path (Join-Path $RepoRoot "nmtk\dist") -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $InstallerExe) {
+                # Fall back to searching the script directory
+                $InstallerExe = Get-ChildItem -Path $ScriptDir -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            }
+            if ($InstallerExe) {
+                & "$PSScriptRoot\sign-installer.ps1" -InstallerPath $InstallerExe.FullName -Thumbprint $env:WINDOWS_SIGNING_THUMBPRINT
+                if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+                Write-Host "Installer signed."
+            } else {
+                Write-Warning "No .exe installer found to sign — skipping signing."
+            }
+        } else {
+            Write-Host "WINDOWS_SIGNING_THUMBPRINT not set — skipping signing (unsigned build)."
+        }
     } else {
         Write-Warning "ISCC.exe not found. Skipping installer creation. Please install Inno Setup 6."
     }

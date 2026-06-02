@@ -15,7 +15,9 @@ class AttendanceCheckInCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
         ),
       ),
       child: Column(
@@ -117,11 +119,16 @@ class AttendanceCheckInCard extends StatelessWidget {
             children: [
               Container(
                 width: 143.73,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 decoration: ShapeDecoration(
                   color: const Color(0xFF2180FF),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                    borderRadius: BorderRadius.circular(
+                      NmtkShellTokens.of(context).radiusSm,
+                    ),
                   ),
                 ),
                 child: const Row(
@@ -145,12 +152,17 @@ class AttendanceCheckInCard extends StatelessWidget {
               ),
               Container(
                 width: 143.73,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 decoration: ShapeDecoration(
                   color: Colors.white,
                   shape: RoundedRectangleBorder(
                     side: const BorderSide(width: 2, color: Color(0xFFE9ECF2)),
-                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                    borderRadius: BorderRadius.circular(
+                      NmtkShellTokens.of(context).radiusSm,
+                    ),
                   ),
                 ),
                 child: const Row(

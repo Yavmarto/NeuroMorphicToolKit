@@ -16,15 +16,29 @@ class WorkoutStatsCard extends StatelessWidget {
         color: const Color(0xFF1D1D25),
         shape: RoundedRectangleBorder(
           side: const BorderSide(width: 1, color: Color(0xFF4B4C57)),
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
         ),
       ),
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          WorkoutStat(iconBg: Color(0x33FFBC99), value: '380 cal', label: 'Burned'),
-          WorkoutStat(iconBg: Color(0x337CDBA2), value: '80 kg', label: 'Lifted'),
-          WorkoutStat(iconBg: Color(0x4CCABDFE), value: '32 min', label: 'Duration'),
+          WorkoutStat(
+            iconBg: Color(0x33FFBC99),
+            value: '380 cal',
+            label: 'Burned',
+          ),
+          WorkoutStat(
+            iconBg: Color(0x337CDBA2),
+            value: '80 kg',
+            label: 'Lifted',
+          ),
+          WorkoutStat(
+            iconBg: Color(0x4CCABDFE),
+            value: '32 min',
+            label: 'Duration',
+          ),
         ],
       ),
     );

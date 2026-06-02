@@ -220,10 +220,9 @@ class _WaitingContent extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                fontSize: 14,
-                color: textColor,
-              ),
+              style: Zeta.of(
+                context,
+              ).textStyles.bodyMedium.copyWith(fontSize: 14, color: textColor),
             ),
           ],
         );

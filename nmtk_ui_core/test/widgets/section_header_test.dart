@@ -53,8 +53,9 @@ void main() {
       expect(find.text('Coverage 6/6'), findsOneWidget);
     });
 
-    testWidgets('renders no filled+rounded BoxDecoration in its subtree',
-        (tester) async {
+    testWidgets('renders no filled+rounded BoxDecoration in its subtree', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -70,13 +71,15 @@ void main() {
       expect(
         find.byWidgetPredicate(_hasFilledRoundedBoxDecoration),
         findsNothing,
-        reason: 'NmtkSectionHeader must be frame-less — no filled+rounded '
+        reason:
+            'NmtkSectionHeader must be frame-less — no filled+rounded '
             'BoxDecoration may appear in its subtree.',
       );
     });
 
-    testWidgets('renders trailing widget alongside the title at wide widths',
-        (tester) async {
+    testWidgets('renders trailing widget alongside the title at wide widths', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(1280, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -105,8 +108,9 @@ void main() {
   });
 
   group('NmtkSection', () {
-    testWidgets('renders title, subtitle, and child without a frame',
-        (tester) async {
+    testWidgets('renders title, subtitle, and child without a frame', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(

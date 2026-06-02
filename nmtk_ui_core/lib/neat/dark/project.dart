@@ -5,7 +5,11 @@ import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
 import 'package:nmtk_ui_core/neat/dark/cut/project_widgets.dart';
 
 class NeatProject extends StatelessWidget {
-  @Preview(name: 'Neat Dark – Project', group: 'Neat Dark Pages', size: Size(375, 1497))
+  @Preview(
+    name: 'Neat Dark – Project',
+    group: 'Neat Dark Pages',
+    size: Size(375, 1497),
+  )
   const NeatProject({super.key});
 
   @override
@@ -23,8 +27,24 @@ class NeatProject extends StatelessWidget {
               Positioned(left: 0, top: 44, child: DarkTopBar()),
               Positioned(left: 16, top: 156, child: WorkspaceHeader()),
               Positioned(left: 16, top: 264, child: ProjectsCompletedCard()),
-              Positioned(left: 195, top: 264, child: ProjectSmallCountCard(value: '12', label: 'Inquiry', iconBg: Color(0xFFB5E4CA))),
-              Positioned(left: 195, top: 380, child: ProjectSmallCountCard(value: '28', label: 'On Going', iconBg: Color(0xFFCABDFE))),
+              Positioned(
+                left: 195,
+                top: 264,
+                child: ProjectSmallCountCard(
+                  value: '12',
+                  label: 'Inquiry',
+                  iconBg: Color(0xFFB5E4CA),
+                ),
+              ),
+              Positioned(
+                left: 195,
+                top: 380,
+                child: ProjectSmallCountCard(
+                  value: '28',
+                  label: 'On Going',
+                  iconBg: Color(0xFFCABDFE),
+                ),
+              ),
               Positioned(left: 16, top: 496, child: RecentProjectsCard()),
               Positioned(left: 16, top: 1037, child: TodayTasksCard()),
             ],

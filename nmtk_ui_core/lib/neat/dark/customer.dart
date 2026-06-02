@@ -62,11 +62,7 @@ class NeatCustomer extends StatelessWidget {
                   label: 'Instagram Followers',
                 ),
               ),
-              Positioned(
-                left: 16,
-                top: 1108,
-                child: CustomerMessageCard(),
-              ),
+              Positioned(left: 16, top: 1108, child: CustomerMessageCard()),
             ],
           ),
         ),

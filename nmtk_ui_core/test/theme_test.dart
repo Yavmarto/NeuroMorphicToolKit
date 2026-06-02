@@ -47,9 +47,7 @@ void main() {
       final other = const NmtkThemeExtension(
         terminalBackground: Colors.white,
         syntaxHighlightColor: Colors.green,
-        brandGradient: LinearGradient(
-          colors: [Colors.green, Colors.yellow],
-        ),
+        brandGradient: LinearGradient(colors: [Colors.green, Colors.yellow]),
       );
 
       final lerped = extension.lerp(other, 0.5) as NmtkThemeExtension;

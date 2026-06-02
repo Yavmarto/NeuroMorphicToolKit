@@ -43,9 +43,9 @@ class NmtkSummaryCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: Zeta.of(context).textStyles.titleSmall.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Zeta.of(
+              context,
+            ).textStyles.titleSmall.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(description),

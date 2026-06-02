@@ -28,9 +28,9 @@ NmtkTonePalette resolveNmtkTonePalette(BuildContext context, NmtkTone tone) {
     switch (tone) {
       case NmtkTone.neutral:
         return NmtkTonePalette(
-          foreground: colors.mainPrimary,
-          background: colors.surfacePrimarySubtle,
-          border: colors.borderPrimary,
+          foreground: colors.mainDefault,
+          background: colors.surfaceDefault,
+          border: colors.borderDefault,
         );
       case NmtkTone.info:
         return NmtkTonePalette(
@@ -66,9 +66,9 @@ NmtkTonePalette resolveNmtkTonePalette(BuildContext context, NmtkTone tone) {
   switch (tone) {
     case NmtkTone.neutral:
       return NmtkTonePalette(
-        foreground: theme.colorScheme.primary,
-        background: theme.colorScheme.primaryContainer.withValues(alpha: 0.08),
-        border: theme.colorScheme.primary.withValues(alpha: 0.35),
+        foreground: theme.colorScheme.onSurface,
+        background: theme.colorScheme.surfaceContainerLow,
+        border: theme.colorScheme.outlineVariant,
       );
     case NmtkTone.info:
       return NmtkTonePalette(

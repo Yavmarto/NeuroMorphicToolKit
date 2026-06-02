@@ -5,7 +5,11 @@ import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
 import 'package:nmtk_ui_core/neat/dark/cut/overview_widgets.dart';
 
 class NeatOverview extends StatelessWidget {
-  @Preview(name: 'Neat Dark – Overview', group: 'Neat Dark Pages', size: Size(375, 1099))
+  @Preview(
+    name: 'Neat Dark – Overview',
+    group: 'Neat Dark Pages',
+    size: Size(375, 1099),
+  )
   const NeatOverview({super.key});
 
   @override
@@ -23,8 +27,22 @@ class NeatOverview extends StatelessWidget {
               Positioned(left: 0, top: 44, child: DarkTopBar()),
               Positioned(left: 16, top: 156, child: OverviewChartCard()),
               Positioned(left: 16, top: 539, child: StatisticsCard()),
-              Positioned(left: 16, top: 867, child: TargetCard(value: '72%', label: 'Target reached this month')),
-              Positioned(left: 16, top: 981, child: TargetCard(value: '89%', label: 'Engagement rate this month')),
+              Positioned(
+                left: 16,
+                top: 867,
+                child: TargetCard(
+                  value: '72%',
+                  label: 'Target reached this month',
+                ),
+              ),
+              Positioned(
+                left: 16,
+                top: 981,
+                child: TargetCard(
+                  value: '89%',
+                  label: 'Engagement rate this month',
+                ),
+              ),
             ],
           ),
         ),

@@ -228,13 +228,17 @@ class _PipelineStepState extends State<_PipelineStep>
     );
     _pulseScale = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 1.06)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(
+          begin: 1.0,
+          end: 1.06,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 40,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 1.06, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween(
+          begin: 1.06,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 60,
       ),
     ]).animate(_pulseCtrl);
@@ -286,8 +290,7 @@ class _PipelineStepState extends State<_PipelineStep>
             style: Zeta.of(context).textStyles.bodyMedium.copyWith(
               color: theme.colorScheme.onSurface,
               fontSize: 11,
-              fontWeight:
-                  widget.selected ? FontWeight.w700 : FontWeight.w600,
+              fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w600,
             ),
           ),
         ],
@@ -310,7 +313,8 @@ class _PipelineStepState extends State<_PipelineStep>
       child: Semantics(
         button: widget.onTap != null,
         selected: widget.selected,
-        label: '${widget.data.label} step, '
+        label:
+            '${widget.data.label} step, '
             'status: ${widget.data.status.name}'
             '${widget.data.detail != null ? ", ${widget.data.detail}" : ""}',
         child: widget.onTap == null

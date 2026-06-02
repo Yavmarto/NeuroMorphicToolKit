@@ -4,12 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/settings_provider.dart';
 
-/// Settings screen — content-only widget (no Scaffold; chrome is provided by
-/// NmtkDesktopScaffold in ToolViewScreen / the ShellRoute wrapper).
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -18,306 +15,210 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  // No external TextEditingControllers: passing an external controller to
-  // ZetaTextInput causes the upstream ZetaTextFormFieldState to add a listener
-  // in initState but never remove it in dispose, accumulating zombie listeners
-  // across rebuilds. Instead we pass initialValue once and let onChange handle
-  // persistence — ZetaTextInput owns its controller internally.
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsStateProvider);
-    final moduleProvider = ref.watch(moduleStateProvider);
     final analytics = ref.watch(analyticsServiceProvider);
     final controlApi = ref.watch(controlApiServiceProvider);
     final zeta = Zeta.of(context);
+    final spacing = zeta.spacing;
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        NmtkSurfaceCard(
-          title: 'Launcher Settings',
-          subtitle:
-              'Adjust shell behavior, logging, telemetry, and per-module overrides here.',
-          child: Text(
-            'Launcher configuration and global preferences.',
-            style: Zeta.of(context).textStyles.bodyMedium.apply(
-                  color: zeta.colors.mainSubtle,
-                ),
-          ),
-        ),
-        const SizedBox(height: 16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final selectWidth = constraints.maxWidth * 0.28;
+        final inputWidth = constraints.maxWidth * 0.42;
+        final buttonWidth = constraints.maxWidth * 0.16;
 
-        // ── Appearance ──────────────────────────────────────────────────────
-        NmtkSurfaceCard(
-          title: 'Appearance',
-          subtitle: 'Control how the launcher theme is rendered.',
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Theme', style: Zeta.of(context).textStyles.bodyMedium),
-              DropdownButton<ThemeMode>(
-                value: settings.themeMode,
-                onChanged: (ThemeMode? newValue) {
-                  if (newValue != null) settings.setThemeMode(newValue);
-                },
-                items: const [
-                  DropdownMenuItem(
-                      value: ThemeMode.system, child: Text('System')),
-                  DropdownMenuItem(
-                      value: ThemeMode.light, child: Text('Light')),
-                  DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // ── Logging ─────────────────────────────────────────────────────────
-        NmtkSurfaceCard(
-          title: 'Logging',
-          subtitle: 'Tune launcher logging verbosity for diagnostics.',
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Log Level', style: Zeta.of(context).textStyles.bodyMedium),
-              DropdownButton<LogLevel>(
-                value: settings.logLevel,
-                onChanged: (LogLevel? newValue) {
-                  if (newValue != null) settings.setLogLevel(newValue);
-                },
-                items: LogLevel.values
-                    .map(
-                      (level) => DropdownMenuItem<LogLevel>(
-                        value: level,
-                        child: Text(level.name.toUpperCase()),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        NmtkSurfaceCard(
-          title: 'Launcher Control API',
-          subtitle:
-              'Configure the launcher backend host used by mobile or remote clients.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Launcher Control API Base URL',
-                style: Zeta.of(context).textStyles.labelMedium,
-              ),
-              const SizedBox(height: 6),
-              ZetaTextInput(
-                key: const ValueKey('launcher-control-url'),
-                initialValue:
-                    ref.read(settingsStateProvider).launcherControlApiBaseUrl ??
-                        '',
-                placeholder: 'http://192.168.1.50:8091',
-                onChange: settings.setLauncherControlApiBaseUrl,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'On Android and iOS, point this at the machine running '
-                '`scripts/launcher_control_service.py --host 0.0.0.0 --port 8091`.',
-                style: Zeta.of(context).textStyles.bodySmall.apply(
-                      color: zeta.colors.mainSubtle,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              NmtkOutlinedButton(
-                onPressed: () => context.go('/backend-setup'),
-                icon: Icons.dns_outlined,
-                label: 'Server Setup',
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // ── Analytics & Telemetry ────────────────────────────────────────────
-        NmtkSurfaceCard(
-          title: 'Analytics & Telemetry',
-          subtitle:
-              'Decide how much anonymous health data the launcher can send.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Opt-in Telemetry',
-                          style: Zeta.of(context).textStyles.bodyMedium,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Share anonymous usage data and performance metrics.',
-                          style: Zeta.of(context).textStyles.bodySmall.apply(
-                                color: zeta.colors.mainSubtle,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Switch(
-                    value: settings.telemetryEnabled,
-                    onChanged: settings.setTelemetryEnabled,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Column(
+        return ListView(
+          padding: EdgeInsets.all(spacing.xl_2),
+          children: [
+            NmtkSection(
+              title: 'Settings',
+              titleStyle: zeta.textStyles.heading3,
+              child: const SizedBox.shrink(),
+            ),
+            SizedBox(height: spacing.large),
+            NmtkSection(
+              title: 'General',
+              titleStyle: zeta.textStyles.titleLarge,
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Remote Reporting Endpoint',
-                    style: Zeta.of(context).textStyles.labelMedium,
+                  ZetaListItem(
+                    primaryText: 'Theme',
+                    trailing: SizedBox(
+                      width: selectWidth,
+                      child: ZetaSelectInput<ThemeMode>(
+                        key: ValueKey('select-theme-${settings.themeMode}'),
+                        initialValue: settings.themeMode,
+                        items: [
+                          ZetaDropdownItem(
+                              value: ThemeMode.system, label: 'System'),
+                          ZetaDropdownItem(
+                              value: ThemeMode.light, label: 'Light'),
+                          ZetaDropdownItem(
+                              value: ThemeMode.dark, label: 'Dark'),
+                        ],
+                        onChange: (ThemeMode? v) {
+                          if (v != null) settings.setThemeMode(v);
+                        },
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  ZetaTextInput(
-                    key: const ValueKey('remote-endpoint-url'),
-                    initialValue:
-                        ref.read(settingsStateProvider).remoteEndpoint ?? '',
-                    placeholder: 'https://example.com/api/logs',
-                    onChange: settings.setRemoteEndpoint,
+                  ZetaListItem(
+                    primaryText: 'Server',
+                    trailing: SizedBox(
+                      width: inputWidth,
+                      child: ZetaTextInput(
+                        key: const ValueKey('launcher-control-url'),
+                        initialValue: ref
+                                .read(settingsStateProvider)
+                                .launcherControlApiBaseUrl ??
+                            '',
+                        placeholder: 'http://192.168.1.50:8091',
+                        onChange: settings.setLauncherControlApiBaseUrl,
+                      ),
+                    ),
+                  ),
+                  ZetaListItem(
+                    primaryText: 'Server Setup',
+                    trailing: SizedBox(
+                      width: buttonWidth,
+                      child: NmtkOutlinedButton(
+                        onPressed: () => context.go('/backend-setup'),
+                        icon: Icons.dns_outlined,
+                        label: 'Setup',
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // ── Local Crash Logs ─────────────────────────────────────────────────
-        NmtkSurfaceCard(
-          title: 'Local Crash Logs',
-          subtitle: 'Inspect launcher crash history without leaving the app.',
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              NmtkPrimaryButton(
-                onPressed: () async {
-                  try {
-                    List<String> logs;
-                    try {
-                      // Prefer the API path — works regardless of sandbox.
-                      logs = await controlApi.fetchCrashLogLines();
-                    } catch (_) {
-                      // Fallback: direct file read (works on non-sandboxed
-                      // desktop builds and in tests).
-                      logs = await analytics.getLocalLogLines();
-                    }
-                    if (!context.mounted) return;
-                    _showLogDialog(
-                      context,
-                      title: 'Local Crash Logs',
-                      logs: logs,
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    NmtkToasts.error(
-                      context,
-                      'Could not fetch local logs: $e',
-                    );
-                  }
-                },
-                icon: Icons.history,
-                label: 'View Local Logs',
+            ),
+            SizedBox(height: spacing.large),
+            NmtkSection(
+              title: 'Logging',
+              titleStyle: zeta.textStyles.titleLarge,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ZetaListItem(
+                    primaryText: 'Log Level',
+                    trailing: SizedBox(
+                      width: selectWidth,
+                      child: ZetaSelectInput<LogLevel>(
+                        key: ValueKey('select-loglevel-${settings.logLevel}'),
+                        initialValue: settings.logLevel,
+                        items: LogLevel.values
+                            .map(
+                              (level) => ZetaDropdownItem<LogLevel>(
+                                value: level,
+                                label: level.name.toUpperCase(),
+                              ),
+                            )
+                            .toList(),
+                        onChange: (LogLevel? v) {
+                          if (v != null) settings.setLogLevel(v);
+                        },
+                      ),
+                    ),
+                  ),
+                  ZetaListItem(
+                    primaryText: 'Local Crash Logs',
+                    trailing: SizedBox(
+                      width: buttonWidth,
+                      child: NmtkPrimaryButton(
+                        onPressed: () async {
+                          try {
+                            List<String> logs;
+                            try {
+                              logs = await controlApi.fetchCrashLogLines();
+                            } catch (_) {
+                              logs = await analytics.getLocalLogLines();
+                            }
+                            if (!context.mounted) return;
+                            _showLogDialog(
+                              context,
+                              title: 'Local Crash Logs',
+                              logs: logs,
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            NmtkToasts.error(
+                              context,
+                              'Could not fetch local logs: $e',
+                            );
+                          }
+                        },
+                        icon: Icons.history,
+                        label: 'View',
+                      ),
+                    ),
+                  ),
+                  ZetaListItem(
+                    primaryText: 'Clear Local Logs',
+                    trailing: SizedBox(
+                      width: buttonWidth,
+                      child: NmtkOutlinedButton(
+                        onPressed: () async {
+                          try {
+                            await analytics.clearLocalLogs();
+                            if (!context.mounted) return;
+                            NmtkToasts.success(context, 'Local logs cleared');
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            NmtkToasts.error(
+                              context,
+                              'Could not clear local logs: $e',
+                            );
+                          }
+                        },
+                        icon: Icons.delete_outline,
+                        label: 'Clear',
+                        tone: NmtkTone.danger,
+                      ),
+                    ),
+                  ),
+                  ZetaListItem(
+                    primaryText: 'Server Logs',
+                    trailing: SizedBox(
+                      width: buttonWidth,
+                      child: NmtkPrimaryButton(
+                        onPressed: () async {
+                          try {
+                            List<String> logs;
+                            try {
+                              logs = await controlApi
+                                  .fetchBackendActivityLogLines();
+                            } catch (_) {
+                              logs =
+                                  await analytics.getBackendActivityLogLines();
+                            }
+                            if (!context.mounted) return;
+                            _showLogDialog(
+                              context,
+                              title: 'Server Logs',
+                              logs: logs,
+                              showErrorOnlyToggle: true,
+                            );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            NmtkToasts.error(
+                              context,
+                              'Could not fetch server logs: $e',
+                            );
+                          }
+                        },
+                        icon: Icons.terminal,
+                        label: 'View',
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              NmtkOutlinedButton(
-                onPressed: () async {
-                  try {
-                    await analytics.clearLocalLogs();
-                    if (!context.mounted) return;
-                    NmtkToasts.success(context, 'Local logs cleared');
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    NmtkToasts.error(
-                      context,
-                      'Could not clear local logs: $e',
-                    );
-                  }
-                },
-                icon: Icons.delete_outline,
-                label: 'Clear Local Logs',
-                tone: NmtkTone.danger,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // ── Backend Logs ─────────────────────────────────────────────────────
-        NmtkSurfaceCard(
-          title: 'Backend Logs',
-          subtitle: 'View everything happening across launcher backends.',
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              NmtkPrimaryButton(
-                onPressed: () async {
-                  try {
-                    List<String> logs;
-                    try {
-                      // Prefer the API path — the launcher control service
-                      // reads ~/Documents/ outside the app sandbox.
-                      logs = await controlApi.fetchBackendActivityLogLines();
-                    } catch (_) {
-                      // Fallback: direct file read for unsandboxed builds.
-                      logs = await analytics.getBackendActivityLogLines();
-                    }
-                    if (!context.mounted) return;
-                    _showLogDialog(
-                      context,
-                      title: 'Backend Activity',
-                      logs: logs,
-                      showErrorOnlyToggle: true,
-                    );
-                  } catch (e) {
-                    if (!context.mounted) return;
-                    NmtkToasts.error(
-                      context,
-                      'Could not fetch backend activity: $e',
-                    );
-                  }
-                },
-                icon: Icons.terminal,
-                label: 'View Backend Activity',
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // ── Modules Configuration ────────────────────────────────────────────
-        NmtkSurfaceCard(
-          title: 'Modules Configuration',
-          subtitle: 'Toggle modules and override launcher-assigned ports.',
-          child: Column(
-            children: [
-              for (final module in moduleProvider.modules)
-                ModuleSettingsTile(module: module),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -435,7 +336,7 @@ class _LogDialogState extends State<_LogDialog> {
           children: [
             ZetaTextInput(
               controller: _searchController,
-              placeholder: 'Filter logs…',
+              placeholder: 'Filter logs...',
             ),
             const SizedBox(height: 8),
             Expanded(
@@ -452,149 +353,6 @@ class _LogDialogState extends State<_LogDialog> {
                         ),
                       ),
                     ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// ModuleSettingsTile
-// ---------------------------------------------------------------------------
-
-class ModuleSettingsTile extends ConsumerStatefulWidget {
-  final Module module;
-
-  const ModuleSettingsTile({super.key, required this.module});
-
-  @override
-  ConsumerState<ModuleSettingsTile> createState() => _ModuleSettingsTileState();
-}
-
-class _ModuleSettingsTileState extends ConsumerState<ModuleSettingsTile> {
-  late TextEditingController _portController;
-
-  @override
-  void initState() {
-    super.initState();
-    _portController = TextEditingController(
-      text: widget.module.customPort?.toString() ??
-          widget.module.port?.toString() ??
-          '',
-    );
-  }
-
-  @override
-  void didUpdateWidget(ModuleSettingsTile oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.module.customPort != widget.module.customPort ||
-        oldWidget.module.port != widget.module.port) {
-      _portController.text = widget.module.customPort?.toString() ??
-          widget.module.port?.toString() ??
-          '';
-    }
-  }
-
-  @override
-  void dispose() {
-    _portController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final moduleProvider = ref.read(moduleStateProvider);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: NmtkSurfaceCard(
-        padding: EdgeInsets.zero,
-        child: ExpansionTile(
-          title: Text(widget.module.name),
-          subtitle: Text(
-            'Port: ${widget.module.customPort ?? widget.module.port ?? 'None'}',
-          ),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ── Enabled toggle ───────────────────────────────────────
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Enabled',
-                          style: Zeta.of(context).textStyles.bodyMedium,
-                        ),
-                      ),
-                      Switch(
-                        value: widget.module.isEnabled,
-                        onChanged: (bool value) {
-                          moduleProvider.updateModuleSettings(
-                            widget.module.id,
-                            isEnabled: value,
-                            customPort: widget.module.customPort,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  // ── Custom port input ────────────────────────────────────
-                  if (widget.module.port != null) ...[
-                    const SizedBox(height: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Custom Port (default: ${widget.module.port})',
-                          style: Zeta.of(context).textStyles.labelMedium,
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ZetaTextInput(
-                                controller: _portController,
-                                placeholder: 'Default: ${widget.module.port}',
-                                keyboardType: TextInputType.number,
-                                onFieldSubmitted: (_) {
-                                  final parsed =
-                                      int.tryParse(_portController.text);
-                                  moduleProvider.updateModuleSettings(
-                                    widget.module.id,
-                                    isEnabled: widget.module.isEnabled,
-                                    customPort: parsed,
-                                  );
-                                  NmtkToasts.success(context, 'Port updated');
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: () {
-                                final parsed =
-                                    int.tryParse(_portController.text);
-                                moduleProvider.updateModuleSettings(
-                                  widget.module.id,
-                                  isEnabled: widget.module.isEnabled,
-                                  customPort: parsed,
-                                );
-                                NmtkToasts.success(context, 'Port updated');
-                              },
-                              icon: const Icon(Icons.save, size: 16),
-                              tooltip: 'Save port',
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
             ),
           ],
         ),

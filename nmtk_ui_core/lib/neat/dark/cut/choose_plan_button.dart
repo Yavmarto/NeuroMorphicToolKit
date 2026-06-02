@@ -13,9 +13,24 @@ class ChoosePlanButton extends StatelessWidget {
       height: 48,
       decoration: ShapeDecoration(
         color: isHighlighted ? Colors.white : const Color(0xFFF2F3FB),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
+        ),
       ),
-      child: const Center(child: Text('Choose plan', style: TextStyle(color: Color(0xFF2A85FF), fontSize: 16, fontFamily: 'Inter', fontWeight: FontWeight.w700, height: 1.25))),
+      child: const Center(
+        child: Text(
+          'Choose plan',
+          style: TextStyle(
+            color: Color(0xFF2A85FF),
+            fontSize: 16,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+          ),
+        ),
+      ),
     );
   }
 }

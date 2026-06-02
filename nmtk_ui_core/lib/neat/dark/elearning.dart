@@ -5,7 +5,11 @@ import 'package:nmtk_ui_core/neat/dark/cut/dark_top_bar.dart';
 import 'package:nmtk_ui_core/neat/dark/cut/elearning_widgets.dart';
 
 class NeatElearning extends StatelessWidget {
-  @Preview(name: 'Neat Dark – E-Learning', group: 'Neat Dark Pages', size: Size(375, 1222))
+  @Preview(
+    name: 'Neat Dark – E-Learning',
+    group: 'Neat Dark Pages',
+    size: Size(375, 1222),
+  )
   const NeatElearning({super.key});
 
   @override

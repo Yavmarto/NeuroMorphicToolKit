@@ -424,12 +424,11 @@ extension NmtkShellTokensCupertinoFactory on NmtkShellTokens {
       canvasBackground: isDark
           ? const Color(0xFF020617)
           : const Color(0xFFFFFFFF),
-      chromeBorder:
-          isDark ? const Color(0xFF243044) : const Color(0xFFD9E0EA),
-      subtleBorder:
-          isDark ? const Color(0xFF1A2436) : const Color(0xFFE7ECF3),
-      metadataForeground:
-          isDark ? const Color(0xFF9BA8BC) : const Color(0xFF5B677C),
+      chromeBorder: isDark ? const Color(0xFF243044) : const Color(0xFFD9E0EA),
+      subtleBorder: isDark ? const Color(0xFF1A2436) : const Color(0xFFE7ECF3),
+      metadataForeground: isDark
+          ? const Color(0xFF9BA8BC)
+          : const Color(0xFF5B677C),
       healthyColor: const Color(0xFF22C55E),
       runningColor: const Color(0xFF38BDF8),
       degradedColor: const Color(0xFFF59E0B),
@@ -445,24 +444,28 @@ extension NmtkShellTokensCupertinoFactory on NmtkShellTokens {
         frameTint: primary.withValues(alpha: isDark ? 0.18 : 0.08),
       ),
       studioPalette: NmtkShellModePalette(
-        accent:
-            isDark ? const Color(0xFF8B5CF6) : const Color(0xFF7C3AED),
-        accentContainer:
-            isDark ? const Color(0xFF251A46) : const Color(0xFFEDE9FE),
-        accentForeground:
-            isDark ? const Color(0xFFF3E8FF) : const Color(0xFF4C1D95),
-        frameTint: const Color(0xFF8B5CF6)
-            .withValues(alpha: isDark ? 0.18 : 0.10),
+        accent: isDark ? const Color(0xFF8B5CF6) : const Color(0xFF7C3AED),
+        accentContainer: isDark
+            ? const Color(0xFF251A46)
+            : const Color(0xFFEDE9FE),
+        accentForeground: isDark
+            ? const Color(0xFFF3E8FF)
+            : const Color(0xFF4C1D95),
+        frameTint: const Color(
+          0xFF8B5CF6,
+        ).withValues(alpha: isDark ? 0.18 : 0.10),
       ),
       instrumentPalette: NmtkShellModePalette(
-        accent:
-            isDark ? const Color(0xFF06B6D4) : const Color(0xFF0F766E),
-        accentContainer:
-            isDark ? const Color(0xFF11313D) : const Color(0xFFCCFBF1),
-        accentForeground:
-            isDark ? const Color(0xFFCFFAFE) : const Color(0xFF134E4A),
-        frameTint: const Color(0xFF0891B2)
-            .withValues(alpha: isDark ? 0.18 : 0.08),
+        accent: isDark ? const Color(0xFF06B6D4) : const Color(0xFF0F766E),
+        accentContainer: isDark
+            ? const Color(0xFF11313D)
+            : const Color(0xFFCCFBF1),
+        accentForeground: isDark
+            ? const Color(0xFFCFFAFE)
+            : const Color(0xFF134E4A),
+        frameTint: const Color(
+          0xFF0891B2,
+        ).withValues(alpha: isDark ? 0.18 : 0.08),
       ),
     );
   }

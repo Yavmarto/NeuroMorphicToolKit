@@ -173,8 +173,9 @@ class EnvironmentApiService {
     if (r.statusCode != 202) throw EnvironmentApiException(_errorFrom(r));
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     final jobId = body['jobId'] as String?;
-    if (jobId == null)
+    if (jobId == null) {
       throw EnvironmentApiException('Backend did not return a job id.');
+    }
     return jobId;
   }
 

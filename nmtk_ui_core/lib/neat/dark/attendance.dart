@@ -7,7 +7,11 @@ import 'package:nmtk_ui_core/neat/dark/cut/attendance_recap_card.dart';
 import 'package:nmtk_ui_core/neat/dark/cut/weekly_calendar_card.dart';
 
 class NeatAttendance extends StatelessWidget {
-  @Preview(name: 'Neat Dark – Attendance', group: 'Neat Dark Pages', size: Size(375, 1072))
+  @Preview(
+    name: 'Neat Dark – Attendance',
+    group: 'Neat Dark Pages',
+    size: Size(375, 1072),
+  )
   const NeatAttendance({super.key});
 
   @override

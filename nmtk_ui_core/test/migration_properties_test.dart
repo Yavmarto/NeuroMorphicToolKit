@@ -94,8 +94,10 @@ class MigratedTextInputConfig {
   final FormFieldValidator<String>? validator;
 
   // Transformed fields
-  final bool? disabled; // !enabled when enabled is explicitly set; null otherwise
-  final String? hint; // hintText + ' ' + helperText when both present; else whichever is non-null
+  final bool?
+  disabled; // !enabled when enabled is explicitly set; null otherwise
+  final String?
+  hint; // hintText + ' ' + helperText when both present; else whichever is non-null
   final String? label; // labelText
   final Widget? leading; // prefixIcon
   final Widget? trailing; // suffixIcon
@@ -181,12 +183,15 @@ TextFieldConfig _randomConfig(Random random) {
   FocusNode? focusNode;
   if (random.nextBool()) focusNode = FocusNode();
 
-  final String? hintText =
-      random.nextBool() ? 'hint_${random.nextInt(1000)}' : null;
-  final String? labelText =
-      random.nextBool() ? 'label_${random.nextInt(1000)}' : null;
-  final String? helperText =
-      random.nextBool() ? 'helper_${random.nextInt(1000)}' : null;
+  final String? hintText = random.nextBool()
+      ? 'hint_${random.nextInt(1000)}'
+      : null;
+  final String? labelText = random.nextBool()
+      ? 'label_${random.nextInt(1000)}'
+      : null;
+  final String? helperText = random.nextBool()
+      ? 'helper_${random.nextInt(1000)}'
+      : null;
 
   Widget? prefixIcon;
   if (random.nextBool()) prefixIcon = const Icon(Icons.search);
@@ -194,8 +199,9 @@ TextFieldConfig _randomConfig(Random random) {
   Widget? suffixIcon;
   if (random.nextBool()) suffixIcon = const Icon(Icons.clear);
 
-  final String? errorText =
-      random.nextBool() ? 'error_${random.nextInt(1000)}' : null;
+  final String? errorText = random.nextBool()
+      ? 'error_${random.nextInt(1000)}'
+      : null;
 
   FormFieldValidator<String>? validator;
   if (random.nextBool()) {
@@ -249,17 +255,19 @@ void main() {
     });
 
     /// Validates: Requirements 6.2
-    test('palette membership invariant — every entry is in the canonical set',
-        () {
-      for (final color in NmtkShellTokens.instrumentChannelPalette) {
-        expect(
-          canonicalSet.contains(color),
-          isTrue,
-          reason:
-              'Color $color is not a member of the canonical instrument palette',
-        );
-      }
-    });
+    test(
+      'palette membership invariant — every entry is in the canonical set',
+      () {
+        for (final color in NmtkShellTokens.instrumentChannelPalette) {
+          expect(
+            canonicalSet.contains(color),
+            isTrue,
+            reason:
+                'Color $color is not a member of the canonical instrument palette',
+          );
+        }
+      },
+    );
 
     /// Validates: Requirements 5.1
     test('font constant consistency — NmtkFontFamilies values are correct', () {
@@ -269,20 +277,22 @@ void main() {
 
     /// Validates: Requirements 1.2
     test(
-        'theme seed smoke — neurocnl dark colorScheme.primary is not 0xFF38BDF8',
-        () {
-      final darkTheme =
-          AppTheme.darkThemeForVariant(NmtkThemeVariant.neurocnl);
-      // The running color 0xFF38BDF8 must never be used as the primary accent
-      // for the neurocnl studio theme after migration.
-      expect(
-        darkTheme.colorScheme.primary.toARGB32(),
-        isNot(equals(0xFF38BDF8)),
-        reason:
-            'neurocnl dark theme must not use 0xFF38BDF8 (runningColor) as '
-            'the primary seed color',
-      );
-    });
+      'theme seed smoke — neurocnl dark colorScheme.primary is not 0xFF38BDF8',
+      () {
+        final darkTheme = AppTheme.darkThemeForVariant(
+          NmtkThemeVariant.neurocnl,
+        );
+        // The running color 0xFF38BDF8 must never be used as the primary accent
+        // for the neurocnl studio theme after migration.
+        expect(
+          darkTheme.colorScheme.primary.toARGB32(),
+          isNot(equals(0xFF38BDF8)),
+          reason:
+              'neurocnl dark theme must not use 0xFF38BDF8 (runningColor) as '
+              'the primary seed color',
+        );
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -291,351 +301,341 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group(
-      'Property 3: Channel color index modulo wrap — no RangeError, correct color',
-      () {
-    final canonicalSet = {
-      const Color(0xFF06B6D4),
-      const Color(0xFF65C4C4),
-      const Color(0xFF91E1E1),
-      const Color(0xFFBCFBFB),
-      const Color(0xFF0F766E),
-      const Color(0xFF1A8080),
-      const Color(0xFF003535),
-      const Color(0xFF0A1616),
-    };
+    'Property 3: Channel color index modulo wrap — no RangeError, correct color',
+    () {
+      final canonicalSet = {
+        const Color(0xFF06B6D4),
+        const Color(0xFF65C4C4),
+        const Color(0xFF91E1E1),
+        const Color(0xFFBCFBFB),
+        const Color(0xFF0F766E),
+        const Color(0xFF1A8080),
+        const Color(0xFF003535),
+        const Color(0xFF0A1616),
+      };
 
-    /// **Validates: Requirements 6.3, 6.7**
-    ///
-    /// For randomly generated (N: 1..1000, i: 0..9999) pairs over 200
-    /// iterations (>= 100 as required), asserts:
-    ///  - indexing with `i % palette.length` does not throw a RangeError
-    ///  - the returned value is a valid [Color]
-    ///  - the returned color is a member of the canonical 8-color set
-    test(
+      /// **Validates: Requirements 6.3, 6.7**
+      ///
+      /// For randomly generated (N: 1..1000, i: 0..9999) pairs over 200
+      /// iterations (>= 100 as required), asserts:
+      ///  - indexing with `i % palette.length` does not throw a RangeError
+      ///  - the returned value is a valid [Color]
+      ///  - the returned color is a member of the canonical 8-color set
+      test(
         'modulo wrap yields valid canonical Color for 200 random (N, i) pairs',
         () {
-      final random = Random(42); // seeded for reproducibility
-      const iterations = 200; // >= 100 as required by task spec
+          final random = Random(42); // seeded for reproducibility
+          const iterations = 200; // >= 100 as required by task spec
 
-      for (int iteration = 0; iteration < iterations; iteration++) {
-        // N: 1..1000 (number of channels — documents the intended context;
-        // the expression under test only uses i and palette.length)
-        final n = 1 + random.nextInt(1000); // 1..1000 inclusive
+          for (int iteration = 0; iteration < iterations; iteration++) {
+            // N: 1..1000 (number of channels — documents the intended context;
+            // the expression under test only uses i and palette.length)
+            final n = 1 + random.nextInt(1000); // 1..1000 inclusive
 
-        // i: 0..9999 (raw channel index, may exceed palette length)
-        final i = random.nextInt(10000); // 0..9999 inclusive
+            // i: 0..9999 (raw channel index, may exceed palette length)
+            final i = random.nextInt(10000); // 0..9999 inclusive
 
-        final paletteLength =
-            NmtkShellTokens.instrumentChannelPalette.length;
+            final paletteLength =
+                NmtkShellTokens.instrumentChannelPalette.length;
 
-        // The palette must retain exactly 8 entries on every iteration.
+            // The palette must retain exactly 8 entries on every iteration.
+            expect(
+              paletteLength,
+              equals(8),
+              reason:
+                  'palette must still have exactly 8 entries (iteration $iteration)',
+            );
+
+            // The expression under test: palette[i % palette.length].
+            // Must not throw a RangeError regardless of i or n.
+            final Color color;
+            try {
+              color =
+                  NmtkShellTokens.instrumentChannelPalette[i % paletteLength];
+            } on RangeError catch (e) {
+              fail(
+                'RangeError thrown for i=$i, n=$n, paletteLength=$paletteLength '
+                'at iteration $iteration: $e',
+              );
+            }
+
+            // The returned value must be a Color (not null, not a sentinel).
+            expect(
+              color,
+              isA<Color>(),
+              reason:
+                  'palette[$i % $paletteLength] must return a Color '
+                  '(iteration $iteration)',
+            );
+
+            // The returned color must belong to the canonical 8-color set.
+            expect(
+              canonicalSet.contains(color),
+              isTrue,
+              reason:
+                  'palette[$i % $paletteLength] = $color is not in the canonical '
+                  'instrument palette (iteration $iteration, n=$n)',
+            );
+          }
+        },
+      );
+
+      /// **Validates: Requirements 6.7**
+      ///
+      /// Boundary check: index exactly equal to palette.length wraps to index 0,
+      /// and index palette.length - 1 returns the last canonical entry.
+      test('modulo wrap boundary — edge indices wrap correctly', () {
+        final palette = NmtkShellTokens.instrumentChannelPalette;
+        final length = palette.length;
+
+        // i == length should wrap to index 0
         expect(
-          paletteLength,
-          equals(8),
-          reason:
-              'palette must still have exactly 8 entries (iteration $iteration)',
+          palette[length % length],
+          equals(palette[0]),
+          reason: 'index equal to length must wrap to index 0',
         );
 
-        // The expression under test: palette[i % palette.length].
-        // Must not throw a RangeError regardless of i or n.
-        final Color color;
-        try {
-          color = NmtkShellTokens.instrumentChannelPalette[i % paletteLength];
-        } on RangeError catch (e) {
-          fail(
-            'RangeError thrown for i=$i, n=$n, paletteLength=$paletteLength '
-            'at iteration $iteration: $e',
-          );
-        }
-
-        // The returned value must be a Color (not null, not a sentinel).
+        // i == length - 1 should return the last entry without error
         expect(
-          color,
-          isA<Color>(),
-          reason:
-              'palette[$i % $paletteLength] must return a Color '
-              '(iteration $iteration)',
+          palette[(length - 1) % length],
+          equals(palette[length - 1]),
+          reason: 'index == length-1 must return the last palette entry',
         );
 
-        // The returned color must belong to the canonical 8-color set.
+        // i == 0 must return the first canonical entry
         expect(
-          canonicalSet.contains(color),
+          palette[0 % length],
+          equals(const Color(0xFF06B6D4)),
+          reason: 'index 0 must return Color(0xFF06B6D4)',
+        );
+
+        // Large index (e.g. 9999) must not throw and must return a canonical color
+        const largeIndex = 9999;
+        expect(
+          () => palette[largeIndex % length],
+          returnsNormally,
+          reason: 'large index $largeIndex % $length must not throw',
+        );
+        expect(
+          canonicalSet.contains(palette[largeIndex % length]),
           isTrue,
-          reason:
-              'palette[$i % $paletteLength] = $color is not in the canonical '
-              'instrument palette (iteration $iteration, n=$n)',
+          reason: 'color at large index must still be in the canonical set',
         );
-      }
-    });
-
-    /// **Validates: Requirements 6.7**
-    ///
-    /// Boundary check: index exactly equal to palette.length wraps to index 0,
-    /// and index palette.length - 1 returns the last canonical entry.
-    test('modulo wrap boundary — edge indices wrap correctly', () {
-      final palette = NmtkShellTokens.instrumentChannelPalette;
-      final length = palette.length;
-
-      // i == length should wrap to index 0
-      expect(
-        palette[length % length],
-        equals(palette[0]),
-        reason: 'index equal to length must wrap to index 0',
-      );
-
-      // i == length - 1 should return the last entry without error
-      expect(
-        palette[(length - 1) % length],
-        equals(palette[length - 1]),
-        reason: 'index == length-1 must return the last palette entry',
-      );
-
-      // i == 0 must return the first canonical entry
-      expect(
-        palette[0 % length],
-        equals(const Color(0xFF06B6D4)),
-        reason: 'index 0 must return Color(0xFF06B6D4)',
-      );
-
-      // Large index (e.g. 9999) must not throw and must return a canonical color
-      const largeIndex = 9999;
-      expect(
-        () => palette[largeIndex % length],
-        returnsNormally,
-        reason: 'large index $largeIndex % $length must not throw',
-      );
-      expect(
-        canonicalSet.contains(palette[largeIndex % length]),
-        isTrue,
-        reason: 'color at large index must still be in the canonical set',
-      );
-    });
-  });
+      });
+    },
+  );
 
   // ---------------------------------------------------------------------------
   // Task 3.3 — Property 1: TextField/ZetaTextInput parameter mapping completeness
   // Validates: Requirements 3.3, 3.4
   // ---------------------------------------------------------------------------
 
-  group(
-    'Property 1: TextField/ZetaTextInput parameter mapping completeness',
-    () {
-      /// **Validates: Requirements 3.3, 3.4**
-      ///
-      /// For 200 randomly generated [TextFieldConfig] structs (≥ 100 required,
-      /// seeded for reproducibility), asserts that [migrateTextFieldConfig]
-      /// produces a [MigratedTextInputConfig] where every direct pass-through
-      /// field is identical (by reference or value) to the source.
-      test(
-        'direct pass-through fields are preserved across 200 random configs',
-        () {
-          final random = Random(2024); // seeded for reproducibility
-          const iterations = 200; // ≥ 100 as required
+  group('Property 1: TextField/ZetaTextInput parameter mapping completeness', () {
+    /// **Validates: Requirements 3.3, 3.4**
+    ///
+    /// For 200 randomly generated [TextFieldConfig] structs (≥ 100 required,
+    /// seeded for reproducibility), asserts that [migrateTextFieldConfig]
+    /// produces a [MigratedTextInputConfig] where every direct pass-through
+    /// field is identical (by reference or value) to the source.
+    test(
+      'direct pass-through fields are preserved across 200 random configs',
+      () {
+        final random = Random(2024); // seeded for reproducibility
+        const iterations = 200; // ≥ 100 as required
 
-          for (int i = 0; i < iterations; i++) {
-            final src = _randomConfig(random);
-            final dst = migrateTextFieldConfig(src);
+        for (int i = 0; i < iterations; i++) {
+          final src = _randomConfig(random);
+          final dst = migrateTextFieldConfig(src);
 
-            // Requirements 3.4 — direct pass-throughs
+          // Requirements 3.4 — direct pass-throughs
 
+          expect(
+            dst.controller,
+            same(src.controller),
+            reason: 'controller must pass through unchanged (iteration $i)',
+          );
+
+          expect(
+            dst.onChanged,
+            same(src.onChanged),
+            reason: 'onChanged must pass through unchanged (iteration $i)',
+          );
+
+          expect(
+            dst.keyboardType,
+            equals(src.keyboardType),
+            reason: 'keyboardType must pass through unchanged (iteration $i)',
+          );
+
+          expect(
+            dst.obscureText,
+            equals(src.obscureText),
+            reason: 'obscureText must pass through unchanged (iteration $i)',
+          );
+
+          expect(
+            dst.maxLines,
+            equals(src.maxLines),
+            reason: 'maxLines must pass through unchanged (iteration $i)',
+          );
+
+          expect(
+            dst.focusNode,
+            same(src.focusNode),
+            reason: 'focusNode must pass through unchanged (iteration $i)',
+          );
+
+          expect(
+            dst.errorText,
+            equals(src.errorText),
+            reason: 'errorText must pass through unchanged (iteration $i)',
+          );
+
+          expect(
+            dst.validator,
+            same(src.validator),
+            reason: 'validator must pass through unchanged (iteration $i)',
+          );
+        }
+      },
+    );
+
+    /// **Validates: Requirements 3.4**
+    ///
+    /// `enabled` → `disabled: !enabled` polarity inversion.
+    /// When `enabled` is not explicitly set (null), `disabled` must be null
+    /// (no default is injected by the migration).
+    test(
+      'disabled = !enabled polarity inversion across 200 random configs',
+      () {
+        final random = Random(31415); // seeded for reproducibility
+        const iterations = 200;
+
+        for (int i = 0; i < iterations; i++) {
+          final src = _randomConfig(random);
+          final dst = migrateTextFieldConfig(src);
+
+          if (src.enabled != null) {
             expect(
-              dst.controller,
-              same(src.controller),
-              reason: 'controller must pass through unchanged (iteration $i)',
-            );
-
-            expect(
-              dst.onChanged,
-              same(src.onChanged),
-              reason: 'onChanged must pass through unchanged (iteration $i)',
-            );
-
-            expect(
-              dst.keyboardType,
-              equals(src.keyboardType),
+              dst.disabled,
+              equals(!src.enabled!),
               reason:
-                  'keyboardType must pass through unchanged (iteration $i)',
+                  'disabled must equal !enabled when enabled is set '
+                  '(iteration $i, enabled=${src.enabled})',
             );
-
+          } else {
             expect(
-              dst.obscureText,
-              equals(src.obscureText),
-              reason: 'obscureText must pass through unchanged (iteration $i)',
-            );
-
-            expect(
-              dst.maxLines,
-              equals(src.maxLines),
-              reason: 'maxLines must pass through unchanged (iteration $i)',
-            );
-
-            expect(
-              dst.focusNode,
-              same(src.focusNode),
-              reason: 'focusNode must pass through unchanged (iteration $i)',
-            );
-
-            expect(
-              dst.errorText,
-              equals(src.errorText),
-              reason: 'errorText must pass through unchanged (iteration $i)',
-            );
-
-            expect(
-              dst.validator,
-              same(src.validator),
-              reason: 'validator must pass through unchanged (iteration $i)',
-            );
-          }
-        },
-      );
-
-      /// **Validates: Requirements 3.4**
-      ///
-      /// `enabled` → `disabled: !enabled` polarity inversion.
-      /// When `enabled` is not explicitly set (null), `disabled` must be null
-      /// (no default is injected by the migration).
-      test(
-        'disabled = !enabled polarity inversion across 200 random configs',
-        () {
-          final random = Random(31415); // seeded for reproducibility
-          const iterations = 200;
-
-          for (int i = 0; i < iterations; i++) {
-            final src = _randomConfig(random);
-            final dst = migrateTextFieldConfig(src);
-
-            if (src.enabled != null) {
-              expect(
-                dst.disabled,
-                equals(!src.enabled!),
-                reason:
-                    'disabled must equal !enabled when enabled is set '
-                    '(iteration $i, enabled=${src.enabled})',
-              );
-            } else {
-              expect(
-                dst.disabled,
-                isNull,
-                reason:
-                    'disabled must be null when enabled is not set '
-                    '(iteration $i)',
-              );
-            }
-          }
-        },
-      );
-
-      /// **Validates: Requirements 3.3**
-      ///
-      /// Icon renaming: `prefixIcon` → `leading`, `suffixIcon` → `trailing`.
-      /// The widget identity (same object) must be preserved — the migration
-      /// must not wrap or copy the icon widget.
-      test(
-        'prefixIcon → leading and suffixIcon → trailing across 200 random '
-        'configs',
-        () {
-          final random = Random(27182); // seeded for reproducibility
-          const iterations = 200;
-
-          for (int i = 0; i < iterations; i++) {
-            final src = _randomConfig(random);
-            final dst = migrateTextFieldConfig(src);
-
-            expect(
-              dst.leading,
-              same(src.prefixIcon),
+              dst.disabled,
+              isNull,
               reason:
-                  'leading must be the same object as prefixIcon '
-                  '(iteration $i)',
-            );
-
-            expect(
-              dst.trailing,
-              same(src.suffixIcon),
-              reason:
-                  'trailing must be the same object as suffixIcon '
+                  'disabled must be null when enabled is not set '
                   '(iteration $i)',
             );
           }
-        },
-      );
+        }
+      },
+    );
 
-      /// **Validates: Requirements 3.3**
-      ///
-      /// Hint concatenation rules (from the canonical mapping table):
-      ///  - both hintText and helperText present → hint = '$hintText $helperText'
-      ///  - only hintText present               → hint = hintText
-      ///  - only helperText present             → hint = helperText
-      ///  - neither present                     → hint = null
-      test(
-        'hint concatenation rules across 200 random configs',
-        () {
-          final random = Random(16180); // seeded for reproducibility
-          const iterations = 200;
+    /// **Validates: Requirements 3.3**
+    ///
+    /// Icon renaming: `prefixIcon` → `leading`, `suffixIcon` → `trailing`.
+    /// The widget identity (same object) must be preserved — the migration
+    /// must not wrap or copy the icon widget.
+    test('prefixIcon → leading and suffixIcon → trailing across 200 random '
+        'configs', () {
+      final random = Random(27182); // seeded for reproducibility
+      const iterations = 200;
 
-          for (int i = 0; i < iterations; i++) {
-            final src = _randomConfig(random);
-            final dst = migrateTextFieldConfig(src);
+      for (int i = 0; i < iterations; i++) {
+        final src = _randomConfig(random);
+        final dst = migrateTextFieldConfig(src);
 
-            if (src.hintText != null && src.helperText != null) {
-              expect(
-                dst.hint,
-                equals('${src.hintText} ${src.helperText}'),
-                reason:
-                    'hint must be hintText + space + helperText when both '
-                    'are present (iteration $i)',
-              );
-            } else if (src.hintText != null) {
-              expect(
-                dst.hint,
-                equals(src.hintText),
-                reason:
-                    'hint must equal hintText when only hintText is present '
-                    '(iteration $i)',
-              );
-            } else if (src.helperText != null) {
-              expect(
-                dst.hint,
-                equals(src.helperText),
-                reason:
-                    'hint must equal helperText when only helperText is '
-                    'present (iteration $i)',
-              );
-            } else {
-              expect(
-                dst.hint,
-                isNull,
-                reason:
-                    'hint must be null when neither hintText nor helperText '
-                    'is set (iteration $i)',
-              );
-            }
-          }
-        },
-      );
+        expect(
+          dst.leading,
+          same(src.prefixIcon),
+          reason:
+              'leading must be the same object as prefixIcon '
+              '(iteration $i)',
+        );
 
-      /// **Validates: Requirements 3.3**
-      ///
-      /// Label rename: `labelText` → `label`.
-      test(
-        'label equals labelText across 200 random configs',
-        () {
-          final random = Random(57721); // seeded for reproducibility
-          const iterations = 200;
+        expect(
+          dst.trailing,
+          same(src.suffixIcon),
+          reason:
+              'trailing must be the same object as suffixIcon '
+              '(iteration $i)',
+        );
+      }
+    });
 
-          for (int i = 0; i < iterations; i++) {
-            final src = _randomConfig(random);
-            final dst = migrateTextFieldConfig(src);
+    /// **Validates: Requirements 3.3**
+    ///
+    /// Hint concatenation rules (from the canonical mapping table):
+    ///  - both hintText and helperText present → hint = '$hintText $helperText'
+    ///  - only hintText present               → hint = hintText
+    ///  - only helperText present             → hint = helperText
+    ///  - neither present                     → hint = null
+    test('hint concatenation rules across 200 random configs', () {
+      final random = Random(16180); // seeded for reproducibility
+      const iterations = 200;
 
-            expect(
-              dst.label,
-              equals(src.labelText),
-              reason: 'label must equal labelText (iteration $i)',
-            );
-          }
-        },
-      );
-    },
-  );
+      for (int i = 0; i < iterations; i++) {
+        final src = _randomConfig(random);
+        final dst = migrateTextFieldConfig(src);
+
+        if (src.hintText != null && src.helperText != null) {
+          expect(
+            dst.hint,
+            equals('${src.hintText} ${src.helperText}'),
+            reason:
+                'hint must be hintText + space + helperText when both '
+                'are present (iteration $i)',
+          );
+        } else if (src.hintText != null) {
+          expect(
+            dst.hint,
+            equals(src.hintText),
+            reason:
+                'hint must equal hintText when only hintText is present '
+                '(iteration $i)',
+          );
+        } else if (src.helperText != null) {
+          expect(
+            dst.hint,
+            equals(src.helperText),
+            reason:
+                'hint must equal helperText when only helperText is '
+                'present (iteration $i)',
+          );
+        } else {
+          expect(
+            dst.hint,
+            isNull,
+            reason:
+                'hint must be null when neither hintText nor helperText '
+                'is set (iteration $i)',
+          );
+        }
+      }
+    });
+
+    /// **Validates: Requirements 3.3**
+    ///
+    /// Label rename: `labelText` → `label`.
+    test('label equals labelText across 200 random configs', () {
+      final random = Random(57721); // seeded for reproducibility
+      const iterations = 200;
+
+      for (int i = 0; i < iterations; i++) {
+        final src = _randomConfig(random);
+        final dst = migrateTextFieldConfig(src);
+
+        expect(
+          dst.label,
+          equals(src.labelText),
+          reason: 'label must equal labelText (iteration $i)',
+        );
+      }
+    });
+  });
 }

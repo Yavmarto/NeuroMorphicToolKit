@@ -12,9 +12,22 @@ class DownloadChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: ShapeDecoration(
         color: const Color(0x192A85FF),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
+        ),
       ),
-      child: const Text('Download Report', style: TextStyle(color: Color(0xFF2180FF), fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w600, height: 1.43)),
+      child: const Text(
+        'Download Report',
+        style: TextStyle(
+          color: Color(0xFF2180FF),
+          fontSize: 14,
+          fontFamily: 'Inter',
+          fontWeight: FontWeight.w600,
+          height: 1.43,
+        ),
+      ),
     );
   }
 }

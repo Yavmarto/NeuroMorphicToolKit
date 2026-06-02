@@ -96,9 +96,7 @@ List<_SourceMatch> _scanForToken(String token) {
         continue; // pure comment line — not an active call site
       }
       if (line.contains(token)) {
-        matches.add(
-          _SourceMatch(file: file, line: i + 1, text: line.trim()),
-        );
+        matches.add(_SourceMatch(file: file, line: i + 1, text: line.trim()));
       }
     }
   }
@@ -118,45 +116,38 @@ int _countMarkers(RegExp markerPattern) {
 
 void main() {
   group('T-ICON governance: Material Icons.* in lib/ is bounded', () {
-    test(
-      'iconsHits - markerCount <= kIconsBaseline',
-      () {
-        final hits = _scanForToken('Icons.');
-        final markerCount = _countMarkers(
-          RegExp(r'ZETA-MIGRATION-EXEMPT:\s*\S'),
-        );
-        final unannotated = hits.length - markerCount;
-        expect(
-          unannotated,
-          lessThanOrEqualTo(kIconsBaseline),
-          reason:
-              'Found ${hits.length} `Icons.*` references in lib/, of which '
-              '$markerCount are paired with `// ZETA-MIGRATION-EXEMPT:` '
-              'markers. Unannotated count: $unannotated. The baseline for '
-              'this package is $kIconsBaseline.\n\n'
-              'You have either (a) introduced a new Material `Icons.*` '
-              'reference without an exemption marker, or (b) need to '
-              'decrease `kIconsBaseline` to reflect progress on the '
-              'T-ICON sweep.\n\n'
-              'See `.kiro/specs/material-to-zeta-icons-sweep/` for the '
-              'migration plan and `tasks.md` for sub-task ordering.\n\n'
-              'First 30 hits:\n${hits.take(30).join('\n')}',
-        );
-      },
-    );
+    test('iconsHits - markerCount <= kIconsBaseline', () {
+      final hits = _scanForToken('Icons.');
+      final markerCount = _countMarkers(RegExp(r'ZETA-MIGRATION-EXEMPT:\s*\S'));
+      final unannotated = hits.length - markerCount;
+      expect(
+        unannotated,
+        lessThanOrEqualTo(kIconsBaseline),
+        reason:
+            'Found ${hits.length} `Icons.*` references in lib/, of which '
+            '$markerCount are paired with `// ZETA-MIGRATION-EXEMPT:` '
+            'markers. Unannotated count: $unannotated. The baseline for '
+            'this package is $kIconsBaseline.\n\n'
+            'You have either (a) introduced a new Material `Icons.*` '
+            'reference without an exemption marker, or (b) need to '
+            'decrease `kIconsBaseline` to reflect progress on the '
+            'T-ICON sweep.\n\n'
+            'See `.kiro/specs/material-to-zeta-icons-sweep/` for the '
+            'migration plan and `tasks.md` for sub-task ordering.\n\n'
+            'First 30 hits:\n${hits.take(30).join('\n')}',
+      );
+    });
 
-    test(
-      'kIconsBaseline is non-negative',
-      () {
-        expect(
-          kIconsBaseline,
-          greaterThanOrEqualTo(0),
-          reason: 'kIconsBaseline must not go negative; the test would '
-              'silently allow unannotated regressions. After T-ICON-5 the '
-              'baseline must equal 0 and the absence-invariant holds via '
-              'the marker count alone.',
-        );
-      },
-    );
+    test('kIconsBaseline is non-negative', () {
+      expect(
+        kIconsBaseline,
+        greaterThanOrEqualTo(0),
+        reason:
+            'kIconsBaseline must not go negative; the test would '
+            'silently allow unannotated regressions. After T-ICON-5 the '
+            'baseline must equal 0 and the absence-invariant holds via '
+            'the marker count alone.',
+      );
+    });
   });
 }

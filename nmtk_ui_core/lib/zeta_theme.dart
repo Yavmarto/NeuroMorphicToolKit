@@ -33,7 +33,10 @@ export 'package:zeta_flutter/zeta_flutter.dart'
         ZetaDropdownItem,
         ZetaDropdownMenuPosition,
         ZetaDropdownMenuType,
-        ZetaDropdownSize;
+        ZetaDropdownSize,
+        ZetaSelectInput,
+        ZetaSwitch,
+        ZetaSwitchType;
 
 /// Central Zeta theme configuration for the NeuroMorphicToolKit suite.
 ///

@@ -42,7 +42,9 @@ class AkidaSupportStateCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusSm,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -56,7 +58,9 @@ class AkidaSupportStateCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     supportState.label,
-                    style: Zeta.of(context).textStyles.titleMedium.copyWith(color: color),
+                    style: Zeta.of(
+                      context,
+                    ).textStyles.titleMedium.copyWith(color: color),
                   ),
                 ),
                 if (akidaVersion != null)
