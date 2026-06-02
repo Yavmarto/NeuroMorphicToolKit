@@ -48,5 +48,6 @@ spinnaker2; python_version < "3.11"
 tonic
 
 # ── NIR interchange + bindings ────────────────────────────────────────────────
-nir
+nir>=1.0.5
 nirtorch
+sc-neurocore>=3.13.0,<4

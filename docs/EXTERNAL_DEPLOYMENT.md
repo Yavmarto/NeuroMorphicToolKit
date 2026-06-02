@@ -42,7 +42,7 @@ docker-ex-i: docker-ex
 ```
 
 **How to use:**
-- `make docker-ex REMOTE_HOST=user@192.168.1.50` -> Deploys the backend only.
+- `make docker-ex REMOTE_HOST=user@192.168.1.50` -> Deploys the full backend stack (same as `docker-ex-all`: all workers, Jupyter, monitoring). Re-runs sync changed files and `docker compose up --build` rebuilds images whose sources changed.
 - `make docker-ex-m REMOTE_HOST=user@192.168.1.50` -> Deploys the backend, then launches the macOS Flutter desktop app pointing to it.
 - `make docker-ex-a REMOTE_HOST=user@192.168.1.50` -> Deploys the backend, then launches the Android Flutter app pointing to it.
 - `make docker-ex-i REMOTE_HOST=user@192.168.1.50` -> Deploys the backend, then launches the iOS Flutter app pointing to it.

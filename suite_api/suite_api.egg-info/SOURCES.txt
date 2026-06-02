@@ -1,6 +1,8 @@
+LICENSE
 pyproject.toml
 suite_api.egg-info/PKG-INFO
 suite_api.egg-info/SOURCES.txt
 suite_api.egg-info/dependency_links.txt
 suite_api.egg-info/requires.txt
 suite_api.egg-info/top_level.txt
+tests/test_middleware.py

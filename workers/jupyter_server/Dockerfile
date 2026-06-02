@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
     torch
 
+# NIR + sc-neurocore before neurocnl source copy — cache-stable, matches suite_api.
+RUN pip install --no-cache-dir "nir>=1.0.5" "sc-neurocore>=3.13.0,<4"
+
 # Full NeuroStudio kernel environment: Jupyter stack + scientific stack + all
 # neuromorphic/SNN frameworks. Single source of truth shared with standalone
 # mode (see requirements.txt header).
@@ -27,6 +30,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Heavy torch/framework layers above are already cached so this is fast.
 COPY neurocnl/ /tmp/neurocnl/
 RUN pip install --no-cache-dir "/tmp/neurocnl/[training,rockpool,synsense,norse]" \
+ && python -c "import nir; assert hasattr(nir, 'CubaLI'), 'nir>=1.0.5 required'; from neurocnl.runtime.sc_neurocore_simulator import sc_neurocore_nir_bridge_available; assert sc_neurocore_nir_bridge_available(), 'sc-neurocore NIR bridge missing'" \
  && rm -rf /tmp/neurocnl
 
 # Register the kernel so JupyterLab discovers it on startup.

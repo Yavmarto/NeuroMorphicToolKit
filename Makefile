@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i macos-signing-check build-macos-dmg-signed
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -32,8 +32,8 @@ help:
 	@echo "  make docker-a                 - Run backend in Docker and launcher on Android"
 	@echo "  make docker-i                 - Run backend in Docker and launcher on iOS"
 	@echo "  make docker-all               - Run full stack in Docker and native launcher (alias for docker)"
-	@echo "  make docker-ex REMOTE_HOST=user@ip - Deploy backend to a remote server using SSH and Docker"
-	@echo "  make docker-ex-all REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote"
+	@echo "  make docker-ex REMOTE_HOST=user@ip - Deploy full backend stack to a remote server (alias for docker-ex-all)"
+	@echo "  make docker-ex-all REMOTE_HOST=user@ip - Same as docker-ex (all workers, Jupyter, monitoring)"
 	@echo "  make docker-ex-m REMOTE_HOST=user@ip - Deploy to remote and run frontend on macOS"
 	@echo "  make docker-ex-a REMOTE_HOST=user@ip - Deploy to remote and run frontend on Android"
 	@echo "  make docker-ex-i REMOTE_HOST=user@ip - Deploy to remote and run frontend on iOS"
@@ -90,32 +90,14 @@ docker-all:
 # Deployment variables (can be overridden on command line)
 REMOTE_HOST ?=
 DEPLOY_DIR ?= ~/nmtk-deploy
-DOCKER_EX_SERVICES ?= suite_api lava-backend
 LAUNCHER_CONTROL_PORT ?= 8091
+# Set DOCKER_EX_PRUNE=1 to run `docker builder prune` before deploy (slower; rarely needed).
+DOCKER_EX_PRUNE ?=
+# Set DOCKER_EX_RSYNC_VERBOSE=1 to list every rsync'd file (debug only).
+DOCKER_EX_RSYNC_VERBOSE ?=
 # SSH ControlMaster: reuses a single TCP connection across all ssh/rsync calls in one make run.
 # The %h/%p/%r tokens are expanded by ssh itself, so this is safe when REMOTE_HOST is empty.
 SSH_OPTS ?= -o ControlMaster=auto -o ControlPath=/tmp/nmtk-ssh-%h-%p-%r -o ControlPersist=60s
-
-docker-ex:
-	@if [ -z "$(REMOTE_HOST)" ]; then \
-		echo "Error: REMOTE_HOST is not set. Example: make docker-ex REMOTE_HOST=user@192.168.1.50"; \
-		exit 1; \
-	fi
-	@echo "==> Syncing source code to $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
-	rsync -av --delete -e "ssh $(SSH_OPTS)" \
-		--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
-		--exclude '__pycache__' --exclude 'node_modules' \
-		--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
-		--exclude '.cache' --exclude '.hypothesis' --exclude '.kiro' \
-		--exclude '.understand-anything' --exclude '.sisyphus' \
-		--exclude '.impeccable' --exclude '.tmp_manual_ui' \
-		. $(REMOTE_HOST):$(DEPLOY_DIR)/
-	@echo "==> Pruning stale build cache on $(REMOTE_HOST) (keeping 20GB most-recent)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "docker builder prune -f --keep-storage=20GB"
-	@echo "==> Building and starting containers on $(REMOTE_HOST) (rolling update, no downtime)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose up --build -d --wait --remove-orphans"
-	@echo "==> Backend ready at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 ## Initialise required secrets on the remote host if they are missing.
 ## Safe to re-run — only fills gaps, never overwrites existing values.
@@ -125,33 +107,53 @@ secrets-init:
 	fi
 	@echo "==> Initialising required secrets on $(REMOTE_HOST)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) '\
-	  touch ~/nmtk-deploy/.env; \
-	  grep -q GRAFANA_ADMIN_PASSWORD ~/nmtk-deploy/.env || \
-	    echo "GRAFANA_ADMIN_PASSWORD=$$(openssl rand -base64 32)" >> ~/nmtk-deploy/.env; \
+	  touch $(DEPLOY_DIR)/.env; \
+	  grep -q GRAFANA_ADMIN_PASSWORD $(DEPLOY_DIR)/.env || \
+	    echo "GRAFANA_ADMIN_PASSWORD=$$(openssl rand -base64 32)" >> $(DEPLOY_DIR)/.env; \
 	  echo "secrets-init: OK (GRAFANA_ADMIN_PASSWORD present)"'
 
-docker-ex-all: secrets-init
+## Sync repo to remote, rebuild images when sources change, start full backend stack.
+.PHONY: docker-ex-deploy
+docker-ex-deploy:
 	@if [ -z "$(REMOTE_HOST)" ]; then \
 		echo "Error: REMOTE_HOST is not set. Example: make docker-ex-all REMOTE_HOST=user@192.168.1.50"; \
 		exit 1; \
 	fi
-	@echo "==> Syncing source code to $(REMOTE_HOST)..."
+	@echo "==> Syncing backend source to $(REMOTE_HOST):$(DEPLOY_DIR) (rsync, incremental)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
-	rsync -av --delete -e "ssh $(SSH_OPTS)" \
+	rsync -a --delete -e "ssh $(SSH_OPTS)" \
+		$(if $(DOCKER_EX_RSYNC_VERBOSE),-v,) \
 		--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
 		--exclude '__pycache__' --exclude 'node_modules' \
 		--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
 		--exclude '.cache' --exclude '.hypothesis' --exclude '.kiro' \
 		--exclude '.understand-anything' --exclude '.sisyphus' \
 		--exclude '.impeccable' --exclude '.tmp_manual_ui' \
+		--exclude '.swarm/' --exclude '.opencode/' --exclude '.cursor/' \
+		--exclude 'docs/' --exclude 'issues/' --exclude 'issues-archive/' \
+		--exclude 'ai_safe/' --exclude 'Neuro-Dream-Hand/' \
+		--exclude 'neurocnl/frontend/' --exclude 'Neurohub/frontend/' \
+		--exclude 'Neurochip/frontend/' --exclude 'Neurobench/frontend/' \
+		--exclude 'Neurosim/frontend/' --exclude 'nmtk_ui_core/' \
+		--exclude 'nmtk/neuro_toolkit/lib/' --exclude 'nmtk/neuro_toolkit/build/' \
+		--exclude 'nmtk/neuro_toolkit/.dart_tool/' --exclude 'nmtk/neuro_toolkit/android/' \
+		--exclude 'nmtk/neuro_toolkit/ios/' --exclude 'nmtk/neuro_toolkit/macos/' \
+		--exclude 'nmtk/neuro_toolkit/linux/' --exclude 'nmtk/neuro_toolkit/windows/' \
+		--exclude 'nmtk/neuro_toolkit/web/' --exclude 'nmtk/packages/' \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Evicting any native process on port $(LAUNCHER_CONTROL_PORT) on $(REMOTE_HOST)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(LAUNCHER_CONTROL_PORT)/tcp 2>/dev/null || true"
-	@echo "==> Pruning stale build cache on $(REMOTE_HOST) (keeping 20GB most-recent)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "docker builder prune -f --keep-storage=20GB"
-	@echo "==> Building and starting full stack on $(REMOTE_HOST) (rolling update, no downtime)..."
+	@if [ -n "$(DOCKER_EX_PRUNE)" ]; then \
+		echo "==> Pruning stale build cache on $(REMOTE_HOST) (keeping 20GB most-recent)..."; \
+		ssh $(SSH_OPTS) $(REMOTE_HOST) "docker builder prune -f --keep-storage=20GB"; \
+	fi
+	@echo "==> Building and starting full backend stack on $(REMOTE_HOST) (--build picks up source changes)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) docker compose up --build -d --wait --remove-orphans"
-	@echo "==> Full stack ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
+	@echo "==> Full backend ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
+
+docker-ex-all: secrets-init docker-ex-deploy
+
+docker-ex: docker-ex-all
 
 docker-ex-m: docker-ex
 	@./scripts/run_dev.sh --flutter-device macos --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"

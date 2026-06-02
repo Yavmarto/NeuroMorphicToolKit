@@ -1,6 +1,4 @@
 export 'app_theme.dart'; // TODO(T-DEBT): migrate test harnesses to NmtkZetaTheme, then delete
-export 'cupertino_theme.dart'; // NmtkCupertinoTheme — Task 2 of cupertino-migration; supersedes app_theme + zeta_theme at Task 7
-export 'design_tokens.dart'; // Forward-compatible token shim (Task 2)
 export 'zeta_theme.dart'; // NmtkZetaTheme + re-exports: ZetaProvider, Zeta, ZetaColors, ZetaButton, etc.
 export 'models/host_navigation_models.dart';
 export 'models/shell_models.dart';

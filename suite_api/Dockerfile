@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+ENV PIP_DEFAULT_TIMEOUT=300
+ENV PIP_RETRIES=5
+
 # Build context must be the repo root (see docker-compose.yml).
 # suite_api imports neurocnl, neurohub, neurosense, and selected neurochip
 # software routes directly,
@@ -15,21 +18,28 @@ RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
     torch \
  && pip install --no-cache-dir \
+    "nir>=1.0.5" \
     snntorch \
+    "sc-neurocore>=3.13.0,<4" \
     rockpool \
     sinabs \
     norse
 
 # Copy source and install the package — heavy deps above already present
 COPY neurocnl/ neurocnl/
-RUN pip install --no-cache-dir "neurocnl/[training,rockpool,synsense,norse]"
+RUN pip install --no-cache-dir "neurocnl/[training,rockpool,synsense,norse]" \
+ && python -c "import nir; assert hasattr(nir, 'CubaLI'), 'nir>=1.0.5 required'; from neurocnl.runtime.sc_neurocore_simulator import sc_neurocore_nir_bridge_available; assert sc_neurocore_nir_bridge_available(), 'sc-neurocore NIR bridge missing'"
 
 # ── Modules installed as top-level packages ───────────────────────────────────
 COPY Neurohub/ Neurohub/
 RUN pip install --no-cache-dir Neurohub/
 
+# Neurosense: brainflow (~31MB) and scipy/h5py wheels — cache-stable before source copy
+COPY docker/neurosense-pip-requirements.txt /tmp/neurosense-pip-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/neurosense-pip-requirements.txt
+
 COPY Neurosense/ Neurosense/
-RUN pip install --no-cache-dir Neurosense/
+RUN pip install --no-cache-dir --no-deps Neurosense/
 
 COPY Neurochip/ Neurochip/
 ENV PYTHONPATH="/repo/neurocnl:/repo/Neurochip"

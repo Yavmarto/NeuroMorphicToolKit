@@ -309,8 +309,7 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/pyproject.toml" ]; then
-            python -m pip install -e ./Neurohub
-            python -m pip install pytest httpx ruff mypy
+            python -m pip install -e "./Neurohub[dev]"
           else
             echo "Submodule missing, skipping"
           fi
