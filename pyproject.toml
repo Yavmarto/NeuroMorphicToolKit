@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+# asyncio_mode = "auto" lets every async test function and fixture run without
+# an explicit @pytest.mark.asyncio decorator.  asyncio_default_fixture_loop_scope
+# prevents the deprecation warning from pytest-asyncio >= 0.23 about implicit
+# session-scoped loop reuse.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+markers = [
+    "golden_path: Full golden-path integration tests (author → validate → simulate → inspect → persist). Requires neurocnl + neurobench services to be running.",
+    "pynq_hardware: Hardware-only tests for the PYNQ-Z2 (sc-neurocore) FPGA board. Skipped unless PYNQ_HARDWARE_TEST=true. Must run on a self-hosted runner with the board physically attached.",
+    "akida_hardware: Hardware-only tests for a physical BrainChip AKida device (USB). Skipped unless AKIDA_HARDWARE_TEST=true. Must run on a self-hosted runner with the USB chip enumerated.",
+]
