@@ -23,7 +23,9 @@ Based on the continuation of work from May 31, here is the updated execution ord
 **Why:** This resolves an active, localized runtime error that prevents `.nire` files from loading in the backend. 
 **Action:** Implement the `safe_nir_read()` shim and apply the try/except blocks to unblock basic functionality.
 
-**Status:** ⬜ NOT STARTED
+**Status:** ✅ COMPLETE — already implemented prior to 2026-06-02
+- `neurocnl/_nir_compat.py` — safe_nir_read() + NIR_READ_HAS_TYPE_CHECK flag + make_nir_graph() fallback (commit e169ae8)
+- `neurosim/app/routers/generation.py` — replaced nir.read() with safe_nir_read() in both call sites (commit 1c8b678)
 
 ---
 
@@ -31,9 +33,10 @@ Based on the continuation of work from May 31, here is the updated execution ord
 **Why:** Continuation of the missing functions required for a credible product release from the Gap Analysis.
 
 ### Outstanding Plans:
-- **D3 — Golden-path CI gate** (P1 #14): Add an end-to-end integration test (no hardware) covering author → validate → simulate → inspect → persist. ⬜ PENDING
-- **D1 — Signed Builds** (P1 #10): Complete Tasks 2 (Windows `signtool.exe`) and 3 (Update channel manifest checksums). ⬜ PENDING
-- **P0 #5 — Neurochip Validated Hardware Path**: Requires physical device (Teensy or PYNQ-Z2) to investigate and prove end-to-end deployment. 🔍 INVESTIGATE
+- **D3 — Golden-path CI gate** (P1 #14): 🔄 IN PROGRESS
+- **D1 Task 2 — Windows signing** (P1 #10): 🔄 IN PROGRESS
+- **D1 Task 3 — Update channel manifest checksums**: ⏸ DEFERRED — `update_service.dart` differential update logic is a stub; SHA-256 verification depends on finalizing the update distribution infrastructure first
+- **P0 #5 — Neurochip Validated Hardware Path**: ⏸ DEFERRED — requires physical Teensy or PYNQ-Z2 device
 
 ---
 
