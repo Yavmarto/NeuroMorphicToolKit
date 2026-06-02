@@ -25,9 +25,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final selectWidth = constraints.maxWidth * 0.28;
-        final inputWidth = constraints.maxWidth * 0.42;
-        final buttonWidth = constraints.maxWidth * 0.16;
+        final trailingWidth = constraints.maxWidth * 0.28;
 
         return ListView(
           padding: EdgeInsets.all(spacing.xl_2),
@@ -47,7 +45,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ZetaListItem(
                     primaryText: 'Theme',
                     trailing: SizedBox(
-                      width: selectWidth,
+                      width: trailingWidth,
                       child: ZetaSelectInput<ThemeMode>(
                         key: ValueKey('select-theme-${settings.themeMode}'),
                         initialValue: settings.themeMode,
@@ -68,7 +66,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ZetaListItem(
                     primaryText: 'Server',
                     trailing: SizedBox(
-                      width: inputWidth,
+                      width: trailingWidth,
                       child: ZetaTextInput(
                         key: const ValueKey('launcher-control-url'),
                         initialValue: ref
@@ -83,7 +81,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ZetaListItem(
                     primaryText: 'Server Setup',
                     trailing: SizedBox(
-                      width: buttonWidth,
+                      width: trailingWidth,
                       child: NmtkOutlinedButton(
                         onPressed: () => context.go('/backend-setup'),
                         icon: Icons.dns_outlined,
@@ -104,7 +102,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ZetaListItem(
                     primaryText: 'Log Level',
                     trailing: SizedBox(
-                      width: selectWidth,
+                      width: trailingWidth,
                       child: ZetaSelectInput<LogLevel>(
                         key: ValueKey('select-loglevel-${settings.logLevel}'),
                         initialValue: settings.logLevel,
@@ -125,7 +123,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ZetaListItem(
                     primaryText: 'Local Crash Logs',
                     trailing: SizedBox(
-                      width: buttonWidth,
+                      width: trailingWidth,
                       child: NmtkPrimaryButton(
                         onPressed: () async {
                           try {
@@ -157,7 +155,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ZetaListItem(
                     primaryText: 'Clear Local Logs',
                     trailing: SizedBox(
-                      width: buttonWidth,
+                      width: trailingWidth,
                       child: NmtkOutlinedButton(
                         onPressed: () async {
                           try {
@@ -181,7 +179,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ZetaListItem(
                     primaryText: 'Server Logs',
                     trailing: SizedBox(
-                      width: buttonWidth,
+                      width: trailingWidth,
                       child: NmtkPrimaryButton(
                         onPressed: () async {
                           try {
