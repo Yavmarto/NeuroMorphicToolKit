@@ -33,8 +33,13 @@ Based on the continuation of work from May 31, here is the updated execution ord
 **Why:** Continuation of the missing functions required for a credible product release from the Gap Analysis.
 
 ### Outstanding Plans:
-- **D3 — Golden-path CI gate** (P1 #14): 🔄 IN PROGRESS
-- **D1 Task 2 — Windows signing** (P1 #10): 🔄 IN PROGRESS
+- **D3 — Golden-path CI gate** (P1 #14): ✅ COMPLETE (2026-06-02)
+  - `tests/integration/test_golden_path_1.py` — already existed; all 5 steps implemented
+  - `pyproject.toml` (root) — registers `golden_path` mark, `asyncio_mode = "auto"`, `asyncio_default_fixture_loop_scope`
+  - `.github/workflows/golden-path.yml` — nightly + push CI workflow; starts neurocnl + Neurobench backends; runs test with graceful skip if services unavailable
+- **D1 Task 2 — Windows signing** (P1 #10): ✅ COMPLETE (2026-06-02)
+  - All signing artifacts already existed (`sign-installer.ps1`, `build-standalone.ps1`, `CODE_SIGNING.md`, `tests/test_windows_installer_signing.py`, `release-desktop.yml` steps)
+  - `.github/workflows/ci.yml` — added `windows_installer` path filter, `test-windows-installer-signing` job, wired into `ci-passed`
 - **D1 Task 3 — Update channel manifest checksums**: ⏸ DEFERRED — `update_service.dart` differential update logic is a stub; SHA-256 verification depends on finalizing the update distribution infrastructure first
 - **P0 #5 — Neurochip Validated Hardware Path**: ⏸ DEFERRED — requires physical Teensy or PYNQ-Z2 device
 
@@ -53,3 +58,32 @@ Based on the continuation of work from May 31, here is the updated execution ord
 **Action:** Targeted Riverpod migrations for async flows and app state.
 
 **Status:** ⬜ NOT STARTED
+
+---
+
+## 6. UI & Design System Migration (Zeta)
+**Why:** Unify the visual identity of all five frontends and remove legacy Material widgets.
+**Action:** Execute the Material Icons to ZetaIcons sweep and complete remaining tech-debt button migrations.
+**Status:** 🔄 IN PROGRESS (Priority currently bumped to front of queue)
+- `2026-05-26-material-icons-to-zeta-icons-migration.md` (T-ICON)
+- `2026-05-24-shadcn-to-zeta-flutter-migration.md` (T-UI deferred tasks)
+- `2026-05-24-tech-debt-cleanup-material-deprecated.md` (T-DEBT deferred tasks)
+
+---
+
+## 7. Core Architecture & Authoring Experience
+**Why:** Support reproducible research by separating topology from training, and provide better authoring UX.
+**Action:** Implement bundle architecture, layer editor, and MCP service.
+**Status:** ⬜ NOT STARTED
+- `2026-05-24-nir-bundle-architecture.md` (T-BUNDLE)
+- `2026-05-24-layer-editor-view.md` (T-LAYER)
+- `2026-05-09-mcp-service-design.md` (MCP Service Design)
+
+---
+
+## 8. Usability Bug Fixes
+**Why:** Stop the UI from suggesting grammar that instantly fails the compiler and ensure deploy-readiness is surfaced in the validation panel.
+**Action:** Align the CNL sentence picker with NIR-native compiler rules and fix the validation panel.
+**Status:** ⬜ NOT STARTED
+- `2026-05-22-neurocnl-sentence-picker-nir-alignment.md` (T1-10)
+- `2026-05-27-validation-deploy-readiness.md`

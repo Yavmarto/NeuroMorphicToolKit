@@ -38,6 +38,7 @@ jobs:
       neurobench_frontend: ${{ steps.filter.outputs.neurobench_frontend }}
       neurotoolkit: ${{ steps.filter.outputs.neurotoolkit }}
       macos_installer: ${{ steps.filter.outputs.macos_installer }}
+      windows_installer: ${{ steps.filter.outputs.windows_installer }}
       nmtk_ui_core: ${{ steps.filter.outputs.nmtk_ui_core }}
     steps:
       - uses: actions/checkout@v4
@@ -86,6 +87,10 @@ jobs:
             macos_installer:
               - 'nmtk/installer/macos/**'
               - 'tests/test_macos_installer_signing.py'
+              - '.github/workflows/release-desktop.yml'
+            windows_installer:
+              - 'nmtk/installer/windows/**'
+              - 'tests/test_windows_installer_signing.py'
               - '.github/workflows/release-desktop.yml'
             nmtk_ui_core:
               - 'nmtk_ui_core/**'
@@ -672,6 +677,22 @@ jobs:
       - name: Verify macOS signing release plumbing
         run: python -m pytest tests/test_macos_installer_signing.py -v --tb=short --noconftest
 
+  test-windows-installer-signing:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.windows_installer == 'true'
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Verify Windows signing release plumbing
+        run: python -m pytest tests/test_windows_installer_signing.py -v --tb=short --noconftest
+
   test-neurocnl-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurocnl_frontend == 'true'
@@ -885,6 +906,7 @@ jobs:
       - test-neurobench-frontend
       - test-neurotoolkit
       - test-macos-installer-signing
+      - test-windows-installer-signing
       - test-nmtk-ui-core
     if: always()
     steps:
@@ -901,6 +923,7 @@ jobs:
           echo "  nmtk-ui-core:   ${{ needs.test-nmtk-ui-core.result }}"
           echo "  neurotoolkit:   ${{ needs.test-neurotoolkit.result }}"
           echo "  macos-installer: ${{ needs.test-macos-installer-signing.result }}"
+          echo "  windows-installer: ${{ needs.test-windows-installer-signing.result }}"
 
           # Fail if any job failed (skipped is OK — means no changes in that module)
           for result in \
@@ -918,7 +941,8 @@ jobs:
             "${{ needs.test-neurocnl-frontend.result }}" \
             "${{ needs.test-nmtk-ui-core.result }}" \
             "${{ needs.test-neurotoolkit.result }}" \
-            "${{ needs.test-macos-installer-signing.result }}"; do
+            "${{ needs.test-macos-installer-signing.result }}" \
+            "${{ needs.test-windows-installer-signing.result }}"; do
             if [ "$result" = "failure" ]; then
               echo "::error::One or more test jobs failed"
               exit 1

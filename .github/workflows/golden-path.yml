@@ -1,0 +1,283 @@
+name: Golden Path CI Gate
+
+# ─── Triggers ────────────────────────────────────────────────────────────────
+# Software golden path (no hardware required):
+#   • Every push to dev / main that touches core modules
+#   • Nightly at 02:00 UTC
+#
+# Hardware golden paths (PYNQ-Z2 / AKida):
+#   • Only via workflow_dispatch with the corresponding input set to true.
+#     These jobs require self-hosted runners with physical boards attached and
+#     will never run in standard GitHub-hosted CI.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches: [dev, main]
+    paths:
+      - "neurocnl/**"
+      - "Neurobench/**"
+      - "Neurochip/**"
+      - "tests/integration/test_golden_path*.py"
+      - "pyproject.toml"
+      - ".github/workflows/golden-path.yml"
+  schedule:
+    - cron: "0 2 * * *"   # nightly at 02:00 UTC
+  workflow_dispatch:
+    inputs:
+      run_pynq_hardware:
+        description: "Run PYNQ-Z2 (sc-neurocore) real-hardware tests"
+        type: boolean
+        default: false
+      run_akida_hardware:
+        description: "Run BrainChip AKida real-hardware tests (USB device required)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 1 — Software Golden Path (no hardware)
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  golden-path-software:
+    name: "Golden Path — software (no hardware)"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install httpx pytest pytest-asyncio
+
+      # Start neurocnl backend
+      - name: Install neurocnl
+        run: pip install -e "neurocnl/[training]" --quiet || true
+
+      - name: Start neurocnl backend
+        run: |
+          cd neurocnl
+          uvicorn backend.app.main:app --host 0.0.0.0 --port 9000 &
+          echo "NEUROCNL_PID=$!" >> "$GITHUB_ENV"
+        env:
+          AUTH_ENABLED: "false"
+
+      # Start Neurobench backend
+      - name: Install Neurobench
+        run: pip install -e "Neurobench/neurobench/[executor]" --quiet || true
+
+      - name: Start Neurobench backend
+        run: |
+          cd Neurobench/neurobench
+          uvicorn app.main:app --host 0.0.0.0 --port 8003 &
+          echo "NEUROBENCH_PID=$!" >> "$GITHUB_ENV"
+
+      - name: Wait for services
+        run: |
+          for url in "http://localhost:9000/health" "http://localhost:8003/health"; do
+            for i in $(seq 1 30); do
+              if curl -sf "$url" >/dev/null 2>&1; then
+                echo "✓ $url ready"
+                break
+              fi
+              sleep 2
+            done
+          done
+
+      - name: Run golden path test
+        env:
+          NEUROCNL_URL: "http://localhost:9000"
+          NEUROSIM_URL: "http://localhost:9000"
+          NEUROBENCH_URL: "http://localhost:8003"
+        run: |
+          python -m pytest tests/integration/test_golden_path_1.py \
+            -m golden_path \
+            -v \
+            --tb=short \
+            --no-header
+
+      - name: Stop backends
+        if: always()
+        run: |
+          kill "$NEUROCNL_PID" 2>/dev/null || true
+          kill "$NEUROBENCH_PID" 2>/dev/null || true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 2 — PYNQ-Z2 (sc-neurocore) Hardware Gate
+#
+# Runs ONLY when triggered via workflow_dispatch with run_pynq_hardware=true.
+# Requires a self-hosted runner labeled [self-hosted, pynq-z2] with:
+#   • The PYNQ-Z2 board powered and connected to the host over SSH or USB.
+#   • The Neurochip backend installed and running with PYNQ runtime mode active
+#     (NEUROCHIP_PYNQ_PYTHON set to the board's Python interpreter or pynq
+#     installed in the host Python environment).
+#   • snn_overlay.bit + snn_overlay.hwh + overlay_manifest.json deployed to
+#     the configured overlay directory.
+#
+# Evidence of real hardware:
+#   The test asserts runtime_mode == "hardware" at preflight, deploy, and status.
+#   It calls /hardware/pynq/deploy with require_hardware=true which returns HTTP 503
+#   if no real PYNQ device is detected — the simulator can never satisfy this check.
+# ─────────────────────────────────────────────────────────────────────────────
+  golden-path-pynq-hardware:
+    name: "Golden Path — PYNQ-Z2 (sc-neurocore) REAL HARDWARE"
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_pynq_hardware == true }}
+    runs-on: [self-hosted, pynq-z2]
+
+    env:
+      # Neurochip service on the runner (board must be locally attached)
+      NEUROCHIP_URL: "http://localhost:9000"
+      # Opt-in flag: the test skips unless this is explicitly set to true
+      PYNQ_HARDWARE_TEST: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install httpx pytest pytest-asyncio
+
+      - name: Verify Neurochip service is running
+        run: |
+          for i in $(seq 1 10); do
+            if curl -sf "http://localhost:9000/health" >/dev/null 2>&1; then
+              echo "✓ Neurochip service healthy"
+              break
+            fi
+            echo "Waiting for Neurochip service… ($i/10)"
+            sleep 3
+          done
+          curl -sf "http://localhost:9000/health" || \
+            (echo "❌ Neurochip service is not reachable on port 9000" && exit 1)
+
+      - name: Pre-check PYNQ preflight (must report hardware mode)
+        run: |
+          python - <<'EOF'
+          import httpx, sys, json
+          r = httpx.get("http://localhost:9000/hardware/pynq/preflight", timeout=30)
+          data = r.json()
+          print(json.dumps(data, indent=2))
+          mode = data.get("runtime_mode", "")
+          if mode != "hardware":
+              print(f"\n❌ PREFLIGHT FAILED: runtime_mode='{mode}' — expected 'hardware'.")
+              print("   The Neurochip service is running in simulator mode.")
+              print("   Ensure the PYNQ-Z2 is powered on and pynq/NEUROCHIP_PYNQ_PYTHON is configured.")
+              sys.exit(1)
+          print(f"\n✓ PYNQ runtime_mode=hardware confirmed.")
+          print(f"  preflight_status : {data.get('preflight_status')}")
+          print(f"  install_mode     : {data.get('install_mode')}")
+          EOF
+
+      - name: Run PYNQ-Z2 hardware validation tests
+        run: |
+          python -m pytest tests/integration/test_golden_path_pynq_hardware.py \
+            -m pynq_hardware \
+            -v \
+            --tb=long \
+            --no-header \
+            -s
+
+      - name: Upload PYNQ hardware test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pynq-hardware-results-${{ github.run_id }}
+          path: |
+            tests/integration/test_golden_path_pynq_hardware.py
+          retention-days: 30
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 3 — BrainChip AKida Hardware Gate
+#
+# Runs ONLY when triggered via workflow_dispatch with run_akida_hardware=true.
+# Requires a self-hosted runner labeled [self-hosted, akida-hardware] with:
+#   • A BrainChip AKida USB device enumerated (akida.devices() returns non-empty).
+#   • akida==2.19.1 + tensorflow==2.19.* installed on the runner.
+#   • The Neurochip backend running on port 9000 with SDK available.
+#
+# Evidence of real hardware:
+#   The test asserts runtime_target == "hardware" at status + map + inference.
+#   The only way runtime_target is set to "hardware" is when akida.devices()
+#   returns a non-empty list — i.e., a physical USB AKida chip is present.
+#   The AKD1000 software simulator is explicitly rejected.
+# ─────────────────────────────────────────────────────────────────────────────
+  golden-path-akida-hardware:
+    name: "Golden Path — BrainChip AKida REAL HARDWARE"
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_akida_hardware == true }}
+    runs-on: [self-hosted, akida-hardware]
+
+    env:
+      NEUROCHIP_URL: "http://localhost:9000"
+      AKIDA_HARDWARE_TEST: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install httpx pytest pytest-asyncio
+
+      - name: Verify Neurochip service is running
+        run: |
+          curl -sf "http://localhost:9000/health" || \
+            (echo "❌ Neurochip service is not reachable on port 9000" && exit 1)
+
+      - name: Pre-check AKida status (must report hardware runtime_target)
+        run: |
+          python - <<'EOF'
+          import httpx, sys, json
+          r = httpx.get("http://localhost:9000/api/neurochip/akida/status", timeout=30)
+          data = r.json()
+          print(json.dumps(data, indent=2))
+          target = data.get("runtime_target", "")
+          sdk_ok = data.get("sdk_available", False)
+          if not sdk_ok:
+              print(f"\n❌ AKIDA SDK NOT AVAILABLE — install akida==2.19.1 on this runner.")
+              sys.exit(1)
+          if target != "hardware":
+              print(f"\n❌ HARDWARE CHECK FAILED: runtime_target='{target}' — expected 'hardware'.")
+              print("   No physical AKida USB device was detected (akida.devices() returned empty).")
+              print("   The AKD1000 software simulator is NOT accepted by this test.")
+              sys.exit(1)
+          print(f"\n✓ AKida runtime_target=hardware confirmed.")
+          print(f"  sdk_available : {sdk_ok}")
+          print(f"  device_info   : {data.get('device_info')}")
+          EOF
+
+      - name: Run BrainChip AKida hardware validation tests
+        run: |
+          python -m pytest tests/integration/test_golden_path_akida_hardware.py \
+            -m akida_hardware \
+            -v \
+            --tb=long \
+            --no-header \
+            -s
+
+      - name: Upload AKida hardware test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: akida-hardware-results-${{ github.run_id }}
+          path: |
+            tests/integration/test_golden_path_akida_hardware.py
+          retention-days: 30
