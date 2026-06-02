@@ -164,6 +164,9 @@ flutter test
 if [[ "$RUN_INTEGRATION" == true ]]; then
   print_header "Root Integration Tests"
   capture_stage "root_integration_tests" "$PYTHON3" -m pytest tests/integration/test_cross_module.py tests/integration/test_teensy_e2e.py || STATUS=1
+
+  print_header "Golden Path CI Gate"
+  capture_stage "golden_path_tests" "$PYTHON3" -m pytest tests/integration/test_golden_path_1.py -m golden_path -v || STATUS=1
 fi
 
 write_failure_report
