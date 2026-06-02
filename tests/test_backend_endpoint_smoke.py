@@ -52,10 +52,10 @@ class BackendEndpointSmokeTests(unittest.TestCase):
                 "uvicornTarget": "backend.app.main:app",
             },
             {
-                "id": "neuro_dream_hand",
-                "name": "NDH Simulator",
+                "id": "cli_only_stub",
+                "name": "CLI-only stub",
                 "port": None,
-                "installPath": "Neuro-Dream-Hand/",
+                "installPath": "examples/cli-only/",
                 "sourcePath": ".",
                 "runPath": ".",
                 "startStrategy": "none",
@@ -73,7 +73,7 @@ class BackendEndpointSmokeTests(unittest.TestCase):
             modules = backend_endpoint_smoke.load_manifest(manifest_path)
             runnable = backend_endpoint_smoke.runnable_modules(modules)
 
-        self.assertEqual([module.id for module in modules], ["neurocnl", "neuro_dream_hand"])
+        self.assertEqual([module.id for module in modules], ["neurocnl", "cli_only_stub"])
         self.assertEqual([module.id for module in runnable], ["neurocnl"])
 
     def test_find_module_and_base_url_are_manifest_driven(self) -> None:

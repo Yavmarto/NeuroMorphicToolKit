@@ -79,13 +79,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                   ZetaListItem(
-                    primaryText: 'Server Setup',
+                    primaryText: 'Setup & environments',
+                    secondaryText:
+                        'Launcher server, backend target, Python environments',
                     trailing: SizedBox(
                       width: trailingWidth,
                       child: NmtkOutlinedButton(
-                        onPressed: () => context.go('/backend-setup'),
-                        icon: Icons.dns_outlined,
-                        label: 'Setup',
+                        onPressed: () => context.go('/setup'),
+                        icon: Icons.settings_suggest_outlined,
+                        label: 'Open',
                       ),
                     ),
                   ),

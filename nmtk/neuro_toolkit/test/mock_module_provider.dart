@@ -183,17 +183,6 @@ class MockModuleProvider extends ChangeNotifier implements ModuleProvider {
         'frontendStatus': 'Scaffold',
         'requiresMuJoCo': false,
       },
-      {
-        'id': 'neuro_dream_hand',
-        'name': 'NDH Simulator',
-        'description': 'Physics',
-        'icon': 'precision_manufacturing',
-        'port': null,
-        'installPath': 'Neuro-Dream-Hand/',
-        'hasFrontend': false,
-        'frontendStatus': 'No',
-        'requiresMuJoCo': true,
-      },
     ];
 
     _mockModules.clear();

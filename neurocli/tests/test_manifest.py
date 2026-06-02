@@ -27,7 +27,6 @@ def test_manifest_loads_all_ids() -> None:
         "Neurobench",
         "Neurosense",
         "Neurohub",
-        "neuro_dream_hand",
         "lava_backend",
     }
     assert expected.issubset(ids), f"Missing ids: {expected - ids}"

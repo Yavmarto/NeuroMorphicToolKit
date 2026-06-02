@@ -253,38 +253,6 @@
     }
   },
   {
-    "id": "neuro_dream_hand",
-    "name": "NDH Simulator",
-    "description": "Prosthetic SNN physics simulation (CLI only)",
-    "icon": "precision_manufacturing",
-    "port": null,
-    "version": "1.0.0",
-    "installPath": "Neuro-Dream-Hand/",
-    "sourcePath": ".",
-    "runPath": ".",
-    "installStrategy": "pip",
-    "startStrategy": "none",
-    "uvicornTarget": "",
-    "hasFrontend": false,
-    "frontendStatus": "No",
-    "requiresMuJoCo": true,
-    "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neuro-Dream-Hand",
-    "required": false,
-    "deployment": {
-      "supportedModes": [
-        "standalone"
-      ],
-      "healthPath": "",
-      "requiredPorts": [],
-      "requiredEnvironment": [],
-      "secretFields": [],
-      "defaultContainerImage": "",
-      "chartTemplateId": "",
-      "startupTimeoutSeconds": 120,
-      "readinessTimeoutSeconds": 120
-    }
-  },
-  {
     "id": "lava_backend",
     "name": "Lava Backend",
     "description": "Isolated Lava simulator runtime service used by Neurochip hardware routes",

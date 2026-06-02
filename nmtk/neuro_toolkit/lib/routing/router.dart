@@ -5,9 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
-import 'package:neuro_toolkit/screens/python_setup.dart';
+import 'package:neuro_toolkit/screens/first_run_setup_screen.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
-import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/screens/environment_editor.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/module_provider.dart';
@@ -48,7 +47,18 @@ GoRouter createGoRouter() {
           GoRoute(
             path: '/backend-setup',
             name: 'backend-setup',
-            builder: (context, state) => const BackendSetupScreen(),
+            redirect: (context, state) {
+              final step = state.uri.queryParameters['step'];
+              if (step != null && step.isNotEmpty) {
+                return '/setup?step=$step';
+              }
+              return '/setup?step=backend';
+            },
+          ),
+          GoRoute(
+            path: '/setup',
+            name: 'setup',
+            builder: (context, state) => const InAppFirstRunSetupScreen(),
           ),
           GoRoute(
             path: '/environments',
@@ -146,9 +156,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       _updateDialogQueued = false;
     }
 
-    // Gate: Python not detected — show full-screen setup guide (own Scaffold).
+    // Gate: Python not detected — unified first-run flow (own Scaffold).
     if (!provider.pythonAvailable && !provider.isLoading) {
-      return const PythonSetupScreen();
+      return const FirstRunSetupScreen(
+        requirePython: true,
+        requireLauncher: false,
+      );
     }
 
     // Gate: launcher control API could not start — show error Scaffold.

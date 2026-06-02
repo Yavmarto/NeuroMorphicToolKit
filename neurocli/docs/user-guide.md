@@ -104,7 +104,7 @@ neuro install <module_id> [--extras <extra1,extra2>] [--json]
 ```
 
 Module IDs come from `nmtk/neuro_toolkit/assets/modules.json`:
-`neurocnl`, `Neurochip`, `Neurobench`, `Neurosense`, `Neurohub`, `neuro_dream_hand`, `lava_backend`
+`neurocnl`, `Neurochip`, `Neurobench`, `Neurosense`, `Neurohub`, `lava_backend` (see `Neuro-Dream-Hand/` as a reference example, not a launcher module)
 
 **Examples:**
 

@@ -8,6 +8,7 @@ import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/providers/command_provider.dart';
+import 'package:neuro_toolkit/screens/first_run_setup_screen.dart';
 import 'package:neuro_toolkit/screens/server_setup.dart';
 
 void main() async {
@@ -212,45 +213,26 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
             ),
           );
         },
-        home: Scaffold(
-          body: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 980),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: _isLoading
-                    ? const _BootstrapLoadingView()
-                    : bootstrap != null && controlApiService != null
-                        ? ProviderScope(
-                            overrides: [
-                              launcherBootstrapStateProvider
-                                  .overrideWithValue(bootstrap),
-                              controlApiServiceProvider
-                                  .overrideWithValue(controlApiService),
-                            ],
-                            child: ServerSetupScreen(
-                              initialValue: _controlApiInput,
-                              onChanged: (v) => _controlApiInput = v ?? '',
-                              message: _setupMessage,
-                              onConnect: _saveAndRetry,
-                              setupAvailable: true,
-                              initialMode: ServerSetupMode.setup,
-                              onSetupCompleted: _bootstrap,
-                            ),
-                          )
-                        : ServerSetupScreen(
-                            initialValue: _controlApiInput,
-                            onChanged: (v) => _controlApiInput = v ?? '',
-                            message: _setupMessage,
-                            onConnect: _saveAndRetry,
-                            setupAvailable: false,
-                            setupUnavailableMessage:
-                                'Set the launcher control API host first. Once this device can reach a launcher server, you can provision a new backend from the same screen.',
-                          ),
+        home: _isLoading
+            ? const Scaffold(body: Center(child: _BootstrapLoadingView()))
+            : FirstRunSetupScreen(
+                requirePython: false,
+                requireLauncher: true,
+                launcherMessage: _setupMessage,
+                launcherInitialValue: _controlApiInput,
+                onLauncherChanged: (v) => _controlApiInput = v ?? '',
+                onLauncherConnect: _saveAndRetry,
+                allowLauncherConnect: true,
+                launcherSetupAvailable:
+                    bootstrap != null && controlApiService != null,
+                launcherSetupUnavailableMessage:
+                    'Set the launcher control API host first. Once this device can reach a launcher server, you can provision a new backend from the same screen.',
+                initialLauncherStep: bootstrap != null &&
+                        controlApiService != null
+                    ? ServerSetupMode.setup
+                    : ServerSetupMode.connect,
+                onLauncherSetupCompleted: _bootstrap,
               ),
-            ),
-          ),
-        ),
       ),
     );
   }

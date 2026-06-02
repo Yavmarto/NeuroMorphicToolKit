@@ -84,7 +84,7 @@ void main() {
 
     expect(find.text('Theme'), findsOneWidget);
     expect(find.text('Server'), findsOneWidget);
-    expect(find.text('Server Setup'), findsOneWidget);
+    expect(find.text('Setup & environments'), findsOneWidget);
   });
 
   testWidgets('Logging section has Log Level and log actions', (tester) async {

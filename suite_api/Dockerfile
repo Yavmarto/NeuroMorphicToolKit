@@ -45,9 +45,10 @@ COPY Neurochip/ Neurochip/
 ENV PYTHONPATH="/repo/neurocnl:/repo/Neurochip"
 # jinja2 is a dep of both Neurochip and suite_api — installed by those, not needed here
 
-# ── Neurobench: no pyproject.toml — directory only, accessed via sys.path ─────
+# ── Neurobench wrapper (declares neurocnl ^0.0.0 on PyPI — reinstall local) ───
 COPY Neurobench/neurobench/ Neurobench/neurobench/
-RUN pip install --no-cache-dir Neurobench/neurobench/
+RUN pip install --no-cache-dir Neurobench/neurobench/ \
+ && pip install --no-cache-dir --no-deps "neurocnl/[training,rockpool,synsense,norse]"
 
 # ── suite_api ─────────────────────────────────────────────────────────────────
 COPY suite_api/ suite_api/
@@ -62,6 +63,7 @@ ENV HOME=/home/app
 ENV XDG_CACHE_HOME=/home/app/.cache
 ENV NEUROCNL_DATA_DIR=/home/app/data
 ENV NEUROHUB_DB_URL=sqlite:////home/app/data/neurohub.db
+ENV NMTK_REPO_ROOT=/repo
 USER app
 EXPOSE 9000
 CMD ["uvicorn", "suite_api.main:app", "--host", "0.0.0.0", "--port", "9000"]
