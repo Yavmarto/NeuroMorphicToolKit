@@ -136,7 +136,7 @@ async def test_golden_path_1_no_hardware() -> None:
             resp = await _request_or_skip(
                 client, "GET", f"{NEUROBENCH_URL}/api/neurobench/run/{job_id}",
             )
-            assert resp.status_code == 200
+            assert resp.status_code == 200, f"Poll GET job/{job_id} failed: {resp.text}"
             job = resp.json()
             if job["status"] in {"COMPLETED", "FAILED"}:
                 break
