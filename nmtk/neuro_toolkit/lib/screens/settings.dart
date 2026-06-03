@@ -261,7 +261,10 @@ class _LogDialogState extends State<_LogDialog> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() => setState(() {}));
+    // No listener needed — ListenableBuilder in build() handles reactivity
+    // without calling setState during a parent rebuild, which would throw
+    // "setState() called during build" when ZetaTextInput.didUpdateWidget
+    // resets the controller value while an ancestor is being rebuilt.
   }
 
   @override
@@ -270,7 +273,7 @@ class _LogDialogState extends State<_LogDialog> {
     super.dispose();
   }
 
-  List<String> get _filteredLogs {
+  List<String> _filteredLogs(String query) {
     var lines = widget.showErrorOnlyToggle && _errorOnly
         ? widget.logs
             .where(
@@ -283,7 +286,7 @@ class _LogDialogState extends State<_LogDialog> {
             )
             .toList()
         : List<String>.from(widget.logs);
-    final q = _searchController.text.trim().toLowerCase();
+    final q = query.trim().toLowerCase();
     if (q.isNotEmpty) {
       lines = lines.where((l) => l.toLowerCase().contains(q)).toList();
     }
@@ -292,71 +295,82 @@ class _LogDialogState extends State<_LogDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _filteredLogs;
-    final text = filtered.join('\n');
+    // ListenableBuilder scopes rebuilds to this subtree only, so a
+    // _searchController notification that fires during a parent rebuild
+    // marks this element dirty rather than calling setState on _LogDialogState.
+    return ListenableBuilder(
+      listenable: _searchController,
+      builder: (context, _) {
+        final filtered = _filteredLogs(_searchController.text);
+        final text = filtered.join('\n');
 
-    return AlertDialog(
-      title: Text(widget.title),
-      actions: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (widget.showErrorOnlyToggle) ...[
-              Text(
-                'Error Only',
-                style: Zeta.of(context).textStyles.bodySmall,
-              ),
-              const SizedBox(width: 8),
-              Switch(
-                value: _errorOnly,
-                onChanged: (value) => setState(() => _errorOnly = value),
-              ),
-              const SizedBox(width: 16),
-            ],
-            ZetaButton.text(
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: text));
-                if (!context.mounted) return;
-                NmtkToasts.success(context, 'Logs copied to clipboard');
-              },
-              label: 'Copy All',
-            ),
-            const SizedBox(width: 4),
-            ZetaButton.text(
-              onPressed: () => Navigator.pop(context),
-              label: 'Close',
+        return AlertDialog(
+          title: Text(widget.title),
+          actions: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.showErrorOnlyToggle) ...[
+                  Text(
+                    'Error Only',
+                    style: Zeta.of(context).textStyles.bodySmall,
+                  ),
+                  const SizedBox(width: 8),
+                  Switch(
+                    value: _errorOnly,
+                    onChanged: (value) => setState(() => _errorOnly = value),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+                ZetaButton.text(
+                  onPressed: () async {
+                    await Clipboard.setData(ClipboardData(text: text));
+                    if (!context.mounted) return;
+                    NmtkToasts.success(context, 'Logs copied to clipboard');
+                  },
+                  label: 'Copy All',
+                ),
+                const SizedBox(width: 4),
+                ZetaButton.text(
+                  onPressed: () => Navigator.pop(context),
+                  label: 'Close',
+                ),
+              ],
             ),
           ],
-        ),
-      ],
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 400,
-        child: Column(
-          children: [
-            ZetaTextInput(
-              controller: _searchController,
-              placeholder: 'Filter logs...',
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: text.isEmpty
-                  ? const Center(child: Text('No logs to display.'))
-                  : Scrollbar(
-                      child: SingleChildScrollView(
-                        child: SelectableText(
-                          text,
-                          style: Zeta.of(context).textStyles.bodySmall.copyWith(
-                                fontFamily: 'JetBrainsMono',
-                                fontSize: 12,
-                              ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: Column(
+              children: [
+                ZetaTextInput(
+                  controller: _searchController,
+                  placeholder: 'Filter logs...',
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: text.isEmpty
+                      ? const Center(child: Text('No logs to display.'))
+                      : Scrollbar(
+                          child: SingleChildScrollView(
+                            child: SelectableText(
+                              text,
+                              style: Zeta.of(context)
+                                  .textStyles
+                                  .bodySmall
+                                  .copyWith(
+                                    fontFamily: 'JetBrainsMono',
+                                    fontSize: 12,
+                                  ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

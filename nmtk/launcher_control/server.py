@@ -2747,25 +2747,54 @@ class LauncherControlState:
     # Hardware auto-discovery
     # ------------------------------------------------------------------
 
-    def _auto_discover_local_hardware(self) -> None:
-        """Probe Neurochip for locally-attached hardware and auto-register hosts.
+    def _purge_auto_discovered_hosts(self) -> None:
+        """Remove auto-discovered host entries so stale entries from a previous session
+        never appear as failures before the current session's discovery has run."""
+        with self._lock:
+            before = self._settings.get("akidaHosts", [])
+            after = [h for h in before if not h.get("autoDiscovered")]
+            if len(after) != len(before):
+                self._settings["akidaHosts"] = after
+                self._persist_settings()
 
-        Retries until the Neurochip module is reachable (up to ~2 minutes), then
-        probes each hardware type and auto-registers any detected physical devices.
-        Called from a daemon thread at startup and from POST /api/launcher/hardware/discover.
+    def _auto_discover_local_hardware(self) -> None:
+        """Probe local hardware runtime services and auto-register detected hosts.
+
+        Probes each hardware type's runtime service directly on its well-known port
+        (e.g. Akida on port 8002) without routing through the Neurochip FastAPI layer.
+        Retries for up to ~30 s to allow services that start concurrently with the
+        launcher to become ready.  Called from a daemon thread at startup and from
+        POST /api/launcher/hardware/discover.
         """
         with self._hardware_discovery_lock:
             if self._hardware_discovery_done:
                 return
             self._hardware_discovery_done = True
 
-        base_url = f"http://{self._external_probe_host}:{DEFAULT_SUITE_API_PORT}"
-        akida_status_url = f"{base_url}/api/neurochip/akida/status"
+        try:
+            self._auto_discover_local_hardware_impl()
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"[hardware-discovery] Unexpected error during hardware discovery: {exc}",
+                file=sys.stderr,
+                flush=True,
+            )
 
-        # Wait for Neurochip to be reachable — it is mounted in the suite_api monolith
-        # which may not be up immediately at launcher start.
-        neurochip_reachable = False
-        for _attempt in range(24):  # up to ~2 min (24 × 5 s)
+    def _auto_discover_local_hardware_impl(self) -> None:
+        """Implementation body for _auto_discover_local_hardware."""
+        # Purge stale auto-discovered entries from a previous session first so
+        # they never show as "connection refused" before re-validation completes.
+        self._purge_auto_discovered_hosts()
+
+        contract = _load_neurochip_launcher_runtime_contract()
+        probe_host = self._external_probe_host
+
+        # --- Akida: probe the neurochip-akida-host runtime service on its own port ---
+        akida_runtime_port = contract.akida.runtime_port  # 8002
+        akida_base_url = f"http://{probe_host}:{akida_runtime_port}"
+        akida_status_url = f"{akida_base_url}/api/neurochip/akida/status"
+
+        for _attempt in range(6):  # up to ~30 s (6 × 5 s)
             if self._shutdown.is_set():
                 return
             try:
@@ -2773,53 +2802,25 @@ class LauncherControlState:
                     body: dict[str, Any] = json.loads(
                         resp.read().decode("utf-8", errors="replace")
                     )
-                    neurochip_reachable = True
-                    self._maybe_register_local_akida(base_url, body)
+                    self._maybe_register_local_akida(akida_base_url, body)
                     break
-            except urllib.error.HTTPError as exc:
-                # 4xx/5xx means the endpoint is up; treat as reachable.
-                neurochip_reachable = True
-                print(
-                    f"[hardware-discovery] Akida status endpoint returned HTTP {exc.code};"
-                    " skipping Akida probe",
-                    file=sys.stderr,
-                    flush=True,
-                )
+            except urllib.error.HTTPError:
+                # Service is up but returned an error — hardware likely unavailable.
                 break
             except (urllib.error.URLError, OSError, TimeoutError):
-                # Neurochip not yet up — wait and retry.
+                # Service not yet up — wait and retry.
                 self._shutdown.wait(5.0)
 
-        if not neurochip_reachable:
-            print(
-                "[hardware-discovery] Neurochip not reachable after max retries; "
-                "skipping auto-discovery. Use POST /api/launcher/hardware/discover to retry.",
-                flush=True,
-            )
-            return
-
-        # Speck probe — best-effort; note detection but no dedicated host registry yet.
-        try:
-            speck_url = f"{base_url}/api/neurochip/hardware/speck/status"
-            with urllib.request.urlopen(speck_url, timeout=8) as resp:
-                speck_body: dict[str, Any] = json.loads(
-                    resp.read().decode("utf-8", errors="replace")
-                )
-                if speck_body.get("runtimeTarget") == "hardware":
-                    print(
-                        f"[hardware-discovery] Speck hardware detected:"
-                        f" {speck_body.get('deviceInfo')} "
-                        "(no dedicated host registry; manual configuration not required"
-                        " for local Speck inference via Neurochip)",
-                        flush=True,
-                    )
-        except Exception:  # noqa: BLE001
-            pass  # Speck probe is best-effort; silence failure noise at startup.
-
     def _maybe_register_local_akida(
-        self, neurochip_base_url: str, status: dict[str, Any]
+        self, runtime_base_url: str, status: dict[str, Any]
     ) -> None:
-        """Auto-register a local Akida host entry when physical hardware is detected."""
+        """Auto-register a local Akida host entry when physical hardware is detected.
+
+        Uses the runtime service URL directly (port 8002) so that preflight checks
+        hit the same service that was probed, not the Neurochip FastAPI layer.
+        Sets controlApiUrl to empty so the launcher's own port 8091 is never
+        mistaken for the Akida control service.
+        """
         if status.get("runtimeTarget") != "hardware":
             return
 
@@ -2836,8 +2837,8 @@ class LauncherControlState:
                 {
                     "id": auto_id,
                     "displayName": f"Local Akida — {device_info}",
-                    "host": "127.0.0.1",
-                    "runtimeApiUrl": neurochip_base_url,
+                    "runtimeApiUrl": runtime_base_url,
+                    "controlApiUrl": "",  # skip control check; launcher occupies 8091
                     "autoDiscovered": True,
                     "isDefault": is_first,
                 }
@@ -6294,8 +6295,9 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 return
 
             if method == "POST" and path == "/api/launcher/hardware/discover":
-                # Reset the discovery flag so the probe runs again, then start a
-                # background thread.  Useful when hardware is hot-plugged after startup.
+                # Purge stale auto-discovered hosts, reset the discovery flag, and
+                # start a fresh probe thread.  Useful for hot-plugged hardware.
+                self.server.state._purge_auto_discovered_hosts()
                 with self.server.state._hardware_discovery_lock:
                     self.server.state._hardware_discovery_done = False
                 threading.Thread(
