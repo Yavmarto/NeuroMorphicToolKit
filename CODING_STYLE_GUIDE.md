@@ -2,6 +2,10 @@
 
 This guide only covers cross-repo defaults that are not already enforced by the nearest module config. The authority order is: nearest `AGENTS.md`, then module config files such as `pyproject.toml`, `pubspec.yaml`, `analysis_options.yaml`, and `.pre-commit-config.yaml`, then this document.
 
+## End-User Convenience — Top Priority
+
+End-user convenience is the highest product priority. When a design decision involves a trade-off between developer convenience and end-user convenience, end-user convenience wins. Defaults must work out of the box; users must never need to know internal port numbers, service hostnames, or deployment internals. See `AGENTS.md` for the full principle.
+
 ## Audited module map
 
 - `neurocnl`: Python + Dart. See `neurocnl/pyproject.toml`, `neurocnl/frontend/pubspec.yaml`, `neurocnl/frontend/analysis_options.yaml`, `neurocnl/.pre-commit-config.yaml`.

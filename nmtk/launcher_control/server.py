@@ -2137,6 +2137,9 @@ class LauncherControlState:
         self._suite_api_logs: collections.deque[str] = collections.deque(
             maxlen=LOG_LINE_LIMIT
         )
+        # Akida runtime process managed separately from module processes so that
+        # shutdown() can terminate it without going through stop_module().
+        self._akida_runtime_process: subprocess.Popen[str] | None = None
         self._modules = self._load_modules()
         self._processes: dict[str, ManagedProcess] = {}
         self._logs: dict[str, collections.deque[str]] = collections.defaultdict(
@@ -2186,6 +2189,16 @@ class LauncherControlState:
             except subprocess.TimeoutExpired:
                 self._suite_api_process.kill()
                 self._suite_api_process.wait(timeout=5)
+        if (
+            self._akida_runtime_process is not None
+            and self._akida_runtime_process.poll() is None
+        ):
+            self._akida_runtime_process.terminate()
+            try:
+                self._akida_runtime_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._akida_runtime_process.kill()
+                self._akida_runtime_process.wait(timeout=5)
 
     def _set_suite_api_state(self, status: str, message: str | None = None) -> None:
         with self._lock:
@@ -2791,10 +2804,33 @@ class LauncherControlState:
 
         # --- Akida: probe the neurochip-akida-host runtime service on its own port ---
         akida_runtime_port = contract.akida.runtime_port  # 8002
-        akida_base_url = f"http://{probe_host}:{akida_runtime_port}"
+
+        # Prefer the Docker-internal service URL when NEUROCHIP_HW_WORKER_URL is
+        # configured.  In the Docker Compose setup the host-side port is 18002
+        # (not 8002), so probing via host.docker.internal:8002 fails.  The
+        # internal network URL http://neurochip-hw-worker:8002 is already used by
+        # suite_api and works correctly from within backend-net.
+        # When the env var is absent we are in local-dev mode: construct the URL
+        # from external_probe_host and try to auto-start the venv if present.
+        _docker_worker_url = os.environ.get("NEUROCHIP_HW_WORKER_URL", "").strip()
+        if _docker_worker_url:
+            akida_base_url = _docker_worker_url.rstrip("/")
+            # Lava-backend has a 120 s start_period that gates neurochip-hw-worker;
+            # allow up to 2 min of retries so Docker mode always survives a cold start.
+            _probe_attempts = 24
+        else:
+            akida_base_url = f"http://{probe_host}:{akida_runtime_port}"
+            _probe_attempts = 6  # 30 s — sufficient for local dev
+            # Auto-start the local venv only when no Docker worker URL is configured.
+            with self._lock:
+                runtime_already_managed = self._akida_runtime_process is not None
+            neurochip_module = self._modules.get("Neurochip")
+            if neurochip_module is not None and not runtime_already_managed:
+                self._start_local_akida_runtime(neurochip_module, akida_runtime_port)
+
         akida_status_url = f"{akida_base_url}/api/neurochip/akida/status"
 
-        for _attempt in range(6):  # up to ~30 s (6 × 5 s)
+        for _attempt in range(_probe_attempts):
             if self._shutdown.is_set():
                 return
             try:
@@ -2802,7 +2838,11 @@ class LauncherControlState:
                     body: dict[str, Any] = json.loads(
                         resp.read().decode("utf-8", errors="replace")
                     )
-                    self._maybe_register_local_akida(akida_base_url, body)
+                    self._maybe_register_local_akida(
+                        akida_base_url,
+                        body,
+                        require_hardware=not bool(_docker_worker_url),
+                    )
                     break
             except urllib.error.HTTPError:
                 # Service is up but returned an error — hardware likely unavailable.
@@ -2811,17 +2851,74 @@ class LauncherControlState:
                 # Service not yet up — wait and retry.
                 self._shutdown.wait(5.0)
 
-    def _maybe_register_local_akida(
-        self, runtime_base_url: str, status: dict[str, Any]
+    def _start_local_akida_runtime(
+        self, neurochip_module: dict[str, Any], runtime_port: int
     ) -> None:
-        """Auto-register a local Akida host entry when physical hardware is detected.
+        """Spawn the Neurochip Akida runtime service locally on *runtime_port*.
 
-        Uses the runtime service URL directly (port 8002) so that preflight checks
-        hit the same service that was probed, not the Neurochip FastAPI layer.
-        Sets controlApiUrl to empty so the launcher's own port 8091 is never
-        mistaken for the Akida control service.
+        Called during hardware auto-discovery when Neurochip is installed and
+        the runtime is not yet listening.  The process is stored in
+        self._akida_runtime_process and terminated by shutdown().
+
+        stdout/stderr are discarded to prevent pipe-buffer stalls; uvicorn
+        writes its own structured logs internally.
         """
-        if status.get("runtimeTarget") != "hardware":
+        python_path = _module_venv_python(neurochip_module)
+        if not python_path.exists():
+            print(
+                "[akida-runtime] Neurochip venv not found — skipping auto-start.",
+                flush=True,
+            )
+            return
+        run_dir = _module_run_dir(neurochip_module)
+        log_level = str(self._settings.get("logLevel", "info"))
+        command = [
+            str(python_path),
+            "-m",
+            "uvicorn",
+            "neurochip.app.main:app",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(runtime_port),
+            "--log-level",
+            log_level,
+        ]
+        try:
+            process = subprocess.Popen(
+                command,
+                cwd=str(run_dir),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL,
+            )
+            with self._lock:
+                self._akida_runtime_process = process
+            print(
+                f"[akida-runtime] Started Neurochip Akida runtime on port {runtime_port} "
+                f"(pid {process.pid}).",
+                flush=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"[akida-runtime] Failed to start: {exc}", flush=True)
+
+    def _maybe_register_local_akida(
+        self,
+        runtime_base_url: str,
+        status: dict[str, Any],
+        require_hardware: bool = True,
+    ) -> None:
+        """Auto-register a local Akida host entry.
+
+        Uses the runtime service URL directly so that preflight checks hit the
+        same service that was probed.  Sets controlApiUrl to empty so the
+        launcher's own port 8091 is never mistaken for the Akida control service.
+
+        *require_hardware* — when True (local-dev default) only registers if
+        the runtime reports physical hardware.  Set to False in Docker mode so
+        that simulator containers are also registered as connectable hosts.
+        """
+        if require_hardware and status.get("runtimeTarget") != "hardware":
             return
 
         auto_id = "local-akida-auto"
@@ -4644,14 +4741,28 @@ class LauncherControlState:
                 )
                 runtime_status = verification
         except Exception as exc:  # noqa: BLE001
+            _url = _resolved_akida_base_url(host).rstrip("/") or "(unknown)"
+            _raw = str(exc)
+            if "111" in _raw or "connection refused" in _raw.lower():
+                _msg = (
+                    f"Akida runtime service not reachable at {_url}. "
+                    "Ensure the Neurochip runtime service is running on the target host."
+                )
+            elif "timed out" in _raw.lower() or "timeout" in _raw.lower():
+                _msg = (
+                    f"Connection to Akida runtime at {_url} timed out. "
+                    "Check network connectivity and firewall rules."
+                )
+            else:
+                _msg = _raw
             verification = {
                 "preflight_status": PREFLIGHT_FAILED,
-                "preflight_message": str(exc),
+                "preflight_message": _msg,
                 "sdk_status": "",
                 "runtime_target": "",
                 "sdk_available": False,
                 "sdk_issues": [],
-                "sdk_issue_detail": str(exc),
+                "sdk_issue_detail": _raw,
                 "environment_checks": None,
             }
         if "preflight_status" not in verification:

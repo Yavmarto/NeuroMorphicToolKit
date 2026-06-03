@@ -2,6 +2,18 @@
 
 This checkout contains the suite control plane plus the individual product modules. Default to one writable top-level module per task; if a change crosses a contract boundary, read both modules' `AGENTS.md` files and both sides' spec or ADR docs before writing.
 
+## End-User Convenience — Top Priority
+
+**End-user convenience is the highest product priority in this codebase.**
+
+When multiple valid solutions exist, always choose the one that requires the least action from the end user. Concretely:
+- Prefer auto-detection and auto-configuration over requiring the user to set anything up manually.
+- Prefer sensible defaults that work out of the box over options that require the user to know internal port numbers, service names, or deployment details.
+- When a service can be discovered automatically, do so — never require the user to type in a URL or port they shouldn't need to know.
+- Prefer changes to config files (docker-compose, modules.json, server defaults) over changes that require UI interaction or user knowledge.
+- Error messages must be actionable: say what failed, why, and exactly what to do — never expose raw exception strings to the end user.
+- When choosing between a simple UI action and a code fix that makes the action unnecessary, fix the code.
+
 Read before edit:
 
 - Before writing code anywhere in this repo, read `CODING_STYLE_GUIDE.md`.
@@ -72,3 +84,4 @@ If `semble` is not on `$PATH`, use `uvx --from "semble[mcp]" semble` in its plac
    - State whether the front end or back end has to be restarted.
    - Describe exactly where the user can notice the changes.
    - Provide a summary of the issue and solution in no more than 3 sentences.
+   - **Important Constraint**: The length of the "Summary of Issue and Solution" and the "Where to notice the changes" sections combined must be between half and 2/3 of the entire report. Keep these two sections highly concise.
