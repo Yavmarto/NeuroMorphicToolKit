@@ -2,7 +2,7 @@
 
 Based on the continuation of work from May 31, here is the updated execution order for the remaining unfinished tasks, prioritizing the manual implementation of Plan C2 (which replaces the broken stash) and remaining bug fixes/release blockers.
 
-> **Last updated:** 2026-06-02
+> **Last updated:** 2026-06-02 (20:10 UTC)
 > **Note:** The `May 31` stash for Plan C2 was abandoned due to massive structural conflicts. We are proceeding with a clean manual implementation.
 
 ---
@@ -45,7 +45,19 @@ Based on the continuation of work from May 31, here is the updated execution ord
 
 ---
 
-## 4. High-Yield Cleanup & Fluff Cuts (`2026-05-fluff-cut-analysis.md`)
+## 4. Hardware Validation Fix — Akida & SC-NeuroCore Target Picker
+**Why:** Blocking the hardware validation path described in `docs/Hardware Validation Plan_ PYNQ-Z2 and BrainChip AKida.md`. Two CNL Studio deploy panel bugs prevent users from reaching physical hardware.
+**Action:** Implement the plan defined in `2026-06-02-akida-manage-targets-pynq-target-picker.md`.
+
+**Status:** ⏳ AWAITING APPROVAL
+- Bug 1: Akida "Manage Targets" crashes with "could not reach launcher control service" → dialog never opens
+- Bug 2: SC-NeuroCore (FPGA RTL) has no PYNQ board target picker
+- All changes in `neurocnl/frontend/` (6 files); no backend changes needed
+- Warp plan ID: `29360f47-74f5-4290-ab39-392b387fe8e9`
+
+---
+
+## 5. High-Yield Cleanup & Fluff Cuts (`2026-05-fluff-cut-analysis.md`)
 **Why:** Tier 1 fluff cuts were completed on May 31. Tier 2+ remains.
 **Action:** Execute remaining cuts (Neurohub PM chrome, neurocli / Neuro-Dream-Hand reclassification, simulator deduplication).
 
@@ -53,7 +65,7 @@ Based on the continuation of work from May 31, here is the updated execution ord
 
 ---
 
-## 5. Targeted Refactoring (`frontend-state-management-review.md`)
+## 6. Targeted Refactoring (`frontend-state-management-review.md`)
 **Why:** Valuable technical polish, but non-blocking.
 **Action:** Targeted Riverpod migrations for async flows and app state.
 
@@ -61,7 +73,7 @@ Based on the continuation of work from May 31, here is the updated execution ord
 
 ---
 
-## 6. UI & Design System Migration (Zeta)
+## 7. UI & Design System Migration (Zeta)
 **Why:** Unify the visual identity of all five frontends and remove legacy Material widgets.
 **Action:** Execute the Material Icons to ZetaIcons sweep and complete remaining tech-debt button migrations.
 **Status:** 🔄 IN PROGRESS (Priority currently bumped to front of queue)
@@ -71,7 +83,7 @@ Based on the continuation of work from May 31, here is the updated execution ord
 
 ---
 
-## 7. Core Architecture & Authoring Experience
+## 8. Core Architecture & Authoring Experience
 **Why:** Support reproducible research by separating topology from training, and provide better authoring UX.
 **Action:** Implement bundle architecture, layer editor, and MCP service.
 **Status:** ⬜ NOT STARTED
@@ -81,7 +93,7 @@ Based on the continuation of work from May 31, here is the updated execution ord
 
 ---
 
-## 8. Usability Bug Fixes
+## 9. Usability Bug Fixes
 **Why:** Stop the UI from suggesting grammar that instantly fails the compiler and ensure deploy-readiness is surfaced in the validation panel.
 **Action:** Align the CNL sentence picker with NIR-native compiler rules and fix the validation panel.
 **Status:** ⬜ NOT STARTED

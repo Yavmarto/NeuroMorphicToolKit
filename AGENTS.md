@@ -68,3 +68,7 @@ If `semble` is not on `$PATH`, use `uvx --from "semble[mcp]" semble` in its plac
 5. Use grep only when you need exhaustive literal matches or quick confirmation of an exact string.
 6. **Apply autofixers and run tests** for the language you are working in (e.g., `ruff check --fix .` and `ruff format .` for Python, `dart fix --apply` and `dart format .` for Dart) to ensure the codebase remains green before finishing a task.
 7. **Update Open Brain** with any new durable knowledge or architectural changes upon task completion.
+8. **End of Task Reporting**: When you finish a task, always report back to the user with the following:
+   - State whether the front end or back end has to be restarted.
+   - Describe exactly where the user can notice the changes.
+   - Provide a summary of the issue and solution in no more than 3 sentences.
