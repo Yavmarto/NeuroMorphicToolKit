@@ -76,7 +76,7 @@ class SnnWorkflowStepper extends StatelessWidget {
       steps: [
         _buildStepData(
           SnnWorkflowPhase.selectData,
-          '1. Select Data',
+          '1. Setup',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (dataset / tabular data)
           Icons.dataset_outlined,
         ),
@@ -111,14 +111,11 @@ class SnnWorkflowStepper extends StatelessWidget {
   }
 
   NmtkPipelineStepData _buildSandboxStepData() {
-    final label = onOpenSandbox != null ? '3. Sandbox ↗' : '3. Sandbox';
+    const label = '3. Notebook';
     final status = _getStatusForPhase(SnnWorkflowPhase.trainingSandbox);
     VoidCallback? onTap;
-    if (onOpenSandbox != null || onPhaseSelected != null) {
-      onTap = () {
-        onPhaseSelected?.call(SnnWorkflowPhase.trainingSandbox);
-        onOpenSandbox?.call();
-      };
+    if (onPhaseSelected != null) {
+      onTap = () => onPhaseSelected!(SnnWorkflowPhase.trainingSandbox);
     }
     return NmtkPipelineStepData(
       id: SnnWorkflowPhase.trainingSandbox.name,
