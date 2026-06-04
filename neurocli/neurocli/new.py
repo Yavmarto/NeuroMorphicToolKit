@@ -1,12 +1,15 @@
 """neuro new — scaffold a neuromorphic project from a template bundle.
 
-Supported combinations (framework + target → bundle):
+Supported combinations (framework + target → bundle) (legacy):
   nir       + snntorch     → nir_snntorch
   nir       + lava_sim     → nir_lava_sim
   nir       + sc_neurocore → nir_sc_neurocore
   neurocnl  + pynq         → neurocnl_pynq
   akida     + brainchip    → akida_brainchip
   neurocnl  + neurosim     → neurocnl_neurosim
+
+New training workflow:
+  trainer (e.g., snntorch) + data (e.g., event) → scaffolds training sandbox
 """
 
 from __future__ import annotations
@@ -35,9 +38,11 @@ _SUPPORTED = [f"{fw}+{tgt}" for fw, tgt in _COMBOS]
 
 def new_command(
     name: str = typer.Argument(..., help="Project directory name"),
-    framework: str = typer.Option(..., "--framework", "-f", help="Framework (nir, neurocnl, akida)"),
-    target: str = typer.Option(  # noqa: E501
-        ..., "--target", "-t", help="Target (snntorch, lava_sim, pynq, brainchip, neurosim)"
+    trainer: Optional[str] = typer.Option(None, "--trainer", help="Training framework (e.g., snntorch, norse)"),
+    data: Optional[str] = typer.Option(None, "--data", help="Dataset type (e.g., event, static)"),
+    framework: Optional[str] = typer.Option(None, "--framework", "-f", help="Framework (nir, neurocnl, akida)"),
+    target: Optional[str] = typer.Option(  # noqa: E501
+        None, "--target", "-t", help="Target (deprecated, use --trainer for training or `neuro deploy` for hardware)"
     ),
     task: str = typer.Option("default", "--task", help="Task label embedded in generated files"),
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
@@ -45,22 +50,38 @@ def new_command(
 ) -> None:
     """Scaffold a new neuromorphic project from a template bundle.
 
-    Supported framework+target combos:
-    nir+snntorch, nir+lava_sim, nir+sc_neurocore, neurocnl+pynq, akida+brainchip, neurocnl+neurosim
+    Supported training workflows: --trainer <framework> --data <type>
+    Legacy combos: nir+snntorch, nir+lava_sim, neurocnl+pynq, etc.
     """
-    key = (framework.lower(), target.lower())
-    bundle = _COMBOS.get(key)
-    if bundle is None:
-        error_exit(
-            {
-                "error": "unsupported_combination",
-                "framework": framework,
-                "target": target,
-                "supported": _SUPPORTED,
-            },
-            json_mode,
-            code=1,
-        )
+    bundle: Optional[str] = None
+    if trainer:
+        # New training workflow
+        if trainer.lower() == "snntorch":
+            bundle = "nir_snntorch"
+        else:
+            error_exit({"error": "unsupported_trainer", "trainer": trainer}, json_mode, code=1)
+    else:
+        # Legacy workflow
+        if not framework or not target:
+            error_exit(
+                {"error": "missing_arguments", "message": "Must provide --trainer or --framework/--target"},
+                json_mode,
+                code=1,
+            )
+        assert framework is not None and target is not None
+        key = (framework.lower(), target.lower())
+        bundle = _COMBOS.get(key)
+        if bundle is None:
+            error_exit(
+                {
+                    "error": "unsupported_combination",
+                    "framework": framework,
+                    "target": target,
+                    "supported": _SUPPORTED,
+                },
+                json_mode,
+                code=1,
+            )
 
     dest = (output_dir or Path.cwd()) / name
     if dest.exists():
@@ -71,8 +92,9 @@ def new_command(
         )
 
     dest.mkdir(parents=True)
-    variables = {"project_name": name, "task": task}
-    render_template(bundle, variables, dest)  # type: ignore[arg-type]
+    variables = {"project_name": name, "task": task, "data_type": data or "static"}
+    assert bundle is not None
+    render_template(bundle, variables, dest)
 
     if json_mode:
         print_result({"status": "created", "path": str(dest), "bundle": bundle}, json_mode)

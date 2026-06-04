@@ -20,7 +20,7 @@ def test_new_nir_snntorch_creates_structure(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert (tmp_path / "my_proj" / "pyproject.toml").exists()
     assert (tmp_path / "my_proj" / "README.md").exists()
-    assert (tmp_path / "my_proj" / "src" / "main.py").exists()
+    assert (tmp_path / "my_proj" / "src" / "train.py").exists()
     assert (tmp_path / "my_proj" / "scripts" / "run.sh").exists()
 
 
@@ -44,6 +44,15 @@ def test_new_json_output_mode(tmp_path: Path) -> None:
     data = json.loads(result.output)
     assert data["status"] == "created"
     assert "json_proj" in data["path"]
+
+
+def test_new_with_trainer(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["new", "trainer_proj", "--trainer", "snntorch", "--data", "event", "--output-dir", str(tmp_path)],
+    )
+    assert result.exit_code == 0
+    assert (tmp_path / "trainer_proj" / "src" / "train.py").exists()
 
 
 def test_new_existing_dir_exits_1(tmp_path: Path) -> None:

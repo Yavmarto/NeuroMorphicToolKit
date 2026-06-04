@@ -56,7 +56,10 @@ class NmtkSectionHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final resolvedTitleStyle =
         titleStyle ??
-        theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700);
+        theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          fontSize: 18,
+        );
 
     return Padding(
       padding: padding,
