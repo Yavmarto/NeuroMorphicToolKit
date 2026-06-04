@@ -44,10 +44,13 @@ class NmtkPipelineStepper extends StatefulWidget {
   final bool bare;
   final Color stepAccentColor;
 
+  final String? secondarySelectedStepId;
+
   const NmtkPipelineStepper({
     super.key,
     required this.steps,
     this.selectedStepId,
+    this.secondarySelectedStepId,
     this.onSelected,
     this.bare = false,
     this.stepAccentColor = NmtkZetaTheme.primary,
@@ -175,7 +178,8 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
         _PipelineStep(
           key: _stepKeys[step.id],
           data: step,
-          selected: widget.selectedStepId == step.id,
+          selected: widget.selectedStepId == step.id ||
+              widget.secondarySelectedStepId == step.id,
           accentColor: widget.stepAccentColor,
           onTap:
               step.onTap ??

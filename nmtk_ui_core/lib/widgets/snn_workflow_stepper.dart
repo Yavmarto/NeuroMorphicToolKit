@@ -46,6 +46,9 @@ class SnnWorkflowStepper extends StatelessWidget {
   /// Intended for the consumer to launch Jupyter Lab (e.g. via url_launcher).
   final VoidCallback? onOpenSandbox;
 
+  /// When set, this phase is also highlighted in the stepper (dual-pane view).
+  final SnnWorkflowPhase? secondaryPhase;
+
   /// When true, renders only the inner scrollable row with no container border.
   /// Pass to embed inside a parent toolbar (mirrors [NmtkPipelineStepper.bare]).
   final bool bare;
@@ -57,6 +60,7 @@ class SnnWorkflowStepper extends StatelessWidget {
     this.runningPhase,
     this.onPhaseSelected,
     this.onOpenSandbox,
+    this.secondaryPhase,
     this.bare = false,
   });
 
@@ -65,6 +69,7 @@ class SnnWorkflowStepper extends StatelessWidget {
     return NmtkPipelineStepper(
       bare: bare,
       selectedStepId: currentPhase.name,
+      secondarySelectedStepId: secondaryPhase?.name,
       onSelected: onPhaseSelected != null
           ? (id) {
               final phase = SnnWorkflowPhase.values.firstWhere(
