@@ -111,28 +111,28 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
     if (stepContext == null || rowContext == null) return;
 
     final stepBox = stepContext.findRenderObject() as RenderBox?;
-    final rowBox = rowContext.findRenderObject() as RenderBox?;
-    if (stepBox == null ||
-        rowBox == null ||
-        !stepBox.hasSize ||
-        !rowBox.hasSize) {
-      return;
-    }
+    if (stepBox == null || !stepBox.hasSize) return;
+
+    final position = _scrollController.position;
+    final viewportWidth = position.viewportDimension;
+
+    final stepLeft = stepBox.localToGlobal(Offset.zero, ancestor: rowContext.findRenderObject()).dx;
+    final stepRight = stepLeft + stepBox.size.width;
+
+    final visibleLeft = position.pixels;
+    final visibleRight = position.pixels + viewportWidth;
+
+    if (stepLeft >= visibleLeft && stepRight <= visibleRight) return;
 
     final tokens = NmtkShellTokens.of(context);
-    final targetOffset = stepBox
-        .localToGlobal(Offset.zero, ancestor: rowBox)
-        .dx;
-    final clampedOffset = targetOffset.clamp(
-      0.0,
-      _scrollController.position.maxScrollExtent,
-    );
+    final targetOffset = (stepLeft - 24)
+        .clamp(0.0, position.maxScrollExtent);
 
-    if ((_scrollController.offset - clampedOffset).abs() < 1) return;
+    if ((position.pixels - targetOffset).abs() < 1) return;
 
     unawaited(
       _scrollController.animateTo(
-        clampedOffset,
+        targetOffset,
         duration: tokens.standardMotion,
         curve: Curves.easeOutCubic,
       ),
@@ -152,12 +152,15 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
           label: 'Pipeline status bar',
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Wrap(
-              key: _rowKey,
-              alignment: WrapAlignment.spaceEvenly,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              runSpacing: 8,
-              children: steps,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              controller: _scrollController,
+              child: Row(
+                key: _rowKey,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: steps,
+              ),
             ),
           ),
         );
