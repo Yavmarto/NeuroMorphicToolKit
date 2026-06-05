@@ -144,29 +144,38 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
 
-    final inner = Semantics(
-      label: 'Pipeline status bar',
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Row(key: _rowKey, children: _buildSteps(context)),
-        ),
-      ),
-    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final steps = _buildSteps(context);
 
-    if (widget.bare) return inner;
+        final inner = Semantics(
+          label: 'Pipeline status bar',
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Wrap(
+              key: _rowKey,
+              alignment: WrapAlignment.spaceEvenly,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: 8,
+              children: steps,
+            ),
+          ),
+        );
 
-    return Container(
-      height: tokens.workspaceBarHeight,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border(
-          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
-        ),
-      ),
-      child: inner,
+        if (widget.bare) return inner;
+
+        return Container(
+          constraints: BoxConstraints(minHeight: tokens.workspaceBarHeight),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            border: Border(
+              bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+            ),
+          ),
+          child: inner,
+        );
+      },
     );
   }
 

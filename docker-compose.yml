@@ -17,8 +17,11 @@ services:
       # Remote Lava timeout — must exceed Lava's cold-start compilation (30–90 s).
       # Increase this if the warm-up isn't active or the network is unusually large.
       - NEUROCNL_LAVA_REMOTE_TIMEOUT_S=${NEUROCNL_LAVA_REMOTE_TIMEOUT_S:-120}
-      # Jupyter worker — only active when notebooks profile is running
+      # Jupyter worker — internal URL for health probing
       - JUPYTER_WORKER_URL=http://jupyter-server:8008
+      # Public URL returned to the Flutter WebView.  Override on remote deployments
+      # with the host's reachable address, e.g. http://my-server:8008/lab
+      - JUPYTER_PUBLIC_URL=${JUPYTER_PUBLIC_URL:-http://localhost:8008/lab}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/suite/health')"]
       start_period: 90s

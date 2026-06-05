@@ -29,7 +29,11 @@ class Settings(BaseSettings):
     neurobench_runner_url: str = "http://localhost:8003"       # profile: jobs
     neurochip_hw_worker_url: str = "http://localhost:8002"    # profile: hardware
     neurocnl_physics_worker_url: str = "http://localhost:8006" # profile: physics
-    jupyter_worker_url: str = "http://localhost:8008"          # profile: notebooks
+    jupyter_worker_url: str = "http://localhost:8008"          # internal URL suite_api uses to probe Jupyter
+    # Public URL returned to the Flutter app so its WebView can load JupyterLab.
+    # In Docker deployments this must point to the host-accessible address
+    # (e.g. http://my-server:8008/lab).  Override via JUPYTER_PUBLIC_URL env var.
+    jupyter_public_url: str = "http://localhost:8008/lab"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

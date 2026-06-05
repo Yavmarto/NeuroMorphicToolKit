@@ -55,6 +55,34 @@ async def _proxy(
     )
 
 
+@router.get("/url")
+async def jupyter_url() -> JSONResponse:
+    """Return the publicly accessible JupyterLab URL when the server is reachable.
+
+    The Flutter app calls this endpoint to get the URL it should load in the
+    embedded WebView.  Returns 503 while the Jupyter worker is not yet up so
+    the client can poll and retry automatically.
+    """
+    target = f"{settings.jupyter_worker_url.rstrip('/')}/api/status"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(target)
+        if resp.status_code == 200:
+            return JSONResponse({"url": settings.jupyter_public_url})
+        return JSONResponse(
+            {"error": f"Jupyter unavailable (HTTP {resp.status_code})"},
+            status_code=503,
+        )
+    except httpx.ConnectError:
+        return JSONResponse(
+            {"error": "Jupyter Server not reachable"},
+            status_code=503,
+        )
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning("Jupyter URL check failed: %s", exc)
+        return JSONResponse({"error": str(exc)}, status_code=503)
+
+
 @router.get("/health")
 async def jupyter_health() -> JSONResponse:
     """Probe the Jupyter Server worker and return a normalised health status."""

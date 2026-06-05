@@ -41,6 +41,7 @@ USE_DOCKER="false"
 CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-${LAUNCHER_CONTROL_PORT:-8091}}"
 LAUNCHER_CONTROL_PORT="${LAUNCHER_CONTROL_PORT:-8091}"
 CONTROL_API_PID=""
+JUPYTER_PID=""
 # NOTE: CONTROL_API_BIND_HOST and CONTROL_API_PUBLIC_HOST are only used
 # in the local dev branch (no --docker, no --remote-host).
 CONTROL_API_BIND_HOST="127.0.0.1"
@@ -63,6 +64,9 @@ EOF
 cleanup() {
   if [ -n "$CONTROL_API_PID" ] && kill -0 "$CONTROL_API_PID" 2>/dev/null; then
     kill "$CONTROL_API_PID" 2>/dev/null || true
+  fi
+  if [ -n "$JUPYTER_PID" ] && kill -0 "$JUPYTER_PID" 2>/dev/null; then
+    kill "$JUPYTER_PID" 2>/dev/null || true
   fi
 }
 
@@ -211,6 +215,50 @@ reserve_suite_api_port() {
 }
 
 
+start_jupyter_server() {
+  local jupyter_dir="$REPO_ROOT/workers/jupyter_server"
+  local notebook_dir="${JUPYTER_NOTEBOOK_DIR:-$HOME/nmtk_notebooks}"
+  local jupyter_port="${JUPYTER_PORT:-8008}"
+
+  # Skip if already listening on the Jupyter port.
+  if is_port_in_use "$jupyter_port"; then
+    echo "==> Jupyter already running on port $jupyter_port — skipping start"
+    return 0
+  fi
+
+  # Resolve the jupyter executable: prefer the worker venv, fall back to system.
+  local jupyter_cmd=""
+  if [ -x "$jupyter_dir/.venv/bin/jupyter" ]; then
+    jupyter_cmd="$jupyter_dir/.venv/bin/jupyter"
+  elif command -v jupyter >/dev/null 2>&1; then
+    jupyter_cmd="jupyter"
+  else
+    echo "==> WARNING: jupyter not found — Notebook step will show 'server unavailable'."
+    echo "             Run:  cd $jupyter_dir && python -m venv .venv && .venv/bin/pip install -r requirements.txt"
+    return 0
+  fi
+
+  mkdir -p "$notebook_dir"
+
+  # Seed starter notebooks if not already present.
+  for nb in "$jupyter_dir/notebooks/"*.ipynb; do
+    [ -f "$nb" ] || continue
+    local dest="$notebook_dir/$(basename "$nb")"
+    [ -f "$dest" ] || cp "$nb" "$dest"
+  done
+
+  echo "==> Starting Jupyter server on port $jupyter_port (notebooks: $notebook_dir)"
+  mkdir -p "$REPO_ROOT/logs"
+  JUPYTER_NOTEBOOK_DIR="$notebook_dir" \
+    "$jupyter_cmd" server \
+      --config="$jupyter_dir/jupyter_server_config.py" \
+      --notebook-dir="$notebook_dir" \
+      > "$REPO_ROOT/logs/jupyter_server.log" 2>&1 &
+  JUPYTER_PID=$!
+  echo "==> Jupyter server started (pid $JUPYTER_PID, log: logs/jupyter_server.log)"
+}
+
+
 start_control_api() {
   local host="$1"
   local manage_suite_api="$2"
@@ -351,6 +399,8 @@ else
   start_control_api "$CONTROL_API_BIND_HOST" "true" ""
   CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
   wait_for_suite_api "$CONTROL_API_URL"
+  # Start Jupyter server alongside the backend so the Notebook step works.
+  start_jupyter_server
 fi
 
 echo "------------------------------------------------------------"
