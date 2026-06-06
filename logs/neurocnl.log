@@ -23572,3 +23572,25 @@ CACHEDIR=/Users/yoshimartodihardjo/.matplotlib
 Using fontManager instance from /Users/yoshimartodihardjo/.matplotlib/fontlist-v390.json
 Creating converter from 5 to 3
 Loaded backend Agg version v2.2.
+Using selector: KqueueSelector
+executing <function connect.<locals>.connector at 0x1672d7b00>
+operation <function connect.<locals>.connector at 0x1672d7b00> completed
+executing functools.partial(<built-in method execute of sqlite3.Connection object at 0x16739bc40>, '\n                SELECT dataset_id, local_path, storage_path, content_sha256,\n                       size_bytes, downloaded_at, status, error_message\n                FROM dataset_downloads\n                WHERE dataset_id = ?\n                ', ('mnist_spike',))
+returning exception no such table: dataset_downloads
+executing functools.partial(<built-in method close of sqlite3.Connection object at 0x16739bc40>)
+operation functools.partial(<built-in method close of sqlite3.Connection object at 0x16739bc40>) completed
+executing <function Connection.stop.<locals>.close_and_stop at 0x1672d7e20>
+operation <function Connection.stop.<locals>.close_and_stop at 0x1672d7e20> completed
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/datasets/nmnist/download "HTTP/1.1 503 Service Unavailable"
+Using selector: KqueueSelector
+executing <function connect.<locals>.connector at 0x16c15ea20>
+operation <function connect.<locals>.connector at 0x16c15ea20> completed
+executing functools.partial(<built-in method execute of sqlite3.Connection object at 0x16c1b73d0>, '\n                SELECT dataset_id, local_path, storage_path, content_sha256,\n                       size_bytes, downloaded_at, status, error_message\n                FROM dataset_downloads\n                WHERE dataset_id = ?\n                ', ('mnist_spike',))
+returning exception no such table: dataset_downloads
+executing functools.partial(<built-in method close of sqlite3.Connection object at 0x16c1b73d0>)
+operation functools.partial(<built-in method close of sqlite3.Connection object at 0x16c1b73d0>) completed
+executing <function Connection.stop.<locals>.close_and_stop at 0x16c15ed40>
+operation <function Connection.stop.<locals>.close_and_stop at 0x16c15ed40> completed
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/datasets/nmnist/download "HTTP/1.1 503 Service Unavailable"
