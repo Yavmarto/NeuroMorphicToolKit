@@ -338,5 +338,70 @@ void main() {
         expect(tappedFooterIndex, 0);
       },
     );
+
+    testWidgets(
+      'mobile layout uses drawer when only one footer destination exists',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(
+          _buildHarness(
+            const NmtkDesktopScaffold(
+              navItems: [],
+              selectedIndex: -1,
+              pageTitle: 'Settings',
+              footerNavItems: [
+                NmtkSidebarItem(
+                  id: 'settings',
+                  label: 'Settings',
+                  icon: Icons.settings_outlined,
+                  selectedIcon: Icons.settings_rounded,
+                ),
+              ],
+              child: Text('Content'),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(NavigationBar), findsNothing);
+        expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'mobile layout uses drawer when only one primary destination exists',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        await tester.pumpWidget(
+          _buildHarness(
+            const NmtkDesktopScaffold(
+              navItems: [
+                NmtkSidebarItem(
+                  id: 'workspace',
+                  label: 'Workspace',
+                  icon: Icons.dashboard_outlined,
+                  selectedIcon: Icons.dashboard_rounded,
+                ),
+              ],
+              selectedIndex: 0,
+              pageTitle: 'Workspace',
+              child: Text('Content'),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(NavigationBar), findsNothing);
+        expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+      },
+    );
   });
 }

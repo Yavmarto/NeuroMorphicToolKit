@@ -25,6 +25,7 @@ from fastapi.responses import Response
 import neurocnl
 
 from backend.app.routers import (
+    datasets,
     parse,
     validate,
     generate,
@@ -86,6 +87,7 @@ for _r in [
     generate.router,
     simulate.router,
     simulators.router,
+    datasets.router,
     export.router,
     deploy.router,
     jobs.router,

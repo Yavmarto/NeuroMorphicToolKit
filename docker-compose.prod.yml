@@ -8,6 +8,7 @@ services:
     environment:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1
+      - NEUROCNL_FIREBASE_BUCKET=${NEUROCNL_FIREBASE_BUCKET:-nmtk-41e11.firebasestorage.app}
     security_opt:
       - no-new-privileges:true
     cap_drop:

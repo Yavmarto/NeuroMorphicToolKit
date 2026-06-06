@@ -10,6 +10,7 @@ import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 import 'package:neuro_toolkit/widgets/tool_view_header_actions.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
@@ -584,6 +585,39 @@ void main() {
 
     expect(find.text('Open in Browser instead'), findsNothing);
     expect(find.byIcon(Icons.open_in_browser), findsNothing);
+  });
+
+  testWidgets(
+      'ToolView mobile empty state uses drawer instead of single-item bottom nav',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final moduleProvider = _TrackingModuleProvider();
+    final workspaceProvider = WorkspaceProvider(
+      controlApiService: _FakeWorkspaceControlApiService(),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsServiceProvider.overrideWithValue(MockAnalyticsService()),
+          moduleStateProvider.overrideWith((ref) => moduleProvider),
+          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+        ],
+        child: _buildTestShell(const ToolViewScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(NmtkDesktopScaffold), findsOneWidget);
+    expect(find.byType(ModulePickerPanel), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+    expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
   });
 }
 

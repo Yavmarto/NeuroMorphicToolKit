@@ -20,7 +20,7 @@ class AnalyticsService {
 
   Future<void> init() async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
+      final directory = await getApplicationSupportDirectory();
       _logFile = File(p.join(directory.path, 'crash.log'));
       _backendActivityLogFile =
           File(p.join(directory.path, 'launcher_backend_activity.log'));

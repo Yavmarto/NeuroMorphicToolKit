@@ -414,8 +414,11 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
   }
 
   bool get _shouldUseBottomNavigation {
+    final destinationCount =
+        widget.navItems.length + widget.footerNavItems.length;
     return widget.footerNavItems.length <= 1 &&
-        widget.navItems.length + widget.footerNavItems.length <= 5;
+        destinationCount >= 2 &&
+        destinationCount <= 5;
   }
 
   List<NmtkSidebarItem> get _mobileNavigationItems => [

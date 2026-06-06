@@ -6,19 +6,17 @@ enum SnnWorkflowPhase {
   defineArchitecture,
   trainingSandbox,
   trainAndExport,
-  selectHardware,
   deploy,
 }
 
 /// A specialized pipeline stepper for the NeuroMorphicToolKit SNN workflow.
 ///
-/// Models the 6-step workflow for training and deploying an SNN:
+/// Models the 5-step workflow for training and deploying an SNN:
 /// 1. Select Data
 /// 2. Define Architecture (CNL/NIR)
 /// 3. Training Sandbox (Jupyter/Python)
 /// 4. Train & Export (GPU)
-/// 5. Select Hardware
-/// 6. Deploy
+/// 5. Deploy
 ///
 /// When [onOpenSandbox] is provided, tapping step 3 opens the training notebook
 /// (e.g. via url_launcher in the consumer) in addition to navigating to that phase.
@@ -100,14 +98,8 @@ class SnnWorkflowStepper extends StatelessWidget {
           pulseTick: epochPulseTick,
         ),
         _buildStepData(
-          SnnWorkflowPhase.selectHardware,
-          '5. Select Hardware',
-          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (neuromorphic chip / memory)
-          Icons.memory_outlined,
-        ),
-        _buildStepData(
           SnnWorkflowPhase.deploy,
-          '6. Deploy',
+          '5. Deploy',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (rocket launch / deploy)
           Icons.rocket_launch_outlined,
         ),

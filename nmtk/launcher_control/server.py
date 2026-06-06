@@ -38,6 +38,17 @@ from .provisioning_helpers import (
     build_pynq_user_space_agent_launch_command,
 )
 
+from .config import (
+    REPO_ROOT,
+    MODULES_MANIFEST,
+    STATE_FILE,
+    SETTINGS_FILE,
+    WORKSPACE_FILE,
+    DEPLOYMENT_STATE_FILE,
+    DEPLOYMENT_SECRET_FILE,
+    SUITE_API_ENV_ROOT,
+)
+
 STATUS_INDEX: dict[str, int] = {
     "notInstalled": 0,
     "installing": 1,
@@ -49,17 +60,6 @@ STATUS_INDEX: dict[str, int] = {
     "degraded": 7,
     "updating": 8,
 }
-
-from .config import (
-    REPO_ROOT,
-    MODULES_MANIFEST,
-    STATE_FILE,
-    SETTINGS_FILE,
-    WORKSPACE_FILE,
-    DEPLOYMENT_STATE_FILE,
-    DEPLOYMENT_SECRET_FILE,
-    SUITE_API_ENV_ROOT,
-)
 
 DEFAULT_CONTROL_LOG_LEVEL = "info"
 DEFAULT_SUITE_API_PORT = 9000
@@ -1696,7 +1696,7 @@ def _is_externally_managed_service(module: dict[str, Any]) -> bool:
 
 def _external_service_health_url(module: dict[str, Any], host: str = "127.0.0.1") -> str:
     """Build the health-probe URL for an externally managed service.
-    
+
     Args:
         module: Module configuration dict.
         host: Hostname or IP to probe. Defaults to 127.0.0.1 for local deployment;
@@ -5144,14 +5144,22 @@ class LauncherControlState:
         except OSError as exc:
             return [f"Failed to read logs: {exc}"]
 
+    def _get_dart_analytics_dir(self) -> Path:
+        if sys.platform == "darwin":
+            return Path.home() / "Library" / "Application Support" / "com.example.neuroToolkit"
+        elif sys.platform == "win32":
+            return Path(os.environ.get("APPDATA", "")) / "com.example" / "neuroToolkit"
+        else:
+            return Path.home() / ".local" / "share" / "neuro_toolkit"
+
     def get_crash_log_lines(self) -> dict[str, Any]:
-        """Serve the Dart AnalyticsService crash.log from ~/Documents/."""
-        log_path = Path.home() / "Documents" / "crash.log"
+        """Serve the Dart AnalyticsService crash.log."""
+        log_path = self._get_dart_analytics_dir() / "crash.log"
         return {"lines": self._read_log_file_tail(log_path)}
 
     def get_backend_activity_log_lines(self) -> dict[str, Any]:
         """Serve the Dart AnalyticsService launcher_backend_activity.log."""
-        log_path = Path.home() / "Documents" / "launcher_backend_activity.log"
+        log_path = self._get_dart_analytics_dir() / "launcher_backend_activity.log"
         return {"lines": self._read_log_file_tail(log_path)}
 
     def _task_running(self, module_id: str) -> bool:

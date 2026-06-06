@@ -8,6 +8,7 @@ services:
       - "${SUITE_API_PORT:-9000}:9000"
     environment:
       - PYTHONUNBUFFERED=1
+      - NEUROCNL_FIREBASE_BUCKET=${NEUROCNL_FIREBASE_BUCKET:-nmtk-41e11.firebasestorage.app}
       # Phase 4 worker URLs — must match Docker service names when profiles are active
       - NEUROSENSE_HW_WORKER_URL=http://neurosense-hw-worker:8004
       - NEUROBENCH_RUNNER_URL=http://neurobench-runner-worker:8003

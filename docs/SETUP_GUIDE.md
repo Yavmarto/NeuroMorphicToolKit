@@ -199,6 +199,8 @@ cd nmtk/neuro_toolkit
 flutter run -d macos
 ```
 
+For a first iPhone or iPad build, open `nmtk/neuro_toolkit/ios/Runner.xcworkspace` in Xcode once and select your local Apple Development team if Xcode prompts for signing. Do not commit that machine-local signing selection back into the repo.
+
 ### 5c. Using the launcher
 
 1. **Dashboard** — Shows status of installed modules
