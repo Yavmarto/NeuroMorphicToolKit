@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 
 /// A scrollable grid of module cards.
 ///
@@ -18,18 +18,19 @@ class ModulePickerPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final moduleState = ref.watch(moduleStateProvider);
-    final controller = ref.read(moduleStateProvider);
+    final moduleStateAsync = ref.watch(moduleNotifierProvider);
+    final moduleState = moduleStateAsync.value;
+    final controller = ref.read(moduleNotifierProvider.notifier);
     final theme = Theme.of(context);
 
-    if (moduleState.isLoading) {
+    if (moduleStateAsync.isLoading || moduleState == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (moduleState.error != null) {
+    if (moduleStateAsync.hasError) {
       return NmtkEmptyState(
         title: 'Catalog Unavailable',
-        message: moduleState.error!,
+        message: moduleStateAsync.error.toString(),
         icon: Icons.cloud_off,
         tone: NmtkTone.danger,
       );
@@ -77,7 +78,7 @@ class ModulePickerPanel extends ConsumerWidget {
                 runSpacing: spacing,
                 children: modules.map((module) {
                   final isMuJoCoUnavailable =
-                      module.requiresMuJoCo && !moduleState.isMuJoCoAvailable();
+                      module.requiresMuJoCo && !moduleState.mujocoAvailable;
                   return SizedBox(
                     width: cardWidth,
                     child: _ModuleCard(

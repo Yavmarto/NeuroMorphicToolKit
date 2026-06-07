@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/src/features/settings/domain/settings_state.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/providers/settings_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -17,7 +17,12 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsStateProvider);
+    final settingsStateAsync = ref.watch(settingsNotifierProvider);
+    final settingsState = settingsStateAsync.value;
+    if (settingsState == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final analytics = ref.watch(analyticsServiceProvider);
     final controlApi = ref.watch(controlApiServiceProvider);
     final zeta = Zeta.of(context);
@@ -47,8 +52,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     trailing: SizedBox(
                       width: trailingWidth,
                       child: ZetaSelectInput<ThemeMode>(
-                        key: ValueKey('select-theme-${settings.themeMode}'),
-                        initialValue: settings.themeMode,
+                        key:
+                            ValueKey('select-theme-${settingsState.themeMode}'),
+                        initialValue: settingsState.themeMode,
                         items: [
                           ZetaDropdownItem(
                               value: ThemeMode.system, label: 'System'),
@@ -58,7 +64,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               value: ThemeMode.dark, label: 'Dark'),
                         ],
                         onChange: (ThemeMode? v) {
-                          if (v != null) settings.setThemeMode(v);
+                          if (v != null)
+                            ref
+                                .read(settingsNotifierProvider.notifier)
+                                .setThemeMode(v);
                         },
                       ),
                     ),
@@ -67,7 +76,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     primaryText: 'Server',
                     trailing: SizedBox(
                       width: trailingWidth,
-                      child: _LauncherControlUrlField(settings: settings),
+                      child: _LauncherControlUrlField(settings: settingsState),
                     ),
                   ),
                   ZetaListItem(
@@ -98,8 +107,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     trailing: SizedBox(
                       width: trailingWidth,
                       child: ZetaSelectInput<LogLevel>(
-                        key: ValueKey('select-loglevel-${settings.logLevel}'),
-                        initialValue: settings.logLevel,
+                        key: ValueKey(
+                            'select-loglevel-${settingsState.logLevel}'),
+                        initialValue: settingsState.logLevel,
                         items: LogLevel.values
                             .map(
                               (level) => ZetaDropdownItem<LogLevel>(
@@ -109,7 +119,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             )
                             .toList(),
                         onChange: (LogLevel? v) {
-                          if (v != null) settings.setLogLevel(v);
+                          if (v != null)
+                            ref
+                                .read(settingsNotifierProvider.notifier)
+                                .setLogLevel(v);
                         },
                       ),
                     ),
@@ -231,17 +244,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
-class _LauncherControlUrlField extends StatefulWidget {
+class _LauncherControlUrlField extends ConsumerStatefulWidget {
   const _LauncherControlUrlField({required this.settings});
 
-  final SettingsProvider settings;
+  final SettingsState settings;
 
   @override
-  State<_LauncherControlUrlField> createState() =>
+  ConsumerState<_LauncherControlUrlField> createState() =>
       _LauncherControlUrlFieldState();
 }
 
-class _LauncherControlUrlFieldState extends State<_LauncherControlUrlField> {
+class _LauncherControlUrlFieldState
+    extends ConsumerState<_LauncherControlUrlField> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
 
@@ -280,7 +294,9 @@ class _LauncherControlUrlFieldState extends State<_LauncherControlUrlField> {
       controller: _controller,
       focusNode: _focusNode,
       placeholder: 'http://192.168.1.50:8091',
-      onChange: widget.settings.setLauncherControlApiBaseUrl,
+      onChange: ref
+          .read(settingsNotifierProvider.notifier)
+          .setLauncherControlApiBaseUrl,
     );
   }
 }

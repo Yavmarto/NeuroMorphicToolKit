@@ -59,9 +59,10 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final moduleProvider = ref.watch(moduleStateProvider);
+    final moduleStateAsync = ref.watch(moduleNotifierProvider);
+    final moduleState = moduleStateAsync.value;
     final pythonReady =
-        !widget.requirePython || moduleProvider.pythonAvailable;
+        !widget.requirePython || (moduleState?.pythonAvailable ?? false);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -152,7 +153,8 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
               children: [
                 if (Platform.isMacOS) ...[
                   NmtkPrimaryButton(
-                    onPressed: _isInstallingPython ? null : _installWithHomebrew,
+                    onPressed:
+                        _isInstallingPython ? null : _installWithHomebrew,
                     icon: Icons.download,
                     label: _isInstallingPython
                         ? 'Installing…'
@@ -168,8 +170,9 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
                   const SizedBox(height: 12),
                 ],
                 NmtkPrimaryButton(
-                  onPressed:
-                      (_isInstallingPython || _isCheckingPython) ? null : _retryPythonCheck,
+                  onPressed: (_isInstallingPython || _isCheckingPython)
+                      ? null
+                      : _retryPythonCheck,
                   icon: Icons.refresh,
                   label: _isCheckingPython
                       ? 'Checking for Python…'
@@ -242,8 +245,7 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
         if (exitCode == 0) {
           unawaited(_retryPythonCheck());
         } else {
-          _pythonErrorMessage =
-              'Homebrew install exited with code $exitCode.';
+          _pythonErrorMessage = 'Homebrew install exited with code $exitCode.';
         }
       }
     } catch (e) {
@@ -269,8 +271,7 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
       _pythonErrorMessage = null;
     });
 
-    final provider = ref.read(moduleStateProvider);
-    await provider.recheckPython();
+    await ref.read(moduleNotifierProvider.notifier).recheckPython();
 
     if (mounted) {
       setState(() => _isCheckingPython = false);

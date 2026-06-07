@@ -24,8 +24,12 @@ class ModuleTabBar extends ConsumerWidget {
     final zeta = Zeta.of(context);
     final colors = zeta.colors;
     final tokens = NmtkShellTokens.of(context);
-    final workspace = ref.watch(workspaceStateProvider);
-    final modules = ref.watch(moduleStateProvider).modules;
+    final workspaceStateAsync = ref.watch(workspaceNotifierProvider);
+    final moduleStateAsync = ref.watch(moduleNotifierProvider);
+    final workspace = workspaceStateAsync.value;
+    final modules = moduleStateAsync.value?.modules ?? [];
+
+    if (workspace == null) return const SizedBox.shrink();
     final activeModules = workspace.sessions
         .map((session) {
           for (final module in modules) {

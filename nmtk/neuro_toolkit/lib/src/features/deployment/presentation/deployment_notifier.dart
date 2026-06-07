@@ -1,40 +1,52 @@
 import 'dart:async';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:flutter/foundation.dart';
 import 'package:neuro_toolkit/models/backend_deployment.dart';
-import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/src/features/deployment/domain/deployment_state.dart';
 
-class BackendDeploymentProvider with ChangeNotifier {
-  BackendDeploymentProvider({ControlApiService? controlApiService})
-      : _controlApiService = controlApiService ?? ControlApiService() {
-    unawaited(refresh());
-  }
+part 'deployment_notifier.g.dart';
 
-  final ControlApiService _controlApiService;
-  List<DeploymentTarget> _targets = <DeploymentTarget>[];
-  DeploymentJob? _activeJob;
-  bool _isLoading = true;
-  bool _isReady = false;
-  String? _error;
+@riverpod
+class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
   Timer? _pollTimer;
 
-  List<DeploymentTarget> get targets => _targets;
-  DeploymentJob? get activeJob => _activeJob;
-  bool get isLoading => _isLoading;
-  bool get isReady => _isReady;
-  String? get error => _error;
+  @override
+  Future<DeploymentState> build() async {
+    final controlApi = ref.watch(controlApiServiceProvider);
+    final settings = await controlApi.fetchSettings();
+    final targets = await controlApi.fetchDeploymentTargets();
+
+    ref.onDispose(() {
+      _pollTimer?.cancel();
+    });
+
+    return DeploymentState(
+      targets: targets,
+      isReady: settings.backendDeploymentReady,
+    );
+  }
 
   Future<void> refresh() async {
     try {
-      final settings = await _controlApiService.fetchSettings();
-      _targets = await _controlApiService.fetchDeploymentTargets();
-      _isReady = settings.backendDeploymentReady;
-      _error = null;
-    } catch (error) {
-      _error = error.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      final controlApi = ref.read(controlApiServiceProvider);
+      final settings = await controlApi.fetchSettings();
+      final targets = await controlApi.fetchDeploymentTargets();
+
+      final currentState = state.value;
+      if (currentState != null) {
+        state = AsyncData(currentState.copyWith(
+          targets: targets,
+          isReady: settings.backendDeploymentReady,
+        ));
+      } else {
+        state = AsyncData(DeploymentState(
+          targets: targets,
+          isReady: settings.backendDeploymentReady,
+        ));
+      }
+    } catch (e, st) {
+      state = AsyncError(e, st);
     }
   }
 
@@ -62,7 +74,7 @@ class BackendDeploymentProvider with ChangeNotifier {
       context: context,
       apiServer: apiServer,
     );
-    return _controlApiService.preflightDeploymentTarget(
+    return ref.read(controlApiServiceProvider).preflightDeploymentTarget(
       <String, dynamic>{'target': payload},
     );
   }
@@ -79,7 +91,8 @@ class BackendDeploymentProvider with ChangeNotifier {
     String context = '',
     String apiServer = '',
   }) async {
-    final target = await _controlApiService.createDeploymentTarget(
+    final controlApi = ref.read(controlApiServiceProvider);
+    final target = await controlApi.createDeploymentTarget(
       _targetPayload(
         targetType: targetType,
         mode: mode,
@@ -93,18 +106,27 @@ class BackendDeploymentProvider with ChangeNotifier {
         apiServer: apiServer,
       ),
     );
-    _activeJob = await _controlApiService.createDeploymentJob(
+    final activeJob = await controlApi.createDeploymentJob(
       <String, dynamic>{'targetId': target.id, 'mode': mode},
     );
-    notifyListeners();
+
+    final currentState = state.value;
+    if (currentState != null) {
+      state = AsyncData(currentState.copyWith(activeJob: activeJob));
+    }
+
     _startPolling();
   }
 
   Future<void> cancelActiveJob() async {
-    final job = _activeJob;
+    final currentState = state.value;
+    final job = currentState?.activeJob;
     if (job == null) return;
-    _activeJob = await _controlApiService.cancelDeploymentJob(job.id);
-    notifyListeners();
+
+    final controlApi = ref.read(controlApiServiceProvider);
+    final updatedJob = await controlApi.cancelDeploymentJob(job.id);
+
+    state = AsyncData(currentState!.copyWith(activeJob: updatedJob));
   }
 
   Map<String, dynamic> _targetPayload({
@@ -141,23 +163,25 @@ class BackendDeploymentProvider with ChangeNotifier {
   void _startPolling() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      final job = _activeJob;
+      final currentState = state.value;
+      final job = currentState?.activeJob;
       if (job == null) {
         timer.cancel();
         return;
       }
-      _activeJob = await _controlApiService.fetchDeploymentJob(job.id);
-      if (_activeJob!.isTerminal) {
-        timer.cancel();
-        await refresh();
-      }
-      notifyListeners();
-    });
-  }
 
-  @override
-  void dispose() {
-    _pollTimer?.cancel();
-    super.dispose();
+      final controlApi = ref.read(controlApiServiceProvider);
+      try {
+        final updatedJob = await controlApi.fetchDeploymentJob(job.id);
+        if (updatedJob.isTerminal) {
+          timer.cancel();
+          await refresh();
+        } else {
+          state = AsyncData(currentState!.copyWith(activeJob: updatedJob));
+        }
+      } catch (e) {
+        // Ignore polling errors
+      }
+    });
   }
 }

@@ -7,8 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:neuro_toolkit/providers/environment_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/src/features/environment/domain/environment_state.dart';
 import 'package:neuro_toolkit/services/environment_api_service.dart';
 
 /// Python Environment Editor.
@@ -35,26 +35,33 @@ class _EnvironmentEditorScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(environmentStateProvider).refresh();
+      ref.read(environmentNotifierProvider.notifier).refresh();
     });
   }
 
   Future<void> _runGuarded(
       Future<void> Function() action, String success) async {
-    final provider = ref.read(environmentStateProvider);
+    final stateAsync = ref.read(environmentNotifierProvider);
+    ref.read(environmentNotifierProvider);
     try {
       await action();
       if (!mounted) return;
       NmtkToasts.success(context, success);
     } catch (_) {
       if (!mounted) return;
-      NmtkToasts.error(context, provider.error ?? 'Operation failed.');
+      NmtkToasts.error(
+          context, stateAsync.error?.toString() ?? 'Operation failed.');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = ref.watch(environmentStateProvider);
+    final providerAsync = ref.watch(environmentNotifierProvider);
+    final provider = providerAsync.value;
+
+    if (provider == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -64,7 +71,10 @@ class _EnvironmentEditorScreenState
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: ZetaButton.text(
               label: 'Refresh',
-              onPressed: provider.busy ? null : () => provider.refresh(),
+              onPressed: provider.busy
+                  ? null
+                  : () =>
+                      ref.read(environmentNotifierProvider.notifier).refresh(),
             ),
           ),
         ],
@@ -73,29 +83,31 @@ class _EnvironmentEditorScreenState
         children: [
           if (provider.busy)
             _BusyBanner(label: provider.activeOperation ?? 'Working…'),
-          Expanded(child: _buildBody(provider)),
+          Expanded(child: _buildBody(providerAsync, provider)),
         ],
       ),
     );
   }
 
-  Widget _buildBody(EnvironmentProvider provider) {
-    if (provider.isLoading && provider.environments.isEmpty) {
+  Widget _buildBody(
+      AsyncValue<EnvironmentState> providerAsync, EnvironmentState provider) {
+    if (providerAsync.isLoading && provider.environments.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (provider.error != null && provider.environments.isEmpty) {
+    if (providerAsync.hasError && provider.environments.isEmpty) {
       return Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: NmtkSurfaceCard(
             tone: NmtkTone.danger,
             title: 'Environments unavailable',
-            subtitle: provider.error!,
+            subtitle: providerAsync.error.toString(),
             child: Align(
               alignment: Alignment.centerLeft,
               child: NmtkPrimaryButton(
                 label: 'Retry',
-                onPressed: () => provider.refresh(),
+                onPressed: () =>
+                    ref.read(environmentNotifierProvider.notifier).refresh(),
               ),
             ),
           ),
@@ -146,7 +158,9 @@ class _EnvironmentEditorScreenState
         await _promptForName('Clone NeuroStudio', 'New environment name');
     if (name == null || name.trim().isEmpty) return;
     await _runGuarded(
-      () => ref.read(environmentStateProvider).createEnvironment(name.trim()),
+      () => ref
+          .read(environmentNotifierProvider.notifier)
+          .createEnvironment(name.trim()),
       'Environment "$name" created.',
     );
   }
@@ -159,7 +173,7 @@ class _EnvironmentEditorScreenState
     if (result == null) return;
     await _runGuarded(
       () => ref
-          .read(environmentStateProvider)
+          .read(environmentNotifierProvider.notifier)
           .importEnvironment(result.name, result.requirements),
       'Environment "${result.name}" imported.',
     );
@@ -188,7 +202,9 @@ class _EnvironmentEditorScreenState
     );
     if (ok != true) return;
     await _runGuarded(
-      () => ref.read(environmentStateProvider).deleteEnvironment(env.slug),
+      () => ref
+          .read(environmentNotifierProvider.notifier)
+          .deleteEnvironment(env.slug),
       'Environment "${env.displayName}" deleted.',
     );
   }
@@ -291,8 +307,9 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
       _packagesError = null;
     });
     try {
-      final pkgs =
-          await ref.read(environmentStateProvider).packages(widget.env.slug);
+      final pkgs = await ref
+          .read(environmentNotifierProvider.notifier)
+          .packages(widget.env.slug);
       if (!mounted) return;
       setState(() => _packages = pkgs);
     } catch (e) {
@@ -313,29 +330,35 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
   Future<void> _addPackage() async {
     final spec = _addController.text.trim();
     if (spec.isEmpty) return;
-    final provider = ref.read(environmentStateProvider);
+    final stateAsync = ref.read(environmentNotifierProvider);
     try {
-      await provider.installPackages(widget.env.slug, [spec]);
+      await ref
+          .read(environmentNotifierProvider.notifier)
+          .installPackages(widget.env.slug, [spec]);
       _addController.clear();
       if (!mounted) return;
       NmtkToasts.success(context, 'Installed $spec');
       await _loadPackages();
     } catch (_) {
       if (!mounted) return;
-      NmtkToasts.error(context, provider.error ?? 'Install failed.');
+      NmtkToasts.error(
+          context, stateAsync.error?.toString() ?? 'Install failed.');
     }
   }
 
   Future<void> _removePackage(String name) async {
-    final provider = ref.read(environmentStateProvider);
+    final stateAsync = ref.read(environmentNotifierProvider);
     try {
-      await provider.uninstallPackages(widget.env.slug, [name]);
+      await ref
+          .read(environmentNotifierProvider.notifier)
+          .uninstallPackages(widget.env.slug, [name]);
       if (!mounted) return;
       NmtkToasts.success(context, 'Removed $name');
       await _loadPackages();
     } catch (_) {
       if (!mounted) return;
-      NmtkToasts.error(context, provider.error ?? 'Uninstall failed.');
+      NmtkToasts.error(
+          context, stateAsync.error?.toString() ?? 'Uninstall failed.');
     }
   }
 
@@ -493,7 +516,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
     });
     try {
       final body = await ref
-          .read(environmentStateProvider)
+          .read(environmentNotifierProvider.notifier)
           .exportRequirements(widget.env.slug, mode: _mode);
       if (!mounted) return;
       setState(() => _body = body);

@@ -3,15 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 
-/// ----------------------------------------------------------------------------
-/// NMTK COMMAND PROVIDER
-/// ----------------------------------------------------------------------------
-
 final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
   final router = ref.watch(goRouterProvider);
 
   return [
-    // --- Navigation Commands ---
     NmtkCommand(
       id: 'nav-workspace',
       label: 'Open Workspace',
@@ -72,11 +67,9 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       icon: Icons.handyman_rounded,
       category: 'System',
       onExecute: () {
-        ref.read(appStateProvider).toggleDeveloperMode();
+        ref.read(appNotifierProvider.notifier).toggleDeveloperMode();
       },
     ),
-
-    // --- Action Commands ---
     NmtkCommand(
       id: 'action-reload',
       label: 'Reload Workspace',
@@ -84,8 +77,6 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       icon: Icons.refresh_rounded,
       category: 'Actions',
       onExecute: () {
-        // Just trigger a rebuild/refresh if needed,
-        // or re-navigate to same path to trigger refresh
         final current = router.state.uri.toString();
         router.go(current);
       },

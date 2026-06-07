@@ -6,9 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
+import 'package:neuro_toolkit/src/features/app/presentation/command_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/providers/command_provider.dart';
 
 /// Toolbar actions shown in the [ToolViewScreen] header.
 ///
@@ -16,20 +15,18 @@ import 'package:neuro_toolkit/providers/command_provider.dart';
 /// open-module, stop-module, and check-for-updates buttons.
 class ToolViewHeaderActions extends ConsumerWidget {
   const ToolViewHeaderActions({
-    required this.moduleProvider,
     required this.activeModule,
     required this.onShowModulePicker,
     super.key,
   });
 
-  final ModuleProvider moduleProvider;
   final Module? activeModule;
   final VoidCallback onShowModulePicker;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final appProvider = ref.watch(appStateProvider);
-    final developerMode = appProvider.developerMode;
+    final appState = ref.watch(appNotifierProvider);
+    final developerMode = appState.developerMode;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -46,7 +43,8 @@ class ToolViewHeaderActions extends ConsumerWidget {
               color:
                   developerMode ? Theme.of(context).colorScheme.primary : null,
             ),
-            onPressed: () => appProvider.toggleDeveloperMode(),
+            onPressed: () =>
+                ref.read(appNotifierProvider.notifier).toggleDeveloperMode(),
             tooltip: developerMode
                 ? 'Hide module internals'
                 : 'Show module internals',
@@ -88,7 +86,9 @@ class ToolViewHeaderActions extends ConsumerWidget {
               onPressed: activeModule == null
                   ? null
                   : () {
-                      unawaited(moduleProvider.stopModule(activeModule!.id));
+                      unawaited(ref
+                          .read(moduleNotifierProvider.notifier)
+                          .stopModule(activeModule!.id));
                     },
               tooltip: 'Stop Module',
             ),
@@ -98,7 +98,8 @@ class ToolViewHeaderActions extends ConsumerWidget {
             button: true,
             child: IconButton(
               icon: const Icon(Icons.refresh_rounded),
-              onPressed: () => moduleProvider.checkForUpdates(),
+              onPressed: () =>
+                  ref.read(moduleNotifierProvider.notifier).checkForUpdates(),
               tooltip: 'Check for Updates',
             ),
           ),

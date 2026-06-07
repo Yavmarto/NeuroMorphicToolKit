@@ -9,9 +9,7 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/screens/settings.dart';
@@ -153,9 +151,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Future<void> _initializeWorkspace({bool forceFocus = false}) async {
-    final moduleProvider = ref.read(moduleStateProvider);
-    final workspaceProvider = ref.read(workspaceStateProvider);
-    if (moduleProvider.isLoading || workspaceProvider.isLoading) {
+    final moduleStateAsync = ref.read(moduleNotifierProvider);
+    final moduleState = moduleStateAsync.value;
+    final workspaceStateAsync = ref.read(workspaceNotifierProvider);
+    final workspaceState = workspaceStateAsync.value;
+    if (moduleStateAsync.isLoading ||
+        workspaceStateAsync.isLoading ||
+        moduleState == null ||
+        workspaceState == null) {
       if (mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           await _initializeWorkspace(forceFocus: forceFocus);
@@ -165,18 +168,17 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
 
     final eligibleModules =
-        moduleProvider.modules.where(_shouldOpenModule).toList(growable: false);
+        moduleState.modules.where(_shouldOpenModule).toList(growable: false);
     if (eligibleModules.isEmpty) {
       return;
     }
 
     final existingSessions = <String, WorkspaceSession>{
-      for (final session in workspaceProvider.sessions)
-        session.moduleId: session,
+      for (final session in workspaceState.sessions) session.moduleId: session,
     };
     final desiredSessions = eligibleModules
         .map(
-          (module) =>
+          (Module module) =>
               (existingSessions[module.id] ?? _defaultSessionFor(module))
                   .copyWith(
             surfaceMode: _surfaceModeForModule(module.id),
@@ -184,14 +186,16 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           ),
         )
         .toList(growable: false);
-    final targetModuleId =
-        _preferredModuleId(eligibleModules, workspaceProvider, forceFocus) ??
-            eligibleModules.first.id;
+    final targetModuleId = _preferredModuleId(
+            eligibleModules, workspaceState.focusedModuleId, forceFocus) ??
+        eligibleModules.first.id;
 
-    await workspaceProvider.ensureDefaultSessionsOnce(
-      sessions: desiredSessions,
-      focusedModuleId: targetModuleId,
-    );
+    await ref
+        .read(workspaceNotifierProvider.notifier)
+        .ensureDefaultSessionsOnce(
+          sessions: desiredSessions,
+          focusedModuleId: targetModuleId,
+        );
 
     _workspaceInitialized = true;
     await _activateModule(targetModuleId, requestFocus: true);
@@ -208,7 +212,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   String? _preferredModuleId(
     List<Module> eligibleModules,
-    WorkspaceProvider workspaceProvider,
+    String? focusedModuleId,
     bool forceFocus,
   ) {
     final eligibleIds = eligibleModules.map((module) => module.id).toSet();
@@ -216,7 +220,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     if (requestedModuleId != null && eligibleIds.contains(requestedModuleId)) {
       return requestedModuleId;
     }
-    final focusedModuleId = workspaceProvider.focusedModuleId;
     if (!forceFocus &&
         focusedModuleId != null &&
         eligibleIds.contains(focusedModuleId)) {
@@ -257,15 +260,17 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     String moduleId, {
     required bool requestFocus,
   }) async {
-    final moduleProvider = ref.read(moduleStateProvider);
-    final workspaceProvider = ref.read(workspaceStateProvider);
-    final module = _findModule(moduleProvider, moduleId);
+    final moduleState = ref.read(moduleNotifierProvider).value;
+    final workspaceState = ref.read(workspaceNotifierProvider).value;
+    if (moduleState == null || workspaceState == null) return;
+
+    final module = _findModule(moduleState.modules, moduleId);
     if (module == null) {
       return;
     }
 
     WorkspaceSession? currentSession;
-    for (final session in workspaceProvider.sessions) {
+    for (final session in workspaceState.sessions) {
       if (session.moduleId == moduleId) {
         currentSession = session;
         break;
@@ -273,13 +278,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
     final desiredReadiness = _readinessStateForModule(module);
     if (currentSession == null) {
-      await workspaceProvider.openSession(
-        moduleId,
-        surfaceMode: _surfaceModeForModule(moduleId),
-        readinessState: desiredReadiness,
-      );
+      await ref.read(workspaceNotifierProvider.notifier).openSession(
+            moduleId,
+            surfaceMode: _surfaceModeForModule(moduleId),
+            readinessState: desiredReadiness,
+          );
     } else if (requestFocus) {
-      await workspaceProvider.focusSession(moduleId);
+      await ref.read(workspaceNotifierProvider.notifier).focusSession(moduleId);
     }
     if (mounted) {
       setState(() {
@@ -290,25 +295,25 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     if (currentSession != null &&
         currentSession.readinessState != desiredReadiness) {
-      await workspaceProvider.updateSession(
-        moduleId,
-        readinessState: desiredReadiness,
-      );
+      await ref.read(workspaceNotifierProvider.notifier).updateSession(
+            moduleId,
+            readinessState: desiredReadiness,
+          );
     }
 
     if (module.status != ModuleStatus.running &&
         module.status != ModuleStatus.degraded &&
         module.status != ModuleStatus.starting) {
-      await workspaceProvider.updateSession(
-        moduleId,
-        readinessState: 'warming_up',
-      );
-      await moduleProvider.launchModule(moduleId);
+      await ref.read(workspaceNotifierProvider.notifier).updateSession(
+            moduleId,
+            readinessState: 'warming_up',
+          );
+      await ref.read(moduleNotifierProvider.notifier).launchModule(moduleId);
     }
   }
 
-  Module? _findModule(ModuleProvider provider, String moduleId) {
-    for (final module in provider.modules) {
+  Module? _findModule(List<Module> modules, String moduleId) {
+    for (final module in modules) {
       if (module.id == moduleId) {
         return module;
       }
@@ -456,11 +461,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     Module currentModule,
     Uri requestUri,
   ) async {
-    final moduleProvider = ref.read(moduleStateProvider);
-    final workspaceProvider = ref.read(workspaceStateProvider);
+    final moduleState = ref.read(moduleNotifierProvider).value;
+    if (moduleState == null) return false;
+
     final navigation = resolveCrossModuleNavigation(
       targetUri: requestUri,
-      modules: moduleProvider.modules,
+      modules: moduleState.modules,
       currentModuleId: currentModule.id,
     );
     if (navigation == null) {
@@ -470,12 +476,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final targetModule = navigation.targetModule;
     _pendingModuleRequests[targetModule.id] = navigation.targetUri;
 
-    await workspaceProvider.openSession(
-      targetModule.id,
-      surfaceMode: _surfaceModeForModule(targetModule.id),
-      deepLink: launcherDeepLinkFromUri(navigation.targetUri),
-      readinessState: 'opening',
-    );
+    await ref.read(workspaceNotifierProvider.notifier).openSession(
+          targetModule.id,
+          surfaceMode: _surfaceModeForModule(targetModule.id),
+          deepLink: launcherDeepLinkFromUri(navigation.targetUri),
+          readinessState: 'opening',
+        );
 
     if (_controllers.containsKey(targetModule.id)) {
       _pendingModuleRequests.remove(targetModule.id);
@@ -491,38 +497,41 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   Future<bool> _handleHostedModuleNavigationRequest(
     NmtkHostNavigationRequest request,
   ) async {
-    final moduleProvider = ref.read(moduleStateProvider);
-    final workspaceProvider = ref.read(workspaceStateProvider);
-    final targetModule = _findModule(moduleProvider, request.moduleId);
+    final moduleState = ref.read(moduleNotifierProvider).value;
+    final workspaceState = ref.read(workspaceNotifierProvider).value;
+    if (moduleState == null || workspaceState == null) return false;
+
+    final targetModule = _findModule(moduleState.modules, request.moduleId);
     if (targetModule == null || !_shouldOpenModule(targetModule)) {
       return false;
     }
 
-    final existingSession = workspaceProvider.sessions
-        .where((session) => session.moduleId == targetModule.id)
+    final existingSession = workspaceState.sessions
+        .where(
+            (WorkspaceSession session) => session.moduleId == targetModule.id)
         .cast<WorkspaceSession?>()
         .firstWhere(
-          (session) => session != null,
+          (WorkspaceSession? session) => session != null,
           orElse: () => null,
         );
     final restoreState = Map<String, dynamic>.from(request.restoreState);
     final readinessState = _readinessStateForModule(targetModule);
 
     if (existingSession == null) {
-      await workspaceProvider.openSession(
-        targetModule.id,
-        surfaceMode: _surfaceModeForModule(targetModule.id),
-        deepLink: request.deepLink,
-        restoreState: restoreState,
-        readinessState: readinessState,
-      );
+      await ref.read(workspaceNotifierProvider.notifier).openSession(
+            targetModule.id,
+            surfaceMode: _surfaceModeForModule(targetModule.id),
+            deepLink: request.deepLink,
+            restoreState: restoreState,
+            readinessState: readinessState,
+          );
     } else {
-      await workspaceProvider.updateSession(
-        targetModule.id,
-        deepLink: request.deepLink,
-        restoreState: restoreState,
-        readinessState: readinessState,
-      );
+      await ref.read(workspaceNotifierProvider.notifier).updateSession(
+            targetModule.id,
+            deepLink: request.deepLink,
+            restoreState: restoreState,
+            readinessState: readinessState,
+          );
     }
 
     await _activateModule(targetModule.id, requestFocus: true);
@@ -538,11 +547,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   Widget _buildHeaderActions(
     BuildContext context,
-    ModuleProvider moduleProvider,
     Module? activeModule,
   ) {
     final actions = ToolViewHeaderActions(
-      moduleProvider: moduleProvider,
       activeModule: activeModule,
       onShowModulePicker: () => _showModulePicker(context),
     );
@@ -565,15 +572,22 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final moduleProvider = ref.watch(moduleStateProvider);
-    final workspaceProvider = ref.watch(workspaceStateProvider);
-    final sessions = workspaceProvider.sessions;
+    final moduleStateAsync = ref.watch(moduleNotifierProvider);
+    final moduleState = moduleStateAsync.value;
+    final workspaceStateAsync = ref.watch(workspaceNotifierProvider);
+    final workspaceState = workspaceStateAsync.value;
+
+    if (moduleState == null || workspaceState == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final sessions = workspaceState.sessions;
     final eligibleModules =
-        moduleProvider.modules.where(_shouldOpenModule).toList(growable: false);
+        moduleState.modules.where(_shouldOpenModule).toList(growable: false);
 
     if (!_workspaceInitialized &&
-        !moduleProvider.isLoading &&
-        !workspaceProvider.isLoading) {
+        !moduleStateAsync.isLoading &&
+        !workspaceStateAsync.isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await _initializeWorkspace();
       });
@@ -583,7 +597,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     // currently open workspace sessions.
     final navItems = eligibleModules
         .map(
-          (module) => NmtkSidebarItem(
+          (Module module) => NmtkSidebarItem(
             id: module.id,
             label: module.name,
             icon: ModuleIcon.forModule(module),
@@ -592,8 +606,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         )
         .toList(growable: false);
 
-    final selectedIndex =
-        navItems.indexWhere((item) => item.id == _activeModuleId);
+    final selectedIndex = navItems
+        .indexWhere((NmtkSidebarItem item) => item.id == _activeModuleId);
     final clampedIndex = _activeModuleId == 'settings'
         ? eligibleModules.length
         : (selectedIndex < 0 ? 0 : selectedIndex);
@@ -621,8 +635,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
 
     final eligibleModuleIds =
-        eligibleModules.map((module) => module.id).toSet();
-    final focusedModuleId = workspaceProvider.focusedModuleId;
+        eligibleModules.map((Module module) => module.id).toSet();
+    final focusedModuleId = workspaceState.focusedModuleId;
 
     // Only sync focus from the provider if we are not currently in Settings.
     // Explicit navigation to modules via _activateModule will still work as it
@@ -643,7 +657,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     };
 
     final activeModule = eligibleModules.firstWhere(
-      (module) => module.id == _activeModuleId,
+      (Module module) => module.id == _activeModuleId,
       orElse: () => eligibleModules.first,
     );
 
@@ -665,12 +679,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       ],
       onFooterNavItemSelected: (_) =>
           setState(() => _activeModuleId = 'settings'),
-      headerActions: _buildHeaderActions(context, moduleProvider, activeModule),
+      headerActions: _buildHeaderActions(context, activeModule),
       mode: NmtkShellMode.command,
       child: IndexedStack(
         key: const ValueKey('WorkspaceStack'),
         index: clampedIndex,
-        children: eligibleModules.map((module) {
+        children: eligibleModules.map((Module module) {
           // Auto-clear stale WebView failures when a module *recovers* — i.e.
           // transitions from a non-ready state back to running/degraded.  We
           // deliberately do NOT clear failures that were recorded while the

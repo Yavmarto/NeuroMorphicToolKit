@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/providers/settings_provider.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
-import 'package:neuro_toolkit/providers/command_provider.dart';
+import 'package:neuro_toolkit/src/features/app/presentation/command_provider.dart';
 import 'package:neuro_toolkit/screens/first_run_setup_screen.dart';
 import 'package:neuro_toolkit/screens/server_setup.dart';
 
@@ -16,9 +15,6 @@ void main() async {
 
   final analytics = AnalyticsService();
   await analytics.init();
-
-  final settings = SettingsProvider(analyticsService: analytics);
-  await settings.init();
 
   // Global error handlers for crash reporting
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -30,12 +26,18 @@ void main() async {
     return true;
   };
 
+  final container = ProviderContainer(
+    overrides: [
+      analyticsServiceProvider.overrideWithValue(analytics),
+    ],
+  );
+
+  // Await the settings to be loaded from SharedPreferences asynchronously
+  await container.read(settingsNotifierProvider.future);
+
   runApp(
-    ProviderScope(
-      overrides: [
-        analyticsServiceProvider.overrideWithValue(analytics),
-        settingsStateProvider.overrideWith((ref) => settings),
-      ],
+    UncontrolledProviderScope(
+      container: container,
       child: const LauncherBootstrapHost(),
     ),
   );
@@ -68,8 +70,8 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   @override
   void initState() {
     super.initState();
-    final settings = ref.read(settingsStateProvider);
-    var saved = settings.launcherControlApiBaseUrl?.trim() ?? '';
+    final settings = ref.read(settingsNotifierProvider).value;
+    var saved = settings?.launcherControlApiBaseUrl?.trim() ?? '';
     if (saved.isNotEmpty) {
       final uri = Uri.tryParse(saved);
       if (uri != null && uri.host.isNotEmpty) {
@@ -81,8 +83,9 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   }
 
   Future<void> _bootstrap() async {
-    final settings = ref.read(settingsStateProvider);
-    final explicitBaseUri = _configuredBaseUri(settings);
+    final settings = ref.read(settingsNotifierProvider).value;
+    final explicitBaseUri =
+        _configuredBaseUri(settings?.launcherControlApiBaseUrl);
     if (_isMobilePlatform && explicitBaseUri == null) {
       setState(() {
         _bootstrapState = null;
@@ -148,12 +151,12 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
     });
   }
 
-  Uri? _configuredBaseUri(SettingsProvider settings) {
+  Uri? _configuredBaseUri(String? stored) {
     final configured = ControlApiService.configuredBaseUrl.trim();
     if (configured.isNotEmpty) {
       return Uri.parse(configured);
     }
-    final stored = settings.launcherControlApiBaseUrl?.trim() ?? '';
+    stored = stored?.trim() ?? '';
     if (stored.isNotEmpty) {
       return Uri.parse(stored);
     }
@@ -171,7 +174,9 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
         input = '${uri.scheme}://${uri.host}:8091${uri.path}';
       }
     }
-    await ref.read(settingsStateProvider).setLauncherControlApiBaseUrl(input);
+    await ref
+        .read(settingsNotifierProvider.notifier)
+        .setLauncherControlApiBaseUrl(input);
     if (!mounted) {
       return;
     }
@@ -180,7 +185,12 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsStateProvider);
+    final settingsState = ref.watch(settingsNotifierProvider);
+    final settings = settingsState.value;
+
+    if (settings == null) {
+      return const Scaffold(body: Center(child: _BootstrapLoadingView()));
+    }
     final bootstrap = _bootstrapState;
     final controlApiService = _controlApiService;
     if (bootstrap != null && _backendDeploymentReady) {
@@ -227,10 +237,10 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
                     bootstrap != null && controlApiService != null,
                 launcherSetupUnavailableMessage:
                     'Set the launcher control API host first. Once this device can reach a launcher server, you can provision a new backend from the same screen.',
-                initialLauncherStep: bootstrap != null &&
-                        controlApiService != null
-                    ? ServerSetupMode.setup
-                    : ServerSetupMode.connect,
+                initialLauncherStep:
+                    bootstrap != null && controlApiService != null
+                        ? ServerSetupMode.setup
+                        : ServerSetupMode.connect,
                 onLauncherSetupCompleted: _bootstrap,
               ),
       ),
@@ -243,7 +253,11 @@ class NeuroToolkitApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsStateProvider);
+    final settingsState = ref.watch(settingsNotifierProvider);
+    final settings = settingsState.value;
+    if (settings == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     final router = ref.watch(goRouterProvider);
 
     return NmtkZetaTheme.wrap(

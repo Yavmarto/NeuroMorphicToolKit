@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/bundle_manager.dart';
-import 'package:neuro_toolkit/providers/settings_provider.dart';
+import 'package:neuro_toolkit/src/features/settings/domain/settings_state.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 

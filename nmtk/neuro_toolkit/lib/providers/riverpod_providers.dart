@@ -1,27 +1,29 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:neuro_toolkit/providers/app_provider.dart';
-import 'package:neuro_toolkit/providers/backend_deployment_provider.dart';
-import 'package:neuro_toolkit/providers/environment_provider.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
-import 'package:neuro_toolkit/providers/settings_provider.dart';
-import 'package:neuro_toolkit/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/routing/router.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/environment_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
+import 'package:neuro_toolkit/src/features/app/presentation/app_notifier.dart';
+import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
+import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
+import 'package:neuro_toolkit/src/features/settings/presentation/settings_notifier.dart';
+import 'package:neuro_toolkit/src/features/environment/presentation/environment_notifier.dart';
+import 'package:neuro_toolkit/src/features/deployment/presentation/deployment_notifier.dart';
+
+final appNotifierProvider = appProvider;
+final moduleNotifierProvider = moduleProvider;
+final workspaceNotifierProvider = workspaceProvider;
+final settingsNotifierProvider = settingsProvider;
+final environmentNotifierProvider = environmentProvider;
+final deploymentNotifierProvider = backendDeploymentProvider;
+
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   throw UnimplementedError(
     'analyticsServiceProvider must be overridden at app bootstrap.',
-  );
-});
-
-final settingsStateProvider = ChangeNotifierProvider<SettingsProvider>((ref) {
-  throw UnimplementedError(
-    'settingsStateProvider must be overridden at app bootstrap.',
   );
 });
 
@@ -37,43 +39,10 @@ final controlApiServiceProvider = Provider<ControlApiService>((ref) {
   );
 });
 
-final appStateProvider = ChangeNotifierProvider<AppProvider>((ref) {
-  return AppProvider();
-});
-
-final moduleStateProvider = ChangeNotifierProvider<ModuleProvider>((ref) {
-  final settings = ref.read(settingsStateProvider);
-  final controlApiService = ref.read(controlApiServiceProvider);
-  final bootstrapState = ref.read(launcherBootstrapStateProvider);
-  return ModuleProvider(
-    controlApiService: controlApiService,
-    bootstrapState: bootstrapState,
-  )..updateSettingsProvider(settings);
-});
-
-final workspaceStateProvider = ChangeNotifierProvider<WorkspaceProvider>((ref) {
-  return WorkspaceProvider(
-    controlApiService: ref.read(controlApiServiceProvider),
-    bootstrapState: ref.read(launcherBootstrapStateProvider),
-  );
-});
-
-final backendDeploymentStateProvider =
-    ChangeNotifierProvider<BackendDeploymentProvider>((ref) {
-  return BackendDeploymentProvider(
-    controlApiService: ref.read(controlApiServiceProvider),
-  );
-});
-
 final environmentApiServiceProvider = Provider<EnvironmentApiService>((ref) {
   return EnvironmentApiService(
     controlApi: ref.watch(controlApiServiceProvider),
   );
-});
-
-final environmentStateProvider =
-    ChangeNotifierProvider<EnvironmentProvider>((ref) {
-  return EnvironmentProvider(ref.watch(environmentApiServiceProvider));
 });
 
 // The Teensy / PYNQ / Akida deploy providers were relocated to the Neurochip

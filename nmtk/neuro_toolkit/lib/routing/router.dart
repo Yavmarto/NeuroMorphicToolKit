@@ -9,7 +9,6 @@ import 'package:neuro_toolkit/screens/first_run_setup_screen.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/environment_editor.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 GoRouter createGoRouter() {
@@ -140,28 +139,39 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = ref.watch(moduleStateProvider);
+    final moduleStateAsync = ref.watch(moduleNotifierProvider);
+    final moduleState = moduleStateAsync.value;
     final bootstrapState = ref.watch(launcherBootstrapStateProvider);
 
-    // Queue the launcher-update dialog exactly once per available update.
-    if (provider.pendingLauncherUpdate != null && !_updateDialogQueued) {
-      _updateDialogQueued = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _showLauncherUpdateDialog(context, provider);
-        }
-      });
-    }
-    if (provider.pendingLauncherUpdate == null) {
-      _updateDialogQueued = false;
+    // If still loading and we have no value, show a loader
+    if (moduleState == null && moduleStateAsync.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('NeuroToolkit')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
-    // Gate: Python not detected — unified first-run flow (own Scaffold).
-    if (!provider.pythonAvailable && !provider.isLoading) {
-      return const FirstRunSetupScreen(
-        requirePython: true,
-        requireLauncher: false,
-      );
+    if (moduleState != null) {
+      // Queue the launcher-update dialog exactly once per available update.
+      if (moduleState.pendingLauncherUpdate != null && !_updateDialogQueued) {
+        _updateDialogQueued = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showLauncherUpdateDialog(context, ref);
+          }
+        });
+      }
+      if (moduleState.pendingLauncherUpdate == null) {
+        _updateDialogQueued = false;
+      }
+
+      // Gate: Python not detected — unified first-run flow (own Scaffold).
+      if (!moduleState.pythonAvailable && !moduleStateAsync.isLoading) {
+        return const FirstRunSetupScreen(
+          requirePython: true,
+          requireLauncher: false,
+        );
+      }
     }
 
     // Gate: launcher control API could not start — show error Scaffold.
@@ -192,9 +202,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   void _showLauncherUpdateDialog(
     BuildContext context,
-    ModuleProvider provider,
+    WidgetRef ref,
   ) {
-    final update = provider.pendingLauncherUpdate;
+    final moduleState = ref.read(moduleNotifierProvider).value;
+    final update = moduleState?.pendingLauncherUpdate;
     if (update == null) return;
     final releaseNotes = update.releaseNotes.trim().isEmpty
         ? 'No published release notes were found for this version.'
@@ -225,7 +236,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         actions: [
           ZetaButton.text(
             onPressed: () {
-              provider.dismissLauncherUpdate();
+              ref.read(moduleNotifierProvider.notifier).dismissLauncherUpdate();
               Navigator.of(dialogContext).pop();
             },
             label: 'Later',

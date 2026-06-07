@@ -93,8 +93,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
       _errorMessage = null;
     });
 
-    final provider = ref.read(moduleStateProvider);
-    unawaited(provider.recheckPython());
+    await ref.read(moduleNotifierProvider.notifier).recheckPython();
 
     if (mounted) {
       setState(() => _isChecking = false);

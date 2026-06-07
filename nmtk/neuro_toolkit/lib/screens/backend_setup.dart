@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/backend_deployment.dart';
-import 'package:neuro_toolkit/providers/backend_deployment_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/first_run_setup_screen.dart';
 
@@ -62,10 +61,12 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = ref.watch(backendDeploymentStateProvider);
+    final deploymentStateAsync = ref.watch(deploymentNotifierProvider);
+    final deploymentState = deploymentStateAsync.value;
+    final isReady = deploymentState?.isReady ?? false;
     final tokens = NmtkShellTokens.of(context);
 
-    if (provider.isReady && !_completionQueued) {
+    if (isReady && !_completionQueued) {
       _completionQueued = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         widget.onDeploymentReady?.call();
@@ -83,12 +84,12 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         _buildDetailsSection(tokens),
         const SizedBox(height: 16),
         if (_preflight != null) _buildPreflightCard(_preflight!, tokens),
-        if (provider.activeJob != null) ...[
+        if (deploymentState?.activeJob != null) ...[
           const SizedBox(height: 16),
-          _buildProgressCard(provider.activeJob!, tokens),
+          _buildProgressCard(deploymentState!.activeJob!, tokens),
         ],
         const SizedBox(height: 24),
-        _buildActions(provider),
+        _buildActions(deploymentState?.activeJob),
       ],
     );
   }
@@ -229,8 +230,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     );
   }
 
-  Widget _buildActions(BackendDeploymentProvider backendProvider) {
-    final job = backendProvider.activeJob;
+  Widget _buildActions(DeploymentJob? job) {
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -249,7 +249,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         ),
         if (job != null && !job.isTerminal)
           ZetaButton.text(
-            onPressed: () => backendProvider.cancelActiveJob(),
+            onPressed: () =>
+                ref.read(deploymentNotifierProvider.notifier).cancelActiveJob(),
             label: 'Cancel',
           ),
       ],
@@ -292,19 +293,19 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
 
   Future<void> _runPreflight() async {
     setState(() => _isWorking = true);
-    final provider = ref.read(backendDeploymentStateProvider);
-    final result = await provider.preflight(
-      targetType: _targetType,
-      mode: _mode,
-      displayName: _displayName.text,
-      host: _host.text,
-      username: _username.text,
-      sshPort: int.tryParse(_sshPort.text) ?? 22,
-      backendPort: int.tryParse(_backendPort.text) ?? 9000,
-      namespace: _namespace.text,
-      context: _context.text,
-      apiServer: _apiServer.text,
-    );
+    final result =
+        await ref.read(deploymentNotifierProvider.notifier).preflight(
+              targetType: _targetType,
+              mode: _mode,
+              displayName: _displayName.text,
+              host: _host.text,
+              username: _username.text,
+              sshPort: int.tryParse(_sshPort.text) ?? 22,
+              backendPort: int.tryParse(_backendPort.text) ?? 9000,
+              namespace: _namespace.text,
+              context: _context.text,
+              apiServer: _apiServer.text,
+            );
     setState(() {
       _preflight = result;
       _isWorking = false;
@@ -316,19 +317,18 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       _isWorking = true;
       _completionQueued = false;
     });
-    final provider = ref.read(backendDeploymentStateProvider);
-    await provider.deploy(
-      targetType: _targetType,
-      mode: _mode,
-      displayName: _displayName.text,
-      host: _host.text,
-      username: _username.text,
-      sshPort: int.tryParse(_sshPort.text) ?? 22,
-      backendPort: int.tryParse(_backendPort.text) ?? 9000,
-      namespace: _namespace.text,
-      context: _context.text,
-      apiServer: _apiServer.text,
-    );
+    await ref.read(deploymentNotifierProvider.notifier).deploy(
+          targetType: _targetType,
+          mode: _mode,
+          displayName: _displayName.text,
+          host: _host.text,
+          username: _username.text,
+          sshPort: int.tryParse(_sshPort.text) ?? 22,
+          backendPort: int.tryParse(_backendPort.text) ?? 9000,
+          namespace: _namespace.text,
+          context: _context.text,
+          apiServer: _apiServer.text,
+        );
     if (mounted) {
       setState(() => _isWorking = false);
     }

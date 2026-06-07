@@ -5,111 +5,45 @@ import 'package:integration_test/integration_test.dart';
 import 'package:neurocnl_studio/shell_adapter.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
-import 'package:neuro_toolkit/providers/module_provider.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/providers/workspace_provider.dart';
-import 'package:neuro_toolkit/services/control_api_service.dart';
-import 'package:neuro_toolkit/services/process_manager.dart';
 import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
+import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
+import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
+import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
+import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 
 import 'app_robot.dart';
 
-class _MockProcessManager implements ProcessManager {
+class FakeModuleNotifier extends ModuleNotifier {
   @override
-  Stream<Module> get statusUpdates => const Stream<Module>.empty();
-
-  @override
-  Future<void> init(List<Module> modules, [dynamic logLevel]) async {}
-
-  @override
-  Future<void> installModule(
-    Module module, {
-    void Function(double progress)? onProgress,
-  }) async {}
-
-  @override
-  Future<void> startModule(Module module, {bool isRetry = false}) async {}
-
-  @override
-  Future<void> stopModule(String moduleId, {bool isFailure = false}) async {}
-
-  @override
-  void dispose() {}
-
-  @override
-  Stream<String>? getOutput(String moduleId) => null;
-
-  @override
-  Future<void> saveModuleState(Module module) async {}
-
-  @override
-  set processRunner(ProcessRunner runner) {}
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  Future<ModuleState> build() async {
+    return ModuleState(modules: [
+      Module(
+        id: 'Neurochip',
+        name: 'NeuroChip',
+        description: 'Execution, flashing, and diagnostics workspace',
+        directory: '/tmp/neurochip',
+        port: 8002,
+        hasFrontend: true,
+        status: ModuleStatus.running,
+      ),
+    ]);
+  }
 }
 
-class _FakeWorkspaceControlApiService extends ControlApiService {
-  _FakeWorkspaceControlApiService()
-      : super(baseUri: Uri.parse('http://127.0.0.1:8091'));
-
-  WorkspaceSnapshot _snapshot = const WorkspaceSnapshot(
-    sessions: <WorkspaceSession>[],
-    focusedModuleId: null,
-  );
-
+class FakeWorkspaceNotifier extends WorkspaceNotifier {
   @override
-  Future<WorkspaceSnapshot> fetchWorkspace() async => _snapshot;
-
-  @override
-  Future<WorkspaceSnapshot> createWorkspaceSession({
-    required String moduleId,
-    required String surfaceMode,
-    String? deepLink,
-    Map<String, dynamic> restoreState = const <String, dynamic>{},
-    String readinessState = 'opening',
-  }) async {
-    final sessions = _snapshot.sessions
-        .where((session) => session.moduleId != moduleId)
-        .toList(growable: true)
-      ..add(
+  Future<WorkspaceState> build() async {
+    return const WorkspaceState(
+      sessions: [
         WorkspaceSession(
-          moduleId: moduleId,
-          surfaceMode: surfaceMode,
-          deepLink: deepLink,
-          restoreState: restoreState,
-          readinessState: readinessState,
+          moduleId: 'Neurochip',
+          surfaceMode: 'native',
+          readinessState: 'ready',
         ),
-      );
-    _snapshot = WorkspaceSnapshot(
-      sessions: sessions,
-      focusedModuleId: moduleId,
+      ],
+      focusedModuleId: 'Neurochip',
     );
-    return _snapshot;
-  }
-
-  @override
-  Future<WorkspaceSnapshot> updateWorkspace({
-    required List<WorkspaceSession> sessions,
-    required String? focusedModuleId,
-  }) async {
-    _snapshot = WorkspaceSnapshot(
-      sessions: List<WorkspaceSession>.from(sessions),
-      focusedModuleId: focusedModuleId,
-    );
-    return _snapshot;
-  }
-
-  @override
-  Future<WorkspaceSnapshot> deleteWorkspaceSession(String moduleId) async {
-    final sessions = _snapshot.sessions
-        .where((session) => session.moduleId != moduleId)
-        .toList(growable: false);
-    _snapshot = WorkspaceSnapshot(
-      sessions: sessions,
-      focusedModuleId: sessions.isEmpty ? null : sessions.last.moduleId,
-    );
-    return _snapshot;
   }
 }
 
@@ -142,33 +76,11 @@ void main() {
 
   testWidgets('launcher workspace can open a native adapter surface',
       (WidgetTester tester) async {
-    final moduleProvider =
-        ModuleProvider(processManager: _MockProcessManager());
-    final workspaceProvider = WorkspaceProvider(
-      controlApiService: _FakeWorkspaceControlApiService(),
-    );
-    moduleProvider.modules = <Module>[
-      Module(
-        id: 'Neurochip',
-        name: 'NeuroChip',
-        description: 'Execution, flashing, and diagnostics workspace',
-        directory: '/tmp/neurochip',
-        port: 8002,
-        hasFrontend: true,
-        status: ModuleStatus.running,
-      ),
-    ];
-    await workspaceProvider.openSession(
-      'Neurochip',
-      surfaceMode: 'native',
-      readinessState: 'ready',
-    );
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          moduleStateProvider.overrideWith((ref) => moduleProvider),
-          workspaceStateProvider.overrideWith((ref) => workspaceProvider),
+          moduleNotifierProvider.overrideWith(() => FakeModuleNotifier()),
+          workspaceNotifierProvider.overrideWith(() => FakeWorkspaceNotifier()),
         ],
         child: const MaterialApp(
           home: _LauncherAdapterHarness(),
