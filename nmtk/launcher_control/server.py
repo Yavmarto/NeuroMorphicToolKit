@@ -5153,13 +5153,25 @@ class LauncherControlState:
             return Path.home() / ".local" / "share" / "neuro_toolkit"
 
     def get_crash_log_lines(self) -> dict[str, Any]:
+<<<<<<< Updated upstream
         """Serve the Dart AnalyticsService crash.log."""
         log_path = self._get_dart_analytics_dir() / "crash.log"
+=======
+        """Serve the Dart AnalyticsService crash.log from Application Support."""
+        log_path = Path.home() / "Library" / "Application Support" / "crash.log"
+>>>>>>> Stashed changes
         return {"lines": self._read_log_file_tail(log_path)}
 
     def get_backend_activity_log_lines(self) -> dict[str, Any]:
         """Serve the Dart AnalyticsService launcher_backend_activity.log."""
+<<<<<<< Updated upstream
         log_path = self._get_dart_analytics_dir() / "launcher_backend_activity.log"
+=======
+        log_path = (
+            Path.home() / "Library" / "Application Support"
+            / "launcher_backend_activity.log"
+        )
+>>>>>>> Stashed changes
         return {"lines": self._read_log_file_tail(log_path)}
 
     def _task_running(self, module_id: str) -> bool:

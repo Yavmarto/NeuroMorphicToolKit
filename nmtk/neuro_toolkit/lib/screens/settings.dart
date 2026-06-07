@@ -67,15 +67,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     primaryText: 'Server',
                     trailing: SizedBox(
                       width: trailingWidth,
-                      child: ZetaTextInput(
-                        key: const ValueKey('launcher-control-url'),
-                        initialValue: ref
-                                .read(settingsStateProvider)
-                                .launcherControlApiBaseUrl ??
-                            '',
-                        placeholder: 'http://192.168.1.50:8091',
-                        onChange: settings.setLauncherControlApiBaseUrl,
-                      ),
+                      child: _LauncherControlUrlField(settings: settings),
                     ),
                   ),
                   ZetaListItem(
@@ -235,6 +227,60 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         logs: logs,
         showErrorOnlyToggle: showErrorOnlyToggle,
       ),
+    );
+  }
+}
+
+class _LauncherControlUrlField extends StatefulWidget {
+  const _LauncherControlUrlField({required this.settings});
+
+  final SettingsProvider settings;
+
+  @override
+  State<_LauncherControlUrlField> createState() =>
+      _LauncherControlUrlFieldState();
+}
+
+class _LauncherControlUrlFieldState extends State<_LauncherControlUrlField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: widget.settings.launcherControlApiBaseUrl ?? '',
+    );
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LauncherControlUrlField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_focusNode.hasFocus) {
+      return;
+    }
+    final nextValue = widget.settings.launcherControlApiBaseUrl ?? '';
+    if (_controller.text != nextValue) {
+      _controller.text = nextValue;
+    }
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ZetaTextInput(
+      key: const ValueKey('launcher-control-url'),
+      controller: _controller,
+      focusNode: _focusNode,
+      placeholder: 'http://192.168.1.50:8091',
+      onChange: widget.settings.setLauncherControlApiBaseUrl,
     );
   }
 }

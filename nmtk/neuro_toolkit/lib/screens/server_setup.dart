@@ -50,10 +50,25 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
   late ServerSetupMode _mode = widget.initialMode;
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialValue ?? '');
+  late final FocusNode _focusNode = FocusNode();
   bool _isConnecting = false;
 
   @override
+  void didUpdateWidget(covariant ServerSetupScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_focusNode.hasFocus) {
+      return;
+    }
+    final nextValue = widget.initialValue ?? '';
+    if (oldWidget.initialValue != widget.initialValue &&
+        _controller.text != nextValue) {
+      _controller.text = nextValue;
+    }
+  }
+
+  @override
   void dispose() {
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -134,6 +149,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
           const SizedBox(height: 6),
           ZetaTextInput(
             controller: _controller,
+            focusNode: _focusNode,
             placeholder: 'http://192.168.1.50:8091',
             onChange: widget.onChanged,
           ),

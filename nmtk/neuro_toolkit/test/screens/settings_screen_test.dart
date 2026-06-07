@@ -105,4 +105,59 @@ void main() {
     expect(find.text('Clear Local Logs'), findsOneWidget);
     expect(find.text('Server Logs'), findsOneWidget);
   });
+
+  testWidgets('server field keeps typed text stable across settings rebuilds',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsProvider();
+    await settings.init();
+
+    await tester.pumpWidget(buildApp(settings));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final fieldFinder = find.byKey(const ValueKey('launcher-control-url'));
+    final editableFinder = find.descendant(
+      of: fieldFinder,
+      matching: find.byType(EditableText),
+    );
+
+    await tester.tap(editableFinder);
+    await tester.pump();
+
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '1',
+        selection: TextSelection.collapsed(offset: 1),
+      ),
+    );
+    await tester.pump();
+
+    EditableText editable = tester.widget<EditableText>(editableFinder);
+    expect(editable.controller.text, '1');
+    expect(
+      editable.controller.selection,
+      const TextSelection.collapsed(offset: 1),
+    );
+
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '19',
+        selection: TextSelection.collapsed(offset: 2),
+      ),
+    );
+    await tester.pump();
+
+    editable = tester.widget<EditableText>(editableFinder);
+    expect(editable.controller.text, '19');
+    expect(
+      editable.controller.selection,
+      const TextSelection.collapsed(offset: 2),
+    );
+  });
 }
