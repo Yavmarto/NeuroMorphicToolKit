@@ -45,6 +45,7 @@ class NmtkPipelineStepper extends StatefulWidget {
   final Color stepAccentColor;
 
   final String? secondarySelectedStepId;
+  final Set<String> disabledStepIds;
 
   const NmtkPipelineStepper({
     super.key,
@@ -54,6 +55,7 @@ class NmtkPipelineStepper extends StatefulWidget {
     this.onSelected,
     this.bare = false,
     this.stepAccentColor = NmtkZetaTheme.primary,
+    this.disabledStepIds = const <String>{},
   });
 
   @override
@@ -186,20 +188,39 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
     final widgets = <Widget>[];
     for (int i = 0; i < widget.steps.length; i++) {
       final step = widget.steps[i];
-      widgets.add(
-        _PipelineStep(
-          key: _stepKeys[step.id],
-          data: step,
-          selected: widget.selectedStepId == step.id ||
-              widget.secondarySelectedStepId == step.id,
-          accentColor: widget.stepAccentColor,
-          onTap:
-              step.onTap ??
-              (widget.onSelected != null
-                  ? () => widget.onSelected!(step.id)
-                  : null),
-        ),
-      );
+      final disabled = widget.disabledStepIds.contains(step.id);
+      if (disabled) {
+        widgets.add(
+          Tooltip(
+            message: 'Complete the previous step first',
+            child: Opacity(
+              opacity: 0.38,
+              child: _PipelineStep(
+                key: _stepKeys[step.id],
+                data: step,
+                selected: false,
+                accentColor: widget.stepAccentColor,
+                onTap: null,
+              ),
+            ),
+          ),
+        );
+      } else {
+        widgets.add(
+          _PipelineStep(
+            key: _stepKeys[step.id],
+            data: step,
+            selected: widget.selectedStepId == step.id ||
+                widget.secondarySelectedStepId == step.id,
+            accentColor: widget.stepAccentColor,
+            onTap:
+                step.onTap ??
+                (widget.onSelected != null
+                    ? () => widget.onSelected!(step.id)
+                    : null),
+          ),
+        );
+      }
       if (i < widget.steps.length - 1) {
         widgets.add(
           _StepConnector(

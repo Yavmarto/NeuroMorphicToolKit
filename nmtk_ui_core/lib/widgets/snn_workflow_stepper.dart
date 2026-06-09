@@ -51,6 +51,11 @@ class SnnWorkflowStepper extends StatelessWidget {
   /// Pass to embed inside a parent toolbar (mirrors [NmtkPipelineStepper.bare]).
   final bool bare;
 
+  /// The set of phases that are locked (not yet accessible to the user).
+  /// Locked phases are rendered with reduced opacity, no tap handler, and a
+  /// tooltip explaining that the previous step must be completed first.
+  final Set<SnnWorkflowPhase> lockedPhases;
+
   const SnnWorkflowStepper({
     super.key,
     required this.currentPhase,
@@ -60,6 +65,7 @@ class SnnWorkflowStepper extends StatelessWidget {
     this.onOpenSandbox,
     this.secondaryPhase,
     this.bare = false,
+    this.lockedPhases = const <SnnWorkflowPhase>{},
   });
 
   @override
@@ -68,6 +74,7 @@ class SnnWorkflowStepper extends StatelessWidget {
       bare: bare,
       selectedStepId: currentPhase.name,
       secondarySelectedStepId: secondaryPhase?.name,
+      disabledStepIds: lockedPhases.map((p) => p.name).toSet(),
       onSelected: onPhaseSelected != null
           ? (id) {
               final phase = SnnWorkflowPhase.values.firstWhere(
