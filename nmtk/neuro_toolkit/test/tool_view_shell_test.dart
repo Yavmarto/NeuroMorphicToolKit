@@ -43,8 +43,8 @@ class _FakeModuleNotifier extends ModuleNotifier {
 class _FakeWorkspaceNotifier extends WorkspaceNotifier {
   @override
   Future<WorkspaceState> build() async {
-    return WorkspaceState(
-      sessions: const [
+    return const WorkspaceState(
+      sessions: [
         WorkspaceSession(
           moduleId: 'neurocnl',
           surfaceMode: 'embedded',

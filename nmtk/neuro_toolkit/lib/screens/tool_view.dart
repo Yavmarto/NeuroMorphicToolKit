@@ -444,8 +444,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
   }
 
-
-
   Future<bool> _handleCrossModuleNavigation(
     Module currentModule,
     Uri requestUri,
