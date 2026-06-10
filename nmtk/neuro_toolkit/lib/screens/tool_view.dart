@@ -12,7 +12,6 @@ import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
-import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/widgets/module_error_view.dart';
 import 'package:neuro_toolkit/widgets/module_icon.dart';
 import 'package:neuro_toolkit/widgets/module_loading_view.dart';
@@ -576,6 +575,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final moduleState = moduleStateAsync.value;
     final workspaceStateAsync = ref.watch(workspaceNotifierProvider);
     final workspaceState = workspaceStateAsync.value;
+    final tokens = NmtkShellTokens.of(context);
 
     if (moduleState == null || workspaceState == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -593,8 +593,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       });
     }
 
-    // Build sidebar nav items from the eligible module manifest, not only the
-    // currently open workspace sessions.
+    // Build the horizontal workspace destinations from the eligible module
+    // manifest, not only the currently open workspace sessions.
     final navItems = eligibleModules
         .map(
           (Module module) => NmtkSidebarItem(
@@ -608,29 +608,43 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     final selectedIndex = navItems
         .indexWhere((NmtkSidebarItem item) => item.id == _activeModuleId);
-    final clampedIndex = _activeModuleId == 'settings'
-        ? eligibleModules.length
-        : (selectedIndex < 0 ? 0 : selectedIndex);
+    final clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
+    final headerActions = eligibleModules.isEmpty
+        ? null
+        : _buildHeaderActions(
+            context,
+            eligibleModules.firstWhere(
+              (module) => module.id == _activeModuleId,
+              orElse: () => eligibleModules.first,
+            ));
 
     if (eligibleModules.isEmpty) {
-      return NmtkDesktopScaffold(
-        pageTitle: _activeModuleId == 'settings' ? 'Settings' : 'NeuroToolkit',
-        navItems: const [],
-        selectedIndex: -1,
-        mode: NmtkShellMode.command,
-        footerNavItems: const [
-          NmtkSidebarItem(
-            id: 'settings',
-            label: 'Settings',
-            icon: Icons.settings_outlined,
-            selectedIcon: Icons.settings_rounded,
+      return Scaffold(
+        backgroundColor: tokens.shellBackground,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              NmtkTopAppBar(
+                mode: NmtkShellMode.command,
+                title: const Text('NeuroToolkit'),
+                destinations: const [],
+                selectedIndex: 0,
+                onDestinationSelected: (_) {},
+                actions: [
+                  NmtkTopAppBarAction(
+                    icon: Icons.settings_rounded,
+                    tooltip: 'Settings',
+                    onPressed: () => context.push('/settings'),
+                  ),
+                ],
+              ),
+              const Expanded(child: ModulePickerPanel()),
+            ],
           ),
-        ],
-        onFooterNavItemSelected: (_) =>
-            setState(() => _activeModuleId = 'settings'),
-        child: _activeModuleId == 'settings'
-            ? const SettingsScreen()
-            : const ModulePickerPanel(),
+        ),
       );
     }
 
@@ -638,18 +652,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         eligibleModules.map((Module module) => module.id).toSet();
     final focusedModuleId = workspaceState.focusedModuleId;
 
-    // Only sync focus from the provider if we are not currently in Settings.
-    // Explicit navigation to modules via _activateModule will still work as it
-    // calls setState internally.
-    if (_activeModuleId != 'settings') {
-      if (focusedModuleId != null &&
-          eligibleModuleIds.contains(focusedModuleId) &&
-          focusedModuleId != _activeModuleId) {
-        _activeModuleId = focusedModuleId;
-      }
-      if (!eligibleModuleIds.contains(_activeModuleId)) {
-        _activeModuleId = eligibleModules.first.id;
-      }
+    if (focusedModuleId != null &&
+        eligibleModuleIds.contains(focusedModuleId) &&
+        focusedModuleId != _activeModuleId) {
+      _activeModuleId = focusedModuleId;
+    }
+    if (!eligibleModuleIds.contains(_activeModuleId)) {
+      _activeModuleId = eligibleModules.first.id;
     }
 
     final sessionsByModuleId = <String, WorkspaceSession>{
@@ -661,131 +670,160 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       orElse: () => eligibleModules.first,
     );
 
-    // ── Normal workspace ─────────────────────────────────────────────────────
-    return NmtkDesktopScaffold(
-      pageTitle: _activeModuleId == 'settings' ? 'Settings' : activeModule.name,
-      navItems: navItems,
-      selectedIndex: clampedIndex < navItems.length ? clampedIndex : -1,
-      onNavItemSelected: (i) async {
-        await _activateModule(navItems[i].id, requestFocus: true);
-      },
-      footerNavItems: const [
-        NmtkSidebarItem(
-          id: 'settings',
-          label: 'Settings',
-          icon: Icons.settings_outlined,
-          selectedIcon: Icons.settings_rounded,
-        ),
-      ],
-      onFooterNavItemSelected: (_) =>
-          setState(() => _activeModuleId = 'settings'),
-      headerActions: _buildHeaderActions(context, activeModule),
-      mode: NmtkShellMode.command,
-      child: IndexedStack(
-        key: const ValueKey('WorkspaceStack'),
-        index: clampedIndex,
-        children: eligibleModules.map((Module module) {
-          // Auto-clear stale WebView failures when a module *recovers* — i.e.
-          // transitions from a non-ready state back to running/degraded.  We
-          // deliberately do NOT clear failures that were recorded while the
-          // module was already running (those are fresh errors, not stale ones
-          // from a prior crash), because clearing them would restart the WebView
-          // and cause an infinite flicker loop.
-          //
-          // Strategy: compare current status against the status we saw in the
-          // previous build.  A non-ready → ready transition signals recovery.
-          // The failure object itself is captured so the postFrameCallback only
-          // removes it if a newer failure has not already replaced it.
-          final prevStatus = _prevModuleStatuses[module.id];
-          final currentStatus = module.status;
-          _prevModuleStatuses[module.id] = currentStatus;
-
-          final isNowReady = currentStatus == ModuleStatus.running ||
-              currentStatus == ModuleStatus.degraded;
-          final wasPreviouslyReady = prevStatus == ModuleStatus.running ||
-              prevStatus == ModuleStatus.degraded;
-
-          if (isNowReady &&
-              !wasPreviouslyReady &&
-              prevStatus != null &&
-              _moduleLoadFailures.containsKey(module.id)) {
-            final staleFailure = _moduleLoadFailures[module.id];
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              // Guard: only clear the exact failure that triggered this recovery.
-              // If the user navigated away and a newer failure was recorded,
-              // leave it in place.
-              if (_moduleLoadFailures[module.id] == staleFailure) {
-                setState(() {
-                  _moduleLoadFailures.remove(module.id);
-                  _controllers.remove(module.id);
-                });
-              }
-            });
-          }
-
-          final session = sessionsByModuleId[module.id];
-          final loadFailure = _moduleLoadFailures[module.id];
-          final supported = _isWebViewSupported();
-          final launchBlocked =
-              module.isPreflightFailed || module.status == ModuleStatus.error;
-          final isReady = module.status == ModuleStatus.running ||
-              module.status == ModuleStatus.degraded;
-
-          return Container(
-            key: ValueKey(module.id),
-            child: launchBlocked
-                ? NmtkEmptyState(
-                    title: '${module.name} Could Not Start',
-                    message: [
-                      module.statusMessage ??
-                          'This module could not be started.',
-                      if (module.capabilityWarnings.isNotEmpty)
-                        module.capabilityWarnings.join('\n'),
-                    ].join('\n\n'),
-                    icon: Icons.error_outline,
-                    tone: NmtkTone.danger,
-                    action: NmtkPrimaryButton(
-                      onPressed: () => _activateModule(
-                        module.id,
-                        requestFocus: false,
+    return Scaffold(
+      backgroundColor: tokens.shellBackground,
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            NmtkTopAppBar(
+              mode: NmtkShellMode.command,
+              title: Text(activeModule.name),
+              destinations: eligibleModules
+                  .map(
+                    (module) => NavigationDestinationData(
+                      icon: ModuleIcon.forModule(module),
+                      selectedIcon: ModuleIcon.forModule(
+                        module,
+                        selected: true,
                       ),
-                      icon: Icons.refresh,
-                      label: 'Retry Start',
-                      tone: NmtkTone.danger,
+                      label: module.name,
                     ),
                   )
-                : session == null || !isReady
-                    ? _buildLoadingState(module)
-                    : loadFailure != null
-                        ? _buildModuleLoadFailureState(module, loadFailure)
-                        : session.surfaceMode == 'native'
-                            ? NmtkHostNavigationScope(
-                                navigator: _handleHostedModuleNavigationRequest,
-                                child: NativeSurfaceRegistry.build(
-                                  module.id,
-                                  session,
-                                ),
-                              )
-                            : supported
-                                ? _buildWebView(module)
-                                : NmtkEmptyState(
-                                    title: 'WebView Not Supported',
-                                    message:
-                                        '${module.name} cannot be displayed on this platform.',
-                                    icon: Icons.warning_amber_rounded,
-                                    tone: NmtkTone.warning,
-                                  ),
-          );
-        }).toList()
-          ..add(
-            Container(
-              key: const ValueKey('settings'),
-              child: _activeModuleId == 'settings'
-                  ? const SettingsScreen()
-                  : const SizedBox.shrink(),
+                  .toList(growable: false),
+              selectedIndex: clampedIndex,
+              onDestinationSelected: (index) async {
+                await _activateModule(navItems[index].id, requestFocus: true);
+              },
+              actions: [
+                NmtkTopAppBarAction(
+                  icon: Icons.settings_rounded,
+                  tooltip: 'Settings',
+                  onPressed: () => context.push('/settings'),
+                ),
+              ],
             ),
-          ),
+            if (headerActions != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                decoration: BoxDecoration(
+                  color: tokens.topBarBackground,
+                  border: Border(
+                    bottom: BorderSide(color: tokens.chromeBorder),
+                  ),
+                ),
+                child: headerActions,
+              ),
+            Expanded(
+              child: IndexedStack(
+                key: const ValueKey('WorkspaceStack'),
+                index: clampedIndex,
+                children: eligibleModules.map((Module module) {
+                  // Auto-clear stale WebView failures when a module *recovers* — i.e.
+                  // transitions from a non-ready state back to running/degraded.  We
+                  // deliberately do NOT clear failures that were recorded while the
+                  // module was already running (those are fresh errors, not stale ones
+                  // from a prior crash), because clearing them would restart the WebView
+                  // and cause an infinite flicker loop.
+                  //
+                  // Strategy: compare current status against the status we saw in the
+                  // previous build.  A non-ready → ready transition signals recovery.
+                  // The failure object itself is captured so the postFrameCallback only
+                  // removes it if a newer failure has not already replaced it.
+                  final prevStatus = _prevModuleStatuses[module.id];
+                  final currentStatus = module.status;
+                  _prevModuleStatuses[module.id] = currentStatus;
+
+                  final isNowReady = currentStatus == ModuleStatus.running ||
+                      currentStatus == ModuleStatus.degraded;
+                  final wasPreviouslyReady =
+                      prevStatus == ModuleStatus.running ||
+                          prevStatus == ModuleStatus.degraded;
+
+                  if (isNowReady &&
+                      !wasPreviouslyReady &&
+                      prevStatus != null &&
+                      _moduleLoadFailures.containsKey(module.id)) {
+                    final staleFailure = _moduleLoadFailures[module.id];
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!mounted) return;
+                      // Guard: only clear the exact failure that triggered this recovery.
+                      // If the user navigated away and a newer failure was recorded,
+                      // leave it in place.
+                      if (_moduleLoadFailures[module.id] == staleFailure) {
+                        setState(() {
+                          _moduleLoadFailures.remove(module.id);
+                          _controllers.remove(module.id);
+                        });
+                      }
+                    });
+                  }
+
+                  final session = sessionsByModuleId[module.id];
+                  final loadFailure = _moduleLoadFailures[module.id];
+                  final supported = _isWebViewSupported();
+                  final launchBlocked = module.isPreflightFailed ||
+                      module.status == ModuleStatus.error;
+                  final isReady = module.status == ModuleStatus.running ||
+                      module.status == ModuleStatus.degraded;
+
+                  return Container(
+                    key: ValueKey(module.id),
+                    child: launchBlocked
+                        ? NmtkEmptyState(
+                            title: '${module.name} Could Not Start',
+                            message: [
+                              module.statusMessage ??
+                                  'This module could not be started.',
+                              if (module.capabilityWarnings.isNotEmpty)
+                                module.capabilityWarnings.join('\n'),
+                            ].join('\n\n'),
+                            icon: Icons.error_outline,
+                            tone: NmtkTone.danger,
+                            action: NmtkPrimaryButton(
+                              onPressed: () => _activateModule(
+                                module.id,
+                                requestFocus: false,
+                              ),
+                              icon: Icons.refresh,
+                              label: 'Retry Start',
+                              tone: NmtkTone.danger,
+                            ),
+                          )
+                        : session == null || !isReady
+                            ? _buildLoadingState(module)
+                            : loadFailure != null
+                                ? _buildModuleLoadFailureState(
+                                    module,
+                                    loadFailure,
+                                  )
+                                : session.surfaceMode == 'native'
+                                    ? NmtkHostNavigationScope(
+                                        navigator:
+                                            _handleHostedModuleNavigationRequest,
+                                        child: NativeSurfaceRegistry.build(
+                                          module.id,
+                                          session,
+                                        ),
+                                      )
+                                    : supported
+                                        ? _buildWebView(module)
+                                        : NmtkEmptyState(
+                                            title: 'WebView Not Supported',
+                                            message:
+                                                '${module.name} cannot be displayed on this platform.',
+                                            icon: Icons.warning_amber_rounded,
+                                            tone: NmtkTone.warning,
+                                          ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
