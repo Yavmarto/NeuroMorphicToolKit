@@ -64,10 +64,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               value: ThemeMode.dark, label: 'Dark'),
                         ],
                         onChange: (ThemeMode? v) {
-                          if (v != null)
+                          if (v != null) {
                             ref
                                 .read(settingsNotifierProvider.notifier)
                                 .setThemeMode(v);
+                          }
                         },
                       ),
                     ),
@@ -119,10 +120,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             )
                             .toList(),
                         onChange: (LogLevel? v) {
-                          if (v != null)
+                          if (v != null) {
                             ref
                                 .read(settingsNotifierProvider.notifier)
                                 .setLogLevel(v);
+                          }
                         },
                       ),
                     ),

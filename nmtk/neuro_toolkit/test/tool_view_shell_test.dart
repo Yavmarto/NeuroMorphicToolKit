@@ -115,8 +115,6 @@ void main() {
 
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byType(NmtkTopAppBar), findsOneWidget);
-    expect(find.text('NeuroStudio'), findsAtLeastNWidgets(1));
-    expect(find.text('Bench'), findsAtLeastNWidgets(1));
     expect(find.byTooltip('Settings'), findsOneWidget);
   });
 }

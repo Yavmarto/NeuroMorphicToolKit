@@ -16,7 +16,6 @@ import 'package:neuro_toolkit/widgets/module_error_view.dart';
 import 'package:neuro_toolkit/widgets/module_icon.dart';
 import 'package:neuro_toolkit/widgets/module_loading_view.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
-import 'package:neuro_toolkit/widgets/tool_view_header_actions.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 
 class ToolViewScreen extends ConsumerStatefulWidget {
@@ -445,16 +444,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
   }
 
-  void _showModulePicker(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.72,
-        child: const ModulePickerPanel(),
-      ),
-    );
-  }
+
 
   Future<bool> _handleCrossModuleNavigation(
     Module currentModule,
@@ -544,31 +534,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 
-  Widget _buildHeaderActions(
-    BuildContext context,
-    Module? activeModule,
-  ) {
-    final actions = ToolViewHeaderActions(
-      activeModule: activeModule,
-      onShowModulePicker: () => _showModulePicker(context),
-    );
-    // The environment editor is Jupyter-specific: only surface it on the
-    // Notebooks tool so it stays close to where the kernels are used.
-    if (activeModule?.id.toLowerCase() == 'jupyter') {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ZetaButton.text(
-            label: 'Environments',
-            onPressed: () => context.push('/environments'),
-          ),
-          actions,
-        ],
-      );
-    }
-    return actions;
-  }
-
   @override
   Widget build(BuildContext context) {
     final moduleStateAsync = ref.watch(moduleNotifierProvider);
@@ -609,14 +574,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final selectedIndex = navItems
         .indexWhere((NmtkSidebarItem item) => item.id == _activeModuleId);
     final clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
-    final headerActions = eligibleModules.isEmpty
-        ? null
-        : _buildHeaderActions(
-            context,
-            eligibleModules.firstWhere(
-              (module) => module.id == _activeModuleId,
-              orElse: () => eligibleModules.first,
-            ));
 
     if (eligibleModules.isEmpty) {
       return Scaffold(
@@ -665,11 +622,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       for (final session in sessions) session.moduleId: session,
     };
 
-    final activeModule = eligibleModules.firstWhere(
-      (Module module) => module.id == _activeModuleId,
-      orElse: () => eligibleModules.first,
-    );
-
     return Scaffold(
       backgroundColor: tokens.shellBackground,
       body: SafeArea(
@@ -678,45 +630,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            NmtkTopAppBar(
-              mode: NmtkShellMode.command,
-              title: Text(activeModule.name),
-              destinations: eligibleModules
-                  .map(
-                    (module) => NavigationDestinationData(
-                      icon: ModuleIcon.forModule(module),
-                      selectedIcon: ModuleIcon.forModule(
-                        module,
-                        selected: true,
-                      ),
-                      label: module.name,
-                    ),
-                  )
-                  .toList(growable: false),
-              selectedIndex: clampedIndex,
-              onDestinationSelected: (index) async {
-                await _activateModule(navItems[index].id, requestFocus: true);
-              },
-              actions: [
-                NmtkTopAppBarAction(
-                  icon: Icons.settings_rounded,
-                  tooltip: 'Settings',
-                  onPressed: () => context.push('/settings'),
-                ),
-              ],
-            ),
-            if (headerActions != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                decoration: BoxDecoration(
-                  color: tokens.topBarBackground,
-                  border: Border(
-                    bottom: BorderSide(color: tokens.chromeBorder),
-                  ),
-                ),
-                child: headerActions,
-              ),
             Expanded(
               child: IndexedStack(
                 key: const ValueKey('WorkspaceStack'),
