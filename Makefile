@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -49,6 +49,10 @@ help:
 	@echo "  make notices-check            - Fail if THIRD_PARTY_NOTICES.md is stale"
 	@echo "  make macos-signing-check      - Report macOS signing/notarization env readiness"
 	@echo "  make build-macos-dmg-signed   - Build a signed/notarized macOS DMG when secrets are set"
+	@echo "  make webtop                   - Build and start NMTK desktop in browser (webtop/kiosk)"
+	@echo "  make webtop-build             - Build the webtop Docker image"
+	@echo "  make webtop-up                - Start the webtop container"
+	@echo "  make webtop-down              - Stop the webtop container"
 	@echo ""
 
 dev:
@@ -229,6 +233,21 @@ check-devices:
 
 macos-signing-check:
 	@bash nmtk/installer/macos/sign-and-notarize.sh --check
+
+WEBTOP_PORT ?= 3030
+
+webtop-build:
+	docker compose -f docker-compose.webtop.yml build
+
+webtop-up:
+	docker compose -f docker-compose.webtop.yml up -d --wait
+	@WEBTOP_IP=$$(python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(('8.8.8.8', 80)); print(s.getsockname()[0]); s.close()" 2>/dev/null || echo "localhost"); \
+	echo "NMTK Desktop available at http://$$WEBTOP_IP:$(WEBTOP_PORT)"
+
+webtop-down:
+	docker compose -f docker-compose.webtop.yml down
+
+webtop: webtop-build webtop-up
 
 build-macos-dmg-signed:
 	@BUILD_ARGS=(--dmg); \
