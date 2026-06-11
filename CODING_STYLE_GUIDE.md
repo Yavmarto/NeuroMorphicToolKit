@@ -84,6 +84,19 @@ Suite-wide status signals (pipeline states, health badges, run buttons, toasts) 
 
 `NmtkNeurocnlTokens.success / .error / .warning` are **CNL syntax-diagnostic colours only**. Do not use them for any UI status outside the CNL editor's syntax highlighting and diagnostics layer.
 
+## Flutter Anti-Patterns (do not do these)
+
+- **No state mutation in `build()`**: Never assign to a `State` field inside `build()` without
+  calling `setState()`. Use `ref.listen` (Riverpod), `didChangeDependencies`, or `initState` to
+  react to external changes and call `setState` from there. Mutating state in `build()` produces
+  frames that render stale data and breaks Flutter's dirty-tracking contract.
+- **No duplicated status checks**: When a concept like "module is ready" is used in multiple
+  places, extract it as a named static helper — do not repeat the same `status == A || status == B`
+  expression at multiple call sites. One helper, used consistently, means only one place to update.
+- **No hardcoded domain text in shared widgets**: `nmtk_ui_core` widgets must accept customisable
+  labels and tooltips for any user-visible strings that are domain-specific. Provide a sensible
+  default string and make it overridable. Example: `disabledTooltip` on `NmtkPipelineStepper`.
+
 ## Validation defaults
 
 - Run the owning module's local checks and apply autofixers (e.g., `ruff check --fix .` and `ruff format .` for Python, `dart fix --apply` and `dart format .` for Dart) from its own config first before finalizing any code.

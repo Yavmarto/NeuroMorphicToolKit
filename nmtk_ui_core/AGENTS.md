@@ -266,3 +266,13 @@ Do NOT:
     ├── workflow_card_test.dart
     └── workspace_shell_test.dart
 </directory_structure>
+
+- Hardcode domain-specific user-visible strings in a generic widget. Any string a consumer might
+  want to customise (tooltip text, placeholder labels, error messages) must be an optional parameter
+  with a sensible default. Example: `NmtkPipelineStepper.disabledTooltip`.
+
+When adding a new optional parameter to a public widget:
+1. Make it optional with a default value so all existing callers compile unchanged.
+2. If a domain-specific wrapper (e.g. `SnnWorkflowStepper`) should surface it, update that wrapper
+   in the same PR.
+3. Verify with `flutter test` that no existing consumer breaks.

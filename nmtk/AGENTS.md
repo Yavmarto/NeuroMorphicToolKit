@@ -781,3 +781,17 @@ The sidebar `navItems` list is dynamic — it is built from the installed module
 │   └── servo_control.ino
 └── user-install-improvement.md
 </directory_structure>
+
+## Widget State Sync Rules
+
+- **Never mutate local `ConsumerStatefulWidget` state directly inside `build()`** without calling
+  `setState()`. Use `ref.listen` with `setState` to react to provider changes. The canonical pattern
+  in this codebase is in `studio_screen.dart` (ref.listen inside build, before any early returns).
+  Specifically: `_activeModuleId` in `tool_view.dart` must be updated via `ref.listen` only.
+- **`ref.listen` must be called unconditionally** on every `build()` invocation — before any
+  `if (...) return` guard. Placing it after an early return violates Riverpod's hook-consistency
+  contract and causes subscription mis-tracking when the guard condition changes.
+- **Settings navigation must remain reachable from all top-level UI paths** in `tool_view.dart`.
+  Both the empty-modules branch and the populated-modules branch must include a `NmtkTopAppBar`
+  with a settings gear action (`context.push('/settings')`). Never remove the settings access point
+  from one branch while keeping it in another.

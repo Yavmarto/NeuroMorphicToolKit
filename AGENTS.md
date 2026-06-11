@@ -50,6 +50,15 @@ Knowledge Management (Open Brain):
 - **Always check Open Brain** (Knowledge Items and Brain logs) at the start of a task to retrieve relevant context, architectural decisions (ADRs), and historical workstreams.
 - **Update Open Brain** after completing a task if new durable knowledge, decisions, or important context were established. Use the `capture_thought` tool if available, or manually update Knowledge Items (KIs).
 - Refer to `docs/archive/open-brain-import.md` for guidelines on how to organize and categorize knowledge for the Open Brain.
+- **Cross-file invariant rule**: After any change that creates or relies on a cross-file invariant
+  (two lists that must stay in sync, a naming convention, a state-machine contract, a parallel
+  enum + string list), write a GBrain entry:
+  ```bash
+  gbrain write --title "<what must stay in sync>" --body "<why and how>"
+  ```
+  This is in addition to code-level asserts and tests — it surfaces intent during future AI-assisted
+  searches before any code is read. Example invariants that were missed until caught by review:
+  `kStudioPipelineStepNames` ↔ `SnnWorkflowPhase` enum, launcher module IDs ↔ `modules.json`.
 
 ## Code Search
 
