@@ -228,7 +228,9 @@ class EnvironmentManager:
             raise EnvironmentError_(f"Unsupported base environment '{based_on}'.")
 
         slug = slug if slug is not None else self._unique_slug(display_name)
-        # Guard: explicit slug must not collide with the immutable base.
+        # Guard: explicit slug must not be empty or collide with the immutable base.
+        if not slug:
+            raise EnvironmentError_("Slug must not be empty.")
         if slug == self.base_kernel:
             raise EnvironmentError_(
                 f"Slug '{slug}' is reserved for the immutable base kernel."

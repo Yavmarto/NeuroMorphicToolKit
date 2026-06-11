@@ -7,6 +7,7 @@ import pytest
 
 from nmtk_env_manager.manager import (
     BASE_KERNEL,
+    EnvironmentError_,
     EnvironmentManager,
     EnvironmentNotFoundError,
     ImmutableEnvironmentError,
@@ -123,3 +124,9 @@ def test_create_environment_explicit_slug_skips_uniquify(manager, monkeypatch):
     monkeypatch.setattr(manager, "_run", lambda cmd: "")
     env = manager.create_environment("My Env", slug="custom-slug-123")
     assert env["slug"] == "custom-slug-123"
+
+
+def test_create_environment_explicit_empty_slug_raises(manager):
+    """Explicit empty string slug must be rejected."""
+    with pytest.raises(EnvironmentError_):
+        manager.create_environment("My Env", slug="")
