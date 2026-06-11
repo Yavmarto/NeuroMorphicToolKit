@@ -648,13 +648,32 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final workspaceState = workspaceStateAsync.value;
     final tokens = NmtkShellTokens.of(context);
 
+    // Compute eligibleModules early so ref.listen can close over it.
+    final eligibleModules = moduleState == null
+        ? const <Module>[]
+        : moduleState.modules.where(_shouldOpenModule).toList(growable: false);
+
+    // Unconditional ref.listen — must be called on every build, before any returns.
+    ref.listen(workspaceNotifierProvider, (prev, next) {
+      final ws = next.value;
+      if (ws == null || eligibleModules.isEmpty) return;
+      final eligibleIds = eligibleModules.map((m) => m.id).toSet();
+      String newId = _activeModuleId;
+      if (ws.focusedModuleId != null &&
+          eligibleIds.contains(ws.focusedModuleId) &&
+          ws.focusedModuleId != _activeModuleId) {
+        newId = ws.focusedModuleId!;
+      } else if (!eligibleIds.contains(_activeModuleId)) {
+        newId = eligibleModules.first.id;
+      }
+      if (newId != _activeModuleId) setState(() => _activeModuleId = newId);
+    });
+
     if (moduleState == null || workspaceState == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final sessions = workspaceState.sessions;
-    final eligibleModules =
-        moduleState.modules.where(_shouldOpenModule).toList(growable: false);
 
     if (!_workspaceInitialized &&
         !moduleStateAsync.isLoading &&
