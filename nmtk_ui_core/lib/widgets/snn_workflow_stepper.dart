@@ -62,6 +62,12 @@ class SnnWorkflowStepper extends StatelessWidget {
   /// tooltip explaining that the previous step must be completed first.
   final Set<SnnWorkflowPhase> lockedPhases;
 
+  /// Custom tooltip shown when the user hovers over a locked phase.
+  ///
+  /// Defaults to `'Complete the previous step first'`. Override this to
+  /// surface domain-appropriate messaging (e.g. "Upload a dataset first").
+  final String disabledTooltip;
+
   const SnnWorkflowStepper({
     super.key,
     required this.currentPhase,
@@ -72,6 +78,7 @@ class SnnWorkflowStepper extends StatelessWidget {
     this.secondaryPhase,
     this.bare = false,
     this.lockedPhases = const <SnnWorkflowPhase>{},
+    this.disabledTooltip = 'Complete the previous step first',
   });
 
   @override
@@ -81,6 +88,7 @@ class SnnWorkflowStepper extends StatelessWidget {
       selectedStepId: currentPhase.name,
       secondarySelectedStepId: secondaryPhase?.name,
       disabledStepIds: lockedPhases.map((p) => p.name).toSet(),
+      disabledTooltip: disabledTooltip,
       onSelected: onPhaseSelected != null
           ? (id) {
               final phase = SnnWorkflowPhase.values.firstWhere(

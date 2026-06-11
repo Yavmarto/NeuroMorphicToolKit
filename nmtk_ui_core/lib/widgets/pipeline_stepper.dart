@@ -46,6 +46,7 @@ class NmtkPipelineStepper extends StatefulWidget {
 
   final String? secondarySelectedStepId;
   final Set<String> disabledStepIds;
+  final String disabledTooltip;
 
   const NmtkPipelineStepper({
     super.key,
@@ -56,6 +57,7 @@ class NmtkPipelineStepper extends StatefulWidget {
     this.bare = false,
     this.stepAccentColor = NmtkZetaTheme.primary,
     this.disabledStepIds = const <String>{},
+    this.disabledTooltip = 'Complete the previous step first',
   });
 
   @override
@@ -193,7 +195,7 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
       if (disabled) {
         widgets.add(
           Tooltip(
-            message: 'Complete the previous step first',
+            message: widget.disabledTooltip,
             child: Opacity(
               opacity: 0.38,
               child: _PipelineStep(
