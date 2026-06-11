@@ -98,3 +98,28 @@ def test_list_environments_always_includes_immutable_base(manager, monkeypatch):
     assert base["immutable"] is True
     assert clone["immutable"] is False
     assert clone["basedOn"] == BASE_KERNEL
+
+
+def test_create_environment_with_explicit_slug(manager, monkeypatch):
+    """Passing slug= bypasses _unique_slug and uses the provided slug exactly."""
+    calls = []
+
+    def fake_run(cmd):
+        calls.append(cmd)
+        return ""
+
+    monkeypatch.setattr(manager, "_run", fake_run)
+
+    env = manager.create_environment("Python (snnTorch)", slug="nmtk-snntorch")
+    assert env["slug"] == "nmtk-snntorch"
+    assert env["displayName"] == "Python (snnTorch)"
+    # ipykernel install should have been called with --name nmtk-snntorch
+    kernel_install = next(c for c in calls if "ipykernel" in c)
+    assert "nmtk-snntorch" in kernel_install
+
+
+def test_create_environment_explicit_slug_skips_uniquify(manager, monkeypatch):
+    """Explicit slug is used verbatim even if it would normally be modified."""
+    monkeypatch.setattr(manager, "_run", lambda cmd: "")
+    env = manager.create_environment("My Env", slug="custom-slug-123")
+    assert env["slug"] == "custom-slug-123"

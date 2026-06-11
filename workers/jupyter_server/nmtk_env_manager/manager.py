@@ -204,8 +204,22 @@ class EnvironmentManager:
         return slug
 
     # ── mutations ──────────────────────────────────────────────────────────--
-    def create_environment(self, display_name: str, based_on: str = BASE_KERNEL) -> dict:
-        """Clone the base env into a new ``--system-site-packages`` venv + kernel."""
+    def create_environment(
+        self,
+        display_name: str,
+        based_on: str = BASE_KERNEL,
+        *,
+        slug: str | None = None,
+    ) -> dict:
+        """Clone the base env into a new ``--system-site-packages`` venv + kernel.
+
+        Args:
+            display_name: Human-readable kernel name shown in JupyterLab.
+            based_on: Must be the immutable base kernel (v1 only).
+            slug: Optional explicit filesystem/kernel slug. If omitted, derived
+                from ``display_name`` via ``_unique_slug()``. Callers that need
+                a stable, predictable slug (e.g. provisioning) should supply this.
+        """
         display_name = (display_name or "").strip()
         if not display_name:
             raise EnvironmentError_("A display name is required.")
@@ -213,7 +227,12 @@ class EnvironmentManager:
             # v1 only clones the immutable base.
             raise EnvironmentError_(f"Unsupported base environment '{based_on}'.")
 
-        slug = self._unique_slug(display_name)
+        slug = slug if slug is not None else self._unique_slug(display_name)
+        # Guard: explicit slug must not collide with the immutable base.
+        if slug == self.base_kernel:
+            raise EnvironmentError_(
+                f"Slug '{slug}' is reserved for the immutable base kernel."
+            )
         venv_dir = self._venv_dir(slug)
         venv_dir.parent.mkdir(parents=True, exist_ok=True)
 
