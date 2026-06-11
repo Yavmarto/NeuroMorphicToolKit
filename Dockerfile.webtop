@@ -1,0 +1,24 @@
+FROM linuxserver/webtop:ubuntu-xfce
+
+# Flutter Linux build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    clang cmake ninja-build pkg-config libgtk-3-dev \
+    curl git unzip xz-utils liblzma-dev libglu1-mesa \
+    && rm -rf /var/lib/apt/lists/*
+
+# Flutter SDK (stable channel; satisfies pubspec.yaml constraint >=3.6.0)
+RUN git clone --depth 1 --branch stable \
+    https://github.com/flutter/flutter.git /opt/flutter
+ENV PATH="/opt/flutter/bin:${PATH}"
+RUN flutter config --no-analytics
+
+# Copy full repo for pub get dependency resolution
+COPY . /app/nmtk
+
+# Build NMTK Linux release binary
+WORKDIR /app/nmtk/nmtk/neuro_toolkit
+RUN flutter pub get && flutter build linux --release
+
+# Kiosk startup — launch NMTK instead of full XFCE desktop
+COPY scripts/webtop-kiosk-startup.sh /custom-services.d/startup.sh
+RUN chmod +x /custom-services.d/startup.sh
