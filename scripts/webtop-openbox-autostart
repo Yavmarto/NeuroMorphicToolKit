@@ -1,0 +1,20 @@
+#!/bin/bash
+# Kiosk autostart — sourced by openbox when the X session begins.
+# linuxserver/webtop copies /defaults/.config/openbox/ to the container
+# user's home at first run, so this file ends up at
+# ~/.config/openbox/autostart and is executed by openbox-session.
+#
+# Strategy: kill the XFCE desktop chrome (panel + desktop manager) so
+# nothing renders behind our app, then launch NMTK. The openbox rc.xml
+# window rule forces the first window fullscreen, so no wmctrl timing
+# hacks are needed.
+
+NMTK_BIN=/app/nmtk/nmtk/neuro_toolkit/build/linux/x64/release/bundle/neuro_toolkit
+
+# Suppress XFCE chrome — these exit 0 even if the process isn't running.
+xfce4-panel -q   2>/dev/null &
+xfdesktop --quit 2>/dev/null &
+wait
+
+# Launch the app. Openbox rc.xml forces it fullscreen on map.
+exec "$NMTK_BIN"

@@ -1,10 +1,28 @@
 FROM linuxserver/webtop:ubuntu-xfce
 
 # Flutter Linux build dependencies
+# - libgstreamer1.0-dev + libgstreamer-plugins-base1.0-dev: needed for
+#   audioplayers_linux's CMake probes (transitive dep of zeta_flutter).
+#   Runtime libs come in as transitive deps; no audio codecs needed since
+#   audio is not a feature.
+# - libwebkit2gtk-4.1-dev: needed for desktop_webview_window (transitive
+#   dep used by the launcher's embedded browser).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     clang cmake ninja-build pkg-config libgtk-3-dev \
     curl git unzip xz-utils liblzma-dev libglu1-mesa \
+    libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+    libwebkit2gtk-4.1-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# mkcert — issues a LAN-aware TLS cert signed by a local CA at container
+# start, so browsers on the host trust the HTTPS origin on first visit.
+# Pinned to the latest release on GitHub via redirect resolution.
+ARG MKCERT_VERSION=1.4.4
+RUN set -eux; \
+    curl -fsSL -o /usr/local/bin/mkcert \
+        "https://github.com/FiloSottile/mkcert/releases/download/v${MKCERT_VERSION}/mkcert-v${MKCERT_VERSION}-linux-amd64"; \
+    chmod +x /usr/local/bin/mkcert; \
+    /usr/local/bin/mkcert --version
 
 # Flutter SDK (stable channel; satisfies pubspec.yaml constraint >=3.6.0)
 RUN git clone --depth 1 --branch stable \
@@ -17,8 +35,22 @@ COPY . /app/nmtk
 
 # Build NMTK Linux release binary
 WORKDIR /app/nmtk/nmtk/neuro_toolkit
-RUN flutter pub get && flutter build linux --release
+RUN cd /app/nmtk/nmtk/neuro_toolkit \
+    && flutter clean \
+    && flutter pub get \
+    && flutter build linux --release
 
-# Kiosk startup — launch NMTK instead of full XFCE desktop
-COPY scripts/webtop-kiosk-startup.sh /custom-services.d/startup.sh
-RUN chmod +x /custom-services.d/startup.sh
+# Kiosk mode — openbox autostart + window rules.
+# linuxserver/webtop copies /defaults/.config/openbox/ to the container
+# user's home (~/.config/openbox/) on first run, so openbox-session picks
+# up both files automatically.
+RUN mkdir -p /defaults/.config/openbox
+COPY scripts/webtop-openbox-autostart /defaults/.config/openbox/autostart
+COPY scripts/webtop-openbox-rc.xml    /defaults/.config/openbox/rc.xml
+RUN chmod +x /defaults/.config/openbox/autostart
+
+# mkcert cert generator — runs at container start; reloads nginx in place.
+COPY scripts/webtop-mkcert-startup.sh /custom-services.d/00-mkcert-startup.sh
+RUN chmod +x /custom-services.d/00-mkcert-startup.sh
+
+LABEL com.docker.compose.image.builder=classic
