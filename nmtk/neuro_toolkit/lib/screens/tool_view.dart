@@ -529,6 +529,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     return true;
   }
 
+  static bool _isModuleReady(ModuleStatus status) =>
+      status == ModuleStatus.running || status == ModuleStatus.degraded;
+
   Widget _buildLoadingState(Module module) {
     return ModuleLoadingView(
       module: module,
@@ -805,6 +808,28 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            NmtkTopAppBar(
+              mode: NmtkShellMode.command,
+              title: const Text('NeuroToolkit'),
+              destinations: navItems
+                  .map((item) => NavigationDestinationData(
+                        icon: item.icon,
+                        selectedIcon: item.selectedIcon,
+                        label: item.label,
+                      ))
+                  .toList(),
+              selectedIndex: clampedIndex,
+              onDestinationSelected: (i) async {
+                await _activateModule(navItems[i].id, requestFocus: true);
+              },
+              actions: [
+                NmtkTopAppBarAction(
+                  icon: Icons.settings_rounded,
+                  tooltip: 'Settings',
+                  onPressed: () => context.push('/settings'),
+                ),
+              ],
+            ),
             Expanded(
               child: PageTransitionSwitcher(
                 transitionBuilder: (child, animation, secondaryAnimation) =>
