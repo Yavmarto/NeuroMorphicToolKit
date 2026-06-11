@@ -329,3 +329,19 @@ class EnvironmentManager:
         finally:
             Path(req_path).unlink(missing_ok=True)
         return next(e for e in self.list_environments() if e["slug"] == slug)
+
+    # ── framework provisioning ────────────────────────────────────────────────
+    def provision_framework_envs(self) -> None:
+        """Create preconfigured per-framework kernel envs at startup.
+
+        Iterates :data:`nmtk_env_manager.framework_envs.FRAMEWORK_ENVS` and
+        creates each env (clone-from-base + kernelspec) if it does not already
+        exist. Safe to call on every Jupyter start — existing envs are skipped.
+        """
+        from .framework_envs import FRAMEWORK_ENVS
+
+        for env in FRAMEWORK_ENVS:
+            slug = env["slug"]
+            if self._meta_path(slug).exists():
+                continue
+            self.create_environment(env["display"], slug=slug)

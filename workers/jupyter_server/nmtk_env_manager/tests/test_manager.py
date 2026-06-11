@@ -130,3 +130,70 @@ def test_create_environment_explicit_empty_slug_raises(manager):
     """Explicit empty string slug must be rejected."""
     with pytest.raises(EnvironmentError_):
         manager.create_environment("My Env", slug="")
+
+
+def test_provision_framework_envs_creates_all(manager, monkeypatch):
+    """All FRAMEWORK_ENVS entries are created when none exist."""
+    from nmtk_env_manager.framework_envs import FRAMEWORK_ENVS
+
+    created_slugs = []
+
+    def fake_create(display_name, based_on=BASE_KERNEL, *, slug=None):
+        created_slugs.append(slug)
+        # Write meta.json so subsequent idempotency check finds it.
+        env_dir = manager.envs_root / slug
+        env_dir.mkdir(parents=True, exist_ok=True)
+        (env_dir / "meta.json").write_text(
+            json.dumps({"slug": slug, "displayName": display_name, "basedOn": BASE_KERNEL})
+        )
+        return {"slug": slug, "displayName": display_name}
+
+    monkeypatch.setattr(manager, "create_environment", fake_create)
+    manager.provision_framework_envs()
+
+    expected = [env["slug"] for env in FRAMEWORK_ENVS]
+    assert sorted(created_slugs) == sorted(expected)
+
+
+def test_provision_framework_envs_is_idempotent(manager, monkeypatch):
+    """Already-present envs are skipped on second call."""
+    from nmtk_env_manager.framework_envs import FRAMEWORK_ENVS
+
+    # Pre-seed all framework envs.
+    for env in FRAMEWORK_ENVS:
+        _seed_env(manager, env["slug"], env["display"])
+
+    create_calls = []
+    monkeypatch.setattr(
+        manager,
+        "create_environment",
+        lambda *a, **kw: create_calls.append(kw.get("slug")),
+    )
+    manager.provision_framework_envs()
+    assert create_calls == [], "provision_framework_envs should skip existing envs"
+
+
+def test_provision_framework_envs_partial(manager, monkeypatch):
+    """Only missing envs are created when some already exist."""
+    from nmtk_env_manager.framework_envs import FRAMEWORK_ENVS
+
+    # Pre-seed first two.
+    for env in FRAMEWORK_ENVS[:2]:
+        _seed_env(manager, env["slug"], env["display"])
+
+    created = []
+
+    def fake_create(display_name, based_on=BASE_KERNEL, *, slug=None):
+        created.append(slug)
+        env_dir = manager.envs_root / slug
+        env_dir.mkdir(parents=True, exist_ok=True)
+        (env_dir / "meta.json").write_text(
+            json.dumps({"slug": slug, "displayName": display_name, "basedOn": BASE_KERNEL})
+        )
+        return {"slug": slug}
+
+    monkeypatch.setattr(manager, "create_environment", fake_create)
+    manager.provision_framework_envs()
+
+    expected_created = {env["slug"] for env in FRAMEWORK_ENVS[2:]}
+    assert set(created) == expected_created
