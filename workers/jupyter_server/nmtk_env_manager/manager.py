@@ -337,11 +337,21 @@ class EnvironmentManager:
         Iterates :data:`nmtk_env_manager.framework_envs.FRAMEWORK_ENVS` and
         creates each env (clone-from-base + kernelspec) if it does not already
         exist. Safe to call on every Jupyter start — existing envs are skipped.
+        A failure for one framework is logged but does not prevent the others
+        from being provisioned.
         """
+        import logging
+
         from .framework_envs import FRAMEWORK_ENVS
 
         for env in FRAMEWORK_ENVS:
             slug = env["slug"]
             if self._meta_path(slug).exists():
                 continue
-            self.create_environment(env["display"], slug=slug)
+            try:
+                self.create_environment(env["display"], slug=slug)
+            except EnvironmentError_ as exc:
+                # Log and continue — one framework failure must not block others.
+                logging.getLogger(__name__).warning(
+                    "Failed to provision framework env %r: %s", slug, exc
+                )

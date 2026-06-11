@@ -173,6 +173,33 @@ def test_provision_framework_envs_is_idempotent(manager, monkeypatch):
     assert create_calls == [], "provision_framework_envs should skip existing envs"
 
 
+def test_provision_framework_envs_continues_after_error(manager, monkeypatch):
+    """A CommandError on one env must not prevent provisioning of subsequent envs."""
+    from nmtk_env_manager.framework_envs import FRAMEWORK_ENVS
+    from nmtk_env_manager.manager import CommandError
+
+    created = []
+    call_count = [0]
+
+    def fake_create(display_name, based_on=BASE_KERNEL, *, slug=None):
+        call_count[0] += 1
+        if call_count[0] == 2:
+            raise CommandError("venv failed", log="stderr output")
+        created.append(slug)
+        env_dir = manager.envs_root / slug
+        env_dir.mkdir(parents=True, exist_ok=True)
+        (env_dir / "meta.json").write_text(
+            json.dumps({"slug": slug, "displayName": display_name, "basedOn": BASE_KERNEL})
+        )
+        return {"slug": slug}
+
+    monkeypatch.setattr(manager, "create_environment", fake_create)
+    manager.provision_framework_envs()  # must not raise
+
+    # 7 of 8 envs created (one failed)
+    assert len(created) == len(FRAMEWORK_ENVS) - 1
+
+
 def test_provision_framework_envs_partial(manager, monkeypatch):
     """Only missing envs are created when some already exist."""
     from nmtk_env_manager.framework_envs import FRAMEWORK_ENVS
