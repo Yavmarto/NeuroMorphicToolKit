@@ -15,6 +15,14 @@ c.ServerApp.token = ""
 c.ServerApp.password = ""
 c.IdentityProvider.token = ""
 
+# ── XSRF protection ──────────────────────────────────────────────────────────
+# The backend (suite_api) writes notebooks via the Contents API server-to-server.
+# Jupyter's XSRF check is designed to protect browser sessions, not internal
+# service calls. Since auth is already disabled (network isolation is the
+# security boundary), we disable XSRF checking so PUT /api/contents/* from
+# the backend is not rejected with 403.
+c.ServerApp.disable_check_xsrf = True
+
 # ── Root user ────────────────────────────────────────────────────────────────
 # Docker containers run as root by default; Jupyter refuses to start as root
 # unless this flag is explicitly set.

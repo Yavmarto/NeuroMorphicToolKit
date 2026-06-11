@@ -10,6 +10,7 @@ The prosthetic/simulate route requires MuJoCo and is proxied to the
 neurocnl-physics-worker (port 8006). When the physics worker is not running,
 /api/neurocnl/prosthetic/simulate returns 503.
 """
+
 # Ensure neurocnl/backend is importable via sys.path preamble
 import suite_api.domains.neurocnl  # noqa: F401 (side-effect import)
 
@@ -26,6 +27,7 @@ import neurocnl
 
 from backend.app.routers import (
     datasets,
+    notebook,
     parse,
     validate,
     generate,
@@ -53,6 +55,7 @@ logger = logging.getLogger("suite_api.neurocnl")
 # Hardware serial port router — optional, requires physical device
 try:
     from backend.app.routers.prosthetic import hardware as prosthetic_hardware
+
     _has_prosthetic_hw = True
 except ImportError as exc:
     logger.warning("neurocnl: prosthetic hardware router unavailable: %s", exc)
@@ -92,6 +95,7 @@ for _r in [
     deploy.router,
     jobs.router,
     neurosim_handoff.router,
+    notebook.router,
     templates.router,
     training.router,
     nir_inspect.router,
@@ -112,6 +116,7 @@ if _has_prosthetic_hw:
 
 # ── Proxied: MuJoCo prosthetic/simulate → neurocnl-physics-worker (port 8006) ─
 # Returns 503 when the physics worker is not running (MuJoCo not available).
+
 
 @router.api_route(
     "/prosthetic/simulate",
