@@ -20,6 +20,20 @@ def _load_jupyter_server_extension(server_app) -> None:
     # Imported lazily so ``nmtk_env_manager.manager`` stays importable (for unit
     # tests) without tornado / jupyter_server present.
     from .handlers import register_handlers
+    from .manager import EnvironmentManager
+
+    # Provision per-framework kernels idempotently before accepting requests.
+    # With --system-site-packages, each venv create takes ~100 ms; 8 envs ≈ <1 s.
+    mgr = EnvironmentManager()
+    try:
+        mgr.provision_framework_envs()
+        server_app.log.info(
+            "[nmtk_env_manager] Framework environments provisioned."
+        )
+    except Exception as exc:  # never block Jupyter startup
+        server_app.log.warning(
+            "[nmtk_env_manager] Framework env provisioning failed (non-fatal): %s", exc
+        )
 
     register_handlers(server_app)
 
