@@ -27,11 +27,14 @@
   </mouse>
 
   <applications>
-    <!-- Force every window fullscreen — kiosk rule -->
+    <!-- Force every window fullscreen — kiosk rule.
+         decor:no  — prevents title-bar reappearing if app exits fullscreen.
+         desktop:1 — pins to workspace 1 regardless of XFCE workspace state. -->
     <application class="*">
       <fullscreen>yes</fullscreen>
       <focus>yes</focus>
-      <layer>normal</layer>
+      <decor>no</decor>
+      <desktop>1</desktop>
     </application>
   </applications>
 

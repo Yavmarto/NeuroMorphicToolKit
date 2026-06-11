@@ -11,10 +11,22 @@
 
 NMTK_BIN=/app/nmtk/nmtk/neuro_toolkit/build/linux/x64/release/bundle/neuro_toolkit
 
-# Suppress XFCE chrome — these exit 0 even if the process isn't running.
-xfce4-panel -q   2>/dev/null &
-xfdesktop --quit 2>/dev/null &
-wait
+# Guard: binary must exist (built into the image by Dockerfile.webtop).
+if [ ! -f "$NMTK_BIN" ]; then
+    zenity --error --title="NMTK Kiosk" \
+        --text="Binary not found:\n$NMTK_BIN\n\nRe-build the Docker image." 2>/dev/null || \
+        xmessage -center "NMTK binary not found at $NMTK_BIN — re-build the Docker image." 2>/dev/null
+    exit 1
+fi
+
+# Ensure DISPLAY is set (openbox autostart runs inside the X session, so
+# this should always be populated — defensive guard only).
+export DISPLAY="${DISPLAY:-:1}"
+
+# Suppress XFCE chrome — run serially so each quit RPC completes before
+# we launch the app (avoids a race where the panel redraws over NMTK).
+xfce4-panel -q   2>/dev/null
+xfdesktop --quit 2>/dev/null
 
 # Launch the app. Openbox rc.xml forces it fullscreen on map.
 exec "$NMTK_BIN"
