@@ -43,8 +43,6 @@ rockpool
 sinabs
 spyx
 nengo
-lava-nc; python_version < "3.11"
-spinnaker2; python_version < "3.11"
 tonic
 
 # ── NIR interchange + bindings ────────────────────────────────────────────────
