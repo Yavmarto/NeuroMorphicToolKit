@@ -36,3 +36,11 @@ def test_target_to_kernel_covers_all_targets():
 def test_target_to_kernel_no_unmapped_targets():
     all_targets = {t for env in FRAMEWORK_ENVS for t in env["targets"]}
     assert set(TARGET_TO_KERNEL.keys()) == all_targets
+
+
+def test_all_envs_have_packages_key():
+    for env in FRAMEWORK_ENVS:
+        assert "packages" in env, f"Missing 'packages' key in {env['slug']}"
+        assert isinstance(env["packages"], list), (
+            f"'packages' in {env['slug']} must be a list, got {type(env['packages'])}"
+        )

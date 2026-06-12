@@ -12,41 +12,49 @@ FRAMEWORK_ENVS: list[dict] = [
         "slug": "nmtk-snntorch",
         "display": "Python (snnTorch)",
         "targets": ["snntorch_sim"],
+        "packages": [],  # snntorch + torch already in base image
     },
     {
         "slug": "nmtk-nengo",
         "display": "Python (Nengo)",
         "targets": ["nengo"],
+        "packages": [],  # nengo already in base image
     },
     {
         "slug": "nmtk-rockpool",
         "display": "Python (Rockpool)",
         "targets": ["rockpool"],
+        "packages": [],  # rockpool already in base image
     },
     {
         "slug": "nmtk-sinabs",
         "display": "Python (Sinabs)",
         "targets": ["sinabs"],
+        "packages": [],  # sinabs + torch already in base image
     },
     {
         "slug": "nmtk-brian2",
         "display": "Python (Brian2)",
         "targets": ["brian2"],
+        "packages": ["brian2"],
     },
     {
         "slug": "nmtk-lava",
         "display": "Python (Lava)",
         "targets": ["lava_sim", "lava"],
+        "packages": ["lava-nc"],
     },
     {
         "slug": "nmtk-pynn",
         "display": "Python (PyNN / SpiNNaker)",
         "targets": ["pynn"],
+        "packages": ["PyNN"],
     },
     {
         "slug": "nmtk-akida",
         "display": "Python (Akida)",
         "targets": ["akida"],
+        "packages": ["akida", "cnn2snn"],
     },
 ]
 
