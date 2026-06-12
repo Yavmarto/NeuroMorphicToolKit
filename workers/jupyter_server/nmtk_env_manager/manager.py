@@ -20,6 +20,7 @@ background jobs by the Tornado handlers, not here.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import shutil
 import subprocess
@@ -27,6 +28,8 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+_log = logging.getLogger(__name__)
 
 # Immutable base kernel — must match the name registered in the Dockerfile.
 BASE_KERNEL = "neurocnl"
@@ -353,7 +356,4 @@ class EnvironmentManager:
                 if pkgs:
                     self.install_packages(slug, pkgs)
             except Exception as exc:
-                import logging
-                logging.getLogger(__name__).warning(
-                    "Failed to provision framework env %r: %s", slug, exc
-                )
+                _log.warning("Failed to provision framework env %r: %s", slug, exc)

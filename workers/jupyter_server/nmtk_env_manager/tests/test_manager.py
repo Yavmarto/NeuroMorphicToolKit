@@ -293,3 +293,7 @@ def test_provision_install_failure_does_not_block_remaining(manager, monkeypatch
 
     # All envs were created despite install failures.
     assert len(created) == len(FRAMEWORK_ENVS)
+
+    # install_packages was attempted for every env that lists packages.
+    envs_with_packages = [env["slug"] for env in FRAMEWORK_ENVS if env["packages"]]
+    assert sorted(install_calls) == sorted(envs_with_packages)
