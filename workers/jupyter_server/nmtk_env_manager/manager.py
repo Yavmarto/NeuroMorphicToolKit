@@ -350,7 +350,7 @@ class EnvironmentManager:
                 continue
             try:
                 self.create_environment(env["display"], slug=slug)
-            except EnvironmentError_ as exc:
+            except Exception as exc:
                 # Log and continue — one framework failure must not block others.
                 logging.getLogger(__name__).warning(
                     "Failed to provision framework env %r: %s", slug, exc
