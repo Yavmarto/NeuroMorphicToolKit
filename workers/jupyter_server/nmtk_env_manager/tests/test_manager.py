@@ -224,3 +224,72 @@ def test_provision_framework_envs_partial(manager, monkeypatch):
 
     expected_created = {env["slug"] for env in FRAMEWORK_ENVS[2:]}
     assert set(created) == expected_created
+
+
+def test_provision_installs_packages_when_listed(manager, monkeypatch):
+    """Envs with non-empty packages list get install_packages called."""
+    from nmtk_env_manager.framework_envs import FRAMEWORK_ENVS
+
+    created = []
+    installed = {}
+
+    def fake_create(display_name, based_on=BASE_KERNEL, *, slug=None):
+        created.append(slug)
+        env_dir = manager.envs_root / slug
+        env_dir.mkdir(parents=True, exist_ok=True)
+        (env_dir / "meta.json").write_text(
+            json.dumps({"slug": slug, "displayName": display_name, "basedOn": BASE_KERNEL})
+        )
+        return {"slug": slug}
+
+    def fake_install(slug, specs):
+        installed[slug] = specs
+
+    monkeypatch.setattr(manager, "create_environment", fake_create)
+    monkeypatch.setattr(manager, "install_packages", fake_install)
+    manager.provision_framework_envs()
+
+    # Every env with non-empty packages must have install_packages called.
+    for env in FRAMEWORK_ENVS:
+        if env["packages"]:
+            assert env["slug"] in installed, (
+                f"{env['slug']} has packages {env['packages']} but install_packages not called"
+            )
+            assert installed[env["slug"]] == env["packages"]
+
+    # Envs with empty packages must NOT trigger install_packages.
+    for env in FRAMEWORK_ENVS:
+        if not env["packages"]:
+            assert env["slug"] not in installed, (
+                f"{env['slug']} has empty packages but install_packages was called"
+            )
+
+
+def test_provision_install_failure_does_not_block_remaining(manager, monkeypatch):
+    """If install_packages fails for one env, provisioning continues for others."""
+    from nmtk_env_manager.framework_envs import FRAMEWORK_ENVS
+    from nmtk_env_manager.manager import CommandError
+
+    created = []
+    install_calls = []
+
+    def fake_create(display_name, based_on=BASE_KERNEL, *, slug=None):
+        created.append(slug)
+        env_dir = manager.envs_root / slug
+        env_dir.mkdir(parents=True, exist_ok=True)
+        (env_dir / "meta.json").write_text(
+            json.dumps({"slug": slug, "displayName": display_name, "basedOn": BASE_KERNEL})
+        )
+        return {"slug": slug}
+
+    def fake_install(slug, specs):
+        install_calls.append(slug)
+        raise CommandError("pip install failed", log="stderr")
+
+    monkeypatch.setattr(manager, "create_environment", fake_create)
+    monkeypatch.setattr(manager, "install_packages", fake_install)
+
+    manager.provision_framework_envs()  # must not raise
+
+    # All envs were created despite install failures.
+    assert len(created) == len(FRAMEWORK_ENVS)
