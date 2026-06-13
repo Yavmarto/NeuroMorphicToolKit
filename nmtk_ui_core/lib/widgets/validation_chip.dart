@@ -209,8 +209,8 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
         : '✗ ${widget.errorCount} errors';
     final chipLabel = hasErrors ? errorLabel : '✓ Valid';
     final chipIcon = hasErrors
-        ? Icons.cancel_outlined
-        : Icons.check_circle_outline;
+        ? ZetaIcons.cancel_outline
+        : ZetaIcons.check_circle_outline;
 
     final pill = GestureDetector(
       onTap: hasErrors ? _toggleExpanded : null,
@@ -242,7 +242,7 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
                 AnimatedRotation(
                   turns: _expanded ? 0.5 : 0.0,
                   duration: _kExpandCollapseDuration,
-                  child: Icon(Icons.keyboard_arrow_down, size: 14, color: fg),
+                  child: Icon(ZetaIcons.arrow_down, size: 14, color: fg),
                 ),
               ],
             ],

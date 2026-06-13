@@ -39,7 +39,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
           button: true,
           child: IconButton(
             icon: Icon(
-              developerMode ? Icons.handyman_rounded : Icons.handyman_outlined,
+              developerMode ? Icons.handyman_rounded : Icons.handyman_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
               color:
                   developerMode ? Theme.of(context).colorScheme.primary : null,
             ),
@@ -55,7 +55,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
           label: 'Search commands',
           button: true,
           child: IconButton(
-            icon: const Icon(Icons.search_rounded),
+            icon: const Icon(ZetaIcons.search),
             onPressed: () {
               final commands = ref.read(commandStateProvider);
               NmtkCommandPalette.show(context, commands: commands);
@@ -70,7 +70,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
             label: 'Open a module',
             button: true,
             child: IconButton(
-              icon: const Icon(Icons.add),
+              icon: const Icon(ZetaIcons.add),
               onPressed: onShowModulePicker,
               tooltip: 'Open a Module',
             ),
@@ -80,7 +80,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
             button: true,
             child: IconButton(
               icon: Icon(
-                Icons.stop_circle,
+                ZetaIcons.stop_circle,
                 color: Theme.of(context).colorScheme.error,
               ),
               onPressed: activeModule == null
@@ -97,7 +97,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
             label: 'Check for Updates',
             button: true,
             child: IconButton(
-              icon: const Icon(Icons.refresh_rounded),
+              icon: const Icon(ZetaIcons.refresh),
               onPressed: () =>
                   ref.read(moduleNotifierProvider.notifier).checkForUpdates(),
               tooltip: 'Check for Updates',

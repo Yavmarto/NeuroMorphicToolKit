@@ -29,7 +29,7 @@ class NmtkErrorCard extends StatelessWidget {
       title: title,
       subtitle: subtitle,
       tone: NmtkTone.danger,
-      leading: Icon(Icons.error_outline, color: errColor),
+      leading: Icon(ZetaIcons.error_outline, color: errColor),
       trailing: action,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

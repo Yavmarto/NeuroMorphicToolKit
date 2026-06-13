@@ -11,7 +11,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       id: 'nav-workspace',
       label: 'Open Workspace',
       description: 'Go to the main workspace',
-      icon: Icons.dashboard_rounded,
+      icon: ZetaIcons.dashboard,
       category: 'Navigation',
       onExecute: () => router.go('/workspace'),
     ),
@@ -19,7 +19,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       id: 'nav-neurocnl',
       label: 'Open NeuroStudio (CNL)',
       description: 'Open the neuromorphic compiler and network editor',
-      icon: Icons.code_rounded,
+      icon: Icons.code_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       category: 'Navigation',
       onExecute: () => router.go('/module/neurocnl'),
     ),
@@ -27,7 +27,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       id: 'nav-neurochip',
       label: 'Open Neurochip Analysis',
       description: 'Analyze and deploy to hardware targets (Teensy, Akida)',
-      icon: Icons.memory_rounded,
+      icon: ZetaIcons.memory,
       category: 'Navigation',
       onExecute: () => router.go('/module/neurochip'),
     ),
@@ -35,7 +35,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       id: 'nav-neurohub',
       label: 'Open Neurohub Dashboard',
       description: 'View saved sessions and experiment telemetry',
-      icon: Icons.analytics_rounded,
+      icon: ZetaIcons.analytics,
       category: 'Navigation',
       onExecute: () => router.go('/module/neurohub'),
     ),
@@ -43,7 +43,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       id: 'nav-settings',
       label: 'Open Settings',
       description: 'Configure appearance, API host, and hardware paths',
-      icon: Icons.settings_rounded,
+      icon: ZetaIcons.settings,
       category: 'System',
       onExecute: () => router.go('/settings'),
     ),
@@ -51,7 +51,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       id: 'action-toggle-sidebar',
       label: 'Toggle Sidebar',
       description: 'Expand or collapse the navigation sidebar',
-      icon: Icons.menu_open_rounded,
+      icon: Icons.menu_open_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       category: 'Actions',
       onExecute: () {
         final context = router.configuration.navigatorKey.currentContext;
@@ -64,7 +64,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       id: 'action-toggle-dev',
       label: 'Toggle Developer Mode',
       description: 'Show/hide advanced module controls and internals',
-      icon: Icons.handyman_rounded,
+      icon: Icons.handyman_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       category: 'System',
       onExecute: () {
         ref.read(appNotifierProvider.notifier).toggleDeveloperMode();
@@ -74,7 +74,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       id: 'action-reload',
       label: 'Reload Workspace',
       description: 'Refresh the current module state',
-      icon: Icons.refresh_rounded,
+      icon: ZetaIcons.refresh,
       category: 'Actions',
       onExecute: () {
         final current = router.state.uri.toString();

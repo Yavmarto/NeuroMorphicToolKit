@@ -31,7 +31,7 @@ class ModulePickerPanel extends ConsumerWidget {
       return NmtkEmptyState(
         title: 'Catalog Unavailable',
         message: moduleStateAsync.error.toString(),
-        icon: Icons.cloud_off,
+        icon: ZetaIcons.cloud_off,
         tone: NmtkTone.danger,
       );
     }
@@ -59,7 +59,7 @@ class ModulePickerPanel extends ConsumerWidget {
           const NmtkEmptyState(
             title: 'No Modules Available',
             message: 'The launcher did not load any modules.',
-            icon: Icons.inventory_2_outlined,
+            icon: Icons.inventory_2_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
           )
         else
           LayoutBuilder(
@@ -170,7 +170,7 @@ class _ModuleCard extends StatelessWidget {
                   const NmtkStatusBadge(
                     label: 'Pinned',
                     tone: NmtkTone.info,
-                    icon: Icons.push_pin,
+                    icon: ZetaIcons.push_pin,
                   ),
               ],
             ),
@@ -220,7 +220,7 @@ class _ModuleCard extends StatelessWidget {
           button: true,
           child: NmtkPrimaryButton(
             onPressed: onInstall,
-            icon: Icons.download_outlined,
+            icon: ZetaIcons.download,
             label: 'Install',
           ),
         );
@@ -233,7 +233,7 @@ class _ModuleCard extends StatelessWidget {
             if (onUpdate != null)
               NmtkPrimaryButton(
                 onPressed: onUpdate,
-                icon: Icons.system_update,
+                icon: Icons.system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 label: 'Update to ${module.remoteVersion}',
                 tone: NmtkTone.success,
               ),
@@ -242,7 +242,7 @@ class _ModuleCard extends StatelessWidget {
               button: true,
               child: NmtkPrimaryButton(
                 onPressed: onLaunch,
-                icon: Icons.play_arrow,
+                icon: ZetaIcons.play,
                 label: 'Start',
               ),
             ),
@@ -258,7 +258,7 @@ class _ModuleCard extends StatelessWidget {
             if (onUpdate != null)
               NmtkPrimaryButton(
                 onPressed: onUpdate,
-                icon: Icons.system_update,
+                icon: Icons.system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 label: 'Update to ${module.remoteVersion}',
                 tone: NmtkTone.success,
               ),
@@ -267,7 +267,7 @@ class _ModuleCard extends StatelessWidget {
               button: true,
               child: NmtkPrimaryButton(
                 onPressed: onOpen,
-                icon: Icons.open_in_new,
+                icon: ZetaIcons.open_in_new_window,
                 label: 'Open',
               ),
             ),
@@ -276,7 +276,7 @@ class _ModuleCard extends StatelessWidget {
               button: true,
               child: NmtkOutlinedButton(
                 onPressed: onStop,
-                icon: Icons.stop_circle_outlined,
+                icon: ZetaIcons.stop_circle,
                 label: 'Stop',
                 tone: NmtkTone.warning,
               ),
@@ -295,7 +295,7 @@ class _ModuleCard extends StatelessWidget {
                 button: true,
                 child: NmtkPrimaryButton(
                   onPressed: onRepair,
-                  icon: Icons.build_outlined,
+                  icon: ZetaIcons.build,
                   label: 'Repair',
                   tone: NmtkTone.warning,
                 ),
@@ -305,7 +305,7 @@ class _ModuleCard extends StatelessWidget {
               button: true,
               child: NmtkPrimaryButton(
                 onPressed: onLaunch,
-                icon: Icons.play_arrow,
+                icon: ZetaIcons.play,
                 label: 'Start',
               ),
             ),
@@ -319,7 +319,7 @@ class _ModuleCard extends StatelessWidget {
       return const NmtkStatusBadge(
         label: 'MuJoCo Missing',
         tone: NmtkTone.warning,
-        icon: Icons.hardware_outlined,
+        icon: Icons.hardware_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       );
     }
     switch (module.status) {
@@ -327,62 +327,62 @@ class _ModuleCard extends StatelessWidget {
         return const NmtkStatusBadge(
           label: 'Not Installed',
           tone: NmtkTone.neutral,
-          icon: Icons.download_outlined,
+          icon: ZetaIcons.download,
         );
       case ModuleStatus.installing:
         return const NmtkStatusBadge(
           label: 'Installing',
           tone: NmtkTone.info,
-          icon: Icons.sync,
+          icon: ZetaIcons.sync,
           semanticsLabel: 'Status: Installing',
         );
       case ModuleStatus.installed:
         return const NmtkStatusBadge(
           label: 'Installed',
           tone: NmtkTone.success,
-          icon: Icons.check_circle_outline,
+          icon: ZetaIcons.check_circle_outline,
           semanticsLabel: 'Status: Installed',
         );
       case ModuleStatus.starting:
         return const NmtkStatusBadge(
           label: 'Starting',
           tone: NmtkTone.info,
-          icon: Icons.sync,
+          icon: ZetaIcons.sync,
           semanticsLabel: 'Status: Starting',
         );
       case ModuleStatus.running:
         return const NmtkStatusBadge(
           label: 'Running',
           tone: NmtkTone.success,
-          icon: Icons.check_circle,
+          icon: ZetaIcons.check_circle,
           semanticsLabel: 'Status: Running',
         );
       case ModuleStatus.stopping:
         return const NmtkStatusBadge(
           label: 'Stopping',
           tone: NmtkTone.warning,
-          icon: Icons.stop_circle_outlined,
+          icon: ZetaIcons.stop_circle,
           semanticsLabel: 'Status: Stopping',
         );
       case ModuleStatus.degraded:
         return const NmtkStatusBadge(
           label: 'Degraded',
           tone: NmtkTone.warning,
-          icon: Icons.warning_amber_rounded,
+          icon: ZetaIcons.warning_outline,
           semanticsLabel: 'Status: Degraded',
         );
       case ModuleStatus.error:
         return const NmtkStatusBadge(
           label: 'Error',
           tone: NmtkTone.danger,
-          icon: Icons.error_outline,
+          icon: ZetaIcons.error_outline,
           semanticsLabel: 'Status: Error',
         );
       case ModuleStatus.updating:
         return const NmtkStatusBadge(
           label: 'Updating',
           tone: NmtkTone.info,
-          icon: Icons.system_update,
+          icon: Icons.system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
           semanticsLabel: 'Status: Updating',
         );
     }
@@ -391,21 +391,21 @@ class _ModuleCard extends StatelessWidget {
   static IconData _iconDataFor(String iconName) {
     switch (iconName) {
       case 'code':
-        return Icons.code;
+        return Icons.code; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       case 'architecture':
-        return Icons.architecture;
+        return Icons.architecture; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       case 'memory':
-        return Icons.memory;
+        return ZetaIcons.memory;
       case 'speed':
-        return Icons.speed;
+        return Icons.speed; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       case 'sensors':
-        return Icons.sensors;
+        return Icons.sensors; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       case 'hub':
-        return Icons.hub;
+        return Icons.hub; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       case 'precision_manufacturing':
-        return Icons.precision_manufacturing;
+        return Icons.precision_manufacturing; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       default:
-        return Icons.extension;
+        return Icons.extension; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
     }
   }
 }
@@ -460,7 +460,7 @@ class _StatusMessageBar extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(2),
                 child: Icon(
-                  Icons.info_outline,
+                  ZetaIcons.info,
                   size: 13,
                   color: palette.foreground,
                 ),
@@ -491,15 +491,15 @@ class _StatusMessageBar extends StatelessWidget {
   static IconData _toneIcon(NmtkTone tone) {
     switch (tone) {
       case NmtkTone.danger:
-        return Icons.error_outline;
+        return ZetaIcons.error_outline;
       case NmtkTone.warning:
-        return Icons.warning_amber_rounded;
+        return ZetaIcons.warning_outline;
       case NmtkTone.info:
-        return Icons.info_outline;
+        return ZetaIcons.info;
       case NmtkTone.success:
-        return Icons.check_circle_outline;
+        return ZetaIcons.check_circle_outline;
       case NmtkTone.neutral:
-        return Icons.circle_outlined;
+        return ZetaIcons.radio_button_unchecked;
     }
   }
 }

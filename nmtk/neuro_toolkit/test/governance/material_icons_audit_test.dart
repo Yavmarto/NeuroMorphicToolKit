@@ -52,7 +52,7 @@ import 'package:flutter_test/flutter_test.dart';
 ///
 /// Decrement as the T-ICON sweep progresses through this package.
 /// Must equal 0 after T-ICON-5 completes.
-const int kIconsBaseline = 84;
+const int kIconsBaseline = 0;
 
 Directory _libDirectory() {
   final lib = Directory('lib');
@@ -95,7 +95,7 @@ List<_SourceMatch> _scanForToken(String token) {
       if (trimmed.startsWith('//') || trimmed.startsWith('///')) {
         continue; // pure comment line — not an active call site
       }
-      if (line.contains(token)) {
+      if (RegExp(r'\bIcons.').hasMatch(line)) {
         matches.add(
           _SourceMatch(file: file, line: i + 1, text: line.trim()),
         );

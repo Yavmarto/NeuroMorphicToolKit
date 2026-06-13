@@ -206,8 +206,8 @@ class NmtkWorkspaceChip extends StatelessWidget {
                         onPressed: onPinned,
                         icon: Icon(
                           data.pinned
-                              ? Icons.push_pin_rounded
-                              : Icons.push_pin_outlined,
+                              ? ZetaIcons.push_pin
+                              : ZetaIcons.push_pin_outline,
                           size: 16,
                           color: isActive
                               ? palette.accentForeground
@@ -229,7 +229,7 @@ class NmtkWorkspaceChip extends StatelessWidget {
                         ),
                         onPressed: onClosed,
                         icon: Icon(
-                          Icons.close_rounded,
+                          ZetaIcons.close,
                           size: 16,
                           color: isActive
                               ? palette.accentForeground

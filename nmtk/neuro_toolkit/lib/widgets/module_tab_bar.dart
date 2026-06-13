@@ -106,7 +106,7 @@ class ModuleTabBar extends ConsumerWidget {
                           child: Row(
                             children: [
                               Icon(
-                                module.hasFrontend ? Icons.web : Icons.api,
+                                module.hasFrontend ? Icons.web : Icons.api, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                                 size: 16,
                                 color: foregroundColor,
                               ),
@@ -128,7 +128,7 @@ class ModuleTabBar extends ConsumerWidget {
                                 dimension: 44,
                                 child: IconButton(
                                   icon: Icon(
-                                    Icons.close_rounded,
+                                    ZetaIcons.close,
                                     size: 16,
                                     color: foregroundColor,
                                   ),

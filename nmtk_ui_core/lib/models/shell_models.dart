@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
 
 enum NmtkShellMode { command, studio, instrument }
@@ -33,7 +34,7 @@ class NmtkShellStatusSpec {
       NmtkShellReadinessState.opening => NmtkShellStatusSpec(
         label: 'Opening',
         tone: NmtkTone.info,
-        icon: Icons.door_front_door_outlined,
+        icon: Icons.door_front_door_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
         readinessState: state,
         detailText: detailText,
         semanticsLabel: semanticsLabel,
@@ -41,7 +42,7 @@ class NmtkShellStatusSpec {
       NmtkShellReadinessState.warmingUp => NmtkShellStatusSpec(
         label: 'Warming Up',
         tone: NmtkTone.warning,
-        icon: Icons.hourglass_top_rounded,
+        icon: Icons.hourglass_top_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
         readinessState: state,
         detailText: detailText,
         semanticsLabel: semanticsLabel,
@@ -49,7 +50,7 @@ class NmtkShellStatusSpec {
       NmtkShellReadinessState.ready => NmtkShellStatusSpec(
         label: 'Ready',
         tone: NmtkTone.success,
-        icon: Icons.check_circle_outline,
+        icon: ZetaIcons.check_circle_outline,
         readinessState: state,
         detailText: detailText,
         semanticsLabel: semanticsLabel,
@@ -57,7 +58,7 @@ class NmtkShellStatusSpec {
       NmtkShellReadinessState.degraded => NmtkShellStatusSpec(
         label: 'Degraded',
         tone: NmtkTone.warning,
-        icon: Icons.warning_amber_rounded,
+        icon: ZetaIcons.warning_outline,
         readinessState: state,
         detailText: detailText,
         semanticsLabel: semanticsLabel,
@@ -65,7 +66,7 @@ class NmtkShellStatusSpec {
       NmtkShellReadinessState.error => NmtkShellStatusSpec(
         label: 'Error',
         tone: NmtkTone.danger,
-        icon: Icons.error_outline,
+        icon: ZetaIcons.error_outline,
         readinessState: state,
         detailText: detailText,
         semanticsLabel: semanticsLabel,

@@ -32,12 +32,12 @@ help:
 	@echo "  make docker-a                 - Run backend in Docker and launcher on Android"
 	@echo "  make docker-i                 - Run backend in Docker and launcher on iOS"
 	@echo "  make docker-all               - Run full stack in Docker and native launcher (alias for docker)"
-	@echo "  make docker-ex REMOTE_HOST=user@ip - Deploy full backend stack to a remote server (alias for docker-ex-all)"
-	@echo "  make docker-ex-all REMOTE_HOST=user@ip - Same as docker-ex (all workers, Jupyter, monitoring)"
-	@echo "  make docker-ex-m REMOTE_HOST=user@ip - Deploy to remote and run frontend on macOS"
+	@echo "  make docker-ex REMOTE_HOST=user@ip - Deploy full backend stack to remote + run Flutter macOS dev app (alias for docker-ex-all)"
+	@echo "  make docker-ex-all REMOTE_HOST=user@ip - Deploy full backend stack to remote + run Flutter macOS dev app"
+	@echo "  make docker-ex-m REMOTE_HOST=user@ip - Same as docker-ex (alias)"
 	@echo "  make docker-ex-a REMOTE_HOST=user@ip - Deploy to remote and run frontend on Android"
 	@echo "  make docker-ex-i REMOTE_HOST=user@ip - Deploy to remote and run frontend on iOS"
-	@echo "  make docker-ex-all-m REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote and run frontend on macOS"
+	@echo "  make docker-ex-all-m REMOTE_HOST=user@ip - Same as docker-ex-all (alias)"
 	@echo "  make docker-ex-all-a REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote and run frontend on Android"
 	@echo "  make docker-ex-all-i REMOTE_HOST=user@ip - Deploy full stack (all workers) to remote and run frontend on iOS"
 	@echo "  make docker-ex-down REMOTE_HOST=user@ip - Stop and remove remote Docker containers"
@@ -156,31 +156,30 @@ docker-ex-deploy:
 	@echo "==> Full backend ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-all: secrets-init docker-ex-deploy
+	@./scripts/run_dev.sh --flutter-device macos --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
 docker-ex: docker-ex-all
 
 docker-ex-m: docker-ex
-	@./scripts/run_dev.sh --flutter-device macos --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
-docker-ex-a: docker-ex
+docker-ex-a: secrets-init docker-ex-deploy
 	@$(MAKE) check-devices
 	@echo "==> Using Android device: $(ANDROID_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
-docker-ex-i: docker-ex
+docker-ex-i: secrets-init docker-ex-deploy
 	@$(MAKE) check-devices
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
 docker-ex-all-m: docker-ex-all
-	@./scripts/run_dev.sh --flutter-device macos --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
-docker-ex-all-a: docker-ex-all
+docker-ex-all-a: secrets-init docker-ex-deploy
 	@$(MAKE) check-devices
 	@echo "==> Using Android device: $(ANDROID_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
-docker-ex-all-i: docker-ex-all
+docker-ex-all-i: secrets-init docker-ex-deploy
 	@$(MAKE) check-devices
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"

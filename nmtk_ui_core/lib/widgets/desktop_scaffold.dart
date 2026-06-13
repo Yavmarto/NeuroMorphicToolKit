@@ -495,7 +495,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                 Builder(
                   builder: (ctx) => IconButton(
                     icon: Icon(
-                      Icons.menu_rounded,
+                      Icons.menu_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                       color: scheme.onSurface,
                       size: 20,
                     ),
@@ -508,7 +508,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
               if (showBackButton)
                 IconButton(
                   icon: Icon(
-                    Icons.arrow_back_ios_new_rounded,
+                    ZetaIcons.arrow_back,
                     color: scheme.onSurface,
                     size: 18,
                   ),
@@ -535,22 +535,22 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
               // Optional file action icons
               if (fileActions != null) ...[
                 _FileActionIconButton(
-                  icon: Icons.add_rounded,
+                  icon: ZetaIcons.add,
                   tooltip: 'New File',
                   onPressed: fileActions!.onNewFile,
                 ),
                 _FileActionIconButton(
-                  icon: Icons.folder_open_rounded,
+                  icon: ZetaIcons.folder_outline,
                   tooltip: 'Open File',
                   onPressed: fileActions!.onOpenFile,
                 ),
                 _FileActionIconButton(
-                  icon: Icons.save_rounded,
+                  icon: ZetaIcons.save,
                   tooltip: 'Save',
                   onPressed: fileActions!.onSaveFile,
                 ),
                 _FileActionIconButton(
-                  icon: Icons.save_as_rounded,
+                  icon: ZetaIcons.save,
                   tooltip: 'Save As',
                   onPressed: fileActions!.onSaveFileAs,
                 ),
@@ -560,7 +560,7 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
               if (onSettingsPressed != null)
                 IconButton(
                   icon: Icon(
-                    Icons.settings_outlined,
+                    ZetaIcons.settings,
                     color: scheme.onSurface.withValues(alpha: 0.65),
                     size: 18,
                   ),
@@ -681,7 +681,7 @@ class _NmtkMobileDrawer extends StatelessWidget {
             const Divider(height: 1),
             if (onSettingsPressed != null)
               _RailIconButton(
-                icon: Icons.settings_outlined,
+                icon: ZetaIcons.settings,
                 tooltip: 'Settings',
                 onPressed: onSettingsPressed!,
               ),
@@ -799,7 +799,7 @@ class _NmtkRailColumn extends StatelessWidget {
           const Divider(height: 1),
           if (onSettingsPressed != null)
             _RailIconButton(
-              icon: Icons.settings_outlined,
+              icon: ZetaIcons.settings,
               tooltip: 'Settings',
               onPressed: onSettingsPressed!,
             ),
@@ -870,7 +870,7 @@ class _RailBrandRow extends StatelessWidget {
             Expanded(child: logoWidget),
             IconButton(
               icon: Icon(
-                Icons.chevron_left_rounded,
+                ZetaIcons.chevron_left,
                 color: scheme.onSurface.withValues(alpha: 0.65),
                 size: 20,
               ),
@@ -1191,7 +1191,7 @@ class _NmtkContentHeader extends StatelessWidget {
                     label: 'Back',
                     button: true,
                     child: IconButton(
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                      icon: const Icon(ZetaIcons.arrow_back),
                       iconSize: 18,
                       tooltip: 'Back',
                       color: scheme.onSurface,
@@ -1206,22 +1206,22 @@ class _NmtkContentHeader extends StatelessWidget {
               // ── File action icon strip ──────────────────────────────
               if (fileActions != null) ...[
                 _FileActionIconButton(
-                  icon: Icons.add_rounded,
+                  icon: ZetaIcons.add,
                   tooltip: 'New File\n⌘N / Ctrl+N',
                   onPressed: fileActions!.onNewFile,
                 ),
                 _FileActionIconButton(
-                  icon: Icons.folder_open_rounded,
+                  icon: ZetaIcons.folder_outline,
                   tooltip: 'Open File\n⌘O / Ctrl+O',
                   onPressed: fileActions!.onOpenFile,
                 ),
                 _FileActionIconButton(
-                  icon: Icons.save_rounded,
+                  icon: ZetaIcons.save,
                   tooltip: 'Save\n⌘S / Ctrl+S',
                   onPressed: fileActions!.onSaveFile,
                 ),
                 _FileActionIconButton(
-                  icon: Icons.save_as_rounded,
+                  icon: ZetaIcons.save,
                   tooltip: 'Save As\n⌘⇧S / Ctrl+Shift+S',
                   onPressed: fileActions!.onSaveFileAs,
                 ),

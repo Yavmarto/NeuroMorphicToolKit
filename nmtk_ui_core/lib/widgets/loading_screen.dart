@@ -237,7 +237,7 @@ class _ReadyContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Icon(
-      Icons.check_circle_outline,
+      ZetaIcons.check_circle_outline,
       color: Zeta.of(context).colors.mainPositive,
       size: 36,
     );
@@ -259,7 +259,7 @@ class _DegradedContent extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.warning_amber_rounded,
+              ZetaIcons.warning_outline,
               color: Zeta.of(context).colors.mainWarning,
               size: 36,
             ),
@@ -315,7 +315,7 @@ class _FailedContent extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.error_outline,
+                ZetaIcons.error_outline,
                 color: Zeta.of(context).colors.mainNegative,
                 size: 36,
               ),

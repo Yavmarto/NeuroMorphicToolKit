@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
 
@@ -111,7 +112,7 @@ class NmtkBackendSupportBanner extends StatelessWidget {
                 ),
                 if (onDismiss != null)
                   IconButton(
-                    icon: Icon(Icons.close, size: 16, color: fg),
+                    icon: Icon(ZetaIcons.close, size: 16, color: fg),
                     tooltip: 'Dismiss',
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,

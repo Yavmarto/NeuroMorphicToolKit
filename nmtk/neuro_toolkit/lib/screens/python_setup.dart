@@ -115,7 +115,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                   NmtkSurfaceCard(
                     child: Column(
                       children: [
-                        const Icon(Icons.terminal, size: 72),
+                        const Icon(Icons.terminal, size: 72), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                         const SizedBox(height: 20),
                         Text(
                           'Python Required',
@@ -139,7 +139,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                             child: NmtkPrimaryButton(
                               onPressed:
                                   _isInstalling ? null : _installWithHomebrew,
-                              icon: Icons.download,
+                              icon: ZetaIcons.download,
                               label: _isInstalling
                                   ? 'Installing...'
                                   : 'Install with Homebrew',
@@ -150,7 +150,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                             width: double.infinity,
                             child: NmtkOutlinedButton(
                               onPressed: _openPythonOrg,
-                              icon: Icons.open_in_new,
+                              icon: ZetaIcons.open_in_new_window,
                               label: 'Download from python.org',
                               tone: NmtkTone.info,
                             ),
@@ -163,7 +163,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                             onPressed: (_isInstalling || _isChecking)
                                 ? null
                                 : _retryCheck,
-                            icon: Icons.refresh,
+                            icon: ZetaIcons.refresh,
                             label: _isChecking
                                 ? 'Checking for Python...'
                                 : 'Retry Detection',

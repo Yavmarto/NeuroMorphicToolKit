@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/top_app_bar.dart';
@@ -551,7 +552,7 @@ class ResponsiveScaffold extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
-                Icons.memory,
+                ZetaIcons.memory,
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),

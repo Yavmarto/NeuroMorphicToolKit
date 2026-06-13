@@ -9,6 +9,7 @@
 // - Deployable: overlay can be loaded onto real PYNQ hardware (runtime)
 
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 /// Support state for PYNQ Z2 target.
 ///
@@ -86,15 +87,15 @@ enum PynqSupportState {
   IconData get icon {
     switch (this) {
       case PynqSupportState.exportable:
-        return Icons.upload_file;
+        return ZetaIcons.upload_file;
       case PynqSupportState.exportableWithWarnings:
-        return Icons.warning_amber_rounded;
+        return ZetaIcons.warning_outline;
       case PynqSupportState.notExportable:
-        return Icons.block;
+        return ZetaIcons.block;
       case PynqSupportState.deployable:
-        return Icons.check_circle;
+        return ZetaIcons.check_circle;
       case PynqSupportState.notDeployable:
-        return Icons.cloud_off;
+        return ZetaIcons.cloud_off;
     }
   }
 }

@@ -5,6 +5,7 @@ export 'package:zeta_flutter/zeta_flutter.dart'
     show
         ZetaCheckbox,
         ZetaIcon,
+        ZetaIcons,
         ZetaProvider,
         Zeta,
         ZetaColors,

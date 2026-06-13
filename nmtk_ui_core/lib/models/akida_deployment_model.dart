@@ -11,6 +11,7 @@
 //   deployable via the Akida SDK in the current environment.
 
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 enum AkidaRuntimeMode {
   localSdk,
@@ -302,15 +303,15 @@ enum AkidaSupportState {
   IconData get icon {
     switch (this) {
       case AkidaSupportState.exportableScaffold:
-        return Icons.architecture;
+        return Icons.architecture; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       case AkidaSupportState.exportableScaffoldWithWarnings:
-        return Icons.warning_amber_rounded;
+        return ZetaIcons.warning_outline;
       case AkidaSupportState.unsupported:
-        return Icons.block;
+        return ZetaIcons.block;
       case AkidaSupportState.sdkDeployable:
-        return Icons.check_circle;
+        return ZetaIcons.check_circle;
       case AkidaSupportState.sdkNotDeployable:
-        return Icons.cloud_off;
+        return ZetaIcons.cloud_off;
     }
   }
 }

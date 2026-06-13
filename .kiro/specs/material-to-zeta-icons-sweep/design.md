@@ -146,12 +146,12 @@ Per-package baselines at T-ICON-2 introduction:
 
 | Package | `kIconsBaseline` |
 |---|---:|
-| `neurocnl/frontend` | 316 |
+| `neurocnl/frontend` | 370 |
 | `nmtk/neuro_toolkit` | 84 |
 | `Neurohub/frontend` | 64 |
 | `Neurosense/frontend` | 60 |
-| `nmtk_ui_core` | 59 |
-| `Neurobench/frontend` | 48 |
+| `nmtk_ui_core` | 57 |
+| `Neurobench/frontend` | 49 |
 
 ## File order (descending hit count)
 

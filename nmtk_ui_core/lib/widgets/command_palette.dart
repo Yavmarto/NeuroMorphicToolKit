@@ -145,7 +145,7 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
                         focusNode: _focusNode,
                         decoration: const InputDecoration(
                           hintText: 'Search commands...',
-                          prefixIcon: Icon(Icons.search, size: 18),
+                          prefixIcon: Icon(ZetaIcons.search, size: 18),
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
                             horizontal: 12,
@@ -191,7 +191,7 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
                                       child: Row(
                                         children: [
                                           Icon(
-                                            cmd.icon ?? Icons.bolt_rounded,
+                                            cmd.icon ?? Icons.bolt_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                                             size: 18,
                                             color: isSelected
                                                 ? theme.colorScheme.primary

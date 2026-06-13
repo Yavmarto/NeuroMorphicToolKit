@@ -385,18 +385,18 @@ class _PipelineStepState extends State<_PipelineStep>
 
     switch (widget.data.status) {
       case NmtkStepStatus.idle:
-        iconData = widget.data.icon ?? Icons.circle_outlined;
+        iconData = widget.data.icon ?? ZetaIcons.radio_button_unchecked;
         iconColor = widget.selected
             ? widget.accentColor
             : theme.colorScheme.onSurfaceVariant;
       case NmtkStepStatus.success:
-        iconData = Icons.check_circle;
+        iconData = ZetaIcons.check_circle;
         iconColor = tokens.healthyColor;
       case NmtkStepStatus.error:
-        iconData = Icons.error;
+        iconData = ZetaIcons.error;
         iconColor = tokens.errorColor;
       default:
-        iconData = widget.data.icon ?? Icons.circle_outlined;
+        iconData = widget.data.icon ?? ZetaIcons.radio_button_unchecked;
         iconColor = theme.colorScheme.onSurfaceVariant;
     }
 
@@ -452,7 +452,7 @@ class _StepConnector extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
       child: Icon(
-        Icons.arrow_forward_ios,
+        ZetaIcons.arrow_forward,
         size: 10,
         color: active
             ? tokens.healthyColor

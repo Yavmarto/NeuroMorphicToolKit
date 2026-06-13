@@ -167,7 +167,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
                 onPressed: _isConnecting || widget.onConnect == null
                     ? null
                     : _handleConnect,
-                icon: Icons.wifi_find_rounded,
+                icon: ZetaIcons.wifi,
                 label: widget.connectLabel,
               ),
               if (widget.setupAvailable)
@@ -175,7 +175,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
                   onPressed: () {
                     setState(() => _mode = ServerSetupMode.setup);
                   },
-                  icon: Icons.add_circle_outline,
+                  icon: ZetaIcons.add_circle_outline,
                   label: 'Set Up a New Server',
                 ),
             ],

@@ -590,7 +590,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                 onDestinationSelected: (_) {},
                 actions: [
                   NmtkTopAppBarAction(
-                    icon: Icons.settings_rounded,
+                    icon: ZetaIcons.settings,
                     tooltip: 'Settings',
                     onPressed: () => context.push('/settings'),
                   ),
@@ -692,14 +692,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                               if (module.capabilityWarnings.isNotEmpty)
                                 module.capabilityWarnings.join('\n'),
                             ].join('\n\n'),
-                            icon: Icons.error_outline,
+                            icon: ZetaIcons.error_outline,
                             tone: NmtkTone.danger,
                             action: NmtkPrimaryButton(
                               onPressed: () => _activateModule(
                                 module.id,
                                 requestFocus: false,
                               ),
-                              icon: Icons.refresh,
+                              icon: ZetaIcons.refresh,
                               label: 'Retry Start',
                               tone: NmtkTone.danger,
                             ),
@@ -726,7 +726,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                                             title: 'WebView Not Supported',
                                             message:
                                                 '${module.name} cannot be displayed on this platform.',
-                                            icon: Icons.warning_amber_rounded,
+                                            icon: ZetaIcons.warning_outline,
                                             tone: NmtkTone.warning,
                                           ),
                   );

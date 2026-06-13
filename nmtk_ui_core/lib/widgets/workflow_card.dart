@@ -64,10 +64,10 @@ class _NmtkWorkflowStageTile extends StatelessWidget {
       NmtkWorkflowStageState.upcoming => theme.colorScheme.outlineVariant,
     };
     final icon = switch (stage.state) {
-      NmtkWorkflowStageState.done => Icons.check_circle,
-      NmtkWorkflowStageState.active => Icons.play_circle_fill,
-      NmtkWorkflowStageState.error => Icons.error,
-      NmtkWorkflowStageState.upcoming => Icons.radio_button_unchecked,
+      NmtkWorkflowStageState.done => ZetaIcons.check_circle,
+      NmtkWorkflowStageState.active => ZetaIcons.play_circle,
+      NmtkWorkflowStageState.error => ZetaIcons.error,
+      NmtkWorkflowStageState.upcoming => ZetaIcons.radio_button_unchecked,
     };
 
     return Container(

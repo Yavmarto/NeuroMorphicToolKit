@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/widgets/buttons.dart';
 import 'package:nmtk_ui_core/widgets/shell_status_badge.dart';
@@ -63,7 +64,7 @@ class NmtkShellReadinessStateView extends StatelessWidget {
       title: title,
       subtitle: message,
       leading: Icon(
-        status.icon ?? Icons.info_outline,
+        status.icon ?? ZetaIcons.info,
         size: 20,
         color: theme.colorScheme.primary,
       ),
@@ -94,7 +95,7 @@ class NmtkShellRetryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return NmtkOutlinedButton(
       label: 'Retry',
-      icon: Icons.refresh_rounded,
+      icon: ZetaIcons.refresh,
       onPressed: onPressed,
     );
   }

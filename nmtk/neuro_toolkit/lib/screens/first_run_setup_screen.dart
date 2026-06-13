@@ -122,7 +122,7 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
                         alignment: Alignment.centerLeft,
                         child: NmtkOutlinedButton(
                           onPressed: () => context.push('/environments'),
-                          icon: Icons.tune_rounded,
+                          icon: ZetaIcons.tune,
                           label: 'Open environment manager',
                         ),
                       ),
@@ -155,7 +155,7 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
                   NmtkPrimaryButton(
                     onPressed:
                         _isInstallingPython ? null : _installWithHomebrew,
-                    icon: Icons.download,
+                    icon: ZetaIcons.download,
                     label: _isInstallingPython
                         ? 'Installing…'
                         : 'Install with Homebrew',
@@ -163,7 +163,7 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
                   const SizedBox(height: 12),
                   NmtkOutlinedButton(
                     onPressed: _openPythonOrg,
-                    icon: Icons.open_in_new,
+                    icon: ZetaIcons.open_in_new_window,
                     label: 'Download from python.org',
                     tone: NmtkTone.info,
                   ),
@@ -173,7 +173,7 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
                   onPressed: (_isInstallingPython || _isCheckingPython)
                       ? null
                       : _retryPythonCheck,
-                  icon: Icons.refresh,
+                  icon: ZetaIcons.refresh,
                   label: _isCheckingPython
                       ? 'Checking for Python…'
                       : 'Retry detection',
