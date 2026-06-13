@@ -3,38 +3,42 @@ import 'package:nmtk_ui_core/widgets/pipeline_stepper.dart';
 
 enum SnnWorkflowPhase {
   selectData,
-  defineArchitecture,
+  defineModel,
+  defineTrain,
+  defineEval,
   trainingSandbox,
-  trainAndExport,
+  run,
   deploy,
 }
 
 /// A specialized pipeline stepper for the NeuroMorphicToolKit SNN workflow.
 ///
-/// Models the 5-step workflow for training and deploying an SNN:
-/// 1. Select Data
-/// 2. Define Architecture (CNL/NIR)
-/// 3. Training Sandbox (Jupyter/Python)
-/// 4. Train & Export (GPU)
-/// 5. Deploy
+/// Models the 7-step workflow for training and deploying an SNN:
+/// 1. Setup        (selectData)
+/// 2. Model        (defineModel)
+/// 3. Training     (defineTrain)
+/// 4. Eval         (defineEval)
+/// 5. Notebook     (trainingSandbox / Jupyter/Python)
+/// 6. Run          (run / GPU)
+/// 7. Deploy       (deploy)
 ///
-/// When [onOpenSandbox] is provided, tapping step 3 opens the training notebook
+/// When [onOpenSandbox] is provided, tapping step 5 opens the training notebook
 /// (e.g. via url_launcher in the consumer) in addition to navigating to that phase.
 /// A "↗" affordance is appended to the step label to signal the action.
 class SnnWorkflowStepper extends StatelessWidget {
   /// The currently active workflow phase.
   final SnnWorkflowPhase currentPhase;
 
-  /// Monotonically increasing tick to pulse the "Train & Export" step.
+  /// Monotonically increasing tick to pulse the "Run" step.
   ///
-  /// Only fires an animation when [runningPhase] is [SnnWorkflowPhase.trainAndExport].
+  /// Only fires an animation when [runningPhase] is [SnnWorkflowPhase.run].
   final int epochPulseTick;
 
   /// The phase that is ACTIVELY executing (shows spinner + pulse).
   /// Null = no step is running right now.
   ///
   /// Distinct from [currentPhase] (the selected/viewed panel). Use
-  /// [SnnWorkflowPhase.trainAndExport] while a training job is in progress.
+  /// [SnnWorkflowPhase.run] while a training job is in progress.
   final SnnWorkflowPhase? runningPhase;
 
   /// Optional callback when a step is tapped.
@@ -91,22 +95,34 @@ class SnnWorkflowStepper extends StatelessWidget {
           Icons.dataset_outlined,
         ),
         _buildStepData(
-          SnnWorkflowPhase.defineArchitecture,
-          '2. Architecture',
+          SnnWorkflowPhase.defineModel,
+          '2. Model',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (architecture diagram)
           Icons.architecture_outlined,
         ),
-        _buildSandboxStepData(),
         _buildStepData(
-          SnnWorkflowPhase.trainAndExport,
-          '4. Train & Export',
+          SnnWorkflowPhase.defineTrain,
+          '3. Training',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (ML model training)
           Icons.model_training_outlined,
+        ),
+        _buildStepData(
+          SnnWorkflowPhase.defineEval,
+          '4. Eval',
+          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (fact check / evaluation)
+          Icons.fact_check_outlined,
+        ),
+        _buildSandboxStepData(),
+        _buildStepData(
+          SnnWorkflowPhase.run,
+          '6. Run',
+          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (play circle / run job)
+          Icons.play_circle_outline,
           pulseTick: epochPulseTick,
         ),
         _buildStepData(
           SnnWorkflowPhase.deploy,
-          '5. Deploy',
+          '7. Deploy',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (rocket launch / deploy)
           Icons.rocket_launch_outlined,
         ),
@@ -115,7 +131,7 @@ class SnnWorkflowStepper extends StatelessWidget {
   }
 
   NmtkPipelineStepData _buildSandboxStepData() {
-    const label = '3. Notebook';
+    const label = '5. Notebook';
     final status = _getStatusForPhase(SnnWorkflowPhase.trainingSandbox);
     VoidCallback? onTap;
     if (onPhaseSelected != null) {
