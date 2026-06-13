@@ -23594,3 +23594,13 @@ executing <function Connection.stop.<locals>.close_and_stop at 0x16c15ed40>
 operation <function Connection.stop.<locals>.close_and_stop at 0x16c15ed40> completed
 Using selector: KqueueSelector
 HTTP Request: POST http://testserver/api/datasets/nmnist/download "HTTP/1.1 503 Service Unavailable"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
