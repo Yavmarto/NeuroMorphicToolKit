@@ -2,6 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+ENV PIP_DEFAULT_TIMEOUT=300
+ENV PIP_RETRIES=5
 # Build tooling for any framework that ships only an sdist (no prebuilt wheel)
 # on python:3.11-slim. Kept in one layer and cleaned up to limit image size.
 RUN apt-get update \

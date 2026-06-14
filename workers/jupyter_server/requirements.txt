@@ -49,3 +49,13 @@ tonic
 nir>=1.0.5
 nirtorch
 sc-neurocore>=3.13.0,<4
+
+# ── Neuromorphic frameworks — always installed in base image ──────────────────
+# These must be present from the start so the setup step never shows them as
+# missing. Per-framework kernel venvs inherit them via --system-site-packages.
+brian2>=2.10.1; python_version >= "3.12"
+brian2; python_version < "3.12"
+PyNN>=0.12.0
+akida>=2.0.0
+cnn2snn
+lava-nc>=0.9.0; python_version < "3.11"

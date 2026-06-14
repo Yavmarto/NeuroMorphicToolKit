@@ -118,7 +118,9 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
     final position = _scrollController.position;
     final viewportWidth = position.viewportDimension;
 
-    final stepLeft = stepBox.localToGlobal(Offset.zero, ancestor: rowContext.findRenderObject()).dx;
+    final stepLeft = stepBox
+        .localToGlobal(Offset.zero, ancestor: rowContext.findRenderObject())
+        .dx;
     final stepRight = stepLeft + stepBox.size.width;
 
     final visibleLeft = position.pixels;
@@ -127,8 +129,7 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
     if (stepLeft >= visibleLeft && stepRight <= visibleRight) return;
 
     final tokens = NmtkShellTokens.of(context);
-    final targetOffset = (stepLeft - 24)
-        .clamp(0.0, position.maxScrollExtent);
+    final targetOffset = (stepLeft - 24).clamp(0.0, position.maxScrollExtent);
 
     if ((position.pixels - targetOffset).abs() < 1) return;
 
@@ -210,7 +211,8 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
           _PipelineStep(
             key: _stepKeys[step.id],
             data: step,
-            selected: widget.selectedStepId == step.id ||
+            selected:
+                widget.selectedStepId == step.id ||
                 widget.secondarySelectedStepId == step.id,
             accentColor: widget.stepAccentColor,
             onTap:

@@ -191,7 +191,9 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
                                       child: Row(
                                         children: [
                                           Icon(
-                                            cmd.icon ?? Icons.bolt_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                                            cmd.icon ??
+                                                Icons
+                                                    .bolt_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                                             size: 18,
                                             color: isSelected
                                                 ? theme.colorScheme.primary

@@ -1,0 +1,101 @@
+<h2>Workflow Stepper: Current vs Proposed</h2>
+<p class="subtitle">Does the proposed 7-step flow better match what each canvas actually does?</p>
+
+<div class="section">
+  <div class="label">Current — 5 steps</div>
+  <div style="display:flex;gap:0;align-items:stretch;margin:12px 0 24px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;">
+    <div style="flex:1;padding:14px 10px;background:rgba(99,102,241,0.15);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">1</div>
+      <div style="font-weight:600;font-size:13px;">Setup</div>
+      <div style="font-size:11px;opacity:0.6;margin-top:6px;">Dataset · Platform · Workspace</div>
+    </div>
+    <div style="flex:1;padding:14px 10px;background:rgba(99,102,241,0.15);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">2</div>
+      <div style="font-weight:600;font-size:13px;">Architecture</div>
+      <div style="font-size:11px;opacity:0.6;margin-top:6px;">CNL · Topology · NIR</div>
+    </div>
+    <div style="flex:1;padding:14px 10px;background:rgba(239,68,68,0.2);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">3</div>
+      <div style="font-weight:600;font-size:13px;">Notebook</div>
+      <div style="font-size:11px;opacity:0.6;margin-top:6px;color:#f87171;">⚠ Before training config</div>
+    </div>
+    <div style="flex:1;padding:14px 10px;background:rgba(239,68,68,0.2);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">4</div>
+      <div style="font-weight:600;font-size:13px;">Train & Export</div>
+      <div style="font-size:11px;opacity:0.6;margin-top:6px;color:#f87171;">⚠ Config + Eval + Run merged</div>
+    </div>
+    <div style="flex:1;padding:14px 10px;background:rgba(99,102,241,0.15);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">5</div>
+      <div style="font-weight:600;font-size:13px;">Deploy</div>
+      <div style="font-size:11px;opacity:0.6;margin-top:6px;">Hardware · Target · Compile</div>
+    </div>
+  </div>
+
+  <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.7;">
+    <strong>Problems:</strong><br>
+    · Notebook sits before training pipeline is even configured — cart before horse<br>
+    · "Train & Export" bundles 3 distinct things: train DAG config, eval DAG config, and actually running<br>
+    · No explicit Eval step, even though <code>pipelineEval</code> canvas already exists<br>
+    · Step labels don't match canvas tab names users actually see
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">Proposed — 7 steps</div>
+  <div style="display:flex;gap:0;align-items:stretch;margin:12px 0 16px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;">
+    <div style="flex:1;padding:14px 8px;background:rgba(99,102,241,0.15);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">1</div>
+      <div style="font-weight:600;font-size:12px;">Setup</div>
+      <div style="font-size:10px;opacity:0.6;margin-top:6px;">unchanged</div>
+    </div>
+    <div style="flex:1;padding:14px 8px;background:rgba(34,197,94,0.15);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">2</div>
+      <div style="font-weight:600;font-size:12px;">Model</div>
+      <div style="font-size:10px;opacity:0.6;margin-top:6px;">architecture canvas</div>
+    </div>
+    <div style="flex:1;padding:14px 8px;background:rgba(34,197,94,0.15);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">3</div>
+      <div style="font-weight:600;font-size:12px;">Training</div>
+      <div style="font-size:10px;opacity:0.6;margin-top:6px;">pipelineTrain DAG</div>
+    </div>
+    <div style="flex:1;padding:14px 8px;background:rgba(34,197,94,0.15);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">4</div>
+      <div style="font-weight:600;font-size:12px;">Eval</div>
+      <div style="font-size:10px;opacity:0.6;margin-top:6px;">pipelineEval DAG</div>
+    </div>
+    <div style="flex:1;padding:14px 8px;background:rgba(251,191,36,0.15);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">5</div>
+      <div style="font-weight:600;font-size:12px;">Notebook</div>
+      <div style="font-size:10px;opacity:0.6;margin-top:6px;">Jupyter · explore</div>
+    </div>
+    <div style="flex:1;padding:14px 8px;background:rgba(34,197,94,0.15);border-right:1px solid rgba(255,255,255,0.08);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">6</div>
+      <div style="font-weight:600;font-size:12px;">Run</div>
+      <div style="font-size:10px;opacity:0.6;margin-top:6px;">execute · monitor</div>
+    </div>
+    <div style="flex:1;padding:14px 8px;background:rgba(99,102,241,0.15);text-align:center;">
+      <div style="font-size:11px;opacity:0.5;margin-bottom:4px;">7</div>
+      <div style="font-weight:600;font-size:12px;">Deploy</div>
+      <div style="font-size:10px;opacity:0.6;margin-top:6px;">unchanged</div>
+    </div>
+  </div>
+
+  <div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.7;">
+    <strong>Wins:</strong><br>
+    · Each step = one canvas tab — 1:1 mapping, no confusion<br>
+    · Eval gets its own step (canvas already built!)<br>
+    · Notebook after config = makes sense: explore once model + pipelines are defined<br>
+    · Run separated from config: "set it up" vs "execute" are different mental modes
+  </div>
+</div>
+
+<div class="section">
+  <div class="label">One open question</div>
+  <div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:8px;padding:12px 16px;font-size:13px;line-height:1.7;">
+    <strong>Where does <code>pipelineInfer</code> (the Infer DAG canvas) live?</strong><br>
+    Currently it's a canvas tab with export nodes (NIRExporter, TorchScript, Loihi). Two options:<br>
+    · Fold into <strong>Deploy</strong> (configure inference pipeline before hardware deploy)<br>
+    · Add as step 7.5 <strong>Infer</strong> between Run and Deploy (explicit inference pipeline config)<br><br>
+    Notebook step also has a question: is it <em>optional</em> (exploratory, skip if not needed)?
+  </div>
+</div>
