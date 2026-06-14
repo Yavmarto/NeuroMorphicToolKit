@@ -27,6 +27,9 @@ class ToolViewScreen extends ConsumerStatefulWidget {
   ConsumerState<ToolViewScreen> createState() => _ToolViewScreenState();
 }
 
+// Module IDs that are desktop-only and must not appear in the mobile bottom nav.
+const _kMobileHiddenModuleIds = {'Neurobench'};
+
 class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   final Map<String, InAppWebViewController> _controllers =
       <String, InAppWebViewController>{};
@@ -670,10 +673,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         )
         .toList(growable: false);
 
-    final selectedIndex = navItems
-        .indexWhere((NmtkSidebarItem item) => item.id == _activeModuleId);
-    final clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
-
     final isMobile = MediaQuery.sizeOf(context).width < 600;
 
     if (eligibleModules.isEmpty) {
@@ -719,33 +718,73 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         eligibleModules.map((Module module) => module.id).toSet();
     final focusedModuleId = workspaceState.focusedModuleId;
 
-    if (focusedModuleId != null &&
-        eligibleModuleIds.contains(focusedModuleId) &&
-        focusedModuleId != _activeModuleId) {
-      _activeModuleId = focusedModuleId;
+    // Sync _activeModuleId to workspace focus without calling setState during
+    // build. Mutations are deferred to a post-frame callback so the framework
+    // never sees state changes mid-layout (avoids assertion failures).
+    final desiredModuleId = () {
+      if (focusedModuleId != null &&
+          eligibleModuleIds.contains(focusedModuleId) &&
+          focusedModuleId != _activeModuleId) {
+        return focusedModuleId;
+      }
+      if (!eligibleModuleIds.contains(_activeModuleId)) {
+        return eligibleModules.first.id;
+      }
+      return _activeModuleId;
+    }();
+    if (desiredModuleId != _activeModuleId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _activeModuleId = desiredModuleId);
+      });
     }
-    if (!eligibleModuleIds.contains(_activeModuleId)) {
-      _activeModuleId = eligibleModules.first.id;
-    }
+
+    final selectedIndex = navItems
+        .indexWhere((NmtkSidebarItem item) => item.id == desiredModuleId);
+    final clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
 
     final sessionsByModuleId = <String, WorkspaceSession>{
       for (final session in sessions) session.moduleId: session,
     };
 
     if (isMobile) {
+      // On mobile, filter out desktop-only modules (e.g. Neurobench) from the
+      // bottom nav and the content stack. Both lists must stay in sync so that
+      // selectedIndex correctly maps a nav tap to its content pane.
+      final mobileModules = eligibleModules
+          .where((m) => !_kMobileHiddenModuleIds.contains(m.id))
+          .toList(growable: false);
+      final mobileNavItems = mobileModules
+          .map(
+            (Module module) => NmtkSidebarItem(
+              id: module.id,
+              label: module.name,
+              icon: ModuleIcon.forModule(module),
+              selectedIcon: ModuleIcon.forModule(module, selected: true),
+            ),
+          )
+          .toList(growable: false);
+      // If the currently active module is hidden on mobile, fall back to the
+      // first visible module so the user always sees a valid pane.
+      final mobileActiveId = _kMobileHiddenModuleIds.contains(desiredModuleId)
+          ? (mobileModules.isNotEmpty ? mobileModules.first.id : desiredModuleId)
+          : desiredModuleId;
+      final mobileSelectedIndex = mobileNavItems
+          .indexWhere((item) => item.id == mobileActiveId);
+      final mobileClampedIndex =
+          mobileSelectedIndex < 0 ? 0 : mobileSelectedIndex;
       return NmtkMobileScaffold(
-        navItems: navItems,
-        selectedIndex: clampedIndex,
+        navItems: mobileNavItems,
+        selectedIndex: mobileClampedIndex,
         onNavItemSelected: (i) {
-          if (i < navItems.length) {
-            setState(() => _activeModuleId = navItems[i].id);
+          if (i < mobileNavItems.length) {
+            setState(() => _activeModuleId = mobileNavItems[i].id);
           }
         },
         onSettingsPressed: () => context.push('/settings'),
         child: IndexedStack(
           key: const ValueKey('WorkspaceStack'),
-          index: clampedIndex,
-          children: eligibleModules
+          index: mobileClampedIndex,
+          children: mobileModules
               .map((module) => _buildModuleChild(module, sessionsByModuleId))
               .toList(growable: false),
         ),
