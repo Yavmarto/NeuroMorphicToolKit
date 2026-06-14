@@ -34,7 +34,8 @@ class NmtkShellStatusSpec {
       NmtkShellReadinessState.opening => NmtkShellStatusSpec(
         label: 'Opening',
         tone: NmtkTone.info,
-        icon: Icons.door_front_door_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+        icon: Icons
+            .door_front_door_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
         readinessState: state,
         detailText: detailText,
         semanticsLabel: semanticsLabel,
@@ -42,7 +43,8 @@ class NmtkShellStatusSpec {
       NmtkShellReadinessState.warmingUp => NmtkShellStatusSpec(
         label: 'Warming Up',
         tone: NmtkTone.warning,
-        icon: Icons.hourglass_top_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+        icon: Icons
+            .hourglass_top_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
         readinessState: state,
         detailText: detailText,
         semanticsLabel: semanticsLabel,

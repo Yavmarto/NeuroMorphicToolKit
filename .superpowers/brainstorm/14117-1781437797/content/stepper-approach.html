@@ -1,0 +1,103 @@
+<h2>How should the 7-step wizard work on mobile?</h2>
+<p class="subtitle">Current: tiny horizontal scroll of all steps crammed in the top bar alongside workspace name + controls. Pick the mobile-native replacement.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#1a1a2e;padding:16px;font-family:monospace;font-size:12px;border-radius:8px 8px 0 0">
+      <!-- Mockup A: Collapsed header with step progress -->
+      <div style="background:#0d0d1a;border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="color:#888;font-size:11px">STEP 1 OF 7</div>
+        <div style="color:#fff;font-weight:600;font-size:14px">Setup</div>
+        <div style="color:#4CAF50;font-size:11px">→ Model</div>
+      </div>
+      <div style="background:#0d0d1a;border-radius:4px;height:4px;margin-bottom:12px">
+        <div style="background:#4CAF50;width:14%;height:100%;border-radius:4px"></div>
+      </div>
+      <div style="color:#aaa;font-size:11px;text-align:center">Tap header to see all steps</div>
+      <div style="background:#111;border-radius:8px;padding:16px;margin-top:8px;color:#fff;font-size:13px">
+        <div style="margin-bottom:8px;font-weight:600">Workspace</div>
+        <div style="background:#1e1e3a;border-radius:6px;padding:8px 12px;color:#aaa;font-size:12px;margin-bottom:8px">☁ Load from Hub</div>
+        <div style="color:#666;font-size:11px;margin-bottom:6px">TARGET</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span style="background:#1e1e3a;border-radius:20px;padding:4px 10px;font-size:11px;color:#ccc">Lava</span>
+          <span style="background:#1e1e3a;border-radius:20px;padding:4px 10px;font-size:11px;color:#ccc">snnTorch</span>
+          <span style="background:#2a1e3a;border:1px solid #6c4fff;border-radius:20px;padding:4px 10px;font-size:11px;color:#a78fff">SC-NeuroCore ✓</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Collapsed progress bar</h3>
+      <p>Shows current step name + thin progress bar. Tap to expand full step sheet. Maximum content space, minimal chrome.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#1a1a2e;padding:16px;font-family:monospace;font-size:12px;border-radius:8px 8px 0 0">
+      <!-- Mockup B: Bottom sheet step nav -->
+      <div style="background:#0d0d1a;border-radius:8px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="color:#fff;font-size:14px;font-weight:500">Untitled Workspace</div>
+        <div style="color:#aaa;font-size:11px">⋯</div>
+      </div>
+      <div style="background:#111;border-radius:8px;padding:16px;color:#fff;font-size:13px;margin-bottom:8px">
+        <div style="margin-bottom:8px;font-weight:600">Workspace</div>
+        <div style="background:#1e1e3a;border-radius:6px;padding:8px 12px;color:#aaa;font-size:12px;margin-bottom:8px">☁ Load from Hub</div>
+        <div style="color:#666;font-size:11px;margin-bottom:6px">TARGET</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span style="background:#1e1e3a;border-radius:20px;padding:4px 10px;font-size:11px;color:#ccc">Lava</span>
+          <span style="background:#2a1e3a;border:1px solid #6c4fff;border-radius:20px;padding:4px 10px;font-size:11px;color:#a78fff">snnTorch ✓</span>
+        </div>
+      </div>
+      <!-- Bottom sheet pill -->
+      <div style="background:#0d0d1a;border-radius:12px 12px 0 0;padding:12px 16px;margin:-8px -8px -8px -8px">
+        <div style="width:36px;height:4px;background:#444;border-radius:2px;margin:0 auto 12px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="color:#4CAF50;font-size:13px;font-weight:600">① Setup</span>
+          <span style="color:#888;font-size:11px">② Model →</span>
+          <span style="color:#555;font-size:11px">③ Train</span>
+          <span style="color:#555;font-size:11px">④ Eval</span>
+          <span style="color:#555;font-size:11px">…</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Persistent step strip at bottom</h3>
+      <p>Step bar lives at the very bottom above the nav bar. Always visible. Drag up to expand to full step overview sheet. Steps replace the top chrome entirely.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#1a1a2e;padding:16px;font-family:monospace;font-size:12px;border-radius:8px 8px 0 0">
+      <!-- Mockup C: Segmented top + large step title -->
+      <div style="background:#0d0d1a;border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="color:#aaa;font-size:11px">←</div>
+        <div style="color:#fff;font-size:15px;font-weight:600;flex:1">Setup</div>
+        <div style="background:#1e1e3a;border-radius:12px;padding:3px 10px;font-size:11px;color:#888">1 / 7</div>
+        <div style="color:#4CAF50;font-size:12px">Next →</div>
+      </div>
+      <div style="display:flex;gap:3px;margin-bottom:12px">
+        <div style="flex:1;height:3px;background:#4CAF50;border-radius:2px"></div>
+        <div style="flex:1;height:3px;background:#333;border-radius:2px"></div>
+        <div style="flex:1;height:3px;background:#333;border-radius:2px"></div>
+        <div style="flex:1;height:3px;background:#333;border-radius:2px"></div>
+        <div style="flex:1;height:3px;background:#333;border-radius:2px"></div>
+        <div style="flex:1;height:3px;background:#333;border-radius:2px"></div>
+        <div style="flex:1;height:3px;background:#333;border-radius:2px"></div>
+      </div>
+      <div style="background:#111;border-radius:8px;padding:16px;color:#fff;font-size:13px">
+        <div style="margin-bottom:8px;font-weight:600">Workspace</div>
+        <div style="background:#1e1e3a;border-radius:6px;padding:8px 12px;color:#aaa;font-size:12px;margin-bottom:8px">☁ Load from Hub</div>
+        <div style="color:#666;font-size:11px;margin-bottom:6px">TARGET</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span style="background:#1e1e3a;border-radius:20px;padding:4px 10px;font-size:11px;color:#ccc">Lava</span>
+          <span style="background:#2a1e3a;border:1px solid #6c4fff;border-radius:20px;padding:4px 10px;font-size:11px;color:#a78fff">SC-NeuroCore ✓</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Wizard-style top bar</h3>
+      <p>Large step name in header, segmented progress bar below it, Back/Next in top bar. Standard mobile wizard pattern (like iOS setup flows).</p>
+    </div>
+  </div>
+
+</div>

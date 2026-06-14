@@ -58,7 +58,8 @@ class NmtkEnergyBarChart extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               _SummaryChip(
-                icon: Icons.functions, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                icon: Icons
+                    .functions, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 label: 'Operations',
                 value: report.opsCount.toString(),
                 color: operationsColor ?? theme.colorScheme.secondary,

@@ -9,6 +9,10 @@ import 'package:nmtk_ui_core/models/commands.dart';
 import 'package:nmtk_ui_core/motion_tokens.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 
+import 'package:nmtk_ui_core/models/scaffold_models.dart';
+import 'package:nmtk_ui_core/widgets/mobile_scaffold.dart';
+import 'package:nmtk_ui_core/widgets/shell_chrome_scope.dart';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // LAYOUT CONSTANTS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -33,86 +37,12 @@ const Curve _kBackButtonAnimCurve = NmtkMotionTokens.easeEnter;
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// A single navigation destination in the [NmtkDesktopScaffold] rail.
-class NmtkSidebarItem {
-  const NmtkSidebarItem({
-    required this.id,
-    required this.label,
-    required this.icon,
-    this.selectedIcon,
-    this.badgeCount,
-  });
-
-  /// Stable string id used for selection tracking and accessibility labels.
-  final String id;
-
-  /// Human-readable label shown in tooltip when collapsed.
-  final String label;
-
-  final IconData icon;
-
-  /// Icon shown in place of [icon] when this item is selected.
-  final IconData? selectedIcon;
-
-  /// When non-null and > 0, a badge with this number is shown (rail mode
-  /// renders it as a small overlay since there is no label area).
-  final int? badgeCount;
-}
 
 /// One entry in the [NmtkUserProfile] dropdown.
-class NmtkUserProfileAction {
-  const NmtkUserProfileAction({
-    required String this.label,
-    this.icon,
-    this.onPressed,
-    this.isDestructive = false,
-  }) : isDivider = false;
-
-  /// Creates a visual divider row (label and onPressed are ignored).
-  const NmtkUserProfileAction.divider()
-    : label = null,
-      icon = null,
-      onPressed = null,
-      isDestructive = false,
-      isDivider = true;
-
-  final String? label;
-  final IconData? icon;
-  final VoidCallback? onPressed;
-
-  /// Renders this action in the destructive colour (error).
-  final bool isDestructive;
-
-  /// When true the row renders as a [Divider] — other fields ignored.
-  final bool isDivider;
-}
 
 /// User identity shown in the [NmtkDesktopScaffold] profile chip.
 ///
 /// Pass [null] to omit the profile section entirely.
-class NmtkUserProfile {
-  const NmtkUserProfile({
-    required this.displayName,
-    this.email,
-    this.avatarUrl,
-    this.avatarFallback,
-    this.actions = const [],
-  });
-
-  /// Primary display name ("Yoshi M.", "Admin", etc.).
-  final String displayName;
-
-  /// Optional secondary line shown below the name in the popover.
-  final String? email;
-
-  /// Remote image URL for the avatar.  Falls back to [avatarFallback].
-  final String? avatarUrl;
-
-  /// Initials shown when [avatarUrl] is null or fails to load.
-  /// Defaults to the first letter of each word in [displayName].
-  final String? avatarFallback;
-
-  final List<NmtkUserProfileAction> actions;
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FILE ACTION DELEGATE
@@ -123,12 +53,6 @@ class NmtkUserProfile {
 /// Provide an implementation via [NmtkDesktopScaffold.fileActions] to render
 /// the file-action icon strip in [_NmtkContentHeader] and activate the
 /// corresponding keyboard shortcuts (Cmd/Ctrl + N/O/S and Cmd/Ctrl+Shift+S).
-abstract class NmtkFileActionDelegate {
-  void onNewFile();
-  void onOpenFile();
-  void onSaveFile();
-  void onSaveFileAs();
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DESKTOP SCAFFOLD
@@ -299,7 +223,29 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
   Widget _buildLayout(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < _kMobileBreakpoint) {
-      return _buildMobileLayout(context);
+      // If already inside a NmtkMobileScaffold, the outer shell provides all
+      // chrome (AppBar + BottomNavigationBar). Adding another one here would
+      // produce double chrome and reduce the usable content area by ~288 px on
+      // a typical phone — enough to cause RenderFlex overflows.
+      if (NmtkShellChromeScope.of(context)) {
+        return widget.child;
+      }
+      return NmtkMobileScaffold(
+        navItems: widget.navItems,
+        selectedIndex: widget.selectedIndex,
+        child: widget.child,
+        onNavItemSelected: widget.onNavItemSelected,
+        userProfile: widget.userProfile,
+        sidebarBrand: widget.sidebarBrand,
+        mode: widget.mode,
+        showBackButton: widget.showBackButton,
+        onBack: widget.onBack,
+        fileActions: widget.fileActions,
+        onSettingsPressed: widget.onSettingsPressed,
+        pageTitle: widget.pageTitle,
+        footerNavItems: widget.footerNavItems,
+        onFooterNavItemSelected: widget.onFooterNavItemSelected,
+      );
     }
     return _buildDesktopLayout(context);
   }
@@ -495,7 +441,8 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                 Builder(
                   builder: (ctx) => IconButton(
                     icon: Icon(
-                      Icons.menu_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                      Icons
+                          .menu_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                       color: scheme.onSurface,
                       size: 20,
                     ),

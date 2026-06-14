@@ -40,7 +40,11 @@ export 'widgets/shell_readiness_state_view.dart';
 export 'widgets/snack_bars.dart';
 export 'widgets/toasts.dart';
 export 'widgets/status_badge.dart';
-export 'widgets/desktop_scaffold.dart'; // NmtkDesktopScaffold, NmtkSidebarItem, NmtkUserProfile, NmtkUserProfileAction
+export 'models/scaffold_models.dart';
+export 'widgets/desktop_scaffold.dart'; // NmtkDesktopScaffold
+export 'widgets/mobile_scaffold.dart'; // NmtkMobileScaffold
+export 'widgets/shell_chrome_scope.dart'; // NmtkShellChromeScope
+export 'widgets/adaptive_layout.dart'; // NmtkAdaptiveLayout
 export 'widgets/mobile_bottom_bar.dart'; // NmtkMobileBottomBar
 export 'widgets/host_navigation_scope.dart';
 export 'widgets/surface_card.dart';

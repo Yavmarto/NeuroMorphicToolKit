@@ -36,25 +36,25 @@ FRAMEWORK_ENVS: list[dict] = [
         "slug": "nmtk-brian2",
         "display": "Python (Brian2)",
         "targets": ["brian2"],
-        "packages": ["brian2"],
+        "packages": [],  # brian2 now in base image
     },
     {
         "slug": "nmtk-lava",
         "display": "Python (Lava)",
         "targets": ["lava_sim", "lava"],
-        "packages": ["lava-nc"],
+        "packages": ["lava-nc"],  # fallback: base image skips lava-nc on Python >=3.11
     },
     {
         "slug": "nmtk-pynn",
         "display": "Python (PyNN / SpiNNaker)",
         "targets": ["pynn"],
-        "packages": ["PyNN"],
+        "packages": [],  # PyNN now in base image
     },
     {
         "slug": "nmtk-akida",
         "display": "Python (Akida)",
         "targets": ["akida"],
-        "packages": ["akida", "cnn2snn"],
+        "packages": [],  # akida now in base image; cnn2snn removed (unused in kernel)
     },
 ]
 
