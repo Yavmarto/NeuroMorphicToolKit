@@ -746,10 +746,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           key: const ValueKey('WorkspaceStack'),
           index: clampedIndex,
           children: eligibleModules
-              .map((module) => KeyedSubtree(
-                    key: ValueKey(module.id),
-                    child: _buildModuleChild(module, sessionsByModuleId),
-                  ))
+              .map((module) => _buildModuleChild(module, sessionsByModuleId))
               .toList(growable: false),
         ),
       );
@@ -772,7 +769,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                           module,
                           sessionsByModuleId,
                         ))
-                    .toList(),
+                    .toList(growable: false),
               ),
             ),
           ],
