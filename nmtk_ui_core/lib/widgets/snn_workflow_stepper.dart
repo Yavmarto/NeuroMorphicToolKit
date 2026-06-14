@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/widgets/pipeline_stepper.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 enum SnnWorkflowPhase {
   selectData,
@@ -170,5 +171,133 @@ class SnnWorkflowStepper extends StatelessWidget {
     } else {
       return NmtkStepStatus.idle;
     }
+  }
+}
+
+/// Mobile-optimized workflow stepper for the SNN 7-step pipeline.
+///
+/// Shows the current step name as a bold title on the left, with the other
+/// 6 steps as compact tappable number chips on the right.
+///
+/// Step chip visual states:
+/// - Current step: shown only as the title text (no chip).
+/// - Completed steps (index < current): [mainPrimary] color, tappable.
+/// - Locked steps: dim (opacity 0.3), no tap handler.
+/// - Unlocked future steps: [mainSubtle] color, tappable.
+class SnnMobileWorkflowStepper extends StatelessWidget {
+  /// The currently active workflow phase.
+  final SnnWorkflowPhase currentPhase;
+
+  /// The phase that is ACTIVELY executing (shows pulse on desktop stepper).
+  /// Carried through for API symmetry; not used in the compact mobile chip.
+  final SnnWorkflowPhase? runningPhase;
+
+  /// Optional callback when a step chip is tapped.
+  final ValueChanged<SnnWorkflowPhase>? onPhaseSelected;
+
+  /// The set of phases that are locked (not yet accessible to the user).
+  final Set<SnnWorkflowPhase> lockedPhases;
+
+  static const _stepLabels = {
+    SnnWorkflowPhase.selectData: 'Setup',
+    SnnWorkflowPhase.defineModel: 'Model',
+    SnnWorkflowPhase.defineTrain: 'Training',
+    SnnWorkflowPhase.defineEval: 'Eval',
+    SnnWorkflowPhase.trainingSandbox: 'Notebook',
+    SnnWorkflowPhase.run: 'Run',
+    SnnWorkflowPhase.deploy: 'Deploy',
+  };
+
+  const SnnMobileWorkflowStepper({
+    super.key,
+    required this.currentPhase,
+    this.runningPhase,
+    this.onPhaseSelected,
+    this.lockedPhases = const <SnnWorkflowPhase>{},
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Zeta.of(context).colors;
+    final allPhases = SnnWorkflowPhase.values;
+
+    return Row(
+      children: [
+        // Current step title — left-aligned, bold.
+        Expanded(
+          child: Text(
+            _stepLabels[currentPhase] ?? currentPhase.name,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colors.mainDefault,
+                ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Number chips for every phase except the current one.
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final phase in allPhases)
+              if (phase != currentPhase) _buildChip(context, phase, colors),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChip(
+    BuildContext context,
+    SnnWorkflowPhase phase,
+    ZetaColors colors,
+  ) {
+    final stepNumber = phase.index + 1;
+    final isCompleted = phase.index < currentPhase.index;
+    final isLocked = lockedPhases.contains(phase);
+
+    final Color chipColor;
+    final VoidCallback? onTap;
+
+    if (isLocked) {
+      chipColor = colors.mainDefault;
+      onTap = null;
+    } else if (isCompleted) {
+      chipColor = colors.mainPrimary;
+      onTap = onPhaseSelected != null ? () => onPhaseSelected!(phase) : null;
+    } else {
+      chipColor = colors.mainSubtle;
+      onTap = onPhaseSelected != null ? () => onPhaseSelected!(phase) : null;
+    }
+
+    Widget chip = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: SizedBox(
+        width: 28,
+        height: 28,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(14),
+            child: Center(
+              child: Text(
+                '$stepNumber',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: chipColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (isLocked) {
+      chip = Opacity(opacity: 0.3, child: chip);
+    }
+
+    return chip;
   }
 }
