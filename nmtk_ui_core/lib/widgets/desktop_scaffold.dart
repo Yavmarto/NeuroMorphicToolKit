@@ -11,6 +11,7 @@ import 'package:nmtk_ui_core/shell_tokens.dart';
 
 import 'package:nmtk_ui_core/models/scaffold_models.dart';
 import 'package:nmtk_ui_core/widgets/mobile_scaffold.dart';
+import 'package:nmtk_ui_core/widgets/shell_chrome_scope.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LAYOUT CONSTANTS
@@ -222,6 +223,13 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
   Widget _buildLayout(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < _kMobileBreakpoint) {
+      // If already inside a NmtkMobileScaffold, the outer shell provides all
+      // chrome (AppBar + BottomNavigationBar). Adding another one here would
+      // produce double chrome and reduce the usable content area by ~288 px on
+      // a typical phone — enough to cause RenderFlex overflows.
+      if (NmtkShellChromeScope.of(context)) {
+        return widget.child;
+      }
       return NmtkMobileScaffold(
         navItems: widget.navItems,
         selectedIndex: widget.selectedIndex,

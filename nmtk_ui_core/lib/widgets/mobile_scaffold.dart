@@ -3,6 +3,7 @@ import 'package:zeta_flutter/zeta_flutter.dart';
 
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/models/scaffold_models.dart';
+import 'package:nmtk_ui_core/widgets/shell_chrome_scope.dart';
 
 class NmtkMobileScaffold extends StatefulWidget {
   const NmtkMobileScaffold({
@@ -243,7 +244,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
     final scheme = Theme.of(context).colorScheme;
     final useBottomNavigation = _shouldUseBottomNavigation;
 
-    return Scaffold(
+    return NmtkShellChromeScope(child: Scaffold(
       backgroundColor: scheme.surface,
       appBar: _NmtkMobileAppBar(
         scheme: scheme,
@@ -295,7 +296,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
               ],
             )
           : null,
-    );
+    ));
   }
 }
 
