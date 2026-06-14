@@ -532,6 +532,107 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 
+  /// Builds the child widget for a single module slot in the [IndexedStack].
+  ///
+  /// Extracted so it can be shared between the desktop [Scaffold] path and the
+  /// [NmtkMobileScaffold] path without duplicating the recovery/failure logic.
+  Widget _buildModuleChild(
+    Module module,
+    Map<String, WorkspaceSession> sessionsByModuleId,
+  ) {
+    // Auto-clear stale WebView failures when a module *recovers* — i.e.
+    // transitions from a non-ready state back to running/degraded.  We
+    // deliberately do NOT clear failures that were recorded while the
+    // module was already running (those are fresh errors, not stale ones
+    // from a prior crash), because clearing them would restart the WebView
+    // and cause an infinite flicker loop.
+    //
+    // Strategy: compare current status against the status we saw in the
+    // previous build.  A non-ready → ready transition signals recovery.
+    // The failure object itself is captured so the postFrameCallback only
+    // removes it if a newer failure has not already replaced it.
+    final prevStatus = _prevModuleStatuses[module.id];
+    final currentStatus = module.status;
+    _prevModuleStatuses[module.id] = currentStatus;
+
+    final isNowReady = currentStatus == ModuleStatus.running ||
+        currentStatus == ModuleStatus.degraded;
+    final wasPreviouslyReady = prevStatus == ModuleStatus.running ||
+        prevStatus == ModuleStatus.degraded;
+
+    if (isNowReady &&
+        !wasPreviouslyReady &&
+        prevStatus != null &&
+        _moduleLoadFailures.containsKey(module.id)) {
+      final staleFailure = _moduleLoadFailures[module.id];
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        // Guard: only clear the exact failure that triggered this recovery.
+        // If the user navigated away and a newer failure was recorded,
+        // leave it in place.
+        if (_moduleLoadFailures[module.id] == staleFailure) {
+          setState(() {
+            _moduleLoadFailures.remove(module.id);
+            _controllers.remove(module.id);
+          });
+        }
+      });
+    }
+
+    final session = sessionsByModuleId[module.id];
+    final loadFailure = _moduleLoadFailures[module.id];
+    final supported = _isWebViewSupported();
+    final launchBlocked =
+        module.isPreflightFailed || module.status == ModuleStatus.error;
+    final isReady = module.status == ModuleStatus.running ||
+        module.status == ModuleStatus.degraded;
+
+    return Container(
+      key: ValueKey(module.id),
+      child: launchBlocked
+          ? NmtkEmptyState(
+              title: '${module.name} Could Not Start',
+              message: [
+                module.statusMessage ?? 'This module could not be started.',
+                if (module.capabilityWarnings.isNotEmpty)
+                  module.capabilityWarnings.join('\n'),
+              ].join('\n\n'),
+              icon: ZetaIcons.error_outline,
+              tone: NmtkTone.danger,
+              action: NmtkPrimaryButton(
+                onPressed: () => _activateModule(
+                  module.id,
+                  requestFocus: false,
+                ),
+                icon: ZetaIcons.refresh,
+                label: 'Retry Start',
+                tone: NmtkTone.danger,
+              ),
+            )
+          : session == null || !isReady
+              ? _buildLoadingState(module)
+              : loadFailure != null
+                  ? _buildModuleLoadFailureState(module, loadFailure)
+                  : session.surfaceMode == 'native'
+                      ? NmtkHostNavigationScope(
+                          navigator: _handleHostedModuleNavigationRequest,
+                          child: NativeSurfaceRegistry.build(
+                            module.id,
+                            session,
+                          ),
+                        )
+                      : supported
+                          ? _buildWebView(module)
+                          : NmtkEmptyState(
+                              title: 'WebView Not Supported',
+                              message:
+                                  '${module.name} cannot be displayed on this platform.',
+                              icon: ZetaIcons.warning_outline,
+                              tone: NmtkTone.warning,
+                            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final moduleStateAsync = ref.watch(moduleNotifierProvider);
@@ -573,7 +674,18 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         .indexWhere((NmtkSidebarItem item) => item.id == _activeModuleId);
     final clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
 
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+
     if (eligibleModules.isEmpty) {
+      if (isMobile) {
+        return NmtkMobileScaffold(
+          navItems: const [],
+          selectedIndex: 0,
+          pageTitle: 'NeuroToolkit',
+          onSettingsPressed: () => context.push('/settings'),
+          child: const ModulePickerPanel(),
+        );
+      }
       return Scaffold(
         backgroundColor: tokens.shellBackground,
         body: SafeArea(
@@ -620,6 +732,29 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       for (final session in sessions) session.moduleId: session,
     };
 
+    if (isMobile) {
+      return NmtkMobileScaffold(
+        navItems: navItems,
+        selectedIndex: clampedIndex,
+        onNavItemSelected: (i) {
+          if (i < navItems.length) {
+            setState(() => _activeModuleId = navItems[i].id);
+          }
+        },
+        onSettingsPressed: () => context.push('/settings'),
+        child: IndexedStack(
+          key: const ValueKey('WorkspaceStack'),
+          index: clampedIndex,
+          children: eligibleModules
+              .map((module) => KeyedSubtree(
+                    key: ValueKey(module.id),
+                    child: _buildModuleChild(module, sessionsByModuleId),
+                  ))
+              .toList(growable: false),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: tokens.shellBackground,
       body: SafeArea(
@@ -632,105 +767,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               child: IndexedStack(
                 key: const ValueKey('WorkspaceStack'),
                 index: clampedIndex,
-                children: eligibleModules.map((Module module) {
-                  // Auto-clear stale WebView failures when a module *recovers* — i.e.
-                  // transitions from a non-ready state back to running/degraded.  We
-                  // deliberately do NOT clear failures that were recorded while the
-                  // module was already running (those are fresh errors, not stale ones
-                  // from a prior crash), because clearing them would restart the WebView
-                  // and cause an infinite flicker loop.
-                  //
-                  // Strategy: compare current status against the status we saw in the
-                  // previous build.  A non-ready → ready transition signals recovery.
-                  // The failure object itself is captured so the postFrameCallback only
-                  // removes it if a newer failure has not already replaced it.
-                  final prevStatus = _prevModuleStatuses[module.id];
-                  final currentStatus = module.status;
-                  _prevModuleStatuses[module.id] = currentStatus;
-
-                  final isNowReady = currentStatus == ModuleStatus.running ||
-                      currentStatus == ModuleStatus.degraded;
-                  final wasPreviouslyReady =
-                      prevStatus == ModuleStatus.running ||
-                          prevStatus == ModuleStatus.degraded;
-
-                  if (isNowReady &&
-                      !wasPreviouslyReady &&
-                      prevStatus != null &&
-                      _moduleLoadFailures.containsKey(module.id)) {
-                    final staleFailure = _moduleLoadFailures[module.id];
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (!mounted) return;
-                      // Guard: only clear the exact failure that triggered this recovery.
-                      // If the user navigated away and a newer failure was recorded,
-                      // leave it in place.
-                      if (_moduleLoadFailures[module.id] == staleFailure) {
-                        setState(() {
-                          _moduleLoadFailures.remove(module.id);
-                          _controllers.remove(module.id);
-                        });
-                      }
-                    });
-                  }
-
-                  final session = sessionsByModuleId[module.id];
-                  final loadFailure = _moduleLoadFailures[module.id];
-                  final supported = _isWebViewSupported();
-                  final launchBlocked = module.isPreflightFailed ||
-                      module.status == ModuleStatus.error;
-                  final isReady = module.status == ModuleStatus.running ||
-                      module.status == ModuleStatus.degraded;
-
-                  return Container(
-                    key: ValueKey(module.id),
-                    child: launchBlocked
-                        ? NmtkEmptyState(
-                            title: '${module.name} Could Not Start',
-                            message: [
-                              module.statusMessage ??
-                                  'This module could not be started.',
-                              if (module.capabilityWarnings.isNotEmpty)
-                                module.capabilityWarnings.join('\n'),
-                            ].join('\n\n'),
-                            icon: ZetaIcons.error_outline,
-                            tone: NmtkTone.danger,
-                            action: NmtkPrimaryButton(
-                              onPressed: () => _activateModule(
-                                module.id,
-                                requestFocus: false,
-                              ),
-                              icon: ZetaIcons.refresh,
-                              label: 'Retry Start',
-                              tone: NmtkTone.danger,
-                            ),
-                          )
-                        : session == null || !isReady
-                            ? _buildLoadingState(module)
-                            : loadFailure != null
-                                ? _buildModuleLoadFailureState(
-                                    module,
-                                    loadFailure,
-                                  )
-                                : session.surfaceMode == 'native'
-                                    ? NmtkHostNavigationScope(
-                                        navigator:
-                                            _handleHostedModuleNavigationRequest,
-                                        child: NativeSurfaceRegistry.build(
-                                          module.id,
-                                          session,
-                                        ),
-                                      )
-                                    : supported
-                                        ? _buildWebView(module)
-                                        : NmtkEmptyState(
-                                            title: 'WebView Not Supported',
-                                            message:
-                                                '${module.name} cannot be displayed on this platform.',
-                                            icon: ZetaIcons.warning_outline,
-                                            tone: NmtkTone.warning,
-                                          ),
-                  );
-                }).toList(),
+                children: eligibleModules
+                    .map((Module module) => _buildModuleChild(
+                          module,
+                          sessionsByModuleId,
+                        ))
+                    .toList(),
               ),
             ),
           ],
