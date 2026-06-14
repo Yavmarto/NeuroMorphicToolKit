@@ -11,7 +11,10 @@ def _slugify(text: str) -> str:
 
 
 def introspect_node(cls: type[CustomNode], source_path: str | None = None) -> object:
-    """Convert a CustomNode subclass into a ComponentBlock for the registry."""
+    """Convert a CustomNode subclass into a ComponentBlock for the registry.
+
+    Note: empty enum_values lists are normalised to None in the output ComponentBlock.
+    """
     from neurosim.contracts.design_contracts import ComponentBlock, ParameterDef, PortDef
 
     author = cls.author or "user"
@@ -28,17 +31,24 @@ def introspect_node(cls: type[CustomNode], source_path: str | None = None) -> ob
             continue
         if hasattr(attr, "_param_meta"):
             m = attr._param_meta
-            parameters.append(ParameterDef(
-                name=m["name"],
-                label=m["label"],
-                description=m.get("description", ""),
-                type=m["type"],
-                default=m["default"],
-                min=m.get("min"),
-                max=m.get("max"),
-                unit=m.get("unit", ""),
-                enum_values=m.get("enum_values") or None,
-            ))
+            try:
+                parameters.append(ParameterDef(
+                    name=m["name"],
+                    label=m["label"],
+                    description=m.get("description", ""),
+                    type=m["type"],
+                    default=m["default"],
+                    min=m.get("min"),
+                    max=m.get("max"),
+                    unit=m.get("unit", ""),
+                    enum_values=m.get("enum_values") or None,  # normalise [] → None for Pydantic ParameterDef
+                ))
+            except (KeyError, Exception) as exc:
+                import logging as _logging
+                _logging.getLogger(__name__).warning(
+                    "Skipping malformed @param metadata on '%s.%s': %s",
+                    cls.__name__, attr_name, exc,
+                )
         elif hasattr(attr, "_port_meta"):
             m = attr._port_meta
             ports.append(PortDef(
