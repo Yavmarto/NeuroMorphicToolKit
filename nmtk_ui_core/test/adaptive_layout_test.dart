@@ -5,8 +5,8 @@ import 'package:nmtk_ui_core/widgets/adaptive_layout.dart';
 void main() {
   testWidgets('shows mobileBuilder when width < 600 (default breakpoint)',
       (tester) async {
-    await tester.binding.setSurfaceSize(const Size(375, 812));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(375, 812));
     await tester.pumpWidget(
       const MaterialApp(
         home: NmtkAdaptiveLayout(
@@ -21,8 +21,8 @@ void main() {
 
   testWidgets('shows desktopBuilder when width >= 600 (default breakpoint)',
       (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1024, 768));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1024, 768));
     await tester.pumpWidget(
       const MaterialApp(
         home: NmtkAdaptiveLayout(
@@ -36,8 +36,8 @@ void main() {
   });
 
   testWidgets('custom breakpoint: 375 < 800 → mobile', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(375, 812));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(375, 812));
     await tester.pumpWidget(
       const MaterialApp(
         home: NmtkAdaptiveLayout(
@@ -51,8 +51,8 @@ void main() {
   });
 
   testWidgets('custom breakpoint: 1024 >= 800 → desktop', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1024, 768));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(1024, 768));
     await tester.pumpWidget(
       const MaterialApp(
         home: NmtkAdaptiveLayout(
