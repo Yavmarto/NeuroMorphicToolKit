@@ -25,7 +25,7 @@ void main() {
       );
     }
 
-    testWidgets('renders Mobile layout (< 600px) with NavigationBar', (
+    testWidgets('renders Mobile layout (< 840px) with NavigationBar', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(500, 800);
@@ -40,14 +40,14 @@ void main() {
       expect(find.text('Main Content'), findsOneWidget);
     });
 
-    testWidgets('renders Tablet layout (>= 600px) with top navigation', (
+    testWidgets('renders Tablet layout (>= 840px) with top navigation', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(800, 800);
+      tester.view.physicalSize = const Size(900, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(buildScaffold(const Size(800, 800)));
+      await tester.pumpWidget(buildScaffold(const Size(900, 800)));
 
       expect(find.byType(NavigationBar), findsNothing);
       expect(find.byType(NmtkNavigationRail), findsNothing);

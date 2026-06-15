@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/motion_tokens.dart';
 import 'package:nmtk_ui_core/widgets/pipeline_stepper.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 
@@ -225,23 +226,47 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
       children: [
         // Current step title — left-aligned, bold.
         Expanded(
-          child: Text(
-            _stepLabels[currentPhase] ?? currentPhase.name,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colors.mainDefault,
-                ),
-            overflow: TextOverflow.ellipsis,
+          child: AnimatedSwitcher(
+            duration: NmtkMotionTokens.durationBase,
+            switchInCurve: NmtkMotionTokens.easeEnter,
+            switchOutCurve: NmtkMotionTokens.easeExit,
+            transitionBuilder: (child, animation) =>
+                FadeTransition(opacity: animation, child: child),
+            child: Text(
+              _stepLabels[currentPhase] ?? currentPhase.name,
+              key: ValueKey(currentPhase),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.mainDefault,
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
         const SizedBox(width: 8),
         // Number chips for every phase except the current one.
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final phase in allPhases)
-              if (phase != currentPhase) _buildChip(context, phase, colors),
-          ],
+        AnimatedSwitcher(
+          duration: NmtkMotionTokens.durationBase,
+          switchInCurve: NmtkMotionTokens.easeEnter,
+          switchOutCurve: NmtkMotionTokens.easeExit,
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.08, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          ),
+          child: Row(
+            key: ValueKey(currentPhase),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final phase in allPhases)
+                if (phase != currentPhase) _buildChip(context, phase, colors),
+            ],
+          ),
         ),
       ],
     );

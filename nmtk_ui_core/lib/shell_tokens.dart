@@ -17,7 +17,7 @@ class NmtkShellModePalette {
 }
 
 class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
-  static const double compactBreakpoint = 600;
+  static const double compactBreakpoint = 840;
   static const double normalBreakpoint = 1080;
   static const double wideBreakpoint = 1280;
 

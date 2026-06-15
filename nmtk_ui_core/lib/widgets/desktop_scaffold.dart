@@ -19,7 +19,7 @@ import 'package:nmtk_ui_core/widgets/shell_chrome_scope.dart';
 
 const double _kRailWidth = 56.0;
 const double _kExpandedRailWidth = 200.0;
-const double _kMobileBreakpoint = 600.0;
+const double _kMobileBreakpoint = 840.0;
 const double _kBrandRowHeight = 52.0;
 const double _kContentHeaderHeight = 44.0;
 const double _kNavItemHeight = 44.0;

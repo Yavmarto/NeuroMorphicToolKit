@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:nmtk_ui_core/motion_tokens.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 
@@ -79,6 +81,7 @@ class ModuleTabBar extends ConsumerWidget {
                     : colors.borderSubtle.withValues(alpha: 0.22);
 
                 return Padding(
+                  key: ValueKey<String>(module.id),
                   padding: EdgeInsets.only(
                     right: index == activeModules.length - 1
                         ? 0
@@ -106,7 +109,10 @@ class ModuleTabBar extends ConsumerWidget {
                           child: Row(
                             children: [
                               Icon(
-                                module.hasFrontend ? Icons.web : Icons.api, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                                module.hasFrontend
+                                    ? Icons.web
+                                    : Icons
+                                        .api, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                                 size: 16,
                                 color: foregroundColor,
                               ),
@@ -149,7 +155,10 @@ class ModuleTabBar extends ConsumerWidget {
                       ),
                     ),
                   ),
-                );
+                )
+                    .animate()
+                    .fadeIn(duration: NmtkMotionTokens.durationFast)
+                    .slideX(begin: 0.3, curve: NmtkMotionTokens.easeEnter);
               },
             ),
           ),

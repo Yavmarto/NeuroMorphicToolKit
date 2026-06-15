@@ -3,7 +3,7 @@ import 'package:nmtk_ui_core/app_theme.dart';
 
 /// A mobile bottom navigation bar that mirrors the destination list from
 /// [NmtkTopAppBar] but rendered as a [NavigationBar] at the bottom of the
-/// screen.  Intended for use when `MediaQuery.sizeOf(context).width < 600`.
+/// screen.  Intended for use when `MediaQuery.sizeOf(context).width < 840`.
 class NmtkMobileBottomBar extends StatelessWidget {
   const NmtkMobileBottomBar({
     super.key,

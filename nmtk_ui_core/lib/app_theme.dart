@@ -521,7 +521,7 @@ class ResponsiveScaffold extends StatelessWidget {
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
 
-        if (screenWidth < 600) {
+        if (screenWidth < 840) {
           return Scaffold(
             body: body,
             floatingActionButton: floatingActionButton,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
@@ -59,7 +60,8 @@ class ModulePickerPanel extends ConsumerWidget {
           const NmtkEmptyState(
             title: 'No Modules Available',
             message: 'The launcher did not load any modules.',
-            icon: Icons.inventory_2_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+            icon: Icons
+                .inventory_2_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
           )
         else
           LayoutBuilder(
@@ -67,7 +69,7 @@ class ModulePickerPanel extends ConsumerWidget {
               const spacing = 12.0;
               final crossAxisCount = constraints.maxWidth >= 900
                   ? 3
-                  : constraints.maxWidth >= 600
+                  : constraints.maxWidth >= 840
                       ? 2
                       : 1;
               final cardWidth =
@@ -76,7 +78,9 @@ class ModulePickerPanel extends ConsumerWidget {
               return Wrap(
                 spacing: spacing,
                 runSpacing: spacing,
-                children: modules.map((module) {
+                children: modules.indexed.map(((int, Module) entry) {
+                  final index = entry.$1;
+                  final module = entry.$2;
                   final isMuJoCoUnavailable =
                       module.requiresMuJoCo && !moduleState.mujocoAvailable;
                   return SizedBox(
@@ -93,7 +97,13 @@ class ModulePickerPanel extends ConsumerWidget {
                           ? () => unawaited(controller.updateModule(module.id))
                           : null,
                       onRepair: () => controller.repairModule(module.id),
-                    ),
+                    )
+                        .animate(delay: Duration(milliseconds: 40 * index))
+                        .fadeIn(duration: NmtkMotionTokens.durationBase)
+                        .slideY(
+                          begin: 0.06,
+                          curve: NmtkMotionTokens.easeEnter,
+                        ),
                   );
                 }).toList(),
               );
@@ -233,7 +243,8 @@ class _ModuleCard extends StatelessWidget {
             if (onUpdate != null)
               NmtkPrimaryButton(
                 onPressed: onUpdate,
-                icon: Icons.system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                icon: Icons
+                    .system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 label: 'Update to ${module.remoteVersion}',
                 tone: NmtkTone.success,
               ),
@@ -258,7 +269,8 @@ class _ModuleCard extends StatelessWidget {
             if (onUpdate != null)
               NmtkPrimaryButton(
                 onPressed: onUpdate,
-                icon: Icons.system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                icon: Icons
+                    .system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 label: 'Update to ${module.remoteVersion}',
                 tone: NmtkTone.success,
               ),
@@ -319,7 +331,8 @@ class _ModuleCard extends StatelessWidget {
       return const NmtkStatusBadge(
         label: 'MuJoCo Missing',
         tone: NmtkTone.warning,
-        icon: Icons.hardware_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+        icon: Icons
+            .hardware_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       );
     }
     switch (module.status) {
@@ -382,7 +395,8 @@ class _ModuleCard extends StatelessWidget {
         return const NmtkStatusBadge(
           label: 'Updating',
           tone: NmtkTone.info,
-          icon: Icons.system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+          icon:
+              Icons.system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
           semanticsLabel: 'Status: Updating',
         );
     }
@@ -403,7 +417,8 @@ class _ModuleCard extends StatelessWidget {
       case 'hub':
         return Icons.hub; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       case 'precision_manufacturing':
-        return Icons.precision_manufacturing; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+        return Icons
+            .precision_manufacturing; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       default:
         return Icons.extension; // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
     }

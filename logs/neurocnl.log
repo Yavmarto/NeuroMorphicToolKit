@@ -23604,3 +23604,160 @@ Using selector: KqueueSelector
 HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
 Using selector: KqueueSelector
 HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: GET http://testserver/api/neurosim/custom-nodes "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Saved custom node test_node.py (20 bytes)
+HTTP Request: POST http://testserver/api/neurosim/custom-nodes/save "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: GET http://testserver/api/neurosim/custom-nodes "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: DELETE http://testserver/api/neurosim/custom-nodes/ghost.py "HTTP/1.1 404 Not Found"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/neurosim/custom-nodes/save "HTTP/1.1 400 Bad Request"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/neurosim/custom-nodes/save "HTTP/1.1 400 Bad Request"
+Using selector: KqueueSelector
+Saved custom node hello.py (31 bytes)
+HTTP Request: POST http://testserver/api/neurosim/custom-nodes/save "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Deleted custom node to_delete.py
+HTTP Request: DELETE http://testserver/api/neurosim/custom-nodes/to_delete.py "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+HTTP Request: GET http://testserver/api/neurosim/components "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+Loaded custom node 'Training Only' from training_only.py
+HTTP Request: GET http://testserver/api/neurosim/components?canvas=model "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+Loaded custom node 'Model Node' from model_node.py
+HTTP Request: GET http://testserver/api/neurosim/components?canvas=model "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+HTTP Request: GET http://testserver/api/neurosim/components?canvas=inference "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+HTTP Request: GET http://testserver/api/neurosim/components "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+Loaded custom node 'Training Only' from training_only.py
+HTTP Request: GET http://testserver/api/neurosim/components?canvas=model "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+Loaded custom node 'Model Node' from model_node.py
+HTTP Request: GET http://testserver/api/neurosim/components?canvas=model "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+HTTP Request: GET http://testserver/api/neurosim/components?canvas=inference "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+HTTP Request: GET http://testserver/api/neurosim/components "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+Loaded custom node 'Training Only' from training_only.py
+HTTP Request: GET http://testserver/api/neurosim/components?canvas=model "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+Loaded custom node 'Model Node' from model_node.py
+HTTP Request: GET http://testserver/api/neurosim/components?canvas=model "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/cpg_oscillator.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/lateral_inhibition.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/reflex_arc.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/patterns/winner_take_all.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/stdp_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/synapses/pes_synapse.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/rate_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/temporal_encoder.json: empty placeholder file
+Skipping component manifest /Users/yoshimartodihardjo/NeuroMorphicToolKit/neurocnl/neurosim/components/encoders/delta_encoder.json: empty placeholder file
+HTTP Request: GET http://testserver/api/neurosim/components?canvas=inference "HTTP/1.1 200 OK"

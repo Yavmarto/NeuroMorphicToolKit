@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 ///
 /// Follows the same [LayoutBuilder] pattern used by [NmtkWorkspaceShell]
 /// (breakpoint 1080) and pipeline stage area (breakpoint 800).
-/// Default [breakpoint] of 600 matches the mobile/tablet boundary used
-/// in [NmtkMobileScaffold].
+/// Default [breakpoint] of 840 matches the mobile/tablet boundary used
+/// in [NmtkMobileScaffold], treating foldable devices as mobile.
 class NmtkAdaptiveLayout extends StatelessWidget {
   const NmtkAdaptiveLayout({
     super.key,
     required this.desktopBuilder,
     required this.mobileBuilder,
-    this.breakpoint = 600.0,
+    this.breakpoint = 840.0,
   });
 
   final WidgetBuilder desktopBuilder;
