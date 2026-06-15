@@ -37,6 +37,8 @@ dependencies:
   url_launcher: ^6.3.0
 
   zeta_flutter: any
+  flutter_animate: ^4.5.0
+  animations: ^2.0.11
 dev_dependencies:
   build_runner: ^2.4.11
   freezed: ^3.2.5
@@ -53,3 +55,4 @@ flutter:
 
   assets:
     - assets/modules.json
+    - assets/custom_node_editor.html

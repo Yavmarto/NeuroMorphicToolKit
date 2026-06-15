@@ -1,0 +1,40 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
+/// Wraps the Neurosim custom nodes REST API.
+class CustomNodeRepository {
+  final String baseUrl;
+  const CustomNodeRepository({required this.baseUrl});
+
+  Future<List<String>> list() async {
+    final resp = await http.get(Uri.parse('$baseUrl/api/neurosim/custom-nodes'));
+    if (resp.statusCode != 200) throw Exception('list failed: ${resp.statusCode}');
+    return List<String>.from(jsonDecode(resp.body) as List);
+  }
+
+  Future<String> save({required String filename, required String source}) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/api/neurosim/custom-nodes/save'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'filename': filename, 'source': source}),
+    );
+    if (resp.statusCode != 200) throw Exception('save failed: ${resp.statusCode}');
+    return (jsonDecode(resp.body) as Map)['installed_path'] as String;
+  }
+
+  Future<void> delete(String filename) async {
+    final resp = await http.delete(
+      Uri.parse('$baseUrl/api/neurosim/custom-nodes/$filename'),
+    );
+    if (resp.statusCode != 200) throw Exception('delete failed: ${resp.statusCode}');
+  }
+
+  Future<void> install({required String downloadUrl, required String filename}) async {
+    final resp = await http.post(
+      Uri.parse('$baseUrl/api/neurosim/custom-nodes/install'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'download_url': downloadUrl, 'filename': filename}),
+    );
+    if (resp.statusCode != 200) throw Exception('install failed: ${resp.statusCode}');
+  }
+}
