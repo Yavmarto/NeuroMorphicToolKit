@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:animations/animations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -673,7 +674,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         )
         .toList(growable: false);
 
-    final isMobile = MediaQuery.sizeOf(context).width < 600;
+    final isMobile = MediaQuery.sizeOf(context).width < 840;
 
     if (eligibleModules.isEmpty) {
       if (isMobile) {
@@ -766,10 +767,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       // If the currently active module is hidden on mobile, fall back to the
       // first visible module so the user always sees a valid pane.
       final mobileActiveId = _kMobileHiddenModuleIds.contains(desiredModuleId)
-          ? (mobileModules.isNotEmpty ? mobileModules.first.id : desiredModuleId)
+          ? (mobileModules.isNotEmpty
+              ? mobileModules.first.id
+              : desiredModuleId)
           : desiredModuleId;
-      final mobileSelectedIndex = mobileNavItems
-          .indexWhere((item) => item.id == mobileActiveId);
+      final mobileSelectedIndex =
+          mobileNavItems.indexWhere((item) => item.id == mobileActiveId);
       final mobileClampedIndex =
           mobileSelectedIndex < 0 ? 0 : mobileSelectedIndex;
       return NmtkMobileScaffold(
@@ -780,7 +783,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             setState(() => _activeModuleId = mobileNavItems[i].id);
           }
         },
-        onSettingsPressed: () => context.push('/settings'),
+        onSettingsPressed: null,
+        showBottomNavigation: false,
         child: IndexedStack(
           key: const ValueKey('WorkspaceStack'),
           index: mobileClampedIndex,
@@ -791,6 +795,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       );
     }
 
+    final activeModule = eligibleModules[clampedIndex];
+
     return Scaffold(
       backgroundColor: tokens.shellBackground,
       body: SafeArea(
@@ -800,15 +806,17 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: IndexedStack(
-                key: const ValueKey('WorkspaceStack'),
-                index: clampedIndex,
-                children: eligibleModules
-                    .map((Module module) => _buildModuleChild(
-                          module,
-                          sessionsByModuleId,
-                        ))
-                    .toList(growable: false),
+              child: PageTransitionSwitcher(
+                transitionBuilder: (child, animation, secondaryAnimation) =>
+                    FadeThroughTransition(
+                  animation: animation,
+                  secondaryAnimation: secondaryAnimation,
+                  child: child,
+                ),
+                child: KeyedSubtree(
+                  key: ValueKey<String>(desiredModuleId),
+                  child: _buildModuleChild(activeModule, sessionsByModuleId),
+                ),
               ),
             ),
           ],

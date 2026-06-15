@@ -22,6 +22,7 @@ class NmtkMobileScaffold extends StatefulWidget {
     this.pageTitle,
     this.footerNavItems = const [],
     this.onFooterNavItemSelected,
+    this.showBottomNavigation = true,
   });
 
   final List<NmtkSidebarItem> navItems;
@@ -38,6 +39,7 @@ class NmtkMobileScaffold extends StatefulWidget {
   final String? pageTitle;
   final List<NmtkSidebarItem> footerNavItems;
   final ValueChanged<int>? onFooterNavItemSelected;
+  final bool showBottomNavigation;
 
   @override
   State<NmtkMobileScaffold> createState() => _NmtkMobileScaffoldState();
@@ -281,7 +283,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
               child: const Icon(Icons.edit_document),
             )
           : null,
-      bottomNavigationBar: useBottomNavigation
+      bottomNavigationBar: (widget.showBottomNavigation && useBottomNavigation)
           ? NavigationBar(
               selectedIndex: _selectedMobileNavigationIndex,
               onDestinationSelected: _handleMobileDestinationSelected,
