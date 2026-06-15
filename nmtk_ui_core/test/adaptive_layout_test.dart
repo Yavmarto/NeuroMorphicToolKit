@@ -3,8 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/widgets/adaptive_layout.dart';
 
 void main() {
-  testWidgets('shows mobileBuilder when width < 840 (default breakpoint)',
-      (tester) async {
+  testWidgets('shows mobileBuilder when width < 840 (default breakpoint)', (
+    tester,
+  ) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(375, 812));
     await tester.pumpWidget(
@@ -19,8 +20,9 @@ void main() {
     expect(find.byType(_DesktopStub), findsNothing);
   });
 
-  testWidgets('shows desktopBuilder when width >= 840 (default breakpoint)',
-      (tester) async {
+  testWidgets('shows desktopBuilder when width >= 840 (default breakpoint)', (
+    tester,
+  ) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(1024, 768));
     await tester.pumpWidget(

@@ -310,20 +310,33 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
     final mobileNavItems = _mobileNavigationItems;
     final useBottomNavigation = _shouldUseBottomNavigation;
 
+    final bool showMenuButton = !useBottomNavigation;
+    final bool hasTitle =
+        widget.pageTitle != null && widget.pageTitle!.isNotEmpty;
+    final bool showSettings =
+        !useBottomNavigation && widget.onSettingsPressed != null;
+    final bool hasAppBarContent =
+        hasTitle ||
+        widget.showBackButton ||
+        showMenuButton ||
+        widget.fileActions != null ||
+        showSettings ||
+        widget.userProfile != null;
+
     return Scaffold(
       backgroundColor: scheme.surface,
-      appBar: _NmtkMobileAppBar(
-        scheme: scheme,
-        title: widget.pageTitle,
-        showBackButton: widget.showBackButton,
-        onBack: widget.onBack,
-        fileActions: widget.fileActions,
-        onSettingsPressed: useBottomNavigation
-            ? null
-            : widget.onSettingsPressed,
-        userProfile: widget.userProfile,
-        showMenuButton: !useBottomNavigation,
-      ),
+      appBar: hasAppBarContent
+          ? _NmtkMobileAppBar(
+              scheme: scheme,
+              title: widget.pageTitle,
+              showBackButton: widget.showBackButton,
+              onBack: widget.onBack,
+              fileActions: widget.fileActions,
+              onSettingsPressed: showSettings ? widget.onSettingsPressed : null,
+              userProfile: widget.userProfile,
+              showMenuButton: showMenuButton,
+            )
+          : null,
       drawer: useBottomNavigation
           ? null
           : _NmtkMobileDrawer(

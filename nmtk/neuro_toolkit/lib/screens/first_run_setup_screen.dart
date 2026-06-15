@@ -75,20 +75,7 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'First-time setup',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
                   const SizedBox(height: 8),
-                  Text(
-                    'Install Python, connect to the launcher control service, '
-                    'then open the workspace. Advanced Python environments are '
-                    'available from settings after setup.',
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 24),
                   if (widget.requirePython) ...[
                     _buildPythonSection(context, pythonReady),
                     const SizedBox(height: 16),

@@ -144,161 +144,76 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
     );
   }
 
-  void _showProfileSettingsSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (widget.userProfile != null) ...[
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        ZetaAvatar(
-                          initials:
-                              widget.userProfile!.avatarFallback ??
-                              widget.userProfile!.displayName.characters.first,
-                          image: widget.userProfile!.avatarUrl != null
-                              ? Image.network(widget.userProfile!.avatarUrl!)
-                              : null,
-                          size: ZetaAvatarSize.m,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.userProfile!.displayName,
-                                style: Zeta.of(context).textStyles.titleMedium
-                                    .copyWith(fontWeight: FontWeight.w700),
-                              ),
-                              if (widget.userProfile!.email != null)
-                                Text(
-                                  widget.userProfile!.email!,
-                                  style: Zeta.of(context).textStyles.bodyMedium,
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  for (final action in widget.userProfile!.actions)
-                    if (action.isDivider)
-                      const Divider(height: 1)
-                    else
-                      ZetaListItem(
-                        leading: action.icon != null
-                            ? Icon(
-                                action.icon,
-                                color: action.isDestructive
-                                    ? Theme.of(context).colorScheme.error
-                                    : null,
-                              )
-                            : null,
-                        title: Text(
-                          action.label ?? '',
-                          style: TextStyle(
-                            color: action.isDestructive
-                                ? Theme.of(context).colorScheme.error
-                                : null,
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          action.onPressed?.call();
-                        },
-                      ),
-                  if (widget.onSettingsPressed != null)
-                    const Divider(height: 1),
-                ],
-                if (widget.onSettingsPressed != null)
-                  ZetaListItem(
-                    leading: const Icon(ZetaIcons.settings),
-                    title: const Text('Settings'),
-                    onTap: () {
-                      Navigator.pop(context);
-                      widget.onSettingsPressed?.call();
-                    },
-                  ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final useBottomNavigation = _shouldUseBottomNavigation;
+    // Only show the menu button (and therefore the AppBar) when there are
+    // multiple destinations that warrant a drawer. A single-module layout
+    // has no meaningful drawer content, so the AppBar is suppressed and the
+    // module content fills edge-to-edge.
+    final bool showMenuButton =
+        !useBottomNavigation && _mobileNavigationItems.length > 1;
+    final bool hasTitle =
+        widget.pageTitle != null && widget.pageTitle!.isNotEmpty;
+    // The 3 dots settings menu is being removed as requested.
+    final bool hasAppBarContent =
+        hasTitle || widget.showBackButton || showMenuButton;
 
-    return NmtkShellChromeScope(child: Scaffold(
-      backgroundColor: scheme.surface,
-      appBar: _NmtkMobileAppBar(
-        scheme: scheme,
-        title: widget.pageTitle,
-        showBackButton: widget.showBackButton,
-        onBack: widget.onBack,
-        onMorePressed:
-            (widget.userProfile != null || widget.onSettingsPressed != null)
-            ? _showProfileSettingsSheet
+    return NmtkShellChromeScope(
+      child: Scaffold(
+        backgroundColor: scheme.surface,
+        appBar: hasAppBarContent
+            ? _NmtkMobileAppBar(
+                scheme: scheme,
+                title: widget.pageTitle,
+                showBackButton: widget.showBackButton,
+                onBack: widget.onBack,
+                showMenuButton: showMenuButton,
+              )
             : null,
-        showMenuButton: !useBottomNavigation,
+        drawer: useBottomNavigation
+            ? null
+            : _NmtkMobileDrawer(
+                navItems: widget.navItems,
+                selectedIndex: widget.selectedIndex,
+                onNavItemSelected: widget.onNavItemSelected,
+                footerNavItems: widget.footerNavItems,
+                onFooterNavItemSelected: widget.onFooterNavItemSelected,
+                scheme: scheme,
+                mode: widget.mode,
+                brand: widget.sidebarBrand,
+              ),
+        body: SafeArea(
+          top: false,
+          child: ColoredBox(color: scheme.surface, child: widget.child),
+        ),
+        floatingActionButton: widget.fileActions != null
+            ? FloatingActionButton(
+                onPressed: _showFileActionsSheet,
+                backgroundColor: scheme.primaryContainer,
+                foregroundColor: scheme.onPrimaryContainer,
+                child: const Icon(Icons.edit_document),
+              )
+            : null,
+        bottomNavigationBar:
+            (widget.showBottomNavigation && useBottomNavigation)
+            ? NavigationBar(
+                selectedIndex: _selectedMobileNavigationIndex,
+                onDestinationSelected: _handleMobileDestinationSelected,
+                backgroundColor: scheme.surfaceContainer,
+                destinations: [
+                  for (final item in _mobileNavigationItems)
+                    NavigationDestination(
+                      icon: Icon(item.icon),
+                      selectedIcon: Icon(item.selectedIcon ?? item.icon),
+                      label: item.label,
+                    ),
+                ],
+              )
+            : null,
       ),
-      drawer: useBottomNavigation
-          ? null
-          : _NmtkMobileDrawer(
-              navItems: widget.navItems,
-              selectedIndex: widget.selectedIndex,
-              onNavItemSelected: widget.onNavItemSelected,
-              footerNavItems: widget.footerNavItems,
-              onFooterNavItemSelected: widget.onFooterNavItemSelected,
-              scheme: scheme,
-              mode: widget.mode,
-              brand: widget.sidebarBrand,
-            ),
-      body: SafeArea(
-        top: false,
-        child: ColoredBox(color: scheme.surface, child: widget.child),
-      ),
-      floatingActionButton: widget.fileActions != null
-          ? FloatingActionButton(
-              onPressed: _showFileActionsSheet,
-              backgroundColor: scheme.primaryContainer,
-              foregroundColor: scheme.onPrimaryContainer,
-              child: const Icon(Icons.edit_document),
-            )
-          : null,
-      bottomNavigationBar: (widget.showBottomNavigation && useBottomNavigation)
-          ? NavigationBar(
-              selectedIndex: _selectedMobileNavigationIndex,
-              onDestinationSelected: _handleMobileDestinationSelected,
-              backgroundColor: scheme.surfaceContainer,
-              destinations: [
-                for (final item in _mobileNavigationItems)
-                  NavigationDestination(
-                    icon: Icon(item.icon),
-                    selectedIcon: Icon(item.selectedIcon ?? item.icon),
-                    label: item.label,
-                  ),
-              ],
-            )
-          : null,
-    ));
+    );
   }
 }
 
@@ -308,7 +223,6 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.showMenuButton,
     required this.showBackButton,
     this.onBack,
-    this.onMorePressed,
     this.title,
   });
 
@@ -316,7 +230,6 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showMenuButton;
   final bool showBackButton;
   final VoidCallback? onBack;
-  final VoidCallback? onMorePressed;
   final String? title;
 
   @override
@@ -373,18 +286,6 @@ class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                 ] else
                   const Spacer(),
-
-                if (onMorePressed != null)
-                  IconButton(
-                    icon: Icon(
-                      Icons.more_vert_rounded,
-                      color: scheme.onSurface,
-                    ),
-                    iconSize: 24,
-                    padding: const EdgeInsets.all(16),
-                    onPressed: onMorePressed,
-                    tooltip: 'More options',
-                  ),
               ],
             ),
           ),

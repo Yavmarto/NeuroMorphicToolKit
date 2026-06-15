@@ -88,7 +88,16 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
                 const SizedBox(height: 24),
                 if (widget.allowConnect) ...[
                   _buildConnectCard(context),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+                ],
+                if (widget.allowConnect && widget.setupAvailable) ...[
+                  Center(
+                    child: Text(
+                      'or',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
                 _buildSetupCard(context),
               ],
@@ -107,81 +116,38 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
 
   Widget _buildHeader(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Launcher Server',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Connect to an existing launcher server or set up a new one. You only need one path to continue.',
-          style: theme.textTheme.bodyLarge,
-        ),
-      ],
+    return Text(
+      'Connect to server',
+      style: theme.textTheme.headlineMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+      ),
     );
   }
 
   Widget _buildConnectCard(BuildContext context) {
-    final isActive = _mode == ServerSetupMode.connect;
-
-    return NmtkSection(
-      title: 'Connect to a server',
-      subtitle: 'Use an existing launcher control API host or base URL.',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          NmtkShellReadinessStateView.fromState(
-            isActive
-                ? NmtkShellReadinessState.error
-                : NmtkShellReadinessState.degraded,
-            message: widget.message ??
-                'Enter the host or base URL for the launcher control API.',
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Launcher Control API Host or URL',
-            style: Theme.of(context).textTheme.labelMedium,
-          ),
-          const SizedBox(height: 6),
-          ZetaTextInput(
-            controller: _controller,
-            focusNode: _focusNode,
-            placeholder: 'http://192.168.1.50:8091',
-            onChange: widget.onChanged,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Run `python3 scripts/launcher_control_service.py --host 0.0.0.0 --port 8091` on the target machine if the launcher server is not already running.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              NmtkPrimaryButton(
-                onPressed: _isConnecting || widget.onConnect == null
-                    ? null
-                    : _handleConnect,
-                icon: ZetaIcons.wifi,
-                label: widget.connectLabel,
-              ),
-              if (widget.setupAvailable)
-                NmtkOutlinedButton(
-                  onPressed: () {
-                    setState(() => _mode = ServerSetupMode.setup);
-                  },
-                  icon: ZetaIcons.add_circle_outline,
-                  label: 'Set Up a New Server',
-                ),
-            ],
-          ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Server address',
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
+        const SizedBox(height: 6),
+        ZetaTextInput(
+          controller: _controller,
+          focusNode: _focusNode,
+          placeholder: 'http://192.168.1.50:8091',
+          onChange: widget.onChanged,
+        ),
+        const SizedBox(height: 16),
+        NmtkPrimaryButton(
+          onPressed: _isConnecting || widget.onConnect == null
+              ? null
+              : _handleConnect,
+          icon: ZetaIcons.wifi,
+          label: widget.connectLabel,
+        ),
+      ],
     );
   }
 

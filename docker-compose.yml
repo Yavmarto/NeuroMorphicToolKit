@@ -271,8 +271,6 @@ services:
       - backend-net
 
 networks:
-  frontend-net:
-    driver: bridge
   backend-net:
     driver: bridge
   monitoring-net:

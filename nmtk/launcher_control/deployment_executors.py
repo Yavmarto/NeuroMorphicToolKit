@@ -89,9 +89,6 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         if docker is None:
             raise RuntimeError("docker CLI is not installed")
 
-        emit("installing", "Tearing down any existing Docker stack", 25)
-        self._compose_down_local(docker, target)
-
         emit("installing", "Building Docker images", 42)
         self._compose_build_local(docker, target)
 
@@ -107,18 +104,6 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         env = dict(os.environ)
         env["SUITE_API_PORT"] = str(target.backend_port or 9000)
         return env
-
-    def _compose_down_local(self, docker: str, target: DeploymentTarget) -> None:
-        cmd = [docker, "compose", "down", "--remove-orphans"]
-        subprocess.run(
-            cmd,
-            cwd=str(self._repo_root),
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=60,
-            env=self._compose_env(target),
-        )
 
     def _compose_build_local(self, docker: str, target: DeploymentTarget) -> None:
         cmd = [docker, "compose", "build", "--parallel"]
@@ -163,11 +148,8 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         emit("installing", f"Syncing source code to {target.host}", 20)
         self._rsync_to_remote(target, deploy_dir)
 
-        emit("installing", "Tearing down any existing stack on remote", 38)
-        self._ssh_run(
-            target,
-            f"cd {deploy_dir} && docker compose down --remove-orphans 2>/dev/null || true",
-        )
+        emit("installing", "Initializing required secrets", 38)
+        self._init_remote_secrets(target, deploy_dir)
 
         emit("installing", "Building Docker images on remote host", 52)
         self._ssh_run(
@@ -185,6 +167,12 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         self._health_check(target, host=target.host)
 
         emit("completed", f"Docker backend deployed to {target.host}", 100)
+
+    def _init_remote_secrets(self, target: DeploymentTarget, deploy_dir: str) -> None:
+        self._ssh_run(
+            target,
+            f"touch {deploy_dir}/.env && grep -q GRAFANA_ADMIN_PASSWORD {deploy_dir}/.env || echo \"GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 32)\" >> {deploy_dir}/.env",
+        )
 
     def _rsync_to_remote(self, target: DeploymentTarget, deploy_dir: str) -> None:
         remote = f"{target.username}@{target.host}" if target.username else target.host
@@ -212,6 +200,40 @@ class DockerDeploymentExecutor(DeploymentExecutor):
                 "--exclude", "__pycache__",
                 "--exclude", "node_modules",
                 "--exclude", "*.pyc",
+                "--exclude", "build/",
+                "--exclude", "*.dill",
+                "--exclude", "*.dill.track.dill",
+                "--exclude", ".cache",
+                "--exclude", ".hypothesis",
+                "--exclude", ".kiro",
+                "--exclude", ".understand-anything",
+                "--exclude", ".sisyphus",
+                "--exclude", ".impeccable",
+                "--exclude", ".tmp_manual_ui",
+                "--exclude", ".swarm/",
+                "--exclude", ".opencode/",
+                "--exclude", ".cursor/",
+                "--exclude", "docs/",
+                "--exclude", "issues/",
+                "--exclude", "issues-archive/",
+                "--exclude", "ai_safe/",
+                "--exclude", "Neuro-Dream-Hand/",
+                "--exclude", "neurocnl/frontend/",
+                "--exclude", "Neurohub/frontend/",
+                "--exclude", "Neurochip/frontend/",
+                "--exclude", "Neurobench/frontend/",
+                "--exclude", "Neurosim/frontend/",
+                "--exclude", "nmtk_ui_core/",
+                "--exclude", "nmtk/neuro_toolkit/lib/",
+                "--exclude", "nmtk/neuro_toolkit/build/",
+                "--exclude", "nmtk/neuro_toolkit/.dart_tool/",
+                "--exclude", "nmtk/neuro_toolkit/android/",
+                "--exclude", "nmtk/neuro_toolkit/ios/",
+                "--exclude", "nmtk/neuro_toolkit/macos/",
+                "--exclude", "nmtk/neuro_toolkit/linux/",
+                "--exclude", "nmtk/neuro_toolkit/windows/",
+                "--exclude", "nmtk/neuro_toolkit/web/",
+                "--exclude", "nmtk/packages/",
                 str(self._repo_root) + "/",
                 f"{remote}:{deploy_dir}/",
             ]

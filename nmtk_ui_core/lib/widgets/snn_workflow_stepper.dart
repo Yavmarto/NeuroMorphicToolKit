@@ -236,9 +236,9 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
               _stepLabels[currentPhase] ?? currentPhase.name,
               key: ValueKey(currentPhase),
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colors.mainDefault,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: colors.mainDefault,
+              ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -263,8 +263,7 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
             key: ValueKey(currentPhase),
             mainAxisSize: MainAxisSize.min,
             children: [
-              for (final phase in allPhases)
-                if (phase != currentPhase) _buildChip(context, phase, colors),
+              for (final phase in allPhases) _buildChip(context, phase, colors),
             ],
           ),
         ),
@@ -278,20 +277,30 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
     ZetaColors colors,
   ) {
     final stepNumber = phase.index + 1;
+    final isCurrent = phase == currentPhase;
     final isCompleted = phase.index < currentPhase.index;
     final isLocked = lockedPhases.contains(phase);
 
     final Color chipColor;
+    final Color bgColor;
     final VoidCallback? onTap;
 
-    if (isLocked) {
+    if (isCurrent) {
+      // Current step: filled primary chip, no tap (already here).
+      chipColor = Colors.white;
+      bgColor = colors.mainPrimary;
+      onTap = null;
+    } else if (isLocked) {
       chipColor = colors.mainDefault;
+      bgColor = Colors.transparent;
       onTap = null;
     } else if (isCompleted) {
       chipColor = colors.mainPrimary;
+      bgColor = Colors.transparent;
       onTap = onPhaseSelected != null ? () => onPhaseSelected!(phase) : null;
     } else {
       chipColor = colors.mainSubtle;
+      bgColor = Colors.transparent;
       onTap = onPhaseSelected != null ? () => onPhaseSelected!(phase) : null;
     }
 
@@ -301,7 +310,8 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
         width: 28,
         height: 28,
         child: Material(
-          color: Colors.transparent,
+          color: bgColor,
+          shape: const CircleBorder(),
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(14),
@@ -309,9 +319,9 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
               child: Text(
                 '$stepNumber',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: chipColor,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: chipColor,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
