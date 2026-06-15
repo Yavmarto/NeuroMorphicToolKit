@@ -172,7 +172,7 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
         ),
         onWebViewCreated: (controller) {
           _controller = controller;
-          controller.loadFlutterAsset('assets/custom_node_editor.html');
+          controller.loadFile(assetFilePath: 'assets/custom_node_editor.html');
         },
         onLoadStop: (controller, url) async {
           await _injectCode(_startingSource);
