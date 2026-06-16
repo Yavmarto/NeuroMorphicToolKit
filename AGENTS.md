@@ -80,8 +80,10 @@ If `semble` is not on `$PATH`, use `uvx --from "semble[mcp]" semble` in its plac
 5. Use grep only when you need exhaustive literal matches or quick confirmation of an exact string.
 6. **Apply autofixers and run tests** for the language you are working in (e.g., `ruff check --fix .` and `ruff format .` for Python, `dart fix --apply` and `dart format .` for Dart) to ensure the codebase remains green before finishing a task.
 7. **Update Open Brain** with any new durable knowledge or architectural changes upon task completion.
-8. **End of Task Reporting**: When you finish a task, always report back to the user with the following:
-   - State whether the front end or back end has to be restarted.
-   - Describe exactly where the user can notice the changes.
-   - Provide a summary of the issue and solution in no more than 3 sentences.
-   - **Important Constraint**: The length of the "Summary of Issue and Solution" and the "Where to notice the changes" sections combined must be between half and 2/3 of the entire report. Keep these two sections highly concise.
+<end_of_task_reporting>
+8. **End of Task Reporting**: When you finish a task, always report back to the user with the following exact format. Every answer must include:
+   - A short description of what the problem is (exactly 2 sentences).
+   - How it was solved (exactly 2 sentences).
+   - Where to notice the difference and restart info (exactly 2 sentences).
+   All in plain English.
+</end_of_task_reporting>
