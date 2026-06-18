@@ -1,9 +1,22 @@
 services:
   suite_api:
     volumes:
-      - ./suite_api:/repo/suite_api
+      - .:/repo
     environment:
       - DEBUG=1
+    command: ["uvicorn", "suite_api.main:app", "--host", "0.0.0.0", "--port", "9000", "--reload"]
+
+  neurosense-hw-worker:
+    command: ["uvicorn", "workers.neurosense_hw.main:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+
+  neurobench-runner-worker:
+    command: ["uvicorn", "workers.neurobench_runner.main:app", "--host", "0.0.0.0", "--port", "8003", "--reload"]
+
+  neurochip-hw-worker:
+    command: ["uvicorn", "workers.neurochip_hw.main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
+
+  neurocnl-physics-worker:
+    command: ["uvicorn", "workers.neurocnl_physics.main:app", "--host", "0.0.0.0", "--port", "8006", "--reload"]
 
   launcher-control:
     volumes:

@@ -137,7 +137,7 @@ docker-ex-deploy:
 		--exclude '.impeccable' --exclude '.tmp_manual_ui' \
 		--exclude '.swarm/' --exclude '.opencode/' --exclude '.cursor/' \
 		--exclude 'docs/' --exclude 'issues/' --exclude 'issues-archive/' \
-		--exclude 'ai_safe/' --exclude 'Neuro-Dream-Hand/' \
+		--exclude 'ai_safe/' --exclude 'Neuro-Dream-Hand/' --exclude 'paper/' \
 		--exclude 'neurocnl/frontend/' --exclude 'Neurohub/frontend/' \
 		--exclude 'Neurochip/frontend/' --exclude 'Neurobench/frontend/' \
 		--exclude 'Neurosim/frontend/' --exclude 'nmtk_ui_core/' \
@@ -163,6 +163,55 @@ docker-ex-all: secrets-init docker-ex-deploy
 docker-ex: docker-ex-all
 
 docker-ex-m: docker-ex
+
+.PHONY: deploy-prod
+deploy-prod: secrets-init
+	@if [ -z "$(REMOTE_HOST)" ]; then \
+		echo "Error: REMOTE_HOST is not set. Example: make deploy-prod REMOTE_HOST=user@192.168.1.50"; \
+		exit 1; \
+	fi
+	@echo "==> Syncing compose files to $(REMOTE_HOST):$(DEPLOY_DIR)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
+	rsync -a -v -e "ssh $(SSH_OPTS)" docker-compose.yml docker-compose.prod.yml $(REMOTE_HOST):$(DEPLOY_DIR)/
+	@echo "==> Evicting any native process on port $(LAUNCHER_CONTROL_PORT) on $(REMOTE_HOST)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(LAUNCHER_CONTROL_PORT)/tcp 2>/dev/null || true"
+	@echo "==> Pulling and starting full backend stack on $(REMOTE_HOST)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.prod.yml pull && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait --remove-orphans"
+	@echo "==> Production backend ready."
+
+.PHONY: dev-sync
+dev-sync:
+	@if [ -z "$(REMOTE_HOST)" ]; then \
+		echo "Error: REMOTE_HOST is not set. Example: make dev-sync REMOTE_HOST=user@192.168.1.50"; \
+		exit 1; \
+	fi
+	@echo "==> Syncing backend source to $(REMOTE_HOST):$(DEPLOY_DIR) (rsync, incremental)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
+	rsync -a --delete -v -e "ssh $(SSH_OPTS)" \
+		$(if $(DOCKER_EX_RSYNC_VERBOSE),-v,) \
+		--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
+		--exclude '__pycache__' --exclude 'node_modules' \
+		--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
+		--exclude '.cache' --exclude '.mypy_cache' --exclude '.pytest_cache' \
+		--exclude '.ruff_cache' --exclude 'logs/' --exclude 'NMTK_SIDE/' \
+		--exclude '.hypothesis' --exclude '.kiro' \
+		--exclude '.understand-anything' --exclude '.sisyphus' \
+		--exclude '.impeccable' --exclude '.tmp_manual_ui' \
+		--exclude '.swarm/' --exclude '.opencode/' --exclude '.cursor/' \
+		--exclude 'docs/' --exclude 'issues/' --exclude 'issues-archive/' \
+		--exclude 'ai_safe/' --exclude 'Neuro-Dream-Hand/' --exclude 'paper/' \
+		--exclude 'neurocnl/frontend/' --exclude 'Neurohub/frontend/' \
+		--exclude 'Neurochip/frontend/' --exclude 'Neurobench/frontend/' \
+		--exclude 'Neurosim/frontend/' --exclude 'nmtk_ui_core/' \
+		--exclude 'nmtk/neuro_toolkit/lib/' --exclude 'nmtk/neuro_toolkit/build/' \
+		--exclude 'nmtk/neuro_toolkit/.dart_tool/' --exclude 'nmtk/neuro_toolkit/android/' \
+		--exclude 'nmtk/neuro_toolkit/ios/' --exclude 'nmtk/neuro_toolkit/macos/' \
+		--exclude 'nmtk/neuro_toolkit/linux/' --exclude 'nmtk/neuro_toolkit/windows/' \
+		--exclude 'nmtk/neuro_toolkit/web/' --exclude 'nmtk/packages/' \
+		. $(REMOTE_HOST):$(DEPLOY_DIR)/
+	@echo "==> Restarting container processes if necessary (live-reload handles python changes automatically)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d"
+	@echo "==> Dev backend synced."
 
 docker-ex-a: secrets-init docker-ex-deploy
 	@$(MAKE) check-devices

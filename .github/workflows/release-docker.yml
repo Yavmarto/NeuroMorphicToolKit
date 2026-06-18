@@ -14,7 +14,33 @@ jobs:
     runs-on: self-hosted
     strategy:
       matrix:
-        module: [neurocnl, neurochip, neurobench, neurosense, neurohub]
+        include:
+          - image: neurocnl
+            file: neurocnl/backend/Dockerfile
+          - image: neurochip
+            file: Neurochip/Dockerfile
+          - image: neurobench
+            file: Neurobench/Dockerfile
+          - image: neurosense
+            file: Neurosense/Dockerfile
+          - image: neurohub
+            file: Neurohub/Dockerfile
+          - image: suite-api
+            file: suite_api/Dockerfile
+          - image: neurosense-hw-worker
+            file: workers/neurosense_hw/Dockerfile
+          - image: neurobench-runner-worker
+            file: workers/neurobench_runner/Dockerfile
+          - image: neurochip-hw-worker
+            file: workers/neurochip_hw/Dockerfile
+          - image: neurocnl-physics-worker
+            file: workers/neurocnl_physics/Dockerfile
+          - image: lava-backend
+            file: Dockerfile.lava
+          - image: launcher-control
+            file: Dockerfile.control
+          - image: jupyter-server
+            file: workers/jupyter_server/Dockerfile
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,7 +60,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/${{ matrix.module }}
+          images: ghcr.io/${{ github.repository }}/${{ matrix.image }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -44,9 +70,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ${{ matrix.module == 'neurocnl' && 'neurocnl/backend/Dockerfile' || format('{0}/Dockerfile', matrix.module == 'neurochip' && 'Neurochip' || matrix.module == 'neurobench' && 'Neurobench' || matrix.module == 'neurosense' && 'Neurosense' || matrix.module == 'neurohub' && 'Neurohub') }}
+          file: ${{ matrix.file }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-             ${{ matrix.module == 'neurocnl-physics' && 'INSTALL_PHYSICS=1' || '' }}
+             ${{ matrix.image == 'neurocnl-physics-worker' && 'INSTALL_PHYSICS=1' || '' }}
