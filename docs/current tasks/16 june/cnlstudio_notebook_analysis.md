@@ -10,11 +10,11 @@
 
 | Notebook | Purpose | Viability | Primary Blocker |
 |----------|---------|-----------|-----------------|
-| `01_lif/lif_snntorch.ipynb` | LIF inference from NIR | ✅ HIGH | None — Spike Generator node now available |
-| `02_cnn/snntorch_apply.ipynb` | CNN-SNN inference on NMNIST | ✅ HIGH | NMNIST must be downloaded (tonic `download=True` workaround) |
-| `03_rnn/Braille_training_snntorch.ipynb` | Full RNN training (Braille) | ✅ HIGH | None |
-| `03_rnn/snntorch_apply_subtract.ipynb` | Braille inference (subtract reset) | ✅ HIGH | None |
-| `03_rnn/nengo_apply.ipynb` | Nengo simulation via NIR | ✅ HIGH | Custom `nir_to_nengo` converter (moderate) |
+| `01_lif/lif_snntorch.ipynb` | LIF inference from NIR | 🟡 MODERATE | Missing Spike Generator, Spike Rate Logger, and Monitoring Canvas |
+| `02_cnn/snntorch_apply.ipynb` | CNN-SNN inference on NMNIST | 🟡 MODERATE | Missing Monitoring Canvas |
+| `03_rnn/Braille_training_snntorch.ipynb` | Full RNN training (Braille) | 🟡 MODERATE | Missing Monitoring Canvas |
+| `03_rnn/snntorch_apply_subtract.ipynb` | Braille inference (subtract reset) | 🟡 MODERATE | Missing Monitoring Canvas |
+| `03_rnn/nengo_apply.ipynb` | Nengo simulation via NIR | 🟡 MODERATE | Custom `nir_to_nengo` converter (moderate), missing Monitoring Canvas |
 | `03_rnn/plots.ipynb` | Cross-framework activity comparison | ⬜ VERY LOW | Not a training/inference workflow |
 
 ---
@@ -32,18 +32,22 @@ Input (1) → Affine (1×1, no bias) → LIF (tau=0.0025, r=1.0, v_threshold=0.1
 
 ### Viability Analysis
 
-**Verdict: ✅ HIGH — fully replicable in CNLStudio with no remaining blockers**
+**Verdict: 🟡 MODERATE — Some missing node implementations and UI gaps**
 
-This notebook is structurally mappable to CNLStudio. All layer types (Affine/Linear + LIF) are in the Model canvas palette and NIR import is supported. The required synthetic spike train is now generated natively via the Spike Generator node.
+This notebook is structurally mappable to CNLStudio. All layer types (Affine/Linear + LIF) are in the Model canvas palette and NIR import is supported. However, the required synthetic spike train cannot be generated currently as there is no Spike Generator node, and the results cannot be evaluated out of the box because the Spike Rate Logger node and Monitoring Canvas are not fully implemented.
 
 **Blockers:**
 
 | # | Blocker | Severity | Workaround |
 |---|---------|----------|-----------|
-| 1 | Model loaded from `lif_norse.nir` | ✅ **Fixed** | "Import NIR..." option now available in the export/file menu. |
-| 2 | Synthetic input data is a hand-crafted ISI spike train — CNLStudio has no native "Spike Train Generator" node | ✅ **Fixed** | Spike Generator node now available in the Data canvas palette (`isi_regular`/`poisson`/`constant_rate` patterns, configurable `n_neurons`, `n_timesteps`, `isi_period`, `rate_hz`, `seed`). |
+| 1 | Synthetic input data is a hand-crafted ISI spike train — CNLStudio has no native "Spike Train Generator" node | Major | Needs to be built. Currently there is no `Spike Generator` in the Data canvas palette. |
+| 2 | Missing "Spike Rate Logger" node | Major | Needs to be built. Cannot currently capture output spikes per timestep natively in the Eval Canvas. |
+| 3 | Lack of clear connection topology in UI | Minor | Some nodes have 2 output ports. Needs clarification on which node connects to which node in documentation or UI helpers. |
+| 4 | Missing Monitoring Canvas | Major | Needs to be built. There is currently no dedicated Monitoring Canvas for viewing the spike raster or membrane voltage traces. |
 
 ### UI Replication Guide
+
+*Note: This guide describes the workflow once the missing features (Spike Generator, Spike Rate Logger, Monitoring Canvas) are implemented.*
 
 **Canvas: Model**
 
@@ -57,12 +61,12 @@ This notebook is structurally mappable to CNLStudio. All layer types (Affine/Lin
 10. Add a **State Reset** node (resets LIF hidden state at start of each sample).
 11. Add a **Forward Pass** node in `eval_mode = true`.
 12. Add a **Spike Rate Logger** node to capture output spikes per timestep.
-13. Connect: **Spike Generator → State Reset → Forward Pass → Spike Rate Logger**.
+13. Connect: **Spike Generator → State Reset → Forward Pass → Spike Rate Logger**. *(Note: Connection topology needs to be clear if nodes have multiple output ports. E.g. connect `spikes` out to `spikes` in.)*
 14. Click **Run Eval**.
 
 **Canvas: Monitoring**
 
-15. Navigate to the **Monitoring Canvas**.
+15. Navigate to the **Monitoring Canvas** *(Once built)*.
 16. The **Spike Raster** panel will display the output spike times (equivalent to `axs[0].eventplot(...)` in the notebook).
 17. The **Membrane Voltage Trace** panel will display the LIF membrane potential over 100 timesteps (equivalent to `axs[1].plot(mem_arr)`).
 18. Export results to CSV via the export button if needed (replicates `lif_snntorch.csv`).
@@ -86,9 +90,9 @@ Input (2×34×34) → Conv2d(2→16, 5×5, stride=2, pad=1) → LIF
 
 ### Viability Analysis
 
-**Verdict: ✅ HIGH — fully replicable; tonic dataset loading and NIR import now supported**
+**Verdict: 🟡 MODERATE — fully buildable, but lacks monitoring visualization**
 
-All layer types are in the CNLStudio Model canvas palette and NIR import works. The `tonic` integration for NMNIST is also supported natively via the Data Loader node.
+All layer types are in the CNLStudio Model canvas palette and NIR import works. The `tonic` integration for NMNIST is also supported natively via the Data Loader node. However, results visualization is currently blocked as the Monitoring Canvas is pending.
 
 **Blockers:**
 
@@ -98,6 +102,8 @@ All layer types are in the CNLStudio Model canvas palette and NIR import works. 
 | 2 | Model loaded from `cnn_sinabs.nir` | ✅ **Fixed** | "Import NIR..." option now available in the export/file menu. |
 | 3 | `snn.Leaky` in the notebook corresponds to LIF with `r=1, v_leak=0` | Minor | Set LIF `tau` to match the Leaky `beta` parameter: `tau = -dt / ln(beta)` |
 | 4 | Accuracy computed as mean over batches of argmax-of-mean-over-time | Negligible | Use top-1 Accuracy metric with spike count summation |
+| 5 | Missing Monitoring Canvas | Major | Needs to be built. Cannot currently view spike raster activity for layer-1. |
+| 6 | Lack of clear connection topology in UI | Minor | Some nodes have multiple output ports. UI needs clarify on proper routing. |
 
 ### UI Replication Guide
 
@@ -118,7 +124,7 @@ All layer types are in the CNLStudio Model canvas palette and NIR import works. 
 
 **Canvas: Monitoring**
 
-10. Navigate to **Monitoring**.
+10. Navigate to **Monitoring** *(Once built)*.
 11. Select the first **LIF** node in the graph. The **Spike Raster** panel will show layer-1 activity over time (equivalent to `act` saved in the notebook as `snnTorch_activity.npy`, shape `[T, B, 16, 16, 16]`).
 12. Use the export button to save activity arrays to `.npy` if needed.
 
@@ -142,7 +148,7 @@ Where `N_hidden`, `alpha_r`, `beta_r`, `alpha_out`, `beta_out` are loaded from `
 
 ### Viability Analysis
 
-**Verdict: ✅ HIGH — model fully buildable and training completely supported**
+**Verdict: 🟡 MODERATE — training is supported but monitoring is missing**
 
 > ✅ **UI Fixes Shipped:** `cnl.RSynaptic`, `cnl.Synaptic`, surrogate gradient slope, and L1/L2 regularizers are now fully supported in CNLStudio. The Braille datasets and parameter files are present in the `paper/03_rnn/data` directory.
 
@@ -155,6 +161,8 @@ Where `N_hidden`, `alpha_r`, `beta_r`, `alpha_out`, `beta_out` are loaded from `
 | 3 | Surrogate gradient slope | ✅ **Fixed** | Exposed in `surrogateBackward` node. |
 | 4 | Missing hyperparameters JSON file | ✅ **Fixed** | Present in repo (`parameters_noDelay_noBias_ref_subtract.json`). |
 | 5 | Missing Braille datasets | ✅ **Fixed** | Present in repo (`ds_train.pt`, `ds_val.pt`, `ds_test.pt`). |
+| 6 | Missing Monitoring Canvas | Major | Needs to be built. Cannot monitor training loss curves or layer spike rasters. |
+| 7 | Complex connection topologies not fully clear | Minor | Large training topologies might be difficult to wire without clear UI indicators for multi-port nodes. |
 
 **Closest approximation:**
 
@@ -206,7 +214,7 @@ The notebook maps cleanly to all 5 canvases. The full training pipeline (Adam + 
 
 **Canvas: Monitoring**
 
-31. During or after training, navigate to **Monitoring**.
+31. During or after training, navigate to **Monitoring** *(Once built)*.
 32. Observe the **training loss curve** and **validation accuracy curve** per epoch.
 33. View the **Spike Raster** from the cnl.RSynaptic hidden layer to inspect spike activity patterns (equivalent to `hid_rec` tracked in the notebook).
 
@@ -222,7 +230,7 @@ Inference-only evaluation of the pre-trained Braille RNN model using the **subtr
 
 ### Viability Analysis
 
-**Verdict: ✅ HIGH — model now fully buildable; subtract-reset confirmed**
+**Verdict: 🟡 MODERATE — inference supported, but missing monitoring visualization**
 
 > ✅ **UI Fixes Shipped:** `cnl.RSynaptic` and `cnl.Synaptic` now fully support the required `reset_mechanism="subtract"` parameter. The pre-trained checkpoint and test dataset are available in the repository.
 
@@ -233,6 +241,7 @@ Inference-only evaluation of the pre-trained Braille RNN model using the **subtr
 | 1 | `RSynaptic` + `Synaptic` with subtract reset | ✅ **Fixed** | Available directly in the node property panels. |
 | 2 | Missing pre-trained `.pt` weights | ✅ **Fixed** | Present in repo (`model_noDelay_noBias_ref_subtract.pt`). |
 | 3 | Missing Braille dataset | ✅ **Fixed** | Present in repo (`ds_test.pt`). |
+| 4 | Missing Monitoring Canvas | Major | Needs to be built. Cannot display single-sample inference label probabilities visually. |
 
 This notebook maps entirely to the Eval canvas (one-shot inference run) and optionally the Monitoring canvas (label probability display). Build the model as per Notebook 3, then run Eval.
 
@@ -270,7 +279,7 @@ Runs the trained Braille model through the **Nengo** neural simulator. Loads `br
 
 ### Viability Analysis
 
-**Verdict: ✅ HIGH — Nengo deployment path unblocked; moderate caveats remain**
+**Verdict: 🟡 MODERATE — Nengo deployment path unblocked; monitoring and caveats remain**
 
 > ✅ **UI Fixes Shipped:** `cnl.RSynaptic` export serialization and Nengo simulation parameters (`nengo_dt`, `nengo_presentation_time`) are now supported. The required test dataset is available.
 
@@ -282,6 +291,7 @@ Runs the trained Braille model through the **Nengo** neural simulator. Loads `br
 | 2 | `nir_to_nengo` custom converter for `cnl.RSynaptic` | Moderate | CNLStudio's Nengo deployment contract must handle `cnl.RSynaptic` node type. |
 | 3 | Canvas preview missing Nengo simulation for RSynaptic | Moderate | Nengo converter extension is still pending for full preview capabilities. |
 | 4 | Nengo simulation result visualization | Minor | Results must be viewed externally. |
+| 5 | Missing Monitoring Canvas | Major | Needs to be built. Cannot import activity `.npy` back for visual inspection natively. |
 
 With `cnl.RSynaptic` and `cnl.Synaptic` now in both the Model palette and NIR export schema, this notebook maps as follows:
 
@@ -317,7 +327,7 @@ With `cnl.RSynaptic` and `cnl.Synaptic` now in both the Model palette and NIR ex
 **Monitoring (partial):**
 
 8. After simulation completes, hidden-layer activity (`p_lif1`) is saved as `nengo_activity_noDelay_noBias_subtract.npy`.
-9. To view activity in CNLStudio's Monitoring canvas: import the `.npy` file as a custom spike raster overlay (if CNLStudio supports `.npy` import for visualization — not confirmed). Otherwise, use Nengo's own plotting tools or the `plots.ipynb` notebook for the cross-framework activity comparison.
+9. To view activity in CNLStudio's Monitoring canvas *(Once built)*: import the `.npy` file as a custom spike raster overlay (if CNLStudio supports `.npy` import for visualization — not confirmed). Otherwise, use Nengo's own plotting tools or the `plots.ipynb` notebook for the cross-framework activity comparison.
 
 ---
 
@@ -347,8 +357,8 @@ The following elements of `plots.ipynb` do have partial analogs in CNLStudio:
 
 | Notebook element | CNLStudio analog |
 |-----------------|-----------------|
-| `a0.imshow(d.T)` — Braille input spike pattern (12 neurons × 256 timesteps) | **Monitoring canvas → Spike Raster**: shows input neuron activity as a raster. Select the Input node in the Monitoring canvas after running an eval/simulation. |
-| Per-framework activity visualization (hidden layer spike rasters) | **Monitoring canvas → Spike Raster**: select the cnl.RSynaptic hidden layer node. One framework at a time only. |
+| `a0.imshow(d.T)` — Braille input spike pattern (12 neurons × 256 timesteps) | **Monitoring canvas *(Pending)* → Spike Raster**: shows input neuron activity as a raster. Select the Input node in the Monitoring canvas after running an eval/simulation. |
+| Per-framework activity visualization (hidden layer spike rasters) | **Monitoring canvas *(Pending)* → Spike Raster**: select the cnl.RSynaptic hidden layer node. One framework at a time only. |
 | Accuracy per framework | **Eval canvas → Accuracy metric**: run eval separately for each target in Hardware Deployment and note the accuracy. No automatic aggregation across targets. |
 
 ### UI Replication Guide (Partial)
@@ -356,7 +366,7 @@ The following elements of `plots.ipynb` do have partial analogs in CNLStudio:
 **Canvas: Eval + Monitoring (for Braille input visualization)**
 
 1. In the Eval Canvas, run inference on a single Braille test sample (`batch_size=1`).
-2. Navigate to **Monitoring**. Select the **Input** node in the network graph.
+2. Navigate to **Monitoring** *(Once built)*. Select the **Input** node in the network graph.
 3. The Spike Raster panel shows the 12-neuron input pattern over 256 timesteps — equivalent to `a0.imshow(d.T)` with `xlabel="Timestep"`, `ylabel="Neuron"`.
 
 **For per-framework activity comparison (manual workflow):**
@@ -430,13 +440,12 @@ The following features are required to fully support the paper notebooks and are
 - Useful for Notebook 3: load `data/parameters_noDelay_noBias_ref_subtract.json` to set `N_hidden`, `alpha_r`, `beta_r`, `alpha_out`, `beta_out`, `lr`, `slope`, `reg_l1`, `reg_l2` in one step.
 - Files: `export_menu.dart`, `pipeline_config.dart`, `canvas_provider.dart`.
 
-**11. ✅ Spike Generator canvas node**
-- New node type `spikeGenerator` in the Data palette (snntorch_sim group). Generates synthetic spike trains entirely within CNLStudio — no external Python snippet or `.npy` file required.
-- Parameters: `n_neurons` (default 1), `n_timesteps` (default 100), `pattern` (`isi_regular`/`poisson`/`constant_rate`), `isi_period` (default 10, min 1), `rate_hz` (default 10.0, min 1e-6), `seed` (default 42).
-- Property panel shows pattern-conditional fields: `isi_period` for `isi_regular`, `rate_hz` for `poisson` and `constant_rate`.
-- Code-gen produces a self-contained spike-train generation cell. Zero-value guards (`isi_period=max(1,v)`, `rate_hz=max(1e-6,v)`) prevent `ValueError`/`ZeroDivisionError` at runtime.
-- Files: `pipeline_dag.dart`, `pipeline_node_property_panel.dart`, `notebook.py`.
-- Fixes Notebook 1: replaces the external ISI-spike-train workaround entirely.
+**11. ❌ Spike Generator canvas node (Pending)**
+- Needs to be built: New node type `spikeGenerator` in the Data palette (snntorch_sim group). Will generate synthetic spike trains entirely within CNLStudio — no external Python snippet or `.npy` file required.
+- Parameters needed: `n_neurons` (default 1), `n_timesteps` (default 100), `pattern` (`isi_regular`/`poisson`/`constant_rate`), `isi_period` (default 10, min 1), `rate_hz` (default 10.0, min 1e-6), `seed` (default 42).
+- Property panel should show pattern-conditional fields: `isi_period` for `isi_regular`, `rate_hz` for `poisson` and `constant_rate`.
+- Code-gen needs to produce a self-contained spike-train generation cell. Zero-value guards (`isi_period=max(1,v)`, `rate_hz=max(1e-6,v)`) will prevent `ValueError`/`ZeroDivisionError` at runtime.
+- Will fix Notebook 1: replaces the external ISI-spike-train workaround entirely.
 
 ---
 
