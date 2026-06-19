@@ -116,7 +116,7 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
     final VoidCallback? onTap;
 
     if (isCurrent) {
-      // P1-7 fix: use colorScheme.onPrimary instead of hardcoded Colors.white
+      // P1-7 fix: Zeta surfacePrimary token for text on a primary-coloured chip
       chipColor = Zeta.of(context).colors.surfacePrimary;
       bgColor = colors.mainPrimary;
       onTap = null;
