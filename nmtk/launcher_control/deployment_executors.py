@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -169,9 +170,12 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         emit("completed", f"Docker backend deployed to {target.host}", 100)
 
     def _init_remote_secrets(self, target: DeploymentTarget, deploy_dir: str) -> None:
+        """Ensure GRAFANA_ADMIN_PASSWORD is set in the remote .env file."""
+        quoted = shlex.quote(deploy_dir)
         self._ssh_run(
             target,
-            f"touch {deploy_dir}/.env && grep -q GRAFANA_ADMIN_PASSWORD {deploy_dir}/.env || echo \"GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 32)\" >> {deploy_dir}/.env",
+            f"touch {quoted}/.env && grep -q GRAFANA_ADMIN_PASSWORD {quoted}/.env"
+            f" || echo \"GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 32)\" >> {quoted}/.env",
         )
 
     def _rsync_to_remote(self, target: DeploymentTarget, deploy_dir: str) -> None:

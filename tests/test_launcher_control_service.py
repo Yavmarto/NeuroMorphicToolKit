@@ -4736,6 +4736,39 @@ class LauncherControlServiceTest(unittest.TestCase):
             "Partial venv directory must be removed after a failed pip install",
         )
 
+    def test_init_remote_secrets_quotes_deploy_dir(self) -> None:
+        """deploy_dir with shell metacharacters must not be passed raw to the SSH command."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from pathlib import Path
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="remote-inject",
+            display_name="Remote Inject",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.1",
+            auth_mode="none",
+            install_root="/opt/nmtk; echo INJECTED",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+
+        captured_cmds: list[str] = []
+
+        def fake_ssh_run(tgt: object, remote_cmd: str, timeout: int = 600) -> None:
+            captured_cmds.append(remote_cmd)
+
+        with mock.patch.object(executor, "_ssh_run", side_effect=fake_ssh_run):
+            executor._init_remote_secrets(target, "/opt/nmtk; echo INJECTED")
+
+        assert captured_cmds, "expected _ssh_run to be called"
+        cmd = captured_cmds[0]
+        # shlex.quote wraps the path in single quotes, neutralising the injection
+        assert "echo INJECTED" not in cmd.split("'")[0], (
+            f"shell injection not neutralised; raw cmd: {cmd!r}"
+        )
+
 
 class TestConfigPaths(unittest.TestCase):
     def tearDown(self):
