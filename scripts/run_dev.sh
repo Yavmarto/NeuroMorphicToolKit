@@ -394,13 +394,16 @@ elif [[ -n "$REMOTE_HOST_IP" ]]; then
   wait_for_control_api "$CONTROL_API_URL"
 
 else
-  # Pure local dev — start the control service on this machine as before.
+  # Pure local dev — start Jupyter before control API so suite_api inherits JUPYTER_* env.
   reserve_suite_api_port
+  # Start Jupyter server alongside the backend so the Notebook step works.
+  start_jupyter_server
+  # Jupyter and neurocnl backend must share the same notebook directory.
+  export JUPYTER_WORKER_URL="${JUPYTER_WORKER_URL:-http://127.0.0.1:${JUPYTER_PORT:-8008}}"
+  export JUPYTER_NOTEBOOK_DIR="${JUPYTER_NOTEBOOK_DIR:-$HOME/nmtk_notebooks}"
   start_control_api "$CONTROL_API_BIND_HOST" "true" ""
   CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
   wait_for_suite_api "$CONTROL_API_URL"
-  # Start Jupyter server alongside the backend so the Notebook step works.
-  start_jupyter_server
 fi
 
 echo "------------------------------------------------------------"
