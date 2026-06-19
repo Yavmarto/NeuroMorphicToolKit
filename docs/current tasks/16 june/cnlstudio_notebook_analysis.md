@@ -61,7 +61,11 @@ This notebook is structurally mappable to CNLStudio. All layer types (Affine/Lin
 10. Add a **State Reset** node (resets LIF hidden state at start of each sample).
 11. Add a **Forward Pass** node in `eval_mode = true`.
 12. Add a **Spike Rate Logger** node to capture output spikes per timestep.
-13. Connect: **Spike Generator → State Reset → Forward Pass → Spike Rate Logger**. *(Note: Connection topology needs to be clear if nodes have multiple output ports. E.g. connect `spikes` out to `spikes` in.)*
+13. Connect the node ports as follows:
+    - **Spike Generator** (`data`) → **Forward Pass** (`input`)
+    - **State Reset** (`model` out) → **Forward Pass** (`model` in)
+    - **Forward Pass** (`spikes`) → **Spike Rate Logger** (`spikes`)
+    *(Note: Any remaining output ports, such as `membrane` and `model` on the Forward Pass node, should be left unconnected.)*
 14. Click **Run Eval**.
 
 **Canvas: Monitoring**
@@ -119,7 +123,12 @@ All layer types are in the CNLStudio Model canvas palette and NIR import works. 
 5. Add a **State Reset** node.
 6. Add a **Forward Pass** node: `eval_mode=true`.
 7. Add an **Accuracy** node: `top_k=1`. The canvas will compute accuracy via spike count argmax across timesteps.
-8. Connect: **Data Loader → State Reset → Forward Pass → Accuracy**.
+8. Connect the node ports as follows:
+   - **Data Loader** (`data`) → **Forward Pass** (`input`)
+   - **Data Loader** (`labels`) → **Accuracy** (`labels`)
+   - **State Reset** (`model` out) → **Forward Pass** (`model` in)
+   - **Forward Pass** (`spikes`) → **Accuracy** (`spikes`)
+   *(Note: Any remaining output ports, such as `membrane` and `model` on the Forward Pass node or `metrics` on the Accuracy node, should be left unconnected.)*
 9. Click **Run Eval**. Expected result: ~97.85%.
 
 **Canvas: Monitoring**
@@ -192,7 +201,15 @@ The notebook maps cleanly to all 5 canvases. The full training pipeline (Adam + 
 15. Add **l2SpikeReg** node: `weight=reg_l2`, applied to cnl.RSynaptic layer.
 16. Add a **Backward Pass (Surrogate Gradient)** node: algorithm = `fast_sigmoid`, `slope=slope` value from JSON.
 17. Add an **Adam Optimizer** node: `lr=lr` from JSON, `betas=(0.9, 0.999)`.
-18. Connect: **Data Loader → State Reset → Forward Pass → CE Loss → Backward Pass → Optimizer**.
+18. Connect the node ports as follows:
+    - **Data Loader** (`data`) → **Forward Pass** (`input`)
+    - **Data Loader** (`labels`) → **CE Loss** (`labels`)
+    - **State Reset** (`model` out) → **Forward Pass** (`model` in)
+    - **Forward Pass** (`spikes`) → **CE Loss** (`spikes`)
+    - **Forward Pass** (`model` out) → **Backward Pass** (`model` in)
+    - **CE Loss** (`loss`) → **Backward Pass** (`loss`)
+    - **Backward Pass** (`model` out) → **Optimizer** (`model` in)
+    *(Note: Any remaining output ports, such as `membrane` on the Forward Pass node, should be left unconnected.)*
 19. Set **Epochs = 500** in the Training canvas header.
 20. Enable **Best Checkpoint Save** (saves weights at epoch with highest validation accuracy).
 21. Add a second **Data Loader** for the validation set: `format=pt`, `dataset_path=paper/03_rnn/data/ds_val.pt`, `batch_size=64`, `shuffle=false`. Connect to a **Validation Loop** node.
@@ -203,7 +220,13 @@ The notebook maps cleanly to all 5 canvases. The full training pipeline (Adam + 
 23. After training completes, navigate to the **Eval Canvas**.
 24. Add a **Data Loader** for the test set: `format=pt`, `dataset_path=paper/03_rnn/data/ds_test.pt`, `batch_size=64`, `shuffle=false`.
 25. Load the best checkpoint weights via **Load Checkpoint**.
-26. Add **State Reset → Forward Pass (eval) → Accuracy** nodes. Connect and run.
+26. Add **State Reset**, **Forward Pass** (eval_mode=true), and **Accuracy** nodes. Connect the ports:
+    - **Data Loader** (`data`) → **Forward Pass** (`input`)
+    - **Data Loader** (`labels`) → **Accuracy** (`labels`)
+    - **State Reset** (`model` out) → **Forward Pass** (`model` in)
+    - **Forward Pass** (`spikes`) → **Accuracy** (`spikes`)
+    *(Note: Any remaining output ports, such as `membrane` and `model` on the Forward Pass node or `metrics` on the Accuracy node, should be left unconnected.)*
+    Run the evaluation.
 27. Expected result: ~92% test accuracy (subtract reset, no bias, no delay configuration).
 
 **Canvas: Hardware Deployment**
@@ -260,13 +283,22 @@ This notebook maps entirely to the Eval canvas (one-shot inference run) and opti
 
 4. Navigate to the **Eval Canvas**.
 5. Add a **Data Loader**: `format=pt`, `dataset_path=paper/03_rnn/data/ds_test.pt`, `batch_size=64`, `shuffle=false`.
-6. Add **State Reset → Forward Pass (eval) → Accuracy** nodes.
+6. Add **State Reset**, **Forward Pass** (eval_mode=true), and **Accuracy** nodes. Connect the ports:
+   - **Data Loader** (`data`) → **Forward Pass** (`input`)
+   - **Data Loader** (`labels`) → **Accuracy** (`labels`)
+   - **State Reset** (`model` out) → **Forward Pass** (`model` in)
+   - **Forward Pass** (`spikes`) → **Accuracy** (`spikes`)
+   *(Note: Any remaining output ports, such as `membrane` and `model` on the Forward Pass node or `metrics` on the Accuracy node, should be left unconnected.)*
 7. Click **Run Eval**. Expected: ~92.14% test accuracy.
 
 **Single-sample inference (label probabilities):**
 
 8. In the Eval Canvas, add a **Data Loader**: `format=pt`, `dataset_path=paper/03_rnn/data/ds_test.pt`, `batch_size=1`, `shuffle=true`.
-9. Add a **Forward Pass** node followed by a **Softmax** output node.
+9. Add a **State Reset**, **Forward Pass** node, and a **Softmax** output node. Connect the ports:
+   - **Data Loader** (`data`) → **Forward Pass** (`input`)
+   - **State Reset** (`model` out) → **Forward Pass** (`model` in)
+   - **Forward Pass** (`spikes`) → **Softmax** (`input`)
+   *(Note: Any remaining output ports, such as `membrane` and `model` on the Forward Pass node or `output` on the Softmax node, should be left unconnected.)*
 10. Run 10 times and observe the label probability output in the Monitoring canvas — this replicates the notebook's `lbl_probs` printout, showing confidence per letter (Space, A, E, I, O, U, Y).
 
 ---
@@ -441,7 +473,7 @@ The following features are required to fully support the paper notebooks and are
 - Files: `export_menu.dart`, `pipeline_config.dart`, `canvas_provider.dart`.
 
 **11. ✅ Native Dynamics Monitoring & NPY Export**
-- Implemented the "Dynamics" tab in the Results step, removing the need for a standalone monitoring canvas. 
+- Implemented the "Dynamics" tab in the Results step, removing the need for a standalone monitoring canvas.
 - Integrated NPY binary data fetching and parsing for plotting `SnnDynamicsView` and providing `.npy` zip exports.
 - Added a `LabelProbabilitiesChart` to support visual inspection of model prediction confidence (Notebook 4).
 
