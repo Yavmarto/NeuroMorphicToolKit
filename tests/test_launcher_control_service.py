@@ -4769,6 +4769,57 @@ class LauncherControlServiceTest(unittest.TestCase):
             f"shell injection not neutralised; raw cmd: {cmd!r}"
         )
 
+    def test_rsync_password_not_in_cmdline(self) -> None:
+        """SSH password must travel via SSHPASS env var, not via sshpass -p <plaintext>."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from pathlib import Path
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="rsync-pwd",
+            display_name="Rsync Pwd",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.2",
+            auth_mode="ssh_password",
+            secret_refs={"sshPassword": "ref:my-secret"},
+        )
+        executor = DockerDeploymentExecutor(
+            repo_root=Path("/tmp"),
+            secret_resolver=lambda _ref: "supersecret",
+        )
+
+        captured: list[dict] = []
+
+        def fake_run(cmd: list[str], **kwargs: object) -> mock.Mock:
+            captured.append({"cmd": cmd, "env": kwargs.get("env", {})})
+            return mock.Mock(returncode=0, stdout="", stderr="")
+
+        with mock.patch("nmtk.launcher_control.deployment_executors.subprocess.run", side_effect=fake_run):
+            with mock.patch("nmtk.launcher_control.deployment_executors.shutil.which", return_value="/usr/bin/rsync"):
+                with mock.patch.object(executor, "_ssh_key_context") as mock_ctx:
+                    mock_ctx.return_value.__enter__ = mock.Mock(return_value=None)
+                    mock_ctx.return_value.__exit__ = mock.Mock(return_value=False)
+                    executor._rsync_to_remote(target, "/opt/nmtk")
+
+        rsync_calls = [c for c in captured if any("--delete" in str(a) for a in c["cmd"])]
+        assert rsync_calls, "expected at least one rsync subprocess call"
+
+        rsync_cmd = rsync_calls[0]
+        cmd_str = " ".join(rsync_cmd["cmd"])
+        env = rsync_cmd["env"]
+
+        assert "supersecret" not in cmd_str, (
+            f"plaintext password appeared in rsync command line: {cmd_str!r}"
+        )
+        assert env.get("SSHPASS") == "supersecret", (
+            f"expected SSHPASS env var to carry the password; env keys: {list(env.keys())}"
+        )
+        assert "sshpass -e" in cmd_str, (
+            f"expected 'sshpass -e' in rsync -e arg; got: {cmd_str!r}"
+        )
+
 
 class TestConfigPaths(unittest.TestCase):
     def tearDown(self):

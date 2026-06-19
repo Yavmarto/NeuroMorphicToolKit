@@ -194,9 +194,12 @@ class DockerDeploymentExecutor(DeploymentExecutor):
                 err = result.stderr.strip() or "mkdir failed on remote"
                 raise RuntimeError(f"Could not create deploy directory on remote: {err}")
 
+            ssh_opts, extra_env = self._ssh_opts_str(target, key_path)
+            rsync_env = dict(os.environ)
+            rsync_env.update(extra_env)
             rsync_cmd = [
                 "rsync", "-av", "--delete",
-                "-e", self._ssh_opts_str(target, key_path),
+                "-e", ssh_opts,
                 "--exclude", ".git",
                 "--exclude", ".env",
                 "--exclude", "venv",
@@ -247,6 +250,7 @@ class DockerDeploymentExecutor(DeploymentExecutor):
                 text=True,
                 check=False,
                 timeout=300,
+                env=rsync_env,
             )
             if result.returncode != 0:
                 err = result.stderr.strip() or result.stdout.strip() or "rsync failed"
@@ -291,21 +295,30 @@ class DockerDeploymentExecutor(DeploymentExecutor):
             return [sshpass, "-p", password] + ssh_cmd
         return ssh_cmd
 
-    def _ssh_opts_str(self, target: DeploymentTarget, key_path: str | None) -> str:
-        """Build the ssh options string for use in rsync -e."""
+    def _ssh_opts_str(
+        self, target: DeploymentTarget, key_path: str | None
+    ) -> tuple[str, dict[str, str]]:
+        """Return (ssh-opts-string, extra-env) for use with rsync -e.
+
+        The extra-env dict must be merged into the subprocess environment so
+        that credentials travel via env vars (SSHPASS) rather than the process
+        argument list, which is visible in ps(1) and /proc/<pid>/cmdline.
+        """
         base = (
             f"ssh -p {target.ssh_port or 22}"
             " -o StrictHostKeyChecking=no"  # Bootstrap: host not in known_hosts on first deploy; TODO: adopt TOFU strategy
             " -o BatchMode=yes"
         )
         if key_path:
-            return f"{base} -i {key_path}"
+            return f"{base} -i {key_path}", {}
         if target.auth_mode == "ssh_password":
             password_ref = target.secret_refs.get("sshPassword", "")
             password = self._resolve_secret(password_ref) if password_ref else ""
             if password:
-                return f"sshpass -p {password} {base}"
-        return base
+                # Use SSHPASS env var + `sshpass -e` to keep the password out of
+                # the process argument list (avoids ps/proc exposure).
+                return f"sshpass -e {base}", {"SSHPASS": password}
+        return base, {}
 
     @contextlib.contextmanager
     def _ssh_key_context(self, target: DeploymentTarget):  # type: ignore[return]  # mypy cannot infer Generator return type for contextmanager with conditional early return
