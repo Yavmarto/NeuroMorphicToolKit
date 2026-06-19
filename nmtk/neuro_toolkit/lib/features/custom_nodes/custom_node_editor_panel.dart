@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
-import 'custom_node_repository.dart';
+import 'package:neuro_toolkit/features/custom_nodes/custom_node_repository.dart';
 
 const _kStarterTemplate = r'''
 from nmtk_sdk import CustomNode, param, port
@@ -88,7 +90,8 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
   Future<void> _onSave() async {
     final source = await _fetchCode();
     if (source == null || source.isEmpty) {
-      _showSnackBar('Editor returned no code — nothing to save.', isError: true);
+      _showSnackBar('Editor returned no code — nothing to save.',
+          isError: true);
       return;
     }
 
@@ -122,10 +125,14 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
+    final colorToken = isError
+        // P0-1 fix: NmtkShellTokens.errorColor replaces Colors.red.shade700
+        ? NmtkShellTokens.of(context).errorColor
+        : null;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red.shade700 : null,
+        backgroundColor: colorToken,
       ),
     );
   }
@@ -142,9 +149,19 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
+      // P0-2 fix: style the AppBar using colorScheme tokens (no raw Material defaults)
       appBar: AppBar(
-        title: const Text('Custom Node Editor'),
+        backgroundColor: scheme.surfaceContainer,
+        surfaceTintColor: Colors.transparent,
+        title: Text(
+          'Custom Node Editor',
+          style: Zeta.of(context).textStyles.titleMedium.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
         actions: [
           if (_saving)
             const Padding(
@@ -158,10 +175,15 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
               ),
             )
           else
-            TextButton.icon(
-              onPressed: _onSave,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Save'),
+            // P1-3 fix: ZetaButton replaces the banned TextButton.icon
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ZetaButton(
+                label: 'Save',
+                leadingIcon: ZetaIcons.save,
+                onPressed: _onSave,
+                type: ZetaButtonType.text,
+              ),
             ),
         ],
       ),
