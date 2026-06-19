@@ -536,6 +536,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 
+  /// Records the current module statuses as "previous" for the next comparison.
+  /// Called from postFrameCallback so it never runs inside build().
+  void _snapshotModuleStatuses(List<Module> modules) {
+    for (final module in modules) {
+      _prevModuleStatuses[module.id] = module.status;
+    }
+  }
+
   /// Builds the child widget for a single module slot in the [IndexedStack].
   ///
   /// Extracted so it can be shared between the desktop [Scaffold] path and the
@@ -557,7 +565,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     // removes it if a newer failure has not already replaced it.
     final prevStatus = _prevModuleStatuses[module.id];
     final currentStatus = module.status;
-    _prevModuleStatuses[module.id] = currentStatus;
+    // (no write here — snapshotted post-frame by _snapshotModuleStatuses)
 
     final isNowReady = currentStatus == ModuleStatus.running ||
         currentStatus == ModuleStatus.degraded;
@@ -591,7 +599,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final isReady = module.status == ModuleStatus.running ||
         module.status == ModuleStatus.degraded;
 
-    return Container(
+    return KeyedSubtree(
       key: ValueKey(module.id),
       child: launchBlocked
           ? NmtkEmptyState(
@@ -649,6 +657,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final eligibleModules = moduleState == null
         ? const <Module>[]
         : moduleState.modules.where(_shouldOpenModule).toList(growable: false);
+
+    // Snapshot statuses after the frame, not inside build()
+    // P1-1 fix: state mutation moved out of build() body
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _snapshotModuleStatuses(eligibleModules);
+    });
 
     // Unconditional ref.listen — must be called on every build, before any returns.
     ref.listen(workspaceNotifierProvider, (prev, next) {
