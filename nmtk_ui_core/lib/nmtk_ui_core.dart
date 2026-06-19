@@ -18,6 +18,7 @@ export 'widgets/info_chip.dart';
 export 'widgets/key_value_row.dart';
 export 'widgets/pipeline_stepper.dart';
 export 'widgets/snn_workflow_stepper.dart';
+export 'widgets/snn_mobile_workflow_stepper.dart';
 export 'widgets/pynq_deploy_status_card.dart';
 export 'widgets/akida_support_state_card.dart';
 export 'widgets/quantization_table.dart';
