@@ -4614,6 +4614,39 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(len(apply_calls), 1)
         self.assertEqual(len(rollout_calls), 1)
 
+    def test_kubectl_env_ctx_cleans_up_kubeconfig_tempfile(self) -> None:
+        """The kubeconfig temp file must be deleted after the context manager exits."""
+        import os
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import KubernetesDeploymentExecutor
+        from pathlib import Path
+
+        target = DeploymentTarget(
+            id="k8s-cleanup",
+            display_name="K8s Cleanup",
+            target_type="kubernetes_cluster",
+            mode="kubernetes",
+            auth_mode="kubeconfig",
+            secret_refs={"kubeconfig": "ref:my-kubeconfig"},
+        )
+        executor = KubernetesDeploymentExecutor(
+            repo_root=Path("/tmp"),
+            secret_resolver=lambda _ref: "apiVersion: v1\nclusters: []\n",
+        )
+
+        leaked_path: list[str] = []
+
+        with executor._kubectl_env_ctx(target) as env:
+            path = env.get("KUBECONFIG", "")
+            assert path, "expected KUBECONFIG to be set inside the context"
+            assert os.path.exists(path), "expected temp file to exist inside the context"
+            leaked_path.append(path)
+
+        assert leaked_path, "context manager did not yield"
+        assert not os.path.exists(leaked_path[0]), (
+            f"kubeconfig temp file was NOT deleted after context exit: {leaked_path[0]}"
+        )
+
     def test_k8s_preflight_blocks_without_kubectl(self) -> None:
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
         from nmtk.launcher_control.deployment_preflight import run_preflight

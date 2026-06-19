@@ -400,7 +400,13 @@ class KubernetesDeploymentExecutor(DeploymentExecutor):
 
         emit("completed", "Kubernetes backend target is configured", 100)
 
-    def _kubectl_env(self, target: DeploymentTarget) -> dict[str, str]:
+    @contextlib.contextmanager
+    def _kubectl_env_ctx(self, target: DeploymentTarget):  # type: ignore[return]  # mypy cannot infer Generator return type for contextmanager with conditional early return
+        """Yield an env dict with KUBECONFIG set, cleaning up the temp file on exit.
+
+        Mirrors the _ssh_key_context pattern: write secret to mkstemp,
+        chmod 0o600, yield, unlink in finally.
+        """
         env = dict(os.environ)
         if target.auth_mode == "kubeconfig":
             kubeconfig_ref = target.secret_refs.get("kubeconfig", "")
@@ -410,10 +416,16 @@ class KubernetesDeploymentExecutor(DeploymentExecutor):
                 try:
                     with os.fdopen(fd, "w") as fh:
                         fh.write(kubeconfig)
+                    os.chmod(path, 0o600)
                     env["KUBECONFIG"] = path
-                except OSError:
-                    os.close(fd)
-        return env
+                    yield env
+                finally:
+                    try:
+                        os.unlink(path)
+                    except OSError:
+                        pass
+                return
+        yield env
 
     def _kubectl_base(self, kubectl: str, target: DeploymentTarget) -> list[str]:
         cmd = [kubectl]
@@ -434,37 +446,37 @@ class KubernetesDeploymentExecutor(DeploymentExecutor):
         manifest_dir: Path,
         target: DeploymentTarget,
     ) -> None:
-        env = self._kubectl_env(target)
-        cmd = self._kubectl_base(kubectl, target) + ["apply", "-f", str(manifest_dir)]
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=60,
-            env=env,
-        )
+        with self._kubectl_env_ctx(target) as env:
+            cmd = self._kubectl_base(kubectl, target) + ["apply", "-f", str(manifest_dir)]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=60,
+                env=env,
+            )
         if result.returncode != 0:
             err = result.stderr.strip() or result.stdout.strip() or "kubectl apply failed"
             raise RuntimeError(f"kubectl apply failed: {err}")
 
     def _wait_rollout(self, kubectl: str, target: DeploymentTarget) -> None:
-        env = self._kubectl_env(target)
-        cmd = self._kubectl_base(kubectl, target) + [
-            "rollout",
-            "status",
-            "deployment/nmtk-suite-api",
-            "--timeout",
-            "300s",
-        ]
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=310,
-            env=env,
-        )
+        with self._kubectl_env_ctx(target) as env:
+            cmd = self._kubectl_base(kubectl, target) + [
+                "rollout",
+                "status",
+                "deployment/nmtk-suite-api",
+                "--timeout",
+                "300s",
+            ]
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=310,
+                env=env,
+            )
         if result.returncode != 0:
             err = result.stderr.strip() or result.stdout.strip() or "rollout timed out"
             raise RuntimeError(f"Rollout did not become ready: {err}")
@@ -488,7 +500,6 @@ class KubernetesDeploymentExecutor(DeploymentExecutor):
     def _cluster_host(self, target: DeploymentTarget) -> str:
         if target.host:
             return target.host
-        env = self._kubectl_env(target)
         kubectl = shutil.which("kubectl")
         if kubectl is None:
             return "localhost"
@@ -499,14 +510,15 @@ class KubernetesDeploymentExecutor(DeploymentExecutor):
             "-o",
             "jsonpath={.status.loadBalancer.ingress[0].ip}",
         ]
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=15,
-            env=env,
-        )
+        with self._kubectl_env_ctx(target) as env:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=15,
+                env=env,
+            )
         ip = result.stdout.strip()
         return ip if ip else "localhost"
 
