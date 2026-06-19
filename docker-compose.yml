@@ -23,6 +23,10 @@ services:
       # Public URL returned to the Flutter WebView.  Override on remote deployments
       # with the host's reachable address, e.g. http://my-server:8008/lab
       - JUPYTER_PUBLIC_URL=${JUPYTER_PUBLIC_URL:-http://localhost:8008/lab}
+      # Shared notebook directory with jupyter-server (see volumes below)
+      - JUPYTER_NOTEBOOK_DIR=/root
+    volumes:
+      - jupyter_notebooks:/root
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/suite/health')"]
       start_period: 90s
