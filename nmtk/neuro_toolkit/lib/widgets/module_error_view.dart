@@ -48,7 +48,8 @@ class ModuleErrorView extends StatelessWidget {
         'Requested URL: ${failure.uri}',
         hostHint,
       ].join('\n\n'),
-      icon: Icons.language_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+      icon:
+          Icons.language_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       tone: NmtkTone.warning,
       action: NmtkPrimaryButton(
         onPressed: onRetry,

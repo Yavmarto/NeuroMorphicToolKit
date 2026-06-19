@@ -47,7 +47,7 @@ class ServerSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
-  late ServerSetupMode _mode = widget.initialMode;
+  late final ServerSetupMode _mode = widget.initialMode;
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialValue ?? '');
   late final FocusNode _focusNode = FocusNode();
@@ -141,9 +141,8 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
         ),
         const SizedBox(height: 16),
         NmtkPrimaryButton(
-          onPressed: _isConnecting || widget.onConnect == null
-              ? null
-              : _handleConnect,
+          onPressed:
+              _isConnecting || widget.onConnect == null ? null : _handleConnect,
           icon: ZetaIcons.wifi,
           label: widget.connectLabel,
         ),

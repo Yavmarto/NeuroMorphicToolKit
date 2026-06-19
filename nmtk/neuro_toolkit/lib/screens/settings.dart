@@ -88,7 +88,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       width: trailingWidth,
                       child: NmtkOutlinedButton(
                         onPressed: () => context.go('/setup'),
-                        icon: Icons.settings_suggest_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                        icon: Icons
+                            .settings_suggest_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                         label: 'Open',
                       ),
                     ),
@@ -215,7 +216,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             );
                           }
                         },
-                        icon: Icons.terminal, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                        icon: Icons
+                            .terminal, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                         label: 'View',
                       ),
                     ),

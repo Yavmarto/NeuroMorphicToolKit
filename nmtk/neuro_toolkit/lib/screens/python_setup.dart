@@ -115,7 +115,9 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                   NmtkSurfaceCard(
                     child: Column(
                       children: [
-                        const Icon(Icons.terminal, size: 72), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                        const Icon(Icons.terminal,
+                            size:
+                                72), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                         const SizedBox(height: 20),
                         Text(
                           'Python Required',

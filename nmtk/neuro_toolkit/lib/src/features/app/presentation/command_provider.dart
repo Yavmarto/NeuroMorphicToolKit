@@ -51,7 +51,8 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       id: 'action-toggle-sidebar',
       label: 'Toggle Sidebar',
       description: 'Expand or collapse the navigation sidebar',
-      icon: Icons.menu_open_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+      icon:
+          Icons.menu_open_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       category: 'Actions',
       onExecute: () {
         final context = router.configuration.navigatorKey.currentContext;

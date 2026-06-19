@@ -92,7 +92,8 @@ class ModuleLoadingView extends StatelessWidget {
                     child: NmtkStatusBadge(
                       label: 'Debug',
                       tone: NmtkTone.warning,
-                      icon: Icons.bug_report_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                      icon: Icons
+                          .bug_report_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                     ),
                   ),
                 ),

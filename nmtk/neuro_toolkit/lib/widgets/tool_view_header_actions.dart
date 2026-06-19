@@ -39,7 +39,10 @@ class ToolViewHeaderActions extends ConsumerWidget {
           button: true,
           child: IconButton(
             icon: Icon(
-              developerMode ? Icons.handyman_rounded : Icons.handyman_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+              developerMode
+                  ? Icons.handyman_rounded
+                  : Icons
+                      .handyman_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
               color:
                   developerMode ? Theme.of(context).colorScheme.primary : null,
             ),
