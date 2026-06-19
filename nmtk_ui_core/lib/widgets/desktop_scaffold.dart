@@ -23,7 +23,6 @@ const double _kMobileBreakpoint = 840.0;
 const double _kBrandRowHeight = 52.0;
 const double _kContentHeaderHeight = 44.0;
 const double _kNavItemHeight = 44.0;
-const double _kNavItemRadius = 8.0;
 const double _kNavItemHPad = 8.0;
 const double _kNavItemVPad = 1.0;
 
@@ -233,7 +232,6 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
       return NmtkMobileScaffold(
         navItems: widget.navItems,
         selectedIndex: widget.selectedIndex,
-        child: widget.child,
         onNavItemSelected: widget.onNavItemSelected,
         userProfile: widget.userProfile,
         sidebarBrand: widget.sidebarBrand,
@@ -245,6 +243,7 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
         pageTitle: widget.pageTitle,
         footerNavItems: widget.footerNavItems,
         onFooterNavItemSelected: widget.onFooterNavItemSelected,
+        child: widget.child,
       );
     }
     return _buildDesktopLayout(context);
@@ -301,354 +300,6 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
           ),
           Expanded(child: contentColumn),
         ],
-      ),
-    );
-  }
-
-  Widget _buildMobileLayout(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final mobileNavItems = _mobileNavigationItems;
-    final useBottomNavigation = _shouldUseBottomNavigation;
-
-    final bool showMenuButton = !useBottomNavigation;
-    final bool hasTitle =
-        widget.pageTitle != null && widget.pageTitle!.isNotEmpty;
-    final bool showSettings =
-        !useBottomNavigation && widget.onSettingsPressed != null;
-    final bool hasAppBarContent =
-        hasTitle ||
-        widget.showBackButton ||
-        showMenuButton ||
-        widget.fileActions != null ||
-        showSettings ||
-        widget.userProfile != null;
-
-    return Scaffold(
-      backgroundColor: scheme.surface,
-      appBar: hasAppBarContent
-          ? _NmtkMobileAppBar(
-              scheme: scheme,
-              title: widget.pageTitle,
-              showBackButton: widget.showBackButton,
-              onBack: widget.onBack,
-              fileActions: widget.fileActions,
-              onSettingsPressed: showSettings ? widget.onSettingsPressed : null,
-              userProfile: widget.userProfile,
-              showMenuButton: showMenuButton,
-            )
-          : null,
-      drawer: useBottomNavigation
-          ? null
-          : _NmtkMobileDrawer(
-              navItems: widget.navItems,
-              selectedIndex: widget.selectedIndex,
-              onNavItemSelected: widget.onNavItemSelected,
-              footerNavItems: widget.footerNavItems,
-              onFooterNavItemSelected: widget.onFooterNavItemSelected,
-              onSettingsPressed: widget.onSettingsPressed,
-              userProfile: widget.userProfile,
-              brand: widget.sidebarBrand,
-              scheme: scheme,
-              mode: widget.mode,
-            ),
-      body: SafeArea(
-        top: false,
-        child: ColoredBox(color: scheme.surface, child: widget.child),
-      ),
-      bottomNavigationBar: useBottomNavigation
-          ? NavigationBar(
-              selectedIndex: _selectedMobileNavigationIndex,
-              onDestinationSelected: _handleMobileDestinationSelected,
-              destinations: [
-                for (final item in mobileNavItems)
-                  NavigationDestination(
-                    icon: Icon(item.icon),
-                    selectedIcon: Icon(item.selectedIcon ?? item.icon),
-                    label: item.label,
-                  ),
-              ],
-            )
-          : null,
-    );
-  }
-
-  bool get _shouldUseBottomNavigation {
-    final destinationCount =
-        widget.navItems.length + widget.footerNavItems.length;
-    return widget.footerNavItems.length <= 1 &&
-        destinationCount >= 2 &&
-        destinationCount <= 5;
-  }
-
-  List<NmtkSidebarItem> get _mobileNavigationItems => [
-    ...widget.navItems,
-    ...widget.footerNavItems,
-  ];
-
-  int get _selectedMobileNavigationIndex {
-    final navCount = widget.navItems.length;
-    if (widget.selectedIndex >= 0 && widget.selectedIndex < navCount) {
-      return widget.selectedIndex;
-    }
-    if (widget.selectedIndex < 0 && widget.footerNavItems.isNotEmpty) {
-      return navCount;
-    }
-    return 0;
-  }
-
-  void _handleMobileDestinationSelected(int index) {
-    if (index < widget.navItems.length) {
-      widget.onNavItemSelected?.call(index);
-      return;
-    }
-
-    final footerIndex = index - widget.navItems.length;
-    if (footerIndex >= 0 && footerIndex < widget.footerNavItems.length) {
-      widget.onFooterNavItemSelected?.call(footerIndex);
-    }
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MOBILE APP BAR
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _NmtkMobileAppBar({
-    required this.scheme,
-    required this.showMenuButton,
-    required this.showBackButton,
-    this.onBack,
-    this.fileActions,
-    this.onSettingsPressed,
-    this.userProfile,
-    this.title,
-  });
-
-  final ColorScheme scheme;
-  final bool showMenuButton;
-  final bool showBackButton;
-  final VoidCallback? onBack;
-  final NmtkFileActionDelegate? fileActions;
-  final VoidCallback? onSettingsPressed;
-  final NmtkUserProfile? userProfile;
-  final String? title;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(_kContentHeaderHeight);
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: SizedBox(
-        height: _kContentHeaderHeight,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            children: [
-              if (showMenuButton)
-                Builder(
-                  builder: (ctx) => IconButton(
-                    icon: Icon(
-                      Icons
-                          .menu_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                      color: scheme.onSurface,
-                      size: 20,
-                    ),
-                    onPressed: () => Scaffold.of(ctx).openDrawer(),
-                    tooltip: 'Open navigation',
-                  ),
-                ),
-
-              // Optional back arrow
-              if (showBackButton)
-                IconButton(
-                  icon: Icon(
-                    ZetaIcons.arrow_back,
-                    color: scheme.onSurface,
-                    size: 18,
-                  ),
-                  onPressed: onBack,
-                  tooltip: 'Back',
-                ),
-
-              if (title != null && title!.isNotEmpty) ...[
-                if (showMenuButton || showBackButton) const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    title!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                      color: scheme.onSurface,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ] else
-                const Spacer(),
-
-              // Optional file action icons
-              if (fileActions != null) ...[
-                _FileActionIconButton(
-                  icon: ZetaIcons.add,
-                  tooltip: 'New File',
-                  onPressed: fileActions!.onNewFile,
-                ),
-                _FileActionIconButton(
-                  icon: ZetaIcons.folder_outline,
-                  tooltip: 'Open File',
-                  onPressed: fileActions!.onOpenFile,
-                ),
-                _FileActionIconButton(
-                  icon: ZetaIcons.save,
-                  tooltip: 'Save',
-                  onPressed: fileActions!.onSaveFile,
-                ),
-                _FileActionIconButton(
-                  icon: ZetaIcons.save,
-                  tooltip: 'Save As',
-                  onPressed: fileActions!.onSaveFileAs,
-                ),
-              ],
-
-              // Optional settings icon
-              if (onSettingsPressed != null)
-                IconButton(
-                  icon: Icon(
-                    ZetaIcons.settings,
-                    color: scheme.onSurface.withValues(alpha: 0.65),
-                    size: 18,
-                  ),
-                  onPressed: onSettingsPressed,
-                  tooltip: 'Settings',
-                ),
-
-              // Optional profile chip
-              if (userProfile != null) _RailProfileChip(profile: userProfile!),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MOBILE DRAWER
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _NmtkMobileDrawer extends StatelessWidget {
-  const _NmtkMobileDrawer({
-    required this.navItems,
-    required this.selectedIndex,
-    required this.onNavItemSelected,
-    required this.footerNavItems,
-    required this.onFooterNavItemSelected,
-    required this.scheme,
-    required this.mode,
-    this.onSettingsPressed,
-    this.userProfile,
-    this.brand,
-  });
-
-  final List<NmtkSidebarItem> navItems;
-  final int selectedIndex;
-  final ValueChanged<int>? onNavItemSelected;
-  final List<NmtkSidebarItem> footerNavItems;
-  final ValueChanged<int>? onFooterNavItemSelected;
-  final ColorScheme scheme;
-  final NmtkShellMode mode;
-  final VoidCallback? onSettingsPressed;
-  final NmtkUserProfile? userProfile;
-  final Widget? brand;
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: scheme.surfaceContainer,
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Brand row at top
-            _RailBrandRow(
-              brand: brand,
-              isExpanded: true,
-              onToggle: () => Navigator.of(context).pop(),
-              mode: mode,
-            ),
-            const Divider(height: 1),
-
-            // Primary nav items
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _kNavItemHPad,
-                  vertical: 6,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < navItems.length; i++)
-                      _SidebarNavItem(
-                        item: navItems[i],
-                        isSelected: i == selectedIndex,
-                        isExpanded: true,
-                        mode: mode,
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          onNavItemSelected?.call(i);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Footer nav items
-            if (footerNavItems.isNotEmpty) ...[
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _kNavItemHPad,
-                  vertical: 4,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var i = 0; i < footerNavItems.length; i++)
-                      _SidebarNavItem(
-                        item: footerNavItems[i],
-                        isSelected: false,
-                        isExpanded: true,
-                        mode: mode,
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          onFooterNavItemSelected?.call(i);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ],
-
-            // Settings + profile at bottom
-            const Divider(height: 1),
-            if (onSettingsPressed != null)
-              _RailIconButton(
-                icon: ZetaIcons.settings,
-                tooltip: 'Settings',
-                onPressed: onSettingsPressed!,
-              ),
-            if (userProfile != null) _RailProfileChip(profile: userProfile!),
-            const SizedBox(height: 8),
-          ],
-        ),
       ),
     );
   }
@@ -1040,7 +691,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(_kNavItemRadius),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1097,7 +748,7 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
           child: InkWell(
             onTap: widget.onTap,
             onHover: (hovered) => setState(() => _hovered = hovered),
-            borderRadius: BorderRadius.circular(_kNavItemRadius),
+            borderRadius: BorderRadius.circular(tokens.radiusSm),
             child: inner,
           ),
         ),
