@@ -3,6 +3,7 @@ import 'package:zeta_flutter/zeta_flutter.dart';
 
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/models/scaffold_models.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/shell_chrome_scope.dart';
 
 class NmtkMobileScaffold extends StatefulWidget {
@@ -84,11 +85,16 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
   void _showFileActionsSheet() {
     final acts = widget.fileActions;
     if (acts == null) return;
-    showModalBottomSheet(
+    // Read tokens before opening the sheet (context is valid here in the State).
+    final tokens = NmtkShellTokens.of(context);
+    showModalBottomSheet<void>(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
+      // P0-5 fix: radiusLg (22 px) replaces the banned raw value 24.0
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(tokens.radiusLg),
+        ),
       ),
       builder: (context) {
         return SafeArea(
@@ -193,6 +199,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                 onPressed: _showFileActionsSheet,
                 backgroundColor: scheme.primaryContainer,
                 foregroundColor: scheme.onPrimaryContainer,
+                // ZETA-MIGRATION-EXEMPT: no Zeta equivalent for document-edit icon
                 child: const Icon(Icons.edit_document),
               )
             : null,
@@ -330,11 +337,13 @@ class _NmtkMobileDrawer extends StatelessWidget {
                 child: Align(alignment: Alignment.centerLeft, child: brand!),
               )
             else
-              const Padding(
-                padding: EdgeInsets.all(24.0),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
                 child: Text(
                   'NMTK',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24),
+                  style: Zeta.of(
+                    context,
+                  ).textStyles.titleLarge.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
             const Divider(height: 1),
@@ -349,7 +358,7 @@ class _NmtkMobileDrawer extends StatelessWidget {
                         title: Text(
                           navItems[i].label,
                           style: i == selectedIndex
-                              ? TextStyle(fontWeight: FontWeight.bold)
+                              ? const TextStyle(fontWeight: FontWeight.bold)
                               : null,
                         ),
                         onTap: () {
