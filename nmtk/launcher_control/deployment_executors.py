@@ -268,7 +268,7 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         ssh_cmd = [
             "ssh",
             "-p", str(target.ssh_port or 22),
-            "-o", "StrictHostKeyChecking=no",
+            "-o", "StrictHostKeyChecking=no",  # Bootstrap: host not in known_hosts on first deploy; TODO: adopt TOFU strategy
             "-o", "BatchMode=yes",
         ]
         if key_path:
@@ -291,7 +291,7 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         """Build the ssh options string for use in rsync -e."""
         base = (
             f"ssh -p {target.ssh_port or 22}"
-            " -o StrictHostKeyChecking=no"
+            " -o StrictHostKeyChecking=no"  # Bootstrap: host not in known_hosts on first deploy; TODO: adopt TOFU strategy
             " -o BatchMode=yes"
         )
         if key_path:
