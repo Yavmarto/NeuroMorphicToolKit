@@ -117,7 +117,7 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
 
     if (isCurrent) {
       // P1-7 fix: use colorScheme.onPrimary instead of hardcoded Colors.white
-      chipColor = Theme.of(context).colorScheme.onPrimary;
+      chipColor = Zeta.of(context).colors.surfacePrimary;
       bgColor = colors.mainPrimary;
       onTap = null;
     } else if (isLocked) {
