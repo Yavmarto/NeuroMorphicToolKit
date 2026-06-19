@@ -304,7 +304,7 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         return base
 
     @contextlib.contextmanager
-    def _ssh_key_context(self, target: DeploymentTarget):  # type: ignore[return]
+    def _ssh_key_context(self, target: DeploymentTarget):  # type: ignore[return]  # mypy cannot infer Generator return type for contextmanager with conditional early return
         """Write the SSH private key to a temp file for the duration of the block."""
         if target.auth_mode == "ssh_key":
             key_ref = (
