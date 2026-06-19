@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-l docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -35,6 +35,7 @@ help:
 	@echo "  make docker-ex REMOTE_HOST=user@ip - Deploy full backend stack to remote + run Flutter macOS dev app (alias for docker-ex-all)"
 	@echo "  make docker-ex-all REMOTE_HOST=user@ip - Deploy full backend stack to remote + run Flutter macOS dev app"
 	@echo "  make docker-ex-m REMOTE_HOST=user@ip - Same as docker-ex (alias)"
+	@echo "  make docker-ex-l REMOTE_HOST=user@ip - Deploy to remote and run Flutter Linux desktop app"
 	@echo "  make docker-ex-a REMOTE_HOST=user@ip - Deploy to remote and run frontend on Android"
 	@echo "  make docker-ex-i REMOTE_HOST=user@ip - Deploy to remote and run frontend on iOS"
 	@echo "  make docker-ex-all-m REMOTE_HOST=user@ip - Same as docker-ex-all (alias)"
@@ -163,6 +164,9 @@ docker-ex-all: secrets-init docker-ex-deploy
 docker-ex: docker-ex-all
 
 docker-ex-m: docker-ex
+
+docker-ex-l: secrets-init docker-ex-deploy
+	@./scripts/run_dev.sh --flutter-device linux --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
 .PHONY: deploy-prod
 deploy-prod: secrets-init
