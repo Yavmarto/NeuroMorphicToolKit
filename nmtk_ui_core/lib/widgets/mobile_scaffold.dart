@@ -358,7 +358,9 @@ class _NmtkMobileDrawer extends StatelessWidget {
                         title: Text(
                           navItems[i].label,
                           style: i == selectedIndex
-                              ? const TextStyle(fontWeight: FontWeight.bold)
+                              ? Zeta.of(context).textStyles.bodyMedium.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                )
                               : null,
                         ),
                         onTap: () {
