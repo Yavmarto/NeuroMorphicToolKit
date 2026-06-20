@@ -23,9 +23,18 @@ SecretResolver = Callable[[str], str]
 __all__ = ["DeploymentExecutor", "executor_for_mode"]
 
 
+def _redact(value: str) -> str:
+    return value[:4] + "..." + value[-4:] if len(value) > 12 else "***"
 
 
 class DeploymentExecutor:
+    """Abstract base class for mode-specific backend deployment executors.
+
+    Subclasses implement ``run()`` for a specific deployment mode
+    (standalone, Docker Compose, Kubernetes). Progress is reported via
+    the ``emit`` callback with stage, message, and percent-complete.
+    """
+
     def __init__(
         self,
         *,
@@ -48,7 +57,18 @@ class DeploymentExecutor:
 
 
 class StandaloneDeploymentExecutor(DeploymentExecutor):
+    """Executor for standalone (no container runtime) backend deployments."""
+
     def run(self, target: DeploymentTarget, emit: ProgressCallback) -> None:
+        """Configure a standalone Python-runtime backend target.
+
+        Args:
+            target: Deployment target describing host, auth, and port settings.
+            emit: Progress callback called with (stage, message, percent).
+
+        Raises:
+            RuntimeError: If preflight validation fails.
+        """
         emit("preflight_running", "Validating standalone backend prerequisites", 10)
         result = run_preflight(target, repo_root=self._repo_root)
         if result.status == "failed":
@@ -67,6 +87,17 @@ class DockerDeploymentExecutor(DeploymentExecutor):
     """Execute a Docker Compose backend deployment on a local or remote host."""
 
     def run(self, target: DeploymentTarget, emit: ProgressCallback) -> None:
+        """Run a Docker Compose deployment to a local host or remote SSH target.
+
+        Args:
+            target: Deployment target. ``target_type`` must be ``"local"`` or
+                ``"remote_host"``.
+            emit: Progress callback called with (stage, message, percent).
+
+        Raises:
+            RuntimeError: If preflight fails, Docker is not installed, or any
+                subprocess step returns a non-zero exit code.
+        """
         emit("preflight_running", "Validating Docker backend prerequisites", 10)
         result = run_preflight(target, repo_root=self._repo_root)
         if result.status == "failed":
@@ -365,7 +396,20 @@ class DockerDeploymentExecutor(DeploymentExecutor):
 
 
 class KubernetesDeploymentExecutor(DeploymentExecutor):
+    """Executor for Kubernetes cluster backend deployments via kubectl."""
+
     def run(self, target: DeploymentTarget, emit: ProgressCallback) -> None:
+        """Render manifests and apply them to a Kubernetes cluster.
+
+        Args:
+            target: Deployment target. ``target_type`` must be
+                ``"kubernetes_cluster"``.
+            emit: Progress callback called with (stage, message, percent).
+
+        Raises:
+            RuntimeError: If preflight fails, kubectl is not installed, or any
+                kubectl command returns a non-zero exit code.
+        """
         emit("preflight_running", "Validating Kubernetes cluster access", 10)
         result = run_preflight(target, repo_root=self._repo_root)
         if result.status == "failed":
@@ -529,6 +573,21 @@ def executor_for_mode(
     repo_root: Path,
     secret_resolver: SecretResolver | None = None,
 ) -> DeploymentExecutor:
+    """Return the correct ``DeploymentExecutor`` subclass for the given mode.
+
+    Args:
+        mode: One of ``"standalone"``, ``"docker"``, or ``"kubernetes"``.
+        repo_root: Absolute path to the repository root used as the Docker
+            Compose working directory and rsync source.
+        secret_resolver: Optional callable that resolves secret reference
+            strings (e.g. ``"ref:my-secret"``) to their plaintext values.
+
+    Returns:
+        A ``DeploymentExecutor`` instance ready to ``run()``.
+
+    Raises:
+        ValueError: If ``mode`` is not one of the supported values.
+    """
     if mode == "standalone":
         return StandaloneDeploymentExecutor(
             repo_root=repo_root,
