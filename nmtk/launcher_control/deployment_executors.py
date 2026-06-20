@@ -93,9 +93,6 @@ class DeploymentExecutor:
     def run(self, target: DeploymentTarget, emit: ProgressCallback) -> None:
         raise NotImplementedError
 
-    def _sleep(self) -> None:
-        time.sleep(0.05)
-
     def _resolve_secret(self, ref: str) -> str:
         if self._secret_resolver is None:
             return ""
@@ -119,13 +116,13 @@ class StandaloneDeploymentExecutor(DeploymentExecutor):
         result = run_preflight(target, repo_root=self._repo_root)
         if result.status == "failed":
             raise RuntimeError(result.message)
-        self._sleep()
+        time.sleep(0.05)
         emit("installing", "Preparing Python runtime plan", 30)
-        self._sleep()
+        time.sleep(0.05)
         emit("installing", "Writing standalone service configuration", 55)
-        self._sleep()
+        time.sleep(0.05)
         emit("verifying", "Running backend health verification", 80)
-        self._sleep()
+        time.sleep(0.05)
         emit("completed", "Standalone backend target is configured", 100)
 
 
