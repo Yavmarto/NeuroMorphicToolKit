@@ -5,11 +5,15 @@ services:
       dockerfile: Dockerfile.webtop
     ports:
       - "${WEBTOP_PORT:-3030}:3000"
+      - "${WEBTOP_HTTPS_PORT:-3031}:3001"
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ:-UTC}
       - WEBTOP_TITLE=NMTK NeuroMorphic Toolkit
+      - CAROOT=/config/mkcert
+      - WEBTOP_HTTPS_PORT=${WEBTOP_HTTPS_PORT:-3031}
+      - HOST_IPS=${HOST_IPS:-}
     volumes:
       - nmtk_webtop_config:/config
     restart: unless-stopped

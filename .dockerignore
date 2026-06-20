@@ -30,8 +30,17 @@ Neurochip/frontend/
 Neurobench/frontend/
 nmtk/
 !nmtk/launcher_control/
-!nmtk/neuro_toolkit/assets/
+!nmtk/neuro_toolkit/
 nmtk_ui_core/
+!nmtk_ui_core/
+# Webtop build needs the full Flutter project including path-dep packages.
+# Whitelist every frontend the launcher (or its shell adapters) statically
+# depend on at build time, so `flutter pub get` can resolve path deps.
+!Neurobench/frontend/
+!neurocnl/frontend/
+!Neurosim/frontend/
+!Neurochip/frontend/
+!Neurohub/frontend/
 
 # Test and demo data
 data/

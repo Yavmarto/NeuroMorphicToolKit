@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-l docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop webtop-trust
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -52,7 +52,8 @@ help:
 	@echo "  make build-macos-dmg-signed   - Build a signed/notarized macOS DMG when secrets are set"
 	@echo "  make webtop                   - Build and start NMTK desktop in browser (webtop/kiosk)"
 	@echo "  make webtop-build             - Build the webtop Docker image"
-	@echo "  make webtop-up                - Start the webtop container"
+	@echo "  make webtop-up                - Start the webtop container (auto-trusts the local CA on first run)"
+	@echo "  make webtop-trust             - Install the webtop mkcert CA into the host trust store"
 	@echo "  make webtop-down              - Stop the webtop container"
 	@echo ""
 
@@ -289,14 +290,30 @@ macos-signing-check:
 	@bash nmtk/installer/macos/sign-and-notarize.sh --check
 
 WEBTOP_PORT ?= 3030
+WEBTOP_HTTPS_PORT ?= 3031
+
+# Detect the host's non-loopback IPv4 addresses for the TLS cert SAN list.
+# Comma-separated; passed to the container so the mkcert startup can include
+# them in the cert (the container can't see the host's IPs from inside its
+# own network namespace).
+HOST_IPS ?= $(shell python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(('8.8.8.8', 80)); print(s.getsockname()[0]); s.close()" 2>/dev/null || true)
 
 webtop-build:
 	docker compose -f docker-compose.webtop.yml build
 
+webtop-trust:
+	@WEBTOP_HTTPS_PORT=$(WEBTOP_HTTPS_PORT) WEBTOP_PORT=$(WEBTOP_PORT) bash scripts/webtop-trust-ca.sh
+
 webtop-up:
-	docker compose -f docker-compose.webtop.yml up -d --wait
+	@echo "==> Host IPs for cert SANs: $(HOST_IPS)"
+	@HOST_IPS='$(HOST_IPS)' docker compose -f docker-compose.webtop.yml up -d --wait
+	@$(MAKE) --no-print-directory webtop-trust || true
 	@WEBTOP_IP=$$(python3 -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(('8.8.8.8', 80)); print(s.getsockname()[0]); s.close()" 2>/dev/null || echo "localhost"); \
-	echo "NMTK Desktop available at http://$$WEBTOP_IP:$(WEBTOP_PORT)"
+	echo ""; \
+	echo "NMTK Desktop is up at: http://$$WEBTOP_IP:$(WEBTOP_PORT)"; \
+	echo "  (auto-redirects to HTTPS; first run installs the local CA into your host trust store)"; \
+	echo "  (direct HTTPS equivalent:  https://$$WEBTOP_IP:$(WEBTOP_HTTPS_PORT))"; \
+	echo "  (localhost also works:      http://localhost:$(WEBTOP_PORT))"
 
 webtop-down:
 	docker compose -f docker-compose.webtop.yml down
