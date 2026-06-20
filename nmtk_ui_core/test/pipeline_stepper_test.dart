@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+// ignore: unnecessary_import — explicit Zeta import for clarity over re-export
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 void main() {
   group('NmtkPipelineStepper', () {
@@ -77,12 +79,12 @@ void main() {
         ),
       );
 
-      // success -> check icon
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
-      // error -> error icon
-      expect(find.byIcon(Icons.error), findsOneWidget);
-      // idle -> circle_outlined
-      expect(find.byIcon(Icons.circle_outlined), findsOneWidget);
+      // success -> ZetaIcons.check_circle (Zeta design system)
+      expect(find.byIcon(ZetaIcons.check_circle), findsOneWidget);
+      // error -> ZetaIcons.error (Zeta design system)
+      expect(find.byIcon(ZetaIcons.error), findsOneWidget);
+      // idle -> ZetaIcons.radio_button_unchecked (Zeta design system)
+      expect(find.byIcon(ZetaIcons.radio_button_unchecked), findsOneWidget);
       // running -> CircularProgressIndicator
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });

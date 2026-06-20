@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+// ignore: unnecessary_import — explicit Zeta import for clarity over re-export
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 void main() {
   group('PynqSupportStateCard', () {
@@ -18,7 +20,7 @@ void main() {
       );
 
       expect(find.text('Exportable — overlay package ready'), findsOneWidget);
-      expect(find.byIcon(Icons.upload_file), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.upload_file), findsOneWidget);
     });
 
     testWidgets('renders exportable_with_warnings state', (
@@ -36,7 +38,7 @@ void main() {
       );
 
       expect(find.text('Exportable — near capacity limits'), findsOneWidget);
-      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.warning_outline), findsOneWidget);
       expect(find.textContaining('205/256 neurons'), findsOneWidget);
     });
 
@@ -55,7 +57,7 @@ void main() {
       );
 
       expect(find.text('Not Exportable — see rejections'), findsOneWidget);
-      expect(find.byIcon(Icons.block), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.block), findsOneWidget);
       expect(find.textContaining('Exceeds neuron capacity'), findsOneWidget);
     });
 
@@ -71,7 +73,7 @@ void main() {
       );
 
       expect(find.text('Deployed — running on PYNQ board'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.check_circle), findsOneWidget);
     });
 
     testWidgets('renders not_deployable state', (WidgetTester tester) async {
@@ -86,7 +88,7 @@ void main() {
       );
 
       expect(find.text('Not Deployable — board unreachable'), findsOneWidget);
-      expect(find.byIcon(Icons.cloud_off), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.cloud_off), findsOneWidget);
     });
 
     testWidgets('renders network summary when provided', (

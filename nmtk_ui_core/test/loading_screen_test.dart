@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/widgets/loading_screen.dart';
+// ignore: unnecessary_import — explicit Zeta import for clarity over re-export
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 void main() {
   group('NmtkLoadingScreen', () {
@@ -82,7 +84,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(degradedMsg), findsOneWidget);
-      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+      // loading_screen uses ZetaIcons.warning_outline (Zeta design system)
+      expect(find.byIcon(ZetaIcons.warning_outline), findsOneWidget);
     });
 
     testWidgets('5. degraded state fits narrow viewports', (tester) async {

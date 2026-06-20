@@ -3,6 +3,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+// ZetaIcons is re-exported by nmtk_ui_core, but the explicit import is left
+// here to signal that this file uses Zeta icons and not Material Icons.*
+// ignore: unnecessary_import
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test helpers
@@ -116,7 +120,8 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.arrow_back_ios_new_rounded), findsOneWidget);
+      // desktop_scaffold uses ZetaIcons.arrow_back (Zeta design system)
+      expect(find.byIcon(ZetaIcons.arrow_back), findsOneWidget);
     });
 
     // 4. onSettingsPressed callback fires
@@ -141,7 +146,8 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byIcon(Icons.settings_outlined));
+      // desktop_scaffold uses ZetaIcons.settings (Zeta design system)
+      await tester.tap(find.byIcon(ZetaIcons.settings));
       await tester.pump();
 
       expect(settingsTapped, isTrue);
@@ -193,10 +199,11 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.add_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.folder_open_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.save_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.save_as_rounded), findsOneWidget);
+      // desktop_scaffold uses ZetaIcons (Zeta design system migration)
+      expect(find.byIcon(ZetaIcons.add), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.folder_outline), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.save), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.save_alt), findsOneWidget);
     });
 
     // 7. onNavItemSelected fires with correct index

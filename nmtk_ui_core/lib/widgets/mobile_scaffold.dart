@@ -154,12 +154,12 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final useBottomNavigation = _shouldUseBottomNavigation;
-    // Only show the menu button (and therefore the AppBar) when there are
-    // multiple destinations that warrant a drawer. A single-module layout
-    // has no meaningful drawer content, so the AppBar is suppressed and the
-    // module content fills edge-to-edge.
+    // Show the menu button whenever there is a drawer (not using bottom
+    // navigation) and there is at least one destination to show in it.
+    // Even a single-item drawer should be reachable via the hamburger button
+    // rather than relying on the undiscoverable left-edge swipe gesture.
     final bool showMenuButton =
-        !useBottomNavigation && _mobileNavigationItems.length > 1;
+        !useBottomNavigation && _mobileNavigationItems.isNotEmpty;
     final bool hasTitle =
         widget.pageTitle != null && widget.pageTitle!.isNotEmpty;
     // The 3 dots settings menu is being removed as requested.

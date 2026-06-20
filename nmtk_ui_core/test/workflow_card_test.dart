@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+// ignore: unnecessary_import — explicit Zeta import for clarity over re-export
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 Widget buildHarness(Widget child) {
   return MaterialApp(home: Scaffold(body: child));
@@ -84,10 +86,11 @@ void main() {
         find.text('Surface validation issues before release.'),
         findsOneWidget,
       );
-      expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
-      expect(find.byIcon(Icons.play_circle_fill), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
-      expect(find.byIcon(Icons.error), findsOneWidget);
+      // workflow_card uses ZetaIcons (Zeta design system migration)
+      expect(find.byIcon(ZetaIcons.radio_button_unchecked), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.play_circle), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.check_circle), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.error), findsOneWidget);
     });
   });
 }

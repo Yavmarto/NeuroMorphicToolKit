@@ -832,7 +832,7 @@ class _NmtkContentHeader extends StatelessWidget {
                   onPressed: fileActions!.onSaveFile,
                 ),
                 _FileActionIconButton(
-                  icon: ZetaIcons.save,
+                  icon: ZetaIcons.save_alt,
                   tooltip: 'Save As\n⌘⇧S / Ctrl+Shift+S',
                   onPressed: fileActions!.onSaveFileAs,
                 ),
