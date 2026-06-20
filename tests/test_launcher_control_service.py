@@ -4802,6 +4802,65 @@ class LauncherControlServiceTest(unittest.TestCase):
             f"shell injection not neutralised; raw cmd: {cmd!r}"
         )
 
+    def test_init_remote_secrets_clean_path(self) -> None:
+        """A clean deploy_dir produces a valid shell command without altering the path."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from pathlib import Path
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="remote-clean",
+            display_name="Remote Clean",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.1",
+            auth_mode="none",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        captured_cmds: list[str] = []
+
+        def fake_ssh_run(tgt: object, remote_cmd: str, timeout: int = 600) -> None:
+            captured_cmds.append(remote_cmd)
+
+        with mock.patch.object(executor, "_ssh_run", side_effect=fake_ssh_run):
+            executor._init_remote_secrets(target, "/opt/nmtk")
+
+        assert captured_cmds, "expected _ssh_run to be called"
+        cmd = captured_cmds[0]
+        assert "/opt/nmtk" in cmd, f"deploy_dir not found in cmd: {cmd!r}"
+        assert "GRAFANA_ADMIN_PASSWORD" in cmd, f"secret setup not in cmd: {cmd!r}"
+
+    def test_init_remote_secrets_path_with_spaces(self) -> None:
+        """A deploy_dir containing spaces must be quoted so the shell treats it as one token."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from pathlib import Path
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="remote-spaces",
+            display_name="Remote Spaces",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.1",
+            auth_mode="none",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        captured_cmds: list[str] = []
+
+        def fake_ssh_run(tgt: object, remote_cmd: str, timeout: int = 600) -> None:
+            captured_cmds.append(remote_cmd)
+
+        with mock.patch.object(executor, "_ssh_run", side_effect=fake_ssh_run):
+            executor._init_remote_secrets(target, "/opt/my deploy dir")
+
+        assert captured_cmds, "expected _ssh_run to be called"
+        cmd = captured_cmds[0]
+        assert "'/opt/my deploy dir'" in cmd, (
+            f"expected path with spaces to be single-quoted; cmd: {cmd!r}"
+        )
+
     def test_rsync_password_not_in_cmdline(self) -> None:
         """SSH password must travel via SSHPASS env var, not via sshpass -p <plaintext>."""
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
