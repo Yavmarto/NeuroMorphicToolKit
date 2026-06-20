@@ -22,6 +22,52 @@ SecretResolver = Callable[[str], str]
 
 __all__ = ["DeploymentExecutor", "executor_for_mode"]
 
+# Paths excluded from every remote rsync deployment.
+# Extend this list (not inline in _rsync_to_remote) when adding new excludes.
+_RSYNC_EXCLUDES: list[str] = [
+    ".git",
+    ".env",
+    "venv",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+    "*.pyc",
+    "build/",
+    "*.dill",
+    "*.dill.track.dill",
+    ".cache",
+    ".hypothesis",
+    ".kiro",
+    ".understand-anything",
+    ".sisyphus",
+    ".impeccable",
+    ".tmp_manual_ui",
+    ".swarm/",
+    ".opencode/",
+    ".cursor/",
+    "docs/",
+    "issues/",
+    "issues-archive/",
+    "ai_safe/",
+    "Neuro-Dream-Hand/",
+    "neurocnl/frontend/",
+    "Neurohub/frontend/",
+    "Neurochip/frontend/",
+    "Neurobench/frontend/",
+    "Neurosim/frontend/",
+    "nmtk_ui_core/",
+    "nmtk/neuro_toolkit/lib/",
+    "nmtk/neuro_toolkit/build/",
+    "nmtk/neuro_toolkit/.dart_tool/",
+    "nmtk/neuro_toolkit/android/",
+    "nmtk/neuro_toolkit/ios/",
+    "nmtk/neuro_toolkit/macos/",
+    "nmtk/neuro_toolkit/linux/",
+    "nmtk/neuro_toolkit/windows/",
+    "nmtk/neuro_toolkit/web/",
+    "nmtk/packages/",
+]
+
 
 def _redact(value: str) -> str:
     return value[:4] + "..." + value[-4:] if len(value) > 12 else "***"
@@ -228,50 +274,13 @@ class DockerDeploymentExecutor(DeploymentExecutor):
             ssh_opts, extra_env = self._ssh_opts_str(target, key_path)
             rsync_env = dict(os.environ)
             rsync_env.update(extra_env)
+            exclude_args: list[str] = []
+            for pattern in _RSYNC_EXCLUDES:
+                exclude_args.extend(["--exclude", pattern])
             rsync_cmd = [
                 "rsync", "-av", "--delete",
                 "-e", ssh_opts,
-                "--exclude", ".git",
-                "--exclude", ".env",
-                "--exclude", "venv",
-                "--exclude", ".venv",
-                "--exclude", "__pycache__",
-                "--exclude", "node_modules",
-                "--exclude", "*.pyc",
-                "--exclude", "build/",
-                "--exclude", "*.dill",
-                "--exclude", "*.dill.track.dill",
-                "--exclude", ".cache",
-                "--exclude", ".hypothesis",
-                "--exclude", ".kiro",
-                "--exclude", ".understand-anything",
-                "--exclude", ".sisyphus",
-                "--exclude", ".impeccable",
-                "--exclude", ".tmp_manual_ui",
-                "--exclude", ".swarm/",
-                "--exclude", ".opencode/",
-                "--exclude", ".cursor/",
-                "--exclude", "docs/",
-                "--exclude", "issues/",
-                "--exclude", "issues-archive/",
-                "--exclude", "ai_safe/",
-                "--exclude", "Neuro-Dream-Hand/",
-                "--exclude", "neurocnl/frontend/",
-                "--exclude", "Neurohub/frontend/",
-                "--exclude", "Neurochip/frontend/",
-                "--exclude", "Neurobench/frontend/",
-                "--exclude", "Neurosim/frontend/",
-                "--exclude", "nmtk_ui_core/",
-                "--exclude", "nmtk/neuro_toolkit/lib/",
-                "--exclude", "nmtk/neuro_toolkit/build/",
-                "--exclude", "nmtk/neuro_toolkit/.dart_tool/",
-                "--exclude", "nmtk/neuro_toolkit/android/",
-                "--exclude", "nmtk/neuro_toolkit/ios/",
-                "--exclude", "nmtk/neuro_toolkit/macos/",
-                "--exclude", "nmtk/neuro_toolkit/linux/",
-                "--exclude", "nmtk/neuro_toolkit/windows/",
-                "--exclude", "nmtk/neuro_toolkit/web/",
-                "--exclude", "nmtk/packages/",
+                *exclude_args,
                 str(self._repo_root) + "/",
                 f"{remote}:{deploy_dir}/",
             ]
