@@ -155,6 +155,7 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
 
         final inner = Semantics(
           label: 'Pipeline status bar',
+<<<<<<< Updated upstream
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: SingleChildScrollView(
@@ -166,6 +167,17 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: steps,
               ),
+=======
+          child: Container(
+            color: Colors.red.withValues(alpha: 0.3), // DEBUG BOUNDING BOX
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+            child: Wrap(
+              key: _rowKey,
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: 8,
+              children: steps,
+>>>>>>> Stashed changes
             ),
           ),
         );
@@ -312,7 +324,7 @@ class _PipelineStepState extends State<_PipelineStep>
         widget.data.status != NmtkStepStatus.idle || widget.onTap != null;
 
     Widget chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: _getBgColor(context, theme, tokens),
         borderRadius: BorderRadius.circular(tokens.radiusSm),
@@ -325,7 +337,7 @@ class _PipelineStepState extends State<_PipelineStep>
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildIcon(context, theme, tokens),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
           Text(
             widget.data.label,
             style: Zeta.of(context).textStyles.bodyMedium.copyWith(
@@ -454,7 +466,7 @@ class _StepConnector extends StatelessWidget {
     final tokens = NmtkShellTokens.of(context);
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 0),
       child: Icon(
         ZetaIcons.arrow_forward,
         size: 10,
