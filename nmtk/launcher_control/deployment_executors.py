@@ -20,9 +20,9 @@ from .deployment_preflight import run_preflight
 ProgressCallback = Callable[[str, str, float], None]
 SecretResolver = Callable[[str], str]
 
+__all__ = ["DeploymentExecutor", "executor_for_mode"]
 
-def _redact(value: str) -> str:
-    return value[:4] + "..." + value[-4:] if len(value) > 12 else "***"
+
 
 
 class DeploymentExecutor:
