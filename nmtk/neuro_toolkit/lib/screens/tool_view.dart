@@ -658,13 +658,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         ? const <Module>[]
         : moduleState.modules.where(_shouldOpenModule).toList(growable: false);
 
-    // Snapshot statuses after the frame, not inside build()
-    // P1-1 fix: state mutation moved out of build() body
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _snapshotModuleStatuses(eligibleModules);
+    // Unconditional ref.listen calls — must be called on every build, before any returns.
+    ref.listen(moduleNotifierProvider, (prev, next) {
+      final modules = next.value?.modules;
+      if (modules == null) return;
+      final eligible = modules.where(_shouldOpenModule).toList(growable: false);
+      if (mounted) _snapshotModuleStatuses(eligible);
     });
 
-    // Unconditional ref.listen — must be called on every build, before any returns.
     ref.listen(workspaceNotifierProvider, (prev, next) {
       final ws = next.value;
       if (ws == null || eligibleModules.isEmpty) return;
