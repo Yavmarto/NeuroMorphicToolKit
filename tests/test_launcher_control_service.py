@@ -320,6 +320,30 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertTrue(python_path.endswith("venv/bin/python"))
         self.assertEqual(install_targets, [str(suite_api_dir)])
 
+    def test_suite_api_install_target_adds_neurocnl_studio_extras(self) -> None:
+        neurocnl_dir = self.repo_root / "neurocnl"
+        neurocnl_dir.mkdir(parents=True, exist_ok=True)
+        install_target = launcher_server._suite_api_install_target(neurocnl_dir)
+        self.assertIn("studio", install_target)
+        self.assertTrue(install_target.startswith(str(neurocnl_dir)))
+
+    def test_resolved_lava_worker_url_uses_local_health_probe(self) -> None:
+        with (
+            mock.patch.dict(os.environ, {}, clear=True),
+            mock.patch.object(
+                launcher_server,
+                "_lava_backend_reachable",
+                return_value=True,
+            ),
+        ):
+            resolved = launcher_server._resolved_lava_worker_url()
+        self.assertEqual(resolved, "http://127.0.0.1:8012")
+
+    def test_doctor_includes_studio_framework_sdk_check(self) -> None:
+        report = self.state.doctor_report()
+        check_ids = {check["id"] for check in report["globalChecks"]}
+        self.assertIn("studio-framework-sdks", check_ids)
+
     def test_prepare_akida_runtime_marks_unsupported_host_without_installing(self) -> None:
         with (
             mock.patch.object(
@@ -1244,7 +1268,7 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(created["remoteServiceName"], "custom-pynq-service")
         self.assertEqual(created["agentExecutableName"], "custom-pynq-agent")
 
-    def test_akida_host_round_trip_updates_settings_file(self) -> None:
+    def test_akida_host_with_capabilities_round_trip_updates_settings_file(self) -> None:
         created = self.state.create_akida_host(
             {
                 "displayName": "Linux Akida Host",
@@ -2025,7 +2049,7 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertIn("pynqBoards", report)
         self.assertEqual(report["pynqBoards"][0]["state"], "ready")
 
-    def test_doctor_report_includes_akida_hosts(self) -> None:
+    def test_doctor_report_includes_ready_remote_sdk_akida_hosts(self) -> None:
         self.state.create_akida_host(
             {
                 "displayName": "Linux Akida Host",
@@ -4048,9 +4072,9 @@ class LauncherControlServiceTest(unittest.TestCase):
         ):
             checks = launcher_server._global_preflight_checks()
 
-        self.assertEqual(len(checks), 1)
-        self.assertEqual(checks[0]["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
-        self.assertIn("not writable", str(checks[0]["preflightMessage"]))
+        flutter_check = next(check for check in checks if check["id"] == "flutter-sdk")
+        self.assertEqual(flutter_check["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
+        self.assertIn("not writable", str(flutter_check["preflightMessage"]))
 
     def test_main_returns_nonzero_for_fatal_doctor_report(self) -> None:
         fake_state = mock.Mock()

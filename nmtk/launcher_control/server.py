@@ -1956,6 +1956,55 @@ def _suite_api_dev_install_paths() -> tuple[Path, ...]:
     )
 
 
+_NEUROCNL_SUITE_API_EXTRAS = "training,studio,rockpool,synsense,norse"
+DEFAULT_LAVA_BACKEND_PORT = 8012
+
+
+def _suite_api_install_target(install_path: Path) -> str:
+    if install_path.name == "neurocnl":
+        return f"{install_path}[{_NEUROCNL_SUITE_API_EXTRAS}]"
+    return str(install_path)
+
+
+def _lava_backend_base_url() -> str:
+    explicit = (
+        str(os.environ.get("NEUROCNL_LAVA_WORKER_URL") or "").strip()
+        or str(os.environ.get("LAVA_BACKEND_URL") or "").strip()
+    )
+    if explicit:
+        return explicit.rstrip("/")
+    port = str(os.environ.get("LAVA_BACKEND_PORT") or DEFAULT_LAVA_BACKEND_PORT).strip()
+    return f"http://127.0.0.1:{port}"
+
+
+def _lava_backend_reachable(base_url: str | None = None) -> bool:
+    health_url = f"{(base_url or _lava_backend_base_url()).rstrip('/')}/health"
+    try:
+        with urllib.request.urlopen(health_url, timeout=2.0) as response:
+            if int(response.status) != HTTPStatus.OK:
+                return False
+            body = response.read().decode("utf-8", errors="replace")
+    except (urllib.error.URLError, TimeoutError, socket.timeout, ValueError):
+        return False
+    try:
+        payload = json.loads(body)
+    except json.JSONDecodeError:
+        return True
+    if isinstance(payload, dict) and "lava_importable" in payload:
+        return bool(payload.get("lava_importable"))
+    return True
+
+
+def _resolved_lava_worker_url() -> str | None:
+    explicit = str(os.environ.get("NEUROCNL_LAVA_WORKER_URL") or "").strip()
+    if explicit:
+        return explicit.rstrip("/")
+    local_url = f"http://127.0.0.1:{DEFAULT_LAVA_BACKEND_PORT}"
+    if _lava_backend_reachable(local_url):
+        return local_url
+    return None
+
+
 def _suite_api_env_fingerprint_files() -> tuple[Path, ...]:
     return (
         REPO_ROOT / "suite_api" / "pyproject.toml",
@@ -2032,7 +2081,74 @@ def _suite_api_health_probe() -> tuple[bool, str | None]:
 
 
 def _global_preflight_checks() -> list[dict[str, Any]]:
-    return [_flutter_sdk_check()]
+    return [_flutter_sdk_check(), _studio_framework_sdk_check()]
+
+
+def _studio_framework_sdk_check() -> dict[str, Any]:
+    """Advisory check: Studio target SDKs in the suite_api runtime."""
+    check_id = "studio-framework-sdks"
+    check_name = "Studio framework SDKs"
+    env_dir = _suite_api_env_dir()
+    venv_python = _suite_api_env_python(env_dir)
+    if not venv_python.exists():
+        return {
+            "id": check_id,
+            "name": check_name,
+            "preflightStatus": PREFLIGHT_OK,
+            "preflightMessage": "suite_api environment not provisioned yet",
+            "capabilityWarnings": [],
+        }
+
+    probe_script = (
+        "from neurocnl.target_sdk import probe_target_availability; "
+        "availability = probe_target_availability(); "
+        "required = ('brian2', 'pynn', 'akida', 'lava_sim'); "
+        "missing = [name for name in required if not availability.get(name)]; "
+        "import sys; "
+        "print(','.join(missing)); "
+        "sys.exit(0 if not missing else 1)"
+    )
+    result = subprocess.run(
+        [str(venv_python), "-c", probe_script],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTHONPATH": _suite_api_pythonpath()},
+    )
+    if result.returncode == 0:
+        return {
+            "id": check_id,
+            "name": check_name,
+            "preflightStatus": PREFLIGHT_OK,
+            "preflightMessage": "Brian2, PyNN, Akida, and Lava probes are ready",
+            "capabilityWarnings": [],
+        }
+
+    missing = [part for part in result.stdout.strip().split(",") if part]
+    lava_hint = (
+        " Start lava-backend (docker compose up) or set NEUROCNL_LAVA_WORKER_URL."
+        if "lava_sim" in missing
+        else ""
+    )
+    reinstall_hint = (
+        " Reinstall suite_api env: delete "
+        f"{env_dir} and restart launcher control."
+    )
+    return {
+        "id": check_id,
+        "name": check_name,
+        "preflightStatus": PREFLIGHT_DEGRADED,
+        "preflightMessage": (
+            "Studio target SDKs missing in suite_api: "
+            + (", ".join(missing) if missing else "unknown")
+            + reinstall_hint
+            + lava_hint
+        ),
+        "capabilityWarnings": [
+            f"Setup may show download icons for: {', '.join(missing) if missing else 'framework targets'}"
+        ],
+    }
 
 
 def _render_doctor_report(report: dict[str, Any]) -> str:
@@ -2268,8 +2384,9 @@ class LauncherControlState:
                     raise RuntimeError(
                         f"suite_api dependency checkout not found: {install_path}"
                     )
+                install_target = _suite_api_install_target(install_path)
                 result = subprocess.run(
-                    [str(venv_python), "-m", "pip", "install", "-e", str(install_path)],
+                    [str(venv_python), "-m", "pip", "install", "-e", install_target],
                     cwd=REPO_ROOT,
                     capture_output=True,
                     text=True,
@@ -2291,6 +2408,9 @@ class LauncherControlState:
     def _suite_api_environment(self) -> dict[str, str]:
         environment = dict(os.environ)
         environment["PYTHONPATH"] = _suite_api_pythonpath()
+        lava_url = _resolved_lava_worker_url()
+        if lava_url:
+            environment["NEUROCNL_LAVA_WORKER_URL"] = lava_url
         return environment
 
     def _stream_suite_api_logs(self, process: subprocess.Popen[str]) -> None:

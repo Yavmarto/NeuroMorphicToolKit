@@ -217,7 +217,7 @@ class _WaitingContent extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Text(
+            SelectableText(
               message,
               textAlign: TextAlign.center,
               style: Zeta.of(
@@ -266,7 +266,7 @@ class _DegradedContent extends StatelessWidget {
             const SizedBox(height: 10),
             SizedBox(
               width: width,
-              child: Text(
+              child: SelectableText(
                 message,
                 textAlign: TextAlign.center,
                 style: Zeta.of(context).textStyles.bodyMedium.copyWith(
@@ -320,7 +320,7 @@ class _FailedContent extends StatelessWidget {
                 size: 36,
               ),
               const SizedBox(height: 12),
-              Text(
+              SelectableText(
                 message,
                 textAlign: TextAlign.center,
                 style: Zeta.of(context).textStyles.bodyMedium.copyWith(

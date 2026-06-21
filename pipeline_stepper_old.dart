@@ -46,7 +46,6 @@ class NmtkPipelineStepper extends StatefulWidget {
 
   final String? secondarySelectedStepId;
   final Set<String> disabledStepIds;
-  final String disabledTooltip;
 
   const NmtkPipelineStepper({
     super.key,
@@ -57,7 +56,6 @@ class NmtkPipelineStepper extends StatefulWidget {
     this.bare = false,
     this.stepAccentColor = NmtkZetaTheme.primary,
     this.disabledStepIds = const <String>{},
-    this.disabledTooltip = 'Complete the previous step first',
   });
 
   @override
@@ -157,24 +155,16 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
           label: 'Pipeline status bar',
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: constraints.maxWidth >= 840
-                ? SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    controller: _scrollController,
-                    child: Row(
-                      key: _rowKey,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: steps,
-                    ),
-                  )
-                : Wrap(
-                    key: _rowKey,
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    runSpacing: 8,
-                    spacing: 0,
-                    children: steps,
-                  ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              controller: _scrollController,
+              child: Row(
+                key: _rowKey,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: steps,
+              ),
+            ),
           ),
         );
 
@@ -203,7 +193,7 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
       if (disabled) {
         widgets.add(
           Tooltip(
-            message: widget.disabledTooltip,
+            message: 'Complete the previous step first',
             child: Opacity(
               opacity: 0.38,
               child: _PipelineStep(
@@ -320,7 +310,7 @@ class _PipelineStepState extends State<_PipelineStep>
         widget.data.status != NmtkStepStatus.idle || widget.onTap != null;
 
     Widget chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: _getBgColor(context, theme, tokens),
         borderRadius: BorderRadius.circular(tokens.radiusSm),
@@ -333,7 +323,7 @@ class _PipelineStepState extends State<_PipelineStep>
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildIcon(context, theme, tokens),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
           Text(
             widget.data.label,
             style: Zeta.of(context).textStyles.bodyMedium.copyWith(
@@ -462,7 +452,7 @@ class _StepConnector extends StatelessWidget {
     final tokens = NmtkShellTokens.of(context);
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 3),
       child: Icon(
         ZetaIcons.arrow_forward,
         size: 10,

@@ -92,5 +92,16 @@ app.include_router(lava.router)
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok", "service": "lava-backend"}
+async def health() -> dict[str, object]:
+    lava_importable = False
+    try:
+        import importlib.util
+
+        lava_importable = importlib.util.find_spec("lava") is not None
+    except (ImportError, ValueError):
+        lava_importable = False
+    return {
+        "status": "ok",
+        "service": "lava-backend",
+        "lava_importable": lava_importable,
+    }

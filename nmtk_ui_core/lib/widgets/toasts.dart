@@ -6,13 +6,13 @@ class NmtkToasts {
   static void success(BuildContext context, String message) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(SnackBar(content: SelectionArea(child: Text(message))));
   }
 
   static void error(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: SelectionArea(child: Text(message)),
         backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
@@ -21,6 +21,6 @@ class NmtkToasts {
   static void warning(BuildContext context, String message) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ).showSnackBar(SnackBar(content: SelectionArea(child: Text(message))));
   }
 }

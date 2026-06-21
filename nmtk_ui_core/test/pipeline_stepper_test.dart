@@ -121,7 +121,7 @@ void main() {
       expect(decoration.border?.top.width, equals(1.6));
     });
 
-    testWidgets('auto-scrolls to selected step', (WidgetTester tester) async {
+    testWidgets('wraps steps when width is constrained', (WidgetTester tester) async {
       final manySteps = List.generate(
         10,
         (i) => NmtkPipelineStepData(
@@ -145,28 +145,8 @@ void main() {
         ),
       );
 
-      final scrollable = tester.widget<SingleChildScrollView>(
-        find.byType(SingleChildScrollView),
-      );
-      final controller = scrollable.controller!;
-      expect(controller.offset, equals(0.0));
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SizedBox(
-              width: 200,
-              child: NmtkPipelineStepper(
-                steps: manySteps,
-                selectedStepId: 'step9',
-              ),
-            ),
-          ),
-        ),
-      );
-
-      await tester.pumpAndSettle();
-      expect(controller.offset, isPositive);
+      expect(find.byType(Wrap), findsOneWidget);
+      expect(find.text('Step 9'), findsOneWidget);
     });
 
     testWidgets('handles empty steps gracefully', (WidgetTester tester) async {
@@ -176,7 +156,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(Row), findsOneWidget);
+      expect(find.byType(Wrap), findsOneWidget);
     });
 
     testWidgets('pulseTick increment on a running step does not throw', (

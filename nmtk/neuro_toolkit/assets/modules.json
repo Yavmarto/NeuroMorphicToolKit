@@ -12,7 +12,7 @@
     "installStrategy": "pip",
     "installExtras": [
       "training",
-      "lava",
+      "studio",
       "rockpool",
       "synsense",
       "norse"

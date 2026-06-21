@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 ENV PIP_DEFAULT_TIMEOUT=300
 ENV PIP_RETRIES=5
@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir \
 
 # Copy source and install the package — heavy deps above already present
 COPY neurocnl/ neurocnl/
-RUN pip install --no-cache-dir "neurocnl/[training,rockpool,synsense,norse]" \
+RUN pip install --no-cache-dir "neurocnl/[training,studio,rockpool,synsense,norse]" \
  && python -c "import nir; assert hasattr(nir, 'CubaLI'), 'nir>=1.0.5 required'; from neurocnl.runtime.sc_neurocore_simulator import sc_neurocore_nir_bridge_available; assert sc_neurocore_nir_bridge_available(), 'sc-neurocore NIR bridge missing'"
 
 # ── Modules installed as top-level packages ───────────────────────────────────
@@ -48,7 +48,7 @@ ENV PYTHONPATH="/repo/neurocnl:/repo/Neurochip"
 # ── Neurobench wrapper (declares neurocnl ^0.0.0 on PyPI — reinstall local) ───
 COPY Neurobench/neurobench/ Neurobench/neurobench/
 RUN pip install --no-cache-dir Neurobench/neurobench/ \
- && pip install --no-cache-dir --no-deps "neurocnl/[training,rockpool,synsense,norse]"
+ && pip install --no-cache-dir --no-deps "neurocnl/[training,studio,rockpool,synsense,norse]"
 
 # ── suite_api ─────────────────────────────────────────────────────────────────
 COPY suite_api/ suite_api/

@@ -195,6 +195,35 @@ All checks should pass with exit code 0 before proceeding to the [Quick Start](q
 
 ---
 
+## Studio framework targets (included by default)
+
+NeuroStudio Setup should **not** ask you to install Brian2, PyNN, Akida, or Lava before selecting targets. The suite installs them automatically:
+
+| Target | How it is provided |
+|--------|-------------------|
+| Brian2, PyNN, Akida | Bundled in the `neurocnl[studio]` extra installed into **suite_api** (Docker image and launcher dev bootstrap) |
+| Lava (`lava_sim`, Lava / Loihi2) | **lava-backend** worker on Python 3.10 (`docker compose up` starts it on port 8012); suite_api probes it via `NEUROCNL_LAVA_WORKER_URL` |
+
+No manual `pip install lava-nc` in the main backend is required or supported on Python 3.11+.
+
+### After upgrading
+
+If Setup still shows download icons for these targets, refresh the runtime environment:
+
+1. **Docker:** `docker compose up --build`
+2. **Launcher dev:** delete the suite_api venv stamp under your launcher state directory (or remove `suite_api_env/venv`) and restart launcher control so it reinstalls `neurocnl[training,studio,...]`
+3. Restart the Flutter app and reopen Studio Setup
+
+Run launcher doctor for an advisory check:
+
+```bash
+python3 scripts/launcher_control_service.py --doctor
+```
+
+Look for **Studio framework SDKs** — it reports missing Brian2/PyNN/Akida imports or an unreachable lava-backend.
+
+---
+
 ## Akida support (optional)
 
 BrainChip Akida requires extra setup beyond the base install:

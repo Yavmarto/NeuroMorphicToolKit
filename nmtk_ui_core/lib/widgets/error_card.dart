@@ -25,7 +25,7 @@ class NmtkErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final errColor = NmtkShellTokens.of(context).errorColor;
-    return NmtkSectionCard(
+    final card = NmtkSectionCard(
       title: title,
       subtitle: subtitle,
       tone: NmtkTone.danger,
@@ -51,5 +51,7 @@ class NmtkErrorCard extends StatelessWidget {
         ],
       ),
     );
+
+    return selectable ? SelectionArea(child: card) : card;
   }
 }

@@ -65,13 +65,15 @@ class NmtkStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ZetaInPageBanner(
-      title: title,
-      content: content ?? const SizedBox.shrink(),
-      status: nmtkToneToZetaWidgetStatus(tone),
-      customIcon: icon,
-      actions: actions,
-      onClose: canClose ? onClose : null,
+    return SelectionArea(
+      child: ZetaInPageBanner(
+        title: title,
+        content: content ?? const SizedBox.shrink(),
+        status: nmtkToneToZetaWidgetStatus(tone),
+        customIcon: icon,
+        actions: actions,
+        onClose: canClose ? onClose : null,
+      ),
     );
   }
 }

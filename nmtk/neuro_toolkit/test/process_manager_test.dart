@@ -261,7 +261,7 @@ void main() {
       description: 'Description',
       directory: tempDir.path,
       sourcePath: 'src',
-      installExtras: const ['training', 'lava'],
+      installExtras: const ['training', 'studio'],
     );
 
     await processManager.installModule(module);
@@ -270,7 +270,7 @@ void main() {
       mockRunner.calls.any(
         (c) =>
             c.arguments.contains('install') &&
-            c.arguments.contains('.[training,lava]'),
+            c.arguments.contains('.[training,studio]'),
       ),
       isTrue,
     );
