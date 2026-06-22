@@ -1,6 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/models/shell_models.dart';
 
+// ---------------------------------------------------------------------------
+// THEME VARIANT ENUM (moved here from app_theme.dart to break circular dep)
+// ---------------------------------------------------------------------------
+
+enum NmtkThemeVariant {
+  defaultNavy,
+  neurocnl,
+  neurohub,
+  neurochip,
+  neurobench,
+  neurosim,
+  neurosense,
+}
+
 class NmtkShellModePalette {
   final Color accent;
   final Color accentContainer;
@@ -62,6 +76,26 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
   final NmtkShellModePalette studioPalette;
   final NmtkShellModePalette instrumentPalette;
 
+  // ── Fields merged from NmtkThemeExtension ──────────────────────────────────
+  final Color terminalBackground;
+  final Color syntaxHighlightColor;
+  final LinearGradient brandGradient;
+  final Color synKeyword;
+  final Color synSubject;
+  final Color synNumber;
+  final Color synComment;
+  final Color synString;
+  final Color nodeEnsemble;
+  final Color nodeMotor;
+  final Color nodeInterneuron;
+  final Color nodeGenericEnsemble;
+  final Color nodeInput;
+  final Color nodeErrorInput;
+  final Color edgeExcitatory;
+  final Color edgeInhibitory;
+  final Color edgePlastic;
+  final NmtkThemeVariant variant;
+
   const NmtkShellTokens({
     required this.topAppBarHeight,
     required this.workspaceBarHeight,
@@ -92,6 +126,26 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
     required this.commandPalette,
     required this.studioPalette,
     required this.instrumentPalette,
+    this.terminalBackground = const Color(0xFF0A0C16),
+    this.syntaxHighlightColor = const Color(0xFF60A5FA),
+    this.brandGradient = const LinearGradient(
+      colors: [Color(0xFF1337EC), Color(0xFF8B5CF6)],
+    ),
+    this.synKeyword = const Color(0xFF60A5FA),
+    this.synSubject = const Color(0xFF38BDF8),
+    this.synNumber = const Color(0xFFFBBF24),
+    this.synComment = const Color(0xFF6B7280),
+    this.synString = const Color(0xFF34D399),
+    this.nodeEnsemble = const Color(0xFF3B82F6),
+    this.nodeMotor = const Color(0xFFF59E0B),
+    this.nodeInterneuron = const Color(0xFF14B8A6),
+    this.nodeGenericEnsemble = const Color(0xFF60A5FA),
+    this.nodeInput = const Color(0xFF22C55E),
+    this.nodeErrorInput = const Color(0xFFEF4444),
+    this.edgeExcitatory = const Color(0xFF3B82F6),
+    this.edgeInhibitory = const Color(0xFFEF4444),
+    this.edgePlastic = const Color(0xFFF59E0B),
+    this.variant = NmtkThemeVariant.defaultNavy,
   });
 
   factory NmtkShellTokens.fromColorScheme(
@@ -221,6 +275,24 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
     NmtkShellModePalette? commandPalette,
     NmtkShellModePalette? studioPalette,
     NmtkShellModePalette? instrumentPalette,
+    Color? terminalBackground,
+    Color? syntaxHighlightColor,
+    LinearGradient? brandGradient,
+    Color? synKeyword,
+    Color? synSubject,
+    Color? synNumber,
+    Color? synComment,
+    Color? synString,
+    Color? nodeEnsemble,
+    Color? nodeMotor,
+    Color? nodeInterneuron,
+    Color? nodeGenericEnsemble,
+    Color? nodeInput,
+    Color? nodeErrorInput,
+    Color? edgeExcitatory,
+    Color? edgeInhibitory,
+    Color? edgePlastic,
+    NmtkThemeVariant? variant,
   }) {
     return NmtkShellTokens(
       topAppBarHeight: topAppBarHeight ?? this.topAppBarHeight,
@@ -254,6 +326,24 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
       commandPalette: commandPalette ?? this.commandPalette,
       studioPalette: studioPalette ?? this.studioPalette,
       instrumentPalette: instrumentPalette ?? this.instrumentPalette,
+      terminalBackground: terminalBackground ?? this.terminalBackground,
+      syntaxHighlightColor: syntaxHighlightColor ?? this.syntaxHighlightColor,
+      brandGradient: brandGradient ?? this.brandGradient,
+      synKeyword: synKeyword ?? this.synKeyword,
+      synSubject: synSubject ?? this.synSubject,
+      synNumber: synNumber ?? this.synNumber,
+      synComment: synComment ?? this.synComment,
+      synString: synString ?? this.synString,
+      nodeEnsemble: nodeEnsemble ?? this.nodeEnsemble,
+      nodeMotor: nodeMotor ?? this.nodeMotor,
+      nodeInterneuron: nodeInterneuron ?? this.nodeInterneuron,
+      nodeGenericEnsemble: nodeGenericEnsemble ?? this.nodeGenericEnsemble,
+      nodeInput: nodeInput ?? this.nodeInput,
+      nodeErrorInput: nodeErrorInput ?? this.nodeErrorInput,
+      edgeExcitatory: edgeExcitatory ?? this.edgeExcitatory,
+      edgeInhibitory: edgeInhibitory ?? this.edgeInhibitory,
+      edgePlastic: edgePlastic ?? this.edgePlastic,
+      variant: variant ?? this.variant,
     );
   }
 
@@ -332,6 +422,36 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
         other.instrumentPalette,
         t,
       ),
+      terminalBackground: Color.lerp(
+        terminalBackground,
+        other.terminalBackground,
+        t,
+      )!,
+      syntaxHighlightColor: Color.lerp(
+        syntaxHighlightColor,
+        other.syntaxHighlightColor,
+        t,
+      )!,
+      brandGradient: LinearGradient.lerp(brandGradient, other.brandGradient, t)!,
+      synKeyword: Color.lerp(synKeyword, other.synKeyword, t)!,
+      synSubject: Color.lerp(synSubject, other.synSubject, t)!,
+      synNumber: Color.lerp(synNumber, other.synNumber, t)!,
+      synComment: Color.lerp(synComment, other.synComment, t)!,
+      synString: Color.lerp(synString, other.synString, t)!,
+      nodeEnsemble: Color.lerp(nodeEnsemble, other.nodeEnsemble, t)!,
+      nodeMotor: Color.lerp(nodeMotor, other.nodeMotor, t)!,
+      nodeInterneuron: Color.lerp(nodeInterneuron, other.nodeInterneuron, t)!,
+      nodeGenericEnsemble: Color.lerp(
+        nodeGenericEnsemble,
+        other.nodeGenericEnsemble,
+        t,
+      )!,
+      nodeInput: Color.lerp(nodeInput, other.nodeInput, t)!,
+      nodeErrorInput: Color.lerp(nodeErrorInput, other.nodeErrorInput, t)!,
+      edgeExcitatory: Color.lerp(edgeExcitatory, other.edgeExcitatory, t)!,
+      edgeInhibitory: Color.lerp(edgeInhibitory, other.edgeInhibitory, t)!,
+      edgePlastic: Color.lerp(edgePlastic, other.edgePlastic, t)!,
+      variant: t < 0.5 ? variant : other.variant,
     );
   }
 

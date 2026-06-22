@@ -29,11 +29,36 @@ void main() {
   });
 
   group('NmtkThemeExtension', () {
-    const extension = NmtkThemeExtension(
-      terminalBackground: Colors.black,
-      syntaxHighlightColor: Colors.blue,
-      brandGradient: LinearGradient(colors: [Colors.blue, Colors.red]),
+    // NmtkThemeExtension is now a typedef for NmtkShellTokens.
+    // Build via fromColorScheme + copyWith to set the expressive fields.
+    final baseScheme = ColorScheme.fromSeed(
+      seedColor: Colors.blue,
+      brightness: Brightness.dark,
     );
+    late NmtkThemeExtension extension;
+    late NmtkThemeExtension other;
+
+    setUp(() {
+      extension = NmtkShellTokens.fromColorScheme(
+        baseScheme,
+        Brightness.dark,
+      ).copyWith(
+        terminalBackground: Colors.black,
+        syntaxHighlightColor: Colors.blue,
+        brandGradient:
+            const LinearGradient(colors: [Colors.blue, Colors.red]),
+      ) as NmtkThemeExtension;
+
+      other = NmtkShellTokens.fromColorScheme(
+        baseScheme,
+        Brightness.dark,
+      ).copyWith(
+        terminalBackground: Colors.white,
+        syntaxHighlightColor: Colors.green,
+        brandGradient:
+            const LinearGradient(colors: [Colors.green, Colors.yellow]),
+      ) as NmtkThemeExtension;
+    });
 
     test('copyWith works correctly', () {
       final updated =
@@ -44,12 +69,6 @@ void main() {
     });
 
     test('lerp works correctly', () {
-      final other = const NmtkThemeExtension(
-        terminalBackground: Colors.white,
-        syntaxHighlightColor: Colors.green,
-        brandGradient: LinearGradient(colors: [Colors.green, Colors.yellow]),
-      );
-
       final lerped = extension.lerp(other, 0.5) as NmtkThemeExtension;
       expect(
         lerped.terminalBackground,
