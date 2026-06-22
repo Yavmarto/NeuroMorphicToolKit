@@ -26,20 +26,16 @@ const _kNavItems = [
   ),
 ];
 
-// A minimal file-action delegate for testing.
-class _TestFileDelegate implements NmtkFileActionDelegate {
+// A minimal file-action callback holder for testing.
+class _TestFileCallbacks {
   int newCount = 0;
   int openCount = 0;
   int saveCount = 0;
   int saveAsCount = 0;
 
-  @override
   void onNewFile() => newCount++;
-  @override
   void onOpenFile() => openCount++;
-  @override
   void onSaveFile() => saveCount++;
-  @override
   void onSaveFileAs() => saveAsCount++;
 }
 
@@ -177,8 +173,8 @@ void main() {
       expect(find.text('YM'), findsOneWidget);
     });
 
-    // 6. File action buttons render when fileActions provided
-    testWidgets('file action icon strip renders when fileActions is provided', (
+    // 6. File action buttons render when file action callbacks provided
+    testWidgets('file action icon strip renders when callbacks are provided', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1280, 900);
@@ -186,14 +182,17 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      final delegate = _TestFileDelegate();
+      final callbacks = _TestFileCallbacks();
 
       await tester.pumpWidget(
         _buildHarness(
           NmtkDesktopScaffold(
             navItems: _kNavItems,
             selectedIndex: 0,
-            fileActions: delegate,
+            onNewFile: callbacks.onNewFile,
+            onOpenFile: callbacks.onOpenFile,
+            onSaveFile: callbacks.onSaveFile,
+            onSaveFileAs: callbacks.onSaveFileAs,
             child: const Text('Content'),
           ),
         ),

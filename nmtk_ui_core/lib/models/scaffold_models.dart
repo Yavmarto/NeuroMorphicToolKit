@@ -66,10 +66,9 @@ class NmtkUserProfile {
   final List<NmtkUserProfileAction> actions;
 }
 
-/// Abstract interface for New/Open/Save/Save-As file operations.
-abstract class NmtkFileActionDelegate {
-  void onNewFile();
-  void onOpenFile();
-  void onSaveFile();
-  void onSaveFileAs();
-}
+/// Callbacks for New/Open/Save/Save-As file operations.
+/// ponytail: single-impl abstract class → plain callbacks
+typedef OnNewFile = void Function();
+typedef OnOpenFile = void Function();
+typedef OnSaveFile = void Function();
+typedef OnSaveFileAs = void Function();

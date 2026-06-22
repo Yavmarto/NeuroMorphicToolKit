@@ -18,7 +18,10 @@ class NmtkMobileScaffold extends StatefulWidget {
     this.mode = NmtkShellMode.command,
     this.showBackButton = false,
     this.onBack,
-    this.fileActions,
+    this.onNewFile,
+    this.onOpenFile,
+    this.onSaveFile,
+    this.onSaveFileAs,
     this.onSettingsPressed,
     this.pageTitle,
     this.footerNavItems = const [],
@@ -35,7 +38,10 @@ class NmtkMobileScaffold extends StatefulWidget {
   final NmtkShellMode mode;
   final bool showBackButton;
   final VoidCallback? onBack;
-  final NmtkFileActionDelegate? fileActions;
+  final OnNewFile? onNewFile;
+  final OnOpenFile? onOpenFile;
+  final OnSaveFile? onSaveFile;
+  final OnSaveFileAs? onSaveFileAs;
   final VoidCallback? onSettingsPressed;
   final String? pageTitle;
   final List<NmtkSidebarItem> footerNavItems;
@@ -83,8 +89,13 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
   }
 
   void _showFileActionsSheet() {
-    final acts = widget.fileActions;
-    if (acts == null) return;
+    // Check if any file action callback is defined
+    if (widget.onNewFile == null &&
+        widget.onOpenFile == null &&
+        widget.onSaveFile == null &&
+        widget.onSaveFileAs == null) {
+      return;
+    }
     // Read tokens before opening the sheet (context is valid here in the State).
     final tokens = NmtkShellTokens.of(context);
     showModalBottomSheet<void>(
@@ -110,38 +121,42 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                   ).textStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
-              ZetaListItem(
-                leading: const Icon(ZetaIcons.add),
-                title: const Text('New File'),
-                onTap: () {
-                  Navigator.pop(context);
-                  acts.onNewFile();
-                },
-              ),
-              ZetaListItem(
-                leading: const Icon(ZetaIcons.folder_outline),
-                title: const Text('Open File'),
-                onTap: () {
-                  Navigator.pop(context);
-                  acts.onOpenFile();
-                },
-              ),
-              ZetaListItem(
-                leading: const Icon(ZetaIcons.save),
-                title: const Text('Save'),
-                onTap: () {
-                  Navigator.pop(context);
-                  acts.onSaveFile();
-                },
-              ),
-              ZetaListItem(
-                leading: const Icon(ZetaIcons.save),
-                title: const Text('Save As'),
-                onTap: () {
-                  Navigator.pop(context);
-                  acts.onSaveFileAs();
-                },
-              ),
+              if (widget.onNewFile != null)
+                ZetaListItem(
+                  leading: const Icon(ZetaIcons.add),
+                  title: const Text('New File'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onNewFile!();
+                  },
+                ),
+              if (widget.onOpenFile != null)
+                ZetaListItem(
+                  leading: const Icon(ZetaIcons.folder_outline),
+                  title: const Text('Open File'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onOpenFile!();
+                  },
+                ),
+              if (widget.onSaveFile != null)
+                ZetaListItem(
+                  leading: const Icon(ZetaIcons.save),
+                  title: const Text('Save'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onSaveFile!();
+                  },
+                ),
+              if (widget.onSaveFileAs != null)
+                ZetaListItem(
+                  leading: const Icon(ZetaIcons.save),
+                  title: const Text('Save As'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    widget.onSaveFileAs!();
+                  },
+                ),
               const SizedBox(height: 16),
             ],
           ),
@@ -194,15 +209,19 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
           top: false,
           child: ColoredBox(color: scheme.surface, child: widget.child),
         ),
-        floatingActionButton: widget.fileActions != null
-            ? FloatingActionButton(
-                onPressed: _showFileActionsSheet,
-                backgroundColor: scheme.primaryContainer,
-                foregroundColor: scheme.onPrimaryContainer,
-                // ZETA-MIGRATION-EXEMPT: no Zeta equivalent for document-edit icon
-                child: const Icon(Icons.edit_document),
-              )
-            : null,
+        floatingActionButton:
+            (widget.onNewFile != null ||
+                    widget.onOpenFile != null ||
+                    widget.onSaveFile != null ||
+                    widget.onSaveFileAs != null)
+                ? FloatingActionButton(
+                    onPressed: _showFileActionsSheet,
+                    backgroundColor: scheme.primaryContainer,
+                    foregroundColor: scheme.onPrimaryContainer,
+                    // ZETA-MIGRATION-EXEMPT: no Zeta equivalent for document-edit icon
+                    child: const Icon(Icons.edit_document),
+                  )
+                : null,
         bottomNavigationBar:
             (widget.showBottomNavigation && useBottomNavigation)
             ? NavigationBar(
