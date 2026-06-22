@@ -105,6 +105,28 @@ DOCKER_EX_RSYNC_VERBOSE ?=
 # The %h/%p/%r tokens are expanded by ssh itself, so this is safe when REMOTE_HOST is empty.
 SSH_OPTS ?= -o ControlMaster=auto -o ControlPath=/tmp/nmtk-ssh-%h-%p-%r -o ControlPersist=60s
 
+# rsync exclude list shared between docker-ex-deploy and dev-sync
+RSYNC_EXCLUDES := \
+	--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
+	--exclude '__pycache__' --exclude 'node_modules' \
+	--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
+	--exclude '.cache' --exclude '.mypy_cache' --exclude '.pytest_cache' \
+	--exclude '.ruff_cache' --exclude 'logs/' --exclude 'NMTK_SIDE/' \
+	--exclude '.hypothesis' --exclude '.kiro' \
+	--exclude '.understand-anything' --exclude '.sisyphus' \
+	--exclude '.impeccable' --exclude '.tmp_manual_ui' \
+	--exclude '.swarm/' --exclude '.opencode/' --exclude '.cursor/' \
+	--exclude 'docs/' --exclude 'issues/' --exclude 'issues-archive/' \
+	--exclude 'ai_safe/' --exclude 'Neuro-Dream-Hand/' --exclude 'paper/' \
+	--exclude 'neurocnl/frontend/' --exclude 'Neurohub/frontend/' \
+	--exclude 'Neurochip/frontend/' --exclude 'Neurobench/frontend/' \
+	--exclude 'Neurosim/frontend/' --exclude 'nmtk_ui_core/' \
+	--exclude 'nmtk/neuro_toolkit/lib/' --exclude 'nmtk/neuro_toolkit/build/' \
+	--exclude 'nmtk/neuro_toolkit/.dart_tool/' --exclude 'nmtk/neuro_toolkit/android/' \
+	--exclude 'nmtk/neuro_toolkit/ios/' --exclude 'nmtk/neuro_toolkit/macos/' \
+	--exclude 'nmtk/neuro_toolkit/linux/' --exclude 'nmtk/neuro_toolkit/windows/' \
+	--exclude 'nmtk/neuro_toolkit/web/' --exclude 'nmtk/packages/'
+
 ## Initialise required secrets on the remote host if they are missing.
 ## Safe to re-run — only fills gaps, never overwrites existing values.
 secrets-init:
@@ -129,25 +151,7 @@ docker-ex-deploy:
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
 	rsync -a --delete -v -e "ssh $(SSH_OPTS)" \
 		$(if $(DOCKER_EX_RSYNC_VERBOSE),-v,) \
-		--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
-		--exclude '__pycache__' --exclude 'node_modules' \
-		--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
-		--exclude '.cache' --exclude '.mypy_cache' --exclude '.pytest_cache' \
-		--exclude '.ruff_cache' --exclude 'logs/' --exclude 'NMTK_SIDE/' \
-		--exclude '.hypothesis' --exclude '.kiro' \
-		--exclude '.understand-anything' --exclude '.sisyphus' \
-		--exclude '.impeccable' --exclude '.tmp_manual_ui' \
-		--exclude '.swarm/' --exclude '.opencode/' --exclude '.cursor/' \
-		--exclude 'docs/' --exclude 'issues/' --exclude 'issues-archive/' \
-		--exclude 'ai_safe/' --exclude 'Neuro-Dream-Hand/' --exclude 'paper/' \
-		--exclude 'neurocnl/frontend/' --exclude 'Neurohub/frontend/' \
-		--exclude 'Neurochip/frontend/' --exclude 'Neurobench/frontend/' \
-		--exclude 'Neurosim/frontend/' --exclude 'nmtk_ui_core/' \
-		--exclude 'nmtk/neuro_toolkit/lib/' --exclude 'nmtk/neuro_toolkit/build/' \
-		--exclude 'nmtk/neuro_toolkit/.dart_tool/' --exclude 'nmtk/neuro_toolkit/android/' \
-		--exclude 'nmtk/neuro_toolkit/ios/' --exclude 'nmtk/neuro_toolkit/macos/' \
-		--exclude 'nmtk/neuro_toolkit/linux/' --exclude 'nmtk/neuro_toolkit/windows/' \
-		--exclude 'nmtk/neuro_toolkit/web/' --exclude 'nmtk/packages/' \
+		$(RSYNC_EXCLUDES) \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Evicting any native process on port $(LAUNCHER_CONTROL_PORT) on $(REMOTE_HOST)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(LAUNCHER_CONTROL_PORT)/tcp 2>/dev/null || true"
@@ -194,25 +198,7 @@ dev-sync:
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
 	rsync -a --delete -v -e "ssh $(SSH_OPTS)" \
 		$(if $(DOCKER_EX_RSYNC_VERBOSE),-v,) \
-		--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
-		--exclude '__pycache__' --exclude 'node_modules' \
-		--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
-		--exclude '.cache' --exclude '.mypy_cache' --exclude '.pytest_cache' \
-		--exclude '.ruff_cache' --exclude 'logs/' --exclude 'NMTK_SIDE/' \
-		--exclude '.hypothesis' --exclude '.kiro' \
-		--exclude '.understand-anything' --exclude '.sisyphus' \
-		--exclude '.impeccable' --exclude '.tmp_manual_ui' \
-		--exclude '.swarm/' --exclude '.opencode/' --exclude '.cursor/' \
-		--exclude 'docs/' --exclude 'issues/' --exclude 'issues-archive/' \
-		--exclude 'ai_safe/' --exclude 'Neuro-Dream-Hand/' --exclude 'paper/' \
-		--exclude 'neurocnl/frontend/' --exclude 'Neurohub/frontend/' \
-		--exclude 'Neurochip/frontend/' --exclude 'Neurobench/frontend/' \
-		--exclude 'Neurosim/frontend/' --exclude 'nmtk_ui_core/' \
-		--exclude 'nmtk/neuro_toolkit/lib/' --exclude 'nmtk/neuro_toolkit/build/' \
-		--exclude 'nmtk/neuro_toolkit/.dart_tool/' --exclude 'nmtk/neuro_toolkit/android/' \
-		--exclude 'nmtk/neuro_toolkit/ios/' --exclude 'nmtk/neuro_toolkit/macos/' \
-		--exclude 'nmtk/neuro_toolkit/linux/' --exclude 'nmtk/neuro_toolkit/windows/' \
-		--exclude 'nmtk/neuro_toolkit/web/' --exclude 'nmtk/packages/' \
+		$(RSYNC_EXCLUDES) \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Restarting container processes if necessary (live-reload handles python changes automatically)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d"
