@@ -59,7 +59,7 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final moduleStateAsync = ref.watch(moduleNotifierProvider);
+    final moduleStateAsync = ref.watch(moduleProvider);
     final moduleState = moduleStateAsync.value;
     final pythonReady =
         !widget.requirePython || (moduleState?.pythonAvailable ?? false);
@@ -107,9 +107,9 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
                           'the launcher is connected.',
                       child: Align(
                         alignment: Alignment.centerLeft,
-                        child: NmtkOutlinedButton(
+                        child: ZetaButton.outline(
                           onPressed: () => context.push('/environments'),
-                          icon: ZetaIcons.tune,
+                          leadingIcon: ZetaIcons.tune,
                           label: 'Open environment manager',
                         ),
                       ),
@@ -139,32 +139,30 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (Platform.isMacOS) ...[
-                  NmtkPrimaryButton(
+                  ZetaButton.primary(
                     onPressed:
                         _isInstallingPython ? null : _installWithHomebrew,
-                    icon: ZetaIcons.download,
+                    leadingIcon: ZetaIcons.download,
                     label: _isInstallingPython
                         ? 'Installing…'
                         : 'Install with Homebrew',
                   ),
                   const SizedBox(height: 12),
-                  NmtkOutlinedButton(
+                  ZetaButton.outline(
                     onPressed: _openPythonOrg,
-                    icon: ZetaIcons.open_in_new_window,
+                    leadingIcon: ZetaIcons.open_in_new_window,
                     label: 'Download from python.org',
-                    tone: NmtkTone.info,
                   ),
                   const SizedBox(height: 12),
                 ],
-                NmtkPrimaryButton(
+                ZetaButton.primary(
                   onPressed: (_isInstallingPython || _isCheckingPython)
                       ? null
                       : _retryPythonCheck,
-                  icon: ZetaIcons.refresh,
+                  leadingIcon: ZetaIcons.refresh,
                   label: _isCheckingPython
                       ? 'Checking for Python…'
                       : 'Retry detection',
-                  tone: NmtkTone.neutral,
                 ),
                 if (_pythonInstallOutput != null) ...[
                   const SizedBox(height: 12),
@@ -258,7 +256,7 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
       _pythonErrorMessage = null;
     });
 
-    await ref.read(moduleNotifierProvider.notifier).recheckPython();
+    await ref.read(moduleProvider.notifier).recheckPython();
 
     if (mounted) {
       setState(() => _isCheckingPython = false);

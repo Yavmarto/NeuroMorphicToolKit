@@ -93,7 +93,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
       _errorMessage = null;
     });
 
-    await ref.read(moduleNotifierProvider.notifier).recheckPython();
+    await ref.read(moduleProvider.notifier).recheckPython();
 
     if (mounted) {
       setState(() => _isChecking = false);
@@ -138,10 +138,10 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                         if (Platform.isMacOS) ...[
                           SizedBox(
                             width: double.infinity,
-                            child: NmtkPrimaryButton(
+                            child: ZetaButton.primary(
                               onPressed:
                                   _isInstalling ? null : _installWithHomebrew,
-                              icon: ZetaIcons.download,
+                              leadingIcon: ZetaIcons.download,
                               label: _isInstalling
                                   ? 'Installing...'
                                   : 'Install with Homebrew',
@@ -150,26 +150,24 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                           const SizedBox(height: 12),
                           SizedBox(
                             width: double.infinity,
-                            child: NmtkOutlinedButton(
+                            child: ZetaButton.outline(
                               onPressed: _openPythonOrg,
-                              icon: ZetaIcons.open_in_new_window,
+                              leadingIcon: ZetaIcons.open_in_new_window,
                               label: 'Download from python.org',
-                              tone: NmtkTone.info,
                             ),
                           ),
                           const SizedBox(height: 12),
                         ],
                         SizedBox(
                           width: double.infinity,
-                          child: NmtkPrimaryButton(
+                          child: ZetaButton.primary(
                             onPressed: (_isInstalling || _isChecking)
                                 ? null
                                 : _retryCheck,
-                            icon: ZetaIcons.refresh,
+                            leadingIcon: ZetaIcons.refresh,
                             label: _isChecking
                                 ? 'Checking for Python...'
                                 : 'Retry Detection',
-                            tone: NmtkTone.neutral,
                           ),
                         ),
                       ],

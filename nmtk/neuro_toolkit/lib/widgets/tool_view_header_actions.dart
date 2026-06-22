@@ -25,7 +25,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final appState = ref.watch(appNotifierProvider);
+    final appState = ref.watch(appProvider);
     final developerMode = appState.developerMode;
 
     return Row(
@@ -47,7 +47,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
                   developerMode ? Theme.of(context).colorScheme.primary : null,
             ),
             onPressed: () =>
-                ref.read(appNotifierProvider.notifier).toggleDeveloperMode(),
+                ref.read(appProvider.notifier).toggleDeveloperMode(),
             tooltip: developerMode
                 ? 'Hide module internals'
                 : 'Show module internals',
@@ -90,7 +90,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
                   ? null
                   : () {
                       unawaited(ref
-                          .read(moduleNotifierProvider.notifier)
+                          .read(moduleProvider.notifier)
                           .stopModule(activeModule!.id));
                     },
               tooltip: 'Stop Module',
@@ -102,7 +102,7 @@ class ToolViewHeaderActions extends ConsumerWidget {
             child: IconButton(
               icon: const Icon(ZetaIcons.refresh),
               onPressed: () =>
-                  ref.read(moduleNotifierProvider.notifier).checkForUpdates(),
+                  ref.read(moduleProvider.notifier).checkForUpdates(),
               tooltip: 'Check for Updates',
             ),
           ),

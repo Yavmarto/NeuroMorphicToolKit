@@ -61,7 +61,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
 
   @override
   Widget build(BuildContext context) {
-    final deploymentStateAsync = ref.watch(deploymentNotifierProvider);
+    final deploymentStateAsync = ref.watch(backendDeploymentProvider);
     final deploymentState = deploymentStateAsync.value;
     final isReady = deploymentState?.isReady ?? false;
     final tokens = NmtkShellTokens.of(context);
@@ -250,7 +250,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         if (job != null && !job.isTerminal)
           ZetaButton.text(
             onPressed: () =>
-                ref.read(deploymentNotifierProvider.notifier).cancelActiveJob(),
+                ref.read(backendDeploymentProvider.notifier).cancelActiveJob(),
             label: 'Cancel',
           ),
       ],
@@ -294,7 +294,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   Future<void> _runPreflight() async {
     setState(() => _isWorking = true);
     final result =
-        await ref.read(deploymentNotifierProvider.notifier).preflight(
+        await ref.read(backendDeploymentProvider.notifier).preflight(
               targetType: _targetType,
               mode: _mode,
               displayName: _displayName.text,
@@ -317,7 +317,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       _isWorking = true;
       _completionQueued = false;
     });
-    await ref.read(deploymentNotifierProvider.notifier).deploy(
+    await ref.read(backendDeploymentProvider.notifier).deploy(
           targetType: _targetType,
           mode: _mode,
           displayName: _displayName.text,

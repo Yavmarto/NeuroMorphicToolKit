@@ -139,7 +139,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final moduleStateAsync = ref.watch(moduleNotifierProvider);
+    final moduleStateAsync = ref.watch(moduleProvider);
     final moduleState = moduleStateAsync.value;
     final bootstrapState = ref.watch(launcherBootstrapStateProvider);
 
@@ -204,7 +204,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     BuildContext context,
     WidgetRef ref,
   ) {
-    final moduleState = ref.read(moduleNotifierProvider).value;
+    final moduleState = ref.read(moduleProvider).value;
     final update = moduleState?.pendingLauncherUpdate;
     if (update == null) return;
     final releaseNotes = update.releaseNotes.trim().isEmpty
@@ -236,7 +236,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         actions: [
           ZetaButton.text(
             onPressed: () {
-              ref.read(moduleNotifierProvider.notifier).dismissLauncherUpdate();
+              ref.read(moduleProvider.notifier).dismissLauncherUpdate();
               Navigator.of(dialogContext).pop();
             },
             label: 'Later',

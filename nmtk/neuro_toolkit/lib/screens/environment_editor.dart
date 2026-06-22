@@ -35,14 +35,14 @@ class _EnvironmentEditorScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(environmentNotifierProvider.notifier).refresh();
+      ref.read(environmentProvider.notifier).refresh();
     });
   }
 
   Future<void> _runGuarded(
       Future<void> Function() action, String success) async {
-    final stateAsync = ref.read(environmentNotifierProvider);
-    ref.read(environmentNotifierProvider);
+    final stateAsync = ref.read(environmentProvider);
+    ref.read(environmentProvider);
     try {
       await action();
       if (!mounted) return;
@@ -56,7 +56,7 @@ class _EnvironmentEditorScreenState
 
   @override
   Widget build(BuildContext context) {
-    final providerAsync = ref.watch(environmentNotifierProvider);
+    final providerAsync = ref.watch(environmentProvider);
     final provider = providerAsync.value;
 
     if (provider == null) {
@@ -74,7 +74,7 @@ class _EnvironmentEditorScreenState
               onPressed: provider.busy
                   ? null
                   : () =>
-                      ref.read(environmentNotifierProvider.notifier).refresh(),
+                      ref.read(environmentProvider.notifier).refresh(),
             ),
           ),
         ],
@@ -104,10 +104,10 @@ class _EnvironmentEditorScreenState
             subtitle: providerAsync.error.toString(),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: NmtkPrimaryButton(
+              child: ZetaButton.primary(
                 label: 'Retry',
                 onPressed: () =>
-                    ref.read(environmentNotifierProvider.notifier).refresh(),
+                    ref.read(environmentProvider.notifier).refresh(),
               ),
             ),
           ),
@@ -127,11 +127,11 @@ class _EnvironmentEditorScreenState
             spacing: 12,
             runSpacing: 12,
             children: [
-              NmtkPrimaryButton(
+              ZetaButton.primary(
                 label: 'Clone NeuroStudio',
                 onPressed: provider.busy ? null : _promptClone,
               ),
-              NmtkOutlinedButton(
+              ZetaButton.outline(
                 label: 'Import requirements…',
                 onPressed: provider.busy ? null : _promptImport,
               ),
@@ -159,7 +159,7 @@ class _EnvironmentEditorScreenState
     if (name == null || name.trim().isEmpty) return;
     await _runGuarded(
       () => ref
-          .read(environmentNotifierProvider.notifier)
+          .read(environmentProvider.notifier)
           .createEnvironment(name.trim()),
       'Environment "$name" created.',
     );
@@ -173,7 +173,7 @@ class _EnvironmentEditorScreenState
     if (result == null) return;
     await _runGuarded(
       () => ref
-          .read(environmentNotifierProvider.notifier)
+          .read(environmentProvider.notifier)
           .importEnvironment(result.name, result.requirements),
       'Environment "${result.name}" imported.',
     );
@@ -203,7 +203,7 @@ class _EnvironmentEditorScreenState
     if (ok != true) return;
     await _runGuarded(
       () => ref
-          .read(environmentNotifierProvider.notifier)
+          .read(environmentProvider.notifier)
           .deleteEnvironment(env.slug),
       'Environment "${env.displayName}" deleted.',
     );
@@ -308,7 +308,7 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
     });
     try {
       final pkgs = await ref
-          .read(environmentNotifierProvider.notifier)
+          .read(environmentProvider.notifier)
           .packages(widget.env.slug);
       if (!mounted) return;
       setState(() => _packages = pkgs);
@@ -330,10 +330,10 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
   Future<void> _addPackage() async {
     final spec = _addController.text.trim();
     if (spec.isEmpty) return;
-    final stateAsync = ref.read(environmentNotifierProvider);
+    final stateAsync = ref.read(environmentProvider);
     try {
       await ref
-          .read(environmentNotifierProvider.notifier)
+          .read(environmentProvider.notifier)
           .installPackages(widget.env.slug, [spec]);
       _addController.clear();
       if (!mounted) return;
@@ -347,10 +347,10 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
   }
 
   Future<void> _removePackage(String name) async {
-    final stateAsync = ref.read(environmentNotifierProvider);
+    final stateAsync = ref.read(environmentProvider);
     try {
       await ref
-          .read(environmentNotifierProvider.notifier)
+          .read(environmentProvider.notifier)
           .uninstallPackages(widget.env.slug, [name]);
       if (!mounted) return;
       NmtkToasts.success(context, 'Removed $name');
@@ -390,18 +390,17 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
             spacing: 12,
             runSpacing: 12,
             children: [
-              NmtkOutlinedButton(
+              ZetaButton.outline(
                 label: _expanded ? 'Hide packages' : 'Packages',
                 onPressed: _toggle,
               ),
-              NmtkOutlinedButton(
+              ZetaButton.outline(
                 label: 'Export…',
                 onPressed: widget.onExport,
               ),
               if (!env.immutable)
-                NmtkOutlinedButton(
+                ZetaButton.outline(
                   label: 'Delete',
-                  tone: NmtkTone.danger,
                   onPressed: widget.busy ? null : widget.onDelete,
                 ),
             ],
@@ -420,7 +419,7 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  NmtkPrimaryButton(
+                  ZetaButton.primary(
                     label: 'Add',
                     onPressed: widget.busy ? null : _addPackage,
                   ),
@@ -516,7 +515,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
     });
     try {
       final body = await ref
-          .read(environmentNotifierProvider.notifier)
+          .read(environmentProvider.notifier)
           .exportRequirements(widget.env.slug, mode: _mode);
       if (!mounted) return;
       setState(() => _body = body);

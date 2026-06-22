@@ -153,9 +153,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Future<void> _initializeWorkspace({bool forceFocus = false}) async {
-    final moduleStateAsync = ref.read(moduleNotifierProvider);
+    final moduleStateAsync = ref.read(moduleProvider);
     final moduleState = moduleStateAsync.value;
-    final workspaceStateAsync = ref.read(workspaceNotifierProvider);
+    final workspaceStateAsync = ref.read(workspaceProvider);
     final workspaceState = workspaceStateAsync.value;
     if (moduleStateAsync.isLoading ||
         workspaceStateAsync.isLoading ||
@@ -193,7 +193,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         eligibleModules.first.id;
 
     await ref
-        .read(workspaceNotifierProvider.notifier)
+        .read(workspaceProvider.notifier)
         .ensureDefaultSessionsOnce(
           sessions: desiredSessions,
           focusedModuleId: targetModuleId,
@@ -262,8 +262,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     String moduleId, {
     required bool requestFocus,
   }) async {
-    final moduleState = ref.read(moduleNotifierProvider).value;
-    final workspaceState = ref.read(workspaceNotifierProvider).value;
+    final moduleState = ref.read(moduleProvider).value;
+    final workspaceState = ref.read(workspaceProvider).value;
     if (moduleState == null || workspaceState == null) return;
 
     final module = _findModule(moduleState.modules, moduleId);
@@ -280,13 +280,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
     final desiredReadiness = _readinessStateForModule(module);
     if (currentSession == null) {
-      await ref.read(workspaceNotifierProvider.notifier).openSession(
+      await ref.read(workspaceProvider.notifier).openSession(
             moduleId,
             surfaceMode: _surfaceModeForModule(moduleId),
             readinessState: desiredReadiness,
           );
     } else if (requestFocus) {
-      await ref.read(workspaceNotifierProvider.notifier).focusSession(moduleId);
+      await ref.read(workspaceProvider.notifier).focusSession(moduleId);
     }
     if (mounted) {
       setState(() {
@@ -297,7 +297,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     if (currentSession != null &&
         currentSession.readinessState != desiredReadiness) {
-      await ref.read(workspaceNotifierProvider.notifier).updateSession(
+      await ref.read(workspaceProvider.notifier).updateSession(
             moduleId,
             readinessState: desiredReadiness,
           );
@@ -306,11 +306,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     if (module.status != ModuleStatus.running &&
         module.status != ModuleStatus.degraded &&
         module.status != ModuleStatus.starting) {
-      await ref.read(workspaceNotifierProvider.notifier).updateSession(
+      await ref.read(workspaceProvider.notifier).updateSession(
             moduleId,
             readinessState: 'warming_up',
           );
-      await ref.read(moduleNotifierProvider.notifier).launchModule(moduleId);
+      await ref.read(moduleProvider.notifier).launchModule(moduleId);
     }
   }
 
@@ -452,7 +452,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     Module currentModule,
     Uri requestUri,
   ) async {
-    final moduleState = ref.read(moduleNotifierProvider).value;
+    final moduleState = ref.read(moduleProvider).value;
     if (moduleState == null) return false;
 
     final navigation = resolveCrossModuleNavigation(
@@ -467,7 +467,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final targetModule = navigation.targetModule;
     _pendingModuleRequests[targetModule.id] = navigation.targetUri;
 
-    await ref.read(workspaceNotifierProvider.notifier).openSession(
+    await ref.read(workspaceProvider.notifier).openSession(
           targetModule.id,
           surfaceMode: _surfaceModeForModule(targetModule.id),
           deepLink: launcherDeepLinkFromUri(navigation.targetUri),
@@ -488,8 +488,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   Future<bool> _handleHostedModuleNavigationRequest(
     NmtkHostNavigationRequest request,
   ) async {
-    final moduleState = ref.read(moduleNotifierProvider).value;
-    final workspaceState = ref.read(workspaceNotifierProvider).value;
+    final moduleState = ref.read(moduleProvider).value;
+    final workspaceState = ref.read(workspaceProvider).value;
     if (moduleState == null || workspaceState == null) return false;
 
     final targetModule = _findModule(moduleState.modules, request.moduleId);
@@ -509,7 +509,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final readinessState = _readinessStateForModule(targetModule);
 
     if (existingSession == null) {
-      await ref.read(workspaceNotifierProvider.notifier).openSession(
+      await ref.read(workspaceProvider.notifier).openSession(
             targetModule.id,
             surfaceMode: _surfaceModeForModule(targetModule.id),
             deepLink: request.deepLink,
@@ -517,7 +517,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             readinessState: readinessState,
           );
     } else {
-      await ref.read(workspaceNotifierProvider.notifier).updateSession(
+      await ref.read(workspaceProvider.notifier).updateSession(
             targetModule.id,
             deepLink: request.deepLink,
             restoreState: restoreState,
@@ -611,14 +611,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               ].join('\n\n'),
               icon: ZetaIcons.error_outline,
               tone: NmtkTone.danger,
-              action: NmtkPrimaryButton(
+              action: ZetaButton.primary(
                 onPressed: () => _activateModule(
                   module.id,
                   requestFocus: false,
                 ),
-                icon: ZetaIcons.refresh,
+                leadingIcon: ZetaIcons.refresh,
                 label: 'Retry Start',
-                tone: NmtkTone.danger,
               ),
             )
           : session == null || !isReady
@@ -647,9 +646,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final moduleStateAsync = ref.watch(moduleNotifierProvider);
+    final moduleStateAsync = ref.watch(moduleProvider);
     final moduleState = moduleStateAsync.value;
-    final workspaceStateAsync = ref.watch(workspaceNotifierProvider);
+    final workspaceStateAsync = ref.watch(workspaceProvider);
     final workspaceState = workspaceStateAsync.value;
     final tokens = NmtkShellTokens.of(context);
 
@@ -659,14 +658,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         : moduleState.modules.where(_shouldOpenModule).toList(growable: false);
 
     // Unconditional ref.listen calls — must be called on every build, before any returns.
-    ref.listen(moduleNotifierProvider, (prev, next) {
+    ref.listen(moduleProvider, (prev, next) {
       final modules = next.value?.modules;
       if (modules == null) return;
       final eligible = modules.where(_shouldOpenModule).toList(growable: false);
       if (mounted) _snapshotModuleStatuses(eligible);
     });
 
-    ref.listen(workspaceNotifierProvider, (prev, next) {
+    ref.listen(workspaceProvider, (prev, next) {
       final ws = next.value;
       if (ws == null || eligibleModules.isEmpty) return;
       final eligibleIds = eligibleModules.map((m) => m.id).toSet();

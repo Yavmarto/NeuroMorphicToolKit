@@ -76,7 +76,7 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       icon: Icons.handyman_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       category: 'System',
       onExecute: () {
-        ref.read(appNotifierProvider.notifier).toggleDeveloperMode();
+        ref.read(appProvider.notifier).toggleDeveloperMode();
       },
     ),
     NmtkCommand(

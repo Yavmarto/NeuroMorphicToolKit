@@ -17,7 +17,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
-    final settingsStateAsync = ref.watch(settingsNotifierProvider);
+    final settingsStateAsync = ref.watch(settingsProvider);
     final settingsState = settingsStateAsync.value;
     if (settingsState == null) {
       return const Center(child: CircularProgressIndicator());
@@ -66,7 +66,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         onChange: (ThemeMode? v) {
                           if (v != null) {
                             ref
-                                .read(settingsNotifierProvider.notifier)
+                                .read(settingsProvider.notifier)
                                 .setThemeMode(v);
                           }
                         },
@@ -86,9 +86,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         'Launcher server, backend target, Python environments',
                     trailing: SizedBox(
                       width: trailingWidth,
-                      child: NmtkOutlinedButton(
+                      child: ZetaButton.outline(
                         onPressed: () => context.go('/setup'),
-                        icon: Icons
+                        leadingIcon: Icons
                             .settings_suggest_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                         label: 'Open',
                       ),
@@ -123,7 +123,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         onChange: (LogLevel? v) {
                           if (v != null) {
                             ref
-                                .read(settingsNotifierProvider.notifier)
+                                .read(settingsProvider.notifier)
                                 .setLogLevel(v);
                           }
                         },
@@ -134,7 +134,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     primaryText: 'Local Crash Logs',
                     trailing: SizedBox(
                       width: trailingWidth,
-                      child: NmtkPrimaryButton(
+                      child: ZetaButton.primary(
                         onPressed: () async {
                           try {
                             List<String> logs;
@@ -157,7 +157,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             );
                           }
                         },
-                        icon: ZetaIcons.history,
+                        leadingIcon: ZetaIcons.history,
                         label: 'View',
                       ),
                     ),
@@ -166,7 +166,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     primaryText: 'Clear Local Logs',
                     trailing: SizedBox(
                       width: trailingWidth,
-                      child: NmtkOutlinedButton(
+                      child: ZetaButton.outline(
                         onPressed: () async {
                           try {
                             await analytics.clearLocalLogs();
@@ -180,9 +180,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             );
                           }
                         },
-                        icon: ZetaIcons.delete_outline,
+                        leadingIcon: ZetaIcons.delete_outline,
                         label: 'Clear',
-                        tone: NmtkTone.danger,
                       ),
                     ),
                   ),
@@ -190,7 +189,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     primaryText: 'Server Logs',
                     trailing: SizedBox(
                       width: trailingWidth,
-                      child: NmtkPrimaryButton(
+                      child: ZetaButton.primary(
                         onPressed: () async {
                           try {
                             List<String> logs;
@@ -216,7 +215,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             );
                           }
                         },
-                        icon: Icons
+                        leadingIcon: Icons
                             .terminal, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                         label: 'View',
                       ),
@@ -299,7 +298,7 @@ class _LauncherControlUrlFieldState
       focusNode: _focusNode,
       placeholder: 'http://192.168.1.50:8091',
       onChange: ref
-          .read(settingsNotifierProvider.notifier)
+          .read(settingsProvider.notifier)
           .setLauncherControlApiBaseUrl,
     );
   }

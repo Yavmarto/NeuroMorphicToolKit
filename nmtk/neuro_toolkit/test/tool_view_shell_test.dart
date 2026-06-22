@@ -102,8 +102,8 @@ void main() {
               analyticsService: AnalyticsService(),
             ),
           ),
-          moduleNotifierProvider.overrideWith(() => _FakeModuleNotifier()),
-          workspaceNotifierProvider
+          moduleProvider.overrideWith(() => _FakeModuleNotifier()),
+          workspaceProvider
               .overrideWith(() => _FakeWorkspaceNotifier()),
         ],
         child: const MaterialApp(home: ToolViewScreen()),
