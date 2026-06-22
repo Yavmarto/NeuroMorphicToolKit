@@ -31,7 +31,6 @@ def get_repos() -> list[str]:
     root_dir = os.getcwd()
     repo_paths: list[str] = []
 
-<<<<<<< Updated upstream
     try:
         paths_output = subprocess.check_output(
             ["git", "config", "--file", ".gitmodules", "--get-regexp", r"submodule\..*\.path"],
@@ -66,82 +65,6 @@ def get_repos() -> list[str]:
 
     repo_paths.append(root_dir)
     return repo_paths
-=======
-def get_repos():
-    """Returns a list of all valid repository paths (submodules with URLs + root)."""
-    root_dir = os.getcwd()
-    repo_paths = []
-
-    try:
-        # Parse submodule paths directly from .gitmodules via git config.
-        # This avoids 'git submodule foreach' which aborts on broken entries (e.g. NeuroDash).
-        paths_output = subprocess.check_output(
-            ["git", "config", "--file", ".gitmodules", "--get-regexp", r"submodule\..*\.path"],
-            text=True, stderr=subprocess.DEVNULL
-        ).strip()
-
-        for line in paths_output.splitlines():
-            # line format: submodule.<name>.path <path>
-            parts = line.split()
-            if len(parts) != 2:
-                continue
-            key, sub_path = parts
-            sub_name = key.split(".")[1]
-
-            # Skip submodules with no URL registered
-            url_check = subprocess.run(
-                ["git", "config", "--file", ".gitmodules", f"submodule.{sub_name}.url"],
-                capture_output=True, text=True
-            )
-            if url_check.returncode != 0 or not url_check.stdout.strip():
-                print(f"  [SKIP] Submodule '{sub_path}' has no URL in .gitmodules — skipping.")
-                continue
-
-            full_path = os.path.join(root_dir, sub_path)
-            if os.path.isdir(full_path):
-                repo_paths.append(full_path)
-            else:
-                print(f"  [SKIP] Submodule path '{sub_path}' does not exist locally — skipping.")
-
-    except subprocess.CalledProcessError:
-        print("  [WARN] Could not read .gitmodules — only the root repo will be used.")
-
-    repo_paths.append(root_dir)  # Always include root last
-    return repo_paths
-
-def get_repo_identifier(repo_path):
-    """Extracts 'owner/repo' from git remote origin — thread-safe, no chdir."""
-    try:
-        url = subprocess.check_output(
-            ["git", "-C", repo_path, "remote", "get-url", "origin"],
-            text=True, stderr=subprocess.DEVNULL
-        ).strip()
-
-        # Match common git URL formats:
-        #   git@github.com:owner/repo.git
-        #   https://github.com/owner/repo.git
-        match = re.search(r"[:/]([^/:]+/[^/.]+)(\.git)?$", url)
-        if not match:
-            return None
-
-        id_str = match.group(1)
-
-        # Normalize owner alias: Yavmarto mirrors -> Completed-Spoon-6
-        id_str = id_str.replace("Yavmarto/", "Completed-Spoon-6/")
-
-        # Normalize repo name: only uppercase the first character if it starts
-        # with 'neuro' (case-insensitive), preserving all other original casing.
-        # e.g. neurocnl -> Neurocnl,  NeuroMorphicToolKit stays NeuroMorphicToolKit
-        if "/" in id_str:
-            owner, repo = id_str.split("/", 1)
-            if repo.lower().startswith("neuro") and repo[0].islower():
-                repo = repo[0].upper() + repo[1:]  # only flip first char
-            id_str = f"{owner}/{repo}"
-
-        return id_str
-    except Exception:
-        return None
->>>>>>> Stashed changes
 
 
 def fetch_sources(api_key: str) -> dict[str, str]:
@@ -154,7 +77,6 @@ def fetch_sources(api_key: str) -> dict[str, str]:
     finally:
         client.close()
 
-<<<<<<< Updated upstream
 
 def reserve_api_key(session_counter: list[int], counter_lock: Any) -> tuple[str | None, str | None]:
     with counter_lock:
@@ -278,23 +200,14 @@ def trigger_jules_api(
     session_counter: list[int],
     counter_lock: Any,
 ) -> str:
-=======
-def trigger_jules_api(repo_path, prompt, branch, source_map, pr_title_prefix="Batch Script"):
-    """Triggers a Jules session via the API. Thread-safe: uses git -C instead of os.chdir."""
->>>>>>> Stashed changes
     repo_id = get_repo_identifier(repo_path)
     if not repo_id:
         return f"[SKIP] Could not determine repository identifier for {repo_path}"
 
-<<<<<<< Updated upstream
-=======
-    # Match against Jules source map
->>>>>>> Stashed changes
     source_name = source_map.get(repo_id) or source_map.get(f"github/{repo_id}")
     if not source_name:
         return f"❌ FAILED: No Jules source found for {repo_id}. Use 'jules remote list --repo' to verify."
 
-<<<<<<< Updated upstream
     active_key, account_label = reserve_api_key(session_counter, counter_lock)
     if not active_key or not account_label:
         return (
@@ -346,64 +259,6 @@ def trigger_jules_api(repo_path, prompt, branch, source_map, pr_title_prefix="Ba
     except Exception as exc:
         release_api_key(account_label, session_counter, counter_lock)
         return f"❌ ERROR: {repo_id}: {exc}"
-=======
-    # ── 1. Checkout branch (thread-safe via git -C) ──────────────────────────
-    # Stash uncommitted changes so checkout doesn't fail
-    status = subprocess.run(
-        ["git", "-C", repo_path, "status", "--porcelain"],
-        capture_output=True, text=True
-    ).stdout.strip()
-    if status:
-        subprocess.run(
-            ["git", "-C", repo_path, "stash", "push", "-m", "jules_batch_prompt_auto_stash"],
-            capture_output=True
-        )
-
-    # Try plain checkout first (branch already exists locally)
-    result = subprocess.run(
-        ["git", "-C", repo_path, "checkout", branch],
-        capture_output=True, text=True
-    )
-    if result.returncode != 0:
-        # Branch may only exist on remote — try to create from origin
-        result = subprocess.run(
-            ["git", "-C", repo_path, "checkout", "-b", branch, f"origin/{branch}"],
-            capture_output=True, text=True
-        )
-        if result.returncode != 0:
-            error_msg = (result.stderr or result.stdout).strip()
-            return f"[SKIP] Could not checkout '{branch}' in {repo_id} ({error_msg})"
-
-    # ── 2. Build payload ─────────────────────────────────────────────────────
-    full_prompt = (
-        f"{prompt}\n\n"
-        f"Requirement: The PR title MUST include the prefix: '{pr_title_prefix}'."
-    )
-
-    headers = {"x-goog-api-key": API_KEY}
-    payload = {
-        "title": f"Batch: {prompt[:50]}...",
-        "prompt": full_prompt,
-        "sourceContext": {
-            "source": source_name,
-            "githubRepoContext": {
-                "startingBranch": branch
-            }
-        },
-        "automationMode": "AUTO_CREATE_PR"
-        }
-
-    # ── 3. POST to /sessions ──────────────────────────────────────────────────
-    try:
-        response = requests.post(f"{BASE_URL}/sessions", headers=headers, json=payload)
-        if response.status_code == 200:
-            session_name = response.json().get("name", "Unknown Session")
-            return f"✅ SUCCESS: {repo_id} -> {session_name}"
-        else:
-            return f"❌ FAILED: {repo_id} (Status {response.status_code}): {response.text}"
-    except Exception as e:
-        return f"❌ ERROR: {repo_id}: {e}"
->>>>>>> Stashed changes
 
 
 def main() -> None:
@@ -416,7 +271,6 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-<<<<<<< Updated upstream
   python3 scripts/jules_batch_prompt.py --prompt "Fix all linting errors"
   python3 scripts/jules_batch_prompt.py --task-file tasks/audit.md
   python3 scripts/jules_batch_prompt.py --task-file tasks/audit.md --branch main --title-prefix "Audit"
@@ -440,18 +294,6 @@ Examples:
         help="Prefix for the PR title (default: 'Batch Script')",
     )
 
-=======
-  python3 scripts/jules_batch_prompt.py --prompt \"Fix all linting errors\"
-  python3 scripts/jules_batch_prompt.py --task-file tasks/audit.md
-  python3 scripts/jules_batch_prompt.py --task-file tasks/audit.md --branch main --title-prefix \"Audit\"
-        """
-    )
-    parser.add_argument("--branch", default="dev", help="Starting branch (default: dev)")
-    parser.add_argument("--prompt", help="Inline prompt/task text for Jules")
-    parser.add_argument("--task-file", metavar="FILE", help="Path to a .md file whose contents are used as the prompt")
-    parser.add_argument("--title-prefix", default="Batch Script", help="Prefix for the PR title (default: 'Batch Script')")
-
->>>>>>> Stashed changes
     args = parser.parse_args()
 
     print("Fetching Jules source mapping...")
@@ -463,7 +305,6 @@ Examples:
     repos = get_repos()
     print(f"Found {len(repos)} repositories (including root).")
 
-<<<<<<< Updated upstream
     prompt: str | None = None
     if not args.send_issues:
         if args.task_file:
@@ -482,27 +323,6 @@ Examples:
             except KeyboardInterrupt:
                 print("\nAborted.")
                 sys.exit(0)
-=======
-    # Resolve prompt: --task-file takes priority, then --prompt, then interactive input
-    prompt = None
-
-    if args.task_file:
-        task_path = os.path.abspath(args.task_file)
-        if not os.path.isfile(task_path):
-            print(f"Error: Task file not found: {task_path}")
-            sys.exit(1)
-        with open(task_path, "r", encoding="utf-8") as f:
-            prompt = f.read().strip()
-        print(f"Task loaded from: {task_path} ({len(prompt)} chars)")
-    elif args.prompt:
-        prompt = args.prompt.strip()
-    else:
-        prompt = input("Enter the task for Jules (or Ctrl+C to abort): ").strip()
-
-    if not prompt:
-        print("Error: Prompt is required.")
-        sys.exit(1)
->>>>>>> Stashed changes
 
         if not prompt:
             print("Error: Prompt is required for batch mode.")

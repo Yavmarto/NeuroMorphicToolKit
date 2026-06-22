@@ -44,11 +44,7 @@ jobs:
       - name: Invoke Jules to fix failure (primary key)
         id: jules-primary
         continue-on-error: true
-<<<<<<< Updated upstream
         uses: google-labs-code/jules-action@v1.0.0
-=======
-        uses: google-labs-code/jules-invoke@v1
->>>>>>> Stashed changes
         with:
           prompt: |
             ${{ steps.sdd.outputs.context }}
@@ -73,11 +69,7 @@ jobs:
 
       - name: Invoke Jules to fix failure (fallback key)
         if: steps.jules-primary.outcome == 'failure'
-<<<<<<< Updated upstream
         uses: google-labs-code/jules-action@v1.0.0
-=======
-        uses: google-labs-code/jules-invoke@v1
->>>>>>> Stashed changes
         with:
           prompt: |
             ${{ steps.sdd.outputs.context }}
