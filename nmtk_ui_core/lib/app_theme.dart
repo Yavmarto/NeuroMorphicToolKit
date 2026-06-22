@@ -85,155 +85,15 @@ class NmtkNeurocnlTokens {
 /// THEME VARIANTS
 /// ----------------------------------------------------------------------------
 
-enum NmtkThemeVariant {
-  defaultNavy,
-  neurocnl,
-  neurohub,
-  neurochip,
-  neurobench,
-  neurosim,
-  neurosense,
-}
+// NmtkThemeVariant is defined in shell_tokens.dart (imported above).
+// It is exported from nmtk_ui_core.dart via shell_tokens.dart.
 
 /// ----------------------------------------------------------------------------
-/// CUSTOM THEME EXTENSION
+/// CUSTOM THEME EXTENSION — merged into NmtkShellTokens
 /// ----------------------------------------------------------------------------
 
-class NmtkThemeExtension extends ThemeExtension<NmtkThemeExtension> {
-  // Base
-  final Color terminalBackground;
-  final Color syntaxHighlightColor;
-  final LinearGradient brandGradient;
-
-  final Color synKeyword;
-  final Color synSubject;
-  final Color synNumber;
-  final Color synComment;
-  final Color synString;
-
-  final Color nodeEnsemble;
-  final Color nodeMotor;
-  final Color nodeInterneuron;
-  final Color nodeGenericEnsemble;
-  final Color nodeInput;
-  final Color nodeErrorInput;
-  final Color edgeExcitatory;
-  final Color edgeInhibitory;
-  final Color edgePlastic;
-
-  final NmtkThemeVariant variant;
-
-  const NmtkThemeExtension({
-    required this.terminalBackground,
-    required this.syntaxHighlightColor,
-    required this.brandGradient,
-    this.synKeyword = const Color(0xFF60A5FA),
-    this.synSubject = const Color(0xFF38BDF8),
-    this.synNumber = const Color(0xFFFBBF24),
-    this.synComment = const Color(0xFF6B7280),
-    this.synString = const Color(0xFF34D399),
-    this.nodeEnsemble = const Color(0xFF3B82F6),
-    this.nodeMotor = const Color(0xFFF59E0B),
-    this.nodeInterneuron = const Color(0xFF14B8A6),
-    this.nodeGenericEnsemble = const Color(0xFF60A5FA),
-    this.nodeInput = const Color(0xFF22C55E),
-    this.nodeErrorInput = const Color(0xFFEF4444),
-    this.edgeExcitatory = const Color(0xFF3B82F6),
-    this.edgeInhibitory = const Color(0xFFEF4444),
-    this.edgePlastic = const Color(0xFFF59E0B),
-    this.variant = NmtkThemeVariant.defaultNavy,
-  });
-
-  @override
-  ThemeExtension<NmtkThemeExtension> copyWith({
-    Color? terminalBackground,
-    Color? syntaxHighlightColor,
-    LinearGradient? brandGradient,
-    Color? synKeyword,
-    Color? synSubject,
-    Color? synNumber,
-    Color? synComment,
-    Color? synString,
-    Color? nodeEnsemble,
-    Color? nodeMotor,
-    Color? nodeInterneuron,
-    Color? nodeGenericEnsemble,
-    Color? nodeInput,
-    Color? nodeErrorInput,
-    Color? edgeExcitatory,
-    Color? edgeInhibitory,
-    Color? edgePlastic,
-    NmtkThemeVariant? variant,
-  }) {
-    return NmtkThemeExtension(
-      terminalBackground: terminalBackground ?? this.terminalBackground,
-      syntaxHighlightColor: syntaxHighlightColor ?? this.syntaxHighlightColor,
-      brandGradient: brandGradient ?? this.brandGradient,
-      synKeyword: synKeyword ?? this.synKeyword,
-      synSubject: synSubject ?? this.synSubject,
-      synNumber: synNumber ?? this.synNumber,
-      synComment: synComment ?? this.synComment,
-      synString: synString ?? this.synString,
-      nodeEnsemble: nodeEnsemble ?? this.nodeEnsemble,
-      nodeMotor: nodeMotor ?? this.nodeMotor,
-      nodeInterneuron: nodeInterneuron ?? this.nodeInterneuron,
-      nodeGenericEnsemble: nodeGenericEnsemble ?? this.nodeGenericEnsemble,
-      nodeInput: nodeInput ?? this.nodeInput,
-      nodeErrorInput: nodeErrorInput ?? this.nodeErrorInput,
-      edgeExcitatory: edgeExcitatory ?? this.edgeExcitatory,
-      edgeInhibitory: edgeInhibitory ?? this.edgeInhibitory,
-      edgePlastic: edgePlastic ?? this.edgePlastic,
-      variant: variant ?? this.variant,
-    );
-  }
-
-  @override
-  ThemeExtension<NmtkThemeExtension> lerp(
-    covariant ThemeExtension<NmtkThemeExtension>? other,
-    double t,
-  ) {
-    if (other is! NmtkThemeExtension) {
-      return this;
-    }
-
-    return NmtkThemeExtension(
-      terminalBackground: Color.lerp(
-        terminalBackground,
-        other.terminalBackground,
-        t,
-      )!,
-      syntaxHighlightColor: Color.lerp(
-        syntaxHighlightColor,
-        other.syntaxHighlightColor,
-        t,
-      )!,
-      brandGradient: LinearGradient.lerp(
-        brandGradient,
-        other.brandGradient,
-        t,
-      )!,
-      synKeyword: Color.lerp(synKeyword, other.synKeyword, t)!,
-      synSubject: Color.lerp(synSubject, other.synSubject, t)!,
-      synNumber: Color.lerp(synNumber, other.synNumber, t)!,
-      synComment: Color.lerp(synComment, other.synComment, t)!,
-      synString: Color.lerp(synString, other.synString, t)!,
-      nodeEnsemble: Color.lerp(nodeEnsemble, other.nodeEnsemble, t)!,
-      nodeMotor: Color.lerp(nodeMotor, other.nodeMotor, t)!,
-      nodeInterneuron: Color.lerp(nodeInterneuron, other.nodeInterneuron, t)!,
-      nodeGenericEnsemble: Color.lerp(
-        nodeGenericEnsemble,
-        other.nodeGenericEnsemble,
-        t,
-      )!,
-      nodeInput: Color.lerp(nodeInput, other.nodeInput, t)!,
-      nodeErrorInput: Color.lerp(nodeErrorInput, other.nodeErrorInput, t)!,
-      edgeExcitatory: Color.lerp(edgeExcitatory, other.edgeExcitatory, t)!,
-      edgeInhibitory: Color.lerp(edgeInhibitory, other.edgeInhibitory, t)!,
-      edgePlastic: Color.lerp(edgePlastic, other.edgePlastic, t)!,
-      variant: t < 0.5 ? variant : other.variant,
-    );
-  }
-}
+// ponytail: merged into NmtkShellTokens
+typedef NmtkThemeExtension = NmtkShellTokens;
 
 Color _seedForVariant(NmtkThemeVariant variant) {
   switch (variant) {
@@ -306,8 +166,7 @@ class AppTheme {
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundLight,
       textTheme: _buildTextTheme(ThemeData.light().textTheme),
       extensions: [
-        _suiteExtension(colorScheme, Brightness.light, variant),
-        NmtkShellTokens.fromColorScheme(colorScheme, Brightness.light),
+        _mergedSuiteTokens(colorScheme, Brightness.light, variant),
       ],
     );
   }
@@ -332,19 +191,21 @@ class AppTheme {
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundDark,
       textTheme: _buildTextTheme(ThemeData.dark().textTheme),
       extensions: [
-        _suiteExtension(colorScheme, Brightness.dark, variant),
-        NmtkShellTokens.fromColorScheme(colorScheme, Brightness.dark),
+        _mergedSuiteTokens(colorScheme, Brightness.dark, variant),
       ],
     );
   }
 
-  static NmtkThemeExtension _suiteExtension(
+  /// Builds the single [NmtkShellTokens] extension that merges shell layout
+  /// tokens (formerly [NmtkShellTokens.fromColorScheme]) with the
+  /// expressive/syntax tokens (formerly [NmtkThemeExtension]).
+  static NmtkShellTokens _mergedSuiteTokens(
     ColorScheme colorScheme,
     Brightness brightness,
     NmtkThemeVariant variant,
   ) {
     final isDark = brightness == Brightness.dark;
-    return NmtkThemeExtension(
+    return NmtkShellTokens.fromColorScheme(colorScheme, brightness).copyWith(
       terminalBackground: isDark
           ? const Color(0xFF0A0C16)
           : const Color(0xFFE2E8F0),
@@ -376,7 +237,7 @@ class AppTheme {
           : const Color(0xFFDC2626),
       edgePlastic: isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706),
       variant: variant,
-    );
+    ) as NmtkShellTokens;
   }
 
   static ThemeData _neurocnlDarkTheme() {
@@ -397,8 +258,7 @@ class AppTheme {
       scaffoldBackgroundColor: NmtkNeurocnlTokens.background,
       textTheme: _buildTextTheme(ThemeData.dark().textTheme),
       extensions: [
-        _neurocnlExtension(Brightness.dark, colorScheme),
-        NmtkShellTokens.fromColorScheme(colorScheme, Brightness.dark),
+        _mergedNeurocnlTokens(Brightness.dark, colorScheme),
       ],
     );
   }
@@ -427,18 +287,19 @@ class AppTheme {
       scaffoldBackgroundColor: background,
       textTheme: _buildTextTheme(ThemeData.light().textTheme),
       extensions: [
-        _neurocnlExtension(Brightness.light, colorScheme),
-        NmtkShellTokens.fromColorScheme(colorScheme, Brightness.light),
+        _mergedNeurocnlTokens(Brightness.light, colorScheme),
       ],
     );
   }
 
-  static NmtkThemeExtension _neurocnlExtension(
+  /// Builds the single [NmtkShellTokens] extension for the neurocnl variant,
+  /// merging shell layout tokens with the CNL syntax/graph color tokens.
+  static NmtkShellTokens _mergedNeurocnlTokens(
     Brightness brightness,
     ColorScheme colorScheme,
   ) {
     final isDark = brightness == Brightness.dark;
-    return NmtkThemeExtension(
+    return NmtkShellTokens.fromColorScheme(colorScheme, brightness).copyWith(
       terminalBackground: isDark
           ? NmtkNeurocnlTokens.background
           : const Color(0xFFF5F1FF),
@@ -461,7 +322,7 @@ class AppTheme {
       edgeInhibitory: NmtkNeurocnlTokens.edgeInhibitory,
       edgePlastic: NmtkNeurocnlTokens.edgePlastic,
       variant: NmtkThemeVariant.neurocnl,
-    );
+    ) as NmtkShellTokens;
   }
 
   static ThemeData get highContrastLightTheme {

@@ -19,9 +19,9 @@ class ModulePickerPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final moduleStateAsync = ref.watch(moduleNotifierProvider);
+    final moduleStateAsync = ref.watch(moduleProvider);
     final moduleState = moduleStateAsync.value;
-    final controller = ref.read(moduleNotifierProvider.notifier);
+    final controller = ref.read(moduleProvider.notifier);
     final theme = Theme.of(context);
 
     if (moduleStateAsync.isLoading || moduleState == null) {
@@ -228,9 +228,9 @@ class _ModuleCard extends StatelessWidget {
         return Semantics(
           label: 'Install ${module.name}',
           button: true,
-          child: NmtkPrimaryButton(
+          child: ZetaButton.primary(
             onPressed: onInstall,
-            icon: ZetaIcons.download,
+            leadingIcon: ZetaIcons.download,
             label: 'Install',
           ),
         );
@@ -241,19 +241,18 @@ class _ModuleCard extends StatelessWidget {
           runSpacing: 10,
           children: [
             if (onUpdate != null)
-              NmtkPrimaryButton(
+              ZetaButton.primary(
                 onPressed: onUpdate,
-                icon: Icons
+                leadingIcon: Icons
                     .system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 label: 'Update to ${module.remoteVersion}',
-                tone: NmtkTone.success,
               ),
             Semantics(
               label: 'Start ${module.name}',
               button: true,
-              child: NmtkPrimaryButton(
+              child: ZetaButton.primary(
                 onPressed: onLaunch,
-                icon: ZetaIcons.play,
+                leadingIcon: ZetaIcons.play,
                 label: 'Start',
               ),
             ),
@@ -267,30 +266,28 @@ class _ModuleCard extends StatelessWidget {
           runSpacing: 10,
           children: [
             if (onUpdate != null)
-              NmtkPrimaryButton(
+              ZetaButton.primary(
                 onPressed: onUpdate,
-                icon: Icons
+                leadingIcon: Icons
                     .system_update, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 label: 'Update to ${module.remoteVersion}',
-                tone: NmtkTone.success,
               ),
             Semantics(
               label: 'Open ${module.name} in Workspace',
               button: true,
-              child: NmtkPrimaryButton(
+              child: ZetaButton.primary(
                 onPressed: onOpen,
-                icon: ZetaIcons.open_in_new_window,
+                leadingIcon: ZetaIcons.open_in_new_window,
                 label: 'Open',
               ),
             ),
             Semantics(
               label: 'Stop ${module.name}',
               button: true,
-              child: NmtkOutlinedButton(
+              child: ZetaButton.outline(
                 onPressed: onStop,
-                icon: ZetaIcons.stop_circle,
+                leadingIcon: ZetaIcons.stop_circle,
                 label: 'Stop',
-                tone: NmtkTone.warning,
               ),
             ),
           ],
@@ -305,19 +302,18 @@ class _ModuleCard extends StatelessWidget {
               Semantics(
                 label: 'Repair ${module.name}',
                 button: true,
-                child: NmtkPrimaryButton(
+                child: ZetaButton.primary(
                   onPressed: onRepair,
-                  icon: ZetaIcons.build,
+                  leadingIcon: ZetaIcons.build,
                   label: 'Repair',
-                  tone: NmtkTone.warning,
                 ),
               ),
             Semantics(
               label: 'Retry starting ${module.name}',
               button: true,
-              child: NmtkPrimaryButton(
+              child: ZetaButton.primary(
                 onPressed: onLaunch,
-                icon: ZetaIcons.play,
+                leadingIcon: ZetaIcons.play,
                 label: 'Start',
               ),
             ),

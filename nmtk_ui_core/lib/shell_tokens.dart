@@ -1,6 +1,19 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/models/shell_models.dart';
+
+// ---------------------------------------------------------------------------
+// THEME VARIANT ENUM (moved here from app_theme.dart to break circular dep)
+// ---------------------------------------------------------------------------
+
+enum NmtkThemeVariant {
+  defaultNavy,
+  neurocnl,
+  neurohub,
+  neurochip,
+  neurobench,
+  neurosim,
+  neurosense,
+}
 
 class NmtkShellModePalette {
   final Color accent;
@@ -63,6 +76,26 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
   final NmtkShellModePalette studioPalette;
   final NmtkShellModePalette instrumentPalette;
 
+  // ── Fields merged from NmtkThemeExtension ──────────────────────────────────
+  final Color terminalBackground;
+  final Color syntaxHighlightColor;
+  final LinearGradient brandGradient;
+  final Color synKeyword;
+  final Color synSubject;
+  final Color synNumber;
+  final Color synComment;
+  final Color synString;
+  final Color nodeEnsemble;
+  final Color nodeMotor;
+  final Color nodeInterneuron;
+  final Color nodeGenericEnsemble;
+  final Color nodeInput;
+  final Color nodeErrorInput;
+  final Color edgeExcitatory;
+  final Color edgeInhibitory;
+  final Color edgePlastic;
+  final NmtkThemeVariant variant;
+
   const NmtkShellTokens({
     required this.topAppBarHeight,
     required this.workspaceBarHeight,
@@ -93,6 +126,26 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
     required this.commandPalette,
     required this.studioPalette,
     required this.instrumentPalette,
+    this.terminalBackground = const Color(0xFF0A0C16),
+    this.syntaxHighlightColor = const Color(0xFF60A5FA),
+    this.brandGradient = const LinearGradient(
+      colors: [Color(0xFF1337EC), Color(0xFF8B5CF6)],
+    ),
+    this.synKeyword = const Color(0xFF60A5FA),
+    this.synSubject = const Color(0xFF38BDF8),
+    this.synNumber = const Color(0xFFFBBF24),
+    this.synComment = const Color(0xFF6B7280),
+    this.synString = const Color(0xFF34D399),
+    this.nodeEnsemble = const Color(0xFF3B82F6),
+    this.nodeMotor = const Color(0xFFF59E0B),
+    this.nodeInterneuron = const Color(0xFF14B8A6),
+    this.nodeGenericEnsemble = const Color(0xFF60A5FA),
+    this.nodeInput = const Color(0xFF22C55E),
+    this.nodeErrorInput = const Color(0xFFEF4444),
+    this.edgeExcitatory = const Color(0xFF3B82F6),
+    this.edgeInhibitory = const Color(0xFFEF4444),
+    this.edgePlastic = const Color(0xFFF59E0B),
+    this.variant = NmtkThemeVariant.defaultNavy,
   });
 
   factory NmtkShellTokens.fromColorScheme(
@@ -181,15 +234,8 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
   }
 
   static NmtkShellTokens of(BuildContext context) {
-    // Cupertino path (post-migration): tokens are carried by an
-    // [NmtkCupertinoShellScope] InheritedWidget. Look that up first so
-    // Cupertino-rooted callers don't depend on Material's ThemeData.
-    final scope = context
-        .dependOnInheritedWidgetOfExactType<NmtkCupertinoShellScope>();
-    if (scope != null) return scope.tokens;
-
-    // Material path (pre-migration): legacy widgets still pump tokens
-    // through ThemeData.extensions. This branch goes away at Task 6 of
+    // Material path: legacy widgets still pump tokens through
+    // ThemeData.extensions. This branch goes away at Task 6 of
     // .kiro/specs/cupertino-migration/.
     return Theme.of(context).extension<NmtkShellTokens>() ??
         NmtkShellTokens.fromColorScheme(
@@ -229,6 +275,24 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
     NmtkShellModePalette? commandPalette,
     NmtkShellModePalette? studioPalette,
     NmtkShellModePalette? instrumentPalette,
+    Color? terminalBackground,
+    Color? syntaxHighlightColor,
+    LinearGradient? brandGradient,
+    Color? synKeyword,
+    Color? synSubject,
+    Color? synNumber,
+    Color? synComment,
+    Color? synString,
+    Color? nodeEnsemble,
+    Color? nodeMotor,
+    Color? nodeInterneuron,
+    Color? nodeGenericEnsemble,
+    Color? nodeInput,
+    Color? nodeErrorInput,
+    Color? edgeExcitatory,
+    Color? edgeInhibitory,
+    Color? edgePlastic,
+    NmtkThemeVariant? variant,
   }) {
     return NmtkShellTokens(
       topAppBarHeight: topAppBarHeight ?? this.topAppBarHeight,
@@ -262,6 +326,24 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
       commandPalette: commandPalette ?? this.commandPalette,
       studioPalette: studioPalette ?? this.studioPalette,
       instrumentPalette: instrumentPalette ?? this.instrumentPalette,
+      terminalBackground: terminalBackground ?? this.terminalBackground,
+      syntaxHighlightColor: syntaxHighlightColor ?? this.syntaxHighlightColor,
+      brandGradient: brandGradient ?? this.brandGradient,
+      synKeyword: synKeyword ?? this.synKeyword,
+      synSubject: synSubject ?? this.synSubject,
+      synNumber: synNumber ?? this.synNumber,
+      synComment: synComment ?? this.synComment,
+      synString: synString ?? this.synString,
+      nodeEnsemble: nodeEnsemble ?? this.nodeEnsemble,
+      nodeMotor: nodeMotor ?? this.nodeMotor,
+      nodeInterneuron: nodeInterneuron ?? this.nodeInterneuron,
+      nodeGenericEnsemble: nodeGenericEnsemble ?? this.nodeGenericEnsemble,
+      nodeInput: nodeInput ?? this.nodeInput,
+      nodeErrorInput: nodeErrorInput ?? this.nodeErrorInput,
+      edgeExcitatory: edgeExcitatory ?? this.edgeExcitatory,
+      edgeInhibitory: edgeInhibitory ?? this.edgeInhibitory,
+      edgePlastic: edgePlastic ?? this.edgePlastic,
+      variant: variant ?? this.variant,
     );
   }
 
@@ -340,6 +422,36 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
         other.instrumentPalette,
         t,
       ),
+      terminalBackground: Color.lerp(
+        terminalBackground,
+        other.terminalBackground,
+        t,
+      )!,
+      syntaxHighlightColor: Color.lerp(
+        syntaxHighlightColor,
+        other.syntaxHighlightColor,
+        t,
+      )!,
+      brandGradient: LinearGradient.lerp(brandGradient, other.brandGradient, t)!,
+      synKeyword: Color.lerp(synKeyword, other.synKeyword, t)!,
+      synSubject: Color.lerp(synSubject, other.synSubject, t)!,
+      synNumber: Color.lerp(synNumber, other.synNumber, t)!,
+      synComment: Color.lerp(synComment, other.synComment, t)!,
+      synString: Color.lerp(synString, other.synString, t)!,
+      nodeEnsemble: Color.lerp(nodeEnsemble, other.nodeEnsemble, t)!,
+      nodeMotor: Color.lerp(nodeMotor, other.nodeMotor, t)!,
+      nodeInterneuron: Color.lerp(nodeInterneuron, other.nodeInterneuron, t)!,
+      nodeGenericEnsemble: Color.lerp(
+        nodeGenericEnsemble,
+        other.nodeGenericEnsemble,
+        t,
+      )!,
+      nodeInput: Color.lerp(nodeInput, other.nodeInput, t)!,
+      nodeErrorInput: Color.lerp(nodeErrorInput, other.nodeErrorInput, t)!,
+      edgeExcitatory: Color.lerp(edgeExcitatory, other.edgeExcitatory, t)!,
+      edgeInhibitory: Color.lerp(edgeInhibitory, other.edgeInhibitory, t)!,
+      edgePlastic: Color.lerp(edgePlastic, other.edgePlastic, t)!,
+      variant: t < 0.5 ? variant : other.variant,
     );
   }
 
@@ -367,149 +479,4 @@ Duration _lerpDuration(Duration a, Duration b, double t) {
       t,
     ).round(),
   );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CUPERTINO PATH (added in Task 2 of cupertino-migration)
-//
-// During the migration the [NmtkShellTokens] class still extends
-// [ThemeExtension] so legacy widgets in `lib/widgets/` keep compiling
-// against `Theme.of(context).extension<NmtkShellTokens>()`. After the
-// migration completes (Task 6/7) the [ThemeExtension] ancestry is
-// removed, leaving the plain class plus the [NmtkCupertinoShellScope]
-// carrier defined below.
-// ─────────────────────────────────────────────────────────────────────────────
-
-extension NmtkShellTokensCupertinoFactory on NmtkShellTokens {
-  /// Builds a [NmtkShellTokens] instance from a Cupertino theme.
-  ///
-  /// Cupertino has no `ColorScheme`, so the accent palettes are
-  /// derived from [CupertinoThemeData.primaryColor] plus brightness-
-  /// dependent constants matching the Material build. Module-specific
-  /// accents (Studio violet, Instrument cyan) match
-  /// [NmtkShellTokens.fromColorScheme] one-for-one so widgets that
-  /// switch between Material and Cupertino hosts during migration see
-  /// identical visual output.
-  static NmtkShellTokens fromCupertinoTheme(
-    CupertinoThemeData theme,
-    Brightness brightness,
-  ) {
-    final isDark = brightness == Brightness.dark;
-    final primary = theme.primaryColor;
-    return NmtkShellTokens(
-      topAppBarHeight: 52,
-      workspaceBarHeight: 48,
-      utilityPanelWidth: 320,
-      compactGap: 8,
-      sectionGap: 16,
-      radiusSm: 12,
-      radiusMd: 16,
-      radiusLg: 22,
-      radiusChip: 999,
-      fastMotion: const Duration(milliseconds: 120),
-      standardMotion: const Duration(milliseconds: 180),
-      emphasizedMotion: const Duration(milliseconds: 240),
-      shellBackground: isDark
-          ? const Color(0xFF08090A)
-          : const Color(0xFFF8FAFC),
-      topBarBackground: isDark
-          ? const Color(0xFF0F172A)
-          : const Color(0xFFFFFFFF).withValues(alpha: 0.94),
-      workspaceBarBackground: isDark
-          ? const Color(0xFF0D1424)
-          : const Color(0xFFF1F5F9),
-      utilityPanelBackground: isDark
-          ? const Color(0xFF111827)
-          : const Color(0xFFFAFBFD),
-      canvasBackground: isDark
-          ? const Color(0xFF020617)
-          : const Color(0xFFFFFFFF),
-      chromeBorder: isDark ? const Color(0xFF243044) : const Color(0xFFD9E0EA),
-      subtleBorder: isDark ? const Color(0xFF1A2436) : const Color(0xFFE7ECF3),
-      metadataForeground: isDark
-          ? const Color(0xFF9BA8BC)
-          : const Color(0xFF5B677C),
-      healthyColor: const Color(0xFF22C55E),
-      runningColor: const Color(0xFF38BDF8),
-      degradedColor: const Color(0xFFF59E0B),
-      warningColor: const Color(0xFFF97316),
-      errorColor: const Color(0xFFEF4444),
-      liveColor: const Color(0xFFE11D48),
-      commandPalette: NmtkShellModePalette(
-        accent: primary,
-        accentContainer: primary.withValues(alpha: isDark ? 0.22 : 0.12),
-        accentForeground: isDark
-            ? const Color(0xFFEFF6FF)
-            : const Color(0xFF1E3A8A),
-        frameTint: primary.withValues(alpha: isDark ? 0.18 : 0.08),
-      ),
-      studioPalette: NmtkShellModePalette(
-        accent: isDark ? const Color(0xFF8B5CF6) : const Color(0xFF7C3AED),
-        accentContainer: isDark
-            ? const Color(0xFF251A46)
-            : const Color(0xFFEDE9FE),
-        accentForeground: isDark
-            ? const Color(0xFFF3E8FF)
-            : const Color(0xFF4C1D95),
-        frameTint: const Color(
-          0xFF8B5CF6,
-        ).withValues(alpha: isDark ? 0.18 : 0.10),
-      ),
-      instrumentPalette: NmtkShellModePalette(
-        accent: isDark ? const Color(0xFF06B6D4) : const Color(0xFF0F766E),
-        accentContainer: isDark
-            ? const Color(0xFF11313D)
-            : const Color(0xFFCCFBF1),
-        accentForeground: isDark
-            ? const Color(0xFFCFFAFE)
-            : const Color(0xFF134E4A),
-        frameTint: const Color(
-          0xFF0891B2,
-        ).withValues(alpha: isDark ? 0.18 : 0.08),
-      ),
-    );
-  }
-}
-
-/// Carries [NmtkShellTokens] down a Cupertino widget tree.
-///
-/// Wrap a [CupertinoApp] (or any subtree that needs shell tokens) in
-/// this scope:
-///
-/// ```dart
-/// CupertinoApp(
-///   theme: NmtkCupertinoTheme.dark,
-///   builder: (context, child) => NmtkCupertinoShellScope(
-///     tokens: NmtkShellTokensCupertinoFactory.fromCupertinoTheme(
-///       CupertinoTheme.of(context),
-///       MediaQuery.platformBrightnessOf(context),
-///     ),
-///     child: child!,
-///   ),
-///   home: const RootScreen(),
-/// )
-/// ```
-///
-/// Children read tokens via [NmtkShellTokens.of], which prefers this
-/// scope over the legacy [ThemeExtension] path.
-class NmtkCupertinoShellScope extends InheritedWidget {
-  const NmtkCupertinoShellScope({
-    required this.tokens,
-    required super.child,
-    super.key,
-  });
-
-  final NmtkShellTokens tokens;
-
-  /// Returns the nearest [NmtkShellTokens] in the widget tree, or null.
-  static NmtkShellTokens? maybeOf(BuildContext context) {
-    return context
-        .dependOnInheritedWidgetOfExactType<NmtkCupertinoShellScope>()
-        ?.tokens;
-  }
-
-  @override
-  bool updateShouldNotify(NmtkCupertinoShellScope oldWidget) {
-    return tokens != oldWidget.tokens;
-  }
 }

@@ -82,7 +82,7 @@ bash scripts/git/merge.sh <source-branch> [strategy]
 | `--no-ff` | Force a merge commit even when fast-forward is possible |
 | `--abort` | Abort any in-progress merge across all repos |
 
-After `--ours` or `--theirs`, review the merge commit before running `push-all.sh`.
+After `--ours` or `--theirs`, review the merge commit before running `scripts/git/push-all.sh`.
 
 For manual conflicts: resolve the files, then inside the affected repo run `git add <files> && git merge --continue`. Then run `merge.sh` again for remaining repos, or push once all are resolved.
 
@@ -91,6 +91,6 @@ For manual conflicts: resolve the files, then inside the affected repo run `git 
 ## Rules
 
 - **Never** run `git add`, `git commit`, `git push`, `git pull`, or `git checkout` manually across multiple repos — always go through the scripts.
-- **Never** push directly to `main`. Create a branch with `create-branch.sh`, push changes with `push-all.sh`, then open PRs with `create-pr.sh`.
+- **Never** push directly to `main`. Create a branch with `create-branch.sh`, push changes with `scripts/git/push-all.sh`, then open PRs with `create-pr.sh`.
 - The default working branch is `dev`.
-- After a merge, run `push-all.sh` to commit the updated submodule pointers in the root repo.
+- After a merge, run `scripts/git/push-all.sh` to commit the updated submodule pointers in the root repo.

@@ -79,8 +79,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          moduleNotifierProvider.overrideWith(() => FakeModuleNotifier()),
-          workspaceNotifierProvider.overrideWith(() => FakeWorkspaceNotifier()),
+          moduleProvider.overrideWith(() => FakeModuleNotifier()),
+          workspaceProvider.overrideWith(() => FakeWorkspaceNotifier()),
         ],
         child: const MaterialApp(
           home: _LauncherAdapterHarness(),

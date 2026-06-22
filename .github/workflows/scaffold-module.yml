@@ -99,13 +99,9 @@ jobs:
           starting_branch: ${{ github.event.repository.default_branch }}
 
       - name: Invoke Jules to scaffold module (fallback key)
-<<<<<<< Updated upstream
         id: jules-fallback
         if: steps.jules-primary.outcome == 'failure'
         continue-on-error: true
-=======
-        if: steps.jules-primary.outcome == 'failure'
->>>>>>> Stashed changes
         uses: google-labs-code/jules-action@v1.0.0
         with:
           prompt: |
@@ -162,7 +158,6 @@ jobs:
             - No `pass` bodies or `raise NotImplementedError` — use minimal working implementations
             - Tests must pass on first run
           jules_api_key: ${{ secrets.JULES_API_KEY_F }}
-<<<<<<< Updated upstream
           starting_branch: ${{ github.event.repository.default_branch }}
 
       - name: Invoke Jules to scaffold module (retry primary key)
@@ -223,6 +218,4 @@ jobs:
             - No `pass` bodies or `raise NotImplementedError` — use minimal working implementations
             - Tests must pass on first run
           jules_api_key: ${{ secrets.JULES_API_KEY }}
-=======
->>>>>>> Stashed changes
           starting_branch: ${{ github.event.repository.default_branch }}

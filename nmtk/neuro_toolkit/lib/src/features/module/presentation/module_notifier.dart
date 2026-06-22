@@ -34,7 +34,7 @@ class ModuleNotifier extends _$ModuleNotifier {
       _startRefreshTimer();
 
       // Setup listening to settings sync
-      ref.listen(settingsNotifierProvider, (previous, next) {
+      ref.listen(settingsProvider, (previous, next) {
         final prevLogLevel = previous?.value?.logLevel;
         final nextLogLevel = next.value?.logLevel;
         if (prevLogLevel != nextLogLevel && nextLogLevel != null) {
@@ -209,7 +209,7 @@ class ModuleNotifier extends _$ModuleNotifier {
     if (startOnLaunch != null) settingsToSave['startOnLaunch'] = startOnLaunch;
 
     await ref
-        .read(settingsNotifierProvider.notifier)
+        .read(settingsProvider.notifier)
         .updateModuleSettings(moduleId, settingsToSave);
 
     if (isEnabled == false) {

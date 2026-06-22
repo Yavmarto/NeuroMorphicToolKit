@@ -6,10 +6,9 @@ import 'package:zeta_flutter/zeta_flutter.dart';
 
 import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/models/commands.dart';
+import 'package:nmtk_ui_core/models/scaffold_models.dart';
 import 'package:nmtk_ui_core/motion_tokens.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
-
-import 'package:nmtk_ui_core/models/scaffold_models.dart';
 import 'package:nmtk_ui_core/widgets/mobile_scaffold.dart';
 import 'package:nmtk_ui_core/widgets/shell_chrome_scope.dart';
 
@@ -124,7 +123,10 @@ class NmtkDesktopScaffold extends StatefulWidget {
     // C1 params:
     this.showBackButton = false,
     this.onBack,
-    this.fileActions,
+    this.onNewFile,
+    this.onOpenFile,
+    this.onSaveFile,
+    this.onSaveFileAs,
     this.onSettingsPressed,
     // Legacy / backward-compat params:
     this.pageTitle,
@@ -163,9 +165,17 @@ class NmtkDesktopScaffold extends StatefulWidget {
   /// Called when the user presses the back button.
   final VoidCallback? onBack;
 
-  /// When non-null, a file-action icon strip (New / Open / Save / Save-As)
-  /// is rendered in the content header, and keyboard shortcuts are active.
-  final NmtkFileActionDelegate? fileActions;
+  /// Called when the user presses New File (Cmd/Ctrl+N).
+  final OnNewFile? onNewFile;
+
+  /// Called when the user presses Open File (Cmd/Ctrl+O).
+  final OnOpenFile? onOpenFile;
+
+  /// Called when the user presses Save (Cmd/Ctrl+S).
+  final OnSaveFile? onSaveFile;
+
+  /// Called when the user presses Save As (Cmd/Ctrl+Shift+S).
+  final OnSaveFileAs? onSaveFileAs;
 
   /// When non-null, a settings gear icon is shown at the bottom of the rail.
   final VoidCallback? onSettingsPressed;
@@ -238,7 +248,10 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
         mode: widget.mode,
         showBackButton: widget.showBackButton,
         onBack: widget.onBack,
-        fileActions: widget.fileActions,
+        onNewFile: widget.onNewFile,
+        onOpenFile: widget.onOpenFile,
+        onSaveFile: widget.onSaveFile,
+        onSaveFileAs: widget.onSaveFileAs,
         onSettingsPressed: widget.onSettingsPressed,
         pageTitle: widget.pageTitle,
         footerNavItems: widget.footerNavItems,
@@ -251,7 +264,11 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
 
   Widget _buildDesktopLayout(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final showHeader = widget.showBackButton || widget.fileActions != null;
+    final hasFileActions = widget.onNewFile != null ||
+        widget.onOpenFile != null ||
+        widget.onSaveFile != null ||
+        widget.onSaveFileAs != null;
+    final showHeader = widget.showBackButton || hasFileActions;
 
     Widget contentColumn = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -260,7 +277,10 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
           _NmtkContentHeader(
             showBackButton: widget.showBackButton,
             onBack: widget.onBack,
-            fileActions: widget.fileActions,
+            onNewFile: widget.onNewFile,
+            onOpenFile: widget.onOpenFile,
+            onSaveFile: widget.onSaveFile,
+            onSaveFileAs: widget.onSaveFileAs,
           ),
         Expanded(
           child: ColoredBox(color: scheme.surface, child: widget.child),
@@ -269,9 +289,12 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
     );
 
     // Wrap with keyboard shortcut handling when file actions are provided.
-    if (widget.fileActions != null) {
+    if (hasFileActions) {
       contentColumn = _FileActionShortcuts(
-        delegate: widget.fileActions!,
+        onNewFile: widget.onNewFile,
+        onOpenFile: widget.onOpenFile,
+        onSaveFile: widget.onSaveFile,
+        onSaveFileAs: widget.onSaveFileAs,
         child: contentColumn,
       );
     }
@@ -762,17 +785,23 @@ class _SidebarNavItemState extends State<_SidebarNavItem> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Optional header bar rendered above the content area when [showBackButton]
-/// is true or [fileActions] is provided.
+/// is true or any file action callback is provided.
 class _NmtkContentHeader extends StatelessWidget {
   const _NmtkContentHeader({
     required this.showBackButton,
     this.onBack,
-    this.fileActions,
+    this.onNewFile,
+    this.onOpenFile,
+    this.onSaveFile,
+    this.onSaveFileAs,
   });
 
   final bool showBackButton;
   final VoidCallback? onBack;
-  final NmtkFileActionDelegate? fileActions;
+  final OnNewFile? onNewFile;
+  final OnOpenFile? onOpenFile;
+  final OnSaveFile? onSaveFile;
+  final OnSaveFileAs? onSaveFileAs;
 
   @override
   Widget build(BuildContext context) {
@@ -815,29 +844,35 @@ class _NmtkContentHeader extends StatelessWidget {
               const Spacer(),
 
               // ── File action icon strip ──────────────────────────────
-              if (fileActions != null) ...[
+              if (onNewFile != null)
                 _FileActionIconButton(
                   icon: ZetaIcons.add,
                   tooltip: 'New File\n⌘N / Ctrl+N',
-                  onPressed: fileActions!.onNewFile,
+                  onPressed: onNewFile!,
                 ),
+              if (onOpenFile != null)
                 _FileActionIconButton(
                   icon: ZetaIcons.folder_outline,
                   tooltip: 'Open File\n⌘O / Ctrl+O',
-                  onPressed: fileActions!.onOpenFile,
+                  onPressed: onOpenFile!,
                 ),
+              if (onSaveFile != null)
                 _FileActionIconButton(
                   icon: ZetaIcons.save,
                   tooltip: 'Save\n⌘S / Ctrl+S',
-                  onPressed: fileActions!.onSaveFile,
+                  onPressed: onSaveFile!,
                 ),
+              if (onSaveFileAs != null)
                 _FileActionIconButton(
                   icon: ZetaIcons.save_alt,
                   tooltip: 'Save As\n⌘⇧S / Ctrl+Shift+S',
-                  onPressed: fileActions!.onSaveFileAs,
+                  onPressed: onSaveFileAs!,
                 ),
+              if (onNewFile != null ||
+                  onOpenFile != null ||
+                  onSaveFile != null ||
+                  onSaveFileAs != null)
                 const SizedBox(width: 4),
-              ],
             ],
           ),
         ),
@@ -881,38 +916,63 @@ class _FileActionIconButton extends StatelessWidget {
 // FILE ACTION KEYBOARD SHORTCUTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Wraps [child] with [CallbackShortcuts] that fire [NmtkFileActionDelegate]
-/// methods on Cmd/Ctrl+N, +O, +S and Cmd/Ctrl+Shift+S.
+/// Wraps [child] with [CallbackShortcuts] that fire file action callbacks
+/// on Cmd/Ctrl+N, +O, +S and Cmd/Ctrl+Shift+S.
 class _FileActionShortcuts extends StatelessWidget {
-  const _FileActionShortcuts({required this.delegate, required this.child});
+  const _FileActionShortcuts({
+    required this.child,
+    this.onNewFile,
+    this.onOpenFile,
+    this.onSaveFile,
+    this.onSaveFileAs,
+  });
 
-  final NmtkFileActionDelegate delegate;
+  final OnNewFile? onNewFile;
+  final OnOpenFile? onOpenFile;
+  final OnSaveFile? onSaveFile;
+  final OnSaveFileAs? onSaveFileAs;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final bindings = <ShortcutActivator, VoidCallback>{};
+
+    if (onNewFile != null) {
+      bindings[const SingleActivator(LogicalKeyboardKey.keyN, meta: true)] =
+          onNewFile!;
+      bindings[const SingleActivator(LogicalKeyboardKey.keyN, control: true)] =
+          onNewFile!;
+    }
+
+    if (onOpenFile != null) {
+      bindings[const SingleActivator(LogicalKeyboardKey.keyO, meta: true)] =
+          onOpenFile!;
+      bindings[const SingleActivator(LogicalKeyboardKey.keyO, control: true)] =
+          onOpenFile!;
+    }
+
+    if (onSaveFile != null) {
+      bindings[const SingleActivator(LogicalKeyboardKey.keyS, meta: true)] =
+          onSaveFile!;
+      bindings[const SingleActivator(LogicalKeyboardKey.keyS, control: true)] =
+          onSaveFile!;
+    }
+
+    if (onSaveFileAs != null) {
+      bindings[
+          const SingleActivator(LogicalKeyboardKey.keyS, meta: true, shift: true)] =
+          onSaveFileAs!;
+      bindings[
+          const SingleActivator(
+            LogicalKeyboardKey.keyS,
+            control: true,
+            shift: true,
+          )] =
+          onSaveFileAs!;
+    }
+
     return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
-            delegate.onNewFile,
-        const SingleActivator(LogicalKeyboardKey.keyN, control: true):
-            delegate.onNewFile,
-        const SingleActivator(LogicalKeyboardKey.keyO, meta: true):
-            delegate.onOpenFile,
-        const SingleActivator(LogicalKeyboardKey.keyO, control: true):
-            delegate.onOpenFile,
-        const SingleActivator(LogicalKeyboardKey.keyS, meta: true):
-            delegate.onSaveFile,
-        const SingleActivator(LogicalKeyboardKey.keyS, control: true):
-            delegate.onSaveFile,
-        const SingleActivator(LogicalKeyboardKey.keyS, meta: true, shift: true):
-            delegate.onSaveFileAs,
-        const SingleActivator(
-          LogicalKeyboardKey.keyS,
-          control: true,
-          shift: true,
-        ): delegate.onSaveFileAs,
-      },
+      bindings: bindings,
       child: Focus(autofocus: true, child: child),
     );
   }

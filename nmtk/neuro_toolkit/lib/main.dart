@@ -33,7 +33,7 @@ void main() async {
   );
 
   // Await the settings to be loaded from SharedPreferences asynchronously
-  await container.read(settingsNotifierProvider.future);
+  await container.read(settingsProvider.future);
 
   runApp(
     UncontrolledProviderScope(
@@ -70,7 +70,7 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   @override
   void initState() {
     super.initState();
-    final settings = ref.read(settingsNotifierProvider).value;
+    final settings = ref.read(settingsProvider).value;
     var saved = settings?.launcherControlApiBaseUrl?.trim() ?? '';
     if (saved.isNotEmpty) {
       final uri = Uri.tryParse(saved);
@@ -83,7 +83,7 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
   }
 
   Future<void> _bootstrap() async {
-    final settings = ref.read(settingsNotifierProvider).value;
+    final settings = ref.read(settingsProvider).value;
     final explicitBaseUri =
         _configuredBaseUri(settings?.launcherControlApiBaseUrl);
     if (_isMobilePlatform && explicitBaseUri == null) {
@@ -175,7 +175,7 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
       }
     }
     await ref
-        .read(settingsNotifierProvider.notifier)
+        .read(settingsProvider.notifier)
         .setLauncherControlApiBaseUrl(input);
     if (!mounted) {
       return;
@@ -185,7 +185,7 @@ class _LauncherBootstrapHostState extends ConsumerState<LauncherBootstrapHost> {
 
   @override
   Widget build(BuildContext context) {
-    final settingsState = ref.watch(settingsNotifierProvider);
+    final settingsState = ref.watch(settingsProvider);
     final settings = settingsState.value;
 
     if (settings == null) {
@@ -253,7 +253,7 @@ class NeuroToolkitApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final settingsState = ref.watch(settingsNotifierProvider);
+    final settingsState = ref.watch(settingsProvider);
     final settings = settingsState.value;
     if (settings == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
