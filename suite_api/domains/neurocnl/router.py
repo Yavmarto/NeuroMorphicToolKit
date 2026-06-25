@@ -27,6 +27,7 @@ import neurocnl
 
 from backend.app.routers import (
     datasets,
+    kernel_runner,
     notebook,
     parse,
     validate,
@@ -96,6 +97,7 @@ for _r in [
     jobs.router,
     neurosim_handoff.router,
     notebook.router,
+    kernel_runner.router,
     templates.router,
     training.router,
     nir_inspect.router,

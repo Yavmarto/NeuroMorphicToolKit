@@ -2,7 +2,7 @@
 
 **Date:** 16 June 2026 · **Updated:** 17 June 2026  
 **Scope:** `paper/01_lif`, `paper/02_cnn`, `paper/03_rnn` — 6 notebooks  
-**Target UI:** CNLStudio (Model → Training → Eval → Hardware Deployment → Monitoring)
+**Target UI:** CNLStudio (Model → Training → Eval → Hardware Deployment → Results)
 
 ---
 
@@ -43,11 +43,10 @@ This notebook is structurally mappable to CNLStudio. All layer types (Affine/Lin
 | 1 | Synthetic input data is a hand-crafted ISI spike train — CNLStudio has no native "Spike Train Generator" node | Major | Needs to be built. Currently there is no `Spike Generator` in the Data canvas palette. |
 | 2 | Missing "Spike Rate Logger" node | Major | Needs to be built. Cannot currently capture output spikes per timestep natively in the Eval Canvas. |
 | 3 | Lack of clear connection topology in UI | Minor | Some nodes have 2 output ports. Needs clarification on which node connects to which node in documentation or UI helpers. |
-| 4 | Missing Monitoring Canvas | ✅ **Fixed** | Implemented natively in the Results step ("Dynamics" tab). |
 
 ### UI Replication Guide
 
-*Note: This guide describes the workflow once the missing features (Spike Generator, Spike Rate Logger, Monitoring Canvas) are implemented.*
+*Note: This guide describes the workflow once the missing features (Spike Generator, Spike Rate Logger) are implemented.*
 
 **Canvas: Model**
 
@@ -68,9 +67,9 @@ This notebook is structurally mappable to CNLStudio. All layer types (Affine/Lin
     *(Note: Any remaining output ports, such as `membrane` and `model` on the Forward Pass node, should be left unconnected.)*
 14. Click **Run Eval**.
 
-**Canvas: Monitoring**
+**Results Step: Dynamics Tab**
 
-15. Navigate to the **Monitoring Canvas** *(Once built)*.
+15. After the eval run completes, navigate to the **Results** step and open the **Dynamics** tab.
 16. The **Spike Raster** panel will display the output spike times (equivalent to `axs[0].eventplot(...)` in the notebook).
 17. The **Membrane Voltage Trace** panel will display the LIF membrane potential over 100 timesteps (equivalent to `axs[1].plot(mem_arr)`).
 18. Export results to CSV via the export button if needed (replicates `lif_snntorch.csv`).
@@ -106,7 +105,7 @@ All layer types are in the CNLStudio Model canvas palette and NIR import works. 
 | 2 | Model loaded from `cnn_sinabs.nir` | ✅ **Fixed** | "Import NIR..." option now available in the export/file menu. |
 | 3 | `snn.Leaky` in the notebook corresponds to LIF with `r=1, v_leak=0` | Minor | Set LIF `tau` to match the Leaky `beta` parameter: `tau = -dt / ln(beta)` |
 | 4 | Accuracy computed as mean over batches of argmax-of-mean-over-time | Negligible | Use top-1 Accuracy metric with spike count summation |
-| 5 | Missing Monitoring Canvas | ✅ **Fixed** | Spike raster activity for layer-1 is viewable in the Results step. |
+| 5 | Layer-1 spike activity visualization | ✅ **Fixed** | Layer-1 spike raster activity is viewable in the Results step → Dynamics tab after running eval. |
 | 6 | Lack of clear connection topology in UI | Minor | Some nodes have multiple output ports. UI needs clarify on proper routing. |
 
 ### UI Replication Guide
@@ -131,9 +130,9 @@ All layer types are in the CNLStudio Model canvas palette and NIR import works. 
    *(Note: Any remaining output ports, such as `membrane` and `model` on the Forward Pass node or `metrics` on the Accuracy node, should be left unconnected.)*
 9. Click **Run Eval**. Expected result: ~97.85%.
 
-**Canvas: Monitoring**
+**Results Step: Dynamics Tab**
 
-10. Navigate to **Monitoring** *(Once built)*.
+10. After the eval run completes, navigate to the **Results** step and open the **Dynamics** tab.
 11. Select the first **LIF** node in the graph. The **Spike Raster** panel will show layer-1 activity over time (equivalent to `act` saved in the notebook as `snnTorch_activity.npy`, shape `[T, B, 16, 16, 16]`).
 12. Use the export button to save activity arrays to `.npy` if needed.
 
@@ -170,12 +169,12 @@ Where `N_hidden`, `alpha_r`, `beta_r`, `alpha_out`, `beta_out` are loaded from `
 | 3 | Surrogate gradient slope | ✅ **Fixed** | Exposed in `surrogateBackward` node. |
 | 4 | Missing hyperparameters JSON file | ✅ **Fixed** | Present in repo (`parameters_noDelay_noBias_ref_subtract.json`). |
 | 5 | Missing Braille datasets | ✅ **Fixed** | Present in repo (`ds_train.pt`, `ds_val.pt`, `ds_test.pt`). |
-| 6 | Missing Monitoring Canvas | ✅ **Fixed** | Loss curves and layer spike rasters are supported natively in the Results step. |
+| 6 | Live training metrics visualization | ✅ **Fixed** | Loss curves and validation accuracy are shown live in the Training step; layer spike rasters are viewable in the Results step → Dynamics tab after training completes. |
 | 7 | Complex connection topologies not fully clear | Minor | Large training topologies might be difficult to wire without clear UI indicators for multi-port nodes. |
 
 **Closest approximation:**
 
-The notebook maps cleanly to all 5 canvases. The full training pipeline (Adam + CE count loss + BPTT + L1/L2 reg + 500 epochs) is well-supported in CNLStudio's Training canvas.
+The notebook maps cleanly to all 4 canvases (Model, Training, Eval, Hardware Deployment). The full training pipeline (Adam + CE count loss + BPTT + L1/L2 reg + 500 epochs) is well-supported in CNLStudio's Training canvas; post-run inspection lives in the Results step.
 
 ### UI Replication Guide
 
@@ -235,10 +234,13 @@ The notebook maps cleanly to all 5 canvases. The full training pipeline (Adam + 
 29. Select **NIR Exporter** — exports the trained model as `braille_noDelay_noBias_subtract.nir` (the NIR file consumed by notebooks 4 and 5).
 30. Optionally select **Python Exporter** or **TorchScript Exporter** for standalone inference.
 
-**Canvas: Monitoring**
+**Training Step: Live Metrics**
 
-31. During or after training, navigate to **Monitoring** *(Once built)*.
-32. Observe the **training loss curve** and **validation accuracy curve** per epoch.
+31. During training, the Training step displays a **live loss curve** and **validation accuracy curve** per epoch — no additional navigation required.
+
+**Results Step: Dynamics Tab (post-run)**
+
+32. After training completes, navigate to the **Results** step and open the **Dynamics** tab.
 33. View the **Spike Raster** from the cnl.RSynaptic hidden layer to inspect spike activity patterns (equivalent to `hid_rec` tracked in the notebook).
 
 ---
@@ -264,9 +266,9 @@ Inference-only evaluation of the pre-trained Braille RNN model using the **subtr
 | 1 | `RSynaptic` + `Synaptic` with subtract reset | ✅ **Fixed** | Available directly in the node property panels. |
 | 2 | Missing pre-trained `.pt` weights | ✅ **Fixed** | Present in repo (`model_noDelay_noBias_ref_subtract.pt`). |
 | 3 | Missing Braille dataset | ✅ **Fixed** | Present in repo (`ds_test.pt`). |
-| 4 | Missing Monitoring Canvas | ✅ **Fixed** | Label probabilities are supported natively via horizontal bar chart in the Results step. |
+| 4 | Label probability visualization | ✅ **Fixed** | Label probabilities are supported natively via horizontal bar chart in the Results step → Dynamics tab. |
 
-This notebook maps entirely to the Eval canvas (one-shot inference run) and optionally the Monitoring canvas (label probability display). Build the model as per Notebook 3, then run Eval.
+This notebook maps entirely to the Eval canvas (one-shot inference run); label probability display is shown in the Results step. Build the model as per Notebook 3, then run Eval.
 
 ### UI Replication Guide
 
@@ -299,7 +301,7 @@ This notebook maps entirely to the Eval canvas (one-shot inference run) and opti
    - **State Reset** (`model` out) → **Forward Pass** (`model` in)
    - **Forward Pass** (`spikes`) → **Softmax** (`input`)
    *(Note: Any remaining output ports, such as `membrane` and `model` on the Forward Pass node or `output` on the Softmax node, should be left unconnected.)*
-10. Run 10 times and observe the label probability output in the Monitoring canvas — this replicates the notebook's `lbl_probs` printout, showing confidence per letter (Space, A, E, I, O, U, Y).
+10. Run 10 times and observe the label probability output in the **Results step → Dynamics tab** (horizontal bar chart) — this replicates the notebook's `lbl_probs` printout, showing confidence per letter (Space, A, E, I, O, U, Y).
 
 ---
 
@@ -322,8 +324,8 @@ Runs the trained Braille model through the **Nengo** neural simulator. Loads `br
 | 1 | Missing Braille dataset | ✅ **Fixed** | Present in repo (`ds_test.pt`). |
 | 2 | `nir_to_nengo` custom converter for `cnl.RSynaptic` | Moderate | CNLStudio's Nengo deployment contract must handle `cnl.RSynaptic` node type. |
 | 3 | Canvas preview missing Nengo simulation for RSynaptic | Moderate | Nengo converter extension is still pending for full preview capabilities. |
-| 4 | Nengo simulation result visualization | Minor | Results must be viewed externally. |
-| 5 | Missing Monitoring Canvas | ✅ **Fixed** | Activity can be exported/viewed natively from the Results step. |
+| 4 | Nengo simulation result visualization | Minor | Results must be viewed externally or via `.npy` import into the Results step → Dynamics tab. |
+| 5 | Post-simulation activity export | ✅ **Fixed** | Activity can be exported/viewed natively from the Results step → Dynamics tab (`.npy` zip export). |
 
 With `cnl.RSynaptic` and `cnl.Synaptic` now in both the Model palette and NIR export schema, this notebook maps as follows:
 
@@ -356,10 +358,10 @@ With `cnl.RSynaptic` and `cnl.Synaptic` now in both the Model palette and NIR ex
    ```
    This corresponds to a 256-step simulation for each of the 1030 test samples.
 
-**Monitoring (partial):**
+**Results Step: Post-simulation activity (partial):**
 
 8. After simulation completes, hidden-layer activity (`p_lif1`) is saved as `nengo_activity_noDelay_noBias_subtract.npy`.
-9. To view activity in CNLStudio's Monitoring canvas *(Once built)*: import the `.npy` file as a custom spike raster overlay (if CNLStudio supports `.npy` import for visualization — not confirmed). Otherwise, use Nengo's own plotting tools or the `plots.ipynb` notebook for the cross-framework activity comparison.
+9. To view activity in CNLStudio: import the `.npy` file as a custom spike raster overlay in the **Results step → Dynamics tab** (if `.npy` import for visualization is supported — not yet confirmed). Otherwise, use Nengo's own plotting tools or the `plots.ipynb` notebook for the cross-framework activity comparison.
 
 ---
 
@@ -373,7 +375,7 @@ Pure research visualization notebook. Loads hidden-layer activity arrays (`.npy`
 
 **Verdict: ⬜ VERY LOW — research visualization tool, not a CNLStudio UI workflow**
 
-This notebook is not a model training or inference workflow; it is a post-hoc analysis tool that aggregates results from multiple frameworks and generates comparison figures. CNLStudio's Monitoring canvas is designed for single-run visualization of one model, not cross-framework comparison.
+This notebook is not a model training or inference workflow; it is a post-hoc analysis tool that aggregates results from multiple frameworks and generates comparison figures. CNLStudio's Results step is designed for single-run visualization of one model, not cross-framework comparison.
 
 **Blockers:**
 
@@ -389,22 +391,22 @@ The following elements of `plots.ipynb` do have partial analogs in CNLStudio:
 
 | Notebook element | CNLStudio analog |
 |-----------------|-----------------|
-| `a0.imshow(d.T)` — Braille input spike pattern (12 neurons × 256 timesteps) | **Monitoring canvas *(Pending)* → Spike Raster**: shows input neuron activity as a raster. Select the Input node in the Monitoring canvas after running an eval/simulation. |
-| Per-framework activity visualization (hidden layer spike rasters) | **Monitoring canvas *(Pending)* → Spike Raster**: select the cnl.RSynaptic hidden layer node. One framework at a time only. |
+| `a0.imshow(d.T)` — Braille input spike pattern (12 neurons × 256 timesteps) | **Results step → Dynamics tab → Spike Raster**: shows input neuron activity as a raster. Select the Input node after running an eval/simulation. |
+| Per-framework activity visualization (hidden layer spike rasters) | **Results step → Dynamics tab → Spike Raster**: select the cnl.RSynaptic hidden layer node. One framework at a time only. |
 | Accuracy per framework | **Eval canvas → Accuracy metric**: run eval separately for each target in Hardware Deployment and note the accuracy. No automatic aggregation across targets. |
 
 ### UI Replication Guide (Partial)
 
-**Canvas: Eval + Monitoring (for Braille input visualization)**
+**Eval Canvas + Results Step (for Braille input visualization)**
 
 1. In the Eval Canvas, run inference on a single Braille test sample (`batch_size=1`).
-2. Navigate to **Monitoring** *(Once built)*. Select the **Input** node in the network graph.
+2. Navigate to the **Results** step and open the **Dynamics** tab. Select the **Input** node in the network graph.
 3. The Spike Raster panel shows the 12-neuron input pattern over 256 timesteps — equivalent to `a0.imshow(d.T)` with `xlabel="Timestep"`, `ylabel="Neuron"`.
 
 **For per-framework activity comparison (manual workflow):**
 
 4. In the **Hardware Deployment Canvas**, run inference on each supported target (snnTorch, Nengo, Rockpool, etc.) separately.
-5. For each run, navigate to **Monitoring** and export the hidden-layer spike activity via the export button.
+5. For each run, navigate to the **Results** step and export the hidden-layer spike activity via the `.npy` export button in the Dynamics tab.
 6. Use an external tool (Python + seaborn, as in the notebook) to compute cosine similarity and generate the heatmap figures. CNLStudio does not replicate this aggregation step.
 
 ---
@@ -449,8 +451,8 @@ The following features are required to fully support the paper notebooks and are
 - "Import NIR..." added to the export/file menu (`PopupMenuButton` in `export_menu.dart` and the Export workspace panel). Opens `.nir` file picker → calls `canonicalDocProvider.updateFromNirFile()` + `nirImportProvider.inspectFile()` — same path as the NIR Inspector tab. Notebooks 1 and 2 no longer require manual graph reconstruction.
 - Files: `export_menu.dart`.
 
-**7. ✅ Cross-target activity export (.npy) from Monitoring**
-- New endpoint `GET /api/neurosim/simulations/{job_id}/activity.npy`. `?node_id=X&probe=spikes` → single `.npy` (1-D spike times or `(T, N)` voltage). No `node_id` → zip of all probes as `{node_id}_{probe}.npy` files. `_probe_to_ndarray()` converts job result dicts to dense float32 arrays.
+**7. ✅ Cross-target activity export (.npy) from Results step**
+- New endpoint `GET /api/neurosim/simulations/{job_id}/activity.npy`. `?node_id=X&probe=spikes` → single `.npy` (1-D spike times or `(T, N)` voltage). No `node_id` → zip of all probes as `{node_id}_{probe}.npy` files. `_probe_to_ndarray()` converts job result dicts to dense float32 arrays. Exposed in the Results step → Dynamics tab via the export button.
 - Files: `neurocnl/neurosim/app/routers/preview.py`.
 
 **8. ✅ Nengo probe/dt configuration**
@@ -472,8 +474,8 @@ The following features are required to fully support the paper notebooks and are
 - Useful for Notebook 3: load `data/parameters_noDelay_noBias_ref_subtract.json` to set `N_hidden`, `alpha_r`, `beta_r`, `alpha_out`, `beta_out`, `lr`, `slope`, `reg_l1`, `reg_l2` in one step.
 - Files: `export_menu.dart`, `pipeline_config.dart`, `canvas_provider.dart`.
 
-**11. ✅ Native Dynamics Monitoring & NPY Export**
-- Implemented the "Dynamics" tab in the Results step, removing the need for a standalone monitoring canvas.
+**11. ✅ Native Dynamics Visualization & NPY Export (Results step)**
+- Implemented the **"Dynamics" tab** in the Results step — this is the consolidated home for all post-run visualization (spike rasters, membrane voltage traces, label probability charts). There is no separate monitoring canvas or monitoring cell; the Training step covers live metrics during training, and the Results step covers everything after a run completes.
 - Integrated NPY binary data fetching and parsing for plotting `SnnDynamicsView` and providing `.npy` zip exports.
 - Added a `LabelProbabilitiesChart` to support visual inspection of model prediction confidence (Notebook 4).
 

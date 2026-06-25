@@ -12,6 +12,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ---------------------------------------------------------------------------
+# Global base state (required by sub-scripts before sourcing).
+# ---------------------------------------------------------------------------
+CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-${LAUNCHER_CONTROL_PORT:-8091}}"
+LAUNCHER_CONTROL_PORT="${LAUNCHER_CONTROL_PORT:-8091}"
+
+# ---------------------------------------------------------------------------
 # Source sub-scripts (defines all functions; does not execute side-effects).
 # ---------------------------------------------------------------------------
 source "$SCRIPT_DIR/dev/lib.sh"
@@ -38,8 +44,6 @@ fi
 # ---------------------------------------------------------------------------
 FLUTTER_DEVICE=""
 USE_DOCKER="false"
-CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-${LAUNCHER_CONTROL_PORT:-8091}}"
-LAUNCHER_CONTROL_PORT="${LAUNCHER_CONTROL_PORT:-8091}"
 CONTROL_API_PID=""
 JUPYTER_PID=""
 # CONTROL_API_BIND_HOST and CONTROL_API_PUBLIC_HOST are only used in the

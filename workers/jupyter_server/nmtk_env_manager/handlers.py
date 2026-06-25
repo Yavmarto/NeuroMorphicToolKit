@@ -6,16 +6,24 @@ Jupyter worker is intentionally unauthenticated and network-isolated (see
 from suite_api; XSRF cookie checking is therefore disabled here for parity with
 that security model.
 """
+
 from __future__ import annotations
 
 import json
+from pathlib import Path
+from queue import Empty
+import time
+from typing import Any, Callable
 
-from jupyter_server.base.handlers import APIHandler
-from jupyter_server.utils import url_path_join
-from tornado import web
+from jupyter_server.base.handlers import APIHandler  # type: ignore[import-not-found]
+from jupyter_server.utils import url_path_join  # type: ignore[import-not-found]
+from tornado import web  # type: ignore[import-not-found]
 
 from .jobs import JobRegistry
 from .manager import EnvironmentError_, EnvironmentManager
+
+_CELL_EXECUTION_TIMEOUT_SECONDS = 300
+_CELL_POLL_INTERVAL_SECONDS = 1
 
 
 class _NmtkHandler(APIHandler):
@@ -40,9 +48,202 @@ class _NmtkHandler(APIHandler):
         self.set_header("Content-Type", "application/json")
         message = self._reason
         exc_info = kwargs.get("exc_info")
-        if exc_info and isinstance(exc_info[1], web.HTTPError) and exc_info[1].log_message:
+        if (
+            exc_info
+            and isinstance(exc_info[1], web.HTTPError)
+            and exc_info[1].log_message
+        ):
             message = exc_info[1].log_message
         self.finish(json.dumps({"error": message}))
+
+
+def _resolve_execute_path(notebook_root: Path, notebook_path: str) -> Path:
+    raw = notebook_path.strip()
+    if not raw:
+        raise ValueError("notebookPath must not be empty")
+    root = notebook_root.resolve()
+    resolved = (root / raw).resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(
+            "notebookPath must stay inside the Jupyter notebook directory"
+        ) from exc
+    if not resolved.exists():
+        raise FileNotFoundError(f"Notebook not found: {raw}")
+    return resolved
+
+
+def _resolve_execute_kernel_name(
+    notebook_path: Path, requested_kernel_name: str
+) -> str:
+    requested = requested_kernel_name.strip() or "python3"
+    if requested != "python3":
+        return requested
+    try:
+        notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+        kernelspec = notebook.get("metadata", {}).get("kernelspec", {}).get("name", "")
+        return kernelspec or requested
+    except Exception:
+        return requested
+
+
+def _drain_notebook_cell(
+    kernel_client: Any,
+    msg_id: str,
+    cell: Any,
+    on_line: Callable[[str], None] | None = None,
+) -> None:
+    from nbformat.v4 import new_output  # type: ignore[import-not-found]  # noqa: PLC0415
+
+    deadline = time.monotonic() + _CELL_EXECUTION_TIMEOUT_SECONDS
+    saw_idle = False
+    saw_execute_reply = False
+
+    while not saw_idle:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"Notebook cell timed out after {_CELL_EXECUTION_TIMEOUT_SECONDS}s "
+                "while waiting for kernel output to go idle."
+            )
+        try:
+            message = kernel_client.get_iopub_msg(
+                timeout=min(_CELL_POLL_INTERVAL_SECONDS, remaining)
+            )
+        except Empty:
+            continue
+        parent_id = message.get("parent_header", {}).get("msg_id", "")
+        if parent_id != msg_id:
+            continue
+        msg_type = message.get("msg_type", "")
+        content = message.get("content", {})
+        if msg_type == "status" and content.get("execution_state") == "idle":
+            saw_idle = True
+            continue
+        if msg_type == "execute_input":
+            cell.execution_count = content.get("execution_count")
+            continue
+        if msg_type == "stream":
+            text = str(content.get("text", ""))
+            cell.outputs.append(
+                new_output(
+                    output_type="stream",
+                    name=content.get("name", "stdout"),
+                    text=text,
+                )
+            )
+            if content.get("name") == "stdout" and on_line is not None:
+                for line in text.splitlines():
+                    on_line(line)
+            continue
+        if msg_type == "display_data":
+            cell.outputs.append(
+                new_output(
+                    output_type="display_data",
+                    data=content.get("data", {}),
+                    metadata=content.get("metadata", {}),
+                )
+            )
+            continue
+        if msg_type == "execute_result":
+            cell.outputs.append(
+                new_output(
+                    output_type="execute_result",
+                    data=content.get("data", {}),
+                    metadata=content.get("metadata", {}),
+                    execution_count=content.get("execution_count"),
+                )
+            )
+            continue
+        if msg_type == "error":
+            traceback = [str(line) for line in content.get("traceback", [])]
+            cell.outputs.append(
+                new_output(
+                    output_type="error",
+                    ename=content.get("ename", "Error"),
+                    evalue=content.get("evalue", ""),
+                    traceback=traceback,
+                )
+            )
+            raise RuntimeError(
+                f"{content.get('ename', 'Error')}: {content.get('evalue', '')}\n"
+                + "\n".join(traceback)
+            )
+
+    while not saw_execute_reply:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(
+                f"Notebook cell timed out after {_CELL_EXECUTION_TIMEOUT_SECONDS}s "
+                "while waiting for the kernel execute reply."
+            )
+        try:
+            message = kernel_client.get_shell_msg(
+                timeout=min(_CELL_POLL_INTERVAL_SECONDS, remaining)
+            )
+        except Empty:
+            continue
+        parent_id = message.get("parent_header", {}).get("msg_id", "")
+        if parent_id != msg_id or message.get("msg_type") != "execute_reply":
+            continue
+        content = message.get("content", {})
+        status = content.get("status")
+        if status == "error":
+            raise RuntimeError(
+                f"{content.get('ename', 'Error')}: {content.get('evalue', '')}"
+            )
+        saw_execute_reply = True
+
+
+def _execute_notebook_job(
+    notebook_root: Path,
+    notebook_path: str,
+    kernel_name: str,
+    on_line: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    resolved_path = _resolve_execute_path(notebook_root, notebook_path)
+    resolved_kernel = _resolve_execute_kernel_name(resolved_path, kernel_name)
+    output: list[str] = []
+    import jupyter_client  # type: ignore[import-not-found]  # noqa: PLC0415
+    import nbformat  # type: ignore[import-not-found]  # noqa: PLC0415
+
+    def _record_output_line(line: str) -> None:
+        output.append(line)
+        if on_line is not None:
+            on_line(line)
+
+    notebook = nbformat.read(resolved_path, as_version=4)
+    kernel_manager = jupyter_client.KernelManager(kernel_name=resolved_kernel)
+    kernel_manager.start_kernel()
+    kernel_client = kernel_manager.blocking_client()
+    kernel_client.start_channels()
+    try:
+        kernel_client.wait_for_ready(timeout=60)
+        for cell in notebook.cells:
+            if cell.cell_type != "code":
+                continue
+            cell.outputs = []
+            cell.execution_count = None
+            msg_id = kernel_client.execute(cell.source)
+            try:
+                _drain_notebook_cell(
+                    kernel_client,
+                    msg_id,
+                    cell,
+                    _record_output_line,
+                )
+            finally:
+                nbformat.write(notebook, resolved_path)
+    finally:
+        kernel_client.stop_channels()
+        kernel_manager.shutdown_kernel(now=True)
+    return {
+        "notebookPath": notebook_path,
+        "kernelName": resolved_kernel,
+        "returncode": 0,
+        "output": output,
+    }
 
 
 class EnvironmentsHandler(_NmtkHandler):
@@ -91,9 +292,13 @@ class PackagesHandler(_NmtkHandler):
         action = body.get("action", "install")
         packages = body.get("packages", [])
         if action == "install":
-            job_id = self.jobs.submit("install", lambda: self.manager.install_packages(slug, packages))
+            job_id = self.jobs.submit(
+                "install", lambda: self.manager.install_packages(slug, packages)
+            )
         elif action == "uninstall":
-            job_id = self.jobs.submit("uninstall", lambda: self.manager.uninstall_packages(slug, packages))
+            job_id = self.jobs.submit(
+                "uninstall", lambda: self.manager.uninstall_packages(slug, packages)
+            )
         else:
             raise web.HTTPError(400, f"Unknown action '{action}'")
         self.set_status(202)
@@ -119,6 +324,28 @@ class JobHandler(_NmtkHandler):
         self.finish(json.dumps(job))
 
 
+class ExecutionsHandler(_NmtkHandler):
+    def post(self) -> None:
+        body = self._body()
+        notebook_path = str(body.get("notebookPath", ""))
+        kernel_name = str(body.get("kernelName", "python3"))
+        notebook_root = Path(
+            self.settings.get("server_root_dir") or self.contents_manager.root_dir
+        )
+        job_id = self.jobs.create("execute")
+        self.jobs.run(
+            job_id,
+            lambda: _execute_notebook_job(
+                notebook_root,
+                notebook_path,
+                kernel_name,
+                lambda line: self.jobs.append_output(job_id, line),
+            ),
+        )
+        self.set_status(202)
+        self.finish(json.dumps({"jobId": job_id}))
+
+
 def register_handlers(server_app) -> None:
     """Attach the env-manager routes to the running Jupyter Server."""
     web_app = server_app.web_app
@@ -138,6 +365,7 @@ def register_handlers(server_app) -> None:
             (route("environments", slug), EnvironmentHandler, kw),
             (route("environments", slug, "packages"), PackagesHandler, kw),
             (route("environments", slug, "requirements"), RequirementsHandler, kw),
+            (route("executions"), ExecutionsHandler, kw),
             (route("jobs", slug), JobHandler, kw),
         ],
     )

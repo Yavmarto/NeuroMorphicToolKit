@@ -63,13 +63,21 @@ push_repo() {
     git add -A
 
     echo "  Committing: \"$MESSAGE\""
-    git commit -m "$MESSAGE"
+    if ! git commit -m "$MESSAGE"; then
+      echo "  [ERROR] Commit failed in $name. Skipping push."
+      FAILED_REPOS+=("$name (commit failed)")
+      cd "$ROOT_DIR"
+      return 0
+    fi
   else
     echo "  Nothing to commit."
   fi
 
   echo "  Pushing to origin/$BRANCH..."
-  git push origin "$BRANCH"
+  if ! git push origin "$BRANCH"; then
+    echo "  [ERROR] Push failed in $name."
+    FAILED_REPOS+=("$name (push failed)")
+  fi
 
   cd "$ROOT_DIR"
 }
@@ -78,11 +86,22 @@ echo "======================================================"
 echo "  push-all.sh  |  branch: $BRANCH"
 echo "======================================================"
 
+FAILED_REPOS=()
+
 while IFS=$'\t' read -r repo_name repo_dir; do
   push_repo "$repo_dir" "$repo_name"
 done < <(list_managed_repos "$ROOT_DIR")
 
 echo ""
 echo "======================================================"
-echo "  Done."
-echo "======================================================"
+if [[ ${#FAILED_REPOS[@]} -gt 0 ]]; then
+  echo "  Finished with ERRORS in the following repos:"
+  for failed in "${FAILED_REPOS[@]}"; do
+    echo "    - $failed"
+  done
+  echo "======================================================"
+  exit 1
+else
+  echo "  Done. All repos pushed successfully."
+  echo "======================================================"
+fi

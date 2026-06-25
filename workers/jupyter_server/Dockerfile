@@ -47,7 +47,7 @@ RUN python -m ipykernel install --sys-prefix \
 # the base env so it runs in-process with the server. User environments and
 # their kernelspecs live under /root (the persisted notebooks volume).
 COPY workers/jupyter_server/nmtk_env_manager/ /tmp/nmtk_env_manager/
-RUN pip install --no-cache-dir /tmp/nmtk_env_manager \
+RUN pip install --no-cache-dir --no-build-isolation /tmp/nmtk_env_manager \
  && rm -rf /tmp/nmtk_env_manager
 
 # NMTK notebook client — thin wrappers for lava-backend and suite_api.

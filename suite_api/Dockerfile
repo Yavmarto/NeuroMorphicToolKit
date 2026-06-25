@@ -39,7 +39,7 @@ COPY docker/neurosense-pip-requirements.txt /tmp/neurosense-pip-requirements.txt
 RUN pip install --no-cache-dir -r /tmp/neurosense-pip-requirements.txt
 
 COPY Neurosense/ Neurosense/
-RUN pip install --no-cache-dir --no-deps Neurosense/
+RUN pip install --no-cache-dir --no-build-isolation --no-deps Neurosense/
 
 COPY Neurochip/ Neurochip/
 ENV PYTHONPATH="/repo/neurocnl:/repo/Neurochip"
