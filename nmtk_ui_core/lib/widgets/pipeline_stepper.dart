@@ -37,6 +37,10 @@ class NmtkPipelineStepData {
 ///
 /// Set [bare] to true to embed just the scrollable row content inside a
 /// parent toolbar without the standalone container/border wrapper.
+///
+/// Pass [splitStepId] to indicate a second active step (split-pane mode).
+/// Provide [onSplitBetween] and [onCollapseStep] to enable animated +/−
+/// connector-slot controls for opening and closing split panes.
 class NmtkPipelineStepper extends StatefulWidget {
   final List<NmtkPipelineStepData> steps;
   final String? selectedStepId;
@@ -48,6 +52,17 @@ class NmtkPipelineStepper extends StatefulWidget {
   final Set<String> disabledStepIds;
   final String disabledTooltip;
 
+  /// The step id of the second panel in split-pane mode. Null = single pane.
+  final String? splitStepId;
+
+  /// Called when the user taps a + connector between two steps.
+  /// [leftId] is the step to the left of the connector, [rightId] to the right.
+  final void Function(String leftId, String rightId)? onSplitBetween;
+
+  /// Called when the user taps a − connector to collapse a pane.
+  /// [keepId] is the step that should remain as the sole active step.
+  final void Function(String keepId)? onCollapseStep;
+
   const NmtkPipelineStepper({
     super.key,
     required this.steps,
@@ -58,6 +73,9 @@ class NmtkPipelineStepper extends StatefulWidget {
     this.stepAccentColor = NmtkZetaTheme.primary,
     this.disabledStepIds = const <String>{},
     this.disabledTooltip = 'Complete the previous step first',
+    this.splitStepId,
+    this.onSplitBetween,
+    this.onCollapseStep,
   });
 
   @override
@@ -197,6 +215,22 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
 
   List<Widget> _buildSteps(BuildContext context) {
     final widgets = <Widget>[];
+
+    // Pre-compute split indices for connector logic.
+    final selectedId = widget.selectedStepId;
+    final splitId = widget.splitStepId;
+    int selectedIdx = -1;
+    int splitIdx = -1;
+    if (selectedId != null) {
+      selectedIdx = widget.steps.indexWhere((s) => s.id == selectedId);
+    }
+    if (splitId != null) {
+      splitIdx = widget.steps.indexWhere((s) => s.id == splitId);
+    }
+    final isSplit = splitId != null && selectedIdx >= 0 && splitIdx >= 0;
+    final leftSplitIdx = isSplit ? (selectedIdx < splitIdx ? selectedIdx : splitIdx) : -1;
+    final rightSplitIdx = isSplit ? (selectedIdx < splitIdx ? splitIdx : selectedIdx) : -1;
+
     for (int i = 0; i < widget.steps.length; i++) {
       final step = widget.steps[i];
       final disabled = widget.disabledStepIds.contains(step.id);
@@ -233,10 +267,73 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
           ),
         );
       }
+
       if (i < widget.steps.length - 1) {
+        final leftStep = widget.steps[i];
+        final rightStep = widget.steps[i + 1];
+        final connectorActive = leftStep.status == NmtkStepStatus.success;
+
+        // Determine which widget goes in this connector slot.
+        Widget slotChild;
+        String slotKey;
+
+        if (isSplit) {
+          // Split mode: show − before left split step and after right split step.
+          if (i == leftSplitIdx - 1 && widget.onCollapseStep != null) {
+            final keepId = widget.steps[rightSplitIdx].id;
+            slotKey = 'minus_left_$i';
+            slotChild = _ConnectorSlotButton(
+              key: ValueKey(slotKey),
+              icon: Icons.remove,
+              tooltip: 'Close left pane',
+              onTap: () => widget.onCollapseStep!(keepId),
+            );
+          } else if (i == rightSplitIdx && widget.onCollapseStep != null) {
+            final keepId = widget.steps[leftSplitIdx].id;
+            slotKey = 'minus_right_$i';
+            slotChild = _ConnectorSlotButton(
+              key: ValueKey(slotKey),
+              icon: Icons.remove,
+              tooltip: 'Close right pane',
+              onTap: () => widget.onCollapseStep!(keepId),
+            );
+          } else {
+            slotKey = 'arrow_$i';
+            slotChild = _StepConnector(key: ValueKey(slotKey), active: connectorActive);
+          }
+        } else if (
+          widget.onSplitBetween != null &&
+          selectedIdx >= 0 &&
+          (i == selectedIdx || i + 1 == selectedIdx)
+        ) {
+          // Single pane: show + adjacent to the selected step.
+          slotKey = 'plus_$i';
+          slotChild = _ConnectorSlotButton(
+            key: ValueKey(slotKey),
+            icon: Icons.add,
+            tooltip: 'Open split view',
+            onTap: () => widget.onSplitBetween!(leftStep.id, rightStep.id),
+          );
+        } else {
+          slotKey = 'arrow_$i';
+          slotChild = _StepConnector(key: ValueKey(slotKey), active: connectorActive);
+        }
+
         widgets.add(
-          _StepConnector(
-            active: widget.steps[i].status == NmtkStepStatus.success,
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              transitionBuilder: (child, animation) {
+                final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+                return FadeTransition(
+                  opacity: curved,
+                  child: ScaleTransition(scale: curved, child: child),
+                );
+              },
+              child: slotChild,
+            ),
           ),
         );
       }
@@ -455,7 +552,7 @@ class _PipelineStepState extends State<_PipelineStep>
 class _StepConnector extends StatelessWidget {
   final bool active;
 
-  const _StepConnector({required this.active});
+  const _StepConnector({super.key, required this.active});
 
   @override
   Widget build(BuildContext context) {
@@ -469,6 +566,83 @@ class _StepConnector extends StatelessWidget {
         color: active
             ? tokens.healthyColor
             : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+      ),
+    );
+  }
+}
+
+// ── _ConnectorSlotButton ──────────────────────────────────────────────────────
+// ponytail: tiny inline +/− button with hover/press animation in connector slots.
+
+class _ConnectorSlotButton extends StatefulWidget {
+  const _ConnectorSlotButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  State<_ConnectorSlotButton> createState() => _ConnectorSlotButtonState();
+}
+
+class _ConnectorSlotButtonState extends State<_ConnectorSlotButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scale = _pressed ? 0.88 : (_hovered ? 1.12 : 1.0);
+    final bgColor = _hovered
+        ? theme.colorScheme.surfaceContainerHighest
+        : theme.colorScheme.surface;
+    final borderColor = _hovered
+        ? theme.colorScheme.outlineVariant
+        : theme.colorScheme.outlineVariant.withValues(alpha: 0.6);
+
+    return Tooltip(
+      message: widget.tooltip,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onTap,
+          onTapDown: (_) => setState(() => _pressed = true),
+          onTapUp: (_) => setState(() => _pressed = false),
+          onTapCancel: () => setState(() => _pressed = false),
+          child: AnimatedScale(
+            scale: scale,
+            duration: const Duration(milliseconds: 120),
+            curve: Curves.easeOut,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              width: 22,
+              height: 22,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(color: borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: _hovered ? 0.18 : 0.10),
+                    blurRadius: _hovered ? 6 : 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Icon(widget.icon, size: 13, color: theme.colorScheme.onSurface),
+            ),
+          ),
+        ),
       ),
     );
   }

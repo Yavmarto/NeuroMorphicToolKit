@@ -207,7 +207,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
               ),
         body: SafeArea(
           top: false,
-          child: ColoredBox(color: scheme.surface, child: widget.child),
+          child: Material(color: scheme.surface, child: widget.child),
         ),
         floatingActionButton:
             (widget.onNewFile != null ||

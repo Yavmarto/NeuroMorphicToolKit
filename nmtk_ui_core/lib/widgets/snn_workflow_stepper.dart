@@ -66,6 +66,16 @@ class SnnWorkflowStepper extends StatelessWidget {
   /// surface domain-appropriate messaging (e.g. "Upload a dataset first").
   final String disabledTooltip;
 
+  /// The phase id of the second panel in split-pane mode. Null = single pane.
+  final String? splitStep;
+
+  /// Called when the user taps a + connector to open a split view.
+  final void Function(String leftId, String rightId)? onSplitBetween;
+
+  /// Called when the user taps a − connector to collapse a pane.
+  /// [keepId] is the step that should remain as sole active.
+  final void Function(String keepId)? onCollapseStep;
+
   const SnnWorkflowStepper({
     super.key,
     required this.currentPhase,
@@ -77,6 +87,9 @@ class SnnWorkflowStepper extends StatelessWidget {
     this.bare = false,
     this.lockedPhases = const <SnnWorkflowPhase>{},
     this.disabledTooltip = 'Complete the previous step first',
+    this.splitStep,
+    this.onSplitBetween,
+    this.onCollapseStep,
   });
 
   @override
@@ -87,6 +100,9 @@ class SnnWorkflowStepper extends StatelessWidget {
       secondarySelectedStepId: secondaryPhase?.name,
       disabledStepIds: lockedPhases.map((p) => p.name).toSet(),
       disabledTooltip: disabledTooltip,
+      splitStepId: splitStep,
+      onSplitBetween: onSplitBetween,
+      onCollapseStep: onCollapseStep,
       onSelected: onPhaseSelected != null
           ? (id) {
               final phase = SnnWorkflowPhase.values.firstWhere(

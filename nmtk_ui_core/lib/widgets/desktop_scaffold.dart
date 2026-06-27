@@ -283,7 +283,7 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
             onSaveFileAs: widget.onSaveFileAs,
           ),
         Expanded(
-          child: ColoredBox(color: scheme.surface, child: widget.child),
+          child: Material(color: scheme.surface, child: widget.child),
         ),
       ],
     );
