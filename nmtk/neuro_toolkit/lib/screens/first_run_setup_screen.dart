@@ -1,19 +1,18 @@
-import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/server_setup.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Guided first-run setup: Python → launcher server → optional backend provision.
 ///
 /// Used from [LauncherBootstrapHost] before the main app shell, from
 /// [MainScreen] when Python is missing, and from `/setup` in settings.
-class FirstRunSetupScreen extends ConsumerStatefulWidget {
+///
+/// All Python install/detection state is owned by [pythonInstallProvider];
+/// this widget is a pure read-and-dispatch surface with no local [setState].
+class FirstRunSetupScreen extends ConsumerWidget {
   const FirstRunSetupScreen({
     super.key,
     this.requirePython = true,
@@ -47,23 +46,13 @@ class FirstRunSetupScreen extends ConsumerStatefulWidget {
   final bool openOnBackendStep;
 
   @override
-  ConsumerState<FirstRunSetupScreen> createState() =>
-      _FirstRunSetupScreenState();
-}
-
-class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
-  bool _isInstallingPython = false;
-  bool _isCheckingPython = false;
-  String? _pythonInstallOutput;
-  String? _pythonErrorMessage;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final moduleStateAsync = ref.watch(moduleProvider);
     final moduleState = moduleStateAsync.value;
     final pythonReady =
-        !widget.requirePython || (moduleState?.pythonAvailable ?? false);
-    final theme = Theme.of(context);
+        !requirePython || (moduleState?.pythonAvailable ?? false);
+
+    final installState = ref.watch(pythonInstallProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -71,35 +60,35 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 980),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(context.nmtkTokens.sectionGap * 1.5),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 8),
-                  if (widget.requirePython) ...[
-                    _buildPythonSection(context, pythonReady),
-                    const SizedBox(height: 16),
+                  SizedBox(height: context.nmtkTokens.compactGap),
+                  if (requirePython) ...[
+                    _buildPythonSection(
+                        context, ref, pythonReady, installState),
+                    SizedBox(height: context.nmtkTokens.sectionGap),
                   ],
-                  if (widget.requireLauncher && pythonReady)
+                  if (requireLauncher && pythonReady)
                     ServerSetupScreen(
-                      message: widget.launcherMessage ??
+                      message: launcherMessage ??
                           'Enter the host or base URL for the launcher control API.',
-                      initialValue: widget.launcherInitialValue,
-                      onChanged: widget.onLauncherChanged,
-                      onConnect: widget.onLauncherConnect,
-                      connectLabel: widget.launcherConnectLabel,
-                      allowConnect: widget.allowLauncherConnect,
-                      setupAvailable: widget.launcherSetupAvailable,
+                      initialValue: launcherInitialValue,
+                      onChanged: onLauncherChanged,
+                      onConnect: onLauncherConnect,
+                      connectLabel: launcherConnectLabel,
+                      allowConnect: allowLauncherConnect,
+                      setupAvailable: launcherSetupAvailable,
                       showScaffold: false,
-                      initialMode: widget.openOnBackendStep
+                      initialMode: openOnBackendStep
                           ? ServerSetupMode.setup
-                          : widget.initialLauncherStep,
-                      onSetupCompleted: widget.onLauncherSetupCompleted,
-                      setupUnavailableMessage:
-                          widget.launcherSetupUnavailableMessage,
+                          : initialLauncherStep,
+                      onSetupCompleted: onLauncherSetupCompleted,
+                      setupUnavailableMessage: launcherSetupUnavailableMessage,
                     ),
                   if (pythonReady) ...[
-                    const SizedBox(height: 16),
+                    SizedBox(height: context.nmtkTokens.sectionGap),
                     NmtkSection(
                       title: 'Python environments (optional)',
                       subtitle:
@@ -124,7 +113,12 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
     );
   }
 
-  Widget _buildPythonSection(BuildContext context, bool pythonReady) {
+  Widget _buildPythonSection(
+    BuildContext context,
+    WidgetRef ref,
+    bool pythonReady,
+    PythonInstallState installState,
+  ) {
     return NmtkSection(
       title: 'Step 1 — Python',
       subtitle: pythonReady
@@ -135,132 +129,68 @@ class _FirstRunSetupScreenState extends ConsumerState<FirstRunSetupScreen> {
               NmtkShellReadinessState.ready,
               message: 'Python is available on this machine.',
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (Platform.isMacOS) ...[
-                  ZetaButton.primary(
-                    onPressed:
-                        _isInstallingPython ? null : _installWithHomebrew,
-                    leadingIcon: ZetaIcons.download,
-                    label: _isInstallingPython
-                        ? 'Installing…'
-                        : 'Install with Homebrew',
-                  ),
-                  const SizedBox(height: 12),
-                  ZetaButton.outline(
-                    onPressed: _openPythonOrg,
-                    leadingIcon: ZetaIcons.open_in_new_window,
-                    label: 'Download from python.org',
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                ZetaButton.primary(
-                  onPressed: (_isInstallingPython || _isCheckingPython)
-                      ? null
-                      : _retryPythonCheck,
-                  leadingIcon: ZetaIcons.refresh,
-                  label: _isCheckingPython
-                      ? 'Checking for Python…'
-                      : 'Retry detection',
-                ),
-                if (_pythonInstallOutput != null) ...[
-                  const SizedBox(height: 12),
-                  SelectableText(
-                    _pythonInstallOutput!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontFamily: NmtkFontFamilies.monospace,
-                          package: NmtkFontFamilies.package,
-                        ),
-                  ),
-                ],
-                if (_pythonErrorMessage != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    _pythonErrorMessage!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+          : _PythonInstallSection(installState: installState),
     );
   }
+}
 
-  Future<void> _installWithHomebrew() async {
-    setState(() {
-      _isInstallingPython = true;
-      _pythonInstallOutput = 'Running: brew install python\n';
-      _pythonErrorMessage = null;
-    });
+/// Private stateless sub-widget that renders install actions and output.
+/// Extracted so [FirstRunSetupScreen.build] stays under 60 lines.
+class _PythonInstallSection extends ConsumerWidget {
+  const _PythonInstallSection({required this.installState});
 
-    try {
-      final brewCheck = await Process.run('which', ['brew']);
-      if (brewCheck.exitCode != 0) {
-        setState(() {
-          _isInstallingPython = false;
-          _pythonErrorMessage =
-              'Homebrew is not installed. Install it from https://brew.sh '
-              'or download Python from python.org.';
-        });
-        return;
-      }
+  final PythonInstallState installState;
 
-      final process = await Process.start('brew', ['install', 'python']);
-      final outputBuffer = StringBuffer();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(pythonInstallProvider.notifier);
 
-      process.stdout.transform(const SystemEncoding().decoder).listen((data) {
-        outputBuffer.write(data);
-        if (mounted) {
-          setState(() => _pythonInstallOutput = outputBuffer.toString());
-        }
-      });
-
-      process.stderr.transform(const SystemEncoding().decoder).listen((data) {
-        outputBuffer.write(data);
-        if (mounted) {
-          setState(() => _pythonInstallOutput = outputBuffer.toString());
-        }
-      });
-
-      final exitCode = await process.exitCode;
-      if (mounted) {
-        setState(() => _isInstallingPython = false);
-        if (exitCode == 0) {
-          unawaited(_retryPythonCheck());
-        } else {
-          _pythonErrorMessage = 'Homebrew install exited with code $exitCode.';
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isInstallingPython = false;
-          _pythonErrorMessage = 'Failed to run brew: $e';
-        });
-      }
-    }
-  }
-
-  Future<void> _openPythonOrg() async {
-    final uri = Uri.parse('https://www.python.org/downloads/');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
-  }
-
-  Future<void> _retryPythonCheck() async {
-    setState(() {
-      _isCheckingPython = true;
-      _pythonErrorMessage = null;
-    });
-
-    await ref.read(moduleProvider.notifier).recheckPython();
-
-    if (mounted) {
-      setState(() => _isCheckingPython = false);
-    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ZetaButton.primary(
+          onPressed:
+              installState.isInstalling ? null : notifier.installWithHomebrew,
+          leadingIcon: ZetaIcons.download,
+          label: installState.isInstalling
+              ? 'Installing…'
+              : 'Install with Homebrew',
+        ),
+        SizedBox(height: context.nmtkTokens.compactGap),
+        ZetaButton.outline(
+          onPressed: notifier.openPythonOrg,
+          leadingIcon: ZetaIcons.open_in_new_window,
+          label: 'Download from python.org',
+        ),
+        SizedBox(height: context.nmtkTokens.compactGap),
+        ZetaButton.primary(
+          onPressed: (installState.isInstalling || installState.isChecking)
+              ? null
+              : notifier.recheckPython,
+          leadingIcon: ZetaIcons.refresh,
+          label: installState.isChecking
+              ? 'Checking for Python…'
+              : 'Retry detection',
+        ),
+        if (installState.installOutput != null) ...[
+          SizedBox(height: context.nmtkTokens.compactGap),
+          SelectableText(
+            installState.installOutput!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontFamily: NmtkFontFamilies.monospace,
+                  package: NmtkFontFamilies.package,
+                ),
+          ),
+        ],
+        if (installState.errorMessage != null) ...[
+          SizedBox(height: context.nmtkTokens.compactGap),
+          Text(
+            installState.errorMessage!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
+      ],
+    );
   }
 }
 

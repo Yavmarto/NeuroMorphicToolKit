@@ -68,13 +68,13 @@ class _EnvironmentEditorScreenState
         title: const Text('Python Environments'),
         actions: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding:
+                EdgeInsets.symmetric(horizontal: context.nmtkTokens.compactGap),
             child: ZetaButton.text(
               label: 'Refresh',
               onPressed: provider.busy
                   ? null
-                  : () =>
-                      ref.read(environmentProvider.notifier).refresh(),
+                  : () => ref.read(environmentProvider.notifier).refresh(),
             ),
           ),
         ],
@@ -116,7 +116,7 @@ class _EnvironmentEditorScreenState
     }
 
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(context.nmtkTokens.sectionGap * 1.5),
       children: [
         NmtkSurfaceCard(
           title: 'Manage Python environments',
@@ -138,7 +138,7 @@ class _EnvironmentEditorScreenState
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: context.nmtkTokens.sectionGap),
         for (final env in provider.environments) ...[
           _EnvironmentCard(
             env: env,
@@ -146,7 +146,7 @@ class _EnvironmentEditorScreenState
             onDelete: () => _confirmDelete(env),
             onExport: () => _showExport(env),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: context.nmtkTokens.sectionGap),
         ],
       ],
     );
@@ -158,9 +158,8 @@ class _EnvironmentEditorScreenState
         await _promptForName('Clone NeuroStudio', 'New environment name');
     if (name == null || name.trim().isEmpty) return;
     await _runGuarded(
-      () => ref
-          .read(environmentProvider.notifier)
-          .createEnvironment(name.trim()),
+      () =>
+          ref.read(environmentProvider.notifier).createEnvironment(name.trim()),
       'Environment "$name" created.',
     );
   }
@@ -202,9 +201,7 @@ class _EnvironmentEditorScreenState
     );
     if (ok != true) return;
     await _runGuarded(
-      () => ref
-          .read(environmentProvider.notifier)
-          .deleteEnvironment(env.slug),
+      () => ref.read(environmentProvider.notifier).deleteEnvironment(env.slug),
       'Environment "${env.displayName}" deleted.',
     );
   }
@@ -260,7 +257,7 @@ class _BusyBanner extends StatelessWidget {
             height: 16,
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: context.nmtkTokens.compactGap),
           Text(label, style: Zeta.of(context).textStyles.bodyMedium),
         ],
       ),
@@ -270,6 +267,9 @@ class _BusyBanner extends StatelessWidget {
 
 // ---------------------------------------------------------------------------
 // _EnvironmentCard — one card per environment, expandable to manage packages.
+//
+// Package state is owned by [environmentPackageProvider] (family by slug),
+// eliminating the four setState calls that tracked loading/packages/error.
 // ---------------------------------------------------------------------------
 class _EnvironmentCard extends ConsumerStatefulWidget {
   const _EnvironmentCard({
@@ -289,10 +289,10 @@ class _EnvironmentCard extends ConsumerStatefulWidget {
 }
 
 class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
+  /// Local boolean — tracks panel open/close only, no async data, no side
+  /// effects. Per the architecture skill, local ephemeral UI state that drives
+  /// exactly one build path without crossing a widget boundary is acceptable.
   bool _expanded = false;
-  bool _loadingPackages = false;
-  List<PackageInfo>? _packages;
-  String? _packagesError;
   final TextEditingController _addController = TextEditingController();
 
   @override
@@ -301,29 +301,13 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
     super.dispose();
   }
 
-  Future<void> _loadPackages() async {
-    setState(() {
-      _loadingPackages = true;
-      _packagesError = null;
-    });
-    try {
-      final pkgs = await ref
-          .read(environmentProvider.notifier)
-          .packages(widget.env.slug);
-      if (!mounted) return;
-      setState(() => _packages = pkgs);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _packagesError = e.toString());
-    } finally {
-      if (mounted) setState(() => _loadingPackages = false);
-    }
-  }
-
   Future<void> _toggle() async {
     setState(() => _expanded = !_expanded);
-    if (_expanded && _packages == null && !_loadingPackages) {
-      await _loadPackages();
+    if (_expanded) {
+      // Load packages into the provider on first expand (or reload on re-open).
+      await ref
+          .read(environmentPackageProvider(widget.env.slug).notifier)
+          .load();
     }
   }
 
@@ -338,7 +322,9 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
       _addController.clear();
       if (!mounted) return;
       NmtkToasts.success(context, 'Installed $spec');
-      await _loadPackages();
+      await ref
+          .read(environmentPackageProvider(widget.env.slug).notifier)
+          .load();
     } catch (_) {
       if (!mounted) return;
       NmtkToasts.error(
@@ -354,7 +340,9 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
           .uninstallPackages(widget.env.slug, [name]);
       if (!mounted) return;
       NmtkToasts.success(context, 'Removed $name');
-      await _loadPackages();
+      await ref
+          .read(environmentPackageProvider(widget.env.slug).notifier)
+          .load();
     } catch (_) {
       if (!mounted) return;
       NmtkToasts.error(
@@ -366,6 +354,8 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
   Widget build(BuildContext context) {
     final env = widget.env;
     final zeta = Zeta.of(context);
+    // Watch the provider so the card rebuilds when packages are loaded.
+    final pkgState = ref.watch(environmentPackageProvider(env.slug));
 
     return NmtkSurfaceCard(
       title: env.displayName,
@@ -385,7 +375,7 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
               NmtkStatusBadge(label: '${env.packageCount} packages'),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: context.nmtkTokens.compactGap),
           Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -418,39 +408,43 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
                           widget.busy ? null : _addPackage(),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: context.nmtkTokens.compactGap),
                   ZetaButton.primary(
                     label: 'Add',
                     onPressed: widget.busy ? null : _addPackage,
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: context.nmtkTokens.compactGap),
             ],
-            _buildPackages(env, zeta),
+            _buildPackages(env, zeta, pkgState),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildPackages(EnvironmentInfo env, Zeta zeta) {
-    if (_loadingPackages) {
-      return const Padding(
-        padding: EdgeInsets.all(8),
-        child: Center(child: CircularProgressIndicator()),
+  Widget _buildPackages(
+    EnvironmentInfo env,
+    Zeta zeta,
+    EnvironmentPackageState pkgState,
+  ) {
+    if (pkgState.loading) {
+      return Padding(
+        padding: EdgeInsets.all(context.nmtkTokens.compactGap),
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
-    if (_packagesError != null) {
+    if (pkgState.error != null) {
       return Text(
-        _packagesError!,
+        pkgState.error!,
         style: Zeta.of(context)
             .textStyles
             .bodySmall
             .apply(color: zeta.colors.mainNegative),
       );
     }
-    final pkgs = _packages ?? const <PackageInfo>[];
+    final pkgs = pkgState.packages;
     if (pkgs.isEmpty) {
       return Text(
         'No packages found.',
@@ -487,62 +481,73 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
 
 // ---------------------------------------------------------------------------
 // _ExportDialog — show the requirements.txt, copy or save to share.
+//
+// All async state (loading, body, mode, error) is owned by
+// [environmentExportProvider] — no setState calls remain.
 // ---------------------------------------------------------------------------
-class _ExportDialog extends ConsumerStatefulWidget {
+class _ExportDialog extends ConsumerWidget {
   const _ExportDialog({required this.env});
   final EnvironmentInfo env;
 
   @override
-  ConsumerState<_ExportDialog> createState() => _ExportDialogState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final exportAsync = ref.watch(environmentExportProvider(env.slug));
+
+    return exportAsync.when(
+      loading: () => const AlertDialog(
+        content: SizedBox(
+          width: 420,
+          height: 420,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (e, _) => AlertDialog(
+        title: Text('Export "${env.displayName}"'),
+        content: Text(e.toString()),
+        actions: [
+          ZetaButton.text(
+            onPressed: () => Navigator.pop(context),
+            label: 'Close',
+          ),
+        ],
+      ),
+      data: (exportState) => _ExportDialogContent(
+        env: env,
+        exportState: exportState,
+        onModeChanged: (mode) =>
+            ref.read(environmentExportProvider(env.slug).notifier).reload(mode),
+      ),
+    );
+  }
 }
 
-class _ExportDialogState extends ConsumerState<_ExportDialog> {
-  String _mode = 'delta';
-  bool _loading = true;
-  String _body = '';
-  String? _error;
+class _ExportDialogContent extends StatelessWidget {
+  const _ExportDialogContent({
+    required this.env,
+    required this.exportState,
+    required this.onModeChanged,
+  });
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
+  final EnvironmentInfo env;
+  final EnvironmentExportState exportState;
+  final ValueChanged<String> onModeChanged;
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final body = await ref
-          .read(environmentProvider.notifier)
-          .exportRequirements(widget.env.slug, mode: _mode);
-      if (!mounted) return;
-      setState(() => _body = body);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.toString());
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _save() async {
+  Future<void> _save(BuildContext context) async {
     if (kIsWeb) {
-      await Clipboard.setData(ClipboardData(text: _body));
-      if (!mounted) return;
+      await Clipboard.setData(ClipboardData(text: exportState.body));
+      if (!context.mounted) return;
       NmtkToasts.success(
           context, 'Copied to clipboard (file save unsupported on web).');
       return;
     }
     try {
       final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/${widget.env.slug}-requirements.txt');
-      await file.writeAsString(_body);
-      if (!mounted) return;
+      final file = File('${dir.path}/${env.slug}-requirements.txt');
+      await file.writeAsString(exportState.body);
+      if (!context.mounted) return;
       NmtkToasts.success(context, 'Saved to ${file.path}');
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       NmtkToasts.error(context, 'Could not save: $e');
     }
   }
@@ -550,7 +555,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Export "${widget.env.displayName}"'),
+      title: Text('Export "${env.displayName}"'),
       content: SizedBox(
         width: double.maxFinite,
         height: 420,
@@ -562,16 +567,13 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
                 Text('Contents',
                     style: Zeta.of(context).textStyles.labelMedium),
                 const Spacer(),
-                if (!widget.env.immutable)
+                if (!env.immutable)
                   DropdownButton<String>(
-                    value: _mode,
-                    onChanged: _loading
+                    value: exportState.mode,
+                    onChanged: exportState.loading
                         ? null
                         : (v) {
-                            if (v != null) {
-                              setState(() => _mode = v);
-                              _load();
-                            }
+                            if (v != null) onModeChanged(v);
                           },
                     items: const [
                       DropdownMenuItem(
@@ -582,16 +584,18 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: context.nmtkTokens.compactGap),
             Expanded(
-              child: _loading
+              child: exportState.loading
                   ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? Text(_error!)
+                  : exportState.error != null
+                      ? Text(exportState.error!)
                       : Scrollbar(
                           child: SingleChildScrollView(
                             child: SelectableText(
-                              _body.isEmpty ? '(no packages)' : _body,
+                              exportState.body.isEmpty
+                                  ? '(no packages)'
+                                  : exportState.body,
                               style: Zeta.of(context)
                                   .textStyles
                                   .bodySmall
@@ -612,17 +616,18 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
           label: 'Close',
         ),
         ZetaButton.outline(
-          onPressed: _body.isEmpty
+          onPressed: exportState.body.isEmpty
               ? null
               : () async {
-                  await Clipboard.setData(ClipboardData(text: _body));
+                  await Clipboard.setData(
+                      ClipboardData(text: exportState.body));
                   if (!context.mounted) return;
                   NmtkToasts.success(context, 'Copied to clipboard');
                 },
           label: 'Copy',
         ),
         ZetaButton(
-          onPressed: _body.isEmpty ? null : _save,
+          onPressed: exportState.body.isEmpty ? null : () => _save(context),
           label: 'Save file',
         ),
       ],
@@ -669,15 +674,15 @@ class _ImportDialogState extends State<_ImportDialog> {
           children: [
             Text('Environment name',
                 style: Zeta.of(context).textStyles.labelMedium),
-            const SizedBox(height: 6),
+            SizedBox(height: context.nmtkTokens.compactGap),
             ZetaTextInput(
               controller: _nameController,
               placeholder: 'e.g. Shared experiment',
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: context.nmtkTokens.sectionGap),
             Text('requirements.txt',
                 style: Zeta.of(context).textStyles.labelMedium),
-            const SizedBox(height: 6),
+            SizedBox(height: context.nmtkTokens.compactGap),
             TextField(
               controller: _reqController,
               minLines: 6,

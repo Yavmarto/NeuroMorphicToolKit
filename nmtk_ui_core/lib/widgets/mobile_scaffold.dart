@@ -211,17 +211,17 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
         ),
         floatingActionButton:
             (widget.onNewFile != null ||
-                    widget.onOpenFile != null ||
-                    widget.onSaveFile != null ||
-                    widget.onSaveFileAs != null)
-                ? FloatingActionButton(
-                    onPressed: _showFileActionsSheet,
-                    backgroundColor: scheme.primaryContainer,
-                    foregroundColor: scheme.onPrimaryContainer,
-                    // ZETA-MIGRATION-EXEMPT: no Zeta equivalent for document-edit icon
-                    child: const Icon(Icons.edit_document),
-                  )
-                : null,
+                widget.onOpenFile != null ||
+                widget.onSaveFile != null ||
+                widget.onSaveFileAs != null)
+            ? FloatingActionButton(
+                onPressed: _showFileActionsSheet,
+                backgroundColor: scheme.primaryContainer,
+                foregroundColor: scheme.onPrimaryContainer,
+                // ZETA-MIGRATION-EXEMPT: no Zeta equivalent for document-edit icon
+                child: const Icon(Icons.edit_document),
+              )
+            : null,
         bottomNavigationBar:
             (widget.showBottomNavigation && useBottomNavigation)
             ? NavigationBar(

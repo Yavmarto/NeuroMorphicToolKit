@@ -264,7 +264,8 @@ class _NmtkDesktopScaffoldState extends State<NmtkDesktopScaffold> {
 
   Widget _buildDesktopLayout(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final hasFileActions = widget.onNewFile != null ||
+    final hasFileActions =
+        widget.onNewFile != null ||
         widget.onOpenFile != null ||
         widget.onSaveFile != null ||
         widget.onSaveFileAs != null;
@@ -959,11 +960,13 @@ class _FileActionShortcuts extends StatelessWidget {
     }
 
     if (onSaveFileAs != null) {
-      bindings[
-          const SingleActivator(LogicalKeyboardKey.keyS, meta: true, shift: true)] =
+      bindings[const SingleActivator(
+            LogicalKeyboardKey.keyS,
+            meta: true,
+            shift: true,
+          )] =
           onSaveFileAs!;
-      bindings[
-          const SingleActivator(
+      bindings[const SingleActivator(
             LogicalKeyboardKey.keyS,
             control: true,
             shift: true,

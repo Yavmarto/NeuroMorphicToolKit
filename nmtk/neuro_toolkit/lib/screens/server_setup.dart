@@ -51,6 +51,9 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialValue ?? '');
   late final FocusNode _focusNode = FocusNode();
+  // Acceptable ephemeral UI state: gates a single button during an async
+  // callback. It does not represent business data or cross-widget state, so
+  // Riverpod ownership would add overhead without benefit (architecture skill §3).
   bool _isConnecting = false;
 
   @override
@@ -80,15 +83,15 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 980),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(context.nmtkTokens.sectionGap * 1.5),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildHeader(context),
-                const SizedBox(height: 24),
+                SizedBox(height: context.nmtkTokens.sectionGap * 1.5),
                 if (widget.allowConnect) ...[
                   _buildConnectCard(context),
-                  const SizedBox(height: 24),
+                  SizedBox(height: context.nmtkTokens.sectionGap * 1.5),
                 ],
                 if (widget.allowConnect && widget.setupAvailable) ...[
                   Center(
@@ -97,7 +100,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: context.nmtkTokens.sectionGap * 1.5),
                 ],
                 _buildSetupCard(context),
               ],
@@ -132,14 +135,14 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
           'Server address',
           style: Theme.of(context).textTheme.labelMedium,
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: context.nmtkTokens.compactGap),
         ZetaTextInput(
           controller: _controller,
           focusNode: _focusNode,
           placeholder: 'http://192.168.1.50:8091',
           onChange: widget.onChanged,
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: context.nmtkTokens.sectionGap),
         NmtkPrimaryButton(
           onPressed:
               _isConnecting || widget.onConnect == null ? null : _handleConnect,

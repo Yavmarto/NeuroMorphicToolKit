@@ -30,6 +30,11 @@ class BackendSetupForm extends ConsumerStatefulWidget {
 }
 
 class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
+  // Acceptable ephemeral form state: _targetType, _mode, _preflight, _isWorking,
+  // and _completionQueued are form-scoped fields that gate buttons and control
+  // UI branching within this widget only. They carry no cross-widget business
+  // semantics, so a Riverpod Notifier would add boilerplate without benefit.
+  // (architecture skill §3 — "local ephemeral UI state is acceptable")
   String _targetType = 'local';
   String _mode = 'standalone';
   final TextEditingController _displayName =
@@ -78,17 +83,17 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildTargetSection(tokens),
-        const SizedBox(height: 16),
+        SizedBox(height: tokens.sectionGap),
         _buildModeSection(tokens),
-        const SizedBox(height: 16),
+        SizedBox(height: tokens.sectionGap),
         _buildDetailsSection(tokens),
-        const SizedBox(height: 16),
+        SizedBox(height: tokens.sectionGap),
         if (_preflight != null) _buildPreflightCard(_preflight!, tokens),
         if (deploymentState?.activeJob != null) ...[
-          const SizedBox(height: 16),
+          SizedBox(height: tokens.sectionGap),
           _buildProgressCard(deploymentState!.activeJob!, tokens),
         ],
-        const SizedBox(height: 24),
+        SizedBox(height: tokens.sectionGap * 1.5),
         _buildActions(deploymentState?.activeJob),
       ],
     );
@@ -102,7 +107,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('1. Choose where to run the backend'),
-            const SizedBox(height: 12),
+            SizedBox(height: tokens.compactGap),
             Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -132,7 +137,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('2. Choose deployment mode'),
-            const SizedBox(height: 12),
+            SizedBox(height: tokens.compactGap),
             Wrap(
               spacing: 12,
               runSpacing: 12,
@@ -141,7 +146,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                   _choice(_modeLabel(mode), mode, isMode: true),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: tokens.compactGap),
             Text(_modeDescription(_mode)),
           ],
         ),
@@ -157,24 +162,24 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('3. Enter only the required details'),
-            const SizedBox(height: 12),
+            SizedBox(height: tokens.compactGap),
             _field(_displayName, 'Display name'),
-            const SizedBox(height: 12),
+            SizedBox(height: tokens.compactGap),
             if (_targetType == 'remote_host') ...[
               _field(_host, 'IP address or hostname'),
-              const SizedBox(height: 12),
+              SizedBox(height: tokens.compactGap),
               _field(_username, 'SSH username'),
-              const SizedBox(height: 12),
+              SizedBox(height: tokens.compactGap),
               _field(_sshPort, 'SSH port'),
-              const SizedBox(height: 12),
+              SizedBox(height: tokens.compactGap),
             ],
             if (_targetType == 'kubernetes_cluster') ...[
               _field(_context, 'Kube context'),
-              const SizedBox(height: 12),
+              SizedBox(height: tokens.compactGap),
               _field(_namespace, 'Namespace'),
-              const SizedBox(height: 12),
+              SizedBox(height: tokens.compactGap),
               _field(_apiServer, 'API server override'),
-              const SizedBox(height: 12),
+              SizedBox(height: tokens.compactGap),
             ],
             _field(_backendPort, 'Backend port'),
           ],
@@ -195,14 +200,14 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(isFailed ? 'Preflight failed' : preflight.message),
-            const SizedBox(height: 8),
+            SizedBox(height: tokens.compactGap),
             for (final finding in [
               ...preflight.blockingFindings,
               ...preflight.degradedFindings,
             ])
               Text('- $finding'),
             if (preflight.suggestedRecovery.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              SizedBox(height: tokens.compactGap),
               Text(preflight.suggestedRecovery),
             ],
           ],
@@ -219,9 +224,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(job.stage == 'completed' ? 'Ready' : job.stageLabel),
-            const SizedBox(height: 12),
+            SizedBox(height: tokens.compactGap),
             LinearProgressIndicator(value: job.percent / 100),
-            const SizedBox(height: 12),
+            SizedBox(height: tokens.compactGap),
             for (final line in job.logs.take(6)) Text(line),
             if (job.error.isNotEmpty) Text(job.error),
           ],
@@ -293,19 +298,18 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
 
   Future<void> _runPreflight() async {
     setState(() => _isWorking = true);
-    final result =
-        await ref.read(backendDeploymentProvider.notifier).preflight(
-              targetType: _targetType,
-              mode: _mode,
-              displayName: _displayName.text,
-              host: _host.text,
-              username: _username.text,
-              sshPort: int.tryParse(_sshPort.text) ?? 22,
-              backendPort: int.tryParse(_backendPort.text) ?? 9000,
-              namespace: _namespace.text,
-              context: _context.text,
-              apiServer: _apiServer.text,
-            );
+    final result = await ref.read(backendDeploymentProvider.notifier).preflight(
+          targetType: _targetType,
+          mode: _mode,
+          displayName: _displayName.text,
+          host: _host.text,
+          username: _username.text,
+          sshPort: int.tryParse(_sshPort.text) ?? 22,
+          backendPort: int.tryParse(_backendPort.text) ?? 9000,
+          namespace: _namespace.text,
+          context: _context.text,
+          apiServer: _apiServer.text,
+        );
     setState(() {
       _preflight = result;
       _isWorking = false;

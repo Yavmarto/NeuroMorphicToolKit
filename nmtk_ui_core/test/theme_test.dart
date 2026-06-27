@@ -39,25 +39,25 @@ void main() {
     late NmtkThemeExtension other;
 
     setUp(() {
-      extension = NmtkShellTokens.fromColorScheme(
-        baseScheme,
-        Brightness.dark,
-      ).copyWith(
-        terminalBackground: Colors.black,
-        syntaxHighlightColor: Colors.blue,
-        brandGradient:
-            const LinearGradient(colors: [Colors.blue, Colors.red]),
-      ) as NmtkThemeExtension;
+      extension =
+          NmtkShellTokens.fromColorScheme(baseScheme, Brightness.dark).copyWith(
+                terminalBackground: Colors.black,
+                syntaxHighlightColor: Colors.blue,
+                brandGradient: const LinearGradient(
+                  colors: [Colors.blue, Colors.red],
+                ),
+              )
+              as NmtkThemeExtension;
 
-      other = NmtkShellTokens.fromColorScheme(
-        baseScheme,
-        Brightness.dark,
-      ).copyWith(
-        terminalBackground: Colors.white,
-        syntaxHighlightColor: Colors.green,
-        brandGradient:
-            const LinearGradient(colors: [Colors.green, Colors.yellow]),
-      ) as NmtkThemeExtension;
+      other =
+          NmtkShellTokens.fromColorScheme(baseScheme, Brightness.dark).copyWith(
+                terminalBackground: Colors.white,
+                syntaxHighlightColor: Colors.green,
+                brandGradient: const LinearGradient(
+                  colors: [Colors.green, Colors.yellow],
+                ),
+              )
+              as NmtkThemeExtension;
     });
 
     test('copyWith works correctly', () {

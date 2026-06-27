@@ -62,6 +62,9 @@ class CustomNodeEditorPanel extends StatefulWidget {
 
 class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
   InAppWebViewController? _controller;
+  // Acceptable ephemeral UI state: _saving gates the AppBar save button during
+  // the async Monaco→repository round-trip. It has no cross-widget semantics
+  // and is correctly scoped to this panel's lifetime. (architecture skill §3)
   bool _saving = false;
 
   String get _startingSource => widget.initialSource ?? _kStarterTemplate;

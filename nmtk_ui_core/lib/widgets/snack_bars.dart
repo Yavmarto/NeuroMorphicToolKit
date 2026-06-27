@@ -15,6 +15,9 @@ class NmtkSnackBars {
 
   static SnackBar error(BuildContext context, String message) {
     final tokens = NmtkShellTokens.of(context);
-    return SnackBar(content: SelectionArea(child: Text(message)), backgroundColor: tokens.errorColor);
+    return SnackBar(
+      content: SelectionArea(child: Text(message)),
+      backgroundColor: tokens.errorColor,
+    );
   }
 }

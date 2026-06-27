@@ -65,9 +65,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ],
                         onChange: (ThemeMode? v) {
                           if (v != null) {
-                            ref
-                                .read(settingsProvider.notifier)
-                                .setThemeMode(v);
+                            ref.read(settingsProvider.notifier).setThemeMode(v);
                           }
                         },
                       ),
@@ -122,9 +120,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             .toList(),
                         onChange: (LogLevel? v) {
                           if (v != null) {
-                            ref
-                                .read(settingsProvider.notifier)
-                                .setLogLevel(v);
+                            ref.read(settingsProvider.notifier).setLogLevel(v);
                           }
                         },
                       ),
@@ -297,9 +293,8 @@ class _LauncherControlUrlFieldState
       controller: _controller,
       focusNode: _focusNode,
       placeholder: 'http://192.168.1.50:8091',
-      onChange: ref
-          .read(settingsProvider.notifier)
-          .setLauncherControlApiBaseUrl,
+      onChange:
+          ref.read(settingsProvider.notifier).setLauncherControlApiBaseUrl,
     );
   }
 }

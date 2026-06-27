@@ -1,114 +1,29 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Screen shown when no Python interpreter is detected.
 /// Guides the user through installing Python on their platform.
-class PythonSetupScreen extends ConsumerStatefulWidget {
+///
+/// All install/detection state is owned by [pythonInstallProvider]; this
+/// widget is a pure read-and-dispatch surface with no local [setState].
+class PythonSetupScreen extends ConsumerWidget {
   const PythonSetupScreen({super.key});
 
   @override
-  ConsumerState<PythonSetupScreen> createState() => _PythonSetupScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final installState = ref.watch(pythonInstallProvider);
 
-class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
-  bool _isInstalling = false;
-  bool _isChecking = false;
-  String? _installOutput;
-  String? _errorMessage;
-
-  Future<void> _installWithHomebrew() async {
-    setState(() {
-      _isInstalling = true;
-      _installOutput = 'Running: brew install python\n';
-      _errorMessage = null;
-    });
-
-    try {
-      final brewCheck = await Process.run('which', ['brew']);
-      if (brewCheck.exitCode != 0) {
-        setState(() {
-          _isInstalling = false;
-          _errorMessage =
-              'Homebrew is not installed. Install it first from https://brew.sh, '
-              'or download Python directly from python.org.';
-        });
-        return;
-      }
-
-      final process = await Process.start('brew', ['install', 'python']);
-      final outputBuffer = StringBuffer();
-
-      process.stdout.transform(const SystemEncoding().decoder).listen((data) {
-        outputBuffer.write(data);
-        if (mounted) {
-          setState(() => _installOutput = outputBuffer.toString());
-        }
-      });
-
-      process.stderr.transform(const SystemEncoding().decoder).listen((data) {
-        outputBuffer.write(data);
-        if (mounted) {
-          setState(() => _installOutput = outputBuffer.toString());
-        }
-      });
-
-      final exitCode = await process.exitCode;
-      if (mounted) {
-        setState(() => _isInstalling = false);
-        if (exitCode == 0) {
-          unawaited(_retryCheck());
-        } else {
-          setState(() {
-            _errorMessage = 'Homebrew install exited with code $exitCode. '
-                'Try installing manually from python.org.';
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isInstalling = false;
-          _errorMessage = 'Failed to run brew: $e';
-        });
-      }
-    }
-  }
-
-  Future<void> _openPythonOrg() async {
-    final uri = Uri.parse('https://www.python.org/downloads/');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    }
-  }
-
-  Future<void> _retryCheck() async {
-    setState(() {
-      _isChecking = true;
-      _errorMessage = null;
-    });
-
-    await ref.read(moduleProvider.notifier).recheckPython();
-
-    if (mounted) {
-      setState(() => _isChecking = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(context.nmtkTokens.sectionGap * 1.5),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -118,7 +33,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                         const Icon(Icons.terminal,
                             size:
                                 72), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                        const SizedBox(height: 20),
+                        SizedBox(height: context.nmtkTokens.sectionGap * 1.25),
                         Text(
                           'Python Required',
                           textAlign: TextAlign.center,
@@ -127,45 +42,53 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                               .headlineMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: context.nmtkTokens.compactGap),
                         Text(
                           'NeuroMorphic ToolKit requires Python 3.10+ to run '
                           'module backends. Install Python to continue.',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
-                        const SizedBox(height: 24),
+                        SizedBox(height: context.nmtkTokens.sectionGap * 1.5),
                         if (Platform.isMacOS) ...[
                           SizedBox(
                             width: double.infinity,
                             child: ZetaButton.primary(
-                              onPressed:
-                                  _isInstalling ? null : _installWithHomebrew,
+                              onPressed: installState.isInstalling
+                                  ? null
+                                  : () => ref
+                                      .read(pythonInstallProvider.notifier)
+                                      .installWithHomebrew(),
                               leadingIcon: ZetaIcons.download,
-                              label: _isInstalling
+                              label: installState.isInstalling
                                   ? 'Installing...'
                                   : 'Install with Homebrew',
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: context.nmtkTokens.compactGap),
                           SizedBox(
                             width: double.infinity,
                             child: ZetaButton.outline(
-                              onPressed: _openPythonOrg,
+                              onPressed: () => ref
+                                  .read(pythonInstallProvider.notifier)
+                                  .openPythonOrg(),
                               leadingIcon: ZetaIcons.open_in_new_window,
                               label: 'Download from python.org',
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: context.nmtkTokens.compactGap),
                         ],
                         SizedBox(
                           width: double.infinity,
                           child: ZetaButton.primary(
-                            onPressed: (_isInstalling || _isChecking)
+                            onPressed: (installState.isInstalling ||
+                                    installState.isChecking)
                                 ? null
-                                : _retryCheck,
+                                : () => ref
+                                    .read(pythonInstallProvider.notifier)
+                                    .recheckPython(),
                             leadingIcon: ZetaIcons.refresh,
-                            label: _isChecking
+                            label: installState.isChecking
                                 ? 'Checking for Python...'
                                 : 'Retry Detection',
                           ),
@@ -173,7 +96,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                       ],
                     ),
                   ),
-                  if (_installOutput != null) ...[
+                  if (installState.installOutput != null) ...[
                     const SizedBox(height: 12),
                     NmtkSurfaceCard(
                       title: 'Installer Output',
@@ -182,7 +105,7 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                         child: SingleChildScrollView(
                           reverse: true,
                           child: SelectableText(
-                            _installOutput!,
+                            installState.installOutput!,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -194,12 +117,12 @@ class _PythonSetupScreenState extends ConsumerState<PythonSetupScreen> {
                       ),
                     ),
                   ],
-                  if (_errorMessage != null) ...[
+                  if (installState.errorMessage != null) ...[
                     const SizedBox(height: 12),
                     NmtkSurfaceCard(
                       title: 'Installation Problem',
                       tone: NmtkTone.danger,
-                      child: Text(_errorMessage!),
+                      child: Text(installState.errorMessage!),
                     ),
                   ],
                   const SizedBox(height: 12),

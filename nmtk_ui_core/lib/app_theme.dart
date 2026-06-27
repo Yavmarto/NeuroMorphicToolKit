@@ -165,9 +165,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundLight,
       textTheme: _buildTextTheme(ThemeData.light().textTheme),
-      extensions: [
-        _mergedSuiteTokens(colorScheme, Brightness.light, variant),
-      ],
+      extensions: [_mergedSuiteTokens(colorScheme, Brightness.light, variant)],
     );
   }
 
@@ -190,9 +188,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundDark,
       textTheme: _buildTextTheme(ThemeData.dark().textTheme),
-      extensions: [
-        _mergedSuiteTokens(colorScheme, Brightness.dark, variant),
-      ],
+      extensions: [_mergedSuiteTokens(colorScheme, Brightness.dark, variant)],
     );
   }
 
@@ -206,38 +202,49 @@ class AppTheme {
   ) {
     final isDark = brightness == Brightness.dark;
     return NmtkShellTokens.fromColorScheme(colorScheme, brightness).copyWith(
-      terminalBackground: isDark
-          ? const Color(0xFF0A0C16)
-          : const Color(0xFFE2E8F0),
-      syntaxHighlightColor: colorScheme.primary,
-      brandGradient: LinearGradient(
-        colors: isDark
-            ? [colorScheme.primary, colorScheme.secondaryContainer]
-            : [colorScheme.primary, colorScheme.tertiary],
-      ),
-      synKeyword: isDark ? const Color(0xFF60A5FA) : const Color(0xFF1D4ED8),
-      synSubject: isDark ? const Color(0xFF38BDF8) : const Color(0xFF0284C7),
-      synNumber: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
-      synComment: isDark ? const Color(0xFF6B7280) : const Color(0xFF4B5563),
-      synString: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
-      nodeEnsemble: isDark ? const Color(0xFF3B82F6) : const Color(0xFF2563EB),
-      nodeMotor: isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706),
-      nodeInterneuron: isDark
-          ? const Color(0xFF14B8A6)
-          : const Color(0xFF0D9488),
-      nodeInput: isDark ? const Color(0xFF22C55E) : const Color(0xFF16A34A),
-      nodeErrorInput: isDark
-          ? const Color(0xFFEF4444)
-          : const Color(0xFFDC2626),
-      edgeExcitatory: isDark
-          ? const Color(0xFF3B82F6)
-          : const Color(0xFF2563EB),
-      edgeInhibitory: isDark
-          ? const Color(0xFFEF4444)
-          : const Color(0xFFDC2626),
-      edgePlastic: isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706),
-      variant: variant,
-    ) as NmtkShellTokens;
+          terminalBackground: isDark
+              ? const Color(0xFF0A0C16)
+              : const Color(0xFFE2E8F0),
+          syntaxHighlightColor: colorScheme.primary,
+          brandGradient: LinearGradient(
+            colors: isDark
+                ? [colorScheme.primary, colorScheme.secondaryContainer]
+                : [colorScheme.primary, colorScheme.tertiary],
+          ),
+          synKeyword: isDark
+              ? const Color(0xFF60A5FA)
+              : const Color(0xFF1D4ED8),
+          synSubject: isDark
+              ? const Color(0xFF38BDF8)
+              : const Color(0xFF0284C7),
+          synNumber: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
+          synComment: isDark
+              ? const Color(0xFF6B7280)
+              : const Color(0xFF4B5563),
+          synString: isDark ? const Color(0xFF34D399) : const Color(0xFF059669),
+          nodeEnsemble: isDark
+              ? const Color(0xFF3B82F6)
+              : const Color(0xFF2563EB),
+          nodeMotor: isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706),
+          nodeInterneuron: isDark
+              ? const Color(0xFF14B8A6)
+              : const Color(0xFF0D9488),
+          nodeInput: isDark ? const Color(0xFF22C55E) : const Color(0xFF16A34A),
+          nodeErrorInput: isDark
+              ? const Color(0xFFEF4444)
+              : const Color(0xFFDC2626),
+          edgeExcitatory: isDark
+              ? const Color(0xFF3B82F6)
+              : const Color(0xFF2563EB),
+          edgeInhibitory: isDark
+              ? const Color(0xFFEF4444)
+              : const Color(0xFFDC2626),
+          edgePlastic: isDark
+              ? const Color(0xFFF59E0B)
+              : const Color(0xFFD97706),
+          variant: variant,
+        )
+        as NmtkShellTokens;
   }
 
   static ThemeData _neurocnlDarkTheme() {
@@ -257,9 +264,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkNeurocnlTokens.background,
       textTheme: _buildTextTheme(ThemeData.dark().textTheme),
-      extensions: [
-        _mergedNeurocnlTokens(Brightness.dark, colorScheme),
-      ],
+      extensions: [_mergedNeurocnlTokens(Brightness.dark, colorScheme)],
     );
   }
 
@@ -286,9 +291,7 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: background,
       textTheme: _buildTextTheme(ThemeData.light().textTheme),
-      extensions: [
-        _mergedNeurocnlTokens(Brightness.light, colorScheme),
-      ],
+      extensions: [_mergedNeurocnlTokens(Brightness.light, colorScheme)],
     );
   }
 
@@ -300,29 +303,30 @@ class AppTheme {
   ) {
     final isDark = brightness == Brightness.dark;
     return NmtkShellTokens.fromColorScheme(colorScheme, brightness).copyWith(
-      terminalBackground: isDark
-          ? NmtkNeurocnlTokens.background
-          : const Color(0xFFF5F1FF),
-      syntaxHighlightColor: NmtkNeurocnlTokens.synKeyword,
-      brandGradient: LinearGradient(
-        colors: [colorScheme.primary, colorScheme.secondary],
-      ),
-      synKeyword: NmtkNeurocnlTokens.synKeyword,
-      synSubject: NmtkNeurocnlTokens.synSubject,
-      synNumber: NmtkNeurocnlTokens.synNumber,
-      synComment: NmtkNeurocnlTokens.synComment,
-      synString: NmtkNeurocnlTokens.synString,
-      nodeEnsemble: NmtkNeurocnlTokens.nodeEnsemble,
-      nodeMotor: NmtkNeurocnlTokens.nodeMotor,
-      nodeInterneuron: NmtkNeurocnlTokens.nodeInterneuron,
-      nodeGenericEnsemble: NmtkNeurocnlTokens.nodeGenericEnsemble,
-      nodeInput: NmtkNeurocnlTokens.nodeInput,
-      nodeErrorInput: NmtkNeurocnlTokens.nodeErrorInput,
-      edgeExcitatory: NmtkNeurocnlTokens.edgeExcitatory,
-      edgeInhibitory: NmtkNeurocnlTokens.edgeInhibitory,
-      edgePlastic: NmtkNeurocnlTokens.edgePlastic,
-      variant: NmtkThemeVariant.neurocnl,
-    ) as NmtkShellTokens;
+          terminalBackground: isDark
+              ? NmtkNeurocnlTokens.background
+              : const Color(0xFFF5F1FF),
+          syntaxHighlightColor: NmtkNeurocnlTokens.synKeyword,
+          brandGradient: LinearGradient(
+            colors: [colorScheme.primary, colorScheme.secondary],
+          ),
+          synKeyword: NmtkNeurocnlTokens.synKeyword,
+          synSubject: NmtkNeurocnlTokens.synSubject,
+          synNumber: NmtkNeurocnlTokens.synNumber,
+          synComment: NmtkNeurocnlTokens.synComment,
+          synString: NmtkNeurocnlTokens.synString,
+          nodeEnsemble: NmtkNeurocnlTokens.nodeEnsemble,
+          nodeMotor: NmtkNeurocnlTokens.nodeMotor,
+          nodeInterneuron: NmtkNeurocnlTokens.nodeInterneuron,
+          nodeGenericEnsemble: NmtkNeurocnlTokens.nodeGenericEnsemble,
+          nodeInput: NmtkNeurocnlTokens.nodeInput,
+          nodeErrorInput: NmtkNeurocnlTokens.nodeErrorInput,
+          edgeExcitatory: NmtkNeurocnlTokens.edgeExcitatory,
+          edgeInhibitory: NmtkNeurocnlTokens.edgeInhibitory,
+          edgePlastic: NmtkNeurocnlTokens.edgePlastic,
+          variant: NmtkThemeVariant.neurocnl,
+        )
+        as NmtkShellTokens;
   }
 
   static ThemeData get highContrastLightTheme {

@@ -432,7 +432,11 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
         other.syntaxHighlightColor,
         t,
       )!,
-      brandGradient: LinearGradient.lerp(brandGradient, other.brandGradient, t)!,
+      brandGradient: LinearGradient.lerp(
+        brandGradient,
+        other.brandGradient,
+        t,
+      )!,
       synKeyword: Color.lerp(synKeyword, other.synKeyword, t)!,
       synSubject: Color.lerp(synSubject, other.synSubject, t)!,
       synNumber: Color.lerp(synNumber, other.synNumber, t)!,
@@ -479,4 +483,9 @@ Duration _lerpDuration(Duration a, Duration b, double t) {
       t,
     ).round(),
   );
+}
+
+extension NmtkThemeExtensions on BuildContext {
+  NmtkShellTokens get nmtkTokens =>
+      Theme.of(this).extension<NmtkShellTokens>()!;
 }

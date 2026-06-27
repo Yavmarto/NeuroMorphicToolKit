@@ -34,7 +34,8 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
     NmtkCommand(
       id: 'nav-neurohub',
       label: 'Open Neurohub Dashboard',
-      description: 'Share CNL networks, canvas projects, and bench results with your team',
+      description:
+          'Share CNL networks, canvas projects, and bench results with your team',
       icon: ZetaIcons.analytics,
       category: 'Navigation',
       onExecute: () => router.go('/module/neurohub'),
@@ -42,7 +43,8 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
     NmtkCommand(
       id: 'nav-neurobench',
       label: 'Open Neurobench',
-      description: 'Run SNN benchmarks and compare results across hardware targets',
+      description:
+          'Run SNN benchmarks and compare results across hardware targets',
       icon: ZetaIcons.analytics,
       category: 'Navigation',
       onExecute: () => router.go('/module/neurobench'),

@@ -121,7 +121,9 @@ void main() {
       expect(decoration.border?.top.width, equals(1.6));
     });
 
-    testWidgets('wraps steps when width is constrained', (WidgetTester tester) async {
+    testWidgets('wraps steps when width is constrained', (
+      WidgetTester tester,
+    ) async {
       final manySteps = List.generate(
         10,
         (i) => NmtkPipelineStepData(

@@ -192,9 +192,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             eligibleModules, workspaceState.focusedModuleId, forceFocus) ??
         eligibleModules.first.id;
 
-    await ref
-        .read(workspaceProvider.notifier)
-        .ensureDefaultSessionsOnce(
+    await ref.read(workspaceProvider.notifier).ensureDefaultSessionsOnce(
           sessions: desiredSessions,
           focusedModuleId: targetModuleId,
         );

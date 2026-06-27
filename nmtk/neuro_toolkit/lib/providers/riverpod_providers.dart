@@ -18,8 +18,24 @@ export 'package:neuro_toolkit/src/features/settings/presentation/settings_notifi
     show settingsProvider;
 export 'package:neuro_toolkit/src/features/environment/presentation/environment_notifier.dart'
     show environmentProvider;
+export 'package:neuro_toolkit/src/features/environment/presentation/environment_package_notifier.dart'
+    show
+        environmentPackageProvider,
+        environmentExportProvider,
+        EnvironmentPackageNotifier,
+        EnvironmentExportNotifier;
+export 'package:neuro_toolkit/src/features/environment/domain/environment_package_state.dart'
+    show EnvironmentPackageState, EnvironmentExportState;
 export 'package:neuro_toolkit/src/features/deployment/presentation/deployment_notifier.dart'
     show backendDeploymentProvider;
+export 'package:neuro_toolkit/src/features/python_install/presentation/python_install_notifier.dart'
+    show pythonInstallProvider, PythonInstallNotifier;
+export 'package:neuro_toolkit/src/features/python_install/domain/python_install_state.dart'
+    show PythonInstallState;
+export 'package:neuro_toolkit/src/features/launcher_bootstrap/presentation/launcher_bootstrap_notifier.dart'
+    show launcherBootstrapProvider, LauncherBootstrapNotifier;
+export 'package:neuro_toolkit/src/features/launcher_bootstrap/domain/launcher_bootstrap_data.dart'
+    show LauncherBootstrapData;
 
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   throw UnimplementedError(

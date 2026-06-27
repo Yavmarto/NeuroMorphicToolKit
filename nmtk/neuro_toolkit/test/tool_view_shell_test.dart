@@ -103,8 +103,7 @@ void main() {
             ),
           ),
           moduleProvider.overrideWith(() => _FakeModuleNotifier()),
-          workspaceProvider
-              .overrideWith(() => _FakeWorkspaceNotifier()),
+          workspaceProvider.overrideWith(() => _FakeWorkspaceNotifier()),
         ],
         child: const MaterialApp(home: ToolViewScreen()),
       ),

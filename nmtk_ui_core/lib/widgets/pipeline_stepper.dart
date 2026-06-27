@@ -228,8 +228,12 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
       splitIdx = widget.steps.indexWhere((s) => s.id == splitId);
     }
     final isSplit = splitId != null && selectedIdx >= 0 && splitIdx >= 0;
-    final leftSplitIdx = isSplit ? (selectedIdx < splitIdx ? selectedIdx : splitIdx) : -1;
-    final rightSplitIdx = isSplit ? (selectedIdx < splitIdx ? splitIdx : selectedIdx) : -1;
+    final leftSplitIdx = isSplit
+        ? (selectedIdx < splitIdx ? selectedIdx : splitIdx)
+        : -1;
+    final rightSplitIdx = isSplit
+        ? (selectedIdx < splitIdx ? splitIdx : selectedIdx)
+        : -1;
 
     for (int i = 0; i < widget.steps.length; i++) {
       final step = widget.steps[i];
@@ -299,13 +303,14 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
             );
           } else {
             slotKey = 'arrow_$i';
-            slotChild = _StepConnector(key: ValueKey(slotKey), active: connectorActive);
+            slotChild = _StepConnector(
+              key: ValueKey(slotKey),
+              active: connectorActive,
+            );
           }
-        } else if (
-          widget.onSplitBetween != null &&
-          selectedIdx >= 0 &&
-          (i == selectedIdx || i + 1 == selectedIdx)
-        ) {
+        } else if (widget.onSplitBetween != null &&
+            selectedIdx >= 0 &&
+            (i == selectedIdx || i + 1 == selectedIdx)) {
           // Single pane: show + adjacent to the selected step.
           slotKey = 'plus_$i';
           slotChild = _ConnectorSlotButton(
@@ -316,7 +321,10 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
           );
         } else {
           slotKey = 'arrow_$i';
-          slotChild = _StepConnector(key: ValueKey(slotKey), active: connectorActive);
+          slotChild = _StepConnector(
+            key: ValueKey(slotKey),
+            active: connectorActive,
+          );
         }
 
         widgets.add(
@@ -324,7 +332,10 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
             duration: const Duration(milliseconds: 200),
             transitionBuilder: (child, animation) {
               return FadeTransition(
-                opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOut,
+                ),
                 child: child,
               );
             },
@@ -610,7 +621,10 @@ class _ConnectorSlotButtonState extends State<_ConnectorSlotButton> {
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hovered = true),
-        onExit: (_) => setState(() { _hovered = false; _pressed = false; }),
+        onExit: (_) => setState(() {
+          _hovered = false;
+          _pressed = false;
+        }),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
@@ -633,13 +647,19 @@ class _ConnectorSlotButtonState extends State<_ConnectorSlotButton> {
                 border: Border.all(color: borderColor),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: _hovered ? 0.18 : 0.10),
+                    color: Colors.black.withValues(
+                      alpha: _hovered ? 0.18 : 0.10,
+                    ),
                     blurRadius: _hovered ? 6 : 4,
                     offset: const Offset(0, 1),
                   ),
                 ],
               ),
-              child: Icon(widget.icon, size: 13, color: theme.colorScheme.onSurface),
+              child: Icon(
+                widget.icon,
+                size: 13,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ),
         ),
