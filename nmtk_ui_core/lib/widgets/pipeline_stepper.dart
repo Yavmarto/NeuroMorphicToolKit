@@ -320,20 +320,15 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
         }
 
         widgets.add(
-          AnimatedSize(
+          AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              transitionBuilder: (child, animation) {
-                final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
-                return FadeTransition(
-                  opacity: curved,
-                  child: ScaleTransition(scale: curved, child: child),
-                );
-              },
-              child: slotChild,
-            ),
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                child: child,
+              );
+            },
+            child: slotChild,
           ),
         );
       }
@@ -558,8 +553,13 @@ class _StepConnector extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = NmtkShellTokens.of(context);
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0),
+    // ponytail: fixed 30px slot (22 + 4px margin each side) matches _ConnectorSlotButton
+    // so AnimatedSwitcher cross-fades with zero width delta — no spatial pop.
+    return Container(
+      width: 22,
+      height: 22,
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      alignment: Alignment.center,
       child: Icon(
         ZetaIcons.arrow_forward,
         size: 10,
