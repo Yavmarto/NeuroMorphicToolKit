@@ -486,6 +486,5 @@ Duration _lerpDuration(Duration a, Duration b, double t) {
 }
 
 extension NmtkThemeExtensions on BuildContext {
-  NmtkShellTokens get nmtkTokens =>
-      Theme.of(this).extension<NmtkShellTokens>()!;
+  NmtkShellTokens get nmtkTokens => NmtkShellTokens.of(this);
 }
