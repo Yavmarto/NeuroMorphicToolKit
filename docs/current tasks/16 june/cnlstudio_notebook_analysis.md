@@ -1,6 +1,6 @@
 # CNLStudio Notebook Reverse-Engineering Analysis Report
 
-**Date:** 16 June 2026 · **Updated:** 17 June 2026  
+**Date:** 16 June 2026 · **Updated:** 27 June 2026  
 **Scope:** `paper/01_lif`, `paper/02_cnn`, `paper/03_rnn` — 6 notebooks  
 **Target UI:** CNLStudio (Model → Training → Eval → Hardware Deployment → Results)
 
@@ -479,12 +479,79 @@ The following features are required to fully support the paper notebooks and are
 - Integrated NPY binary data fetching and parsing for plotting `SnnDynamicsView` and providing `.npy` zip exports.
 - Added a `LabelProbabilitiesChart` to support visual inspection of model prediction confidence (Notebook 4).
 
-**12. ❌ Spike Generator canvas node (Pending)**
-- Needs to be built: New node type `spikeGenerator` in the Data palette (snntorch_sim group). Will generate synthetic spike trains entirely within CNLStudio — no external Python snippet or `.npy` file required.
-- Parameters needed: `n_neurons` (default 1), `n_timesteps` (default 100), `pattern` (`isi_regular`/`poisson`/`constant_rate`), `isi_period` (default 10, min 1), `rate_hz` (default 10.0, min 1e-6), `seed` (default 42).
-- Property panel should show pattern-conditional fields: `isi_period` for `isi_regular`, `rate_hz` for `poisson` and `constant_rate`.
-- Code-gen needs to produce a self-contained spike-train generation cell. Zero-value guards (`isi_period=max(1,v)`, `rate_hz=max(1e-6,v)`) will prevent `ValueError`/`ZeroDivisionError` at runtime.
-- Will fix Notebook 1: replaces the external ISI-spike-train workaround entirely.
+**12. ✅ Spike Generator canvas node (Shipped after 17 June 2026)**
+- Fully implemented: `spikeGenerator` node in Data palette (`pipeline_dag.dart`, `pipeline_node_property_panel.dart`, `pipeline_phase_canvas.dart`, `pipeline_palette.dart`).
+- Parameters: `n_neurons`, `n_timesteps`, `pattern` (`isi_regular`/`poisson`/`constant_rate`), `isi_period`, `rate_hz`, `seed` — with pattern-conditional UI.
+- Backend code-gen: `_spike_generator_code()` in `notebook.py` emits `_spikes[isi_period-1::isi_period] = 1.0` for `isi_regular`, Poisson sampling for `poisson`, and constant-rate fill for `constant_rate`.
+- Fixes Notebook 1.
+
+### P4 — ✅ Both items shipped (post 17 June 2026)
+
+**13. ✅ `ceCountLoss` node in Training canvas**
+- `case "ceCountLoss"` added to `_dag_node_code()` in `notebook.py`: generates `SF.ce_count_loss()` from snnTorch's functional module — the correct spike-count cross-entropy used by the Braille notebooks.
+- Distinct from `crossEntropyLoss` (which uses `nn.CrossEntropyLoss` on logits). Required by Notebooks 3 and 4.
+- **27 June 2026 update:** `ceCountLoss` enum entry, label, category (loss), frameworks (`snntorch_sim`), defaultParameters, inputPorts, and outputPorts added to `pipeline_dag.dart` — the Dart palette entry was missing until now, so the node was never visible in the UI despite the Python codegen being present.
+
+**14. ✅ `cnl.RSynaptic` / `cnl.Synaptic` in `_generate_snntorch_code()`**
+- Both node types added to the architecture code generator in `notebook.py`. For graphs containing RSynaptic, a temporal-sequence forward is generated: `for t in range(x.shape[0]): xt = x[t]` with explicit state threading (`init_rsynaptic()` / `init_synaptic()`).
+- Hidden-layer spikes (from RSynaptic) returned as the second output (`hid_rec`) so L1/L2 reg can reference `mem_out` as the target layer.
+- Fixes Notebooks 3 and 4.
+
+### P5 — ✅ All 10 shipped (27 June 2026)
+
+#### Model canvas additions (4 new neuron/layer types)
+
+**15. ✅ `cnl.RLeaky` — Recurrent LIF neuron**
+- `snn.RLeaky(beta, linear_features, threshold, reset_mechanism)` with two states `(spk, mem)` from `init_rleaky()`. Built-in internal recurrent `nn.Linear(n, n)` for spike-feedback — simpler than RSynaptic (2 states vs 3).
+- Code-gen: temporal loop (`for t in range(x.shape[0])`) triggered by `kind="rleaky"` in `_recurrent_kinds`; forward call `self.rleaky(xt, spk, mem)` → `(spk, mem)`.
+- Files: `cnl_nodes.py` (dataclass), `nir_graph_serializer.py` (spec + serialize/deserialize), `nir_support.py` (`snntorch_sim=exact`, others `unsupported`), `nir_types_provider.dart` (palette entry, category=neuron, icon=Icons.loop), `notebook.py` (isinstance branch).
+
+**16. ✅ `cnl.Leaky` — Explicit-beta Leaky neuron**
+- `snn.Leaky(beta, threshold, reset_mechanism, init_hidden=False)` with one state `mem` from `init_leaky()`. Lets users specify decay as `beta` directly instead of converting from tau (as `nir.LIF` requires).
+- Code-gen: same temporal loop path (`kind="leaky_explicit"`); forward call `self.lk(xt, mem)` → `(spk, mem)`.
+- Files: same 5-file pattern as RLeaky. `nir_types_provider.dart` category=neuron, icon=Icons.hub.
+
+**17. ✅ `cnl.BatchNorm1d` — Batch normalisation layer**
+- `nn.BatchNorm1d(num_features)` — stateless; no `spiking_vars` entry, no state init. Forward: `xt = self.bn(xt)` inside the temporal loop.
+- Files: same 5-file pattern. `nir_support.py` all backends `exact` (pure PyTorch). `nir_types_provider.dart` category=transform, icon=Icons.auto_fix_normal, single param `num_features`.
+
+**18. ✅ `cnl.Dropout` — Dropout layer**
+- `nn.Dropout(p)` — stateless. Forward: `xt = self.drop(xt)`.
+- Files: same 5-file pattern. `nir_types_provider.dart` category=transform, icon=Icons.blur_on, single param `p` (float, 0–1).
+
+#### Pipeline canvas additions (6 new training/eval utility nodes)
+
+**19. ✅ `gradientClip` — Gradient norm clipping**
+- `torch.nn.utils.clip_grad_norm_(net.parameters(), max_norm=<max_norm>)`. Category: backward. Frameworks: `snntorch_sim` only.
+- Property panel: single `max_norm` double field (default 1.0). Input port: `gradients`.
+- Files: `pipeline_dag.dart`, `pipeline_node_property_panel.dart`, `notebook.py`.
+
+**20. ✅ `weightClip` — Hard weight clipping**
+- `with torch.no_grad(): for _wp in net.parameters(): _wp.clamp_(<min>, <max>)`. Category: optimiser.
+- Property panel: `min_weight` + `max_weight` double fields. Input port: `model`.
+- Files: same 3-file pattern.
+
+**21. ✅ `reduceLROnPlateau` — Adaptive LR scheduler**
+- `torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode, factor, patience, min_lr)`. Category: scheduler. Frameworks: all (framework-agnostic PyTorch).
+- Code-gen comment instructs caller: `# Call scheduler.step(val_loss) at end of each epoch`.
+- Property panel: `factor` (double), `patience` (int), `min_lr` (double). Input port: `model`.
+- Files: same 3-file pattern.
+
+**22. ✅ `earlyStopping` — Epoch-level early stopping**
+- Emits sentinel variables `_es_best`, `_es_counter`, `_es_patience`, `_es_min_delta` and a commented epoch-loop footer with `break` logic. Category: scheduler. Frameworks: all.
+- Property panel: `patience` (int) + `min_delta` (double). Input port: `model`.
+- Files: same 3-file pattern.
+
+**23. ✅ `spikeCountMetric` — Mean output spike count**
+- `mean_spike_count = spk_out.sum(0).float().mean().item()` — reports average spikes per output neuron per sample. No parameters. Category: metrics. Frameworks: `snntorch_sim` only.
+- Input ports: `spikes` + `labels`.
+- Files: same 3-file pattern.
+
+**24. ✅ `latencyMetric` — Time-to-first-spike (TTFS) accuracy**
+- Full TTFS classification: `argmax(0)` for first spike time, `argmin(1)` for predicted class, no-spike sentinel handling. Category: metrics. Frameworks: `snntorch_sim` only.
+- Property panel: `default_latency` int field (sentinel value for non-firing neurons, default −1).
+- Input ports: `spikes` + `labels`.
+- Files: same 3-file pattern.
 
 ---
 
