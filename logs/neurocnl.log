@@ -41615,3 +41615,87 @@ Using selector: KqueueSelector
 HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
 Using selector: KqueueSelector
 HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+matplotlib data path: /Users/yoshimartodihardjo/anaconda/anaconda3/lib/python3.12/site-packages/matplotlib/mpl-data
+CONFIGDIR=/Users/yoshimartodihardjo/.matplotlib
+interactive is False
+platform is darwin
+CACHEDIR=/Users/yoshimartodihardjo/.matplotlib
+Using fontManager instance from /Users/yoshimartodihardjo/.matplotlib/fontlist-v390.json
+matplotlib data path: /Users/yoshimartodihardjo/anaconda/anaconda3/lib/python3.12/site-packages/matplotlib/mpl-data
+CONFIGDIR=/Users/yoshimartodihardjo/.matplotlib
+interactive is False
+platform is darwin
+CACHEDIR=/Users/yoshimartodihardjo/.matplotlib
+Using fontManager instance from /Users/yoshimartodihardjo/.matplotlib/fontlist-v390.json
+matplotlib data path: /Users/yoshimartodihardjo/anaconda/anaconda3/lib/python3.12/site-packages/matplotlib/mpl-data
+CONFIGDIR=/Users/yoshimartodihardjo/.matplotlib
+interactive is False
+platform is darwin
+CACHEDIR=/Users/yoshimartodihardjo/.matplotlib
+Using fontManager instance from /Users/yoshimartodihardjo/.matplotlib/fontlist-v390.json
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+matplotlib data path: /Users/yoshimartodihardjo/anaconda/anaconda3/lib/python3.12/site-packages/matplotlib/mpl-data
+CONFIGDIR=/Users/yoshimartodihardjo/.matplotlib
+interactive is False
+platform is darwin
+CACHEDIR=/Users/yoshimartodihardjo/.matplotlib
+Using fontManager instance from /Users/yoshimartodihardjo/.matplotlib/fontlist-v390.json
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+matplotlib data path: /Users/yoshimartodihardjo/anaconda/anaconda3/lib/python3.12/site-packages/matplotlib/mpl-data
+CONFIGDIR=/Users/yoshimartodihardjo/.matplotlib
+interactive is False
+platform is darwin
+CACHEDIR=/Users/yoshimartodihardjo/.matplotlib
+Using fontManager instance from /Users/yoshimartodihardjo/.matplotlib/fontlist-v390.json
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+matplotlib data path: /Users/yoshimartodihardjo/anaconda/anaconda3/lib/python3.12/site-packages/matplotlib/mpl-data
+CONFIGDIR=/Users/yoshimartodihardjo/.matplotlib
+interactive is False
+platform is darwin
+CACHEDIR=/Users/yoshimartodihardjo/.matplotlib
+Using fontManager instance from /Users/yoshimartodihardjo/.matplotlib/fontlist-v390.json
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 422 Unprocessable Entity"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
+Using selector: KqueueSelector
+HTTP Request: POST http://testserver/api/notebook/generate-v2 "HTTP/1.1 200 OK"
