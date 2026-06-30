@@ -1,0 +1,285 @@
+# Phase 2 — Fragment Shader Visualization for Neurosim
+**Task:** 2026-06-30 · Network visualization upgrade
+
+---
+
+## Background
+
+Neurosim's current preview panels render spike data through `sparkline_chart.dart` (a thin `CustomPainter` line chart) and a summary stat card. This is adequate for networks up to a few hundred neurons. The goal here is to jump directly to GPU-driven visualization using Flutter's fragment shader pipeline, and to design the renderer seam so that Phase 3 (Rust + wgpu) can be dropped in without touching any Flutter UI code.
+
+The WebSocket streaming endpoint (`/api/neurosim/ws/simulation`) and the `PreviewPlayback` contract already exist. The backend will need one new aggregation endpoint for large-scale modes; the frontend needs a new visualization subsystem.
+
+---
+
+## Resolved Decisions
+
+| Decision | Choice | Consequence |
+|---|---|---|
+| **Q1 — Demo data source** | **B — dedicated backend `/demo` endpoint** | Demos exercise the real WebSocket streaming path end-to-end; backend generates Poisson spike trains at scale, no Nengo involved |
+| **Q2 — Shader host location** | **B — `nmtk_ui_core/assets/shaders/`** | Shaders are part of the shared design system from day one; Neurohub and any future module can import them without promotion work |
+
+> [!WARNING]
+> **Breaking change to `PreviewPlayback` frame format.** At 100k+ neurons, emitting one `PreviewSpikeEvent` object per spike per WebSocket frame is prohibitively large. We need to extend the WebSocket frame with a compact binary spike array (`Float32List` encoded as base64, or a new `bulk_spikes` list of `[neuron_index, time_ms]` pairs). This is a contract change — both `design_contracts.py` and the Dart model must change together. See §Proposed Changes for details.
+
+---
+
+## Renderer Interface — The Phase 3 Swap Seam
+
+The central design decision is an abstract `NeuronRenderer` interface that all visualization modes implement. Phase 3 means replacing `FragmentShaderNeuronRenderer` with `WgpuNativeNeuronRenderer` (via FFI). **No Flutter UI widget code changes when you do that swap.**
+
+```
+abstract interface class NeuronRenderer {
+  // Called once when the render surface is ready
+  void attach(Size surfaceSize);
+
+  // Called per WebSocket frame — renderer decides how to consume
+  void pushFrame(VisualizationFrame frame);
+
+  // Returns the widget that owns the render surface
+  Widget buildSurface(BuildContext context);
+
+  // Releases GPU resources
+  void dispose();
+}
+```
+
+`VisualizationFrame` is a new Dart model that is **renderer-agnostic** — it contains the data, not the draw calls:
+
+```dart
+class VisualizationFrame {
+  final int totalNeuronCount;
+  final Float32List spikePositions; // [neuron_index, time_ms, ...] interleaved
+  final Float32List voltageGrid;    // flattened density or voltage values
+  final double simulationTimeMs;
+  final VisualizationScale scale;   // enum: single | small | medium | large | massive
+}
+```
+
+---
+
+## Proposed Changes
+
+---
+
+### Backend — Neurosim Python
+
+#### [MODIFY] [design_contracts.py](file:///Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurosim/neurosim/contracts/design_contracts.py)
+
+Add `BulkSpikeFrame` model alongside existing `PreviewSpikeEvent`:
+
+```python
+class BulkSpikeFrame(BaseModel):
+    """Compact spike data for large networks. Spike pairs as flat list."""
+    # Flat list of [neuron_index, time_ms] pairs (length = 2 * spike_count)
+    data: list[float]
+    # Aggregated firing-rate density grid (for heatmap modes)
+    density_grid: list[float] = Field(default_factory=list)
+    grid_w: int = 0
+    grid_h: int = 0
+    scale_hint: Literal["raster", "density", "particle"] = "raster"
+```
+
+Extend `PreviewPlayback`:
+
+```python
+class PreviewPlayback(BaseModel):
+    ...
+    bulk_spike_frame: BulkSpikeFrame | None = None  # NEW — populated for n>5000
+```
+
+#### [NEW] [density_aggregator.py](file:///Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurosim/neurosim/app/services/density_aggregator.py)
+
+Service that converts raw `spike_trains` into a 2D density grid for heatmap rendering. Takes neuron count, time window, and grid dimensions. Returns a flat `list[float]` of firing rate per cell. Used by `preview_runner.py` when `n_neurons > 5_000`.
+
+#### [MODIFY] [preview_runner.py](file:///Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurosim/neurosim/app/services/preview_runner.py)
+
+Add branching logic: if total neuron count across graph > 5 000, populate `bulk_spike_frame` instead of (or alongside) `spike_events`. Call `density_aggregator` to compute the grid.
+
+#### [NEW] [routers/viz_demo.py](file:///Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurosim/neurosim/app/routers/viz_demo.py)
+
+**WebSocket endpoint** `WS /api/neurosim/viz/demo` — accepts a JSON handshake `{"scale": "10k" | "100k" | "1m", "rate_hz": float}` then streams `PreviewPlayback` frames at ~30 fps until the client disconnects. Each frame contains a `BulkSpikeFrame` generated by a pure-Python Poisson spike generator (no Nengo, no simulation). This endpoint exercises the real WebSocket streaming path used by real simulations, making the demo a true integration smoke test of the full pipeline.
+
+Key implementation details:
+- Uses the same `asyncio.Queue` + `anyio.to_thread` pattern as `simulation_ws.py` to keep the generator non-blocking
+- Frame rate is throttled to 30 fps via `asyncio.sleep(1/30)` — the client renders at its own pace
+- Scale presets: `10k` = 10 000 neurons 20 Hz, `100k` = 100 000 neurons 15 Hz, `1m` = 1 000 000 neurons 5 Hz
+- Registered in `main.py` under an `if settings.enable_demo_routes:` guard (env var `NMTK_DEMO_ROUTES=true`, default true in dev, false in prod)
+
+#### [NEW] [services/poisson_demo_generator.py](file:///Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurosim/neurosim/app/services/poisson_demo_generator.py)
+
+Pure-Python Poisson spike train generator. `generate_frame(neuron_count, rate_hz, dt_ms) -> BulkSpikeFrame`. Uses `numpy` for vectorised binomial draws — fast enough to sustain 30 fps for 1M neurons on a laptop CPU. Also computes the density grid for heatmap mode. No Nengo, no neurocnl, no external dependencies beyond numpy.
+
+---
+
+### Frontend — Neurosim Flutter
+
+The Neurosim frontend lives at `Neurosim/frontend/`. The canvas is untouchable; changes go into new files under `lib/visualization/`.
+
+#### [NEW] `lib/visualization/renderer_interface.dart`
+
+Abstract `NeuronRenderer` interface + `VisualizationFrame` + `VisualizationScale` enum. **This is the Phase 3 seam.** Contains zero rendering logic.
+
+#### [NEW] `lib/visualization/renderer_registry.dart`
+
+Factory that returns the correct `NeuronRenderer` implementation based on `VisualizationScale` and a feature flag:
+
+```dart
+NeuronRenderer rendererFor(VisualizationScale scale) {
+  if (useNativeRenderer) return WgpuNativeNeuronRenderer();   // Phase 3
+  return FragmentShaderNeuronRenderer(scale: scale);           // Phase 2
+}
+```
+
+`useNativeRenderer` reads from a compile-time flag (`const bool.fromEnvironment('NMTK_NATIVE_RENDERER')`). Defaults to false. Phase 3 just flips the flag.
+
+#### [NEW] `lib/visualization/fragment_shader_renderer.dart`
+
+Implements `NeuronRenderer` using `FragmentProgram` + `CustomPainter`. Contains three sub-renderers selected by scale:
+
+| Scale | Shader used | When |
+|---|---|---|
+| `small` (≤1k) | `raster_plot.frag` | Raster plot, one row per neuron |
+| `medium` (≤100k) | `spike_field.frag` | Particle field, one point per spike |
+| `large` (≤1M) | `density_map.frag` | Heatmap, grid cells colored by firing rate |
+
+#### [NEW] `nmtk_ui_core/assets/shaders/raster_plot.frag`
+
+GLSL ES 3.00 fragment shader. Inputs: spike buffer as `sampler2D` (one texel per spike, `{neuron_idx, time_ms}`). Draws a bright dot per spike on a dark grid background. Columns = time axis, rows = neuron index. Shared across modules via `nmtk_ui_core`.
+
+#### [NEW] `nmtk_ui_core/assets/shaders/spike_field.frag`
+
+GLSL ES 3.00 fragment shader. Renders spike positions as glowing point sprites. Inputs: spike buffer texture + current simulation time (for fade-out). Each spike fades over ~20ms. Produces the "glowing neuron" effect without one widget per spike.
+
+#### [NEW] `nmtk_ui_core/assets/shaders/density_map.frag`
+
+GLSL ES 3.00 fragment shader. Inputs: density grid as `sampler2D`. Maps firing rate to color ramp (dark purple → cyan → white). Used for 100k+ neuron modes.
+
+#### [MODIFY] [nmtk_ui_core/pubspec.yaml](file:///Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk_ui_core/pubspec.yaml)
+
+Add shader assets declaration under `flutter:`:
+```yaml
+flutter:
+  shaders:
+    - assets/shaders/raster_plot.frag
+    - assets/shaders/spike_field.frag
+    - assets/shaders/density_map.frag
+```
+
+Any Flutter package that depends on `nmtk_ui_core` gets these shaders automatically — no per-module asset registration needed.
+
+#### [NEW] `lib/visualization/visualization_panel.dart`
+
+The Flutter widget that hosts the renderer. Uses `LayoutBuilder` to determine available size, calls `renderer.attach(size)`, and wraps `renderer.buildSurface(context)` in an `AnimatedSwitcher` for scale transitions. This widget is what Neurosim's preview tab will mount — it is a simple `StatefulWidget`, not a canvas.
+
+#### [NEW] `lib/visualization/visualization_provider.dart`
+
+Riverpod `AsyncNotifier` that:
+1. Opens the WebSocket (`/api/neurosim/ws/simulation`)
+2. Deserializes each frame into `VisualizationFrame`
+3. Chooses `VisualizationScale` based on `totalNeuronCount`
+4. Pushes frames to the active renderer via `renderer.pushFrame(frame)`
+
+#### [MODIFY] Neurosim preview tab widget
+
+Mount `VisualizationPanel` in place of (or alongside) the existing `sparkline_chart.dart` in the preview/inspection panel. The `AGENTS.md` constraint is respected: only the inspection panel chrome changes, not the canvas.
+
+---
+
+### Demo Scenes — `lib/visualization/demo/`
+
+Three standalone Flutter widgets, each runnable from a dev route. They connect to the real backend WebSocket demo endpoint (`WS /api/neurosim/viz/demo`), exercising the full streaming pipeline end-to-end.
+
+#### [NEW] `lib/visualization/demo/viz_demo_provider.dart`
+
+Riverpod `StreamProvider` that opens the demo WebSocket, sends the scale handshake, and emits deserialized `VisualizationFrame` objects. Shared by all three demo widgets. On disconnect or error, the provider marks itself as loading and attempts reconnect after 2 s.
+
+```dart
+// Usage in any demo widget:
+final frame = ref.watch(vizDemoProvider(VizDemoConfig(scale: DemoScale.k100, rateHz: 15)));
+```
+
+#### [NEW] `lib/visualization/demo/demo_10k.dart`
+
+- Connects to backend with `scale=10k, rate_hz=20` → backend streams ~200 spikes/frame at 30 fps
+- Renderer: `FragmentShaderNeuronRenderer` at `VisualizationScale.small` → `raster_plot.frag`
+- UI: dark panel, neuron count badge, live spikes/sec counter derived from frame data, pause/resume button (sends WS pause message)
+
+#### [NEW] `lib/visualization/demo/demo_100k.dart`
+
+- Connects to backend with `scale=100k, rate_hz=15` → backend streams ~1 500 spikes/frame at 30 fps
+- Renderer: `FragmentShaderNeuronRenderer` at `VisualizationScale.medium` → `spike_field.frag`
+- UI: same as above + mode toggle (particle ↔ heatmap) that switches between `spike_field.frag` and `density_map.frag` without reconnecting — the frame already carries both `data` and `density_grid`
+
+#### [NEW] `lib/visualization/demo/demo_1m.dart`
+
+- Connects to backend with `scale=1m, rate_hz=5` → backend streams ~5 000 spikes/frame at 30 fps
+- Renderer: `FragmentShaderNeuronRenderer` at `VisualizationScale.large` → `density_map.frag`
+- UI: grid resolution slider (16×16 → 256×256, sent as WS param), region zoom overlay, live fps counter
+- **This is the Phase 3 readiness gate.** If sustained fps < 30 on the target device, that is the quantitative trigger to proceed to Phase 3.
+
+#### [NEW] `lib/visualization/demo/demo_shell.dart`
+
+Navigation shell with three tabs (10k / 100k / 1M). Mounted at the dev-only route `/dev/viz-demo`, gated behind `const bool.fromEnvironment('NMTK_DEMO_ROUTES', defaultValue: true)`.
+
+---
+
+### nmtk_ui_core
+
+Shaders are now first-class design-system assets. Changes:
+
+#### [NEW] `nmtk_ui_core/assets/shaders/` directory
+
+Hosts the three `.frag` files (see Frontend section). Declared in `pubspec.yaml` under `flutter.shaders`.
+
+#### [NEW] `nmtk_ui_core/lib/visualization/renderer_interface.dart`
+
+**Promoted to shared.** The `NeuronRenderer` abstract interface and `VisualizationFrame` / `VisualizationScale` types live here, not in `Neurosim/frontend/`. Any future module (Neurohub live monitor, Neurobench playback) can import and implement the interface without depending on Neurosim.
+
+#### [NEW] `nmtk_ui_core/lib/visualization/fragment_shader_renderer.dart`
+
+**Promoted to shared.** The shader-backed renderer implementation is also shared. Modules that want custom rendering behaviour can subclass or compose it.
+
+> [!NOTE]
+> `NmtkDesktopScaffold`, `NmtkSparklineChart`, and all existing widgets are **unchanged**. The new `lib/visualization/` subdirectory is purely additive.
+
+---
+
+## Phase 3 Swap Path
+
+When Phase 3 (Rust + wgpu) is ready:
+
+1. Implement `WgpuNativeNeuronRenderer` in `lib/visualization/wgpu_native_renderer.dart` — conforms to `NeuronRenderer` interface, hosts an FFI texture surface.
+2. Update `renderer_registry.dart` to return `WgpuNativeNeuronRenderer` when `NMTK_NATIVE_RENDERER=true`.
+3. Run the three demo scenes as regression tests — same `VisualizationFrame` inputs, compare fps and visual output.
+4. **Zero changes** to `visualization_panel.dart`, `visualization_provider.dart`, or any preview UI widget.
+
+The swap is a single file change + a compile flag.
+
+---
+
+## Verification Plan
+
+### Automated Tests
+
+```bash
+# Backend — density aggregator unit tests
+PYTHONPATH=. python -m pytest Neurosim/neurosim/tests/ -k density
+
+# Backend — contract serialization
+PYTHONPATH=. python -m pytest Neurosim/neurosim/tests/ -k bulk_spike
+
+# Frontend — renderer interface conformance
+cd Neurosim/frontend && flutter test test/visualization/
+
+# Type check
+cd Neurosim && python -m mypy neurosim
+```
+
+### Manual Verification
+
+1. Launch the three demo scenes via `/dev/viz-demo` in the Neurosim frontend.
+2. Verify 10k demo: raster plot fills the panel, spikes visible, fps ≥ 60.
+3. Verify 100k demo: particle field animates smoothly, fps ≥ 60; density toggle switches shader.
+4. Verify 1M demo: density heatmap updates at fps ≥ 30; grid slider works.
+5. Connect a real Nengo simulation (≤1k neurons) and verify `VisualizationPanel` auto-selects raster mode.
+6. Run launcher doctor: `python3 scripts/launcher_control_service.py --doctor --json`.

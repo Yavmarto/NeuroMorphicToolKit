@@ -18,6 +18,7 @@ from neurosim.app.routers import (
     sweep,
     templates,
     validation,
+    viz_demo,
 )
 
 logger = logging.getLogger("suite_api.neurosim")
@@ -44,6 +45,7 @@ for _r in [
     sweep.router,
     export.router,
     projects.router,
+    viz_demo.router,
 ]:
     router.include_router(_r)
 

@@ -56,3 +56,5 @@ export 'motion_tokens.dart'; // NmtkMotionTokens
 export 'models/commands.dart';
 export 'widgets/command_palette.dart';
 export 'widgets/shortcut_scope.dart';
+export 'visualization/renderer_interface.dart';
+export 'visualization/fragment_shader_renderer.dart';

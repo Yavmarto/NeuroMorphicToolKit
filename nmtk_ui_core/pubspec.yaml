@@ -25,3 +25,7 @@ flutter:
     - family: JetBrains Mono
       fonts:
         - asset: assets/fonts/JetBrainsMono-VariableFont_wght.ttf
+  shaders:
+    - assets/shaders/raster_plot.frag
+    - assets/shaders/spike_field.frag
+    - assets/shaders/density_map.frag
