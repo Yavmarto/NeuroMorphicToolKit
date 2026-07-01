@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 /// One frame of per-core-tile aggregated activity for the /viz-demo
 /// chip-die view. `tileActivity[i]`/`tileConcentration[i]` describe tile
@@ -61,6 +62,14 @@ class TileGridNeuronRenderer {
   }
 
   Widget buildSurface(BuildContext context) {
+    // Heat-map colors are resolved from the active Zeta theme here — this is
+    // the only place in the render path with a BuildContext. They're threaded
+    // into the painter below because CustomPainter.paint() has no context.
+    final zetaColors = Zeta.of(context).colors;
+    final lowActivityColor = zetaColors.mainInfo; // low activity
+    final highActivityColor = zetaColors.mainNegative; // high activity
+    final hotspotColor = zetaColors.mainWarning; // concentration hotspot glow
+
     return ValueListenableBuilder<TileActivityFrame?>(
       valueListenable: _frameNotifier,
       builder: (context, frame, _) {
@@ -84,9 +93,14 @@ class TileGridNeuronRenderer {
                     children: [
                       CustomPaint(
                         size: _size,
-                        painter: _TileGridPainter(frame: frame),
+                        painter: _TileGridPainter(
+                          frame: frame,
+                          lowActivityColor: lowActivityColor,
+                          highActivityColor: highActivityColor,
+                          hotspotColor: hotspotColor,
+                        ),
                       ),
-                      if (hovered != null) _buildTilePopup(frame, hovered),
+                      if (hovered != null) _buildTilePopup(context, frame, hovered),
                     ],
                   ),
                 ),
@@ -98,15 +112,26 @@ class TileGridNeuronRenderer {
     );
   }
 
-  Widget _buildTilePopup(TileActivityFrame frame, int tileIndex) {
+  Widget _buildTilePopup(BuildContext context, TileActivityFrame frame, int tileIndex) {
     final row = tileIndex ~/ frame.tileCols;
     final col = tileIndex % frame.tileCols;
+    final zeta = Zeta.of(context);
+    // `surfaceDefaultInverse` is the design system's dark-surface token (see
+    // ZetaSnackBar's default styling); `mainInverse` is the light foreground
+    // token meant to sit on top of it (same pairing used by ZetaSnackBar and
+    // ZetaTooltip), so this reproduces the old dark-card-with-white-text look
+    // without any hardcoded hex values.
+    final cardColor = zeta.colors.surfaceDefaultInverse.withValues(alpha: 0.9);
+    final labelColor = zeta.colors.mainInverse;
+    final subtleLabelStyle = zeta.textStyles.labelMedium.copyWith(
+      color: labelColor.withValues(alpha: 0.7),
+    );
     return Positioned(
       left: 12,
       top: 12,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xCC111827),
+          color: cardColor,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Padding(
@@ -117,19 +142,22 @@ class TileGridNeuronRenderer {
             children: [
               Text(
                 'Core $tileIndex (row $row, col $col)',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: zeta.textStyles.bodyMedium.copyWith(
+                  color: labelColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 'Neurons: ~${frame.neuronsForTile(tileIndex)}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                style: subtleLabelStyle,
               ),
               Text(
                 'Activity: ${frame.tileActivity[tileIndex].toStringAsFixed(2)}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                style: subtleLabelStyle,
               ),
               Text(
                 'Concentration: ${frame.tileConcentration[tileIndex].toStringAsFixed(2)}',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                style: subtleLabelStyle,
               ),
             ],
           ),
@@ -147,11 +175,19 @@ class TileGridNeuronRenderer {
 class _TileGridPainter extends CustomPainter {
   final TileActivityFrame frame;
 
-  _TileGridPainter({required this.frame});
+  // Resolved from the active Zeta theme by TileGridNeuronRenderer.buildSurface
+  // (paint() has no BuildContext, so these must be threaded in via the
+  // constructor rather than read here).
+  final Color lowActivityColor;
+  final Color highActivityColor;
+  final Color hotspotColor;
 
-  static const _lo = Color(0xFF1e3a8f); // blue: low activity
-  static const _hi = Color(0xFFf0453c); // red: high activity
-  static const _hot = Color(0xFFffe9a8); // pale glow for the hotspot
+  _TileGridPainter({
+    required this.frame,
+    required this.lowActivityColor,
+    required this.highActivityColor,
+    required this.hotspotColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -173,7 +209,8 @@ class _TileGridPainter extends CustomPainter {
           tileH - gap,
         );
 
-        final tilePaint = Paint()..color = Color.lerp(_lo, _hi, activity)!;
+        final tilePaint = Paint()
+          ..color = Color.lerp(lowActivityColor, highActivityColor, activity)!;
         canvas.drawRRect(
           RRect.fromRectAndRadius(rect, const Radius.circular(3)),
           tilePaint,
@@ -185,7 +222,7 @@ class _TileGridPainter extends CustomPainter {
           // edges as concentration -> 1 (edge-heavy).
           final inset = rect.deflate(rect.shortestSide * (0.4 - concentration * 0.3));
           final hotspotPaint = Paint()
-            ..color = _hot.withValues(alpha: 0.15 + activity * 0.5)
+            ..color = hotspotColor.withValues(alpha: 0.15 + activity * 0.5)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
           canvas.drawRRect(
             RRect.fromRectAndRadius(inset, const Radius.circular(3)),
