@@ -67,21 +67,21 @@ class TileGridNeuronRenderer {
     // into the painter below because CustomPainter.paint() has no context.
     final zetaColors = Zeta.of(context).colors;
     // The design system does not use gradients. We use a 10-step discrete scale
-    // of primitive swatches spanning from blue (low) to red (high) to match the
-    // original implementation intent but using allowed tokens.
+    // of a single primitive swatch (blue) to visualize quantitative intensity
+    // using allowed tokens.
     final activityScale = [
       zetaColors.primitives.blue.shade10,
+      zetaColors.primitives.blue.shade20,
       zetaColors.primitives.blue.shade30,
+      zetaColors.primitives.blue.shade40,
       zetaColors.primitives.blue.shade50,
+      zetaColors.primitives.blue.shade60,
       zetaColors.primitives.blue.shade70,
+      zetaColors.primitives.blue.shade80,
       zetaColors.primitives.blue.shade90,
-      zetaColors.primitives.red.shade20,
-      zetaColors.primitives.red.shade40,
-      zetaColors.primitives.red.shade60,
-      zetaColors.primitives.red.shade80,
-      zetaColors.primitives.red.shade100,
+      zetaColors.primitives.blue.shade100,
     ];
-    final hotspotColor = zetaColors.mainWarning; // concentration hotspot glow
+    final hotspotColor = Colors.white; // concentration hotspot glow
 
     return ValueListenableBuilder<TileActivityFrame?>(
       valueListenable: _frameNotifier,
