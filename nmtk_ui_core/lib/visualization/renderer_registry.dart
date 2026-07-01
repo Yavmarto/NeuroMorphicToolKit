@@ -4,12 +4,12 @@ import 'package:nmtk_ui_core/visualization/fragment_shader_renderer.dart';
 import 'package:nmtk_ui_core/visualization/renderer_interface.dart';
 import 'package:nmtk_ui_core/visualization/wgpu_native_renderer.dart';
 
-/// Stage 3: default-on for macOS (see "Staged rollout" in
-/// `tasks/30 june/implementation_plan.md`). Rollback switch:
-/// `--dart-define=NMTK_WGPU_RENDERER=false`. Delete once
-/// `FragmentShaderNeuronRenderer` is no longer needed as a fallback.
+/// Default-off: `SharedPixelBuffer::write_rows` (rust/nmtk_wgpu/src/texture_bridge/macos.rs)
+/// crashes the whole process with SIGSEGV on the first real draw call (confirmed via
+/// macOS crash report — objc_msgSend_uncached failure inside CVPixelBufferLockBaseAddress).
+/// Re-enable via `--dart-define=NMTK_WGPU_RENDERER=true` only for native-side debugging.
 const bool kEnableWgpuRenderer =
-    bool.fromEnvironment('NMTK_WGPU_RENDERER', defaultValue: true);
+    bool.fromEnvironment('NMTK_WGPU_RENDERER', defaultValue: false);
 
 /// Picks the neuron renderer for the current platform/build. Falls back to
 /// [FragmentShaderNeuronRenderer] if the native renderer isn't enabled, isn't

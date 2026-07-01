@@ -55,7 +55,7 @@ COPY suite_api/ suite_api/
 RUN pip install --no-cache-dir suite_api/
 
 RUN addgroup --system app && adduser --system --ingroup app app \
- && mkdir -p /home/app/.cache /home/app/data && chown -R app:app /home/app
+ && mkdir -p /home/app/.cache /home/app/data /home/app/notebooks && chown -R app:app /home/app
 # /repo is intentionally NOT chowned — all COPY'd and pip-installed files are
 # 644/755 (world-readable) so the app user can read them without owning them.
 # Chowning /repo recursively was walking thousands of inodes for no benefit.

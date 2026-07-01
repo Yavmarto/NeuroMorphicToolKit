@@ -12,4 +12,6 @@ Requires-Dist: pydantic>=2.7
 Requires-Dist: pydantic-settings>=2.2
 Requires-Dist: slowapi>=0.1.9
 Requires-Dist: python-json-logger>=2.0
+Requires-Dist: sqlalchemy>=2.0
+Requires-Dist: alembic>=1.13
 Dynamic: license-file

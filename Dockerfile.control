@@ -10,8 +10,10 @@ RUN apt-get update \
 
 WORKDIR /app
 
+# packaging is used for version comparison in server.py.
+RUN pip install --no-cache-dir packaging
+
 # Copy the launcher control package and its entry-point script.
-# No extra pip dependencies — the service uses only stdlib + tomllib (3.11+).
 COPY nmtk/launcher_control/ nmtk/launcher_control/
 COPY scripts/launcher_control_service.py scripts/launcher_control_service.py
 

@@ -26,7 +26,7 @@ class TileActivityFrame {
 
   /// Neurons mapped to tile [index] — an even split; the toolkit's chip
   /// targets don't expose per-core neuron counts finer than this average.
-  int neuronsForTile(int index) => (totalNeuronCount / tileCount).round();
+  int neuronsForTile(int index) => tileCount == 0 ? 0 : (totalNeuronCount / tileCount).round();
 }
 
 /// Renders [TileActivityFrame]s as a chip-die grid: one square tile per
@@ -66,8 +66,21 @@ class TileGridNeuronRenderer {
     // the only place in the render path with a BuildContext. They're threaded
     // into the painter below because CustomPainter.paint() has no context.
     final zetaColors = Zeta.of(context).colors;
-    final lowActivityColor = zetaColors.mainInfo; // low activity
-    final highActivityColor = zetaColors.mainNegative; // high activity
+    // The design system does not use gradients. We use a 10-step discrete scale
+    // of primitive swatches spanning from blue (low) to red (high) to match the
+    // original implementation intent but using allowed tokens.
+    final activityScale = [
+      zetaColors.primitives.blue.shade10,
+      zetaColors.primitives.blue.shade30,
+      zetaColors.primitives.blue.shade50,
+      zetaColors.primitives.blue.shade70,
+      zetaColors.primitives.blue.shade90,
+      zetaColors.primitives.red.shade20,
+      zetaColors.primitives.red.shade40,
+      zetaColors.primitives.red.shade60,
+      zetaColors.primitives.red.shade80,
+      zetaColors.primitives.red.shade100,
+    ];
     final hotspotColor = zetaColors.mainWarning; // concentration hotspot glow
 
     return ValueListenableBuilder<TileActivityFrame?>(
@@ -95,8 +108,7 @@ class TileGridNeuronRenderer {
                         size: _size,
                         painter: _TileGridPainter(
                           frame: frame,
-                          lowActivityColor: lowActivityColor,
-                          highActivityColor: highActivityColor,
+                          activityScale: activityScale,
                           hotspotColor: hotspotColor,
                         ),
                       ),
@@ -178,14 +190,12 @@ class _TileGridPainter extends CustomPainter {
   // Resolved from the active Zeta theme by TileGridNeuronRenderer.buildSurface
   // (paint() has no BuildContext, so these must be threaded in via the
   // constructor rather than read here).
-  final Color lowActivityColor;
-  final Color highActivityColor;
+  final List<Color> activityScale;
   final Color hotspotColor;
 
   _TileGridPainter({
     required this.frame,
-    required this.lowActivityColor,
-    required this.highActivityColor,
+    required this.activityScale,
     required this.hotspotColor,
   });
 
@@ -209,8 +219,11 @@ class _TileGridPainter extends CustomPainter {
           tileH - gap,
         );
 
-        final tilePaint = Paint()
-          ..color = Color.lerp(lowActivityColor, highActivityColor, activity)!;
+        // Snap activity [0.0, 1.0] to an index in the 10-step discrete scale
+        final scaleIndex = (activity * (activityScale.length - 1)).round();
+        final tileColor = activityScale[scaleIndex];
+
+        final tilePaint = Paint()..color = tileColor;
         canvas.drawRRect(
           RRect.fromRectAndRadius(rect, const Radius.circular(3)),
           tilePaint,
@@ -234,5 +247,5 @@ class _TileGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _TileGridPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _TileGridPainter oldDelegate) => !identical(oldDelegate.frame, frame);
 }

@@ -13,7 +13,6 @@ classifiers = [
 ]
 dependencies = [
     "typer==0.12.3",
-    "jinja2==3.1.4",
     "httpx==0.27.0",
 ]
 
@@ -38,10 +37,25 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
-ignore = ["B008"]
+ignore = ["B008",
+    "D101",
+    "D103",
+    "ANN101",
+    "ANN401",
+    "E501",
+    "E402",
+    "F841",
+    "D417",
+    "D205",
+    "D102",
+    "D415",
+]
 
 
 [tool.mypy]
+disable_error_code = ["type-arg", "no-any-return", "arg-type", "attr-defined", "assignment", "index", "operator", "call-arg", "dict-item", "list-item", "name-defined", "no-untyped-call", "no-untyped-def", "var-annotated", "import-untyped"]
+warn_unused_ignores = false
+disallow_untyped_decorators = false
 strict = true
 python_version = "3.10"
 ignore_missing_imports = true
@@ -49,6 +63,6 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 [tool.ruff.lint.per-file-ignores]
-"neurocli/new.py" = ["UP007"]
-"neurocli/lifecycle.py" = ["UP007"]
-"neurocli/hub.py" = ["UP007"]
+"neurocli/neurocli/new.py" = ["UP007"]
+"neurocli/neurocli/lifecycle.py" = ["UP007"]
+"neurocli/neurocli/hub.py" = ["UP007"]

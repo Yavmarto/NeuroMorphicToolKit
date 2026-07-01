@@ -46,13 +46,21 @@ class WgpuNativeNeuronRenderer implements NeuronRenderer {
   Future<void> _registerTexture() async {
     try {
       final pixelBufferPtr = _bindings.getPixelBuffer(_handle).address;
+      // Draw (and thus lock/touch the CVPixelBuffer) once *before* handing
+      // the pointer to Flutter's texture registry. CVPixelBufferLockBaseAddress
+      // realizes the buffer's backing Objective-C class on first use; if that
+      // first use instead happens after registerTexture(), the engine's
+      // raster thread can call copyPixelBuffer() and race our first lock on
+      // the same never-before-touched object, crashing in the ObjC runtime's
+      // class-realization path (SIGSEGV in _getCVPixelBuffer, seen via a
+      // macOS crash report). Drawing first serializes that one-time
+      // realization on this thread before any other consumer can see the
+      // pointer. Also doubles as Stage 1's bridge proof — a solid-color
+      // marker is visible even with no backend connected. pushFrame() takes
+      // over once real frames arrive.
+      _bindings.drawFrame(_handle);
       final id = await NmtkWgpuRendererPlugin.registerTexture(pixelBufferPtr);
       _textureId = id;
-      // Stage 1's bridge proof must not depend on a live spike stream —
-      // draw once immediately so the solid-color marker is visible even
-      // with no backend connected. pushFrame() takes over once real frames
-      // arrive.
-      _bindings.drawFrame(_handle);
       await NmtkWgpuRendererPlugin.textureFrameAvailable(id);
       _textureIdNotifier.value = id;
     } catch (e) {
