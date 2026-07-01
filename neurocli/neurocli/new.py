@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -38,22 +37,21 @@ _SUPPORTED = [f"{fw}+{tgt}" for fw, tgt in _COMBOS]
 
 def new_command(
     name: str = typer.Argument(..., help="Project directory name"),
-    trainer: Optional[str] = typer.Option(None, "--trainer", help="Training framework (e.g., snntorch, norse)"),
-    data: Optional[str] = typer.Option(None, "--data", help="Dataset type (e.g., event, static)"),
-    framework: Optional[str] = typer.Option(None, "--framework", "-f", help="Framework (nir, neurocnl, akida)"),
-    target: Optional[str] = typer.Option(  # noqa: E501
+    trainer: str | None = typer.Option(None, "--trainer", help="Training framework (e.g., snntorch, norse)"),
+    data: str | None = typer.Option(None, "--data", help="Dataset type (e.g., event, static)"),
+    framework: str | None = typer.Option(None, "--framework", "-f", help="Framework (nir, neurocnl, akida)"),
+    target: str | None = typer.Option(  # noqa: E501
         None, "--target", "-t", help="Target (deprecated, use --trainer for training or `neuro deploy` for hardware)"
     ),
     task: str = typer.Option("default", "--task", help="Task label embedded in generated files"),
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
-    output_dir: Optional[Path] = typer.Option(None, "--output-dir", "-o", help="Parent directory (default: cwd)"),
+    output_dir: Path | None = typer.Option(None, "--output-dir", "-o", help="Parent directory (default: cwd)"),
 ) -> None:
     """Scaffold a new neuromorphic project from a template bundle.
-
     Supported training workflows: --trainer <framework> --data <type>
-    Legacy combos: nir+snntorch, nir+lava_sim, neurocnl+pynq, etc.
+    Legacy combos: nir+snntorch, nir+lava_sim, neurocnl+pynq, akida+brainchip, neurocnl+neurosim, etc.
     """
-    bundle: Optional[str] = None
+    bundle: str | None = None
     if trainer:
         # New training workflow
         if trainer.lower() == "snntorch":

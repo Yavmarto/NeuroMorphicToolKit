@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import re
 import shutil
+import string
 from pathlib import Path
-
-import jinja2
 
 
 class UnknownBundleError(ValueError):
@@ -28,15 +28,11 @@ def _bundle_path(bundle: str) -> Path:
 def render_template(bundle: str, variables: dict[str, str], dest: Path) -> None:
     """Render template *bundle* into *dest* directory using *variables*.
 
-    ``.jinja`` files are rendered with Jinja2 (StrictUndefined).
+    ``.jinja`` files are rendered with string.Template.
     All other files are copied verbatim.
     The output filename strips the ``.jinja`` suffix.
     """
     src = _bundle_path(bundle)
-    env = jinja2.Environment(
-        undefined=jinja2.StrictUndefined,
-        keep_trailing_newline=True,
-    )
 
     for src_file in src.rglob("*"):
         if not src_file.is_file():
@@ -48,7 +44,9 @@ def render_template(bundle: str, variables: dict[str, str], dest: Path) -> None:
         dest_file.parent.mkdir(parents=True, exist_ok=True)
 
         if src_file.suffix == ".jinja":
-            template = env.from_string(src_file.read_text(encoding="utf-8"))
-            dest_file.write_text(template.render(**variables), encoding="utf-8")
+            template_str = src_file.read_text(encoding="utf-8")
+            template_str = re.sub(r'\{\{\s*(\w+)\s*\}\}', r'${\1}', template_str)
+            template = string.Template(template_str)
+            dest_file.write_text(template.substitute(**variables), encoding="utf-8")
         else:
             shutil.copy2(src_file, dest_file)

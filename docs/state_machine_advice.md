@@ -4,7 +4,7 @@ Given your recent migration to Riverpod 3 for the frontend, introducing explicit
 
 ## 1. Is it Useful?
 
-**Yes, absolutely.** Currently, many of your state classes (like `WorkspaceState` or `AppState`) are flat data structures (struct-like) with multiple independent fields (e.g., `bool isLoading`, `String? error`, `Data? data`). 
+**Yes, absolutely.** Currently, many of your state classes (like `WorkspaceState` or `AppState`) are flat data structures (struct-like) with multiple independent fields (e.g., `bool isLoading`, `String? error`, `Data? data`).
 
 Implementing a State Machine (Finite State Machine - FSM) provides several massive benefits:
 - **Eliminates Impossible States:** You can no longer accidentally have `isLoading = true` *and* an error message showing simultaneously. The UI state is strictly deterministic.

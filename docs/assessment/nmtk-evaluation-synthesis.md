@@ -36,7 +36,7 @@ To establish a clear and objective evaluation, the table below weighs the streng
 ### 1. The Platform & The Substrate: Is NMTK Premature?
 * **Critique:** Neuromorphic computing is too immature; without a dominant chip, stable cross-vendor standard, or mainstream superiority over traditional ANNs, a unified platform is a premature bet.
 * **Positive Case:** The "ONNX of neuromorphic" (NIR) is stabilizing, and edge AI interest is booming. More importantly, the pain of research environment setup is immediate and unaddressed.
-* **Realistic Synthesis (60% Positive / 40% Negative):** 
+* **Realistic Synthesis (60% Positive / 40% Negative):**
   The platform is *not* premature, but its *value proposition* must be scoped correctly. NMTK is most powerful not as a universal "cross-compiler" that magically abstracts away hardware-specific constraints (which is scientifically impossible), but as a **reproducibility and coordination engine**. By leaning into the **team-server model**, it resolves the coordination overhead of scarce physical chips (Loihi, Akida) without forcing every researcher to become a systems administrator.
 
 ### 2. NeuroStudio (`neurocnl`): Syntax vs. Domain Knowledge

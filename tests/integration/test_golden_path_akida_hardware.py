@@ -218,7 +218,7 @@ def test_akida_status_confirms_real_hardware() -> None:
         _assert_hardware_target(data, step="status")
 
         print(f"\n{'═'*60}")
-        print(f"  [AKIDA HW] STATUS — REAL HARDWARE CONFIRMED")
+        print("  [AKIDA HW] STATUS — REAL HARDWARE CONFIRMED")
         print(f"{'═'*60}")
         print(f"  sdk_available    : {data.get('sdk_available')}")
         print(f"  sdk_status       : {data.get('sdk_status')}")
@@ -282,7 +282,7 @@ def test_akida_map_to_physical_device() -> None:
         )
 
         print(f"\n{'═'*60}")
-        print(f"  [AKIDA HW] MAP — MODEL LOADED ONTO PHYSICAL CHIP")
+        print("  [AKIDA HW] MAP — MODEL LOADED ONTO PHYSICAL CHIP")
         print(f"{'═'*60}")
         print(f"  runtime_target   : {data.get('runtime_target')}")
         print(f"  device_info      : {data.get('device_info')}")
@@ -341,7 +341,7 @@ def test_akida_inference_on_real_hardware() -> None:
         )
 
         print(f"\n{'═'*60}")
-        print(f"  [AKIDA HW] INFERENCE — REAL CHIP OUTPUT")
+        print("  [AKIDA HW] INFERENCE — REAL CHIP OUTPUT")
         print(f"{'═'*60}")
         print(f"  inputs           : {_INFERENCE_INPUTS}")
         print(f"  outputs          : {infer_data['outputs']}")
@@ -419,7 +419,7 @@ def test_akida_on_device_deploy_on_real_hardware() -> None:
         assert zip_size > 0, "[AKIDA HW] Empty ZIP response from on_device deploy."
 
         print(f"\n{'═'*60}")
-        print(f"  [AKIDA HW] ON_DEVICE DEPLOY — REAL HARDWARE PACKAGE")
+        print("  [AKIDA HW] ON_DEVICE DEPLOY — REAL HARDWARE PACKAGE")
         print(f"{'═'*60}")
         print(f"  deployment_mode  : {deployment_mode_header}")
         print(f"  runtime_target   : {runtime_target_header}")

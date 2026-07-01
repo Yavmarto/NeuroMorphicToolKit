@@ -168,7 +168,7 @@ def test_pynq_preflight_confirms_real_hardware() -> None:
 
         # Structured audit log: visible in pytest -s output and CI Step Summary
         print(f"\n{'═'*60}")
-        print(f"  [PYNQ HW] PREFLIGHT — HARDWARE CONFIRMED")
+        print("  [PYNQ HW] PREFLIGHT — HARDWARE CONFIRMED")
         print(f"{'═'*60}")
         print(f"  runtime_mode     : {data.get('runtime_mode')}")
         print(f"  preflight_status : {data.get('preflight_status')}")
@@ -226,7 +226,7 @@ def test_pynq_deploy_on_real_hardware() -> None:
         _assert_hardware_mode(data, step="deploy")
 
         print(f"\n{'═'*60}")
-        print(f"  [PYNQ HW] DEPLOY — FPGA OVERLAY LOADED ON REAL HARDWARE")
+        print("  [PYNQ HW] DEPLOY — FPGA OVERLAY LOADED ON REAL HARDWARE")
         print(f"{'═'*60}")
         print(f"  status           : {data.get('status')}")
         print(f"  runtime_mode     : {data.get('runtime_mode')}")
@@ -321,7 +321,7 @@ def test_pynq_run_inference_on_real_hardware() -> None:
         )
 
         print(f"\n{'═'*60}")
-        print(f"  [PYNQ HW] INFERENCE — REAL FPGA OUTPUT")
+        print("  [PYNQ HW] INFERENCE — REAL FPGA OUTPUT")
         print(f"{'═'*60}")
         print(f"  input_spikes      : {_INPUT_SPIKES}")
         print(f"  output_spikes     : {run_data['output_spikes']}")
@@ -391,14 +391,14 @@ def test_pynq_sitl_verify_on_real_hardware() -> None:
         assert total > 0, "[PYNQ HW] No stimulus cases were run by verify."
 
         print(f"\n{'═'*60}")
-        print(f"  [PYNQ HW] SITL VERIFY — REAL FPGA I/O MATRIX")
+        print("  [PYNQ HW] SITL VERIFY — REAL FPGA I/O MATRIX")
         print(f"{'═'*60}")
         print(f"  summary          : {verify_data.get('summary')}")
         print(f"  total_cases      : {total}")
         print(f"  passed_cases     : {passed}")
         print(f"  mean_exec_us     : {mean_us:.1f} µs")
         print(f"  max_exec_us      : {max_us:.1f} µs")
-        print(f"\n  Stimulus → FPGA Output Matrix:")
+        print("\n  Stimulus → FPGA Output Matrix:")
         print(f"  {'Label':<20} {'Input':<12} {'Output':<20} {'Time (µs)'}")
         print(f"  {'-'*20} {'-'*12} {'-'*20} {'-'*12}")
         for step in verify_data.get("steps", []):

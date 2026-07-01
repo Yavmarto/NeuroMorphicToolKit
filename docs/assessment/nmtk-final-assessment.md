@@ -86,4 +86,3 @@ This framing is:
 - More honest than calling it a production-ready unified platform
 - More accurate than dismissing it as a portfolio project with no real utility
 - Defensible to both academic and industry audiences
-

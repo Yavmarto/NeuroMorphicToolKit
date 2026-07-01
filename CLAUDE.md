@@ -2,6 +2,9 @@
   <initialization>
     Read `AGENTS.md` first, then `CODING_STYLE_GUIDE.md`. If a top-level module has its own `AGENTS.md`, read that module file before editing files in that module.
   </initialization>
+  <cleanup>
+    Always clean up after yourself. Delete any temporary scripts, patch files, or intermediate files created during execution to keep the repository clean.
+  </cleanup>
   <end_of_task_reporting>
     Every answer must include a short description of what the problem is (exactly 2 sentences), how it was solved (exactly 2 sentences), and where to notice the difference and restart info (exactly 2 sentences). All in plain English.
   </end_of_task_reporting>

@@ -1312,19 +1312,19 @@ NEW_SNNTORCH_NODES = {
 @pytest.mark.parametrize("node_type_name", list(NEW_SNNTORCH_NODES.keys()))
 def test_new_node_type_no_skip_warning(node_type_name: str) -> None:
     """Newly implemented node types must not emit an 'unsupported/skipped' warning.
-    
+
     Feature: nir-simulator-support-matrix, Property 6: no skip warnings for new types
     """
     torch   = pytest.importorskip("torch")
     snn     = pytest.importorskip("snntorch")
-    
+
     N = 4
     node = NEW_SNNTORCH_NODES[node_type_name](N)
     graph = _make_graph_with_node(node_type_name.lower(), node, in_size=N)
     stimulus = _make_minimal_stimulus(graph, timesteps=5)
-    
+
     result = SnnTorchSimulatorAdapter().run(graph, stimulus, timesteps=5, seed=0)
-    
+
     skip_warnings = [
         w for w in result.warnings
         if "not supported" in w.lower() or "skipped" in w.lower()
@@ -1354,11 +1354,11 @@ def test_new_node_type_not_classified_as_unsupported(node_type_name: str) -> Non
 ```python
 def test_lava_early_rejection_names_unsupported_types() -> None:
     """LavaSimulatorAdapter must raise LavaDispatchError naming unsupported node types.
-    
+
     Feature: nir-simulator-support-matrix, Property 8: lava early rejection
     """
     pytest.importorskip("lava")
-    
+
     # Conv2d is unsupported by lava-nc
     graph = _make_graph_with_node(
         "conv",
@@ -1369,12 +1369,12 @@ def test_lava_early_rejection_names_unsupported_types() -> None:
         ),
         in_size=4,
     )
-    
+
     from neurocnl.runtime.lava_simulator import LavaDispatchError, LavaSimulatorAdapter
-    
+
     with pytest.raises(LavaDispatchError) as exc_info:
         LavaSimulatorAdapter()._run_in_process(graph, timesteps=5, seed=0)
-    
+
     error_msg = str(exc_info.value)
     assert "Conv2d" in error_msg, (
         f"LavaDispatchError did not name Conv2d in: {error_msg}"
@@ -1400,19 +1400,19 @@ LAVA_UNSUPPORTED = [
 @settings(max_examples=50)
 def test_lava_early_rejection_any_unsupported_type(unsupported_types) -> None:
     """For any graph containing lava-unsupported types, LavaDispatchError is raised.
-    
+
     Feature: nir-simulator-support-matrix, Property 8: lava early rejection
     """
     pytest.importorskip("lava")
     from neurocnl.runtime.lava_simulator import LavaDispatchError, LavaSimulatorAdapter
-    
+
     # Build a graph containing the first unsupported type (simplification)
     type_name = unsupported_types[0]
     graph = _build_minimal_unsupported_graph(type_name)
-    
+
     with pytest.raises(LavaDispatchError) as exc_info:
         LavaSimulatorAdapter()._run_in_process(graph, timesteps=5, seed=0)
-    
+
     error_msg = str(exc_info.value)
     assert type_name in error_msg
 ```

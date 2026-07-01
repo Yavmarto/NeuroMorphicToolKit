@@ -18,10 +18,10 @@ def deploy_command(
     """Compile and package a trained NIR model for hardware deployment."""
     if not model.exists():
         error_exit({"error": "file_not_found", "path": str(model)}, json_mode, code=1)
-    
+
     if hardware.lower() not in ["akida", "lava_sim", "pynq", "sc_neurocore"]:
         error_exit({"error": "unsupported_hardware", "hardware": hardware}, json_mode, code=1)
-        
+
     if json_mode:
         print_result(
             {

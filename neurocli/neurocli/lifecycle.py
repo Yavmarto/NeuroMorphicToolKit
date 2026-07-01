@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 import typer
@@ -66,7 +66,7 @@ def status_command(
 
 def install_command(
     module_id: str = typer.Argument(..., help="Module ID from modules.json"),
-    extras: Optional[str] = typer.Option(None, "--extras", help="Comma-separated extras (e.g. training,lava)"),
+    extras: str | None = typer.Option(None, "--extras", help="Comma-separated extras (e.g. training,lava)"),
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ) -> None:
     """Install an NMTK module via pip/uv."""
@@ -120,7 +120,7 @@ def install_command(
 
 def run_command(
     module_id: str = typer.Argument(..., help="Module ID from modules.json"),
-    port: Optional[int] = typer.Option(None, "--port", help="Override port from manifest"),
+    port: int | None = typer.Option(None, "--port", help="Override port from manifest"),
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ) -> None:
     """Start an NMTK module backend via uvicorn."""

@@ -16,7 +16,7 @@
 
 ### 3. Backend: Add `/api/export/preflight` endpoint
 - **File:** `neurocnl/backend/app/routers/export.py`
-- **Goal:** Add a new POST endpoint (e.g., `/api/export/preflight`) that accepts an export format and a spec, and returns the capability verdict (`backend_support`) WITHOUT generating artifacts. 
+- **Goal:** Add a new POST endpoint (e.g., `/api/export/preflight`) that accepts an export format and a spec, and returns the capability verdict (`backend_support`) WITHOUT generating artifacts.
 - **Why:** Allows the export dialog to warn the user about topological constraints (like sinabs requiring sequential-only graphs) *before* they click export.
 
 ## Verification

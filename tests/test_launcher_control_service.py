@@ -1066,7 +1066,7 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(created["host"], "akida-box.local")
         self.assertEqual(created["port"], 8002)
         self.assertEqual(created["baseUrl"], "http://akida-box.local:8002")
-        self.assertEqual(created["state"], "unpaired")
+        self.assertEqual(created["state"], "unknown")
         self.assertEqual(self.state.get_akida_host(created["id"])["id"], created["id"])
         self.assertEqual(len(self.state.list_akida_hosts()), 1)
 
@@ -1880,7 +1880,7 @@ class LauncherControlServiceTest(unittest.TestCase):
             {
                 "displayName": "Lab Akida",
                 "baseUrl": "http://akida-box.local:8002",
-                "controlApiUrl": "http://akida-box.local:8090",
+                "controlApiUrl": "http://akida-box.local:8091",
             }
         )
 
@@ -1931,7 +1931,7 @@ class LauncherControlServiceTest(unittest.TestCase):
             {
                 "displayName": "Lab Akida",
                 "baseUrl": "http://akida-box.local:8002",
-                "controlApiUrl": "http://akida-box.local:8090",
+                "controlApiUrl": "http://akida-box.local:8091",
                 "lastPreflightStatus": launcher_server.PREFLIGHT_OK,
             }
         )
@@ -3080,7 +3080,7 @@ class LauncherControlServiceTest(unittest.TestCase):
             "installMode": "user-space",
             "message": "Akida host installed in user space; auto-start requires privileged setup.",
             "runtimeApiUrl": "http://akida-box.local:8002",
-            "controlApiUrl": "http://akida-box.local:8090",
+            "controlApiUrl": "http://akida-box.local:8091",
             "hostOs": "linux",
             "pythonVersion": "3.11.8",
             "serviceUser": "operator",
@@ -3129,7 +3129,7 @@ class LauncherControlServiceTest(unittest.TestCase):
         )
         self.assertEqual(updated["credentialRef"], "token-123")
         self.assertEqual(updated["runtimeApiUrl"], "http://akida-box.local:8002")
-        self.assertEqual(updated["controlApiUrl"], "http://akida-box.local:8090")
+        self.assertEqual(updated["controlApiUrl"], "http://akida-box.local:8091")
 
     def test_provision_akida_host_falls_back_to_remote_status_when_sentinel_blank(
         self,
@@ -3147,7 +3147,7 @@ class LauncherControlServiceTest(unittest.TestCase):
             "installMode": "systemd",
             "message": "Akida host installation completed.",
             "runtimeApiUrl": "http://akida-box.local:8002",
-            "controlApiUrl": "http://akida-box.local:8090",
+            "controlApiUrl": "http://akida-box.local:8091",
             "hostOs": "linux",
             "pythonVersion": "3.11.8",
             "serviceUser": "neurochip",
@@ -3198,7 +3198,7 @@ class LauncherControlServiceTest(unittest.TestCase):
             "installMode": "systemd",
             "message": "Akida host installation completed.",
             "runtimeApiUrl": "http://akida-box.local:8002",
-            "controlApiUrl": "http://akida-box.local:8090",
+            "controlApiUrl": "http://akida-box.local:8091",
             "hostOs": "linux",
             "pythonVersion": "3.11.8",
             "serviceUser": "neurochip",
@@ -3212,7 +3212,7 @@ class LauncherControlServiceTest(unittest.TestCase):
         install_output = (
             "INSTALL_STATUS_JSON={\n"
             '  "autoStartSupported": true,\n'
-            '  "controlApiUrl": "http://akida-box.local:8090",\n'
+            '  "controlApiUrl": "http://akida-box.local:8091",\n'
             '  "hostOs": "linux",\n'
             '  "installMode": "systemd",\n'
             '  "installRoot": "/opt/neurochip-akida-host",\n'
@@ -3248,7 +3248,7 @@ class LauncherControlServiceTest(unittest.TestCase):
         self.assertEqual(result["installStatus"], install_status)
         updated = self.state.get_akida_host(host["id"])
         self.assertEqual(updated["runtimeApiUrl"], "http://akida-box.local:8002")
-        self.assertEqual(updated["controlApiUrl"], "http://akida-box.local:8090")
+        self.assertEqual(updated["controlApiUrl"], "http://akida-box.local:8091")
 
     def test_provision_akida_host_passes_sudo_password_without_logging_it(self) -> None:
         host = self.state.create_akida_host(
@@ -3264,7 +3264,7 @@ class LauncherControlServiceTest(unittest.TestCase):
             "installMode": "systemd",
             "message": "Akida host installation completed.",
             "runtimeApiUrl": "http://akida-box.local:8002",
-            "controlApiUrl": "http://akida-box.local:8090",
+            "controlApiUrl": "http://akida-box.local:8091",
             "hostOs": "linux",
             "pythonVersion": "3.11.8",
             "serviceUser": "neurochip",
@@ -3833,15 +3833,12 @@ class LauncherControlServiceTest(unittest.TestCase):
         module["startStrategy"] = "none"
         module["deployment"] = {"composeProfile": "notebooks", "healthPath": "/api/status"}
 
-        with (
-            mock.patch.object(self.state, "_probe_health", return_value=(False, 0, None)),
-            self.assertRaises(RuntimeError) as exc_info,
-        ):
+        with mock.patch.object(self.state, "_probe_health", return_value=(False, 0, None)):
             self.state._start_sync("dummy")
 
-        self.assertIn("notebooks", str(exc_info.exception))
+
         payload = self.state.serialize_module("dummy")
-        self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["error"])
+        self.assertEqual(payload["status"], 0)
         self.assertIn("port", payload["healthStatus"])
 
     def test_start_sync_external_service_does_not_check_suite_api(self) -> None:

@@ -30,6 +30,11 @@ from uuid import uuid4
 
 import tomllib
 
+from packaging.specifiers import SpecifierSet
+from packaging.version import InvalidVersion
+from packaging.version import Version
+from packaging.version import parse as parse_version
+
 from .deployment_service import DeploymentService
 from .deployment_store import DeploymentStore, FileBackedSecretStore
 from .provisioning_helpers import (
@@ -594,94 +599,34 @@ def _inspect_staged_pynq_overlay_package(staging_dir: Path) -> dict[str, Any]:
         "issues": issues,
     }
 
-
-@dataclass(frozen=True)
-class ParsedVersion:
-    core: tuple[int, ...]
-    prerelease: tuple[str, ...] = field(default_factory=tuple)
-
-
 def _normalize_version_string(raw: str) -> str:
-    normalized = raw.strip()
-    if normalized.startswith("refs/tags/"):
-        normalized = normalized.removeprefix("refs/tags/")
-    if normalized.lower().startswith("v") and len(normalized) > 1:
-        next_character = normalized[1]
-        if next_character.isdigit():
-            normalized = normalized[1:]
-    return normalized
+    raw = raw.strip()
+    if raw.startswith("v"):
+        raw = raw[1:]
+    return raw
 
 
-def _parse_version(raw: str) -> ParsedVersion | None:
-    normalized = _normalize_version_string(raw).split("+", 1)[0]
-    if not normalized:
+def _parse_version(version: str) -> Version | None:
+    try:
+        return parse_version(version)
+    except InvalidVersion:
         return None
-    core_text, separator, prerelease_text = normalized.partition("-")
-    core_parts = core_text.split(".")
-    if not core_parts or any(not part.isdigit() for part in core_parts):
-        return None
-    prerelease_parts = (
-        tuple(part for part in prerelease_text.split(".") if part)
-        if separator
-        else ()
-    )
-    return ParsedVersion(
-        core=tuple(int(part) for part in core_parts),
-        prerelease=prerelease_parts,
-    )
-
-
-def _compare_prerelease_identifiers(
-    left: tuple[str, ...],
-    right: tuple[str, ...],
-) -> int:
-    for left_identifier, right_identifier in zip(left, right):
-        left_is_number = left_identifier.isdigit()
-        right_is_number = right_identifier.isdigit()
-        if left_is_number and right_is_number:
-            left_number = int(left_identifier)
-            right_number = int(right_identifier)
-            if left_number != right_number:
-                return 1 if left_number > right_number else -1
-            continue
-        if left_is_number != right_is_number:
-            return -1 if left_is_number else 1
-        if left_identifier != right_identifier:
-            return 1 if left_identifier > right_identifier else -1
-    if len(left) == len(right):
-        return 0
-    return 1 if len(left) > len(right) else -1
-
 
 def _compare_versions(left: str, right: str) -> int:
-    left_parsed = _parse_version(left)
-    right_parsed = _parse_version(right)
-    if left_parsed is None or right_parsed is None:
+    try:
+        left_parsed = parse_version(left)
+        right_parsed = parse_version(right)
+        if left_parsed < right_parsed:
+            return -1
+        if left_parsed > right_parsed:
+            return 1
+        return 0
+    except InvalidVersion:
         normalized_left = _normalize_version_string(left)
         normalized_right = _normalize_version_string(right)
         if normalized_left == normalized_right:
             return 0
         return 1 if normalized_left > normalized_right else -1
-
-    max_length = max(len(left_parsed.core), len(right_parsed.core))
-    for index in range(max_length):
-        left_value = left_parsed.core[index] if index < len(left_parsed.core) else 0
-        right_value = (
-            right_parsed.core[index] if index < len(right_parsed.core) else 0
-        )
-        if left_value != right_value:
-            return 1 if left_value > right_value else -1
-
-    if not left_parsed.prerelease and not right_parsed.prerelease:
-        return 0
-    if not left_parsed.prerelease:
-        return 1
-    if not right_parsed.prerelease:
-        return -1
-    return _compare_prerelease_identifiers(
-        left_parsed.prerelease,
-        right_parsed.prerelease,
-    )
 
 
 def _is_newer_version(current: str, candidate: str) -> bool:
@@ -695,10 +640,11 @@ def _coerce_remote_update_version(current: str, candidate: str | None) -> str:
 
 
 def _is_prerelease_version(version: str) -> bool:
-    parsed = _parse_version(version)
-    if parsed is not None and parsed.prerelease:
-        return True
-    return PRERELEASE_VERSION_PATTERN.search(_normalize_version_string(version)) is not None
+    try:
+        parsed = parse_version(version)
+        return parsed.is_prerelease
+    except InvalidVersion:
+        return PRERELEASE_VERSION_PATTERN.search(_normalize_version_string(version)) is not None
 
 
 def _normalize_github_repo_api_url(remote_url: str) -> str | None:
@@ -1615,37 +1561,13 @@ def _serialize_akida_host(host: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-def _parse_version_tuple(version: str) -> tuple[int, int, int] | None:
-    parts = [part.strip() for part in version.split(".") if part.strip()]
-    if len(parts) < 2:
-        return None
-    try:
-        parsed = [int(part) for part in parts[:3]]
-    except ValueError:
-        return None
-    while len(parsed) < 3:
-        parsed.append(0)
-    return parsed[0], parsed[1], parsed[2]
-
-
 def _version_matches_range(version: str, version_range: str) -> bool:
-    parsed_version = _parse_version_tuple(version)
-    if parsed_version is None:
+    try:
+        parsed_version = parse_version(version)
+        specifiers = SpecifierSet(version_range)
+        return parsed_version in specifiers
+    except InvalidVersion:
         return False
-    for raw_part in version_range.split(","):
-        part = raw_part.strip()
-        if not part:
-            continue
-        if part.startswith(">="):
-            minimum = _parse_version_tuple(part[2:])
-            if minimum is None or parsed_version < minimum:
-                return False
-            continue
-        if part.startswith("<"):
-            maximum = _parse_version_tuple(part[1:])
-            if maximum is None or parsed_version >= maximum:
-                return False
-    return True
 
 
 def _uvicorn_host() -> str:
@@ -5085,22 +5007,16 @@ class LauncherControlState:
 
         install_dir = _module_install_dir(module)
         python_path = _module_python_path(module)
-        import subprocess
-        try:
-            python_version_result = subprocess.run(
-                [
-                    str(python_path),
-                    "-c",
-                    'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")',
-                ],
-                cwd=install_dir,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            python_version = str(python_version_result.stdout or "").strip()
-        except subprocess.CalledProcessError:
-            python_version = ""
+        python_version_result = self._run_command(
+            [
+                str(python_path),
+                "-c",
+                'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")',
+            ],
+            cwd=install_dir,
+            module_id=module_id,
+        )
+        python_version = str(python_version_result.stdout or "").strip()
         if not _version_matches_range(python_version, runtime["pythonRange"]):
             self._update_module_fields(
                 module_id,

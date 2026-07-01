@@ -8,7 +8,7 @@ Based on an audit of the documents in this folder, here is the recommended execu
 ---
 
 ## 1. Immediate Bug Fix (`nir_type_check_fix.md`)
-**Why:** This resolves an active, localized runtime error that prevents `.nire` files from loading in the backend. 
+**Why:** This resolves an active, localized runtime error that prevents `.nire` files from loading in the backend.
 **Action:** Implement the `safe_nir_read()` shim and apply the try/except blocks to unblock basic functionality.
 
 **Status:** ⬜ NOT STARTED — unblocked and ready to pick up.
@@ -95,7 +95,7 @@ Based on an audit of the documents in this folder, here is the recommended execu
 **Remaining (Tier 2+):** Neurohub PM chrome, neurocli / Neuro-Dream-Hand reclassification, launcher setup merge, simulator deduplication, doc-tree consolidation, and all contract-dependent cuts from the fluff analysis.
 
 ## 4. Targeted Refactoring (`frontend-state-management-review.md`)
-**Why:** Recommends targeted Riverpod migrations for async flows and app state. 
+**Why:** Recommends targeted Riverpod migrations for async flows and app state.
 **Action:** This is valuable technical polish but does not block releases or unblock broken features. Schedule these migrations as isolated follow-up tasks.
 
 ## 5. Completed Work Follow-ups (`2026-05-31-sc-neurocore-deploy-targets-handoff.md`)

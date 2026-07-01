@@ -944,4 +944,3 @@ All Dart widget tests live in `neurocnl/frontend/test/widgets/`.
 - Rate-limit test: 11 rapid requests → 10 succeed, 11th returns 429 with `retry_after`
 - `GET /api/training/capabilities` with Norse and SpikingJelly unavailable → both listed
   with `available: false` and non-empty `unavailable_reason`
-

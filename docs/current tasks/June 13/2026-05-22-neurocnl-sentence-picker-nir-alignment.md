@@ -7,7 +7,7 @@
 ---
 
 ## 1. Overview of the Alignment Gap
-The **CNL Sentence Picker** (accessible via the **Add CNL Sentence** button in CNL Studio) and the **Editor Autocomplete suggestions** are currently out of sync with the new NIR-native CNL compiler. 
+The **CNL Sentence Picker** (accessible via the **Add CNL Sentence** button in CNL Studio) and the **Editor Autocomplete suggestions** are currently out of sync with the new NIR-native CNL compiler.
 
 While the new compiler has been completely overhauled to bypass Nengo and target `nir.NIRGraph` directly via explicit primitive and structural declarations, the frontend inputs still generate **legacy biological grammar** statements. This causes any sentence added via the picker or autocomplete to be immediately rejected by the parser's legacy-token safety gate.
 

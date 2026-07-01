@@ -6,7 +6,7 @@ This document explains what is meant by **Simple Reflex Topologies** in the curr
 
 ## 1. Understanding Simple Reflex Topologies
 
-In the current implementation of NMTK (specifically within the `Neurosim` canvas and `neurocnl` compilers), the pipeline is gated to support **Simple Reflex Topologies**. 
+In the current implementation of NMTK (specifically within the `Neurosim` canvas and `neurocnl` compilers), the pipeline is gated to support **Simple Reflex Topologies**.
 
 ```
 ┌──────────────────┐               ┌────────────────┐               ┌────────────────┐
@@ -41,7 +41,7 @@ To expand beyond basic reflexes and enable human-like cognitive tasks, robotic c
   Sensory Layer ──► Spiking Reservoir (Recurrent Pools) ──► Motor Layer
 ```
 * **What they are:** Networks with cyclic connection loops. Neurons connect back to themselves, to other neurons within the same layer (lateral loops), or feed spikes backward to previous layers.
-* **Use Cases:** 
+* **Use Cases:**
   * **Temporal Sequence Processing:** Tracking changes over time (like continuous speech recognition or radar signal tracking).
   * **Central Pattern Generators (CPGs):** Generating rhythmic, self-sustaining motor signals for walking, swimming, or flying robots.
   * **Working Memory:** Retaining short-term neural states without persistent external inputs.
@@ -83,7 +83,7 @@ To move NMTK from a hardcoded reflex compiler to a generic, arbitrary SNN engine
 
 ### Stage 1: Visual Canvas (Flutter UI)
 * **The Current State:** The frontend visually lays out a static sensory panel and motor panel.
-* **The Expansion:** 
+* **The Expansion:**
   * Integrate a generic Flutter node-graph framework (e.g., `graphview` or custom canvas painters).
   * Enable users to dynamically drag-and-drop layer blocks (LIF populations, input sources, synapse matrices).
   * Allow dragging connection lines between output ports and input ports to visually establish feedback and lateral pathways.
@@ -101,7 +101,7 @@ The hidden population connects to the motor population.
 
 ### Stage 3: Graph Compiler (`CNL ──► IR ──► NIR`)
 * **The Current State:** The compiler expects a fixed input structure and maps it directly to a pre-defined NIR shape.
-* **The Expansion:** 
+* **The Expansion:**
   * Parse CNL rules into an internal directed graph structure of nodes and edges.
   * Use the **NIR (Neuromorphic Intermediate Representation)** library's native support for complex structures:
     * Map populations to `nir.LIF` or `nir.ALIF` nodes.

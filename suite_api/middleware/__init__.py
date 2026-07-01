@@ -8,28 +8,8 @@ import logging
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger("suite_api")
-
-
-class RequestIdMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next) -> Response:
-        # Honour an incoming X-Request-ID so cross-service traces stay correlated.
-        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
-        request.state.request_id = request_id
-        response = await call_next(request)
-        response.headers["X-Request-Id"] = request_id
-        return response
-
-
-class ResponseTimeMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next) -> Response:
-        start = time.perf_counter()
-        response = await call_next(request)
-        elapsed_ms = (time.perf_counter() - start) * 1000
-        response.headers["X-Response-Time-Ms"] = f"{elapsed_ms:.2f}"
-        return response
 
 
 def attach_middleware(app: FastAPI) -> None:
@@ -55,5 +35,20 @@ def attach_middleware(app: FastAPI) -> None:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_middleware(RequestIdMiddleware)
-    app.add_middleware(ResponseTimeMiddleware)
+
+    @app.middleware("http")
+    async def request_id_middleware(request: Request, call_next) -> Response:
+        # Honour an incoming X-Request-ID so cross-service traces stay correlated.
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-Id"] = request_id
+        return response
+
+    @app.middleware("http")
+    async def response_time_middleware(request: Request, call_next) -> Response:
+        start = time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        response.headers["X-Response-Time-Ms"] = f"{elapsed_ms:.2f}"
+        return response

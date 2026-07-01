@@ -7,10 +7,6 @@ import traceback
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
-from suite_api.bootstrap import validate_runtime_dependencies
-
-validate_runtime_dependencies()
-
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from suite_api.middleware import attach_middleware
@@ -52,25 +48,25 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 app.include_router(health.router, prefix="/api/suite", tags=["health"])
 
-from suite_api.domains.neurocnl.router import router as neurocnl_router
+from suite_api.domains.neurocnl.router import router as neurocnl_router  # noqa: E402
 app.include_router(neurocnl_router)
 
-from suite_api.domains.neurosim.router import router as neurosim_router
+from suite_api.domains.neurosim.router import router as neurosim_router  # noqa: E402
 app.include_router(neurosim_router)
 
-from suite_api.domains.neurochip.router import router as neurochip_router
+from suite_api.domains.neurochip.router import router as neurochip_router  # noqa: E402
 app.include_router(neurochip_router)
 
-from suite_api.domains.neurobench.router import router as neurobench_router
+from suite_api.domains.neurobench.router import router as neurobench_router  # noqa: E402
 app.include_router(neurobench_router)
 
-from suite_api.domains.neurosense.router import router as neurosense_router
+from suite_api.domains.neurosense.router import router as neurosense_router  # noqa: E402
 app.include_router(neurosense_router)
 
-from suite_api.domains.neurohub.router import router as neurohub_router
+from suite_api.domains.neurohub.router import router as neurohub_router  # noqa: E402
 app.include_router(neurohub_router)
 
-from suite_api.domains.jupyter.router import router as jupyter_router
+from suite_api.domains.jupyter.router import router as jupyter_router  # noqa: E402
 app.include_router(jupyter_router)
 
 

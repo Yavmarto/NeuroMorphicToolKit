@@ -733,4 +733,3 @@ introduced.
   passing state.
 - Render the NIR tab with a loaded `.nir` file; verify the HDF5 tree view is absent
   and the editor occupies full width.
-

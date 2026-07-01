@@ -55,7 +55,7 @@ Based on the ⁠ NIRGraph ⁠ implementation, any script written in the CNL 
 2.⁠ ⁠*Structural Integrity:*
    - *No Ghost Nodes:* Every node referenced in an edge must exist.
    - *No Duplicate Edges:* You cannot define the exact same connection twice.
-3.⁠ ⁠*Type/Shape Consistency:* 
+3.⁠ ⁠*Type/Shape Consistency:*
    - NIR performs an automated type-checking inference pass. For every edge connecting node A to node B, the output shape of A must mathematically align with the required input shape of B.
 
 ---
@@ -65,7 +65,7 @@ Based on the ⁠ NIRGraph ⁠ implementation, any script written in the CNL 
 When building the CNL compiler, leverage these features of the NIR architecture:
 
 ### Mocking Weights and Matrices
-Because the CNL hides specific weight configurations (caring only about named shapes), be aware that NIR nodes require actual NumPy arrays to instantiate (e.g., ⁠ Linear ⁠ requires a ⁠ weight ⁠ array). 
+Because the CNL hides specific weight configurations (caring only about named shapes), be aware that NIR nodes require actual NumPy arrays to instantiate (e.g., ⁠ Linear ⁠ requires a ⁠ weight ⁠ array).
 *Tip:* Your CNL parser will need a compilation step where it translates named shapes into dummy NumPy arrays (e.g., ⁠ np.zeros(shape) ⁠) so that ⁠ nir.NIRGraph ⁠ can validate the types correctly.
 
 ### Utilize the ⁠ metadata ⁠ Dictionary
@@ -77,7 +77,7 @@ Because ⁠ NIRGraph ⁠ inherits from ⁠ NIRNode ⁠, a node inside a 
 *Tip:* Your CNL should support modular blocks. A user could define a "ResNet Block" in natural language once, and instantiate it multiple times. Under the hood, this translates cleanly into nested ⁠ NIRGraphs ⁠.
 
 ### Serialization Flow (HDF5)
-The primary way NIR interacts with neuromorphic hardware and simulators (snnTorch, Nengo, Lava, SpiNNaker, etc.) is via HDF5 files (⁠ .nir ⁠). 
+The primary way NIR interacts with neuromorphic hardware and simulators (snnTorch, Nengo, Lava, SpiNNaker, etc.) is via HDF5 files (⁠ .nir ⁠).
 *Pipeline:*
 1.⁠ ⁠Parse CNL text.
 2.⁠ ⁠Map concepts to ⁠ nir.* ⁠ nodes and auto-generate dummy arrays.

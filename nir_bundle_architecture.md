@@ -450,4 +450,3 @@ The priority order should therefore be:
 4. Add the Lava online_learn adapter (Phase 4b) as the sole NIR-portable online learning path.
 
 All gaps are additive extensions to an already coherent system. None require architectural revision.
-

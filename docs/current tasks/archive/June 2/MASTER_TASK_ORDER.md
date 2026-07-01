@@ -20,7 +20,7 @@ Based on the continuation of work from May 31, here is the updated execution ord
 ---
 
 ## 2. Immediate Bug Fix (`nir_type_check_fix.md`)
-**Why:** This resolves an active, localized runtime error that prevents `.nire` files from loading in the backend. 
+**Why:** This resolves an active, localized runtime error that prevents `.nire` files from loading in the backend.
 **Action:** Implement the `safe_nir_read()` shim and apply the try/except blocks to unblock basic functionality.
 
 **Status:** ✅ COMPLETE — already implemented prior to 2026-06-02

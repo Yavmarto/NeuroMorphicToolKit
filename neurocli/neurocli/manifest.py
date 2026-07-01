@@ -45,14 +45,10 @@ def _find_manifest_path(start: Path) -> Path:
 
     # Walk upward
     current = start.resolve()
-    for _ in range(20):
-        candidate = current / _MANIFEST_REL
+    for directory in [current, *current.parents]:
+        candidate = directory / _MANIFEST_REL
         if candidate.exists():
             return candidate
-        parent = current.parent
-        if parent == current:
-            break
-        current = parent
 
     raise ManifestNotFoundError(
         f"Could not find {_MANIFEST_REL} walking up from {start}. "
@@ -79,16 +75,7 @@ def load_manifest(root: Path) -> list[ModuleEntry]:
     """Load and parse modules.json, returning a list of :class:`ModuleEntry`."""
     path = _find_manifest_path(root)
     raw_list: list[dict[str, Any]] = json.loads(path.read_text())
-    # Deduplicate by id (manifest has a duplicate 'version' key per entry — JSON
-    # parsers keep the last value, so raw_list is already clean).
-    seen: set[str] = set()
-    entries: list[ModuleEntry] = []
-    for raw in raw_list:
-        mid = raw["id"]
-        if mid not in seen:
-            seen.add(mid)
-            entries.append(_entry_from_raw(raw))
-    return entries
+    return [_entry_from_raw(raw) for raw in raw_list]
 
 
 def find_module(modules: list[ModuleEntry], module_id: str) -> ModuleEntry | None:

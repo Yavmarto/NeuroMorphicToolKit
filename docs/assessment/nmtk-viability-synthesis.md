@@ -6,7 +6,7 @@ This document synthesizes the critical and affirmative assessments of the NeuroM
 
 NMTK is a highly ambitious project attempting to provide a unified platform for a field that is still stabilizing its foundational technologies. The **critique** rightly points out that the addressable audience is currently small and that abstracting away hardware differences is fraught with scientific risk. However, the **positive case** persuasively argues that the lack of infrastructure is a major bottleneck in neuromorphic research today.
 
-**The Verdict:** NMTK's most realistic and immediate value lies in its **team/server deployment model** and its **systems-level thinking** (typed contracts, intermediate representations, and standardized workflows). While it may not instantly unify the global neuromorphic community, it solves profound, immediate pain points for research labs and students who currently lose months to environment configuration and disjointed tooling. 
+**The Verdict:** NMTK's most realistic and immediate value lies in its **team/server deployment model** and its **systems-level thinking** (typed contracts, intermediate representations, and standardized workflows). While it may not instantly unify the global neuromorphic community, it solves profound, immediate pain points for research labs and students who currently lose months to environment configuration and disjointed tooling.
 
 ---
 

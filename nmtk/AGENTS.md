@@ -795,3 +795,7 @@ The sidebar `navItems` list is dynamic — it is built from the installed module
   Both the empty-modules branch and the populated-modules branch must include a `NmtkTopAppBar`
   with a settings gear action (`context.push('/settings')`). Never remove the settings access point
   from one branch while keeping it in another.
+
+## Remote Testing Configuration
+
+For dev, `REMOTE_HOST=moosebuntu@192.168.2.51` can be used. For example, when the agent wants to test run the app, you can use `192.168.2.51` as the server address.

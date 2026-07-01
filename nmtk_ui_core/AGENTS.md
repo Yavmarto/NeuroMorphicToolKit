@@ -276,3 +276,7 @@ When adding a new optional parameter to a public widget:
 2. If a domain-specific wrapper (e.g. `SnnWorkflowStepper`) should surface it, update that wrapper
    in the same PR.
 3. Verify with `flutter test` that no existing consumer breaks.
+
+## Remote Testing Configuration
+
+For dev, `REMOTE_HOST=moosebuntu@192.168.2.51` can be used. For example, when the agent wants to test run the app, you can use `192.168.2.51` as the server address.

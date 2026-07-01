@@ -1,6 +1,6 @@
 # Add `sc-neurocore` Backend Support
 
-This plan outlines the steps required to integrate `sc-neurocore` as a native backend for NeuroMorphicToolKit (NMTK). 
+This plan outlines the steps required to integrate `sc-neurocore` as a native backend for NeuroMorphicToolKit (NMTK).
 
 By completing this integration, NMTK will gain:
 1. An ultra-fast Rust-based simulation backend for inference.
@@ -47,7 +47,7 @@ A new simulator adapter implementing the CNL → NIR → Simulator contract. It 
 Add `"sc_neurocore"` to the supported simulator enumeration types.
 
 #### [MODIFY] neurocnl/backend/app/routers/simulators.py
-Register the new `ScNeuroCoreSimulatorAdapter` so the API can route `/simulate` requests to it when requested. 
+Register the new `ScNeuroCoreSimulatorAdapter` so the API can route `/simulate` requests to it when requested.
 
 ---
 
@@ -56,7 +56,7 @@ Register the new `ScNeuroCoreSimulatorAdapter` so the API can route `/simulate` 
 We will update the Flutter UI to expose the new targets to the user.
 
 #### [MODIFY] neurocnl/frontend/lib/screens/studio/deploy/deploy_target_catalog.dart
-Add `SC-NeuroCore (Simulation)` and `SC-NeuroCore (FPGA RTL)` as available targets in the Deploy catalog. 
+Add `SC-NeuroCore (Simulation)` and `SC-NeuroCore (FPGA RTL)` as available targets in the Deploy catalog.
 
 #### [MODIFY] neurocnl/frontend/lib/models/template.dart
 Register the `nir_sc_neurocore` template in the dart models so it can be selected in the Studio UI when starting a new export project.

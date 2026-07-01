@@ -942,4 +942,3 @@ PYTHONPATH=. pytest neurocli/tests/ -v
 # Next.js unit tests
 cd Neurohub/frontend-nextjs && npx vitest --run
 ```
-

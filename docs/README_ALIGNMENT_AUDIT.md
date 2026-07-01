@@ -89,7 +89,7 @@ GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)
 
 **Recommended Fix:**
 ```markdown
-**Suite Integration:** Accessible via `suite_api` proxy at `/api/<module>` (port 9000), 
+**Suite Integration:** Accessible via `suite_api` proxy at `/api/<module>` (port 9000),
 or directly as a standalone FastAPI service.
 ```
 
@@ -487,9 +487,9 @@ NEVER modify CNL grammar patterns in `cnl_parser.py` without human approval.
 
 **Issue:** Self-declared as historical
 ```
-This spec describes the originally planned standalone product. The active product shape 
-is Studio-integrated: NeuroSim provides a FastAPI backend mounted by CNL Studio, and 
-there is no standalone Flutter frontend. Sections describing the frontend, template 
+This spec describes the originally planned standalone product. The active product shape
+is Studio-integrated: NeuroSim provides a FastAPI backend mounted by CNL Studio, and
+there is no standalone Flutter frontend. Sections describing the frontend, template
 gallery, and standalone build are historical.
 ```
 

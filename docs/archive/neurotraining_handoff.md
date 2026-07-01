@@ -6,7 +6,7 @@ This document provides a comprehensive technical overview of the **Neurotraining
 
 ## 🚀 1. The Good News: Completion Status
 
-You do not need to implement the core neurotraining pipeline from scratch! The entire architecture—from the domain registry up to the Flutter desktop UI widgets—is **already fully implemented, integrated, and covered by automated tests**. 
+You do not need to implement the core neurotraining pipeline from scratch! The entire architecture—from the domain registry up to the Flutter desktop UI widgets—is **already fully implemented, integrated, and covered by automated tests**.
 
 The system leverages a capability-driven adapter pattern that permits seamless background execution, status polling, and modular expansion.
 
@@ -70,7 +70,7 @@ To see the training pipeline run live on your machine:
 Since the structural plumbing is complete, you can focus on building advanced enhancements to promote this into a production-grade system:
 
 ### 1. Integrate Realistic Dataset Ingestion
-Currently, the `snntorch` adapter is hardcoded to a lightweight synthetic `n-mnist` fixture (`neurocnl/neurocnl/training/dataset_fixtures.py`). 
+Currently, the `snntorch` adapter is hardcoded to a lightweight synthetic `n-mnist` fixture (`neurocnl/neurocnl/training/dataset_fixtures.py`).
 * **Extension:** Integrate physical file-system path loaders in the payload, allowing users to choose raw DVS (Dynamic Vision Sensor) event files or local folders in the UI.
 
 ### 2. Add New Framework Adapters

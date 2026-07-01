@@ -175,3 +175,7 @@ neurocli/
 │   └── test_renderer.py
 └── uv.lock
 </directory_structure>
+
+## Remote Testing Configuration
+
+For dev, `REMOTE_HOST=moosebuntu@192.168.2.51` can be used. For example, when the agent wants to test run the app, you can use `192.168.2.51` as the server address.

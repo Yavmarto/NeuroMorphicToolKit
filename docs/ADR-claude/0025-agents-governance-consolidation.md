@@ -5,7 +5,7 @@
 
 ## Context
 
-The repository suffered from significant documentation redundancy and fragmentation regarding AI agent governance files (`AGENTS.md`). A repository scan revealed 25 distinct `AGENTS.md` files distributed across the five main modules (`Neurohub`, `Neurosim`, `Neurochip`, `Neurosense`, `Neurobench`), `neurocnl`, and `Neuro-Dream-Hand`. 
+The repository suffered from significant documentation redundancy and fragmentation regarding AI agent governance files (`AGENTS.md`). A repository scan revealed 25 distinct `AGENTS.md` files distributed across the five main modules (`Neurohub`, `Neurosim`, `Neurochip`, `Neurosense`, `Neurobench`), `neurocnl`, and `Neuro-Dream-Hand`.
 
 This fragmentation presented several risks:
 1.  **Exact Duplicates:** Entire pipeline guidelines were duplicated identically in `docs/unified-dev-pipeline/` and `docs/Opus-dev-pipeline/`.

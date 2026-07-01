@@ -1,6 +1,6 @@
 # Option B Handoff: In-Compiler Weight Initialization
 
-This handoff document details the design, syntax, mathematical specification, architectural implementation plan, and verification strategy for **Option B: In-Compiler Weight Initialization**. 
+This handoff document details the design, syntax, mathematical specification, architectural implementation plan, and verification strategy for **Option B: In-Compiler Weight Initialization**.
 
 By introducing Xavier (Glorot) and Kaiming (He) uniform weight initialization for shape-only declarations (`ArraySpec`) during CNL $\rightarrow$ NIR compilation, we resolve the "zero-activity" bug in downstream neuromorphic simulators where populations receive zero synaptic currents and never fire.
 

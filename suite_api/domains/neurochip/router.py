@@ -62,44 +62,19 @@ if _spinnaker2_router is not None:
 # ── Proxied: hardware routes → neurochip-hw-worker (port 8002) ───────────────
 # These routes return 503 when the hardware worker is not running.
 
-@router.api_route(
+for prefix in [
     "/api/neurochip/akida/{path:path}",
-    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
-)
-async def proxy_neurochip_akida(request: Request, path: str) -> Response:
-    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
-
-
-@router.api_route(
     "/api/neurochip/hardware/lava/{path:path}",
-    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
-)
-async def proxy_neurochip_lava(request: Request, path: str) -> Response:
-    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
-
-
-@router.api_route(
     "/api/neurochip/hardware/speck/{path:path}",
-    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
-)
-async def proxy_neurochip_speck(request: Request, path: str) -> Response:
-    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
-
-
-@router.api_route(
     "/hardware/pynq/{path:path}",
-    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
-)
-async def proxy_neurochip_pynq(request: Request, path: str) -> Response:
-    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
-
-
-@router.api_route(
     "/api/neurochip/serial/{path:path}",
-    methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
-)
-async def proxy_neurochip_serial(request: Request, path: str) -> Response:
-    return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
+]:
+    @router.api_route(
+        prefix,
+        methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
+    )
+    async def _hw_proxy(request: Request, path: str) -> Response:
+        return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
 
 
 @router.get("/api/neurochip/health")

@@ -21,7 +21,7 @@ import os
 import stat
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import httpx
 import typer
@@ -104,6 +104,32 @@ def _status_to_exit(status_code: int) -> int:
     return 2 if status_code >= 500 else 1
 
 
+def _request(
+    method: str,
+    url: str,
+    error_msg: str,
+    json_mode: bool,
+    registry_url: str,
+    **kwargs: Any,
+) -> httpx.Response:
+    """Make an HTTP request and handle connection and HTTP status errors cleanly."""
+    try:
+        req_func = getattr(httpx, method.lower())
+        resp = req_func(url, **kwargs)
+        resp.raise_for_status()
+        return resp
+    except httpx.ConnectError:
+        error_exit({"error": "registry_unreachable", "registry": registry_url}, json_mode, code=2)
+        raise  # Unreachable, error_exit calls sys.exit
+    except httpx.HTTPStatusError as exc:
+        error_exit(
+            {"error": error_msg, "status_code": exc.response.status_code},
+            json_mode,
+            code=_status_to_exit(exc.response.status_code),
+        )
+        raise
+
+
 # ---------------------------------------------------------------------------
 # login
 # ---------------------------------------------------------------------------
@@ -111,10 +137,10 @@ def _status_to_exit(status_code: int) -> int:
 
 @hub_app.command("login")
 def login(
-    registry: Optional[str] = typer.Option(None, "--registry", "-r", help="Registry URL"),
-    username: Optional[str] = typer.Option(None, "--username", "-u", help="Account username"),
-    password: Optional[str] = typer.Option(None, "--password", help="Account password"),
-    token: Optional[str] = typer.Option(None, "--token", help="Use an existing JWT directly"),
+    registry: str | None = typer.Option(None, "--registry", "-r", help="Registry URL"),
+    username: str | None = typer.Option(None, "--username", "-u", help="Account username"),
+    password: str | None = typer.Option(None, "--password", help="Account password"),
+    token: str | None = typer.Option(None, "--token", help="Use an existing JWT directly"),
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ) -> None:
     """Authenticate with a Neurohub registry and store the JWT credentials."""
@@ -137,23 +163,15 @@ def login(
             error_exit({"error": "missing_password"}, json_mode, code=1)
         resolved_pass = typer.prompt("Neurohub password", hide_input=True)
 
-    try:
-        resp = httpx.post(
-            f"{url}/api/v1/auth/login",
-            json={"username": resolved_user, "password": resolved_pass},
-            timeout=10.0,
-        )
-        resp.raise_for_status()
-    except httpx.ConnectError:
-        error_exit({"error": "registry_unreachable", "registry": url}, json_mode, code=2)
-        return
-    except httpx.HTTPStatusError as exc:
-        error_exit(
-            {"error": "login_failed", "status_code": exc.response.status_code},
-            json_mode,
-            code=_status_to_exit(exc.response.status_code),
-        )
-        return
+    resp = _request(
+        "POST",
+        f"{url}/api/v1/auth/login",
+        "login_failed",
+        json_mode,
+        url,
+        json={"username": resolved_user, "password": resolved_pass},
+        timeout=10.0,
+    )
 
     access_token = resp.json().get("access_token")
     if not access_token:
@@ -181,9 +199,9 @@ def push(
     type: str = typer.Option(..., "--type", "-t", help="Artefact type"),
     slug: str = typer.Option(..., "--slug", "-s", help="Artefact slug"),
     version: str = typer.Option(..., "--version", "-v", help="Semantic version MAJOR.MINOR.PATCH"),
-    description: Optional[str] = typer.Option(None, "--description", "-d"),
-    tag: Optional[list[str]] = typer.Option(None, "--tag", help="Tag (repeatable, up to 20)"),
-    registry: Optional[str] = typer.Option(None, "--registry", "-r"),
+    description: str | None = typer.Option(None, "--description", "-d"),
+    tag: list[str] | None = typer.Option(None, "--tag", help="Tag (repeatable, up to 20)"),
+    registry: str | None = typer.Option(None, "--registry", "-r"),
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ) -> None:
     """Push an artefact to the Neurohub registry and print its canonical URI."""
@@ -215,26 +233,18 @@ def push(
     if tags:
         data["tags"] = ",".join(tags)
 
-    try:
-        with artefact_path.open("rb") as fh:
-            resp = httpx.post(
-                f"{url}/api/v1/artefacts",
-                data=data,
-                files={"file": (artefact_path.name, fh)},
-                headers=_auth_headers(),
-                timeout=60.0,
-            )
-        resp.raise_for_status()
-    except httpx.ConnectError:
-        error_exit({"error": "registry_unreachable", "registry": url}, json_mode, code=2)
-        return
-    except httpx.HTTPStatusError as exc:
-        error_exit(
-            {"error": "push_failed", "status_code": exc.response.status_code},
+    with artefact_path.open("rb") as fh:
+        resp = _request(
+            "POST",
+            f"{url}/api/v1/artefacts",
+            "push_failed",
             json_mode,
-            code=_status_to_exit(exc.response.status_code),
+            url,
+            data=data,
+            files={"file": (artefact_path.name, fh)},
+            headers=_auth_headers(),
+            timeout=60.0,
         )
-        return
 
     uri = resp.json().get("neurohub_uri", "")
     print_result({"status": "pushed", "uri": uri, "registry": url}, json_mode)
@@ -248,8 +258,8 @@ def push(
 @hub_app.command("pull")
 def pull(
     uri: str = typer.Argument(..., help="neurohub:// URI of the artefact"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o", help="Output file path"),
-    registry: Optional[str] = typer.Option(None, "--registry", "-r"),
+    output: Path | None = typer.Option(None, "--output", "-o", help="Output file path"),
+    registry: str | None = typer.Option(None, "--registry", "-r"),
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ) -> None:
     """Pull an artefact, verifying its SHA-256 checksum after download."""
@@ -264,19 +274,15 @@ def pull(
     if parsed.version is not None:
         path = f"{path}/{parsed.version}"
 
-    try:
-        meta_resp = httpx.get(f"{base}{path}", headers=_auth_headers(), timeout=30.0)
-        meta_resp.raise_for_status()
-    except httpx.ConnectError:
-        error_exit({"error": "registry_unreachable", "registry": base}, json_mode, code=2)
-        return
-    except httpx.HTTPStatusError as exc:
-        error_exit(
-            {"error": "artefact_not_found", "status_code": exc.response.status_code},
-            json_mode,
-            code=_status_to_exit(exc.response.status_code),
-        )
-        return
+    meta_resp = _request(
+        "GET",
+        f"{base}{path}",
+        "artefact_not_found",
+        json_mode,
+        base,
+        headers=_auth_headers(),
+        timeout=30.0,
+    )
 
     meta = meta_resp.json()
     expected_sha = meta.get("sha256", "")
@@ -286,21 +292,16 @@ def pull(
         error_exit({"error": "no_download_url"}, json_mode, code=2)
         return
 
-    try:
-        blob_resp = httpx.get(
-            f"{base}{download_url}", headers=_auth_headers(), timeout=120.0, follow_redirects=True
-        )
-        blob_resp.raise_for_status()
-    except httpx.ConnectError:
-        error_exit({"error": "registry_unreachable", "registry": base}, json_mode, code=2)
-        return
-    except httpx.HTTPStatusError as exc:
-        error_exit(
-            {"error": "download_failed", "status_code": exc.response.status_code},
-            json_mode,
-            code=_status_to_exit(exc.response.status_code),
-        )
-        return
+    blob_resp = _request(
+        "GET",
+        f"{base}{download_url}",
+        "download_failed",
+        json_mode,
+        base,
+        headers=_auth_headers(),
+        timeout=120.0,
+        follow_redirects=True,
+    )
 
     blob = blob_resp.content
     ext = _TYPE_EXTENSION.get(parsed.type.value, "")
@@ -334,10 +335,10 @@ def pull(
 @hub_app.command("search")
 def search(
     query: str = typer.Argument(..., help="Search query"),
-    type: Optional[str] = typer.Option(None, "--type", "-t", help="Filter by artefact type"),
-    hardware: Optional[str] = typer.Option(None, "--hardware", help="Filter by hardware target"),
+    type: str | None = typer.Option(None, "--type", "-t", help="Filter by artefact type"),
+    hardware: str | None = typer.Option(None, "--hardware", help="Filter by hardware target"),
     limit: int = typer.Option(20, "--limit", "-l", help="Max results (1-100)"),
-    registry: Optional[str] = typer.Option(None, "--registry", "-r"),
+    registry: str | None = typer.Option(None, "--registry", "-r"),
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ) -> None:
     """Search artefacts in the Neurohub registry."""
@@ -349,21 +350,16 @@ def search(
     if hardware:
         params["hardware_target"] = hardware
 
-    try:
-        resp = httpx.get(
-            f"{url}/api/v1/search", params=params, headers=_auth_headers(), timeout=10.0
-        )
-        resp.raise_for_status()
-    except httpx.ConnectError:
-        error_exit({"error": "registry_unreachable", "registry": url}, json_mode, code=2)
-        return
-    except httpx.HTTPStatusError as exc:
-        error_exit(
-            {"error": "search_failed", "status_code": exc.response.status_code},
-            json_mode,
-            code=_status_to_exit(exc.response.status_code),
-        )
-        return
+    resp = _request(
+        "GET",
+        f"{url}/api/v1/search",
+        "search_failed",
+        json_mode,
+        url,
+        params=params,
+        headers=_auth_headers(),
+        timeout=10.0,
+    )
 
     data = resp.json()
     items = data.get("items", []) if isinstance(data, dict) else data
