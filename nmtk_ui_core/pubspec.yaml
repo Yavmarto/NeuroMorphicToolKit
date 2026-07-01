@@ -8,8 +8,11 @@ environment:
 
 dependencies:
   cupertino_icons: ^1.0.8
+  ffi: ^2.1.4
   flutter:
     sdk: flutter
+  nmtk_wgpu_renderer_plugin:
+    path: ../rust/nmtk_wgpu_renderer_plugin
   zeta_flutter: ^1.4.5
 
 dev_dependencies:

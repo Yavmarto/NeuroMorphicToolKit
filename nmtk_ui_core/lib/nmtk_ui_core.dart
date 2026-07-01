@@ -58,3 +58,5 @@ export 'widgets/command_palette.dart';
 export 'widgets/shortcut_scope.dart';
 export 'visualization/renderer_interface.dart';
 export 'visualization/fragment_shader_renderer.dart';
+export 'visualization/wgpu_native_renderer.dart';
+export 'visualization/renderer_registry.dart';

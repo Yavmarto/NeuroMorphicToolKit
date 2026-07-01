@@ -860,6 +860,13 @@ packages:
       relative: true
     source: path
     version: "0.7.0+0"
+  nmtk_wgpu_renderer_plugin:
+    dependency: transitive
+    description:
+      path: "../../rust/nmtk_wgpu_renderer_plugin"
+      relative: true
+    source: path
+    version: "0.1.0"
   node_preamble:
     dependency: transitive
     description:
