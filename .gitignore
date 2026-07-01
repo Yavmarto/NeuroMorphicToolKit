@@ -30,6 +30,7 @@ output/
 # Runtime artifacts (root)
 server.log
 simulation_report.json
+logs/*.log
 
 # Root scratch / notes (not product source)
 .tmp_manual_ui/
