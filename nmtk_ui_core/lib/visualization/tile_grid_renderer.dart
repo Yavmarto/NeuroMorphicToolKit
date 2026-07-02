@@ -249,3 +249,26 @@ class _TileGridPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _TileGridPainter oldDelegate) => !identical(oldDelegate.frame, frame);
 }
+
+/// One cascade node's tile-activity frame plus its display label, for the
+/// /viz-demo topology-cascade mode. Wraps [TileActivityFrame] without
+/// changing it — keeps this demo's contract self-contained.
+class CascadeNodeFrame {
+  final String nodeId;
+  final String label;
+  final TileActivityFrame tileFrame;
+
+  CascadeNodeFrame({
+    required this.nodeId,
+    required this.label,
+    required this.tileFrame,
+  });
+}
+
+/// One frame across all cascade nodes, keyed by nodeId ("0".."12").
+class CascadeFrame {
+  final Map<String, CascadeNodeFrame> nodes;
+  final double simulationTimeMs;
+
+  CascadeFrame({required this.nodes, required this.simulationTimeMs});
+}

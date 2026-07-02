@@ -234,6 +234,39 @@ neuro hub search "braille dataset" --json
 
 ---
 
+### `neuro studio run` — generate and run a NeuroStudio notebook
+
+Reads a NeuroStudio workspace file (`*.neurocnl-workspace.json`, saved from the
+NeuroStudio GUI's File > Save), generates a Jupyter notebook from its CNL spec via
+the `neurocnl` backend, runs it, and streams live training progress until it
+finishes.
+
+```bash
+neuro studio run <workspace_file> [--epochs N] [--learning-rate F] [--optimizer NAME]
+                  [--batch-size N] [--framework NAME] [--dataset NAME]
+                  [--registry <url>] [--json]
+```
+
+The workspace file only stores the CNL spec (and canvas layout) — it does not store
+training parameters. `--epochs`/`--learning-rate`/`--optimizer`/`--batch-size`
+default to the same values the GUI's Pipeline tab defaults to (50, 1e-3, Adam, 32),
+so an unmodified workspace file behaves the same from the CLI as it would freshly
+opened in the GUI. `--framework`/`--dataset` default to the workspace file's
+`selectedPlatforms[0]`/`selectedDataset`.
+
+Requires the `neurocnl` backend running first (`neuro run neurocnl`); the registry
+URL resolves from `--registry`, then the `neurocnl` port in
+`nmtk/neuro_toolkit/assets/modules.json`, then `http://localhost:9000`.
+
+**Examples:**
+
+```bash
+neuro studio run my-project.neurocnl-workspace.json
+neuro studio run my-project.neurocnl-workspace.json --framework lava_sim --epochs 100 --json
+```
+
+---
+
 ## Global flags
 
 All commands support:

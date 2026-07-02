@@ -33,6 +33,7 @@ neurocli/
     new.py          # neuro new command
     lifecycle.py    # neuro status / install / run commands
     hub.py          # neuro hub sub-commands (login/push/pull/search)
+    studio.py       # neuro studio run — workspace file -> generate notebook -> run it
     templates/      # template bundles (package data)
       nir_snntorch/
       nir_lava_sim/
@@ -46,6 +47,7 @@ neurocli/
     test_new.py
     test_lifecycle.py
     test_hub.py
+    test_studio.py
     test_integration.py
 ```
 
@@ -159,6 +161,7 @@ neurocli/
 │   │       │   └── run.sh
 │   │       └── src
 │   │           └── train.py.jinja
+│   ├── studio.py
 │   └── uri_parser.py
 ├── pyproject.toml
 ├── tests
@@ -172,7 +175,8 @@ neurocli/
 │   ├── test_lifecycle.py
 │   ├── test_manifest.py
 │   ├── test_new.py
-│   └── test_renderer.py
+│   ├── test_renderer.py
+│   └── test_studio.py
 └── uv.lock
 </directory_structure>
 

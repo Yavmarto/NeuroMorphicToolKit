@@ -29,6 +29,7 @@ class FragmentShaderNeuronRenderer implements NeuronRenderer {
 
   bool _initializing = false;
   bool _textureBusy = false; // drop frames that arrive while encoding
+  bool _disposed = false; // guards ValueNotifier writes racing with dispose()
 
   // ── Init ────────────────────────────────────────────────────────────────────
 
@@ -73,10 +74,12 @@ class FragmentShaderNeuronRenderer implements NeuronRenderer {
       _particleProgram = await _loadShader('spike_field.frag');
       _densityProgram = await _loadShader('density_map.frag');
       _placeholder = await _make1x1Image();
+      if (_disposed) return;
       _spikeTexture.value = _placeholder;
       _densityTexture.value = _placeholder;
       _ready.value = true;
     } catch (e) {
+      if (_disposed) return;
       _initError.value = '$e';
       debugPrint('FragmentShaderNeuronRenderer: shader load failed: $e');
     } finally {
@@ -177,6 +180,10 @@ class FragmentShaderNeuronRenderer implements NeuronRenderer {
       if (spikeCount > 0) {
         final pixels = _encodeSpikePixels(frame);
         final img = await _buildImage(pixels, spikeCount, 1);
+        if (_disposed) {
+          img.dispose();
+          return;
+        }
         final old = _spikeTexture.value;
         _spikeTexture.value = img;
         if (old != null && old != _placeholder) old.dispose();
@@ -191,6 +198,10 @@ class FragmentShaderNeuronRenderer implements NeuronRenderer {
       if (cellCount > 0 && frame.densityGrid.isNotEmpty) {
         final pixels = _encodeDensityPixels(frame);
         final img = await _buildImage(pixels, cellCount, 1);
+        if (_disposed) {
+          img.dispose();
+          return;
+        }
         final old = _densityTexture.value;
         _densityTexture.value = img;
         if (old != null && old != _placeholder) old.dispose();
@@ -280,6 +291,7 @@ class FragmentShaderNeuronRenderer implements NeuronRenderer {
 
   @override
   void dispose() {
+    _disposed = true;
     _ready.dispose();
     _initError.dispose();
     _frameNotifier.dispose();

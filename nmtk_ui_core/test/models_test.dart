@@ -87,6 +87,56 @@ void main() {
     });
   });
 
+  group('BulkSpikeFrame', () {
+    test('fromJson parses a node-partitioned payload', () {
+      final frame = BulkSpikeFrame.fromJson({
+        'nodes': {
+          'pop_a': {
+            'data': [0.0, 10.0, 1.0, 20.0],
+            'density_grid': [0.5],
+            'grid_w': 1,
+            'grid_h': 1,
+            'neuron_count': 6000,
+          },
+        },
+        'scale_hint': 'density',
+      });
+
+      expect(frame.isEmpty, isFalse);
+      expect(frame.scale, VisualizationScale.density);
+      expect(frame.nodes['pop_a']!.neuronCount, 6000);
+      expect(frame.nodes['pop_a']!.data, [0.0, 10.0, 1.0, 20.0]);
+    });
+
+    test('fromJson defaults to raster scale and empty nodes when absent', () {
+      final frame = BulkSpikeFrame.fromJson(const {});
+
+      expect(frame.isEmpty, isTrue);
+      expect(frame.scale, VisualizationScale.raster);
+    });
+  });
+
+  group('NodeBulkData', () {
+    test('toVisualizationFrame carries neuronCount and honors a scale override', () {
+      const nodeData = NodeBulkData(
+        data: [0.0, 5.0],
+        densityGrid: [0.9],
+        gridW: 1,
+        gridH: 1,
+        neuronCount: 2000,
+      );
+
+      final frame = nodeData.toVisualizationFrame(
+        simulationTimeMs: 12.0,
+        scaleOverride: VisualizationScale.particle,
+      );
+
+      expect(frame.totalNeuronCount, 2000);
+      expect(frame.scale, VisualizationScale.particle);
+      expect(frame.simulationTimeMs, 12.0);
+    });
+  });
+
   group('PynqNetworkResponse', () {
     test('fromJson parses exportable state and deploy payload', () {
       final json = {
