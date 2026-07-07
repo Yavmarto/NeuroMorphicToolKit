@@ -83,15 +83,16 @@ If `semble` is not on `$PATH`, use `uvx --from "semble[mcp]" semble` in its plac
 ## Workflow
 
 1. **Check Open Brain** for existing context and relevant Knowledge Items.
-2. Start with `semble search` to find relevant chunks.
-3. Inspect full files only when the returned chunk is not enough context.
-4. Optionally use `semble find-related` with a promising result's `file_path` and `line` to discover related implementations.
-5. Use grep only when you need exhaustive literal matches or quick confirmation of an exact string.
-6. **Apply autofixers and run tests** for the language you are working in (e.g., `ruff check --fix .` and `ruff format .` for Python, `dart fix --apply` and `dart format .` for Dart) to ensure the codebase remains green before finishing a task.
-7. **Clean up workspace**: Always delete any temporary scripts, patch files, or intermediate artifacts (like `patch_*.py`) created during execution. Leave the repository clean.
-8. **Update Open Brain** with any new durable knowledge or architectural changes upon task completion.
+2. **Check the `current tasks` folder** at the root of the repository for ongoing or past dated tasks. When saving or creating new tasks, always place them in this directory under a subfolder named with the current date.
+3. Start with `semble search` to find relevant chunks.
+4. Inspect full files only when the returned chunk is not enough context.
+5. Optionally use `semble find-related` with a promising result's `file_path` and `line` to discover related implementations.
+6. Use grep only when you need exhaustive literal matches or quick confirmation of an exact string.
+7. **Apply autofixers and run tests** for the language you are working in (e.g., `ruff check --fix .` and `ruff format .` for Python, `dart fix --apply` and `dart format .` for Dart) to ensure the codebase remains green before finishing a task.
+8. **Clean up workspace**: Always delete any temporary scripts, patch files, or intermediate artifacts (like `patch_*.py`) created during execution. Leave the repository clean.
+9. **Update Open Brain** with any new durable knowledge or architectural changes upon task completion.
 <end_of_task_reporting>
-9. **End of Task Reporting**: When you finish a task, always report back to the user with the following exact format. Every answer must include:
+10. **End of Task Reporting**: When you finish a task, always report back to the user with the following exact format. Every answer must include:
    - A short description of what the problem is (exactly 2 sentences).
    - How it was solved (exactly 2 sentences).
    - Where to notice the difference and restart info (exactly 2 sentences).

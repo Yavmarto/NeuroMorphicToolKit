@@ -139,7 +139,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
         ZetaTextInput(
           controller: _controller,
           focusNode: _focusNode,
-          placeholder: 'http://192.168.1.50:8091',
+          placeholder: '192.168.1.50',
           onChange: widget.onChanged,
         ),
         SizedBox(height: context.nmtkTokens.sectionGap),

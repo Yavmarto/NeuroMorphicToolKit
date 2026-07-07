@@ -164,12 +164,15 @@ def test_execute_notebook_job_uses_resolved_kernel_and_collects_output(
             assert timeout == 1
             return next(self._shell_messages)
 
+    started_with_cwd: list[str | None] = []
+
     class FakeKernelManager:
         def __init__(self, kernel_name: str) -> None:
             self.kernel_name = kernel_name
             self.client = FakeBlockingClient()
 
-        def start_kernel(self) -> None:
+        def start_kernel(self, cwd: str | None = None) -> None:
+            started_with_cwd.append(cwd)
             return None
 
         def blocking_client(self) -> FakeBlockingClient:
@@ -196,6 +199,10 @@ def test_execute_notebook_job_uses_resolved_kernel_and_collects_output(
     assert seen == [progress_line]
     executed = json.loads(notebook_path.read_text(encoding="utf-8"))
     assert executed["cells"][0]["outputs"][0]["text"] == progress_line + "\n"
+    # Regression: the kernel must be started with cwd set to the notebook's
+    # own directory, not left to inherit the worker process's cwd (otherwise
+    # relative paths like weights.npz silently resolve to the wrong place).
+    assert started_with_cwd == [str(notebook_path.parent)]
 
 
 def test_execute_notebook_job_waits_for_matching_execute_reply(
@@ -282,7 +289,7 @@ def test_execute_notebook_job_waits_for_matching_execute_reply(
             self.kernel_name = kernel_name
             self.client = FakeBlockingClient()
 
-        def start_kernel(self) -> None:
+        def start_kernel(self, cwd: str | None = None) -> None:
             return None
 
         def blocking_client(self) -> FakeBlockingClient:
@@ -374,7 +381,7 @@ def test_execute_notebook_job_times_out_waiting_for_execute_reply(
             self.kernel_name = kernel_name
             self.client = FakeBlockingClient()
 
-        def start_kernel(self) -> None:
+        def start_kernel(self, cwd: str | None = None) -> None:
             return None
 
         def blocking_client(self) -> FakeBlockingClient:

@@ -31,8 +31,8 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Install neurocnl with all extras (brings nir and framework bindings).
 # Heavy torch/framework layers above are already cached so this is fast.
 COPY neurocnl/ /tmp/neurocnl/
-RUN pip install --no-cache-dir "/tmp/neurocnl/[training,rockpool,synsense,norse]" \
- && python -c "import nir; assert hasattr(nir, 'CubaLI'), 'nir>=1.0.5 required'; from neurocnl.runtime.sc_neurocore_simulator import sc_neurocore_nir_bridge_available; assert sc_neurocore_nir_bridge_available(), 'sc-neurocore NIR bridge missing'" \
+RUN pip install --no-cache-dir "/tmp/neurocnl[training,rockpool,synsense,norse]" \
+ && python -c "import nir; assert hasattr(nir, 'CubaLI'), 'nir>=1.0.5 required'; from neurocnl.runtime.sc_neurocore_simulator import sc_neurocore_nir_bridge_available; assert sc_neurocore_nir_bridge_available(), 'sc-neurocore NIR bridge missing'; import os; os._exit(0)" \
  && rm -rf /tmp/neurocnl
 
 # Register the kernel so JupyterLab discovers it on startup.

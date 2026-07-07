@@ -108,17 +108,15 @@ class LauncherBootstrapHost extends ConsumerWidget {
 
   Widget _buildSetupScreen(WidgetRef ref, LauncherBootstrapData? data) {
     final controlApiInput = data?.controlApiService?.baseUri.host ?? '';
+    var typedHost = controlApiInput;
     return FirstRunSetupScreen(
       requirePython: false,
       requireLauncher: true,
       launcherMessage: data?.setupMessage,
       launcherInitialValue: controlApiInput,
-      onLauncherChanged: (_) {},
-      onLauncherConnect: () async {
-        // The server_setup widget already has the text field — the connect
-        // action writes the URL via the settings notifier. We just re-trigger
-        // the bootstrap probe through the notifier.
-      },
+      onLauncherChanged: (value) => typedHost = value ?? '',
+      onLauncherConnect: () =>
+          ref.read(launcherBootstrapProvider.notifier).saveAndRetry(typedHost),
       allowLauncherConnect: true,
       launcherSetupAvailable:
           data?.bootstrapState != null && data?.controlApiService != null,

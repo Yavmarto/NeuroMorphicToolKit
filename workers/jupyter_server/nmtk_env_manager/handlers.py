@@ -215,7 +215,13 @@ def _execute_notebook_job(
 
     notebook = nbformat.read(resolved_path, as_version=4)
     kernel_manager = jupyter_client.KernelManager(kernel_name=resolved_kernel)
-    kernel_manager.start_kernel()
+    # Regression fix: without an explicit cwd, the kernel subprocess inherits
+    # this worker process's own working directory, not the notebook's. Any
+    # relative path a generated notebook uses (weights.npz, ./data, etc.)
+    # then silently resolves against the wrong directory — either failing
+    # outright or, worse, loading an unrelated file that happens to exist
+    # there. Always run the kernel from the notebook's own directory.
+    kernel_manager.start_kernel(cwd=str(resolved_path.parent))
     kernel_client = kernel_manager.blocking_client()
     kernel_client.start_channels()
     try:

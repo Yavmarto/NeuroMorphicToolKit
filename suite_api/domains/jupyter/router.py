@@ -19,6 +19,19 @@ router = APIRouter(prefix="/api/jupyter", tags=["jupyter"])
 _logger = logging.getLogger("suite_api.jupyter")
 
 
+def _env_manager_path(public_path: str) -> str:
+    """Map suite API Jupyter routes to the worker extension mount path."""
+    prefix = "/api/jupyter"
+    suffix = public_path[len(prefix) :] if public_path.startswith(prefix) else public_path
+    return f"/nmtk-envs/api{suffix}"
+
+
+async def _proxy_to_env_manager(request: Request) -> Response:
+    return await proxy_to_worker(
+        request,
+        settings.jupyter_worker_url,
+        target_path=_env_manager_path(request.url.path),
+    )
 
 
 @router.get("/url")
@@ -78,36 +91,41 @@ async def jupyter_health() -> JSONResponse:
 # ── Environment manager proxy ──────────────────────────────────────────────────
 @router.get("/environments")
 async def list_environments(request: Request) -> Response:
-    return await proxy_to_worker(request, settings.jupyter_worker_url)
+    return await _proxy_to_env_manager(request)
 
 
 @router.post("/environments")
 async def create_environment(request: Request) -> Response:
     """Create a clone (or import a requirements file). Returns a job id."""
-    return await proxy_to_worker(request, settings.jupyter_worker_url)
+    return await _proxy_to_env_manager(request)
 
 
 @router.delete("/environments/{slug}")
 async def delete_environment(request: Request, slug: str) -> Response:
-    return await proxy_to_worker(request, settings.jupyter_worker_url)
+    return await _proxy_to_env_manager(request)
 
 
 @router.get("/environments/{slug}/packages")
 async def list_packages(request: Request, slug: str) -> Response:
-    return await proxy_to_worker(request, settings.jupyter_worker_url)
+    return await _proxy_to_env_manager(request)
 
 
 @router.post("/environments/{slug}/packages")
 async def mutate_packages(request: Request, slug: str) -> Response:
     """Install/uninstall packages in a clone. Returns a job id."""
-    return await proxy_to_worker(request, settings.jupyter_worker_url)
+    return await _proxy_to_env_manager(request)
 
 
 @router.get("/environments/{slug}/requirements")
 async def export_requirements(request: Request, slug: str) -> Response:
-    return await proxy_to_worker(request, settings.jupyter_worker_url)
+    return await _proxy_to_env_manager(request)
+
+
+@router.post("/executions")
+async def execute_notebook(request: Request) -> Response:
+    return await _proxy_to_env_manager(request)
 
 
 @router.get("/jobs/{job_id}")
 async def get_job(request: Request, job_id: str) -> Response:
-    return await proxy_to_worker(request, settings.jupyter_worker_url)
+    return await _proxy_to_env_manager(request)

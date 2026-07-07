@@ -126,6 +126,10 @@ class ControlApiService {
     while (value.endsWith('/')) {
       value = value.substring(0, value.length - 1);
     }
+    final uri = Uri.tryParse(value);
+    if (uri != null && !uri.hasPort) {
+      value = '${uri.scheme}://${uri.host}:8091${uri.path}';
+    }
     return value;
   }
 

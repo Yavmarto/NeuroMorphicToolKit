@@ -292,7 +292,7 @@ class _LauncherControlUrlFieldState
       key: const ValueKey('launcher-control-url'),
       controller: _controller,
       focusNode: _focusNode,
-      placeholder: 'http://192.168.1.50:8091',
+      placeholder: '192.168.1.50',
       onChange:
           ref.read(settingsProvider.notifier).setLauncherControlApiBaseUrl,
     );

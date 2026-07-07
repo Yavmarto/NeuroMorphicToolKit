@@ -125,7 +125,12 @@ RSYNC_EXCLUDES := \
 	--exclude 'nmtk/neuro_toolkit/.dart_tool/' --exclude 'nmtk/neuro_toolkit/android/' \
 	--exclude 'nmtk/neuro_toolkit/ios/' --exclude 'nmtk/neuro_toolkit/macos/' \
 	--exclude 'nmtk/neuro_toolkit/linux/' --exclude 'nmtk/neuro_toolkit/windows/' \
-	--exclude 'nmtk/neuro_toolkit/web/' --exclude 'nmtk/packages/'
+	--exclude 'nmtk/neuro_toolkit/web/' --exclude 'nmtk/packages/' \
+	--exclude '*.db' --exclude '*.sqlite' --exclude 'data/' \
+	--exclude 'server.log' --exclude 'reports/' --exclude 'skills/' \
+	--exclude 'neurocli/' --exclude '.test-venv/' --exclude '.claude/' \
+	--exclude '.antigravitycli/' --exclude '.superpowers/' --exclude '.DS_Store' \
+	--exclude 'UI - issues/' --exclude 'NIR graphs/' --exclude 'tasks/'
 
 ## Initialise required secrets on the remote host if they are missing.
 ## Safe to re-run — only fills gaps, never overwrites existing values.
@@ -160,7 +165,8 @@ docker-ex-deploy:
 		ssh $(SSH_OPTS) $(REMOTE_HOST) "docker builder prune -f --keep-storage=20GB"; \
 	fi
 	@echo "==> Building and starting full backend stack on $(REMOTE_HOST) (--build picks up source changes)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose up --build -d --wait --remove-orphans"
+	REMOTE_HOST="$(REMOTE_HOST)" DEPLOY_DIR="$(DEPLOY_DIR)" LAUNCHER_CONTROL_PORT="$(LAUNCHER_CONTROL_PORT)" SSH_OPTS="$(SSH_OPTS)" \
+		scripts/remote_docker_compose_up.sh
 	@echo "==> Full backend ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-all: secrets-init docker-ex-deploy

@@ -27,19 +27,9 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
   /// Normalises a raw host/URL input entered by the user and stores it in
   /// settings, then reruns the bootstrap probe.
   Future<void> saveAndRetry(String rawInput) async {
-    var input = rawInput.trim();
-    if (input.isNotEmpty) {
-      if (!input.startsWith('http://') && !input.startsWith('https://')) {
-        input = 'http://$input';
-      }
-      final uri = Uri.tryParse(input);
-      if (uri != null && !uri.hasPort) {
-        input = '${uri.scheme}://${uri.host}:8091${uri.path}';
-      }
-    }
     await ref
         .read(settingsProvider.notifier)
-        .setLauncherControlApiBaseUrl(input);
+        .setLauncherControlApiBaseUrl(rawInput);
     state = const AsyncLoading();
     state = await AsyncValue.guard(_runBootstrap);
   }

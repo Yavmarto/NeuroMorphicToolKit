@@ -20,6 +20,7 @@ services:
       - NEUROCHIP_HW_WORKER_URL=http://neurochip-hw-worker:8002
       - NEUROCNL_PHYSICS_WORKER_URL=http://neurocnl-physics-worker:8006
       - NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012
+      - SNN_MLIR_COMPILER_WORKER_URL=http://snn-mlir-compiler:8007
       # Remote Lava timeout — must exceed Lava's cold-start compilation (30–90 s).
       # Increase this if the warm-up isn't active or the network is unusually large.
       - NEUROCNL_LAVA_REMOTE_TIMEOUT_S=${NEUROCNL_LAVA_REMOTE_TIMEOUT_S:-120}
@@ -31,7 +32,7 @@ services:
       # Local mirror dir for kernel_runner; notebooks are also published to Jupyter via Contents API
       - JUPYTER_NOTEBOOK_DIR=/home/app/notebooks
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9000/api/suite/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/api/suite/health')"]
       start_period: 90s
       <<: *default-healthcheck-params
     depends_on:
@@ -55,7 +56,7 @@ services:
     volumes:
       - .:/repo:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8004/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health')"]
       <<: *default-healthcheck-params
     restart: unless-stopped
     networks:
@@ -70,10 +71,11 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - NEUROCNL_DATA_DIR=/tmp
+      - SNN_MLIR_COMPILER_WORKER_URL=http://snn-mlir-compiler:8007
     volumes:
       - .:/repo:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health')"]
       start_period: 90s
       <<: *default-healthcheck-params
     restart: unless-stopped
@@ -92,7 +94,7 @@ services:
     volumes:
       - .:/repo:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health')"]
       <<: *default-healthcheck-params
     restart: unless-stopped
     depends_on:
@@ -110,7 +112,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8012/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8012/health')"]
       start_period: 120s
       <<: *default-healthcheck-params
     restart: unless-stopped
@@ -142,7 +144,7 @@ services:
       - launcher_control_state:/app/state
       - launcher_control_data:/app/data
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8091/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8091/health')"]
       start_period: 30s
       <<: *default-healthcheck-params
     restart: unless-stopped
@@ -160,7 +162,23 @@ services:
     volumes:
       - .:/repo:ro
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8006/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8006/health')"]
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  snn-mlir-compiler:
+    build:
+      context: .
+      dockerfile: workers/snn_mlir_compiler/Dockerfile
+    ports:
+      - "${SNN_MLIR_COMPILER_PORT:-8007}:8007"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8007/health')"]
+      start_period: 60s
       <<: *default-healthcheck-params
     restart: unless-stopped
     networks:
@@ -249,7 +267,7 @@ services:
     volumes:
       - jupyter_notebooks:/root
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/api/status')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8008/api/status')"]
       start_period: 30s
       <<: *default-healthcheck-params
     restart: unless-stopped

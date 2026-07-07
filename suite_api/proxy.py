@@ -45,6 +45,7 @@ async def proxy_to_worker(
     worker_base_url: str,
     *,
     timeout: float = 30.0,
+    target_path: str | None = None,
 ) -> Response:
     """Forward an HTTP request to a worker service.
 
@@ -55,8 +56,10 @@ async def proxy_to_worker(
         request:         The incoming FastAPI request.
         worker_base_url: Base URL of the worker (e.g. http://localhost:8004).
         timeout:         httpx request timeout in seconds.
+        target_path:     Optional worker path to use instead of request.url.path.
     """
-    target_url = f"{worker_base_url.rstrip('/')}{request.url.path}"
+    path = target_path if target_path is not None else request.url.path
+    target_url = f"{worker_base_url.rstrip('/')}{path}"
     if request.url.query:
         target_url = f"{target_url}?{request.url.query}"
 

@@ -8,7 +8,8 @@ __pycache__
 venv
 venv/
 .env.local
-node_modules
+**/node_modules
+**/.opencode
 .pytest_cache
 .mypy_cache
 .ruff_cache
@@ -36,11 +37,26 @@ nmtk_ui_core/
 # Webtop build needs the full Flutter project including path-dep packages.
 # Whitelist every frontend the launcher (or its shell adapters) statically
 # depend on at build time, so `flutter pub get` can resolve path deps.
+# NOTE: `!dir/` re-includes everything under it, overriding the generic
+# `build/`/`.dart_tool/` excludes above for these specific paths -- re-exclude
+# each whitelisted frontend's own build output explicitly below, or local
+# Flutter build artifacts (multi-GB debug APKs, gradle caches) get shipped
+# into every image's build context and can exhaust the Docker VM's disk.
 !Neurobench/frontend/
 !neurocnl/frontend/
 !Neurosim/frontend/
 !Neurochip/frontend/
 !Neurohub/frontend/
+Neurobench/frontend/build/
+Neurobench/frontend/.dart_tool/
+neurocnl/frontend/build/
+neurocnl/frontend/.dart_tool/
+Neurosim/frontend/build/
+Neurosim/frontend/.dart_tool/
+Neurochip/frontend/build/
+Neurochip/frontend/.dart_tool/
+Neurohub/frontend/build/
+Neurohub/frontend/.dart_tool/
 
 # Test and demo data
 data/

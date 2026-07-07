@@ -5,6 +5,9 @@
   <cleanup>
     Always clean up after yourself. Delete any temporary scripts, patch files, or intermediate files created during execution to keep the repository clean.
   </cleanup>
+  <task_management>
+    Always check the `current tasks` directory at the repository root for ongoing or dated task histories. When creating or saving new tasks, always save them inside `current tasks/` under a subfolder named with the current date.
+  </task_management>
   <end_of_task_reporting>
     Every answer must include a short description of what the problem is (exactly 2 sentences), how it was solved (exactly 2 sentences), and where to notice the difference and restart info (exactly 2 sentences). All in plain English.
   </end_of_task_reporting>
