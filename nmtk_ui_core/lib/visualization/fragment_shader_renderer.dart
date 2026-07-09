@@ -102,20 +102,24 @@ class FragmentShaderNeuronRenderer implements NeuronRenderer {
     final spikes = isRaster ? _rasterHistory : frame.spikeData;
     final count = spikes.length ~/ 2;
     final bytes = Uint8List(count * 4);
-    final nScale = frame.totalNeuronCount > 0 ? frame.totalNeuronCount.toDouble() : 1.0;
+    final nScale = frame.totalNeuronCount > 0
+        ? frame.totalNeuronCount.toDouble()
+        : 1.0;
     final tScale = frame.simulationTimeMs > 0 ? frame.simulationTimeMs : 1000.0;
 
     for (int i = 0; i < count; i++) {
       final nNorm = (spikes[i * 2] / nScale).clamp(0.0, 1.0);
       final tNorm = isRaster
-          ? (1.0 - ((frame.simulationTimeMs - spikes[i * 2 + 1]) / _rasterWindowMs))
+          ? (1.0 -
+                    ((frame.simulationTimeMs - spikes[i * 2 + 1]) /
+                        _rasterWindowMs))
                 .clamp(0.0, 1.0)
           : (spikes[i * 2 + 1] / tScale).clamp(0.0, 1.0);
       final v = (tNorm * 255).round();
       bytes[i * 4 + 0] = (nNorm * 255).round(); // R: neuron → row/x
-      bytes[i * 4 + 1] = v;                     // G: time → col/y
-      bytes[i * 4 + 2] = v;                     // B: time norm → birth_time for fade
-      bytes[i * 4 + 3] = 255;                   // A
+      bytes[i * 4 + 1] = v; // G: time → col/y
+      bytes[i * 4 + 2] = v; // B: time norm → birth_time for fade
+      bytes[i * 4 + 3] = 255; // A
     }
     return bytes;
   }
@@ -242,7 +246,9 @@ class FragmentShaderNeuronRenderer implements NeuronRenderer {
             valueListenable: _initError,
             builder: (context, initError, _) {
               if (initError == null) {
-                return const Center(child: Text('Loading visualization shaders...'));
+                return const Center(
+                  child: Text('Loading visualization shaders...'),
+                );
               }
               return Center(
                 child: Padding(
@@ -343,19 +349,19 @@ class _ShaderPainter extends CustomPainter {
       shader.setFloat(0, size.width);
       shader.setFloat(1, size.height);
       shader.setFloat(2, frame.simulationTimeMs); // uCurrentTimeMs
-      shader.setFloat(3, 20.0);                   // uFadeDuration
-      shader.setImageSampler(0, spikeTexture);    // uSpikes
-      shader.setFloat(4, spikeCount);             // uSpikeCount
+      shader.setFloat(3, 20.0); // uFadeDuration
+      shader.setImageSampler(0, spikeTexture); // uSpikes
+      shader.setFloat(4, spikeCount); // uSpikeCount
     } else {
       // raster
       shader = rasterProgram.fragmentShader();
       shader.setFloat(0, size.width);
       shader.setFloat(1, size.height);
       shader.setFloat(2, frame.totalNeuronCount.toDouble()); // uNeuronCount
-      shader.setFloat(3, _rasterWindowMs);                   // uDuration
-      shader.setFloat(4, _rasterWindowMs);                   // uTime
-      shader.setImageSampler(0, spikeTexture);               // uSpikes
-      shader.setFloat(5, spikeCount);                        // uSpikeCount
+      shader.setFloat(3, _rasterWindowMs); // uDuration
+      shader.setFloat(4, _rasterWindowMs); // uTime
+      shader.setImageSampler(0, spikeTexture); // uSpikes
+      shader.setFloat(5, spikeCount); // uSpikeCount
     }
 
     paint.shader = shader;

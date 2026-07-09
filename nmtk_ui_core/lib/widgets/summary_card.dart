@@ -19,7 +19,10 @@ class NmtkSummaryCard extends StatelessWidget {
     ZetaColors? colors;
     try {
       colors = Zeta.of(context).colors;
-    } catch (_) {}
+    } catch (_) {
+      // ZetaProvider is not in the tree; fall back gracefully to
+      // NmtkShellTokens and Theme.
+    }
 
     final tokens = NmtkShellTokens.of(context);
 

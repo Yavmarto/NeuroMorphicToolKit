@@ -25,6 +25,9 @@ class AkidaSupportStateCard extends StatelessWidget {
   /// Optional network summary fields shown below warnings/rejections.
   final Map<String, dynamic>? networkSummary;
 
+  /// Message shown when [supportState] is [AkidaSupportState.sdkNotDeployable].
+  final String scaffoldOnlyNotice;
+
   const AkidaSupportStateCard({
     super.key,
     required this.supportState,
@@ -33,115 +36,122 @@ class AkidaSupportStateCard extends StatelessWidget {
     this.akidaVersion,
     this.topologyVerdict,
     this.networkSummary,
+    this.scaffoldOnlyNotice = 'Akida SDK not verified — scaffold package only.',
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = supportState.color;
+    final tokens = NmtkShellTokens.of(context);
+    final color = supportState.colorFor(tokens);
 
     return Container(
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(
-          NmtkShellTokens.of(context).radiusSm,
-        ),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(supportState.icon, color: color, size: 28),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    supportState.label,
-                    style: Zeta.of(
-                      context,
-                    ).textStyles.titleMedium.copyWith(color: color),
-                  ),
-                ),
-                if (akidaVersion != null)
-                  Chip(
-                    label: Text(
-                      akidaVersion!,
-                      style: Zeta.of(context).textStyles.labelSmall,
-                    ),
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
-                  ),
-              ],
-            ),
-            if (supportState == AkidaSupportState.sdkNotDeployable) ...[
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.only(left: 36),
-                child: Text(
-                  'Akida SDK not verified — scaffold package only.',
-                  style: Zeta.of(context).textStyles.bodyMedium.apply(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
-            ],
-            if (warnings.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              ...warnings.map(
-                (w) => Padding(
-                  padding: const EdgeInsets.only(left: 36, bottom: 4),
-                  child: Text(
-                    '⚠ $w',
-                    style: Zeta.of(context).textStyles.bodyMedium.apply(
-                      color: Zeta.of(context).colors.mainWarning,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            if (rejections.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              ...rejections.map(
-                (r) => Padding(
-                  padding: const EdgeInsets.only(left: 36, bottom: 4),
-                  child: Text(
-                    '✗ $r',
-                    style: Zeta.of(context).textStyles.bodyMedium.apply(
-                      color: Zeta.of(context).colors.mainNegative,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            if (networkSummary != null && networkSummary!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.only(left: 36),
-                child: Text(
-                  _formatNetworkSummary(networkSummary!),
-                  style: Zeta.of(context).textStyles.bodySmall,
-                ),
-              ),
-            ],
-            if (topologyVerdict != null && topologyVerdict!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Padding(
-                padding: const EdgeInsets.only(left: 36),
-                child: Text(
-                  'Topology: $topologyVerdict',
-                  style: Zeta.of(context).textStyles.bodySmall.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ),
-            ],
+            _buildHeaderRow(context, color),
+            if (supportState == AkidaSupportState.sdkNotDeployable)
+              _buildScaffoldOnlyNotice(context),
+            ..._buildWarningsAndRejections(context, tokens),
+            if (networkSummary != null && networkSummary!.isNotEmpty)
+              _buildNetworkSummary(context),
+            if (topologyVerdict != null && topologyVerdict!.isNotEmpty)
+              _buildTopologyVerdict(context),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderRow(BuildContext context, Color color) {
+    return Row(
+      children: [
+        Icon(supportState.icon, color: color, size: 28),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            supportState.label,
+            style: Zeta.of(
+              context,
+            ).textStyles.titleMedium.copyWith(color: color),
+          ),
+        ),
+        if (akidaVersion != null) ZetaAssistChip(label: akidaVersion!),
+      ],
+    );
+  }
+
+  Widget _buildScaffoldOnlyNotice(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, left: 36),
+      child: Text(
+        scaffoldOnlyNotice,
+        style: Zeta.of(context).textStyles.bodyMedium.apply(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          fontStyle: FontStyle.italic,
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildWarningsAndRejections(
+    BuildContext context,
+    NmtkShellTokens tokens,
+  ) {
+    return [
+      if (warnings.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        ...warnings.map(
+          (w) => Padding(
+            padding: const EdgeInsets.only(left: 36, bottom: 4),
+            child: Text(
+              '⚠ $w',
+              style: Zeta.of(
+                context,
+              ).textStyles.bodyMedium.apply(color: tokens.warningColor),
+            ),
+          ),
+        ),
+      ],
+      if (rejections.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        ...rejections.map(
+          (r) => Padding(
+            padding: const EdgeInsets.only(left: 36, bottom: 4),
+            child: Text(
+              '✗ $r',
+              style: Zeta.of(
+                context,
+              ).textStyles.bodyMedium.apply(color: tokens.errorColor),
+            ),
+          ),
+        ),
+      ],
+    ];
+  }
+
+  Widget _buildNetworkSummary(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, left: 36),
+      child: Text(
+        _formatNetworkSummary(networkSummary!),
+        style: Zeta.of(context).textStyles.bodySmall,
+      ),
+    );
+  }
+
+  Widget _buildTopologyVerdict(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, left: 36),
+      child: Text(
+        'Topology: $topologyVerdict',
+        style: Zeta.of(context).textStyles.bodySmall.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
     );

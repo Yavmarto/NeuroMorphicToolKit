@@ -175,6 +175,10 @@ class _EnergyBar extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
+        // ZETA-MIGRATION-EXEMPT: ZetaProgressBar has no per-instance color
+        // override (confirmed against zeta_flutter's ZetaProgress source) —
+        // it would silently drop this bar's primary-to-error color-lerp,
+        // which is the actual warning signal here, not decoration.
         LinearProgressIndicator(
           value: fraction,
           minHeight: 10,

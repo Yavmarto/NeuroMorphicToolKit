@@ -374,7 +374,7 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.byType(NavigationBar), findsNothing);
-        expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+        expect(find.byIcon(ZetaIcons.hamburger_menu_round), findsOneWidget);
       },
     );
 
@@ -406,7 +406,7 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.byType(NavigationBar), findsNothing);
-        expect(find.byIcon(Icons.menu_rounded), findsOneWidget);
+        expect(find.byIcon(ZetaIcons.hamburger_menu_round), findsOneWidget);
       },
     );
   });

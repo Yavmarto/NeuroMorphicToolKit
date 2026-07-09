@@ -238,7 +238,7 @@ class _ReadyContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Icon(
       ZetaIcons.check_circle_outline,
-      color: Zeta.of(context).colors.mainPositive,
+      color: NmtkShellTokens.of(context).healthyColor,
       size: 36,
     );
   }
@@ -260,7 +260,7 @@ class _DegradedContent extends StatelessWidget {
           children: [
             Icon(
               ZetaIcons.warning_outline,
-              color: Zeta.of(context).colors.mainWarning,
+              color: NmtkShellTokens.of(context).warningColor,
               size: 36,
             ),
             const SizedBox(height: 10),
@@ -303,22 +303,16 @@ class _FailedContent extends StatelessWidget {
           width: width,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Zeta.of(context).colors.mainNegative.withValues(alpha: 0.08),
+            color: tokens.errorColor.withValues(alpha: 0.08),
             border: Border.all(
-              color: Zeta.of(
-                context,
-              ).colors.mainNegative.withValues(alpha: 0.35),
+              color: tokens.errorColor.withValues(alpha: 0.35),
             ),
             borderRadius: BorderRadius.circular(tokens.radiusMd),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                ZetaIcons.error_outline,
-                color: Zeta.of(context).colors.mainNegative,
-                size: 36,
-              ),
+              Icon(ZetaIcons.error_outline, color: tokens.errorColor, size: 36),
               const SizedBox(height: 12),
               SelectableText(
                 message,

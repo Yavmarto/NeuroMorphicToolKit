@@ -22,7 +22,11 @@ from tornado import web  # type: ignore[import-not-found]
 from .jobs import JobRegistry
 from .manager import EnvironmentError_, EnvironmentManager
 
-_CELL_EXECUTION_TIMEOUT_SECONDS = 300
+# Must stay >= kernel_runner.py's _WORKER_EXECUTION_TIMEOUT_SECONDS (the outer
+# per-job budget) — a per-cell ceiling stricter than the outer job budget kills
+# any single slow cell (e.g. a full-dataset eval pass) well before that budget
+# is used up.
+_CELL_EXECUTION_TIMEOUT_SECONDS = 30 * 60
 _CELL_POLL_INTERVAL_SECONDS = 1
 
 

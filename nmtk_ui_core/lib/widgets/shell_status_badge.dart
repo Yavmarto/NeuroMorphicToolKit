@@ -9,6 +9,11 @@ class NmtkShellStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ZETA-MIGRATION-EXEMPT: ZetaTooltip takes a `child: Widget` (an
+    // always-visible styled bubble) with no message/hover-trigger API —
+    // it is not a drop-in for this hover-triggered help text. Replacing it
+    // would require building custom show/hide overlay logic, a behavior
+    // change beyond a widget swap.
     return Tooltip(
       message: status.detailText ?? status.label,
       child: NmtkStatusBadge(

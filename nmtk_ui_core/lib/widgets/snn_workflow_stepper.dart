@@ -11,6 +11,20 @@ enum SnnWorkflowPhase {
   deploy,
 }
 
+/// Base step-name labels, shared between [SnnWorkflowStepper] (which
+/// prefixes each with its 1-based step number) and `SnnMobileWorkflowStepper`
+/// (which uses these bare). Single source of truth so the two steppers
+/// cannot drift out of sync with each other.
+const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
+  SnnWorkflowPhase.selectData: 'Setup',
+  SnnWorkflowPhase.defineModel: 'Model',
+  SnnWorkflowPhase.defineTrain: 'Training',
+  SnnWorkflowPhase.defineEval: 'Eval',
+  SnnWorkflowPhase.trainingSandbox: 'Notebook',
+  SnnWorkflowPhase.run: 'Run',
+  SnnWorkflowPhase.deploy: 'Deploy',
+};
+
 /// A specialized pipeline stepper for the NeuroMorphicToolKit SNN workflow.
 ///
 /// Models the 7-step workflow for training and deploying an SNN:
@@ -76,6 +90,10 @@ class SnnWorkflowStepper extends StatelessWidget {
   /// [keepId] is the step that should remain as sole active.
   final void Function(String keepId)? onCollapseStep;
 
+  /// Override for the step-name labels, keyed by phase. Defaults to
+  /// [kSnnStepLabels]; each is prefixed with its 1-based step number.
+  final Map<SnnWorkflowPhase, String> stepLabels;
+
   const SnnWorkflowStepper({
     super.key,
     required this.currentPhase,
@@ -90,6 +108,7 @@ class SnnWorkflowStepper extends StatelessWidget {
     this.splitStep,
     this.onSplitBetween,
     this.onCollapseStep,
+    this.stepLabels = kSnnStepLabels,
   });
 
   @override
@@ -114,39 +133,33 @@ class SnnWorkflowStepper extends StatelessWidget {
       steps: [
         _buildStepData(
           SnnWorkflowPhase.selectData,
-          '1. Setup',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (dataset / tabular data)
           Icons.dataset_outlined,
         ),
         _buildStepData(
           SnnWorkflowPhase.defineModel,
-          '2. Model',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (architecture diagram)
           Icons.architecture_outlined,
         ),
         _buildStepData(
           SnnWorkflowPhase.defineTrain,
-          '3. Training',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (ML model training)
           Icons.model_training_outlined,
         ),
         _buildStepData(
           SnnWorkflowPhase.defineEval,
-          '4. Eval',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (fact check / evaluation)
           Icons.fact_check_outlined,
         ),
         _buildSandboxStepData(),
         _buildStepData(
           SnnWorkflowPhase.run,
-          '6. Run',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (play circle / run job)
           Icons.play_circle_outline,
           pulseTick: epochPulseTick,
         ),
         _buildStepData(
           SnnWorkflowPhase.deploy,
-          '7. Deploy',
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (rocket launch / deploy)
           Icons.rocket_launch_outlined,
         ),
@@ -154,8 +167,10 @@ class SnnWorkflowStepper extends StatelessWidget {
     );
   }
 
+  String _numberedLabel(SnnWorkflowPhase phase) =>
+      '${phase.index + 1}. ${stepLabels[phase] ?? phase.name}';
+
   NmtkPipelineStepData _buildSandboxStepData() {
-    const label = '5. Notebook';
     final status = _getStatusForPhase(SnnWorkflowPhase.trainingSandbox);
     VoidCallback? onTap;
     if (onPhaseSelected != null) {
@@ -163,7 +178,7 @@ class SnnWorkflowStepper extends StatelessWidget {
     }
     return NmtkPipelineStepData(
       id: SnnWorkflowPhase.trainingSandbox.name,
-      label: label,
+      label: _numberedLabel(SnnWorkflowPhase.trainingSandbox),
       status: status,
       // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (flask / experiment sandbox)
       icon: Icons.science_outlined,
@@ -173,14 +188,13 @@ class SnnWorkflowStepper extends StatelessWidget {
 
   NmtkPipelineStepData _buildStepData(
     SnnWorkflowPhase phase,
-    String label,
     IconData icon, {
     int pulseTick = 0,
   }) {
     final status = _getStatusForPhase(phase);
     return NmtkPipelineStepData(
       id: phase.name,
-      label: label,
+      label: _numberedLabel(phase),
       status: status,
       icon: icon,
       pulseTick: pulseTick,

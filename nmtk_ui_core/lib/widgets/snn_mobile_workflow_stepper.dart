@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/motion_tokens.dart';
 import 'package:nmtk_ui_core/widgets/snn_workflow_stepper.dart'
-    show SnnWorkflowPhase;
+    show SnnWorkflowPhase, kSnnStepLabels;
 
 /// Mobile-optimized workflow stepper for the SNN 7-step pipeline.
 ///
@@ -28,15 +28,10 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
   /// The set of phases that are locked (not yet accessible to the user).
   final Set<SnnWorkflowPhase> lockedPhases;
 
-  static const _stepLabels = {
-    SnnWorkflowPhase.selectData: 'Setup',
-    SnnWorkflowPhase.defineModel: 'Model',
-    SnnWorkflowPhase.defineTrain: 'Training',
-    SnnWorkflowPhase.defineEval: 'Eval',
-    SnnWorkflowPhase.trainingSandbox: 'Notebook',
-    SnnWorkflowPhase.run: 'Run',
-    SnnWorkflowPhase.deploy: 'Deploy',
-  };
+  /// Override for the step-name labels, keyed by phase. Defaults to the
+  /// same [kSnnStepLabels] map used by the desktop `SnnWorkflowStepper`, so
+  /// both steppers cannot drift out of sync with each other.
+  final Map<SnnWorkflowPhase, String> stepLabels;
 
   const SnnMobileWorkflowStepper({
     super.key,
@@ -44,6 +39,7 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
     this.runningPhase,
     this.onPhaseSelected,
     this.lockedPhases = const <SnnWorkflowPhase>{},
+    this.stepLabels = kSnnStepLabels,
   });
 
   @override
@@ -62,7 +58,7 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
             transitionBuilder: (child, animation) =>
                 FadeTransition(opacity: animation, child: child),
             child: Text(
-              _stepLabels[currentPhase] ?? currentPhase.name,
+              stepLabels[currentPhase] ?? currentPhase.name,
               key: ValueKey(currentPhase),
               // P1-6 fix: Zeta text styles instead of Theme.of(context).textTheme
               style: Zeta.of(context).textStyles.titleSmall.copyWith(

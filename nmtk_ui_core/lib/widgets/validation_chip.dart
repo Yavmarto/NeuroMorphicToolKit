@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 
+part 'validation_chip_error_dropdown.dart';
+
 const Duration _kExpandCollapseDuration = Duration(milliseconds: 220);
 const Duration _kFadeInDelay = Duration(milliseconds: 40);
 const Duration _kValidFadeOutDuration = Duration(milliseconds: 400);
@@ -182,7 +184,10 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
     ZetaColors? colors;
     try {
       colors = Zeta.of(context).colors;
-    } catch (_) {}
+    } catch (_) {
+      // ZetaProvider is not in the tree; fall back gracefully to
+      // NmtkShellTokens.
+    }
 
     final tokens = NmtkShellTokens.of(context);
 
@@ -204,6 +209,45 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
               ? tokens.errorColor.withValues(alpha: 0.5)
               : tokens.healthyColor.withValues(alpha: 0.5));
 
+    return Focus(
+      onKeyEvent: _handleKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildPill(
+            context,
+            hasErrors: hasErrors,
+            fg: fg,
+            bg: bg,
+            border: border,
+            tokens: tokens,
+          ),
+          AnimatedSize(
+            duration: _kExpandCollapseDuration,
+            curve: Curves.easeInOut,
+            alignment: Alignment.topLeft,
+            child: _expanded
+                ? AnimatedOpacity(
+                    opacity: _listVisible ? 1.0 : 0.0,
+                    duration: _kExpandCollapseDuration,
+                    child: _ErrorDropdown(errors: widget.errors),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPill(
+    BuildContext context, {
+    required bool hasErrors,
+    required Color fg,
+    required Color bg,
+    required Color border,
+    required NmtkShellTokens tokens,
+  }) {
     final errorLabel = widget.errorCount == 1
         ? '✗ 1 error'
         : '✗ ${widget.errorCount} errors';
@@ -212,7 +256,7 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
         ? ZetaIcons.cancel_outline
         : ZetaIcons.check_circle_outline;
 
-    final pill = GestureDetector(
+    return GestureDetector(
       onTap: hasErrors ? _toggleExpanded : null,
       child: AnimatedOpacity(
         opacity: hasErrors ? 1.0 : (_chipVisible ? 1.0 : 0.0),
@@ -247,108 +291,6 @@ class _NmtkValidationChipState extends State<NmtkValidationChip> {
               ],
             ],
           ),
-        ),
-      ),
-    );
-
-    return Focus(
-      onKeyEvent: _handleKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          pill,
-          AnimatedSize(
-            duration: _kExpandCollapseDuration,
-            curve: Curves.easeInOut,
-            alignment: Alignment.topLeft,
-            child: _expanded
-                ? AnimatedOpacity(
-                    opacity: _listVisible ? 1.0 : 0.0,
-                    duration: _kExpandCollapseDuration,
-                    child: _ErrorDropdown(errors: widget.errors),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Error dropdown card ───────────────────────────────────────────────────
-
-class _ErrorDropdown extends StatelessWidget {
-  const _ErrorDropdown({required this.errors});
-
-  final List<NmtkValidationError> errors;
-
-  @override
-  Widget build(BuildContext context) {
-    ZetaColors? colors;
-    try {
-      colors = Zeta.of(context).colors;
-    } catch (_) {}
-
-    final tokens = NmtkShellTokens.of(context);
-
-    final bg = colors != null
-        ? colors.surfaceNegativeSubtle
-        : tokens.errorColor.withValues(alpha: 0.12);
-
-    final border = colors != null
-        ? colors.borderNegative
-        : tokens.errorColor.withValues(alpha: 0.5);
-
-    final fg = colors != null ? colors.mainNegative : tokens.errorColor;
-
-    return SelectionArea(
-      child: Container(
-        margin: const EdgeInsets.only(top: 6),
-        constraints: const BoxConstraints(maxHeight: 220),
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: border),
-          borderRadius: BorderRadius.circular(tokens.radiusSm),
-        ),
-        child: ListView.separated(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          itemCount: errors.length,
-          separatorBuilder: (_, _) => Divider(height: 1, color: border),
-          itemBuilder: (context, index) {
-            final error = errors[index];
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (error.line != null) ...[
-                    Text(
-                      'L${error.line}',
-                      style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                        fontFamily: 'monospace',
-                        fontSize: 11,
-                        color: fg,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: Text(
-                      error.message,
-                      style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        color: fg,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
         ),
       ),
     );

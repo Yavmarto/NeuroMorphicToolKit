@@ -84,7 +84,13 @@ class WgpuNativeNeuronRenderer implements NeuronRenderer {
         final nativeBuf = ffi.calloc<Float>(grid.length);
         try {
           nativeBuf.asTypedList(grid.length).setAll(0, grid);
-          _bindings.pushDensity(_handle, nativeBuf, grid.length, frame.gridW, frame.gridH);
+          _bindings.pushDensity(
+            _handle,
+            nativeBuf,
+            grid.length,
+            frame.gridW,
+            frame.gridH,
+          );
         } finally {
           ffi.calloc.free(nativeBuf);
         }
@@ -131,7 +137,9 @@ class WgpuNativeNeuronRenderer implements NeuronRenderer {
           valueListenable: _textureIdNotifier,
           builder: (context, textureId, _) {
             if (textureId == null) {
-              return const Center(child: Text('Initializing native renderer...'));
+              return const Center(
+                child: Text('Initializing native renderer...'),
+              );
             }
             return Texture(textureId: textureId);
           },

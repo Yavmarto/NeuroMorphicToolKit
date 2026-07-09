@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/widgets.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
 
 /// Colored pill badge with optional icon and accessible label.
@@ -24,6 +26,7 @@ class NmtkStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = resolveNmtkTonePalette(context, tone);
+    final tokens = NmtkShellTokens.of(context);
     return Semantics(
       label: semanticsLabel ?? label,
       child: Container(
@@ -31,7 +34,7 @@ class NmtkStatusBadge extends StatelessWidget {
         decoration: BoxDecoration(
           color: palette.background,
           border: Border.all(color: palette.border, width: 0.5),
-          borderRadius: const BorderRadius.all(Radius.circular(999)),
+          borderRadius: BorderRadius.all(Radius.circular(tokens.radiusChip)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -42,8 +45,7 @@ class NmtkStatusBadge extends StatelessWidget {
             ],
             Text(
               label,
-              style: TextStyle(
-                fontSize: 11,
+              style: Zeta.of(context).textStyles.labelSmall.copyWith(
                 fontWeight: FontWeight.w700,
                 color: palette.foreground,
               ),

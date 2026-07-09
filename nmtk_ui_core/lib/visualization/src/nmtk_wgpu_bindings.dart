@@ -4,76 +4,94 @@ import 'dart:io';
 /// Hand-written `dart:ffi` bindings for the nmtk_wgpu Rust crate's 6-function
 /// FFI surface (see `neurocnl/frontend/rust/nmtk_wgpu/src/lib.rs`). Not worth
 /// generating via `ffigen` for a surface this small.
-typedef _NmtkRendererCreateNative = Pointer<Void> Function(Uint32 width, Uint32 height);
+typedef _NmtkRendererCreateNative =
+    Pointer<Void> Function(Uint32 width, Uint32 height);
 typedef NmtkRendererCreateDart = Pointer<Void> Function(int width, int height);
 
-typedef _NmtkRendererResizeNative = Void Function(Pointer<Void> handle, Uint32 width, Uint32 height);
-typedef NmtkRendererResizeDart = void Function(Pointer<Void> handle, int width, int height);
+typedef _NmtkRendererResizeNative =
+    Void Function(Pointer<Void> handle, Uint32 width, Uint32 height);
+typedef NmtkRendererResizeDart =
+    void Function(Pointer<Void> handle, int width, int height);
 
-typedef _NmtkRendererPushSpikesNative = Void Function(
-  Pointer<Void> handle,
-  Pointer<Float> ptr,
-  IntPtr len,
-  Uint32 totalNeuronCount,
-  Float simulationTimeMs,
-);
-typedef NmtkRendererPushSpikesDart = void Function(
-  Pointer<Void> handle,
-  Pointer<Float> ptr,
-  int len,
-  int totalNeuronCount,
-  double simulationTimeMs,
-);
+typedef _NmtkRendererPushSpikesNative =
+    Void Function(
+      Pointer<Void> handle,
+      Pointer<Float> ptr,
+      IntPtr len,
+      Uint32 totalNeuronCount,
+      Float simulationTimeMs,
+    );
+typedef NmtkRendererPushSpikesDart =
+    void Function(
+      Pointer<Void> handle,
+      Pointer<Float> ptr,
+      int len,
+      int totalNeuronCount,
+      double simulationTimeMs,
+    );
 
-typedef _NmtkRendererPushDensityNative = Void Function(
-  Pointer<Void> handle,
-  Pointer<Float> ptr,
-  IntPtr len,
-  Uint32 gridW,
-  Uint32 gridH,
-);
-typedef NmtkRendererPushDensityDart = void Function(
-  Pointer<Void> handle,
-  Pointer<Float> ptr,
-  int len,
-  int gridW,
-  int gridH,
-);
+typedef _NmtkRendererPushDensityNative =
+    Void Function(
+      Pointer<Void> handle,
+      Pointer<Float> ptr,
+      IntPtr len,
+      Uint32 gridW,
+      Uint32 gridH,
+    );
+typedef NmtkRendererPushDensityDart =
+    void Function(
+      Pointer<Void> handle,
+      Pointer<Float> ptr,
+      int len,
+      int gridW,
+      int gridH,
+    );
 
 typedef _NmtkRendererDrawFrameNative = Void Function(Pointer<Void> handle);
 typedef NmtkRendererDrawFrameDart = void Function(Pointer<Void> handle);
 
-typedef _NmtkRendererGetPixelBufferNative = Pointer<Void> Function(Pointer<Void> handle);
-typedef NmtkRendererGetPixelBufferDart = Pointer<Void> Function(Pointer<Void> handle);
+typedef _NmtkRendererGetPixelBufferNative =
+    Pointer<Void> Function(Pointer<Void> handle);
+typedef NmtkRendererGetPixelBufferDart =
+    Pointer<Void> Function(Pointer<Void> handle);
 
 typedef _NmtkRendererDestroyNative = Void Function(Pointer<Void> handle);
 typedef NmtkRendererDestroyDart = void Function(Pointer<Void> handle);
 
 class NmtkWgpuBindings {
   NmtkWgpuBindings._(DynamicLibrary lib)
-      : create = lib.lookupFunction<_NmtkRendererCreateNative, NmtkRendererCreateDart>(
-          'nmtk_renderer_create',
-        ),
-        resize = lib.lookupFunction<_NmtkRendererResizeNative, NmtkRendererResizeDart>(
-          'nmtk_renderer_resize',
-        ),
-        pushSpikes = lib.lookupFunction<_NmtkRendererPushSpikesNative, NmtkRendererPushSpikesDart>(
-          'nmtk_renderer_push_spikes',
-        ),
-        pushDensity =
-            lib.lookupFunction<_NmtkRendererPushDensityNative, NmtkRendererPushDensityDart>(
-          'nmtk_renderer_push_density',
-        ),
-        drawFrame = lib.lookupFunction<_NmtkRendererDrawFrameNative, NmtkRendererDrawFrameDart>(
-          'nmtk_renderer_draw_frame',
-        ),
-        getPixelBuffer =
-            lib.lookupFunction<_NmtkRendererGetPixelBufferNative, NmtkRendererGetPixelBufferDart>(
-          'nmtk_renderer_get_pixel_buffer',
-        ),
-        destroy = lib.lookupFunction<_NmtkRendererDestroyNative, NmtkRendererDestroyDart>(
-          'nmtk_renderer_destroy',
-        );
+    : create = lib
+          .lookupFunction<_NmtkRendererCreateNative, NmtkRendererCreateDart>(
+            'nmtk_renderer_create',
+          ),
+      resize = lib
+          .lookupFunction<_NmtkRendererResizeNative, NmtkRendererResizeDart>(
+            'nmtk_renderer_resize',
+          ),
+      pushSpikes = lib
+          .lookupFunction<
+            _NmtkRendererPushSpikesNative,
+            NmtkRendererPushSpikesDart
+          >('nmtk_renderer_push_spikes'),
+      pushDensity = lib
+          .lookupFunction<
+            _NmtkRendererPushDensityNative,
+            NmtkRendererPushDensityDart
+          >('nmtk_renderer_push_density'),
+      drawFrame = lib
+          .lookupFunction<
+            _NmtkRendererDrawFrameNative,
+            NmtkRendererDrawFrameDart
+          >('nmtk_renderer_draw_frame'),
+      getPixelBuffer = lib
+          .lookupFunction<
+            _NmtkRendererGetPixelBufferNative,
+            NmtkRendererGetPixelBufferDart
+          >('nmtk_renderer_get_pixel_buffer'),
+      destroy = lib
+          .lookupFunction<_NmtkRendererDestroyNative, NmtkRendererDestroyDart>(
+            'nmtk_renderer_destroy',
+          );
 
   final NmtkRendererCreateDart create;
   final NmtkRendererResizeDart resize;

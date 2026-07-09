@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
-import 'package:nmtk_ui_core/models/shell_models.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
-import 'package:nmtk_ui_core/widgets/top_app_bar.dart';
 
 /// ----------------------------------------------------------------------------
 /// NMTK BRAND TOKENS & EXPRESSIVE SHAPES
@@ -16,7 +13,10 @@ class NmtkDesignTokens {
 
   static final BorderRadius buttonShape = BorderRadius.circular(16.0);
   static final BorderRadius cardShape = BorderRadius.circular(24.0);
-  static final BorderRadius dialogShape = BorderRadius.circular(20.0);
+  // Suite spec mandates 28px for dialogs (Material 3 default) — was
+  // incorrectly 20.0, which meant every dialog in every module silently
+  // diverged from NmtkDesignTokens.dialogShape's documented contract.
+  static final BorderRadius dialogShape = BorderRadius.circular(28.0);
   static final BorderRadius inputShape = BorderRadius.circular(12.0);
 }
 
@@ -356,97 +356,4 @@ class AppTheme {
       visualDensity: VisualDensity.comfortable,
     );
   }
-}
-
-/// ----------------------------------------------------------------------------
-/// ADAPTIVE LAYOUT
-/// ----------------------------------------------------------------------------
-
-class ResponsiveScaffold extends StatelessWidget {
-  final Widget body;
-  final int currentIndex;
-  final ValueChanged<int> onNavigationTargetSelected;
-  final List<NavigationDestinationData> destinations;
-  final Widget? floatingActionButton;
-  final List<NmtkTopAppBarAction> appBarActions;
-
-  const ResponsiveScaffold({
-    super.key,
-    required this.body,
-    required this.currentIndex,
-    required this.onNavigationTargetSelected,
-    required this.destinations,
-    this.floatingActionButton,
-    this.appBarActions = const <NmtkTopAppBarAction>[],
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenWidth = constraints.maxWidth;
-
-        if (screenWidth < 840) {
-          return Scaffold(
-            body: body,
-            floatingActionButton: floatingActionButton,
-            bottomNavigationBar: NavigationBar(
-              selectedIndex: currentIndex,
-              onDestinationSelected: onNavigationTargetSelected,
-              destinations: destinations.map((destination) {
-                return NavigationDestination(
-                  icon: Icon(destination.icon),
-                  selectedIcon: Icon(
-                    destination.selectedIcon ?? destination.icon,
-                  ),
-                  label: destination.label,
-                );
-              }).toList(),
-            ),
-          );
-        }
-
-        return Scaffold(
-          appBar: NmtkTopAppBar(
-            leading: Container(
-              key: const ValueKey('responsive-topnav-brand'),
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                ZetaIcons.memory,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-            title: const Text('NMTK Hub'),
-            destinations: destinations,
-            selectedIndex: currentIndex,
-            onDestinationSelected: onNavigationTargetSelected,
-            actions: appBarActions,
-          ),
-          floatingActionButton: floatingActionButton,
-          body: body,
-        );
-      },
-    );
-  }
-}
-
-/// ----------------------------------------------------------------------------
-/// NAVIGATION ITEM DATACLASS
-/// ----------------------------------------------------------------------------
-
-class NavigationDestinationData {
-  final IconData icon;
-  final IconData? selectedIcon;
-  final String label;
-
-  const NavigationDestinationData({
-    required this.icon,
-    this.selectedIcon,
-    required this.label,
-  });
 }

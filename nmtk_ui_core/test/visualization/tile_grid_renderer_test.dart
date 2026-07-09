@@ -37,33 +37,38 @@ void main() {
       addTearDown(renderer.dispose);
       renderer.attach(const Size(200, 200));
 
-      await tester.pumpWidget(MaterialApp(home: Builder(builder: renderer.buildSurface)));
+      await tester.pumpWidget(
+        MaterialApp(home: Builder(builder: renderer.buildSurface)),
+      );
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     },
   );
 
-  testWidgets(
-    'TileGridNeuronRenderer paints a grid after pushFrame',
-    (tester) async {
-      final renderer = TileGridNeuronRenderer();
-      addTearDown(renderer.dispose);
-      renderer.attach(const Size(200, 200));
+  testWidgets('TileGridNeuronRenderer paints a grid after pushFrame', (
+    tester,
+  ) async {
+    final renderer = TileGridNeuronRenderer();
+    addTearDown(renderer.dispose);
+    renderer.attach(const Size(200, 200));
 
-      await tester.pumpWidget(MaterialApp(home: Builder(builder: renderer.buildSurface)));
+    await tester.pumpWidget(
+      MaterialApp(home: Builder(builder: renderer.buildSurface)),
+    );
 
-      renderer.pushFrame(TileActivityFrame(
+    renderer.pushFrame(
+      TileActivityFrame(
         totalNeuronCount: 100,
         tileActivity: Float32List.fromList([0.5, 0.8, 0.1, 0.9]),
         tileConcentration: Float32List.fromList([0.2, 0.7, 0.0, 1.0]),
         tileRows: 2,
         tileCols: 2,
         simulationTimeMs: 33.0,
-      ));
-      await tester.pump();
+      ),
+    );
+    await tester.pump();
 
-      expect(find.byType(CustomPaint), findsWidgets);
-      expect(find.byType(CircularProgressIndicator), findsNothing);
-    },
-  );
+    expect(find.byType(CustomPaint), findsWidgets);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
 }

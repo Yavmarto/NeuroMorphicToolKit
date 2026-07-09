@@ -10,6 +10,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 /// Support state for PYNQ Z2 target.
 ///
@@ -64,22 +65,26 @@ enum PynqSupportState {
     }
   }
 
-  /// Theme color for UI indicators.
+  /// Theme color for UI indicators, resolved from the suite's
+  /// [NmtkShellTokens] semantic palette rather than a hardcoded hex value.
   ///
-  /// Blue/teal for exportable states (distinct from Teensy green)
-  /// to visually reinforce the export-only semantic boundary.
-  Color get color {
+  /// Exportable-only (no warnings) maps to [NmtkShellTokens.runningColor] —
+  /// the "works, not yet fully verified" in-progress tier; warnings map to
+  /// [NmtkShellTokens.warningColor]; not-exportable/not-deployable map to
+  /// [NmtkShellTokens.errorColor]; fully deployable maps to
+  /// [NmtkShellTokens.healthyColor].
+  Color colorFor(NmtkShellTokens tokens) {
     switch (this) {
       case PynqSupportState.exportable:
-        return const Color(0xFF0097A7); // Teal 700
+        return tokens.runningColor;
       case PynqSupportState.exportableWithWarnings:
-        return const Color(0xFFFFA000); // Amber 700
+        return tokens.warningColor;
       case PynqSupportState.notExportable:
-        return const Color(0xFFD32F2F); // Red 700
+        return tokens.errorColor;
       case PynqSupportState.deployable:
-        return const Color(0xFF388E3C); // Green 700
+        return tokens.healthyColor;
       case PynqSupportState.notDeployable:
-        return const Color(0xFFD32F2F); // Red 700
+        return tokens.errorColor;
     }
   }
 

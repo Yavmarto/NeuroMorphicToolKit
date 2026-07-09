@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 /// One frame of per-core-tile aggregated activity for the /viz-demo
 /// chip-die view. `tileActivity[i]`/`tileConcentration[i]` describe tile
@@ -26,7 +27,8 @@ class TileActivityFrame {
 
   /// Neurons mapped to tile [index] — an even split; the toolkit's chip
   /// targets don't expose per-core neuron counts finer than this average.
-  int neuronsForTile(int index) => tileCount == 0 ? 0 : (totalNeuronCount / tileCount).round();
+  int neuronsForTile(int index) =>
+      tileCount == 0 ? 0 : (totalNeuronCount / tileCount).round();
 }
 
 /// Renders [TileActivityFrame]s as a chip-die grid: one square tile per
@@ -36,6 +38,22 @@ class TileActivityFrame {
 /// pushed toward the tile boundary) neuron indices. Supports hover/click
 /// for a per-tile detail popup and pinch/drag zoom-pan.
 class TileGridNeuronRenderer {
+  /// Optional overrides for the per-tile popup's labels. Each defaults to a
+  /// generic "core/neuron" template; pass these to surface domain-specific
+  /// terminology (e.g. a different chip family's naming) without forking
+  /// this shared widget.
+  final String Function(int tileIndex, int row, int col)? coreLabelBuilder;
+  final String Function(int neuronCount)? neuronsLabelBuilder;
+  final String Function(double activity)? activityLabelBuilder;
+  final String Function(double concentration)? concentrationLabelBuilder;
+
+  TileGridNeuronRenderer({
+    this.coreLabelBuilder,
+    this.neuronsLabelBuilder,
+    this.activityLabelBuilder,
+    this.concentrationLabelBuilder,
+  });
+
   final ValueNotifier<TileActivityFrame?> _frameNotifier = ValueNotifier(null);
   final ValueNotifier<int?> _hoveredTile = ValueNotifier(null);
   Size _size = Size.zero;
@@ -81,7 +99,7 @@ class TileGridNeuronRenderer {
       zetaColors.primitives.blue.shade90,
       zetaColors.primitives.blue.shade100,
     ];
-    final hotspotColor = Colors.white; // concentration hotspot glow
+    final hotspotColor = zetaColors.mainInverse; // concentration hotspot glow
 
     return ValueListenableBuilder<TileActivityFrame?>(
       valueListenable: _frameNotifier,
@@ -96,12 +114,14 @@ class TileGridNeuronRenderer {
               minScale: 1.0,
               maxScale: 8.0,
               child: MouseRegion(
-                onHover: (event) =>
-                    _hoveredTile.value = _tileAtLocalPosition(event.localPosition, frame),
+                onHover: (event) => _hoveredTile.value = _tileAtLocalPosition(
+                  event.localPosition,
+                  frame,
+                ),
                 onExit: (_) => _hoveredTile.value = null,
                 child: GestureDetector(
-                  onTapUp: (details) =>
-                      _hoveredTile.value = _tileAtLocalPosition(details.localPosition, frame),
+                  onTapUp: (details) => _hoveredTile.value =
+                      _tileAtLocalPosition(details.localPosition, frame),
                   child: Stack(
                     children: [
                       CustomPaint(
@@ -112,7 +132,8 @@ class TileGridNeuronRenderer {
                           hotspotColor: hotspotColor,
                         ),
                       ),
-                      if (hovered != null) _buildTilePopup(context, frame, hovered),
+                      if (hovered != null)
+                        _buildTilePopup(context, frame, hovered),
                     ],
                   ),
                 ),
@@ -124,7 +145,11 @@ class TileGridNeuronRenderer {
     );
   }
 
-  Widget _buildTilePopup(BuildContext context, TileActivityFrame frame, int tileIndex) {
+  Widget _buildTilePopup(
+    BuildContext context,
+    TileActivityFrame frame,
+    int tileIndex,
+  ) {
     final row = tileIndex ~/ frame.tileCols;
     final col = tileIndex % frame.tileCols;
     final zeta = Zeta.of(context);
@@ -144,7 +169,9 @@ class TileGridNeuronRenderer {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: cardColor,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -153,22 +180,28 @@ class TileGridNeuronRenderer {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Core $tileIndex (row $row, col $col)',
+                coreLabelBuilder?.call(tileIndex, row, col) ??
+                    'Core $tileIndex (row $row, col $col)',
                 style: zeta.textStyles.bodyMedium.copyWith(
                   color: labelColor,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
-                'Neurons: ~${frame.neuronsForTile(tileIndex)}',
+                neuronsLabelBuilder?.call(frame.neuronsForTile(tileIndex)) ??
+                    'Neurons: ~${frame.neuronsForTile(tileIndex)}',
                 style: subtleLabelStyle,
               ),
               Text(
-                'Activity: ${frame.tileActivity[tileIndex].toStringAsFixed(2)}',
+                activityLabelBuilder?.call(frame.tileActivity[tileIndex]) ??
+                    'Activity: ${frame.tileActivity[tileIndex].toStringAsFixed(2)}',
                 style: subtleLabelStyle,
               ),
               Text(
-                'Concentration: ${frame.tileConcentration[tileIndex].toStringAsFixed(2)}',
+                concentrationLabelBuilder?.call(
+                      frame.tileConcentration[tileIndex],
+                    ) ??
+                    'Concentration: ${frame.tileConcentration[tileIndex].toStringAsFixed(2)}',
                 style: subtleLabelStyle,
               ),
             ],
@@ -223,6 +256,9 @@ class _TileGridPainter extends CustomPainter {
         final scaleIndex = (activity * (activityScale.length - 1)).round();
         final tileColor = activityScale[scaleIndex];
 
+        // Not an NmtkShellTokens value: this is a proportional micro-radius
+        // on a raster tile a few px wide (chip-die visualization), not UI
+        // chrome — radiusSm (12) would round the tile into a near-circle.
         final tilePaint = Paint()..color = tileColor;
         canvas.drawRRect(
           RRect.fromRectAndRadius(rect, const Radius.circular(3)),
@@ -233,7 +269,9 @@ class _TileGridPainter extends CustomPainter {
           // Soft square hotspot: shrinks toward the tile's center as
           // concentration -> 0 (core-heavy), grows toward the tile's
           // edges as concentration -> 1 (edge-heavy).
-          final inset = rect.deflate(rect.shortestSide * (0.4 - concentration * 0.3));
+          final inset = rect.deflate(
+            rect.shortestSide * (0.4 - concentration * 0.3),
+          );
           final hotspotPaint = Paint()
             ..color = hotspotColor.withValues(alpha: 0.15 + activity * 0.5)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
@@ -247,7 +285,8 @@ class _TileGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _TileGridPainter oldDelegate) => !identical(oldDelegate.frame, frame);
+  bool shouldRepaint(covariant _TileGridPainter oldDelegate) =>
+      !identical(oldDelegate.frame, frame);
 }
 
 /// One cascade node's tile-activity frame plus its display label, for the

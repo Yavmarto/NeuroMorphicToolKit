@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:nmtk_ui_core/widgets/status_badge.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
 
 /// A verdict-toned banner for displaying backend support status.
@@ -93,15 +94,13 @@ class NmtkBackendSupportBanner extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Chip(
-                        label: Text(verdict.toUpperCase()),
-                        labelStyle: theme.textTheme.labelSmall!.copyWith(
-                          color: fg,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        backgroundColor: palette.background,
-                        side: BorderSide(color: palette.border),
-                        visualDensity: VisualDensity.compact,
+                      // NmtkStatusBadge (not a raw Chip) so the verdict pill
+                      // keeps the same tone-driven palette as the banner
+                      // itself — a generic ZetaAssistChip has no per-instance
+                      // tone/color param and would flatten this to one color.
+                      NmtkStatusBadge(
+                        label: verdict.toUpperCase(),
+                        tone: _tone(),
                       ),
                       Text(
                         backend,
@@ -111,13 +110,18 @@ class NmtkBackendSupportBanner extends StatelessWidget {
                   ),
                 ),
                 if (onDismiss != null)
-                  IconButton(
-                    icon: Icon(ZetaIcons.close, size: 16, color: fg),
-                    tooltip: 'Dismiss',
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: onDismiss,
+                  // ZetaIconButton has no hover-tooltip param, so the
+                  // Material Tooltip wrapper is kept purely for that
+                  // affordance while the button chrome itself is Zeta.
+                  Tooltip(
+                    message: 'Dismiss',
+                    child: ZetaIconButton(
+                      icon: ZetaIcons.close,
+                      size: ZetaWidgetSize.small,
+                      type: ZetaButtonType.text,
+                      semanticLabel: 'Dismiss',
+                      onPressed: onDismiss,
+                    ),
                   ),
               ],
             ),

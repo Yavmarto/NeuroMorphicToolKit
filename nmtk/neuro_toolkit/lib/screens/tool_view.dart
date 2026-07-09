@@ -814,7 +814,20 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             setState(() => _activeModuleId = mobileNavItems[i].id);
           }
         },
-        onSettingsPressed: null,
+        appBar: NmtkTopAppBar(
+          mode: NmtkShellMode.command,
+          title: const Text('NeuroToolkit'),
+          destinations: const [],
+          selectedIndex: 0,
+          onDestinationSelected: (_) {},
+          actions: [
+            NmtkTopAppBarAction(
+              icon: ZetaIcons.settings,
+              tooltip: 'Settings',
+              onPressed: () => context.push('/settings'),
+            ),
+          ],
+        ),
         showBottomNavigation: false,
         child: IndexedStack(
           key: const ValueKey('WorkspaceStack'),
@@ -836,6 +849,20 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            NmtkTopAppBar(
+              mode: NmtkShellMode.command,
+              title: Text(activeModule.name),
+              destinations: const [],
+              selectedIndex: 0,
+              onDestinationSelected: (_) {},
+              actions: [
+                NmtkTopAppBarAction(
+                  icon: ZetaIcons.settings,
+                  tooltip: 'Settings',
+                  onPressed: () => context.push('/settings'),
+                ),
+              ],
+            ),
             Expanded(
               child: PageTransitionSwitcher(
                 transitionBuilder: (child, animation, secondaryAnimation) =>

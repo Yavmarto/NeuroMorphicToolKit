@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/app_theme.dart';
+import 'package:nmtk_ui_core/widgets/responsive_scaffold.dart';
 
 /// A mobile bottom navigation bar that mirrors the destination list from
 /// [NmtkTopAppBar] but rendered as a [NavigationBar] at the bottom of the

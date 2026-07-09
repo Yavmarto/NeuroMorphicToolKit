@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/models/quantization_report.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 /// Table/visual showing bit-width vs accuracy drop and sparsity.
 class NmtkQuantizationTable extends StatelessWidget {
@@ -22,6 +23,9 @@ class NmtkQuantizationTable extends StatelessWidget {
       );
     }
 
+    // ZETA-MIGRATION-EXEMPT: zeta_flutter has no table/data-grid component
+    // (confirmed against the installed package source) — DataTable is the
+    // only option for tabular data here.
     return DataTable(
       headingRowColor: WidgetStatePropertyAll(
         theme.colorScheme.surfaceContainerHighest,
@@ -98,15 +102,15 @@ class _AccuracyDropIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
     final pct = drop * 100;
     final Color color;
     if (pct < 2) {
-      color = Zeta.of(context).colors.mainPositive;
+      color = tokens.healthyColor;
     } else if (pct < 5) {
-      color = Zeta.of(context).colors.mainWarning;
+      color = tokens.warningColor;
     } else {
-      color = theme.colorScheme.error;
+      color = tokens.errorColor;
     }
 
     return Row(

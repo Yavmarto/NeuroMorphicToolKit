@@ -12,6 +12,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 enum AkidaRuntimeMode {
   localSdk,
@@ -279,23 +280,26 @@ enum AkidaSupportState {
     }
   }
 
-  /// Theme color for UI indicators.
+  /// Theme color for UI indicators, resolved from the suite's
+  /// [NmtkShellTokens] semantic palette rather than a hardcoded hex value.
   ///
-  /// Purple/indigo for scaffold states (distinct from PYNQ teal and
-  /// Teensy green) to visually reinforce the scaffold-only semantic
-  /// boundary.
-  Color get color {
+  /// Scaffold-only (no warnings) maps to [NmtkShellTokens.runningColor] —
+  /// the "works, not yet fully verified" in-progress tier; warnings map to
+  /// [NmtkShellTokens.warningColor]; unsupported/not-deployable map to
+  /// [NmtkShellTokens.errorColor]; fully SDK-deployable maps to
+  /// [NmtkShellTokens.healthyColor].
+  Color colorFor(NmtkShellTokens tokens) {
     switch (this) {
       case AkidaSupportState.exportableScaffold:
-        return const Color(0xFF5C6BC0); // Indigo 400
+        return tokens.runningColor;
       case AkidaSupportState.exportableScaffoldWithWarnings:
-        return const Color(0xFFFFA000); // Amber 700
+        return tokens.warningColor;
       case AkidaSupportState.unsupported:
-        return const Color(0xFFD32F2F); // Red 700
+        return tokens.errorColor;
       case AkidaSupportState.sdkDeployable:
-        return const Color(0xFF388E3C); // Green 700
+        return tokens.healthyColor;
       case AkidaSupportState.sdkNotDeployable:
-        return const Color(0xFFD32F2F); // Red 700
+        return tokens.errorColor;
     }
   }
 

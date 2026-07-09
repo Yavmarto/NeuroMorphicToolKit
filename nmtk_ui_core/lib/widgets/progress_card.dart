@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/section_card.dart';
 
 class NmtkProgressCard extends StatelessWidget {
@@ -28,6 +29,7 @@ class NmtkProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = NmtkShellTokens.of(context);
     return NmtkSectionCard(
       title: title,
       subtitle: subtitle,
@@ -37,9 +39,7 @@ class NmtkProgressCard extends StatelessWidget {
         children: [
           LinearProgressIndicator(
             value: progress,
-            color: errorText != null
-                ? Zeta.of(context).colors.mainNegative
-                : null,
+            color: errorText != null ? tokens.errorColor : null,
           ),
           const SizedBox(height: 12),
           Row(
@@ -51,9 +51,7 @@ class NmtkProgressCard extends StatelessWidget {
                   statusLabel,
                   style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: errorText != null
-                        ? Zeta.of(context).colors.mainNegative
-                        : null,
+                    color: errorText != null ? tokens.errorColor : null,
                   ),
                 ),
               ),
@@ -63,9 +61,9 @@ class NmtkProgressCard extends StatelessWidget {
             const SizedBox(height: 8),
             SelectableText(
               errorText!,
-              style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                color: Zeta.of(context).colors.mainNegative,
-              ),
+              style: Zeta.of(
+                context,
+              ).textStyles.bodyMedium.copyWith(color: tokens.errorColor),
             ),
           ],
           if (details.isNotEmpty) ...[const SizedBox(height: 8), ...details],

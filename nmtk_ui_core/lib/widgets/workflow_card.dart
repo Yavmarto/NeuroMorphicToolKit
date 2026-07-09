@@ -3,6 +3,8 @@ import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/surface_card.dart';
 
+part 'workflow_stage_tile.dart';
+
 enum NmtkWorkflowStageState { upcoming, active, done, error }
 
 class NmtkWorkflowStage {
@@ -43,62 +45,6 @@ class NmtkWorkflowCard extends StatelessWidget {
               ),
             )
             .toList(growable: false),
-      ),
-    );
-  }
-}
-
-class _NmtkWorkflowStageTile extends StatelessWidget {
-  const _NmtkWorkflowStageTile({required this.stage});
-
-  final NmtkWorkflowStage stage;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final tokens = NmtkShellTokens.of(context);
-    final color = switch (stage.state) {
-      NmtkWorkflowStageState.done => Zeta.of(context).colors.mainPositive,
-      NmtkWorkflowStageState.active => theme.colorScheme.primary,
-      NmtkWorkflowStageState.error => theme.colorScheme.error,
-      NmtkWorkflowStageState.upcoming => theme.colorScheme.outlineVariant,
-    };
-    final icon = switch (stage.state) {
-      NmtkWorkflowStageState.done => ZetaIcons.check_circle,
-      NmtkWorkflowStageState.active => ZetaIcons.play_circle,
-      NmtkWorkflowStageState.error => ZetaIcons.error,
-      NmtkWorkflowStageState.upcoming => ZetaIcons.radio_button_unchecked,
-    };
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(tokens.radiusSm),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-        color: color.withValues(alpha: 0.08),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  stage.title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(stage.detail, style: theme.textTheme.bodySmall),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

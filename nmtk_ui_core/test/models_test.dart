@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
@@ -117,24 +118,27 @@ void main() {
   });
 
   group('NodeBulkData', () {
-    test('toVisualizationFrame carries neuronCount and honors a scale override', () {
-      const nodeData = NodeBulkData(
-        data: [0.0, 5.0],
-        densityGrid: [0.9],
-        gridW: 1,
-        gridH: 1,
-        neuronCount: 2000,
-      );
+    test(
+      'toVisualizationFrame carries neuronCount and honors a scale override',
+      () {
+        const nodeData = NodeBulkData(
+          data: [0.0, 5.0],
+          densityGrid: [0.9],
+          gridW: 1,
+          gridH: 1,
+          neuronCount: 2000,
+        );
 
-      final frame = nodeData.toVisualizationFrame(
-        simulationTimeMs: 12.0,
-        scaleOverride: VisualizationScale.particle,
-      );
+        final frame = nodeData.toVisualizationFrame(
+          simulationTimeMs: 12.0,
+          scaleOverride: VisualizationScale.particle,
+        );
 
-      expect(frame.totalNeuronCount, 2000);
-      expect(frame.scale, VisualizationScale.particle);
-      expect(frame.simulationTimeMs, 12.0);
-    });
+        expect(frame.totalNeuronCount, 2000);
+        expect(frame.scale, VisualizationScale.particle);
+        expect(frame.simulationTimeMs, 12.0);
+      },
+    );
   });
 
   group('PynqNetworkResponse', () {
@@ -266,10 +270,14 @@ void main() {
     });
 
     test('labels and icons are non-null for all states', () {
+      final tokens = NmtkShellTokens.fromColorScheme(
+        const ColorScheme.light(),
+        Brightness.light,
+      );
       for (final state in PynqSupportState.values) {
         expect(state.label.isNotEmpty, isTrue);
         expect(state.icon, isNotNull);
-        expect(state.color, isNotNull);
+        expect(state.colorFor(tokens), isNotNull);
       }
     });
   });

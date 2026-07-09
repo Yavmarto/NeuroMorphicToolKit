@@ -178,10 +178,24 @@ void main() {
   testWidgets('NmtkKeyValueRow renders label and primary value text', (
     WidgetTester tester,
   ) async {
+    // NmtkKeyValueRow reads Zeta.of(context).colors.mainPrimary (fixed as
+    // part of the P0 zeta-compliance sweep — it used to read a raw Material
+    // theme color instead). This harness has no ZetaProvider ancestor (same
+    // as buildHarness(), and ZetaProvider's own async init means wrapping
+    // one here would need pumpAndSettle, which never resolves for it in
+    // this package's test environment) — Zeta.of falls back to its default
+    // palette without one, so the expected color is captured the same way
+    // rather than hardcoded, to avoid duplicating — and drifting from —
+    // Zeta's own fallback resolution.
+    Color? zetaPrimary;
     await tester.pumpWidget(
       buildHarness(
-        const NmtkKeyValueRow(label: 'Synapses', value: '4096'),
-        theme: AppTheme.lightTheme,
+        Builder(
+          builder: (context) {
+            zetaPrimary = Zeta.of(context).colors.mainPrimary;
+            return const NmtkKeyValueRow(label: 'Synapses', value: '4096');
+          },
+        ),
       ),
     );
 
@@ -189,7 +203,7 @@ void main() {
 
     expect(find.text('Synapses'), findsOneWidget);
     expect(find.text('4096'), findsOneWidget);
-    expect(valueText.style?.color, AppTheme.lightTheme.colorScheme.primary);
+    expect(valueText.style?.color, zetaPrimary);
   });
 
   testWidgets('NmtkSectionCard keeps neutral header content and actions', (

@@ -128,7 +128,8 @@ class ControlApiService {
     }
     final uri = Uri.tryParse(value);
     if (uri != null && !uri.hasPort) {
-      value = '${uri.scheme}://${uri.host}:8091${uri.path}';
+      value =
+          '${uri.scheme}://${uri.host}:${ControlApiService.configuredPort}${uri.path}';
     }
     return value;
   }

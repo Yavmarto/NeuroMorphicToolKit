@@ -27,14 +27,13 @@ class PynqSupportStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = supportState.color;
+    final tokens = NmtkShellTokens.of(context);
+    final color = supportState.colorFor(tokens);
 
     return Container(
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(
-          NmtkShellTokens.of(context).radiusSm,
-        ),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -62,9 +61,9 @@ class PynqSupportStateCard extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
                   child: Text(
                     '⚠ $w',
-                    style: Zeta.of(context).textStyles.bodyMedium.apply(
-                      color: Zeta.of(context).colors.mainWarning,
-                    ),
+                    style: Zeta.of(
+                      context,
+                    ).textStyles.bodyMedium.apply(color: tokens.warningColor),
                   ),
                 ),
               ),
@@ -76,9 +75,9 @@ class PynqSupportStateCard extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 36, bottom: 4),
                   child: Text(
                     '✗ $r',
-                    style: Zeta.of(context).textStyles.bodyMedium.apply(
-                      color: Zeta.of(context).colors.mainNegative,
-                    ),
+                    style: Zeta.of(
+                      context,
+                    ).textStyles.bodyMedium.apply(color: tokens.errorColor),
                   ),
                 ),
               ),

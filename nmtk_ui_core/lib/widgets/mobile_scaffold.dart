@@ -6,6 +6,8 @@ import 'package:nmtk_ui_core/models/scaffold_models.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/shell_chrome_scope.dart';
 
+part 'mobile_scaffold_parts.dart';
+
 class NmtkMobileScaffold extends StatefulWidget {
   const NmtkMobileScaffold({
     super.key,
@@ -27,6 +29,15 @@ class NmtkMobileScaffold extends StatefulWidget {
     this.footerNavItems = const [],
     this.onFooterNavItemSelected,
     this.showBottomNavigation = true,
+    this.fileActionsSheetTitle = 'File Actions',
+    this.newFileLabel = 'New File',
+    this.openFileLabel = 'Open File',
+    this.saveFileLabel = 'Save',
+    this.saveFileAsLabel = 'Save As',
+    this.openNavigationTooltip = 'Open navigation',
+    this.backTooltip = 'Back',
+    this.brandFallbackText = 'NMTK',
+    this.appBar,
   });
 
   final List<NmtkSidebarItem> navItems;
@@ -47,6 +58,36 @@ class NmtkMobileScaffold extends StatefulWidget {
   final List<NmtkSidebarItem> footerNavItems;
   final ValueChanged<int>? onFooterNavItemSelected;
   final bool showBottomNavigation;
+
+  /// Title of the modal bottom sheet shown by the file-actions FAB.
+  final String fileActionsSheetTitle;
+
+  /// Label for the "New File" action sheet item.
+  final String newFileLabel;
+
+  /// Label for the "Open File" action sheet item.
+  final String openFileLabel;
+
+  /// Label for the "Save" action sheet item.
+  final String saveFileLabel;
+
+  /// Label for the "Save As" action sheet item.
+  final String saveFileAsLabel;
+
+  /// Tooltip for the hamburger menu button that opens the drawer.
+  final String openNavigationTooltip;
+
+  /// Tooltip for the back button.
+  final String backTooltip;
+
+  /// Fallback brand text shown in the drawer header when [sidebarBrand] is
+  /// null.
+  final String brandFallbackText;
+
+  /// Overrides the default title/back/menu app bar with a caller-supplied
+  /// one (e.g. [NmtkTopAppBar]) — used when a screen needs consistent top
+  /// chrome (like a Settings action) across both mobile and desktop layouts.
+  final PreferredSizeWidget? appBar;
 
   @override
   State<NmtkMobileScaffold> createState() => _NmtkMobileScaffoldState();
@@ -115,7 +156,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
-                  'File Actions',
+                  widget.fileActionsSheetTitle,
                   style: Zeta.of(
                     context,
                   ).textStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
@@ -124,7 +165,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
               if (widget.onNewFile != null)
                 ZetaListItem(
                   leading: const Icon(ZetaIcons.add),
-                  title: const Text('New File'),
+                  title: Text(widget.newFileLabel),
                   onTap: () {
                     Navigator.pop(context);
                     widget.onNewFile!();
@@ -133,7 +174,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
               if (widget.onOpenFile != null)
                 ZetaListItem(
                   leading: const Icon(ZetaIcons.folder_outline),
-                  title: const Text('Open File'),
+                  title: Text(widget.openFileLabel),
                   onTap: () {
                     Navigator.pop(context);
                     widget.onOpenFile!();
@@ -142,7 +183,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
               if (widget.onSaveFile != null)
                 ZetaListItem(
                   leading: const Icon(ZetaIcons.save),
-                  title: const Text('Save'),
+                  title: Text(widget.saveFileLabel),
                   onTap: () {
                     Navigator.pop(context);
                     widget.onSaveFile!();
@@ -151,7 +192,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
               if (widget.onSaveFileAs != null)
                 ZetaListItem(
                   leading: const Icon(ZetaIcons.save),
-                  title: const Text('Save As'),
+                  title: Text(widget.saveFileAsLabel),
                   onTap: () {
                     Navigator.pop(context);
                     widget.onSaveFileAs!();
@@ -184,15 +225,18 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
     return NmtkShellChromeScope(
       child: Scaffold(
         backgroundColor: scheme.surface,
-        appBar: hasAppBarContent
-            ? _NmtkMobileAppBar(
-                scheme: scheme,
-                title: widget.pageTitle,
-                showBackButton: widget.showBackButton,
-                onBack: widget.onBack,
-                showMenuButton: showMenuButton,
-              )
-            : null,
+        appBar: widget.appBar ??
+            (hasAppBarContent
+                ? _NmtkMobileAppBar(
+                    scheme: scheme,
+                    title: widget.pageTitle,
+                    showBackButton: widget.showBackButton,
+                    onBack: widget.onBack,
+                    showMenuButton: showMenuButton,
+                    openNavigationTooltip: widget.openNavigationTooltip,
+                    backTooltip: widget.backTooltip,
+                  )
+                : null),
         drawer: useBottomNavigation
             ? null
             : _NmtkMobileDrawer(
@@ -204,6 +248,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                 scheme: scheme,
                 mode: widget.mode,
                 brand: widget.sidebarBrand,
+                brandFallbackText: widget.brandFallbackText,
               ),
         body: SafeArea(
           top: false,
@@ -238,173 +283,6 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                 ],
               )
             : null,
-      ),
-    );
-  }
-}
-
-class _NmtkMobileAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _NmtkMobileAppBar({
-    required this.scheme,
-    required this.showMenuButton,
-    required this.showBackButton,
-    this.onBack,
-    this.title,
-  });
-
-  final ColorScheme scheme;
-  final bool showMenuButton;
-  final bool showBackButton;
-  final VoidCallback? onBack;
-  final String? title;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(64.0);
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: SizedBox(
-          height: 64.0,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              children: [
-                if (showMenuButton)
-                  Builder(
-                    builder: (ctx) => IconButton(
-                      icon: Icon(Icons.menu_rounded, color: scheme.onSurface),
-                      iconSize: 24,
-                      padding: const EdgeInsets.all(16),
-                      onPressed: () => Scaffold.of(ctx).openDrawer(),
-                      tooltip: 'Open navigation',
-                    ),
-                  ),
-
-                if (showBackButton)
-                  IconButton(
-                    icon: Icon(ZetaIcons.arrow_back, color: scheme.onSurface),
-                    iconSize: 24,
-                    padding: const EdgeInsets.all(16),
-                    onPressed: onBack,
-                    tooltip: 'Back',
-                  ),
-
-                if (title != null && title!.isNotEmpty) ...[
-                  if (showMenuButton || showBackButton)
-                    const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      title!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Zeta.of(context).textStyles.titleLarge.copyWith(
-                        color: scheme.onSurface,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ] else
-                  const Spacer(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NmtkMobileDrawer extends StatelessWidget {
-  const _NmtkMobileDrawer({
-    required this.navItems,
-    required this.selectedIndex,
-    required this.onNavItemSelected,
-    required this.footerNavItems,
-    required this.onFooterNavItemSelected,
-    required this.scheme,
-    required this.mode,
-    this.brand,
-  });
-
-  final List<NmtkSidebarItem> navItems;
-  final int selectedIndex;
-  final ValueChanged<int>? onNavItemSelected;
-  final List<NmtkSidebarItem> footerNavItems;
-  final ValueChanged<int>? onFooterNavItemSelected;
-  final ColorScheme scheme;
-  final NmtkShellMode mode;
-  final Widget? brand;
-
-  @override
-  Widget build(BuildContext context) {
-    return Drawer(
-      backgroundColor: scheme.surfaceContainer,
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (brand != null)
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Align(alignment: Alignment.centerLeft, child: brand!),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Text(
-                  'NMTK',
-                  style: Zeta.of(
-                    context,
-                  ).textStyles.titleLarge.copyWith(fontWeight: FontWeight.w800),
-                ),
-              ),
-            const Divider(height: 1),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    for (var i = 0; i < navItems.length; i++)
-                      ZetaListItem(
-                        leading: Icon(navItems[i].icon),
-                        title: Text(
-                          navItems[i].label,
-                          style: i == selectedIndex
-                              ? Zeta.of(context).textStyles.bodyMedium.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                )
-                              : null,
-                        ),
-                        onTap: () {
-                          Navigator.of(context).pop();
-                          onNavItemSelected?.call(i);
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            if (footerNavItems.isNotEmpty) ...[
-              const Divider(height: 1),
-              for (var i = 0; i < footerNavItems.length; i++)
-                ZetaListItem(
-                  leading: Icon(footerNavItems[i].icon),
-                  title: Text(footerNavItems[i].label),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    onFooterNavItemSelected?.call(i);
-                  },
-                ),
-            ],
-          ],
-        ),
       ),
     );
   }

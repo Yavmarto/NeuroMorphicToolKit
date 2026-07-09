@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 class NmtkKeyValueRow extends StatelessWidget {
   const NmtkKeyValueRow({
@@ -16,7 +17,7 @@ class NmtkKeyValueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final zeta = Zeta.of(context);
 
     return Padding(
       padding: padding,
@@ -26,8 +27,8 @@ class NmtkKeyValueRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: zeta.textStyles.bodySmall.copyWith(
+                color: zeta.colors.mainSubtle,
               ),
             ),
           ),
@@ -35,9 +36,9 @@ class NmtkKeyValueRow extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.end,
-              style: theme.textTheme.bodyMedium?.copyWith(
+              style: zeta.textStyles.bodyMedium.copyWith(
                 fontWeight: FontWeight.w700,
-                color: valueColor ?? theme.colorScheme.primary,
+                color: valueColor ?? zeta.colors.mainPrimary,
               ),
             ),
           ),

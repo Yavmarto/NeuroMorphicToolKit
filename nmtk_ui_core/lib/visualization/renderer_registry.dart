@@ -8,8 +8,10 @@ import 'package:nmtk_ui_core/visualization/wgpu_native_renderer.dart';
 /// crashes the whole process with SIGSEGV on the first real draw call (confirmed via
 /// macOS crash report — objc_msgSend_uncached failure inside CVPixelBufferLockBaseAddress).
 /// Re-enable via `--dart-define=NMTK_WGPU_RENDERER=true` only for native-side debugging.
-const bool kEnableWgpuRenderer =
-    bool.fromEnvironment('NMTK_WGPU_RENDERER', defaultValue: false);
+const bool kEnableWgpuRenderer = bool.fromEnvironment(
+  'NMTK_WGPU_RENDERER',
+  defaultValue: false,
+);
 
 /// Picks the neuron renderer for the current platform/build. Falls back to
 /// [FragmentShaderNeuronRenderer] if the native renderer isn't enabled, isn't
