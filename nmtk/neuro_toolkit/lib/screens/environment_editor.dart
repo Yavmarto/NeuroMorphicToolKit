@@ -227,7 +227,12 @@ class _EnvironmentEditorScreenState
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      // Defer disposal a frame: the dialog's exit transition is still
+      // rebuilding widgets that reference this controller when this future
+      // resolves, so disposing synchronously here throws.
+      WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
+    });
   }
 
   // ── export / share ─────────────────────────────────────────────────────---

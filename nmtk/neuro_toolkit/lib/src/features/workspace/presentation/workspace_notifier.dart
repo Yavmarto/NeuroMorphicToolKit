@@ -23,7 +23,8 @@ class WorkspaceNotifier extends _$WorkspaceNotifier {
         sessions: List<WorkspaceSession>.from(snapshot.sessions),
         focusedModuleId: snapshot.focusedModuleId,
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Failed to fetch workspace: $e');
       return const WorkspaceState();
     }
   }
