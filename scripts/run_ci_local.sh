@@ -178,7 +178,7 @@ detect_changed_modules() {
 
   echo "$changed_files" | grep -q "^nmtk/neuro_toolkit/" && add_unique "neuro_toolkit"
 
-  if echo "$changed_files" | grep -Eq '^(nmtk/neuro_toolkit/|nmtk/launcher_control/|scripts/launcher_control_service.py|scripts/run_launcher_guardrails.sh|tests/test_launcher_control_service.py|AGENTS.md|CODING_STYLE_GUIDE.md|docs/jules/JULES_WORKSPACE_GUIDE.md|CONTRIBUTING.md)'; then
+  if echo "$changed_files" | grep -Eq '^(nmtk/neuro_toolkit/|nmtk/launcher_control/|scripts/launcher_control_service.py|scripts/run_launcher_guardrails.sh|tests/launcher_control/|AGENTS.md|CODING_STYLE_GUIDE.md|docs/jules/JULES_WORKSPACE_GUIDE.md|CONTRIBUTING.md)'; then
     RUN_LAUNCHER_GUARDRAILS=true
   fi
 

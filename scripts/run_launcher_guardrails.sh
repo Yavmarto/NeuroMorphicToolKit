@@ -153,7 +153,7 @@ if ! capture_stage "launcher_doctor" "$PYTHON3" scripts/launcher_control_service
 fi
 
 print_header "Launcher Unit Tests"
-capture_stage "launcher_unit_tests" "$PYTHON3" -m unittest tests.test_launcher_control_service || STATUS=1
+capture_stage "launcher_unit_tests" "$PYTHON3" -m pytest tests/launcher_control/ || STATUS=1
 
 print_header "Launcher Flutter Tests"
 capture_stage "launcher_flutter_tests" bash -lc "

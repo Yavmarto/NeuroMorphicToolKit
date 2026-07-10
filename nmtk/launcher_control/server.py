@@ -37,11 +37,19 @@ from packaging.version import parse as parse_version
 
 from .deployment_service import DeploymentService
 from .deployment_store import DeploymentStore, FileBackedSecretStore
+from .http_transport import read_json_body, send_json, stream_deployment_sse
 from .provisioning_helpers import (
     build_akida_host_bundle,
     build_pynq_agent_bundle,
     build_pynq_user_space_agent_launch_command,
 )
+from .runtime_contracts import (
+    AkidaLauncherRuntimeContract as _AkidaLauncherRuntimeContract,
+    NeurochipLauncherRuntimeContract as _NeurochipLauncherRuntimeContract,
+    PynqLauncherRuntimeContract as _PynqLauncherRuntimeContract,
+    load_neurochip_launcher_runtime_contract,
+)
+from .runtime_errors import RuntimeRequestError as _RuntimeRequestError
 
 from .config import (
     REPO_ROOT,
@@ -481,6 +489,17 @@ def _load_neurochip_launcher_runtime_contract() -> NeurochipLauncherRuntimeContr
             ),
         ),
     )
+
+
+# Compatibility aliases keep existing imports and monkey-patches working while
+# the manifest contract implementation lives outside the server façade.
+PynqLauncherRuntimeContract = _PynqLauncherRuntimeContract
+AkidaLauncherRuntimeContract = _AkidaLauncherRuntimeContract
+NeurochipLauncherRuntimeContract = _NeurochipLauncherRuntimeContract
+
+
+def _load_neurochip_launcher_runtime_contract() -> NeurochipLauncherRuntimeContract:
+    return load_neurochip_launcher_runtime_contract(MODULES_MANIFEST)
 
 
 def _validate_pynq_overlay_manifest(payload: Any) -> None:
@@ -1111,6 +1130,11 @@ class RuntimeRequestError(RuntimeError):
         self.url = url
         self.status_code = status_code
         self.response_body = response_body
+
+
+# Keep the server import path stable while runtime clients and transport share
+# one error type without importing this compatibility façade.
+RuntimeRequestError = _RuntimeRequestError
 
 
 def _runtime_request_error_kind(exc: Exception) -> str:
@@ -6911,53 +6935,13 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
             )
 
     def _read_body(self) -> dict[str, Any] | None:
-        length = int(self.headers.get("Content-Length", "0"))
-        if length <= 0:
-            return None
-        raw = self.rfile.read(length)
-        if not raw:
-            return None
-        try:
-            payload = json.loads(raw.decode("utf-8"))
-        except json.JSONDecodeError:
-            return None
-        return payload if isinstance(payload, dict) else None
+        return read_json_body(self)
 
     def _send_json(self, status: HTTPStatus, payload: Any) -> None:
-        encoded = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(encoded)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header(
-            "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"
-        )
-        self.end_headers()
-        if status != HTTPStatus.NO_CONTENT:
-            self.wfile.write(encoded)
+        send_json(self, status, payload)
 
     def _send_deployment_sse(self, job_id: str) -> None:
-        self.send_response(HTTPStatus.OK)
-        self.send_header("Content-Type", "text/event-stream")
-        self.send_header("Cache-Control", "no-cache")
-        self.send_header("Connection", "keep-alive")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        sent = 0
-        deadline = time.monotonic() + 60.0
-        while time.monotonic() < deadline:
-            events = self.server.state.deployment_job_events(job_id)
-            for event in events[sent:]:
-                self.wfile.write(event.encode("utf-8"))
-                self.wfile.flush()
-            sent = len(events)
-            job = self.server.state.get_deployment_job(job_id)
-            if str(job.get("stage") or "") in {"completed", "failed", "cancelled"}:
-                break
-            self.wfile.write(b"event: heartbeat\ndata: {}\n\n")
-            self.wfile.flush()
-            time.sleep(2.0)
+        stream_deployment_sse(self, job_id)
 
 
 class LauncherControlServer(ThreadingHTTPServer):
