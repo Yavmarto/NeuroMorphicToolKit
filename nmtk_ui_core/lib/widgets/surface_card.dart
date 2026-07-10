@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/tone.dart';
 
@@ -112,17 +113,19 @@ class NmtkSurfaceCard extends StatelessWidget {
                                     title!,
                                     style:
                                         titleStyle ??
-                                        theme.textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                        ),
+                                        Zeta.of(context).textStyles.titleMedium
+                                            .copyWith(
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                   ),
                                 if (subtitle != null) ...[
                                   if (title != null) const SizedBox(height: 4),
                                   Text(
                                     subtitle!,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                    ),
+                                    style: Zeta.of(context).textStyles.bodyMedium
+                                        .copyWith(
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
                                   ),
                                 ],
                               ],

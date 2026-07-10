@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/models/commands.dart';
+import 'package:nmtk_ui_core/widgets/command_palette.dart';
 
 /// ----------------------------------------------------------------------------
 /// NMTK SHORTCUT SCOPE

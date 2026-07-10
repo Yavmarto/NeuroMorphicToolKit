@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:nmtk_ui_core/models/commands.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 
 part 'command_palette_parts.dart';
 
