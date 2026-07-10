@@ -8,6 +8,11 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 import nmtk.launcher_control.server as launcher_server
+import nmtk.launcher_control.runtime_shared as launcher_runtime_shared
+import nmtk.launcher_control.settings_service as launcher_settings_service
+import nmtk.launcher_control.module_environment as launcher_module_environment
+import nmtk.launcher_control.module_lifecycle as launcher_module_lifecycle
+import nmtk.launcher_control.module_install as launcher_module_install
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -120,13 +125,36 @@ class LauncherControlServiceTestBase(unittest.TestCase):
                 "MODULES_MANIFEST",
                 assets_dir / "modules.json",
             ),
+            mock.patch.object(launcher_runtime_shared, "REPO_ROOT", self.repo_root),
+            mock.patch.object(
+                launcher_runtime_shared,
+                "MODULES_MANIFEST",
+                assets_dir / "modules.json",
+            ),
+            mock.patch.object(launcher_module_environment, "REPO_ROOT", self.repo_root),
+            mock.patch.object(launcher_module_install, "REPO_ROOT", self.repo_root),
+            mock.patch.object(
+                launcher_module_lifecycle,
+                "MODULES_MANIFEST",
+                assets_dir / "modules.json",
+            ),
             mock.patch.object(
                 launcher_server,
                 "STATE_FILE",
                 self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json",
             ),
             mock.patch.object(
+                launcher_module_lifecycle,
+                "STATE_FILE",
+                self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json",
+            ),
+            mock.patch.object(
                 launcher_server,
+                "SETTINGS_FILE",
+                self.repo_root / "nmtk" / "neuro_toolkit" / "launcher_settings.json",
+            ),
+            mock.patch.object(
+                launcher_settings_service,
                 "SETTINGS_FILE",
                 self.repo_root / "nmtk" / "neuro_toolkit" / "launcher_settings.json",
             ),

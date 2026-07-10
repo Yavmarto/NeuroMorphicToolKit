@@ -114,6 +114,6 @@ void main() {
 
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byType(NmtkTopAppBar), findsOneWidget);
-    expect(find.byTooltip('Settings'), findsOneWidget);
+    expect(find.byTooltip('Settings'), findsNothing);
   });
 }

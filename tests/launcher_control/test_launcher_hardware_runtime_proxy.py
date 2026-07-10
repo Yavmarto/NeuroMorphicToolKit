@@ -3,6 +3,7 @@
 from pathlib import Path
 import json
 import nmtk.launcher_control.server as launcher_server
+import nmtk.launcher_control.module_install as launcher_module_install
 from unittest import mock
 import subprocess
 import threading
@@ -21,7 +22,7 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
                     message="ok",
                 ),
             ),
-            mock.patch.object(launcher_server, "_current_platform_key", return_value="macos"),
+            mock.patch.object(launcher_module_install, "_current_platform_key", return_value="macos"),
             mock.patch.object(self.state, "_run_command") as run_command,
         ):
             updated = self.state.prepare_akida_runtime("dummy")
@@ -53,7 +54,7 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
                     message="ok",
                 ),
             ),
-            mock.patch.object(launcher_server, "_current_platform_key", return_value="linux"),
+            mock.patch.object(launcher_module_install, "_current_platform_key", return_value="linux"),
             mock.patch.object(self.state, "_run_command", side_effect=fake_run_command),
         ):
             updated = self.state.prepare_akida_runtime("dummy")
@@ -116,7 +117,7 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
                     message="ok",
                 ),
             ),
-            mock.patch.object(launcher_server, "_current_platform_key", return_value="macos"),
+            mock.patch.object(launcher_module_install, "_current_platform_key", return_value="macos"),
         ):
             request = urllib.request.Request(
                 (

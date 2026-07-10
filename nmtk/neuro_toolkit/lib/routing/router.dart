@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:neuro_toolkit/screens/settings.dart';
 import 'package:neuro_toolkit/screens/first_run_setup_screen.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/environment_editor.dart';
@@ -37,11 +36,6 @@ GoRouter createGoRouter() {
               final moduleId = state.pathParameters['moduleId']!;
               return '/workspace?moduleId=$moduleId';
             },
-          ),
-          GoRoute(
-            path: '/settings',
-            name: 'settings',
-            builder: (context, state) => const SettingsScreen(),
           ),
           GoRoute(
             path: '/backend-setup',
@@ -195,8 +189,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     }
 
     // Normal operation: the child route provides its own chrome via
-    // NmtkDesktopScaffold (ToolViewScreen) or is a content-only widget
-    // (SettingsScreen). No extra Scaffold wrapper here.
+    // NmtkDesktopScaffold (ToolViewScreen). No extra Scaffold wrapper here.
     return widget.child;
   }
 

@@ -4,6 +4,9 @@ from pathlib import Path
 import io
 import json
 import nmtk.launcher_control.server as launcher_server
+import nmtk.launcher_control.module_lifecycle as launcher_module_lifecycle
+import nmtk.launcher_control.module_install as launcher_module_install
+import nmtk.launcher_control.doctor_service as launcher_doctor_service
 from unittest import mock
 import os
 import subprocess
@@ -198,7 +201,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module = self.state._get_module("dummy")
         module["status"] = launcher_server.STATUS_INDEX["installed"]
         with (
-            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
             mock.patch.object(
                 self.state,
                 "_preflight_module",
@@ -229,7 +232,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         self.state._suite_api_status = launcher_server.SUITE_API_STATUS_PREFLIGHT_FAILED
         self.state._suite_api_message = "suite_api port 9000 is occupied by another process"
 
-        with mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]):
+        with mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]):
             report = self.state.doctor_report()
 
         self.assertEqual(report["status"], "error")
@@ -241,7 +244,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module = self.state._get_module("dummy")
         module["status"] = launcher_server.STATUS_INDEX["installed"]
         with (
-            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
             mock.patch.object(
                 self.state,
                 "_preflight_module",
@@ -350,7 +353,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module["startStrategy"] = "none"
 
         with (
-            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
             mock.patch.object(
                 self.state, "_probe_health", return_value=(True, 200, "ok")
             ),
@@ -371,7 +374,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module["deployment"] = {"composeProfile": "notebooks", "healthPath": "/api/status"}
 
         with (
-            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
             mock.patch.object(self.state, "_probe_health", return_value=(False, 0, None)),
         ):
             report = self.state.doctor_report()
@@ -425,7 +428,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             }
         ]
         with (
-            mock.patch.object(launcher_server, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
             mock.patch.object(
                 self.state,
                 "_preflight_module",
@@ -482,7 +485,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
     def test_doctor_report_includes_global_preflight_failures(self) -> None:
         with (
             mock.patch.object(
-                launcher_server,
+                launcher_module_lifecycle,
                 "_global_preflight_checks",
                 return_value=[
                     {
@@ -530,7 +533,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             mock.patch.object(launcher_server.shutil, "which", return_value=str(flutter_bin)),
             mock.patch.object(launcher_server.os, "access", side_effect=fake_access),
         ):
-            checks = launcher_server._global_preflight_checks()
+            checks = launcher_doctor_service._global_preflight_checks()
 
         flutter_check = next(check for check in checks if check["id"] == "flutter-sdk")
         self.assertEqual(flutter_check["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
@@ -739,7 +742,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         fallback_python.chmod(0o755)
 
         with (
-            mock.patch.object(launcher_server, "_poetry_command", return_value="poetry"),
+            mock.patch.object(launcher_module_install, "_poetry_command", return_value="poetry"),
             mock.patch.object(launcher_server.subprocess, "run") as poetry_run,
         ):
             self.state._cleanup_module_environment("dummy")
@@ -761,7 +764,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         poetry_python = self._create_fake_poetry_python()
 
         with (
-            mock.patch.object(launcher_server, "_poetry_command", return_value="poetry"),
+            mock.patch.object(launcher_module_install, "_poetry_command", return_value="poetry"),
             mock.patch.object(
                 launcher_server.subprocess,
                 "run",

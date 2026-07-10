@@ -3,6 +3,7 @@
 from typing import Any
 import json
 import nmtk.launcher_control.server as launcher_server
+import nmtk.launcher_control.suite_api_service as suite_api_service
 from unittest import mock
 import os
 import sys
@@ -90,16 +91,16 @@ class TestLauncherManifestWorkspace(LauncherControlServiceTestBase):
         with (
             mock.patch.dict(os.environ, {"NMTK_SUITE_API_ENV_DIR": str(env_dir)}, clear=False),
             mock.patch.object(
-                launcher_server,
+                suite_api_service,
                 "_suite_api_env_fingerprint",
                 return_value=fingerprint,
             ),
             mock.patch.object(
-                launcher_server,
+                suite_api_service,
                 "_suite_api_dev_install_paths",
                 return_value=(suite_api_dir,),
             ),
-            mock.patch("nmtk.launcher_control.server.subprocess.run", side_effect=fake_run),
+            mock.patch("nmtk.launcher_control.suite_api_service.subprocess.run", side_effect=fake_run),
         ):
             python_path = self.state._suite_api_python()
 

@@ -791,10 +791,10 @@ The sidebar `navItems` list is dynamic — it is built from the installed module
 - **`ref.listen` must be called unconditionally** on every `build()` invocation — before any
   `if (...) return` guard. Placing it after an early return violates Riverpod's hook-consistency
   contract and causes subscription mis-tracking when the guard condition changes.
-- **Settings navigation must remain reachable from all top-level UI paths** in `tool_view.dart`.
-  Both the empty-modules branch and the populated-modules branch must include a `NmtkTopAppBar`
-  with a settings gear action (`context.push('/settings')`). Never remove the settings access point
-  from one branch while keeping it in another.
+- There is no in-app Settings screen or route (removed — see git history for the prior
+  `/settings` route and `SettingsScreen`). `settingsProvider` / `SettingsNotifier` / `SettingsState`
+  still exist and back app-wide theming and launcher bootstrap; do not resurrect a Settings UI
+  around them without re-establishing this section's guidance.
 
 ## Remote Testing Configuration
 

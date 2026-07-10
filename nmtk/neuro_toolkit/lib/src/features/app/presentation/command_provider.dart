@@ -50,14 +50,6 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       onExecute: () => router.go('/module/neurobench'),
     ),
     NmtkCommand(
-      id: 'nav-settings',
-      label: 'Open Settings',
-      description: 'Configure appearance, API host, and hardware paths',
-      icon: ZetaIcons.settings,
-      category: 'System',
-      onExecute: () => router.go('/settings'),
-    ),
-    NmtkCommand(
       id: 'action-toggle-sidebar',
       label: 'Toggle Sidebar',
       description: 'Expand or collapse the navigation sidebar',

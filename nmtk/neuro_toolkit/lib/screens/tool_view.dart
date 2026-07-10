@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
@@ -709,12 +708,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     if (eligibleModules.isEmpty) {
       if (isMobile) {
-        return NmtkMobileScaffold(
-          navItems: const [],
+        return const NmtkMobileScaffold(
+          navItems: [],
           selectedIndex: 0,
           pageTitle: 'NeuroToolkit',
-          onSettingsPressed: () => context.push('/settings'),
-          child: const ModulePickerPanel(),
+          child: ModulePickerPanel(),
         );
       }
       return Scaffold(
@@ -731,13 +729,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                 destinations: const [],
                 selectedIndex: 0,
                 onDestinationSelected: (_) {},
-                actions: [
-                  NmtkTopAppBarAction(
-                    icon: ZetaIcons.settings,
-                    tooltip: 'Settings',
-                    onPressed: () => context.push('/settings'),
-                  ),
-                ],
               ),
               const Expanded(child: ModulePickerPanel()),
             ],
@@ -820,13 +811,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           destinations: const [],
           selectedIndex: 0,
           onDestinationSelected: (_) {},
-          actions: [
-            NmtkTopAppBarAction(
-              icon: ZetaIcons.settings,
-              tooltip: 'Settings',
-              onPressed: () => context.push('/settings'),
-            ),
-          ],
         ),
         showBottomNavigation: false,
         child: IndexedStack(
@@ -855,13 +839,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               destinations: const [],
               selectedIndex: 0,
               onDestinationSelected: (_) {},
-              actions: [
-                NmtkTopAppBarAction(
-                  icon: ZetaIcons.settings,
-                  tooltip: 'Settings',
-                  onPressed: () => context.push('/settings'),
-                ),
-              ],
             ),
             Expanded(
               child: PageTransitionSwitcher(
