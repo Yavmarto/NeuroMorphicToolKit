@@ -813,13 +813,28 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           onDestinationSelected: (_) {},
         ),
         showBottomNavigation: false,
-        child: IndexedStack(
-          key: const ValueKey('WorkspaceStack'),
-          index: mobileClampedIndex,
-          children: mobileModules
-              .map((module) => _buildModuleChild(module, sessionsByModuleId))
-              .toList(growable: false),
-        ),
+        // Only the active module's content is built here — unlike an
+        // IndexedStack (which would build and keep every eligible module's
+        // full subtree alive simultaneously, including full nested apps for
+        // native-surface modules and real WebViews), this matches the
+        // desktop branch above and builds one module at a time.
+        child: mobileModules.isEmpty
+            ? const SizedBox.shrink()
+            : PageTransitionSwitcher(
+                transitionBuilder: (child, animation, secondaryAnimation) =>
+                    FadeThroughTransition(
+                  animation: animation,
+                  secondaryAnimation: secondaryAnimation,
+                  child: child,
+                ),
+                child: KeyedSubtree(
+                  key: ValueKey<String>(mobileModules[mobileClampedIndex].id),
+                  child: _buildModuleChild(
+                    mobileModules[mobileClampedIndex],
+                    sessionsByModuleId,
+                  ),
+                ),
+              ),
       );
     }
 
