@@ -6,9 +6,12 @@ class CustomNodeRepository {
   final String baseUrl;
   const CustomNodeRepository({required this.baseUrl});
 
+  static const Duration _requestTimeout = Duration(seconds: 10);
+
   Future<List<String>> list() async {
-    final resp =
-        await http.get(Uri.parse('$baseUrl/api/neurosim/custom-nodes'));
+    final resp = await http
+        .get(Uri.parse('$baseUrl/api/neurosim/custom-nodes'))
+        .timeout(_requestTimeout);
     if (resp.statusCode != 200) {
       throw Exception('list failed: ${resp.statusCode}');
     }
@@ -17,11 +20,13 @@ class CustomNodeRepository {
 
   Future<String> save(
       {required String filename, required String source}) async {
-    final resp = await http.post(
-      Uri.parse('$baseUrl/api/neurosim/custom-nodes/save'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'filename': filename, 'source': source}),
-    );
+    final resp = await http
+        .post(
+          Uri.parse('$baseUrl/api/neurosim/custom-nodes/save'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'filename': filename, 'source': source}),
+        )
+        .timeout(_requestTimeout);
     if (resp.statusCode != 200) {
       throw Exception('save failed: ${resp.statusCode}');
     }
@@ -37,9 +42,11 @@ class CustomNodeRepository {
   }
 
   Future<void> delete(String filename) async {
-    final resp = await http.delete(
-      Uri.parse('$baseUrl/api/neurosim/custom-nodes/$filename'),
-    );
+    final resp = await http
+        .delete(
+          Uri.parse('$baseUrl/api/neurosim/custom-nodes/$filename'),
+        )
+        .timeout(_requestTimeout);
     if (resp.statusCode != 200) {
       throw Exception('delete failed: ${resp.statusCode}');
     }
@@ -47,11 +54,13 @@ class CustomNodeRepository {
 
   Future<void> install(
       {required String downloadUrl, required String filename}) async {
-    final resp = await http.post(
-      Uri.parse('$baseUrl/api/neurosim/custom-nodes/install'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'download_url': downloadUrl, 'filename': filename}),
-    );
+    final resp = await http
+        .post(
+          Uri.parse('$baseUrl/api/neurosim/custom-nodes/install'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'download_url': downloadUrl, 'filename': filename}),
+        )
+        .timeout(_requestTimeout);
     if (resp.statusCode != 200) {
       throw Exception('install failed: ${resp.statusCode}');
     }

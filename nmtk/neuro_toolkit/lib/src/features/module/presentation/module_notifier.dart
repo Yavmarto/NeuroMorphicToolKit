@@ -96,7 +96,7 @@ class ModuleNotifier extends _$ModuleNotifier {
   void _startRefreshTimer() {
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (state.isLoading || state.hasError || _pollInFlight) return;
+      if (state.isLoading || state.hasError) return;
       unawaited(_pollUpdates());
     });
     ref.onDispose(() {
@@ -105,6 +105,7 @@ class ModuleNotifier extends _$ModuleNotifier {
   }
 
   Future<void> _pollUpdates() async {
+    if (_pollInFlight) return;
     _pollInFlight = true;
     try {
       final controlApi = ref.read(controlApiServiceProvider);

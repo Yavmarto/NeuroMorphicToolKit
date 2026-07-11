@@ -140,6 +140,7 @@ class ProcessManager {
   final Map<String, DateTime> _startupGraceDeadlines = {};
   final Set<String> _intentionallyStopping = {};
   final Set<String> _failureStopping = {};
+  final Set<String> _healthChecksInFlight = {};
   Timer? _healthTimer;
   bool _initialized = false;
   List<Module> _modules = [];
@@ -188,8 +189,26 @@ class ProcessManager {
     final response = await _httpClient.send(request).timeout(
           const Duration(seconds: 2),
         );
-    final body = await response.stream.bytesToString();
+    final body = await response.stream.bytesToString().timeout(
+          const Duration(seconds: 5),
+        );
     return _HealthProbeResponse(statusCode: response.statusCode, body: body);
+  }
+
+  /// Runs [_checkHealth] for [module] unless a check for that module is
+  /// already in flight (from the steady-state poll timer or the startup
+  /// wait loop), preventing overlapping probes from piling up against a
+  /// slow or hung module process.
+  Future<bool> _checkHealthTracked(Module module) async {
+    if (_healthChecksInFlight.contains(module.id)) {
+      return false;
+    }
+    _healthChecksInFlight.add(module.id);
+    try {
+      return await _checkHealth(module);
+    } finally {
+      _healthChecksInFlight.remove(module.id);
+    }
   }
 
   Future<_HealthProbeResponse> _probeHealth(Uri uri, String moduleId) async {
@@ -995,7 +1014,7 @@ class ProcessManager {
         DateTime.now().add(_startupHealthGracePeriod);
 
     while (true) {
-      final success = await _checkHealth(module);
+      final success = await _checkHealthTracked(module);
       if (success) {
         _startupGraceDeadlines.remove(module.id);
         return true;
@@ -1110,7 +1129,7 @@ class ProcessManager {
         if (!module.isEnabled) continue;
         if (_runningProcesses.containsKey(module.id)) {
           debugPrint('Polling health for ${module.id}');
-          unawaited(_checkHealth(module));
+          unawaited(_checkHealthTracked(module));
         } else if (module.status == ModuleStatus.error) {
           final nextRetry = _nextRetryTimes[module.id];
           if (nextRetry != null && DateTime.now().isAfter(nextRetry)) {

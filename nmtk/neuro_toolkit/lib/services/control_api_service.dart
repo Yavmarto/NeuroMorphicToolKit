@@ -74,9 +74,7 @@ class ControlApiService {
     http.Client? client,
     Uri? baseUri,
     AnalyticsService? analyticsService,
-  })  : _client = analyticsService == null
-            ? (client ?? http.Client())
-            : _LoggedHttpClient(client ?? http.Client(), analyticsService),
+  })  : _client = _LoggedHttpClient(client ?? http.Client(), analyticsService),
         _baseUri = baseUri ?? resolveBaseUri();
 
   final http.Client _client;
@@ -697,7 +695,7 @@ class _LoggedHttpClient extends http.BaseClient {
   static const _requestTimeout = Duration(seconds: 10);
 
   final http.Client _inner;
-  final AnalyticsService _analytics;
+  final AnalyticsService? _analytics;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -721,7 +719,7 @@ class _LoggedHttpClient extends http.BaseClient {
       );
       stopwatch.stop();
       final responseBody = utf8.decode(bytes, allowMalformed: true);
-      await _analytics.recordBackendActivity(
+      await _analytics?.recordBackendActivity(
         method: request.method,
         uri: request.url,
         statusCode: response.statusCode,
@@ -741,7 +739,7 @@ class _LoggedHttpClient extends http.BaseClient {
       );
     } catch (error) {
       stopwatch.stop();
-      await _analytics.recordBackendActivity(
+      await _analytics?.recordBackendActivity(
         method: request.method,
         uri: request.url,
         requestBody: requestBody,

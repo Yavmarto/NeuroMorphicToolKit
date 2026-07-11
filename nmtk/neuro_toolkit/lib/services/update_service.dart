@@ -40,6 +40,7 @@ class UpdateService {
     'Accept': 'application/vnd.github+json',
     'User-Agent': 'NeuroMorphicToolkit-Launcher',
   };
+  static const Duration _requestTimeout = Duration(seconds: 10);
 
   final http.Client _client;
   final PackageInfoLoader _packageInfoLoader;
@@ -158,7 +159,9 @@ class UpdateService {
 
   Future<List<dynamic>?> _readJsonList(Uri uri) async {
     try {
-      final response = await _client.get(uri, headers: _githubHeaders);
+      final response = await _client
+          .get(uri, headers: _githubHeaders)
+          .timeout(_requestTimeout);
       if (response.statusCode == 404) {
         return null;
       }

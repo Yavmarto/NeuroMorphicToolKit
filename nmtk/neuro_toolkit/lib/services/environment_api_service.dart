@@ -99,6 +99,7 @@ class EnvironmentApiService {
   final http.Client _client;
 
   static const int _suiteApiPort = 9000;
+  static const Duration _requestTimeout = Duration(seconds: 10);
 
   Uri _base() {
     if (kIsWeb) {
@@ -130,7 +131,7 @@ class EnvironmentApiService {
   }
 
   Future<List<EnvironmentInfo>> listEnvironments() async {
-    final r = await _client.get(_uri('/environments'));
+    final r = await _client.get(_uri('/environments')).timeout(_requestTimeout);
     if (r.statusCode != 200) throw EnvironmentApiException(_errorFrom(r));
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     final list = (body['environments'] as List<dynamic>? ?? <dynamic>[]);
@@ -140,7 +141,9 @@ class EnvironmentApiService {
   }
 
   Future<List<PackageInfo>> listPackages(String slug) async {
-    final r = await _client.get(_uri('/environments/$slug/packages'));
+    final r = await _client
+        .get(_uri('/environments/$slug/packages'))
+        .timeout(_requestTimeout);
     if (r.statusCode != 200) throw EnvironmentApiException(_errorFrom(r));
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     final list = (body['packages'] as List<dynamic>? ?? <dynamic>[]);
@@ -165,11 +168,13 @@ class EnvironmentApiService {
       {'action': 'uninstall', 'packages': names});
 
   Future<String> _postJob(String path, Map<String, dynamic> payload) async {
-    final r = await _client.post(
-      _uri(path),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    );
+    final r = await _client
+        .post(
+          _uri(path),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(payload),
+        )
+        .timeout(_requestTimeout);
     if (r.statusCode != 202) throw EnvironmentApiException(_errorFrom(r));
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     final jobId = body['jobId'] as String?;
@@ -180,20 +185,23 @@ class EnvironmentApiService {
   }
 
   Future<void> deleteEnvironment(String slug) async {
-    final r = await _client.delete(_uri('/environments/$slug'));
+    final r = await _client
+        .delete(_uri('/environments/$slug'))
+        .timeout(_requestTimeout);
     if (r.statusCode != 204) throw EnvironmentApiException(_errorFrom(r));
   }
 
   Future<String> exportRequirements(String slug,
       {String mode = 'delta'}) async {
     final r = await _client
-        .get(_uri('/environments/$slug/requirements', {'mode': mode}));
+        .get(_uri('/environments/$slug/requirements', {'mode': mode}))
+        .timeout(_requestTimeout);
     if (r.statusCode != 200) throw EnvironmentApiException(_errorFrom(r));
     return r.body;
   }
 
   Future<EnvJob> pollJob(String jobId) async {
-    final r = await _client.get(_uri('/jobs/$jobId'));
+    final r = await _client.get(_uri('/jobs/$jobId')).timeout(_requestTimeout);
     if (r.statusCode != 200) throw EnvironmentApiException(_errorFrom(r));
     return EnvJob.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
