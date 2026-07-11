@@ -15,6 +15,13 @@ class AnalyticsService {
   File? _logFile;
   File? _backendActivityLogFile;
 
+  // Every control-API request/response gets appended here (see
+  // control_api_service.dart's _LoggedHttpClient), so with no cap this file
+  // grows without bound for the life of the install — observed reaching
+  // several GB in practice. Rotate it down once it crosses [_maxLogFileBytes].
+  static const int _maxLogFileBytes = 5 * 1024 * 1024;
+  static const int _logTrimTargetBytes = 2 * 1024 * 1024;
+
   set telemetryEnabled(bool enabled) => _telemetryEnabled = enabled;
   set remoteEndpoint(String? endpoint) => _remoteEndpoint = endpoint;
 
@@ -35,11 +42,7 @@ class AnalyticsService {
 
     // Always log locally
     if (_logFile != null) {
-      try {
-        await _logFile!.writeAsString(logEntry, mode: FileMode.append);
-      } catch (e) {
-        debugPrint('Failed to write to local crash log: $e');
-      }
+      await _appendWithRotation(_logFile!, logEntry, label: 'crash log');
     }
 
     // Optional remote reporting
@@ -140,11 +143,11 @@ class AnalyticsService {
 
     buffer.writeln();
 
-    try {
-      await file.writeAsString(buffer.toString(), mode: FileMode.append);
-    } catch (e) {
-      debugPrint('Failed to write backend activity log: $e');
-    }
+    await _appendWithRotation(
+      file,
+      buffer.toString(),
+      label: 'backend activity log',
+    );
   }
 
   Future<List<String>> getBackendActivityLogLines({int maxLines = 2000}) async {
@@ -159,6 +162,46 @@ class AnalyticsService {
     if (_logFile != null && await _logFile!.exists()) {
       await _logFile!.delete();
     }
+  }
+
+  /// Appends [entry] to [file], first trimming the file down to its last
+  /// [_logTrimTargetBytes] once it crosses [_maxLogFileBytes], so repeated
+  /// appends (e.g. one per control-API request, every few seconds for the
+  /// life of the app) can't grow it without bound.
+  Future<void> _appendWithRotation(
+    File file,
+    String entry, {
+    required String label,
+  }) async {
+    try {
+      if (await file.exists() && await file.length() > _maxLogFileBytes) {
+        await _trimToTail(file, _logTrimTargetBytes);
+      }
+      await file.writeAsString(entry, mode: FileMode.append);
+    } catch (e) {
+      debugPrint('Failed to write $label: $e');
+    }
+  }
+
+  Future<void> _trimToTail(File file, int keepBytes) async {
+    final length = await file.length();
+    final start = length > keepBytes ? length - keepBytes : 0;
+    final handle = await file.open();
+    String text;
+    try {
+      await handle.setPosition(start);
+      final bytes = await handle.read(length - start);
+      text = utf8.decode(bytes, allowMalformed: true);
+    } finally {
+      await handle.close();
+    }
+    if (start > 0) {
+      final firstNewline = text.indexOf('\n');
+      if (firstNewline >= 0 && firstNewline + 1 < text.length) {
+        text = text.substring(firstNewline + 1);
+      }
+    }
+    await file.writeAsString(text, mode: FileMode.write);
   }
 
   Future<List<String>> _readTailLines(
