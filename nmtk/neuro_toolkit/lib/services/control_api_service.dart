@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -693,6 +694,8 @@ class ControlApiService {
 class _LoggedHttpClient extends http.BaseClient {
   _LoggedHttpClient(this._inner, this._analytics);
 
+  static const _requestTimeout = Duration(seconds: 10);
+
   final http.Client _inner;
   final AnalyticsService _analytics;
 
@@ -701,8 +704,21 @@ class _LoggedHttpClient extends http.BaseClient {
     final stopwatch = Stopwatch()..start();
     final requestBody = _requestBody(request);
     try {
-      final response = await _inner.send(request);
-      final bytes = await response.stream.toBytes();
+      final response = await _inner.send(request).timeout(
+        _requestTimeout,
+        onTimeout: () => throw TimeoutException(
+          'Control API request timed out: ${request.method} ${request.url}',
+          _requestTimeout,
+        ),
+      );
+      final bytes = await response.stream.toBytes().timeout(
+        _requestTimeout,
+        onTimeout: () => throw TimeoutException(
+          'Control API response body timed out: '
+          '${request.method} ${request.url}',
+          _requestTimeout,
+        ),
+      );
       stopwatch.stop();
       final responseBody = utf8.decode(bytes, allowMalformed: true);
       await _analytics.recordBackendActivity(

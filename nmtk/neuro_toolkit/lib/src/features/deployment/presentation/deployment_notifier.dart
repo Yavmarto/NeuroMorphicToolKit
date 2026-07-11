@@ -10,6 +10,7 @@ part 'deployment_notifier.g.dart';
 @riverpod
 class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
   Timer? _pollTimer;
+  bool _pollInFlight = false;
 
   @override
   Future<DeploymentState> build() async {
@@ -169,7 +170,9 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
         timer.cancel();
         return;
       }
+      if (_pollInFlight) return;
 
+      _pollInFlight = true;
       final controlApi = ref.read(controlApiServiceProvider);
       try {
         final updatedJob = await controlApi.fetchDeploymentJob(job.id);
@@ -181,6 +184,8 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
         }
       } catch (e) {
         // Ignore polling errors
+      } finally {
+        _pollInFlight = false;
       }
     });
   }

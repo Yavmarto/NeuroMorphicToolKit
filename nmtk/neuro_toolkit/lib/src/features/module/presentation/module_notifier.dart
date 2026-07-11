@@ -16,6 +16,7 @@ part 'module_notifier.g.dart';
 class ModuleNotifier extends _$ModuleNotifier {
   late final UpdateService _updateService;
   Timer? _refreshTimer;
+  bool _pollInFlight = false;
 
   @override
   Future<ModuleState> build() async {
@@ -95,7 +96,7 @@ class ModuleNotifier extends _$ModuleNotifier {
   void _startRefreshTimer() {
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (state.isLoading || state.hasError) return;
+      if (state.isLoading || state.hasError || _pollInFlight) return;
       unawaited(_pollUpdates());
     });
     ref.onDispose(() {
@@ -104,6 +105,7 @@ class ModuleNotifier extends _$ModuleNotifier {
   }
 
   Future<void> _pollUpdates() async {
+    _pollInFlight = true;
     try {
       final controlApi = ref.read(controlApiServiceProvider);
       final settings = await controlApi.fetchSettings();
@@ -147,6 +149,8 @@ class ModuleNotifier extends _$ModuleNotifier {
       }
     } catch (_) {
       // Ignore polling errors to prevent breaking the UI on transient network drops
+    } finally {
+      _pollInFlight = false;
     }
   }
 
