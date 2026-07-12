@@ -13,6 +13,7 @@ import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
 import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
+import 'package:neuro_toolkit/widgets/module_loading_view.dart';
 
 class _FakeModuleNotifier extends ModuleNotifier {
   @override
@@ -115,5 +116,40 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byType(NmtkTopAppBar), findsOneWidget);
     expect(find.byTooltip('Settings'), findsNothing);
+  });
+
+  testWidgets('narrow launcher mounts only the active module surface', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+          controlApiServiceProvider.overrideWithValue(
+            ControlApiService(
+              baseUri: Uri.parse('http://localhost:9000'),
+              analyticsService: AnalyticsService(),
+            ),
+          ),
+          moduleProvider.overrideWith(() => _FakeModuleNotifier()),
+          workspaceProvider.overrideWith(() => _FakeWorkspaceNotifier()),
+        ],
+        child: const MaterialApp(home: ToolViewScreen()),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // An IndexedStack used to mount both waiting surfaces here. The narrow
+    // layout must retain only the currently selected module's frontend.
+    expect(find.byType(ModuleLoadingView), findsOneWidget);
+    expect(find.text('Waiting for NeuroStudio'), findsOneWidget);
+    expect(find.text('Waiting for Bench'), findsNothing);
   });
 }

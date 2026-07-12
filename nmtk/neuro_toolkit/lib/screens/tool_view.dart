@@ -541,10 +541,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
   }
 
-  /// Builds the child widget for a single module slot in the [IndexedStack].
+  /// Builds the active embedded surface for a module.
   ///
-  /// Extracted so it can be shared between the desktop [Scaffold] path and the
-  /// [NmtkMobileScaffold] path without duplicating the recovery/failure logic.
+  /// Shared by the desktop [Scaffold] and narrow [NmtkMobileScaffold] paths.
+  /// Both paths intentionally mount only their active module: native module
+  /// trees and WebViews must be disposed when a user switches away instead of
+  /// accumulating hidden frontends in memory.
   Widget _buildModuleChild(
     Module module,
     Map<String, WorkspaceSession> sessionsByModuleId,
