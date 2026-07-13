@@ -48,3 +48,13 @@ def test_query_llm_sends_base64_image_in_payload():
 
 def test_query_llm_model_is_qwen3_5_35b():
     assert agent.OLLAMA_MODEL == "qwen3.5:35b"
+
+
+def test_scripted_macro_removed():
+    assert not hasattr(agent, "run_lif_snntorch_scripted")
+
+
+def test_main_requires_guide_path_argument():
+    import inspect
+    sig = inspect.signature(agent.main)
+    assert list(sig.parameters) == ["guide_path"]

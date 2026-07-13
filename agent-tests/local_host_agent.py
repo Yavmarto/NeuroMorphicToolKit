@@ -28,50 +28,6 @@ SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# Numbered checklist for paper/01_lif/lif_snntorch.ipynb. Earlier version was
-# copied verbatim from `current tasks/16 june/cnlstudio_notebook_analysis.md`'s
-# "UI Replication Guide", which turned out to describe UI that doesn't exist in
-# this build (e.g. there is no "Export/File Menu"). Rewritten below to name the
-# ACTUAL widgets (tooltip/label text confirmed by reading the Flutter source:
-# neurocnl/frontend/lib/widgets/nir_importer_tab.dart,
-# neurocnl/frontend/lib/screens/canvas/canvas_screen.dart,
-# neurocnl/frontend/lib/models/canvas/pipeline_dag.dart) so a small model has an
-# actual click target for every step instead of an abstract goal.
-NIR_FILE_PATH = "/Users/yoshimartodihardjo/NeuroMorphicToolKit/paper/01_lif/lif_norse.nir"
-TASK_INSTRUCTION = (
-    "You are reproducing the 'lif_snntorch.ipynb' notebook inside the NeuroStudio (neuro_toolkit) "
-    "application by following this EXACT numbered checklist, in order. Use the action history below "
-    "to figure out which steps you've already completed, then perform the next uncompleted one. "
-    "Do not skip ahead and do not repeat a step that already succeeded.\n\n"
-    "Canvas: Model\n"
-    "1. Navigate to the Model Canvas (stepper tab '2. Model').\n"
-    "2. Click the icon whose tooltip/content is 'NIR Importer' to open its side panel.\n"
-    "3. Inside that panel, click the button labeled 'Load .nir'.\n"
-    f"4. A native file picker will open as a SEPARATE window you cannot see or click into — do not try. "
-    f"Instead: press key 'cmd+shift+g', then type the exact text '{NIR_FILE_PATH}', then press key "
-    "'Return', then press key 'Return' again to confirm the file selection.\n"
-    "5. Wait a couple of seconds, then confirm the Model canvas now shows a real graph (no longer empty).\n\n"
-    "Canvas: Eval\n"
-    "6. Navigate to the Eval Canvas (stepper tab '4. Eval').\n"
-    "7. Click the '+' icon in the bottom toolbar (tooltip 'Add') to open the 'Add Node' picker.\n"
-    "8. Click the tile labeled 'Spike Generator'. Configure it: n_neurons=1, n_timesteps=100, "
-    "pattern=isi_regular, isi_period=10, seed=42.\n"
-    "9. Click the '+' icon again, then click the tile labeled 'State Reset'.\n"
-    "10. Click the '+' icon again, then click the tile labeled 'Forward Pass'. Set its eval_mode = true.\n"
-    "11. Click the '+' icon again, then click the tile labeled 'Spike Rate Logger'.\n"
-    "12. Drag from the Spike Generator node's output port to the Forward Pass node's input port "
-    "(use the 'drag' action with from_id/to_id set to those two ports' element IDs).\n"
-    "13. Drag from the State Reset node's model-output port to the Forward Pass node's model-input port.\n"
-    "14. Drag from the Forward Pass node's spikes-output port to the Spike Rate Logger node's spikes-input port. "
-    "Leave any other Forward Pass outputs (membrane, model) unconnected.\n"
-    "15. Click 'Run Eval'.\n\n"
-    "Results Step: Dynamics Tab\n"
-    "16. After the eval run completes, navigate to the Results step and open the Dynamics tab.\n"
-    "17. Confirm the Spike Raster panel shows the output spike times.\n"
-    "18. Confirm the Membrane Voltage Trace panel shows the LIF membrane potential over 100 timesteps.\n"
-    "19. Export results to CSV via the export button.\n"
-)
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 import subprocess
 
@@ -243,151 +199,30 @@ def element_center_px(target_id: str, label_coordinates: dict, screen_w: int, sc
     return int(cx_r * screen_w), int(cy_r * screen_h)
 
 
-# ── Scripted routine ─────────────────────────────────────────────────────────
-# The stepper tabs and toolbar icon positions are identical in every screenshot
-# we've captured so far — there's nothing for a vision model to "discover" there.
-# Only the "Add Node" popup's tile layout is actually unknown, so that's the only
-# place we still call OmniParser. Ratios measured from
-# agent-tests/screenshots/step16_232409_before.png (1512x874 window crop).
-MODEL_TAB = (0.1217, 0.0835)
-EVAL_TAB = (0.2725, 0.0835)
-NIR_IMPORTER_ICON = (0.6027, 0.9531)   # rightmost icon, Model canvas toolbar
-EVAL_ADD_ICON = (0.5311, 0.9531)       # "+" icon, Eval canvas toolbar
+def load_guide(path: str) -> str:
+    """Read a per-notebook task-instruction guide file and return its text,
+    stripped of leading/trailing whitespace. Raises FileNotFoundError with an
+    actionable message if the path doesn't exist."""
+    guide_file = Path(path)
+    if not guide_file.is_file():
+        raise FileNotFoundError(
+            f"Guide file not found: {path!r}. Pass the path to a notebook "
+            f"guide, e.g. agent-tests/guides/lif_snntorch.md"
+        )
+    return guide_file.read_text().strip()
 
 
-def click_ratio(win_w, win_h, win_origin, rx, ry, label=""):
-    x = int(win_origin[0] + rx * win_w)
-    y = int(win_origin[1] + ry * win_h)
-    print(f"  [scripted] Clicking {label} at ({x}, {y})")
-    pyautogui.moveTo(x, y, duration=0.3)
-    pyautogui.click()
-    time.sleep(1.2)
+# ── Main loop (general vision-LLM-driven agent, guide-file-parameterized) ────
+def main(guide_path: str):
+    task_instruction = load_guide(guide_path)
 
-
-def parse_screen(img, yolo_model, caption_model_processor):
-    """Full OmniParser pass (OCR + icon detect + caption) — slow (~60-90s).
-    Only call this where the layout is genuinely unknown."""
-    ocr_result, _ = check_ocr_box(
-        img, display_img=False, output_bb_format="xyxy",
-        easyocr_args={"paragraph": False, "text_threshold": 0.9},
-        use_paddleocr=False,
-    )
-    text, ocr_bbox = ocr_result
-    _, label_coordinates, parsed_content_list = get_som_labeled_img(
-        img, yolo_model,
-        BOX_TRESHOLD=0.3,
-        output_coord_in_ratio=True,
-        ocr_bbox=ocr_bbox,
-        caption_model_processor=caption_model_processor,
-        ocr_text=text,
-        iou_threshold=0.1,
-        imgsz=640,
-    )
-    for i, elem in enumerate(parsed_content_list):
-        elem["original_id"] = str(i)
-    return label_coordinates, parsed_content_list
-
-
-def find_element_by_text(parsed_content_list, needle):
-    needle_l = needle.lower()
-    for elem in parsed_content_list:
-        content = (elem.get("content") or "").lower()
-        if needle_l in content:
-            return elem["original_id"]
-    return None
-
-
-def click_element(label_coordinates, parsed_content_list, target_id, win_w, win_h, win_origin, label=""):
-    cx, cy = element_center_px(target_id, label_coordinates, win_w, win_h)
-    if cx is None:
-        print(f"  ⚠️  Could not resolve element {target_id} for \"{label}\"")
-        return False
-    abs_x, abs_y = int(win_origin[0] + cx), int(win_origin[1] + cy)
-    print(f"  [scripted] Clicking found element {target_id} (\"{label}\") at ({abs_x}, {abs_y})")
-    pyautogui.moveTo(abs_x, abs_y, duration=0.3)
-    pyautogui.click()
-    time.sleep(1.2)
-    return True
-
-
-def run_lif_snntorch_scripted():
-    """Deterministic macro for paper/01_lif/lif_snntorch.ipynb: script every
-    fixed, already-confirmed click directly, and only fall back to OmniParser
-    text-matching (no LLM call — OCR/caption content is searched directly) for
-    the one part whose layout isn't fixed: the 'Add Node' popup's tiles."""
-    print("Loading OmniParser models...")
-    yolo_model = get_yolo_model(model_path=os.path.expanduser("~/OmniParser/weights/icon_detect/model.pt"))
-    caption_model_processor = get_caption_model_processor(
-        model_name="florence2",
-        model_name_or_path=os.path.expanduser("~/OmniParser/weights/icon_caption_florence"),
-    )
-
-    print("Agent starting in 5 seconds — make neuro_toolkit the active window…")
-    time.sleep(5)
-
-    # 1. Model canvas
-    _, win_w, win_h, win_origin = get_screenshot()
-    click_ratio(win_w, win_h, win_origin, *MODEL_TAB, "Model tab")
-
-    # 2. Open NIR Importer panel
-    _, win_w, win_h, win_origin = get_screenshot()
-    click_ratio(win_w, win_h, win_origin, *NIR_IMPORTER_ICON, "NIR Importer icon")
-
-    # 3. Find + click "Load .nir" inside the panel (position not previously
-    # confirmed — one live OmniParser lookup, since this needs real detection).
-    img, win_w, win_h, win_origin = get_screenshot()
-    label_coords, parsed = parse_screen(img, yolo_model, caption_model_processor)
-    load_nir_id = find_element_by_text(parsed, "load .nir") or find_element_by_text(parsed, "load")
-    if load_nir_id is None:
-        print("  ⚠️  Could not find 'Load .nir' button — check the latest step*_before.png "
-              "for the panel layout and adjust NIR_IMPORTER_ICON/search text.")
-        return
-    click_element(label_coords, parsed, load_nir_id, win_w, win_h, win_origin, "Load .nir")
-
-    # 4. Native file picker is a separate OS window we can't see — go in blind.
-    time.sleep(1.5)
-    pyautogui.hotkey('command', 'shift', 'g')
-    time.sleep(0.8)
-    pyautogui.typewrite(NIR_FILE_PATH, interval=0.02)
-    pyautogui.press('return')
-    time.sleep(0.8)
-    pyautogui.press('return')
-    time.sleep(2)
-
-    # 5. Eval canvas
-    _, win_w, win_h, win_origin = get_screenshot()
-    click_ratio(win_w, win_h, win_origin, *EVAL_TAB, "Eval tab")
-
-    # 6-8. Add each pipeline node via the "+" -> "Add Node" popup, found by
-    # direct text match against the popup's own labels (no LLM guessing).
-    for name in ("Spike Generator", "State Reset", "Forward Pass", "Spike Rate Logger"):
-        _, win_w, win_h, win_origin = get_screenshot()
-        click_ratio(win_w, win_h, win_origin, *EVAL_ADD_ICON, "+ (Add Node)")
-
-        img, win_w, win_h, win_origin = get_screenshot()
-        label_coords, parsed = parse_screen(img, yolo_model, caption_model_processor)
-        tile_id = find_element_by_text(parsed, name)
-        if tile_id is None:
-            print(f"  ⚠️  Could not find node tile '{name}' in the Add Node popup — "
-                  f"check the latest step*_before.png.")
-            continue
-        click_element(label_coords, parsed, tile_id, win_w, win_h, win_origin, name)
-
-    final_img, _, _, _ = get_screenshot()
-    save_screenshot(final_img, 99, "nodes_added")
-    print("\nAll 4 nodes attempted. Check agent-tests/screenshots/step99_*_nodes_added.png "
-          "to confirm they landed on the Eval canvas before wiring ports / Run Eval — "
-          "that part isn't scripted yet since we haven't seen the populated canvas.")
-
-
-# ── Main loop (general LLM-driven agent, kept for other notebooks) ──────────
-def main():
     report_lines = [
         f"# Notebook Reproduction Report",
         f"Generated: {datetime.now().isoformat()}",
+        f"Guide: {guide_path}",
         "",
         f"## Task",
-        TASK_INSTRUCTION,
+        task_instruction,
         "",
         "## Steps",
     ]
@@ -455,7 +290,7 @@ def main():
 
         # 3. Ask LLM
         print("  Querying LLM…")
-        action_obj = query_llm(TASK_INSTRUCTION, element_summary, history)
+        action_obj = query_llm(task_instruction, element_summary, history, img)
         print(f"  LLM → {action_obj}")
         history.append(f"Step {step}: {json.dumps(action_obj)}")
 
@@ -565,10 +400,8 @@ def main():
 
 
 if __name__ == "__main__":
-    # Default: the fast scripted macro for lif_snntorch (no per-step LLM calls
-    # for the fixed navigation). Pass --llm to use the general vision-LLM loop
-    # instead (needed for a different notebook, or if the UI layout changes).
-    if "--llm" in sys.argv:
-        main()
-    else:
-        run_lif_snntorch_scripted()
+    if len(sys.argv) < 2:
+        print("Usage: python local_host_agent.py <path-to-guide.md>")
+        print("Example: python local_host_agent.py guides/lif_snntorch.md")
+        sys.exit(1)
+    main(sys.argv[1])
