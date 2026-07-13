@@ -19,7 +19,7 @@ import torch
 
 # ── Config ────────────────────────────────────────────────────────────────────
 OLLAMA_URL   = "http://127.0.0.1:11435/api/chat"
-OLLAMA_MODEL = "qwen3.5:35b"         # vision-capable — sees the screenshot, not just the element list
+OLLAMA_MODEL = "qwen3-vl:4b"         # small, Ollama-native, ~94% ScreenSpot grounding accuracy — faster + more accurate at GUI click-targets than the general-purpose 35B model
 MAX_ELEMENTS = 80                    # cap to avoid context overflow
 STEPS        = 30
 SCREENSHOT_DIR = Path(__file__).parent / "screenshots"
@@ -287,7 +287,14 @@ def main(guide_path: str):
 
             _, label_coordinates, parsed_content_list = get_som_labeled_img(
                 img, yolo_model,
-                BOX_TRESHOLD=0.05,
+                # 0.3 (not the original 0.05) — this is now the ONLY detection pass
+                # per step (the old scripted macro used to handle fixed nav with zero
+                # OmniParser calls and only ran a 0.3-threshold lookup for the one
+                # genuinely-variable target). At 0.05 this floods parsed_content_list
+                # with low-confidence noise every step, and the always-present,
+                # high-confidence stepper-tab icons win build_element_summary()'s
+                # truncation every time — the agent ends up only ever clicking those.
+                BOX_TRESHOLD=0.3,
                 output_coord_in_ratio=True,
                 ocr_bbox=ocr_bbox,
                 caption_model_processor=caption_model_processor,

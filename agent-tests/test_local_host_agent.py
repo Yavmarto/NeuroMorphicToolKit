@@ -46,8 +46,8 @@ def test_query_llm_sends_base64_image_in_payload():
     base64.b64decode(encoded)
 
 
-def test_query_llm_model_is_qwen3_5_35b():
-    assert agent.OLLAMA_MODEL == "qwen3.5:35b"
+def test_query_llm_model_is_qwen3_vl_4b():
+    assert agent.OLLAMA_MODEL == "qwen3-vl:4b"
 
 
 def test_scripted_macro_removed():
