@@ -58,3 +58,58 @@ def test_main_requires_guide_path_argument():
     import inspect
     sig = inspect.signature(agent.main)
     assert list(sig.parameters) == ["guide_path"]
+
+
+def test_get_window_rect_points_retries_once_on_timeout():
+    timeout_result = MagicMock(returncode=1, stdout="", stderr="AppleEvent timed out")
+    ok_result = MagicMock(returncode=0, stdout="{100, 200}, {800, 600}", stderr="")
+
+    with patch("local_host_agent.subprocess.run", side_effect=[timeout_result, ok_result]) as mock_run:
+        result = agent.get_window_rect_points()
+
+    assert result == (100.0, 200.0, 800.0, 600.0)
+    assert mock_run.call_count == 2
+
+
+def test_get_window_rect_points_uses_applescript_timeout_wrapper():
+    ok_result = MagicMock(returncode=0, stdout="{0, 0}, {10, 10}", stderr="")
+    with patch("local_host_agent.subprocess.run", return_value=ok_result) as mock_run:
+        agent.get_window_rect_points()
+    script_arg = mock_run.call_args.args[0][2]  # ['osascript', '-e', <script>]
+    assert "with timeout of 20 seconds" in script_arg
+
+
+def test_main_passes_screenshot_to_query_llm(tmp_path, monkeypatch):
+    guide = tmp_path / "g.md"
+    guide.write_text("1. Click done.")
+
+    fake_img = _make_fake_img()
+
+    def fake_get_screenshot():
+        return fake_img, 100, 100, (0, 0)
+
+    monkeypatch.setattr(agent, "get_screenshot", fake_get_screenshot)
+    monkeypatch.setattr(agent, "save_screenshot", lambda *a, **k: "fake/path.png")
+    monkeypatch.setattr(agent, "get_yolo_model", lambda **k: MagicMock())
+    monkeypatch.setattr(agent, "get_caption_model_processor", lambda **k: MagicMock())
+
+    def fake_check_ocr_box(*a, **k):
+        return (([], []), None)
+
+    monkeypatch.setattr(agent, "check_ocr_box", fake_check_ocr_box)
+    monkeypatch.setattr(agent, "get_som_labeled_img", lambda *a, **k: (None, {}, []))
+
+    captured = {}
+
+    def fake_query_llm(instruction, element_summary, history, img):
+        captured["img"] = img
+        captured["instruction"] = instruction
+        return {"action": "done", "reason": "test finished"}
+
+    monkeypatch.setattr(agent, "query_llm", fake_query_llm)
+    monkeypatch.setattr(agent.time, "sleep", lambda *_: None)
+
+    agent.main(str(guide))
+
+    assert captured["img"] is fake_img
+    assert captured["instruction"] == "1. Click done."

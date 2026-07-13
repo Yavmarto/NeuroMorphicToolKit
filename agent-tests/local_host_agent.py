@@ -33,23 +33,33 @@ import subprocess
 
 def get_window_rect_points():
     """Return (x, y, w, h) in points for neuro_toolkit's front window, or None
-    if it can't be determined (e.g. Accessibility permission not granted)."""
-    try:
-        result = subprocess.run(
-            ['osascript', '-e',
-             'tell application "System Events" to tell process "neuro_toolkit" '
-             'to get {position, size} of front window'],
-            capture_output=True, text=True, timeout=10,
-        )
-        if result.returncode != 0:
-            return None
-        nums = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", result.stdout)]
-        if len(nums) != 4:
-            return None
-        x, y, w, h = nums
-        return x, y, w, h
-    except Exception:
-        return None
+    if it can't be determined (e.g. Accessibility permission not granted).
+    Wrapped in a 20s AppleScript-level timeout and retried once, since a cold
+    app or a busy System Events can otherwise hit AppleEvent error -1712
+    well before Python's own subprocess timeout would fire."""
+    script = (
+        'with timeout of 20 seconds\n'
+        'tell application "System Events" to tell process "neuro_toolkit" '
+        'to get {position, size} of front window\n'
+        'end timeout'
+    )
+    for attempt in range(2):
+        try:
+            result = subprocess.run(
+                ['osascript', '-e', script],
+                capture_output=True, text=True, timeout=25,
+            )
+        except subprocess.TimeoutExpired:
+            continue
+        if result.returncode == 0:
+            nums = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", result.stdout)]
+            if len(nums) == 4:
+                x, y, w, h = nums
+                return x, y, w, h
+        if attempt == 0:
+            print("  ⚠️  System Events call failed/timed out, retrying once…")
+            time.sleep(1)
+    return None
 
 
 def get_screenshot():
@@ -58,7 +68,22 @@ def get_screenshot():
     # window when the app has none visible, and Flutter's macOS embedder
     # mishandles it even when a window is already open, knocking it out of
     # view and leaving only the menu bar for OmniParser to see.
-    subprocess.run(['osascript', '-e', 'tell application "neuro_toolkit" to activate', '-e', 'tell application "System Events" to set frontmost of process "neuro_toolkit" to true'])
+    activate_script = (
+        'with timeout of 20 seconds\n'
+        'tell application "neuro_toolkit" to activate\n'
+        'tell application "System Events" to set frontmost of process "neuro_toolkit" to true\n'
+        'end timeout'
+    )
+    for attempt in range(2):
+        try:
+            result = subprocess.run(['osascript', '-e', activate_script], capture_output=True, text=True, timeout=25)
+        except subprocess.TimeoutExpired:
+            result = None
+        if result is not None and result.returncode == 0:
+            break
+        if attempt == 0:
+            print("  ⚠️  Could not activate neuro_toolkit (AppleEvent issue), retrying once…")
+            time.sleep(1)
     time.sleep(3)
 
     win_rect_pt = get_window_rect_points()
