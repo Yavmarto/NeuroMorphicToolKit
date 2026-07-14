@@ -45,3 +45,6 @@ NIR graphs/session.neurocnl-workspace.json
 .local_automation/
 codeflow-report.json
 filtered-unused-functions.json
+
+# Workspaces
+nmtk-workspaces/
