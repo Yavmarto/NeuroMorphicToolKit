@@ -114,7 +114,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.byType(NavigationRail), findsNothing);
-    expect(find.byType(NmtkTopAppBar), findsOneWidget);
+    expect(find.byType(NmtkTopAppBar), findsNothing);
     expect(find.byTooltip('Settings'), findsNothing);
   });
 

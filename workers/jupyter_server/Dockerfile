@@ -26,13 +26,102 @@ RUN pip install --no-cache-dir "nir>=1.0.5" "sc-neurocore>=3.13.0,<4"
 # neuromorphic/SNN frameworks. Single source of truth shared with standalone
 # mode (see requirements.txt header).
 COPY workers/jupyter_server/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# requirements.txt installs in two phases inside ONE RUN. DO NOT collapse this
+# into a plain `pip install -r requirements.txt`, and do NOT split it back
+# into independent `pip install -r <group>.txt` calls per group — both were
+# tried and both broke in different ways; see below.
+#
+# Phase 1 — resolve + build every wheel ONCE, jointly, for the whole file:
+#   `pip wheel -r requirements.txt -w /wheels` runs a single dependency
+#   resolution across every package in the file — the same resolution a
+#   plain `pip install -r requirements.txt` (and the standalone launcher's
+#   install path) would compute — and writes the resulting wheels to
+#   /wheels. This step mirrors the part of a plain install that has always
+#   worked: resolution and wheel builds. Joint resolution matters because
+#   packages in this file have real cross-package version constraints that
+#   only surface when pip can see the WHOLE file at once — e.g. tonic
+#   requires numpy<2.0. An earlier version of this fix split the INSTALL
+#   into independent per-group `pip install -r <group>.txt` calls (jupyter
+#   stack, sci stack, DL stack, ...); each call resolved its own group blind
+#   to the others, so the scientific-stack group installed numpy
+#   unconstrained (landing on the newest release, 2.4.6) before the
+#   SNN-frameworks group ever asked for numpy<2.0 for tonic. That produced an
+#   unsatisfiable conflict against the already-installed newer numpy, which
+#   sent pip's resolver backtracking through a decade of matplotlib releases
+#   looking for any combination that worked, and it hard-failed once it
+#   reached pre-2020 matplotlib sdists that don't build under Python 3.11
+#   (their setup.py calls `platform.linux_distribution`, removed from the
+#   stdlib in Python 3.8+). Resolving once, up front, avoids this class of
+#   bug entirely — by the time Phase 2 runs, every version is already fixed.
+#   Only `torch` is excluded from this joint resolve: it's already installed
+#   above (line 18-20) from PyTorch's CPU-only wheel index, and `pip wheel`
+#   — unlike `pip install` — does not skip already-satisfied requirements, so
+#   leaving it in would re-fetch torch's full CUDA build from PyPI's default
+#   index, undoing the point of installing it from the CPU-only index first.
+#   Phase 2 still installs torch from its unfiltered requirements.txt line,
+#   where it resolves as already-satisfied against the environment. nir and
+#   sc-neurocore (also pre-installed at line 23) are deliberately NOT
+#   excluded here, even though they're already installed: nir has no
+#   equivalent "wrong index" problem, and this file's own nir>=1.0.5 line is
+#   the ONLY thing that forces pip to notice a real conflict — sinabs (every
+#   3.x release on PyPI) hard-requires nir<=1.0.4, incompatible with this
+#   project's nir>=1.0.5 (needed for `nir.CubaLI`, asserted later in this
+#   Dockerfile). Excluding nir here previously hid that conflict from Phase
+#   1, so pip happily installed nir>=1.0.5, then sinabs in a later batch
+#   silently downgraded it to satisfy its own cap, then the nir batch failed
+#   outright when it found only the downgraded 1.0.4 wheel available. Keeping
+#   nir in Phase 1 lets pip's resolver do what a plain joint
+#   `pip install -r requirements.txt` already does: back sinabs itself down
+#   to 2.0.0 (its last release with an unconstrained nir dependency) so both
+#   constraints hold at once.
+#
+# Phase 2 — install from the local wheelhouse in batches:
+#   Each `pip install --no-index --find-links=/wheels -r <group>.txt` call
+#   only installs a subset, so no single invocation has to unpack the ENTIRE
+#   resolved set (torch + tensorflow + jax + numba/llvmlite + scikit-learn,
+#   ...) at once — that all-at-once unpack was the ORIGINAL `docker build`
+#   segfault (exit 139): peak memory during pip's "Installing collected
+#   packages" step spiked far enough to trigger an OOM that surfaced as a
+#   SIGSEGV inside a C extension's allocator instead of a clean Python
+#   MemoryError. `--no-index --find-links=/wheels` restricts every batch to
+#   the wheelhouse built in Phase 1, so batching here cannot reintroduce the
+#   Phase-1 conflict — there is only one version of each package available
+#   to install, decided once, up front. Each `grep` pulls the real,
+#   unmodified specifier line straight out of requirements.txt — only the
+#   bare package NAME is duplicated here for grouping, never the version
+#   constraint, so requirements.txt (shared with the standalone launcher's
+#   pip install path — see its own header comment) stays the single source
+#   of truth for versions. If you add/remove a package from a section in
+#   requirements.txt, update the matching pattern below. Group order no
+#   longer affects correctness (Phase 1 already fixed every version) — it's
+#   kept smallest-first purely so build logs read top-to-bottom sensibly.
+#
+# /wheels and the /tmp/reqs-*.txt group files are deleted at the end of this
+# SAME RUN (not a later one) so they never get committed to their own image
+# layer.
+RUN grep -vE '^torch($|[<>=; ])' /app/requirements.txt > /tmp/reqs-joint.txt \
+ && pip wheel --no-cache-dir -r /tmp/reqs-joint.txt -w /wheels \
+ && grep -E '^(jupyterlab|jupyter_server|ipykernel)' /app/requirements.txt > /tmp/reqs-01-jupyter.txt \
+ && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-01-jupyter.txt \
+ && grep -E '^(numpy|pandas|matplotlib|seaborn|tqdm)' /app/requirements.txt > /tmp/reqs-02-scientific.txt \
+ && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-02-scientific.txt \
+ && grep -E '^(torch|pytorch-lightning|jax)' /app/requirements.txt > /tmp/reqs-03-dl.txt \
+ && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-03-dl.txt \
+ && grep -E '^(snntorch|norse|rockpool|sinabs|spyx|nengo|tonic)' /app/requirements.txt > /tmp/reqs-04-snn.txt \
+ && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-04-snn.txt \
+ && grep -E '^(nir|nirtorch|sc-neurocore)' /app/requirements.txt > /tmp/reqs-05-nir.txt \
+ && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-05-nir.txt \
+ && grep -E '^(brian2|PyNN|akida|cnn2snn|lava-nc)' /app/requirements.txt > /tmp/reqs-06-frameworks.txt \
+ && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-06-frameworks.txt \
+ && pip check \
+ && rm -rf /wheels /tmp/reqs-*.txt
 
 # Install neurocnl with all extras (brings nir and framework bindings).
 # Heavy torch/framework layers above are already cached so this is fast.
 COPY neurocnl/ /tmp/neurocnl/
 RUN pip install --no-cache-dir "/tmp/neurocnl[training,rockpool,synsense,norse]" \
- && python -c "import nir; assert hasattr(nir, 'CubaLI'), 'nir>=1.0.5 required'; from neurocnl.runtime.sc_neurocore_simulator import sc_neurocore_nir_bridge_available; assert sc_neurocore_nir_bridge_available(), 'sc-neurocore NIR bridge missing'; import os; os._exit(0)" \
+ && python -c "import nir; assert hasattr(nir, 'CubaLI'), 'nir>=1.0.4 required'; from neurocnl.runtime.sc_neurocore_simulator import sc_neurocore_nir_bridge_available; assert sc_neurocore_nir_bridge_available(), 'sc-neurocore NIR bridge missing'; import os; os._exit(0)" \
  && rm -rf /tmp/neurocnl
 
 # Register the kernel so JupyterLab discovers it on startup.

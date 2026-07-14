@@ -725,13 +725,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              NmtkTopAppBar(
-                mode: NmtkShellMode.command,
-                title: const Text('NeuroToolkit'),
-                destinations: const [],
-                selectedIndex: 0,
-                onDestinationSelected: (_) {},
-              ),
               const Expanded(child: ModulePickerPanel()),
             ],
           ),
@@ -807,13 +800,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             setState(() => _activeModuleId = mobileNavItems[i].id);
           }
         },
-        appBar: NmtkTopAppBar(
-          mode: NmtkShellMode.command,
-          title: const Text('NeuroToolkit'),
-          destinations: const [],
-          selectedIndex: 0,
-          onDestinationSelected: (_) {},
-        ),
         showBottomNavigation: false,
         // Only the active module's content is built here — unlike an
         // IndexedStack (which would build and keep every eligible module's
@@ -850,13 +836,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            NmtkTopAppBar(
-              mode: NmtkShellMode.command,
-              title: Text(activeModule.name),
-              destinations: const [],
-              selectedIndex: 0,
-              onDestinationSelected: (_) {},
-            ),
             Expanded(
               child: PageTransitionSwitcher(
                 transitionBuilder: (child, animation, secondaryAnimation) =>

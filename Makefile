@@ -97,6 +97,21 @@ docker-all:
 REMOTE_HOST ?=
 DEPLOY_DIR ?= ~/nmtk-deploy
 LAUNCHER_CONTROL_PORT ?= 8091
+# Every other host port docker-compose.yml binds for a service that can ALSO
+# run natively via the standalone launcher (modules.json installStrategy).
+# Defaults mirror docker-compose.yml's own `${VAR:-default}` fallbacks so
+# eviction below targets the exact port Compose is about to bind.
+SUITE_API_PORT ?= 9000
+NEUROSENSE_PORT ?= 8004
+NEUROBENCH_PORT ?= 8003
+NEUROCHIP_PORT ?= 8002
+LAVA_BACKEND_PORT ?= 8012
+NEUROCNL_PHYSICS_PORT ?= 8006
+SNN_MLIR_COMPILER_PORT ?= 8007
+JUPYTER_PORT ?= 8008
+NATIVE_WORKER_PORTS := $(LAUNCHER_CONTROL_PORT) $(SUITE_API_PORT) $(NEUROSENSE_PORT) \
+	$(NEUROBENCH_PORT) $(NEUROCHIP_PORT) $(LAVA_BACKEND_PORT) $(NEUROCNL_PHYSICS_PORT) \
+	$(SNN_MLIR_COMPILER_PORT) $(JUPYTER_PORT)
 # Set DOCKER_EX_PRUNE=1 to run `docker builder prune` before deploy (slower; rarely needed).
 DOCKER_EX_PRUNE ?=
 # Set DOCKER_EX_RSYNC_VERBOSE=1 to list every rsync'd file (debug only).
@@ -158,8 +173,8 @@ docker-ex-deploy:
 		$(if $(DOCKER_EX_RSYNC_VERBOSE),-v,) \
 		$(RSYNC_EXCLUDES) \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
-	@echo "==> Evicting any native process on port $(LAUNCHER_CONTROL_PORT) on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(LAUNCHER_CONTROL_PORT)/tcp 2>/dev/null || true"
+	@echo "==> Evicting any native process on ports $(NATIVE_WORKER_PORTS) on $(REMOTE_HOST)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(foreach p,$(NATIVE_WORKER_PORTS),$(p)/tcp) 2>/dev/null || true"
 	@if [ -n "$(DOCKER_EX_PRUNE)" ]; then \
 		echo "==> Pruning stale build cache on $(REMOTE_HOST) (keeping 20GB most-recent)..."; \
 		ssh $(SSH_OPTS) $(REMOTE_HOST) "docker builder prune -f --keep-storage=20GB"; \
@@ -188,8 +203,8 @@ deploy-prod: secrets-init
 	@echo "==> Syncing compose files to $(REMOTE_HOST):$(DEPLOY_DIR)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
 	rsync -a -v -e "ssh $(SSH_OPTS)" docker-compose.yml docker-compose.prod.yml $(REMOTE_HOST):$(DEPLOY_DIR)/
-	@echo "==> Evicting any native process on port $(LAUNCHER_CONTROL_PORT) on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(LAUNCHER_CONTROL_PORT)/tcp 2>/dev/null || true"
+	@echo "==> Evicting any native process on ports $(NATIVE_WORKER_PORTS) on $(REMOTE_HOST)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(foreach p,$(NATIVE_WORKER_PORTS),$(p)/tcp) 2>/dev/null || true"
 	@echo "==> Pulling and starting full backend stack on $(REMOTE_HOST)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.prod.yml pull && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait --remove-orphans"
 	@echo "==> Production backend ready."
