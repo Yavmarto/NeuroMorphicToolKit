@@ -11,6 +11,9 @@
   <end_of_task_reporting>
     Every answer must include a short description of what the problem is (exactly 2 sentences), how it was solved (exactly 2 sentences), and where to notice the difference and restart info (exactly 2 sentences). All in plain English.
   </end_of_task_reporting>
+  <deployment>
+    User's standard command to deploy to their dev server: `make docker-ex-m REMOTE_HOST=moosebuntu@192.168.2.51`. Run from repo root — rsyncs uncommitted local changes, rebuilds `suite_api`, launches the Flutter macOS app against that host. See root `AGENTS.md` / `Makefile` (`docker-ex-m` → `docker-ex-deploy`).
+  </deployment>
 </agent_instructions>
 ## GBrain Configuration (configured by /setup-gbrain)
 - Engine: pglite

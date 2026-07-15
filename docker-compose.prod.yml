@@ -6,6 +6,8 @@ services:
     tmpfs:
       - /tmp
       - /run
+    volumes:
+      - suite_api_data:/home/app/data
     environment:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1
@@ -129,6 +131,7 @@ networks:
   monitoring-net:
 
 volumes:
+  suite_api_data:
   neurobench-data:
   neurochip-data:
   neurosense-recordings:

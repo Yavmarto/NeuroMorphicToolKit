@@ -8,9 +8,9 @@
         "path": null,
         "dirty": true,
         "isUntitled": true,
-        "cursorOffset": 1217,
-        "selectionBase": 1217,
-        "selectionExtent": 1217,
+        "cursorOffset": 1942,
+        "selectionBase": 1942,
+        "selectionExtent": 1942,
         "scrollOffset": 0.0,
         "pipelineCache": null,
         "nirArtifactCache": null,
@@ -23,7 +23,7 @@
           "parseResult": {
             "sentences": [
               {
-                "line": 13,
+                "line": 20,
                 "raw": "Define a Input named nir.Input_1784102108810.",
                 "parsed": {
                   "concept": "Input",
@@ -38,7 +38,7 @@
                 "error_detail": null
               },
               {
-                "line": 14,
+                "line": 21,
                 "raw": "Define a Linear named nir.Linear_1784102121480.",
                 "parsed": {
                   "concept": "Linear",
@@ -53,7 +53,22 @@
                 "error_detail": null
               },
               {
-                "line": 16,
+                "line": 22,
+                "raw": "Define a Synaptic named cnl.Synaptic_1784123413089.",
+                "parsed": {
+                  "concept": "Synaptic",
+                  "subject": "cnl.Synaptic_1784123413089",
+                  "action": "",
+                  "verb": "Define",
+                  "negated": false,
+                  "condition": ""
+                },
+                "valid": true,
+                "error": null,
+                "error_detail": null
+              },
+              {
+                "line": 23,
                 "raw": "Define a Linear named nir.Linear_1784123425347.",
                 "parsed": {
                   "concept": "Linear",
@@ -68,7 +83,22 @@
                 "error_detail": null
               },
               {
-                "line": 18,
+                "line": 24,
+                "raw": "Define a Synaptic named cnl.Synaptic_1784123439941.",
+                "parsed": {
+                  "concept": "Synaptic",
+                  "subject": "cnl.Synaptic_1784123439941",
+                  "action": "",
+                  "verb": "Define",
+                  "negated": false,
+                  "condition": ""
+                },
+                "valid": true,
+                "error": null,
+                "error_detail": null
+              },
+              {
+                "line": 25,
                 "raw": "Define a Output named nir.Output_1784123447064.",
                 "parsed": {
                   "concept": "Output",
@@ -83,7 +113,7 @@
                 "error_detail": null
               },
               {
-                "line": 25,
+                "line": 28,
                 "raw": "Connect nir.Input_1784102108810 to nir.Linear_1784102121480.",
                 "parsed": {
                   "concept": "Connect",
@@ -96,9 +126,69 @@
                 "valid": true,
                 "error": null,
                 "error_detail": null
+              },
+              {
+                "line": 29,
+                "raw": "Connect nir.Linear_1784102121480 to cnl.Synaptic_1784123413089.",
+                "parsed": {
+                  "concept": "Connect",
+                  "subject": "nir.Linear_1784102121480",
+                  "action": "",
+                  "verb": "Connect",
+                  "negated": false,
+                  "condition": "cnl.Synaptic_1784123413089"
+                },
+                "valid": true,
+                "error": null,
+                "error_detail": null
+              },
+              {
+                "line": 30,
+                "raw": "Connect cnl.Synaptic_1784123413089 to nir.Linear_1784123425347.",
+                "parsed": {
+                  "concept": "Connect",
+                  "subject": "cnl.Synaptic_1784123413089",
+                  "action": "",
+                  "verb": "Connect",
+                  "negated": false,
+                  "condition": "nir.Linear_1784123425347"
+                },
+                "valid": true,
+                "error": null,
+                "error_detail": null
+              },
+              {
+                "line": 31,
+                "raw": "Connect nir.Linear_1784123425347 to cnl.Synaptic_1784123439941.",
+                "parsed": {
+                  "concept": "Connect",
+                  "subject": "nir.Linear_1784123425347",
+                  "action": "",
+                  "verb": "Connect",
+                  "negated": false,
+                  "condition": "cnl.Synaptic_1784123439941"
+                },
+                "valid": true,
+                "error": null,
+                "error_detail": null
+              },
+              {
+                "line": 32,
+                "raw": "Connect cnl.Synaptic_1784123439941 to nir.Output_1784123447064.",
+                "parsed": {
+                  "concept": "Connect",
+                  "subject": "cnl.Synaptic_1784123439941",
+                  "action": "",
+                  "verb": "Connect",
+                  "negated": false,
+                  "condition": "nir.Output_1784123447064"
+                },
+                "valid": true,
+                "error": null,
+                "error_detail": null
               }
             ],
-            "total": 5,
+            "total": 11,
             "errors": 0
           },
           "validateResult": {
@@ -133,9 +223,10 @@
           "generateResult": null,
           "simulateResult": null,
           "deployReadinessResult": {
-            "level": "approximate",
+            "level": "unsupported",
             "unsupportedNodes": [],
             "diagnostics": [
+              "BrainChip Akida: nir.CubaLIF is not supported and cannot be executed. Remove or replace this node type before running the simulation.",
               "BrainChip Akida: nir.Linear is executed with approximate semantics (timestep quantization may differ). Results are labelled 'approximate'."
             ],
             "status": "unsupported"
@@ -1075,7 +1166,7 @@
             "timing_declarations": [],
             "metadata": {}
           },
-          "cnl_text": "# Network with 1 input.\n# flow: (no edges)\n# Network with 1 input, 1 hidden node.\n# Network with 1 input, 2 hidden nodes.\n# Network with 1 input, 3 hidden nodes.\n# Network with 1 input, 4 hidden nodes.\n\nDefine a network named graph.\n# Network with 1 input, 4 hidden nodes, 1 output.\n# flow: nir.Input_1784102108810 → nir.Linear_1784102121480\n\n# Layers:\nDefine an input port named nir.Input_1784102108810 with shape (12,).\nDefine a linear transformation named nir.Linear_1784102121480 with weight matrix shape (40, 12).\n# unsupported node type Synaptic for node cnl.Synaptic_1784123413089\nDefine a linear transformation named nir.Linear_1784123425347 with weight matrix shape (7, 40).\n# unsupported node type Synaptic for node cnl.Synaptic_1784123439941\nDefine an output port named nir.Output_1784123447064 with shape (7,).\n\n# Connections:\n# unsupported edge from nir.Linear_1784102121480 to cnl.Synaptic_1784123413089\n# unsupported edge from cnl.Synaptic_1784123413089 to nir.Linear_1784123425347\n# unsupported edge from nir.Linear_1784123425347 to cnl.Synaptic_1784123439941\n# unsupported edge from cnl.Synaptic_1784123439941 to nir.Output_1784123447064\nnir.Input_1784102108810 connects to nir.Linear_1784102121480.\n",
+          "cnl_text": "# Network with 1 input.\n# flow: (no edges)\n# Network with 1 input, 1 hidden node.\n# Network with 1 input, 2 hidden nodes.\n# Network with 1 input, 3 hidden nodes.\n# Network with 1 input, 4 hidden nodes.\n# flow: nir.Input_1784102108810 → nir.Linear_1784102121480\n# unsupported node type Synaptic for node cnl.Synaptic_1784123413089\n# unsupported node type Synaptic for node cnl.Synaptic_1784123439941\n# unsupported edge from nir.Linear_1784102121480 to cnl.Synaptic_1784123413089\n# unsupported edge from cnl.Synaptic_1784123413089 to nir.Linear_1784123425347\n# unsupported edge from nir.Linear_1784123425347 to cnl.Synaptic_1784123439941\n# unsupported edge from cnl.Synaptic_1784123439941 to nir.Output_1784123447064\n\nDefine a network named graph.\n# Network with 1 input, 4 hidden nodes, 1 output.\n# flow: nir.Input_1784102108810 → nir.Linear_1784102121480 → cnl.Synaptic_1784123413089 → nir.Linear_1784123425347 → cnl.Synaptic_1784123439941 → nir.Output_1784123447064\n\n# Layers:\nDefine an input port named nir.Input_1784102108810 with shape (12,).\nDefine a linear transformation named nir.Linear_1784102121480 with weight matrix shape (40, 12).\nDefine a Synaptic neuron named cnl.Synaptic_1784123413089 with neuron count 40, synaptic decay 0.75, membrane decay 0.85, and firing threshold 1.0.\nDefine a linear transformation named nir.Linear_1784123425347 with weight matrix shape (7, 40).\nDefine a Synaptic neuron named cnl.Synaptic_1784123439941 with neuron count 7, synaptic decay 0.45, membrane decay 0.7, and firing threshold 1.0.\nDefine an output port named nir.Output_1784123447064 with shape (7,).\n\n# Connections:\nnir.Input_1784102108810 connects to nir.Linear_1784102121480.\nnir.Linear_1784102121480 connects to cnl.Synaptic_1784123413089.\ncnl.Synaptic_1784123413089 connects to nir.Linear_1784123425347.\nnir.Linear_1784123425347 connects to cnl.Synaptic_1784123439941.\ncnl.Synaptic_1784123439941 connects to nir.Output_1784123447064.\n",
           "fidelity_annotations": [],
           "canvas": {
             "nodes": [
@@ -1099,7 +1190,7 @@
                   "canvas_component_id": "input_node",
                   "canvas_position": [
                     45.0,
-                    222.0
+                    30.0
                   ],
                   "label": "nir.Input_1784102108810",
                   "display_label": "Input"
@@ -1690,7 +1781,7 @@
                   "canvas_component_id": "nir.Linear",
                   "canvas_position": [
                     285.0,
-                    222.0
+                    30.0
                   ],
                   "label": "nir.Linear_1784102121480",
                   "display_label": "Linear"
@@ -1704,11 +1795,11 @@
                 "size": 1,
                 "parameters": {
                   "n_neurons": 40,
-                  "alpha": 0.9,
-                  "beta": 0.8,
+                  "alpha": 0.75,
+                  "beta": 0.85,
                   "threshold": 1.0,
                   "reset_mechanism": "subtract",
-                  "name": "Synaptic",
+                  "name": "cnl.Synaptic_1784123413089",
                   "nir_type": "cnl.Synaptic",
                   "shape": [
                     1
@@ -1716,13 +1807,13 @@
                 },
                 "metadata": {
                   "category": "neuron",
-                  "canvas_label": "Synaptic",
+                  "canvas_label": "cnl.Synaptic_1784123413089",
                   "canvas_component_id": "cnl.Synaptic",
                   "canvas_position": [
                     525.0,
-                    222.0
+                    30.0
                   ],
-                  "label": "Synaptic",
+                  "label": "cnl.Synaptic_1784123413089",
                   "display_label": "Synaptic"
                 }
               },
@@ -2036,18 +2127,18 @@
                     ]
                   ],
                   "weight_fill": 1.0,
-                  "name": "Linear",
+                  "name": "nir.Linear_1784123425347",
                   "nir_type": "nir.Linear"
                 },
                 "metadata": {
                   "category": "transform",
-                  "canvas_label": "Linear",
+                  "canvas_label": "nir.Linear_1784123425347",
                   "canvas_component_id": "nir.Linear",
                   "canvas_position": [
                     765.0,
-                    222.0
+                    30.0
                   ],
-                  "label": "Linear",
+                  "label": "nir.Linear_1784123425347",
                   "display_label": "Linear"
                 }
               },
@@ -2059,11 +2150,11 @@
                 "size": 1,
                 "parameters": {
                   "n_neurons": 7,
-                  "alpha": 0.9,
-                  "beta": 0.8,
+                  "alpha": 0.45,
+                  "beta": 0.7,
                   "threshold": 1.0,
                   "reset_mechanism": "subtract",
-                  "name": "Synaptic",
+                  "name": "cnl.Synaptic_1784123439941",
                   "nir_type": "cnl.Synaptic",
                   "shape": [
                     1
@@ -2071,13 +2162,13 @@
                 },
                 "metadata": {
                   "category": "neuron",
-                  "canvas_label": "Synaptic",
+                  "canvas_label": "cnl.Synaptic_1784123439941",
                   "canvas_component_id": "cnl.Synaptic",
                   "canvas_position": [
                     1005.0,
-                    222.0
+                    30.0
                   ],
-                  "label": "Synaptic",
+                  "label": "cnl.Synaptic_1784123439941",
                   "display_label": "Synaptic"
                 }
               },
@@ -2092,18 +2183,18 @@
                   "shape": [
                     7
                   ],
-                  "name": "Output",
+                  "name": "nir.Output_1784123447064",
                   "nir_type": "nir.Output"
                 },
                 "metadata": {
                   "category": "io",
-                  "canvas_label": "Output",
+                  "canvas_label": "nir.Output_1784123447064",
                   "canvas_component_id": "output_node",
                   "canvas_position": [
                     1245.0,
-                    222.0
+                    30.0
                   ],
-                  "label": "Output",
+                  "label": "nir.Output_1784123447064",
                   "display_label": "Output"
                 }
               }
@@ -2138,14 +2229,14 @@
             "read_only_annotations": []
           }
         },
-        "revision": 78
+        "revision": 85
       }
     ],
     "activeFileId": "untitled-1",
-    "workspaceName": "session",
+    "workspaceName": "session_backup",
     "workspaceSourceKind": null,
     "activePanel": "validation",
-    "activePipelineStep": "trainingSandbox",
+    "activePipelineStep": "deploy",
     "selectedBenchmarkId": null,
     "selectedBenchmarkName": null,
     "selectedDataset": null,
@@ -2461,7 +2552,712 @@
     },
     "simulationResults": null,
     "simulationCurrentTime": 0.0,
-    "trainingHistory": {},
+    "trainingHistory": {
+      "snntorch_sim": [
+        {
+          "epoch": 1,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 2,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 3,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 4,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 5,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 6,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 7,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 8,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 9,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 10,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 11,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 12,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 13,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 14,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 15,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 16,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 17,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 18,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 19,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 20,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 21,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 22,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 23,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 24,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 25,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 26,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 27,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 28,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 29,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 30,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 31,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 32,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 33,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 34,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 35,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 36,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 37,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 38,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 39,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 40,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 41,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 42,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 43,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 44,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 45,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 46,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 47,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 48,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 49,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 50,
+          "total_epochs": 50,
+          "loss": 1.9459097608923912,
+          "accuracy": null,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 1,
+          "total_epochs": 3,
+          "loss": 0.0,
+          "accuracy": 0.109375,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 2,
+          "total_epochs": 3,
+          "loss": 0.0,
+          "accuracy": 0.1484375,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 3,
+          "total_epochs": 3,
+          "loss": 0.0,
+          "accuracy": 0.14285714285714285,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        },
+        {
+          "epoch": 1,
+          "total_epochs": 1,
+          "loss": 0.0,
+          "accuracy": 0.14285714285714285,
+          "elapsed_seconds": null,
+          "layer_spike_rates": {
+            "output": 0.0
+          },
+          "label_probabilities": [],
+          "platform": "snntorch_sim",
+          "replayed": false
+        }
+      ]
+    },
     "nodeLayout": {
       "nir.Input_1784102108810": {
         "x": 45.0,

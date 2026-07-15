@@ -205,6 +205,7 @@ def _execute_notebook_job(
     notebook_path: str,
     kernel_name: str,
     on_line: Callable[[str], None] | None = None,
+    register_kernel: Callable[[Any], None] | None = None,
 ) -> dict[str, Any]:
     resolved_path = _resolve_execute_path(notebook_root, notebook_path)
     resolved_kernel = _resolve_execute_kernel_name(resolved_path, kernel_name)
@@ -226,6 +227,8 @@ def _execute_notebook_job(
     # outright or, worse, loading an unrelated file that happens to exist
     # there. Always run the kernel from the notebook's own directory.
     kernel_manager.start_kernel(cwd=str(resolved_path.parent))
+    if register_kernel is not None:
+        register_kernel(kernel_manager)
     kernel_client = kernel_manager.blocking_client()
     kernel_client.start_channels()
     try:
@@ -333,6 +336,12 @@ class JobHandler(_NmtkHandler):
             raise web.HTTPError(404, f"Job '{job_id}' not found")
         self.finish(json.dumps(job))
 
+    def delete(self, job_id: str) -> None:
+        if not self.jobs.cancel(job_id):
+            raise web.HTTPError(404, f"Job '{job_id}' not found")
+        self.set_status(204)
+        self.finish()
+
 
 class ExecutionsHandler(_NmtkHandler):
     def post(self) -> None:
@@ -350,6 +359,7 @@ class ExecutionsHandler(_NmtkHandler):
                 notebook_path,
                 kernel_name,
                 lambda line: self.jobs.append_output(job_id, line),
+                lambda km: self.jobs.register_kernel(job_id, km),
             ),
         )
         self.set_status(202)

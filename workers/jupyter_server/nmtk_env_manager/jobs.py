@@ -26,6 +26,7 @@ class JobRegistry:
 
     def __init__(self, max_workers: int = 2) -> None:
         self._jobs: dict[str, dict[str, Any]] = {}
+        self._kernels: dict[str, Any] = {}
         self._lock = threading.Lock()
         self._pool = ThreadPoolExecutor(
             max_workers=max_workers, thread_name_prefix="nmtk-env"
@@ -56,6 +57,31 @@ class JobRegistry:
             if job is None:
                 return
             job.setdefault("output", []).append(line)
+
+    def register_kernel(self, job_id: str, kernel_manager: Any) -> None:
+        """Associate a running job with its kernel manager so it can be cancelled."""
+        with self._lock:
+            self._kernels[job_id] = kernel_manager
+
+    def cancel(self, job_id: str) -> bool:
+        """Shut down the kernel backing *job_id*, if it is still running.
+
+        Returns False if the job is unknown. The job's own worker thread
+        observes the dead kernel and transitions it to the error state via
+        the normal `_run` exception path, so this only needs to trigger the
+        shutdown, not update job state itself.
+        """
+        with self._lock:
+            job = self._jobs.get(job_id)
+            kernel_manager = self._kernels.get(job_id)
+        if job is None:
+            return False
+        if kernel_manager is not None:
+            try:
+                kernel_manager.shutdown_kernel(now=True)
+            except Exception:  # noqa: BLE001 — kernel may already be gone
+                pass
+        return True
 
     def _run(self, job_id: str, fn: Callable[[], Any]) -> None:
         try:

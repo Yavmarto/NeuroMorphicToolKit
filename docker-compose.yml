@@ -11,6 +11,8 @@ services:
       dockerfile: suite_api/Dockerfile
     ports:
       - "${SUITE_API_PORT:-9000}:9000"
+    volumes:
+      - suite_api_data:/home/app/data
     environment:
       - PYTHONUNBUFFERED=1
       - NEUROCNL_FIREBASE_BUCKET=${NEUROCNL_FIREBASE_BUCKET:-nmtk-41e11.firebasestorage.app}
@@ -286,6 +288,7 @@ networks:
     driver: bridge
 
 volumes:
+  suite_api_data:
   prometheus_data:
   grafana_data:
   jupyter_notebooks:
