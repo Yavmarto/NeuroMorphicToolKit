@@ -9,15 +9,15 @@ This guide explains how to replicate a full end-to-end training of a Spiking RNN
 The snnTorch tutorial defines an RNN that classifies 7 letter categories from 12-channel tactile spike inputs over 256 timesteps.
 ```python
 # Conceptual Architecture
-Input (12) → Linear(12 → N_hidden, no bias)
-           → RSynaptic(alpha_r, beta_r, recurrent=True, reset="subtract") [N_hidden]
-           → Linear(N_hidden → 7, no bias)
-           → Synaptic(alpha_out, beta_out, reset="subtract") [7]
+Input (12) → Linear(12 → 40, no bias)
+           → RSynaptic(alpha=0.75, beta=0.85, recurrent=True, reset="subtract") [40]
+           → Linear(40 → 7, no bias)
+           → Synaptic(alpha=0.45, beta=0.7, reset="subtract") [7]
            → Output (7)
 ```
 
 ### Parameter Conversions for CNLStudio:
-*   Instead of manually setting parameters, you can use the built-in **Import Config...** button in the Export workspace panel to load the hyperparameters from `paper/03_rnn/data/parameters_noDelay_noBias_ref_subtract.json`. This JSON provides `N_hidden`, `alpha_r`, `beta_r`, `alpha_out`, `beta_out`, `lr`, `slope`, `reg_l1`, and `reg_l2`.
+*   The original code uses a JSON configuration file (`paper/03_rnn/data/parameters_noDelay_noBias_ref_subtract.json`). For the CNLStudio UI, you will enter these values manually. The values are: `N_hidden = 40`, `alpha_r = 0.75`, `beta_r = 0.85`, `alpha_out = 0.45`, `beta_out = 0.7`, `lr = 0.001`, `slope = 5`, `reg_l1 = 0.001`, and `reg_l2 = 0.000001`.
 *   **Recurrent Nodes:** The `snn.RSynaptic` neuron is mapped to the `cnl.RSynaptic` node, which already includes the internal recurrent Linear layer (no separate recurrent edge needed).
 
 ---
@@ -27,12 +27,12 @@ Input (12) → Linear(12 → N_hidden, no bias)
 ### 1. Canvas: Model
 Open the **Model** canvas in CNLStudio and construct the network:
 
-1.  **Input Node:** Set `n_neurons = 12`.
-2.  **Linear Node:** Set `in_features = 12`, `out_features = N_hidden` (from JSON), disable bias.
-3.  **cnl.RSynaptic Node:** Set `alpha = alpha_r`, `beta = beta_r`, `reset_mechanism = "subtract"`, `use_bias = false`.
-4.  **Linear Node:** Set `in_features = N_hidden`, `out_features = 7`, disable bias.
-5.  **cnl.Synaptic Node:** Set `alpha = alpha_out`, `beta = beta_out`, `reset_mechanism = "subtract"`.
-6.  **Output Node:** Set `n_neurons = 7`.
+1.  **Input Node:** Set `Size = 12`.
+2.  **Linear Node:** Set `Cols = 12` and `Rows = 40` (Note: Linear node has no bias parameter in the UI).
+3.  **cnl.RSynaptic Node:** Set `Neurons = 40`, `Alpha (syn decay) = 0.75`, `Beta (mem decay) = 0.85`, `Reset = "subtract"`, `Use Bias = false`.
+4.  **Linear Node:** Set `Cols = 40` and `Rows = 7`.
+5.  **cnl.Synaptic Node:** Set `Neurons = 7`, `Alpha (syn decay) = 0.45`, `Beta (mem decay) = 0.7`, `Reset = "subtract"`.
+6.  **Output Node:** Set `Size = 7`.
 
 **Wire them sequentially:**
 `Input` → `Linear` → `cnl.RSynaptic` → `Linear` → `cnl.Synaptic` → `Output`
@@ -40,34 +40,46 @@ Open the **Model** canvas in CNLStudio and construct the network:
 ### 2. Canvas: Training
 Navigate to the **Training** canvas to set up the learning pipeline:
 
-1.  **Data Loader (Train):** Add a node. Set `format = pt`, `dataset_path = paper/03_rnn/data/ds_train.pt`, `batch_size = 64`, `shuffle = true`.
+1.  **Data Loader (Train):** Add a node. Set `Format = pt`, `Dataset Path = paper/03_rnn/data/ds_train.pt`, `Batch Size = 64`, `Shuffle = true`.
 2.  **State Reset Node:** Add to canvas (resets states at each batch start).
-3.  **Forward Pass Node:** Set `num_steps = 256`.
-4.  **CE Count Loss Node:** Add to canvas (equivalent to `SF.ce_count_loss()`).
-5.  **l1SpikeReg Node:** Set `weight = reg_l1`, apply to `cnl.RSynaptic` layer.
-6.  **l2SpikeReg Node:** Set `weight = reg_l2`, apply to `cnl.RSynaptic` layer.
-7.  **Backward Pass Node:** Set algorithm = `fast_sigmoid`, `slope = slope` (from JSON).
-8.  **Adam Optimizer Node:** Set `lr = lr` (from JSON), `betas = (0.9, 0.999)`.
-9.  **Data Loader (Val):** Add a node. Set `format = pt`, `dataset_path = paper/03_rnn/data/ds_val.pt`, `batch_size = 64`, `shuffle = false`. Connect to a **Validation Loop** node.
-10. **Connect Training Nodes:**
-    *   `Data Loader (Train)` (`data`) → `Forward Pass` (`input`)
-    *   `Data Loader (Train)` (`labels`) → `CE Loss` (`labels`)
-    *   `State Reset` (`model` out) → `Forward Pass` (`model` in)
-    *   `Forward Pass` (`spikes`) → `CE Loss` (`spikes`)
-    *   `Forward Pass` (`model` out) → `Backward Pass` (`model` in)
-    *   `CE Loss` (`loss`) → `Backward Pass` (`loss`)
-    *   `Backward Pass` (`model` out) → `Optimizer` (`model` in)
-11. **Configure Execution:** Set **Epochs = 500** in the header. Enable **Best Checkpoint Save**.
-12. **Start:** Click **Start Training** and observe the live loss/accuracy curves.
+3.  **Forward Pass Node:** Add to canvas (no parameters to set).
+4.  **Time Loop Node:** Add to canvas and set `Time Steps = 256`.
+5.  **CE Count Loss Node:** Add to canvas (equivalent to `SF.ce_count_loss()`).
+6.  **l1SpikeReg Node:** Set `Regularization Weight = 0.001` and `Target Layer (blank = all hidden) = cnl.RSynaptic`.
+7.  **l2SpikeReg Node:** Set `Regularization Weight = 0.000001` and `Target Layer (blank = all hidden) = cnl.RSynaptic`.
+8.  **Surrogate Backward Node:** Set `Function = fast_sigmoid`, `Slope = 5`.
+9.  **Adam Optimizer Node:** Set `Learning Rate = 0.001`.
+10. **Data Loader (Val):** Add a node. Set `Format = pt`, `Dataset Path = paper/03_rnn/data/ds_val.pt`, `Batch Size = 64`, `Shuffle = false`. Connect to a **Validation Loop** node.
+11. **Connect Training Nodes:**
+    *   `Data Loader (Train)` (output: `data`) → `Forward Pass` (input: `input`)
+    *   `Data Loader (Train)` (output: `labels`) → `CE Loss` (input: `labels`)
+    *   `State Reset` (output: `model`) → `Forward Pass` (input: `model`)
+    *   `Forward Pass` (output: `spikes`) → `Time Loop` (input: `spikes`)
+    *   `Time Loop` (output: `spikes`) → `CE Loss` (input: `spikes`)
+    *   `Time Loop` (output: `spikes`) → `l1SpikeReg` (input: `spikes`)
+    *   `Time Loop` (output: `spikes`) → `l2SpikeReg` (input: `spikes`)
+    *   `CE Loss` (output: `loss`) → `l1SpikeReg` (input: `loss_in`)
+    *   `l1SpikeReg` (output: `loss`) → `l2SpikeReg` (input: `loss_in`)
+    *   `l2SpikeReg` (output: `loss`) → `Surrogate Backward` (input: `loss`)
+    *   `Surrogate Backward` (output: `gradients`) → `Optimizer` (input: `gradients`)
+    *   `Optimizer` (output: `model`) → `Validation Loop` (input: `model`)
+    *   `Data Loader (Val)` (output: `data`) → `Validation Loop` (input: `val_data`)
+12. **Validation Loop Node:** Ensure `Epochs = 500` and `Save Best Checkpoint` is enabled in the property panel (configured in step 10).
+13. **Start Training:** Proceed to **Step 5 (Jupyter Lab)** to generate and review the training code, then execute it, or go to **Step 6 (Results)** to run the training and observe the live loss/accuracy curves.
 
 ### 3. Canvas: Eval
 After training completes, navigate to the **Eval** canvas to test the model:
 
-1.  **Data Loader (Test):** Set `format = pt`, `dataset_path = paper/03_rnn/data/ds_test.pt`, `batch_size = 64`, `shuffle = false`.
-2.  **Load Checkpoint:** Load the best weights saved during training.
-3.  **Accuracy Node:** Add to canvas.
-4.  **Connect Eval Nodes:** (Similar to training, connect `Data Loader` to `Forward Pass`, and `spikes`/`labels` to `Accuracy`).
-5.  Run the evaluation. Expected test accuracy is ~92%.
+1.  **Data Loader (Test):** Set `Format = pt`, `Dataset Path = paper/03_rnn/data/ds_test.pt`, `Batch Size = 64`, `Shuffle = false`, and enable `Load Best Checkpoint`.
+2.  **State Reset Node:** Add to canvas.
+3.  **Forward Pass Node:** Add to canvas.
+4.  **Accuracy Node:** Add to canvas.
+5.  **Connect Eval Nodes:**
+    *   `Data Loader (Test)` (output: `data`) → `Forward Pass` (input: `input`)
+    *   `Data Loader (Test)` (output: `labels`) → `Accuracy` (input: `labels`)
+    *   `State Reset` (output: `model`) → `Forward Pass` (input: `model`)
+    *   `Forward Pass` (output: `spikes`) → `Accuracy` (input: `spikes`)
+6.  **Start Evaluation:** Proceed to **Step 5 (Jupyter Lab)** or **Step 6 (Results)** to execute the evaluation and observe the results (expected test accuracy is ~92%).
 
 ### 4. Results Step: Dynamics
 Navigate to the **Results** step (UI Step 6) and open the **Dynamics** tab.
