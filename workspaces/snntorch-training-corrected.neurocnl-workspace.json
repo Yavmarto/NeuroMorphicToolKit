@@ -8,9 +8,9 @@
         "path": null,
         "dirty": true,
         "isUntitled": true,
-        "cursorOffset": 1493,
-        "selectionBase": 1493,
-        "selectionExtent": 1493,
+        "cursorOffset": 1231,
+        "selectionBase": 1231,
+        "selectionExtent": 1231,
         "scrollOffset": 0.0,
         "pipelineCache": null,
         "nirArtifactCache": null,
@@ -23,7 +23,7 @@
           "parseResult": {
             "sentences": [
               {
-                "line": 14,
+                "line": 6,
                 "raw": "Define a Input named nir.Input_1784102108810.",
                 "parsed": {
                   "concept": "Input",
@@ -38,7 +38,7 @@
                 "error_detail": null
               },
               {
-                "line": 15,
+                "line": 7,
                 "raw": "Define a Linear named nir.Linear_1784102121480.",
                 "parsed": {
                   "concept": "Linear",
@@ -53,7 +53,7 @@
                 "error_detail": null
               },
               {
-                "line": 16,
+                "line": 8,
                 "raw": "Define a RSynaptic named cnl.RSynaptic_1784123413089.",
                 "parsed": {
                   "concept": "RSynaptic",
@@ -68,7 +68,7 @@
                 "error_detail": null
               },
               {
-                "line": 17,
+                "line": 9,
                 "raw": "Define a Linear named nir.Linear_1784123425347.",
                 "parsed": {
                   "concept": "Linear",
@@ -83,7 +83,7 @@
                 "error_detail": null
               },
               {
-                "line": 18,
+                "line": 10,
                 "raw": "Define a Synaptic named cnl.Synaptic_1784123439941.",
                 "parsed": {
                   "concept": "Synaptic",
@@ -98,7 +98,7 @@
                 "error_detail": null
               },
               {
-                "line": 19,
+                "line": 11,
                 "raw": "Define a Output named nir.Output_1784123447064.",
                 "parsed": {
                   "concept": "Output",
@@ -113,7 +113,7 @@
                 "error_detail": null
               },
               {
-                "line": 22,
+                "line": 14,
                 "raw": "Connect nir.Input_1784102108810 to nir.Linear_1784102121480.",
                 "parsed": {
                   "concept": "Connect",
@@ -128,7 +128,7 @@
                 "error_detail": null
               },
               {
-                "line": 23,
+                "line": 15,
                 "raw": "Connect nir.Linear_1784102121480 to cnl.RSynaptic_1784123413089.",
                 "parsed": {
                   "concept": "Connect",
@@ -143,7 +143,7 @@
                 "error_detail": null
               },
               {
-                "line": 24,
+                "line": 16,
                 "raw": "Connect cnl.RSynaptic_1784123413089 to nir.Linear_1784123425347.",
                 "parsed": {
                   "concept": "Connect",
@@ -158,7 +158,7 @@
                 "error_detail": null
               },
               {
-                "line": 25,
+                "line": 17,
                 "raw": "Connect nir.Linear_1784123425347 to cnl.Synaptic_1784123439941.",
                 "parsed": {
                   "concept": "Connect",
@@ -173,7 +173,7 @@
                 "error_detail": null
               },
               {
-                "line": 26,
+                "line": 18,
                 "raw": "Connect cnl.Synaptic_1784123439941 to nir.Output_1784123447064.",
                 "parsed": {
                   "concept": "Connect",
@@ -1167,7 +1167,7 @@
             "timing_declarations": [],
             "metadata": {}
           },
-          "cnl_text": "# Network with 1 input.\n# flow: (no edges)\n# Network with 1 input, 1 hidden node.\n# Network with 1 input, 2 hidden nodes.\n# Network with 1 input, 3 hidden nodes.\n# Network with 1 input, 4 hidden nodes.\n# flow: nir.Input_1784102108810 → nir.Linear_1784102121480\n\nDefine a network named graph.\n# Network with 1 input, 4 hidden nodes, 1 output.\n# flow: nir.Input_1784102108810 → nir.Linear_1784102121480 → cnl.RSynaptic_1784123413089 → nir.Linear_1784123425347 → cnl.Synaptic_1784123439941 → nir.Output_1784123447064\n\n# Layers:\nDefine an input port named nir.Input_1784102108810 with shape (12,).\nDefine a linear transformation named nir.Linear_1784102121480 with weight matrix shape (40, 12).\nDefine a RSynaptic neuron named cnl.RSynaptic_1784123413089 with neuron count 40, synaptic decay 0.75, membrane decay 0.85, and firing threshold 1.0.\nDefine a linear transformation named nir.Linear_1784123425347 with weight matrix shape (7, 40).\nDefine a Synaptic neuron named cnl.Synaptic_1784123439941 with neuron count 7, synaptic decay 0.45, membrane decay 0.7, and firing threshold 1.0.\nDefine an output port named nir.Output_1784123447064 with shape (7,).\n\n# Connections:\nnir.Input_1784102108810 connects to nir.Linear_1784102121480.\nnir.Linear_1784102121480 connects to cnl.RSynaptic_1784123413089.\ncnl.RSynaptic_1784123413089 connects to nir.Linear_1784123425347.\nnir.Linear_1784123425347 connects to cnl.Synaptic_1784123439941.\ncnl.Synaptic_1784123439941 connects to nir.Output_1784123447064.\n",
+          "cnl_text": "Define a network named graph.\n# Network with 1 input, 4 hidden nodes, 1 output.\n# flow: nir.Input_1784102108810 → nir.Linear_1784102121480 → cnl.RSynaptic_1784123413089 → nir.Linear_1784123425347 → cnl.Synaptic_1784123439941 → nir.Output_1784123447064\n\n# Layers:\nDefine an input port named nir.Input_1784102108810 with shape (12,).\nDefine a linear transformation named nir.Linear_1784102121480 with weight matrix shape (40, 12).\nDefine a RSynaptic neuron named cnl.RSynaptic_1784123413089 with neuron count 40, synaptic decay 0.75, membrane decay 0.85, and firing threshold 1.0.\nDefine a linear transformation named nir.Linear_1784123425347 with weight matrix shape (7, 40).\nDefine a Synaptic neuron named cnl.Synaptic_1784123439941 with neuron count 7, synaptic decay 0.45, membrane decay 0.7, and firing threshold 1.0.\nDefine an output port named nir.Output_1784123447064 with shape (7,).\n\n# Connections:\nnir.Input_1784102108810 connects to nir.Linear_1784102121480.\nnir.Linear_1784102121480 connects to cnl.RSynaptic_1784123413089.\ncnl.RSynaptic_1784123413089 connects to nir.Linear_1784123425347.\nnir.Linear_1784123425347 connects to cnl.Synaptic_1784123439941.\ncnl.Synaptic_1784123439941 connects to nir.Output_1784123447064.\n",
           "fidelity_annotations": [],
           "canvas": {
             "nodes": [
@@ -2231,7 +2231,7 @@
             "read_only_annotations": []
           }
         },
-        "revision": 92
+        "revision": 95
       }
     ],
     "activeFileId": "untitled-1",
@@ -2254,7 +2254,7 @@
   },
   "canvas": {
     "pipeline": {
-      "epochs": 50,
+      "epochs": 500,
       "learning_rate": 0.001,
       "optimizer": "Adam",
       "batch_size": 32,
