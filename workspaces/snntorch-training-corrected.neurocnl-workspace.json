@@ -2231,7 +2231,7 @@
             "read_only_annotations": []
           }
         },
-        "revision": 95
+        "revision": 98
       }
     ],
     "activeFileId": "untitled-1",
@@ -2255,6 +2255,7 @@
   "canvas": {
     "pipeline": {
       "epochs": 500,
+      "seed": 42,
       "learning_rate": 0.001,
       "optimizer": "Adam",
       "batch_size": 32,
