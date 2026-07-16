@@ -42,3 +42,9 @@ the same contract surface.
   fallback rules no longer mask stale callers.
 - **Negative:** any external caller still using `import_network` must migrate to
   `import_network_handoff` before this repo version is adopted.
+
+## Status Update (2026-07-16 audit)
+
+The cited file `Neurochip/frontend/lib/services/import_network_payload.dart` no longer exists — `Neurochip/frontend` is now an empty stub (only `neurochip.iml` remains) since the ADR-0019 Flutter feature-package migration superseded it.
+
+The underlying decision (no bare `import_network` fallback) still holds. The versioned-handoff parsing logic now lives in `nmtk/packages/neurochip_feature/lib/src/neurochip_shell_adapter.dart` (around line 68, the `import_network_handoff` query-parameter check). Readers should look there instead of the deleted path.

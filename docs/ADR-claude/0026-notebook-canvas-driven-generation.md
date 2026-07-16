@@ -37,3 +37,7 @@ The pipeline phases canvas is the user's explicit specification of what training
 - Users who want training cells must draw them on the pipeline phases canvas. There is no auto-generated fallback.
 - The flat-config training/eval/infer generators (~500 lines) are removed. Per-framework training scaffolds must be added as DAG node types if needed in future.
 - `_nmtk_emit` is never emitted into notebooks without training phase nodes, eliminating dead-code cells.
+
+## Status Update (2026-07-16 audit)
+
+The helper this ADR names, `_node_var()`, does not exist in current code. The actual guard function is `_python_identifier()` at `neurocnl/backend/app/routers/notebook.py` (around lines 452-459), which prefixes `n_` for identifiers starting with a digit — not `layer_` as this ADR states. Behavior and intent are unchanged; only the function name and prefix string differ from what is documented above.

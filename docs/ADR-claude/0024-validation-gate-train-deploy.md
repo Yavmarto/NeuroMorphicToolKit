@@ -33,3 +33,9 @@ This is derived from `pipelineProvider` via `ref.watch` inside each workspace's 
 - Training will not auto-start on page load if the cached spec is invalid or if validation has not yet run.
 - Deploy action buttons (Generate Package, Install, Map Runtime, Run Inference, Check Readiness, Compile, Run) are visually disabled until validation passes.
 - Once the user corrects the spec and validation succeeds, the buttons re-enable automatically without any additional interaction.
+
+## Status Update (2026-07-16 audit)
+
+The Deploy-path gating this ADR describes still holds: `studio_screen.dart` still checks `pipeline.validateStatus == StepStatus.success` (see the guard around line 349) before allowing downstream submission.
+
+The Training half of this ADR is dead code, however. `TrainingInspectorPanel` — and its `_autoStart()` gating described above — no longer exists in the codebase. `neurocnl/frontend/lib/providers/training_provider.dart` (around lines 75-84) documents that the old generic-training flow (`TrainingInspectorPanel` side panel, `POST /training/run`, `GET /training/capabilities`) was retired in favor of canvas-DAG training, which now runs exclusively through pipeline step 6 ("Run", `_RunStep`). Readers should treat the Training section of this ADR as historical and refer to the current `_RunStep`/`trainingJobIdsProvider` flow instead.

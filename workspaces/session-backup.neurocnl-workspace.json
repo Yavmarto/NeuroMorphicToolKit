@@ -2236,7 +2236,7 @@
     "workspaceName": "session_backup",
     "workspaceSourceKind": null,
     "activePanel": "validation",
-    "activePipelineStep": "defineEval",
+    "activePipelineStep": "selectData",
     "selectedBenchmarkId": null,
     "selectedBenchmarkName": null,
     "selectedDataset": null,

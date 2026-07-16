@@ -2,6 +2,8 @@
 
 Shared Dart/Flutter widget library for the NeuroMorphicToolKit (NMTK) suite. All module frontends (`neurocnl`, `Neurohub`, `Neurobench`, `Neurosense`) depend on this package for design tokens, theming, and reusable UI components.
 
+**Note on Neurochip:** `CODING_STYLE_GUIDE.md`'s shell-mode table lists Neurochip under `NmtkShellMode.instrument` alongside NeuroSense, implying it is a peer consumer of this shared shell. In practice, Neurochip is not currently a real dependent of `nmtk_ui_core` — its local `Neurochip/nmtk_ui_core/` directory is an empty placeholder (no `lib/`, no `pubspec.yaml`), and the Neurochip deploy UI is actually served through neurocnl's `NeurocnlShellAdapter` (see `nmtk/packages/neurochip_feature`). This is a known inconsistency between this README and `CODING_STYLE_GUIDE.md`'s shell-mode table, not a resolved fact — it is flagged here rather than silently corrected in either document.
+
 **Version:** `0.6.0+3` — SDK `^3.11.0`, Flutter `>=3.41.0`
 
 ---

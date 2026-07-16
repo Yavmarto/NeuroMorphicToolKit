@@ -12,3 +12,7 @@ Define `NmtkDesignTokens` for brand constants (primarySeed color, background col
 ## Consequences
 - **Positive:** Material 3 seed-based theming ensures consistent color harmonies across light/dark modes; per-module tokens allow domain-specific customization within the shared design language.
 - **Negative:** Custom design tokens alongside Material 3 create two sources of truth for styling; per-module token classes grow linearly with the number of modules.
+
+## Status Update (2026-07-16 audit)
+
+The claim that Google Fonts supplements theming is stale. Reading `nmtk_ui_core/pubspec.yaml` confirms there is no `google_fonts` dependency, and a repo-wide grep under `nmtk_ui_core/` finds `google_fonts` mentioned only in this ADR's own text, nowhere in code or config. Typography is actually bundled as static font assets — `pubspec.yaml`'s `flutter.fonts` section declares the `Space Grotesk` and `JetBrains Mono` families from local `.ttf` assets — plus `zeta_flutter`'s `ZetaTextStyles`.

@@ -120,3 +120,9 @@ consumed by `control_api_service.dart` on each side.
   toward Neurochip coverage. `bash scripts/run_launcher_guardrails.sh`
   sees a reduced surface; `cd Neurochip/frontend && flutter test` sees
   the addition. Both still need to pass per their owning `AGENTS.md`.
+
+## Status Update (2026-07-16 audit)
+
+The specific file paths this ADR cites under `Neurochip/frontend/lib/{screens,services,providers,models}/...` no longer exist. Verified with `find /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurochip/frontend -type f`: the directory contains only a single `neurochip.iml` file — no `lib/`, no Dart sources at all.
+
+The actual current architecture is different from what this ADR describes: Neurochip deploy is handled by `NeurocnlShellAdapter` (from `neurocnl_studio`, `neurocnl/frontend`) via a `panel=deploy&target=` query param, wired up in `nmtk/packages/neurochip_feature/lib/src/neurochip_shell_adapter.dart` (`NeurochipShellAdapter`/`normalizeNeurochipDeepLinkForStudio`). This is consistent with the later architecture in ADR 0019 (Flutter Feature Packages) and ADR 0020 (CNL Studio Owns Deployment Target Selection). This ADR is effectively superseded by that later architecture but carries no supersession marker in its `## Status` section.

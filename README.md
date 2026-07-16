@@ -55,6 +55,7 @@ NMTK ships with the following modules. All are started automatically when the ba
 1. **[neurocnl / NeuroStudio](./neurocnl)**
    * *Purpose:* Translates plain-English specifications into verified Spiking Neural Networks (SNNs) and hosts the merged visual canvas workflow under the NeuroStudio launcher surface.
    * *Best for:* Fast prototyping, biological-constraint validation, visual editing, simulation preview, and export to hardware targets such as Loihi, Lava, and SpiNNaker.
+   * *Note:* The `/canvas` visual graph, preview, sweep, and export workspace shown inside NeuroStudio is owned by the [`Neurosim`](./Neurosim) module. It is embedded in CNL Studio's canvas rather than a standalone launcher card — see [`Neurosim/README.md`](./Neurosim/README.md) for its current scope.
 2. **[Neurosense](./Neurosense)**
    * *Purpose:* Sensory processing and encoding. Converts traditional data modalities (vision, audio, touch) into spike trains.
    * *Best for:* Preparing datasets for SNNs and integrating sensors.
@@ -88,6 +89,8 @@ NMTK ships with the following modules. All are started automatically when the ba
 | **NMTK Launcher**          |  95%  |   ✅   |    ✅    |  ✅  |  N/A  | ⚠️ |
 
 > ¹ Neurochip has no standalone frontend. CNL Studio (NeuroStudio) owns the deployment and diagnostics UI via the [ADR 0021 handoff contract](./docs/ADR-claude/0021-studio-neurochip-handoff-contract.md). The Neurosim visual canvas is embedded inside NeuroStudio at the `/canvas` route — it is not a separate launcher card. NeuroDash has been deferred and is not in the active `modules.json` manifest.
+>
+> Note: `NMTK_SIDE/` is an internal docs tree (branding, market intelligence, product strategy) used by the project team. It is not a runtime module and is intentionally excluded from the table above.
 
 ---
 
@@ -113,7 +116,7 @@ NMTK uses a **"Downloadable App + Backend-as-a-Service"** model. The desktop and
 - **[API Reference Index](./docs/api/README.md)** — Suite-level API entrypoint with service ports, live OpenAPI links, auth notes, and module API guides.
 - **[User Guide: Installation](./docs/user/installation.md)** — Getting started with NMTK.
 - **[User Guide: Troubleshooting](./docs/user/troubleshooting.md)** — Solutions for common startup issues.
-- **[Developer Setup Guide](./SETUP_GUIDE.md)** — Running the full suite from source.
+- **[Developer Setup Guide](./docs/SETUP_GUIDE.md)** — Running the full suite from source.
 - **[Production Playbook](./docs/PRODUCTION_PLAYBOOK.md)** — Deployment and operational guide.
 
 ---

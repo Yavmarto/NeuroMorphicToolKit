@@ -54,10 +54,10 @@
               },
               {
                 "line": 22,
-                "raw": "Define a Synaptic named cnl.Synaptic_1784123413089.",
+                "raw": "Define a RSynaptic neuron named cnl.RSynaptic_1784123413089.",
                 "parsed": {
-                  "concept": "Synaptic",
-                  "subject": "cnl.Synaptic_1784123413089",
+                  "concept": "RSynaptic",
+                  "subject": "cnl.RSynaptic_1784123413089",
                   "action": "",
                   "verb": "Define",
                   "negated": false,
@@ -129,14 +129,14 @@
               },
               {
                 "line": 29,
-                "raw": "Connect nir.Linear_1784102121480 to cnl.Synaptic_1784123413089.",
+                "raw": "Connect nir.Linear_1784102121480 to cnl.RSynaptic_1784123413089.",
                 "parsed": {
                   "concept": "Connect",
                   "subject": "nir.Linear_1784102121480",
                   "action": "",
                   "verb": "Connect",
                   "negated": false,
-                  "condition": "cnl.Synaptic_1784123413089"
+                  "condition": "cnl.RSynaptic_1784123413089"
                 },
                 "valid": true,
                 "error": null,
@@ -144,10 +144,10 @@
               },
               {
                 "line": 30,
-                "raw": "Connect cnl.Synaptic_1784123413089 to nir.Linear_1784123425347.",
+                "raw": "Connect cnl.RSynaptic_1784123413089 to nir.Linear_1784123425347.",
                 "parsed": {
                   "concept": "Connect",
-                  "subject": "cnl.Synaptic_1784123413089",
+                  "subject": "cnl.RSynaptic_1784123413089",
                   "action": "",
                   "verb": "Connect",
                   "negated": false,
@@ -268,7 +268,7 @@
             "connections": [
               {
                 "source": "nir.input_1784102108810",
-                "target": "cnl.synaptic_1784123413089",
+                "target": "cnl.rsynaptic_1784123413089",
                 "weight": [
                   [
                     1.0,
@@ -841,7 +841,7 @@
                 "attributes": {}
               },
               {
-                "source": "cnl.synaptic_1784123413089",
+                "source": "cnl.rsynaptic_1784123413089",
                 "target": "cnl.synaptic_1784123439941",
                 "weight": [
                   [
@@ -1166,7 +1166,7 @@
             "timing_declarations": [],
             "metadata": {}
           },
-          "cnl_text": "# Network with 1 input.\n# flow: (no edges)\n# Network with 1 input, 1 hidden node.\n# Network with 1 input, 2 hidden nodes.\n# Network with 1 input, 3 hidden nodes.\n# Network with 1 input, 4 hidden nodes.\n# flow: nir.Input_1784102108810 → nir.Linear_1784102121480\n# unsupported node type Synaptic for node cnl.Synaptic_1784123413089\n# unsupported node type Synaptic for node cnl.Synaptic_1784123439941\n# unsupported edge from nir.Linear_1784102121480 to cnl.Synaptic_1784123413089\n# unsupported edge from cnl.Synaptic_1784123413089 to nir.Linear_1784123425347\n# unsupported edge from nir.Linear_1784123425347 to cnl.Synaptic_1784123439941\n# unsupported edge from cnl.Synaptic_1784123439941 to nir.Output_1784123447064\n\nDefine a network named graph.\n# Network with 1 input, 4 hidden nodes, 1 output.\n# flow: nir.Input_1784102108810 → nir.Linear_1784102121480 → cnl.Synaptic_1784123413089 → nir.Linear_1784123425347 → cnl.Synaptic_1784123439941 → nir.Output_1784123447064\n\n# Layers:\nDefine an input port named nir.Input_1784102108810 with shape (12,).\nDefine a linear transformation named nir.Linear_1784102121480 with weight matrix shape (40, 12).\nDefine a Synaptic neuron named cnl.Synaptic_1784123413089 with neuron count 40, synaptic decay 0.75, membrane decay 0.85, and firing threshold 1.0.\nDefine a linear transformation named nir.Linear_1784123425347 with weight matrix shape (7, 40).\nDefine a Synaptic neuron named cnl.Synaptic_1784123439941 with neuron count 7, synaptic decay 0.45, membrane decay 0.7, and firing threshold 1.0.\nDefine an output port named nir.Output_1784123447064 with shape (7,).\n\n# Connections:\nnir.Input_1784102108810 connects to nir.Linear_1784102121480.\nnir.Linear_1784102121480 connects to cnl.Synaptic_1784123413089.\ncnl.Synaptic_1784123413089 connects to nir.Linear_1784123425347.\nnir.Linear_1784123425347 connects to cnl.Synaptic_1784123439941.\ncnl.Synaptic_1784123439941 connects to nir.Output_1784123447064.\n",
+          "cnl_text": "# Network with 1 input.\n# flow: (no edges)\n# Network with 1 input, 1 hidden node.\n# Network with 1 input, 2 hidden nodes.\n# Network with 1 input, 3 hidden nodes.\n# Network with 1 input, 4 hidden nodes.\n# flow: nir.Input_1784102108810 \u2192 nir.Linear_1784102121480\n\nDefine a network named graph.\n# Network with 1 input, 4 hidden nodes, 1 output.\n# flow: nir.Input_1784102108810 \u2192 nir.Linear_1784102121480 \u2192 cnl.RSynaptic_1784123413089 \u2192 nir.Linear_1784123425347 \u2192 cnl.Synaptic_1784123439941 \u2192 nir.Output_1784123447064\n\n# Layers:\nDefine an input port named nir.Input_1784102108810 with shape (12,).\nDefine a linear transformation named nir.Linear_1784102121480 with weight matrix shape (40, 12).\nDefine a RSynaptic neuron named cnl.RSynaptic_1784123413089 with neuron count 40, synaptic decay 0.75, membrane decay 0.85, and firing threshold 1.0.\nDefine a linear transformation named nir.Linear_1784123425347 with weight matrix shape (7, 40).\nDefine a Synaptic neuron named cnl.Synaptic_1784123439941 with neuron count 7, synaptic decay 0.45, membrane decay 0.7, and firing threshold 1.0.\nDefine an output port named nir.Output_1784123447064 with shape (7,).\n\n# Connections:\nnir.Input_1784102108810 connects to nir.Linear_1784102121480.\nnir.Linear_1784102121480 connects to cnl.RSynaptic_1784123413089.\ncnl.RSynaptic_1784123413089 connects to nir.Linear_1784123425347.\nnir.Linear_1784123425347 connects to cnl.Synaptic_1784123439941.\ncnl.Synaptic_1784123439941 connects to nir.Output_1784123447064.\n",
           "fidelity_annotations": [],
           "canvas": {
             "nodes": [
@@ -1788,9 +1788,9 @@
                 }
               },
               {
-                "id": "cnl.Synaptic_1784123413089",
-                "label": "cnl.Synaptic_1784123413089",
-                "nir_type": "cnl.Synaptic",
+                "id": "cnl.RSynaptic_1784123413089",
+                "label": "cnl.RSynaptic_1784123413089",
+                "nir_type": "cnl.RSynaptic",
                 "type": "excitatory",
                 "size": 1,
                 "parameters": {
@@ -1799,22 +1799,23 @@
                   "beta": 0.85,
                   "threshold": 1.0,
                   "reset_mechanism": "subtract",
-                  "name": "cnl.Synaptic_1784123413089",
-                  "nir_type": "cnl.Synaptic",
+                  "name": "cnl.RSynaptic_1784123413089",
+                  "nir_type": "cnl.RSynaptic",
                   "shape": [
                     1
-                  ]
+                  ],
+                  "use_bias": false
                 },
                 "metadata": {
                   "category": "neuron",
-                  "canvas_label": "cnl.Synaptic_1784123413089",
-                  "canvas_component_id": "cnl.Synaptic",
+                  "canvas_label": "cnl.RSynaptic_1784123413089",
+                  "canvas_component_id": "cnl.RSynaptic",
                   "canvas_position": [
                     525.0,
                     30.0
                   ],
-                  "label": "cnl.Synaptic_1784123413089",
-                  "display_label": "Synaptic"
+                  "label": "cnl.RSynaptic_1784123413089",
+                  "display_label": "RSynaptic"
                 }
               },
               {
@@ -2207,11 +2208,11 @@
               },
               {
                 "source": "nir.Linear_1784102121480",
-                "target": "cnl.Synaptic_1784123413089",
+                "target": "cnl.RSynaptic_1784123413089",
                 "polarity": "excitatory"
               },
               {
-                "source": "cnl.Synaptic_1784123413089",
+                "source": "cnl.RSynaptic_1784123413089",
                 "target": "nir.Linear_1784123425347",
                 "polarity": "excitatory"
               },
@@ -2328,7 +2329,7 @@
             "x": 1460.0,
             "y": 228.0,
             "parameters": {
-              "weight": 0.000001,
+              "weight": 1e-06,
               "target_layer": "cnl.RSynaptic"
             }
           },
@@ -3273,13 +3274,6 @@
         "height": 132.0,
         "isVisible": true
       },
-      "cnl.Synaptic_1784123413089": {
-        "x": 525.0,
-        "y": 30.0,
-        "width": 150.0,
-        "height": 132.0,
-        "isVisible": true
-      },
       "nir.Linear_1784123425347": {
         "x": 1005.0,
         "y": 30.0,
@@ -3296,6 +3290,13 @@
       },
       "nir.Output_1784123447064": {
         "x": 1485.0,
+        "y": 30.0,
+        "width": 150.0,
+        "height": 132.0,
+        "isVisible": true
+      },
+      "cnl.RSynaptic_1784123413089": {
+        "x": 525.0,
         "y": 30.0,
         "width": 150.0,
         "height": 132.0,

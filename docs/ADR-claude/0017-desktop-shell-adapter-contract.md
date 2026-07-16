@@ -71,3 +71,11 @@ lanes implement against it; they do not redefine it locally.
 - [Shell Adapter Contract And Package Conventions](../2026-04-24-shell-adapter-contract-and-package-conventions.md)
 - [Desktop-Only Module Migration Subplans](../2026-04-24-desktop-module-migration-subplans.md)
 - [Multi-Agent Desktop Migration Execution Map](../2026-04-24-multi-agent-desktop-migration-execution-map.md)
+
+## Status Update (2026-07-16 audit)
+
+No class or interface named `ShellModuleAdapter` exists anywhere in the Dart codebase (verified by repo-wide grep). Each module instead defines an independently-named adapter class with no shared base type — e.g. `NeurocnlShellAdapter` (defined in `neurocnl/frontend/lib/shell_adapter.dart`, wrapped by `nmtk/packages/neurocnl_feature/lib/src/neurocnl_shell.dart`) — plus standalone adapter packages `Neurohub/Neurohub_shell_adapter`, `Neurosim/Neurosim_shell_adapter`, and `Neurosense/Neurosense_shell_adapter`.
+
+`degraded_optional_capability` does exist as a real status value, but there is no `CapabilityReport` type anywhere in the codebase (Python or Dart) — that name does not appear in a repo-wide grep. The status string itself lives in Python (`nmtk/launcher_control/`, `tools/nmtk_mcp_server/`) and is also parsed as a plain string literal in Dart deployment models (`nmtk_ui_core/lib/models/pynq_deployment_model.dart`, `akida_deployment_model.dart`) — but there is no shared Dart-level contract type wrapping it, only ad hoc per-model string handling.
+
+The unifying shell-adapter contract this ADR envisioned was never actually built as a shared type.

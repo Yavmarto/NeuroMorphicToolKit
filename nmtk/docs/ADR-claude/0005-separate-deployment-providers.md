@@ -12,3 +12,7 @@ Implement three independent `ChangeNotifierProvider` deployment providers (Teens
 ## Consequences
 - **Positive:** Independent providers keep each deployment workflow focused and independently testable; adding a new hardware target means adding a new provider without modifying existing ones.
 - **Negative:** Three separate providers duplicate common deployment patterns (progress tracking, error handling, status polling); no shared abstraction for cross-target deployment comparison.
+
+## Status Update (2026-07-16 audit)
+
+Superseded by ADR-0006 (state management) and ADR-0007 (deploy providers moved out of the launcher). Confirmed by grep: `AkidaDeployProvider`, `PynqDeployProvider`, and `TeensyDeployProvider` do not exist in `nmtk/neuro_toolkit/lib/providers/riverpod_providers.dart` or anywhere else under `nmtk/neuro_toolkit/lib/`. ADR 0006 and ADR 0007 already state they supersede this ADR's remaining launcher-side content; this note is the reciprocal pointer that was never added here.

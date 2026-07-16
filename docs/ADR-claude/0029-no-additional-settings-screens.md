@@ -24,3 +24,7 @@ We will not build any additional settings screens at this time — neither per-m
 
 - Any new user-configurable option should be added to the existing Launcher `SettingsScreen` (or, per AGENTS.md's convenience principle, be auto-detected/defaulted so it needs no UI at all) rather than prompting a new settings screen in a module.
 - If a module later surfaces a genuinely module-specific configuration need that doesn't fit the shared screen, that should be brought as a new decision superseding this ADR — not built ad hoc.
+
+## Status Update (2026-07-16 audit)
+
+Low severity. `Neurohub/frontend/lib/screens/settings_screen.dart` exists as a stub `Scaffold` but is not routed or referenced anywhere in Neurohub's app code (a repo grep finds only its own test file, no route or navigation reference) — orphaned dead code rather than an active contradiction of this decision. No action needed beyond noting it for future cleanup.

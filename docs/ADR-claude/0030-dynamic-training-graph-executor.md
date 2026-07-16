@@ -20,3 +20,9 @@ We will deprecate the static Training Adapter pattern and implement a **Dynamic 
 - **Positive**: Brings training and evaluation behavior in line with the already-dynamic Model architecture compilation.
 - **Negative**: Increases the complexity of the execution engine. Compiling and running a dynamic graph per epoch/step may introduce minor performance overhead in Python if not properly JIT-compiled.
 - **Negative**: Deprecates existing adapter logic in `snntorch_adapter.py` and `sleep_pes_adapter.py`, requiring a migration of legacy prosthetic workflows to the new dynamic node format.
+
+## Status Update (2026-07-16 audit)
+
+This ADR's central decision — the `DynamicGraphCompiler` / `AbstractDynamicExecutor` / `SnnTorchExecutor` / `LavaExecutor` architecture — was implemented in the `neurocnl` submodule on 2026-07-13 (commits `6cad4560`→`b85aa611`), then fully deleted the same day by commit `676ebaf2` ("delete adapter-registry live-training engine (Part A)"). That commit's message states the logic was replaced by porting it into `notebook.py`'s codegen instead. None of `neurocnl/neurocnl/training/executors/`, `graph_compiler.py`, or `snntorch_adapter.py` exist in the repo today; `dag_schema.py`, `dag_topology.py`, `factory.py`, and `sleep_pes_adapter.py` remain under `neurocnl/neurocnl/training/` (alongside dataset-fixture and test helpers unrelated to this ADR).
+
+Status should be read as **Superseded (in practice reverted)**, not Accepted. Readers looking for the live equivalent of this ADR's decision should check the codegen logic in `neurocnl/backend/app/routers/notebook.py`.

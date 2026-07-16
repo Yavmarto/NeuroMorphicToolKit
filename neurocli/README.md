@@ -15,7 +15,7 @@ The clearest intended workflow is documented in
 [`issues-archive/22mar1_project_scaffolder.md`](./issues-archive/22mar1_project_scaffolder.md):
 
 ```bash
-neuro new --framework lava --target loihi2 --task kws
+neuro new --framework nir --target snntorch --task kws
 ```
 
 That points to a scaffolding-first CLI rather than a simulation or orchestration service.
@@ -52,8 +52,12 @@ So `neurocli` most likely belongs in the "developer tooling / project bootstrap"
 `neuro hub` resolves the registry URL from `nmtk/neuro_toolkit/assets/modules.json`
 (the Neurohub port), an `--registry` flag, the `NEUROHUB_REGISTRY` env var, or the stored
 credentials file, and verifies SHA-256 checksums on every `pull`. The shared
-`neurocli/uri_parser.py` is kept byte-for-byte equivalent with the backend copy at
-`Neurohub/neurohub/app/utils/uri_parser.py`.
+`neurocli/uri_parser.py` is kept in sync with the backend copy at
+`Neurohub/neurohub/app/utils/uri_parser.py`, but the two are not currently identical:
+Neurohub's `ArtefactType` enum has 8 members (including `custom_node`), while the
+neurocli copy has only the original 7. This means `hub push --type custom_node` is
+accepted by the backend but currently fails CLI-side validation — the CLI copy needs
+its `ArtefactType` enum updated to add `custom_node` to restore parity.
 
 ## Verification
 
