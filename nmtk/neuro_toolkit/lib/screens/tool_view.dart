@@ -126,6 +126,22 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 
+  /// Backend API base URL to hand to a natively-embedded module so it can
+  /// skip its own connect prompt — the launcher already knows this host.
+  /// Only meaningful for modules sharing the monolith port (9000); other
+  /// modules resolve their own backend independently.
+  String? _nativeSurfaceServerUrl(Module module) {
+    if (module.effectivePort != 9000) {
+      return null;
+    }
+    return Uri(
+      scheme: _serviceScheme(),
+      host: _serviceHost(),
+      port: 9000,
+      path: '/api/neurocnl',
+    ).toString();
+  }
+
   String _surfaceModeForModule(String moduleId) {
     return NativeSurfaceRegistry.supportsModule(moduleId)
         ? 'native'
@@ -629,6 +645,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                           child: NativeSurfaceRegistry.build(
                             module.id,
                             session,
+                            initialServerUrl: _nativeSurfaceServerUrl(module),
                           ),
                         )
                       : supported
@@ -719,13 +736,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       }
       return Scaffold(
         backgroundColor: tokens.shellBackground,
-        body: SafeArea(
+        body: const SafeArea(
           top: false,
           bottom: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Expanded(child: ModulePickerPanel()),
+              Expanded(child: ModulePickerPanel()),
             ],
           ),
         ),

@@ -6,30 +6,35 @@ import 'package:neurohub_shell_adapter/neurohub_shell_adapter.dart';
 // import 'package:neurochip/shell_adapter.dart';
 import 'package:neurobench_frontend/shell_adapter.dart';
 
-typedef NativeSurfaceBuilder = Widget Function(WorkspaceSession session);
+typedef NativeSurfaceBuilder = Widget Function(
+  WorkspaceSession session, {
+  String? initialServerUrl,
+});
 
 class NativeSurfaceRegistry {
   static final Map<String, NativeSurfaceBuilder> _builders =
       <String, NativeSurfaceBuilder>{
-    'neurocnl': (WorkspaceSession session) {
+    'neurocnl': (WorkspaceSession session, {String? initialServerUrl}) {
       return NeurocnlShellAdapter(
         initialLocation: session.deepLink ?? '/',
+        initialServerUrl: initialServerUrl,
       );
     },
-    'Neurohub': (WorkspaceSession session) {
+    'Neurohub': (WorkspaceSession session, {String? initialServerUrl}) {
       return NeurohubShellAdapter(
         initialLocation: session.deepLink ?? '/',
       );
     },
-    'Neurochip': (WorkspaceSession session) {
+    'Neurochip': (WorkspaceSession session, {String? initialServerUrl}) {
       return NeurocnlShellAdapter(
         initialLocation: session.deepLink ?? '/?panel=deploy',
         initialRestoreState: session.restoreState.isEmpty
             ? const <String, Object?>{}
             : session.restoreState,
+        initialServerUrl: initialServerUrl,
       );
     },
-    'Neurobench': (WorkspaceSession session) {
+    'Neurobench': (WorkspaceSession session, {String? initialServerUrl}) {
       return NeurobenchShellAdapter(
         initialLocation: session.deepLink ?? '/',
       );
@@ -39,11 +44,15 @@ class NativeSurfaceRegistry {
   static bool supportsModule(String moduleId) =>
       _builders.containsKey(moduleId);
 
-  static Widget build(String moduleId, WorkspaceSession session) {
+  static Widget build(
+    String moduleId,
+    WorkspaceSession session, {
+    String? initialServerUrl,
+  }) {
     final builder = _builders[moduleId];
     if (builder == null) {
       throw ArgumentError('No native surface registered for $moduleId');
     }
-    return builder(session);
+    return builder(session, initialServerUrl: initialServerUrl);
   }
 }

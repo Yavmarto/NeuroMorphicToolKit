@@ -78,9 +78,11 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
               'Connect to another launcher server or set up a new one here.',
         );
       }
-    } catch (error) {
+    } catch (_) {
       return LauncherBootstrapData.needsSetup(
-        message: 'Preflight failed: could not load launcher settings: $error',
+        message: 'Preflight failed: could not load settings from this '
+            'launcher host. Confirm the launcher control API is running and '
+            'reachable, then try again.',
       );
     }
   }

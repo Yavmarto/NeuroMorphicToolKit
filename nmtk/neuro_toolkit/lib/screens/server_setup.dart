@@ -14,7 +14,6 @@ class ServerSetupScreen extends ConsumerStatefulWidget {
     super.key,
     required this.message,
     this.initialValue,
-    this.onChanged,
     this.onConnect,
     this.connectLabel = 'Save & Retry',
     this.allowConnect = true,
@@ -29,11 +28,10 @@ class ServerSetupScreen extends ConsumerStatefulWidget {
   /// internally so there are no cross-widget controller lifetimes to manage.
   final String? initialValue;
 
-  /// Called whenever the host input text changes.
-  final ValueChanged<String?>? onChanged;
-
   final String? message;
-  final Future<void> Function()? onConnect;
+
+  /// Called with the current host field text when the user presses Connect.
+  final Future<void> Function(String host)? onConnect;
   final String connectLabel;
   final bool allowConnect;
   final bool setupAvailable;
@@ -55,6 +53,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
   // callback. It does not represent business data or cross-widget state, so
   // Riverpod ownership would add overhead without benefit (architecture skill §3).
   bool _isConnecting = false;
+  String? _connectError;
 
   @override
   void didUpdateWidget(covariant ServerSetupScreen oldWidget) {
@@ -78,6 +77,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final statusText = _buildStatusText(context);
     final body = SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -88,6 +88,10 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildHeader(context),
+                if (statusText != null) ...[
+                  SizedBox(height: context.nmtkTokens.compactGap),
+                  statusText,
+                ],
                 SizedBox(height: context.nmtkTokens.sectionGap * 1.5),
                 if (widget.allowConnect) ...[
                   _buildConnectCard(context),
@@ -119,11 +123,39 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
 
   Widget _buildHeader(BuildContext context) {
     final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(
+          Icons.dns_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+          size: 32,
+          color: theme.colorScheme.primary,
+        ),
+        SizedBox(width: context.nmtkTokens.compactGap),
+        Text(
+          'Connect to server',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Renders the connect failure (if any), falling back to [widget.message].
+  /// Mirrors the error-text style already used for Python install failures
+  /// in [FirstRunSetupScreen] rather than inventing a new banner widget.
+  Widget? _buildStatusText(BuildContext context) {
+    final text = _connectError ?? widget.message;
+    if (text == null || text.isEmpty) {
+      return null;
+    }
     return Text(
-      'Connect to server',
-      style: theme.textTheme.headlineMedium?.copyWith(
-        fontWeight: FontWeight.w800,
-      ),
+      text,
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: _connectError != null
+                ? Theme.of(context).colorScheme.error
+                : null,
+          ),
     );
   }
 
@@ -140,7 +172,6 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
           controller: _controller,
           focusNode: _focusNode,
           placeholder: '192.168.1.50',
-          onChange: widget.onChanged,
         ),
         SizedBox(height: context.nmtkTokens.sectionGap),
         NmtkPrimaryButton(
@@ -198,9 +229,19 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
   }
 
   Future<void> _handleConnect() async {
-    setState(() => _isConnecting = true);
+    setState(() {
+      _isConnecting = true;
+      _connectError = null;
+    });
     try {
-      await widget.onConnect?.call();
+      await widget.onConnect?.call(_controller.text.trim());
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _connectError =
+              'Could not save that server address. Check the host and try again.';
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _isConnecting = false);

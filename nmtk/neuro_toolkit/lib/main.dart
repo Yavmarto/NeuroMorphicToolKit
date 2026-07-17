@@ -108,15 +108,13 @@ class LauncherBootstrapHost extends ConsumerWidget {
 
   Widget _buildSetupScreen(WidgetRef ref, LauncherBootstrapData? data) {
     final controlApiInput = data?.controlApiService?.baseUri.host ?? '';
-    var typedHost = controlApiInput;
     return FirstRunSetupScreen(
       requirePython: false,
       requireLauncher: true,
       launcherMessage: data?.setupMessage,
       launcherInitialValue: controlApiInput,
-      onLauncherChanged: (value) => typedHost = value ?? '',
-      onLauncherConnect: () =>
-          ref.read(launcherBootstrapProvider.notifier).saveAndRetry(typedHost),
+      onLauncherConnect: (host) =>
+          ref.read(launcherBootstrapProvider.notifier).saveAndRetry(host),
       allowLauncherConnect: true,
       launcherSetupAvailable:
           data?.bootstrapState != null && data?.controlApiService != null,

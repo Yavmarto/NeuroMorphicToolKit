@@ -20,7 +20,6 @@ class FirstRunSetupScreen extends ConsumerWidget {
     this.initialLauncherStep = ServerSetupMode.connect,
     this.launcherMessage,
     this.launcherInitialValue,
-    this.onLauncherChanged,
     this.onLauncherConnect,
     this.launcherConnectLabel = 'Save & Retry',
     this.allowLauncherConnect = true,
@@ -36,8 +35,7 @@ class FirstRunSetupScreen extends ConsumerWidget {
   final ServerSetupMode initialLauncherStep;
   final String? launcherMessage;
   final String? launcherInitialValue;
-  final ValueChanged<String?>? onLauncherChanged;
-  final Future<void> Function()? onLauncherConnect;
+  final Future<void> Function(String host)? onLauncherConnect;
   final String launcherConnectLabel;
   final bool allowLauncherConnect;
   final bool launcherSetupAvailable;
@@ -75,7 +73,6 @@ class FirstRunSetupScreen extends ConsumerWidget {
                       message: launcherMessage ??
                           'Enter the host or base URL for the launcher control API.',
                       initialValue: launcherInitialValue,
-                      onChanged: onLauncherChanged,
                       onConnect: onLauncherConnect,
                       connectLabel: launcherConnectLabel,
                       allowConnect: allowLauncherConnect,

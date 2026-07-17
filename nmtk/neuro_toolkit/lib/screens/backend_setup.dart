@@ -4,18 +4,6 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/screens/first_run_setup_screen.dart';
-
-/// Legacy route target — prefer `/setup?step=backend` ([InAppFirstRunSetupScreen]).
-@Deprecated('Use /setup?step=backend via InAppFirstRunSetupScreen')
-class BackendSetupScreen extends StatelessWidget {
-  const BackendSetupScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const InAppFirstRunSetupScreen();
-  }
-}
 
 class BackendSetupForm extends ConsumerStatefulWidget {
   const BackendSetupForm({
