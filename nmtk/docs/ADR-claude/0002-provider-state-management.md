@@ -1,7 +1,7 @@
 # ADR 0002: Provider State Management
 
 ## Status
-Accepted
+Superseded by ADR 0006
 
 ## Context
 The launcher has complex interdependencies between settings, module state, analytics, and three separate hardware deployment providers. The state management solution must handle cascading updates (e.g., settings changes affecting module behavior) without excessive boilerplate.

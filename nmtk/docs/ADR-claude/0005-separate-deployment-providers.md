@@ -1,7 +1,7 @@
 # ADR 0005: Separate Deployment Providers
 
 ## Status
-Accepted
+Superseded by ADR 0006 and ADR 0007
 
 ## Context
 Hardware deployment to Teensy 4.1, PYNQ Z2, and BrainChip Akida requires target-specific workflows, serial protocols, state tracking, and error handling. A single polymorphic deployment abstraction would be overly complex given the fundamentally different deployment mechanisms.

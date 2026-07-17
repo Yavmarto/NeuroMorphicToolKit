@@ -1,7 +1,7 @@
 # 0030: Dynamic Training Graph Executor
 
 ## Status
-Accepted
+Superseded (reverted same-day; see Status Update below)
 
 ## Context
 Currently, the `neurocnl` training and evaluation workflows utilize a static "Adapter" pattern (e.g., `snntorch_adapter.py`). While the frontend `NeuroStudio` canvas allows users to wire arbitrary training and evaluation nodes in a Directed Acyclic Graph (DAG), the backend ignores this topological wiring. Instead, the backend treats the DAG as a flat configuration dictionary and executes a hardcoded PyTorch BPTT (Backpropagation Through Time) loop. 
