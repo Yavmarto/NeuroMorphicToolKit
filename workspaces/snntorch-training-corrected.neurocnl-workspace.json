@@ -2231,14 +2231,14 @@
             "read_only_annotations": []
           }
         },
-        "revision": 104
+        "revision": 115
       }
     ],
     "activeFileId": "untitled-1",
     "workspaceName": "snntorch-training-corrected",
     "workspaceSourceKind": null,
     "activePanel": "validation",
-    "activePipelineStep": "run",
+    "activePipelineStep": "trainingSandbox",
     "selectedBenchmarkId": null,
     "selectedBenchmarkName": null,
     "selectedDataset": null,
@@ -7050,32 +7050,6 @@
           "elapsed_seconds": null,
           "layer_spike_rates": {
             "output": 0.1752232164144516
-          },
-          "label_probabilities": [],
-          "platform": "snntorch_sim",
-          "replayed": false
-        },
-        {
-          "epoch": 347,
-          "total_epochs": 500,
-          "loss": 3.6869802325963974,
-          "accuracy": null,
-          "elapsed_seconds": null,
-          "layer_spike_rates": {
-            "output": 0.16565290093421936
-          },
-          "label_probabilities": [],
-          "platform": "snntorch_sim",
-          "replayed": false
-        },
-        {
-          "epoch": 348,
-          "total_epochs": 500,
-          "loss": 3.697174236178398,
-          "accuracy": null,
-          "elapsed_seconds": null,
-          "layer_spike_rates": {
-            "output": 0.17324218153953552
           },
           "label_probabilities": [],
           "platform": "snntorch_sim",

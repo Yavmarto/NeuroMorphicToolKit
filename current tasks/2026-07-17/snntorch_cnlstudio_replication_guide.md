@@ -1,3 +1,27 @@
+## ⚠️ Correction (2026-07-17) — pulled back out of archive, status downgraded
+
+This file was mistakenly filed as historical/done in the 2026-07-17 cleanup. It is not done. Everything below is **untested design-time work**: the doc's own line 6 says it was "checked against live code" — i.e. someone read the source and confirmed the parameter names/wiring *should* work — nobody has actually opened CNLStudio, built these graphs, run them, and confirmed the notebook's original numeric results come out the other end. "Replicable" and "shipped ✅" in this doc and in `cnlstudio_notebook_analysis.md`'s P0–P5 backlog describe **feature/capability presence** (the node exists, the parameter is named correctly), not a verified replication. Real remaining work: actually run all 3 written guides (Tutorial 3 feedforward, Braille RNN, the 4-notebook LIF group) end-to-end in a live CNLStudio instance and confirm they reproduce the original notebooks' results, then do the same for the 9 still-unwritten guides once written.
+
+## ⚠️ Second correction (2026-07-17) — this whole doc only ever covered a subset of the notebooks in the repo
+
+Everything above only concerns notebooks living under `paper/` (the vendored NIR-paper repo), which turns out to actually hold **4 separate notebook collections**, not 1:
+- `paper/01_lif/`, `02_cnn/`, `03_rnn/` — NMTK's own ~38-40 NIR-paper notebooks (this doc's actual subject).
+- `paper/Spiking-Neural-Networks-Tutorials-main/` — 6 third-party intro tutorials.
+- `paper/notebooks-main/` — 12 official Norse tutorials.
+- `paper/spikingjelly-master/community_tutorials/jupyter/chinese/` — 5 Chinese-language SpikingJelly tutorials.
+
+That's ~59-63 notebooks total under `paper/` alone, of which only 10 are even on the curated "reproducible" list (`agent-tests/reproducible_notebooks.md`), only 3 groups have written guides (this doc), and **zero have been actually run end-to-end in CNLStudio.**
+
+**On top of that, a real notebook collection outside `paper/` has never been assessed at all: `Neuro-Dream-Hand/`** (NMTK's own submodule) — `demo.ipynb` plus 6 example notebooks under `Neuro-Dream-Hand/examples/` (`example_conveyor.ipynb`, `example_dynamic_mass.ipynb`, `example_fragile_grasp.ipynb`, `example_noisy_sensors.ipynb`, `example_phantom_limb.ipynb`, `example_prosthetic_fatigue.ipynb`) — Nengo/MuJoCo prosthetic-hand demos. Nobody has done any CNLStudio-replicability analysis on these 7 at all — no P0-P5-style backlog, no ranking, no guide, nothing. This needs its own pass from scratch.
+
+Two more notebook locations exist but are **not** replication targets — noted so they don't get mistaken for new sources:
+- `workers/jupyter_server/notebooks/00_nmtk_quickstart.ipynb` — NMTK's own in-app product quickstart notebook, not an external tutorial.
+- `gen test/` (9 notebooks + `MANIFEST.md`) — this is CNLStudio's own *generated output* from a prior codegen test pass, not a source to replicate. Its manifest was never actually read until now; it contains two real findings worth folding in:
+  - Confirms (again) `snntorch_apply`/`cnn_sinabs.nir` is `unsupported` (real `SumPool2d`, not `AvgPool2d`) — consistent with the correction already in this doc.
+  - **New finding, not previously captured anywhere:** the 3 Braille notebooks classify as `approximate`, not `exact` — `cnl.RSynaptic`/`cnl.Synaptic` get flattened to raw `nir.CubaLIF`+`nir.Linear` at NIR export time, and `CubaLIF` is only `approximate` for `snntorch_sim`. This is expected/correct behavior, not a bug, but it means Guide 2 below (Braille RNN) should not be read as reproducing the original `snn.RSynaptic`/`snn.Synaptic` dynamics exactly — the generated code uses `snn.Leaky` with synaptic current filtering explicitly not modeled. All 9 `gen test/` notebooks did generate without exceptions and validated as well-formed — that's confirmation the *codegen* works, still not confirmation the *replication* is correct (no cell was actually executed).
+
+---
+
 # CNLStudio Replication Guide: snnTorch Tutorials (consolidated, corrected)
 
 **Date:** 16 July 2026

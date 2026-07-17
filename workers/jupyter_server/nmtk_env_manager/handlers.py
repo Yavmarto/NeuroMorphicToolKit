@@ -22,10 +22,13 @@ from tornado import web  # type: ignore[import-not-found]
 from .jobs import JobRegistry
 from .manager import EnvironmentError_, EnvironmentManager
 
+# Stall timeout, not a total-duration budget: reset every time the kernel
+# emits activity for this cell (see _drain_notebook_cell below). A single
+# cell can run arbitrarily long (e.g. a multi-hundred-epoch training loop)
+# as long as it keeps producing output; only a truly stuck kernel — no
+# activity at all for this many seconds — trips it.
 # Must stay >= kernel_runner.py's _WORKER_EXECUTION_TIMEOUT_SECONDS (the outer
-# per-job budget) — a per-cell ceiling stricter than the outer job budget kills
-# any single slow cell (e.g. a full-dataset eval pass) well before that budget
-# is used up.
+# per-job stall budget), which resets on the same "new output" signal.
 _CELL_EXECUTION_TIMEOUT_SECONDS = 30 * 60
 _CELL_POLL_INTERVAL_SECONDS = 1
 
@@ -108,8 +111,8 @@ def _drain_notebook_cell(
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError(
-                f"Notebook cell timed out after {_CELL_EXECUTION_TIMEOUT_SECONDS}s "
-                "while waiting for kernel output to go idle."
+                f"Notebook cell stalled: no kernel activity for "
+                f"{_CELL_EXECUTION_TIMEOUT_SECONDS}s while waiting for output to go idle."
             )
         try:
             message = kernel_client.get_iopub_msg(
@@ -120,6 +123,7 @@ def _drain_notebook_cell(
         parent_id = message.get("parent_header", {}).get("msg_id", "")
         if parent_id != msg_id:
             continue
+        deadline = time.monotonic() + _CELL_EXECUTION_TIMEOUT_SECONDS
         msg_type = message.get("msg_type", "")
         content = message.get("content", {})
         if msg_type == "status" and content.get("execution_state") == "idle":
@@ -179,8 +183,8 @@ def _drain_notebook_cell(
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             raise TimeoutError(
-                f"Notebook cell timed out after {_CELL_EXECUTION_TIMEOUT_SECONDS}s "
-                "while waiting for the kernel execute reply."
+                f"Notebook cell stalled: no kernel activity for "
+                f"{_CELL_EXECUTION_TIMEOUT_SECONDS}s while waiting for the execute reply."
             )
         try:
             message = kernel_client.get_shell_msg(
@@ -191,6 +195,7 @@ def _drain_notebook_cell(
         parent_id = message.get("parent_header", {}).get("msg_id", "")
         if parent_id != msg_id or message.get("msg_type") != "execute_reply":
             continue
+        deadline = time.monotonic() + _CELL_EXECUTION_TIMEOUT_SECONDS
         content = message.get("content", {})
         status = content.get("status")
         if status == "error":
