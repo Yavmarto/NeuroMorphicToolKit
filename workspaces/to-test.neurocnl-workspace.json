@@ -2231,11 +2231,11 @@
             "read_only_annotations": []
           }
         },
-        "revision": 115
+        "revision": 117
       }
     ],
     "activeFileId": "untitled-1",
-    "workspaceName": "snntorch-training-corrected",
+    "workspaceName": "to_test",
     "workspaceSourceKind": null,
     "activePanel": "validation",
     "activePipelineStep": "trainingSandbox",
@@ -2254,7 +2254,7 @@
   },
   "canvas": {
     "pipeline": {
-      "epochs": 500,
+      "epochs": 700,
       "seed": 42,
       "learning_rate": 0.001,
       "optimizer": "Adam",
@@ -2336,32 +2336,10 @@
             }
           },
           {
-            "id": "surrogateBackward_1784105836918",
-            "type": "surrogateBackward",
-            "x": 1700.0,
-            "y": 242.0,
-            "parameters": {
-              "function": "fast_sigmoid",
-              "slope": 5.0
-            }
-          },
-          {
-            "id": "adamOptimiser_1784105841529",
-            "type": "adamOptimiser",
-            "x": 1940.0,
-            "y": 242.0,
-            "parameters": {
-              "lr": 0.001,
-              "weight_decay": 0.0,
-              "beta1": 0.9,
-              "beta2": 0.999
-            }
-          },
-          {
             "id": "dataLoader_1784105847372",
             "type": "dataLoader",
-            "x": 2180.0,
-            "y": 228.0,
+            "x": 1940.0,
+            "y": 420.0,
             "parameters": {
               "batch_size": 64,
               "shuffle": true,
@@ -2373,14 +2351,55 @@
           {
             "id": "validationLoop_1784105853033",
             "type": "validationLoop",
-            "x": 2420.0,
-            "y": 228.0,
+            "x": 2180.0,
+            "y": 420.0,
             "parameters": {
               "epochs": 500,
               "every_n_epochs": 1,
               "save_best_checkpoint": true,
               "checkpoint_metric": "val_accuracy",
               "checkpoint_mode": "max"
+            }
+          },
+          {
+            "id": "gradientClip_1784384023883",
+            "type": "gradientClip",
+            "x": 1940.0,
+            "y": 50.0,
+            "parameters": {
+              "max_norm": 1.0
+            }
+          },
+          {
+            "id": "reduceLROnPlateau_1784384058152",
+            "type": "reduceLROnPlateau",
+            "x": 2420.0,
+            "y": 228.0,
+            "parameters": {
+              "mode": "min",
+              "factor": 0.3,
+              "patience": 25,
+              "min_lr": 0.0
+            }
+          },
+          {
+            "id": "surrogateBackward_1784384107429",
+            "type": "surrogateBackward",
+            "x": 1700.0,
+            "y": 242.0,
+            "parameters": {
+              "function": "fast_sigmoid",
+              "slope": 5.0
+            }
+          },
+          {
+            "id": "adamwOptimiser_1784395279743",
+            "type": "adamwOptimiser",
+            "x": 1940.0,
+            "y": 242.0,
+            "parameters": {
+              "lr": 0.001,
+              "weight_decay": 0.0001
             }
           }
         ],
@@ -2442,27 +2461,6 @@
             "target_port": "loss_in"
           },
           {
-            "id": "edge_1784106001786",
-            "source_node_id": "l2SpikeReg_1784105831129",
-            "source_port": "loss",
-            "target_node_id": "surrogateBackward_1784105836918",
-            "target_port": "loss"
-          },
-          {
-            "id": "edge_1784106003993",
-            "source_node_id": "surrogateBackward_1784105836918",
-            "source_port": "gradients",
-            "target_node_id": "adamOptimiser_1784105841529",
-            "target_port": "gradients"
-          },
-          {
-            "id": "edge_1784106017579",
-            "source_node_id": "adamOptimiser_1784105841529",
-            "source_port": "model",
-            "target_node_id": "validationLoop_1784105853033",
-            "target_port": "model"
-          },
-          {
             "id": "edge_1784106021813",
             "source_node_id": "dataLoader_1784105847372",
             "source_port": "data",
@@ -2475,6 +2473,41 @@
             "source_port": "labels",
             "target_node_id": "ceCountLoss_1784105813570",
             "target_port": "labels"
+          },
+          {
+            "id": "edge_1784384322278",
+            "source_node_id": "surrogateBackward_1784384107429",
+            "source_port": "gradients",
+            "target_node_id": "gradientClip_1784384023883",
+            "target_port": "gradients"
+          },
+          {
+            "id": "edge_1784384325883",
+            "source_node_id": "l2SpikeReg_1784105831129",
+            "source_port": "loss",
+            "target_node_id": "surrogateBackward_1784384107429",
+            "target_port": "loss"
+          },
+          {
+            "id": "edge_1784384347663",
+            "source_node_id": "validationLoop_1784105853033",
+            "source_port": "metrics",
+            "target_node_id": "reduceLROnPlateau_1784384058152",
+            "target_port": "metric"
+          },
+          {
+            "id": "edge_1784395282037",
+            "source_node_id": "surrogateBackward_1784384107429",
+            "source_port": "gradients",
+            "target_node_id": "adamwOptimiser_1784395279743",
+            "target_port": "gradients"
+          },
+          {
+            "id": "edge_1784395284132",
+            "source_node_id": "adamwOptimiser_1784395279743",
+            "source_port": "model",
+            "target_node_id": "reduceLROnPlateau_1784384058152",
+            "target_port": "model"
           }
         ]
       },
