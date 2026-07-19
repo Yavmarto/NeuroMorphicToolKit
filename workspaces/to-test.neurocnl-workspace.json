@@ -2235,7 +2235,7 @@
       }
     ],
     "activeFileId": "untitled-1",
-    "workspaceName": "to_test",
+    "workspaceName": "to-test",
     "workspaceSourceKind": null,
     "activePanel": "validation",
     "activePipelineStep": "trainingSandbox",
@@ -2377,8 +2377,8 @@
             "y": 228.0,
             "parameters": {
               "mode": "min",
-              "factor": 0.3,
-              "patience": 25,
+              "factor": 0.5,
+              "patience": 15,
               "min_lr": 0.0
             }
           },
@@ -2393,13 +2393,13 @@
             }
           },
           {
-            "id": "adamwOptimiser_1784395279743",
+            "id": "adamwOptimiser_1784443095475",
             "type": "adamwOptimiser",
             "x": 1940.0,
             "y": 242.0,
             "parameters": {
               "lr": 0.001,
-              "weight_decay": 0.0001
+              "weight_decay": 0.01
             }
           }
         ],
@@ -2496,17 +2496,17 @@
             "target_port": "metric"
           },
           {
-            "id": "edge_1784395282037",
+            "id": "edge_1784443099809",
             "source_node_id": "surrogateBackward_1784384107429",
             "source_port": "gradients",
-            "target_node_id": "adamwOptimiser_1784395279743",
+            "target_node_id": "adamwOptimiser_1784443095475",
             "target_port": "gradients"
           },
           {
-            "id": "edge_1784395284132",
-            "source_node_id": "adamwOptimiser_1784395279743",
+            "id": "edge_1784443108419",
+            "source_node_id": "adamwOptimiser_1784443095475",
             "source_port": "model",
-            "target_node_id": "reduceLROnPlateau_1784384058152",
+            "target_node_id": "validationLoop_1784105853033",
             "target_port": "model"
           }
         ]
