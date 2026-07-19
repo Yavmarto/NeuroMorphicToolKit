@@ -2254,7 +2254,7 @@
   },
   "canvas": {
     "pipeline": {
-      "epochs": 700,
+      "epochs": 350,
       "seed": 42,
       "learning_rate": 0.001,
       "optimizer": "Adam",
@@ -2399,7 +2399,7 @@
             "y": 242.0,
             "parameters": {
               "lr": 0.001,
-              "weight_decay": 0.01
+              "weight_decay": 0.015
             }
           }
         ],
