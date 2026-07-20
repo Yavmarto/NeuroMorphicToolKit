@@ -7,9 +7,9 @@ This guide explains how to manage sessions and start projects quickly using pred
 A "Workspace" in CNLStudio encapsulates the active CNL specification, the currently selected hardware targets, UI layout state, and simulation configurations.
 
 ### Managing Workspace Files
-- **Open Workspace:** Located in the top action bar. It opens a file dialog to select a `.neurocnl-workspace.json` file.
+- **Open Workspace:** Located in the top action bar. It opens a file dialog to select a `.nmtk` file.
   - *Agent Note:* Triggers the `_handleOpenWorkspace()` method which loads a JSON payload restoring the entire studio state.
-- **Save Workspace:** Located next to the open button. It serializes the current state into a `.json` file for future resumption.
+- **Save Workspace:** Located next to the open button. It serializes the current state into a `.nmtk` file for future resumption.
 - **Load/Save Spec:** If you only want to work with raw `.cnl` files rather than a full workspace, you can use the standard Load and Save text buttons.
 - **Rename Active File:** Clicking on the active file name in the app bar opens a dialog to rename the file.
 

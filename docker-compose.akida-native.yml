@@ -1,0 +1,32 @@
+# Overlay for boxes with a real BrainChip Akida card already served by the
+# native `neurochip.service` systemd unit (installed via the SSH provisioning
+# flow in Neurochip/neurochip/provisioning/akida_host_bundle.py).
+#
+# The containerized neurochip-hw-worker has no Akida SDK installed (see
+# workers/neurochip_hw/Dockerfile) and can never serve real hardware routes,
+# so on these boxes it only fights the native service for port 8002 with no
+# upside. This overlay stops it from publishing that port and repoints
+# suite_api/launcher-control at the native service instead.
+#
+# Apply with: docker compose -f docker-compose.yml -f docker-compose.akida-native.yml ...
+# (wired automatically by `make docker-ex-m REMOTE_HOST=... AKIDA_NATIVE=1`)
+
+services:
+
+  neurochip-hw-worker:
+    # Compose merges sequences (like ports:) by concatenation by default, so a
+    # plain `ports: []` here would NOT remove the base file's mapping — the
+    # !reset tag is required to actually clear it and stop publishing 8002.
+    ports: !reset []
+
+  suite_api:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - NEUROCHIP_HW_WORKER_URL=http://host.docker.internal:8002
+      - NEUROCHIP_HW_WORKER_API_KEY=${NEUROCHIP_HW_WORKER_API_KEY:-}
+
+  launcher-control:
+    environment:
+      - NEUROCHIP_HW_WORKER_URL=http://host.docker.internal:8002
+      - NEUROCHIP_HW_WORKER_API_KEY=${NEUROCHIP_HW_WORKER_API_KEY:-}

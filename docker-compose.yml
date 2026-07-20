@@ -138,9 +138,11 @@ services:
       - NMTK_DATA_DIR=/app/data
       - NMTK_BACKEND_DEPLOYMENT_READY=1
       # Internal Docker network URL for the Neurochip hardware worker.
-      # Probing via host.docker.internal:8002 fails because the host-side port
-      # is 18002 (${NEUROCHIP_PORT:-18002}:8002).  The internal URL bypasses
-      # that and is reachable from backend-net directly.
+      # This is the containerized stub worker (no Akida SDK installed — see
+      # workers/neurochip_hw/Dockerfile), reachable from backend-net directly.
+      # On boxes with a real Akida card, docker-compose.akida-native.yml
+      # overrides this to point at the native neurochip.service instead
+      # (via host.docker.internal), which has the SDK and real hardware access.
       - NEUROCHIP_HW_WORKER_URL=http://neurochip-hw-worker:8002
     volumes:
       - launcher_control_state:/app/state

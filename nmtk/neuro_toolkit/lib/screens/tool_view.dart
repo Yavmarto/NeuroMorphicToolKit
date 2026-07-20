@@ -46,6 +46,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   String _activeModuleId = '';
   bool _workspaceInitialized = false;
+  // Guards the entire async _initializeWorkspace() operation (not just its
+  // aftermath) so overlapping rebuilds during boot — e.g. a module flipping
+  // starting -> running while ensureDefaultSessionsOnce is still in flight —
+  // can never queue a second concurrent run. A second concurrent run can
+  // transiently churn workspaceState.focusedModuleId, which remounts the
+  // active module's KeyedSubtree and re-triggers its startup dialogs.
+  bool _workspaceInitializing = false;
 
   Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
 
@@ -168,52 +175,62 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Future<void> _initializeWorkspace({bool forceFocus = false}) async {
-    final moduleStateAsync = ref.read(moduleProvider);
-    final moduleState = moduleStateAsync.value;
-    final workspaceStateAsync = ref.read(workspaceProvider);
-    final workspaceState = workspaceStateAsync.value;
-    if (moduleStateAsync.isLoading ||
-        workspaceStateAsync.isLoading ||
-        moduleState == null ||
-        workspaceState == null) {
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          await _initializeWorkspace(forceFocus: forceFocus);
-        });
+    if (_workspaceInitializing) {
+      return;
+    }
+    _workspaceInitializing = true;
+    try {
+      final moduleStateAsync = ref.read(moduleProvider);
+      final moduleState = moduleStateAsync.value;
+      final workspaceStateAsync = ref.read(workspaceProvider);
+      final workspaceState = workspaceStateAsync.value;
+      if (moduleStateAsync.isLoading ||
+          workspaceStateAsync.isLoading ||
+          moduleState == null ||
+          workspaceState == null) {
+        if (mounted) {
+          _workspaceInitializing = false;
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            await _initializeWorkspace(forceFocus: forceFocus);
+          });
+        }
+        return;
       }
-      return;
+
+      final eligibleModules =
+          moduleState.modules.where(_shouldOpenModule).toList(growable: false);
+      if (eligibleModules.isEmpty) {
+        return;
+      }
+
+      final existingSessions = <String, WorkspaceSession>{
+        for (final session in workspaceState.sessions)
+          session.moduleId: session,
+      };
+      final desiredSessions = eligibleModules
+          .map(
+            (Module module) =>
+                (existingSessions[module.id] ?? _defaultSessionFor(module))
+                    .copyWith(
+              surfaceMode: _surfaceModeForModule(module.id),
+              readinessState: _readinessStateForModule(module),
+            ),
+          )
+          .toList(growable: false);
+      final targetModuleId = _preferredModuleId(
+              eligibleModules, workspaceState.focusedModuleId, forceFocus) ??
+          eligibleModules.first.id;
+
+      await ref.read(workspaceProvider.notifier).ensureDefaultSessionsOnce(
+            sessions: desiredSessions,
+            focusedModuleId: targetModuleId,
+          );
+
+      _workspaceInitialized = true;
+      await _activateModule(targetModuleId, requestFocus: true);
+    } finally {
+      _workspaceInitializing = false;
     }
-
-    final eligibleModules =
-        moduleState.modules.where(_shouldOpenModule).toList(growable: false);
-    if (eligibleModules.isEmpty) {
-      return;
-    }
-
-    final existingSessions = <String, WorkspaceSession>{
-      for (final session in workspaceState.sessions) session.moduleId: session,
-    };
-    final desiredSessions = eligibleModules
-        .map(
-          (Module module) =>
-              (existingSessions[module.id] ?? _defaultSessionFor(module))
-                  .copyWith(
-            surfaceMode: _surfaceModeForModule(module.id),
-            readinessState: _readinessStateForModule(module),
-          ),
-        )
-        .toList(growable: false);
-    final targetModuleId = _preferredModuleId(
-            eligibleModules, workspaceState.focusedModuleId, forceFocus) ??
-        eligibleModules.first.id;
-
-    await ref.read(workspaceProvider.notifier).ensureDefaultSessionsOnce(
-          sessions: desiredSessions,
-          focusedModuleId: targetModuleId,
-        );
-
-    _workspaceInitialized = true;
-    await _activateModule(targetModuleId, requestFocus: true);
   }
 
   WorkspaceSession _defaultSessionFor(Module module) {
@@ -703,6 +720,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final sessions = workspaceState.sessions;
 
     if (!_workspaceInitialized &&
+        !_workspaceInitializing &&
         !moduleStateAsync.isLoading &&
         !workspaceStateAsync.isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {

@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     neurosense_hw_worker_url: str = "http://localhost:8004"   # profile: hardware
     neurobench_runner_url: str = "http://localhost:8003"       # profile: jobs
     neurochip_hw_worker_url: str = "http://localhost:8002"    # profile: hardware
+    # API key sent to the Akida hardware worker as X-API-Key. Required when
+    # pointing at the native neurochip.service (NEUROCHIP_AUTH_ENABLED=true
+    # there); left empty for the unauthenticated Docker stub worker.
+    neurochip_hw_worker_api_key: str = ""
     neurocnl_physics_worker_url: str = "http://localhost:8006" # profile: physics
     jupyter_worker_url: str = "http://localhost:8008"          # internal URL suite_api uses to probe Jupyter
     # Public URL returned to the Flutter app so its WebView can load JupyterLab.

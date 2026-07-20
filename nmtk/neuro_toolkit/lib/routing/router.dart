@@ -86,7 +86,9 @@ GoRouter createGoRouter() {
           ),
           GoRoute(
             path: '/module/neurosense',
-            redirect: (context, state) => '/module/neurocnl',
+            name: 'module-neurosense',
+            builder: (context, state) =>
+                const ToolViewScreen(initialModuleId: 'Neurosense'),
           ),
           GoRoute(
             path: '/module/neurohub',

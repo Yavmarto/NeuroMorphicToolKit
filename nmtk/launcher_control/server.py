@@ -1287,13 +1287,16 @@ class LauncherControlState(
         akida_runtime_port = contract.akida.runtime_port  # 8002
 
         # Prefer the Docker-internal service URL when NEUROCHIP_HW_WORKER_URL is
-        # configured.  In the Docker Compose setup the host-side port is 18002
-        # (not 8002), so probing via host.docker.internal:8002 fails.  The
-        # internal network URL http://neurochip-hw-worker:8002 is already used by
-        # suite_api and works correctly from within backend-net.
+        # configured. This may point at either the containerized stub worker
+        # (no Akida SDK, always simulator-absent) or, on boxes with a real card,
+        # the native neurochip.service via host.docker.internal (see
+        # docker-compose.akida-native.yml) — either way it may legitimately be
+        # hardware or the SDK's own AKD1000() simulator fallback, so both should
+        # register (require_hardware=False below).
         # When the env var is absent we are in local-dev mode: construct the URL
         # from external_probe_host and try to auto-start the venv if present.
         _docker_worker_url = os.environ.get("NEUROCHIP_HW_WORKER_URL", "").strip()
+        _worker_api_key = os.environ.get("NEUROCHIP_HW_WORKER_API_KEY", "").strip()
         if _docker_worker_url:
             akida_base_url = _docker_worker_url.rstrip("/")
             # Lava-backend has a 120 s start_period that gates neurochip-hw-worker;
@@ -1315,7 +1318,11 @@ class LauncherControlState(
             if self._shutdown.is_set():
                 return
             try:
-                with urllib.request.urlopen(akida_status_url, timeout=5) as resp:
+                _req = urllib.request.Request(
+                    akida_status_url,
+                    headers={"X-API-Key": _worker_api_key} if _worker_api_key else {},
+                )
+                with urllib.request.urlopen(_req, timeout=5) as resp:
                     body: dict[str, Any] = json.loads(
                         resp.read().decode("utf-8", errors="replace")
                     )

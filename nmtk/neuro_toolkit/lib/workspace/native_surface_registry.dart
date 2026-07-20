@@ -5,6 +5,7 @@ import 'package:neurocnl_studio/shell_adapter.dart';
 import 'package:neurohub_shell_adapter/neurohub_shell_adapter.dart';
 // import 'package:neurochip/shell_adapter.dart';
 import 'package:neurobench_frontend/shell_adapter.dart';
+import 'package:neurosense_shell_adapter/neurosense_shell_adapter.dart';
 
 typedef NativeSurfaceBuilder = Widget Function(
   WorkspaceSession session, {
@@ -36,6 +37,11 @@ class NativeSurfaceRegistry {
     },
     'Neurobench': (WorkspaceSession session, {String? initialServerUrl}) {
       return NeurobenchShellAdapter(
+        initialLocation: session.deepLink ?? '/',
+      );
+    },
+    'Neurosense': (WorkspaceSession session, {String? initialServerUrl}) {
+      return NeurosenseShellAdapter(
         initialLocation: session.deepLink ?? '/',
       );
     },

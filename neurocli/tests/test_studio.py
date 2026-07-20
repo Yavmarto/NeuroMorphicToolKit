@@ -23,7 +23,7 @@ def _workspace(tmp_path: Path, *, spec: str = "network kws { }", **overrides) ->
         "selectedDataset": "mnist",
     }
     workspace.update(overrides)
-    path = tmp_path / "session.neurocnl-workspace.json"
+    path = tmp_path / "session.nmtk"
     path.write_text(json.dumps({"version": 1, "workspace": workspace}))
     return path
 
@@ -54,7 +54,7 @@ def test_run_missing_file_exits_1(tmp_path: Path) -> None:
 
 
 def test_run_invalid_json_exits_1(tmp_path: Path) -> None:
-    bad = tmp_path / "bad.neurocnl-workspace.json"
+    bad = tmp_path / "bad.nmtk"
     bad.write_text("not json")
     result = runner.invoke(app, ["studio", "run", str(bad), "--json"])
     assert result.exit_code == 1
@@ -62,7 +62,7 @@ def test_run_invalid_json_exits_1(tmp_path: Path) -> None:
 
 
 def test_run_missing_workspace_key_exits_1(tmp_path: Path) -> None:
-    bad = tmp_path / "bad.neurocnl-workspace.json"
+    bad = tmp_path / "bad.nmtk"
     bad.write_text(json.dumps({"version": 1}))
     result = runner.invoke(app, ["studio", "run", str(bad), "--json"])
     assert result.exit_code == 1

@@ -9,7 +9,7 @@ user clicks "Generate" on the Pipeline tab:
 then streams live progress from ``GET /api/training/jobs/{job_id}/events`` (SSE)
 until the run reaches a terminal ``done``/``failed`` state.
 
-The workspace file (``*.neurocnl-workspace.json``) does not carry training/pipeline
+The workspace file (``*.nmtk``) does not carry training/pipeline
 parameters (epochs, learning rate, ...) — those only exist as ephemeral in-app state
 in the GUI. The ``--epochs``/``--learning-rate``/etc. flags below default to the same
 values the GUI's ``PipelineConfig`` defaults to, so an unmodified workspace file
@@ -95,7 +95,7 @@ def _safe_detail(response: httpx.Response) -> str:
 
 @studio_app.command("run")
 def run(
-    workspace_file: Path = typer.Argument(..., help="Path to a *.neurocnl-workspace.json file"),
+    workspace_file: Path = typer.Argument(..., help="Path to a *.nmtk file"),
     epochs: int = typer.Option(50, "--epochs", help="Training epochs"),
     learning_rate: float = typer.Option(1e-3, "--learning-rate", help="Optimizer learning rate"),
     optimizer: str = typer.Option("Adam", "--optimizer", help="Optimizer algorithm"),

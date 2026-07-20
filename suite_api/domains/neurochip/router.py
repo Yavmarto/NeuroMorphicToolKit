@@ -74,7 +74,14 @@ for prefix in [
         methods=["GET", "POST", "DELETE", "PUT", "PATCH"],
     )
     async def _hw_proxy(request: Request, path: str) -> Response:
-        return await proxy_to_worker(request, settings.neurochip_hw_worker_url)
+        extra_headers = (
+            {"X-API-Key": settings.neurochip_hw_worker_api_key}
+            if settings.neurochip_hw_worker_api_key
+            else None
+        )
+        return await proxy_to_worker(
+            request, settings.neurochip_hw_worker_url, extra_headers=extra_headers
+        )
 
 
 @router.get("/api/neurochip/health")

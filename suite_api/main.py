@@ -81,7 +81,6 @@ for module_id, path in [
     ("neurosim", "neurocnl/frontend/build/web"),
     ("neurochip", "Neurochip/frontend/build/web"),
     ("neurobench", "Neurobench/frontend/build/web"),
-    ("neurosense", "Neurosense/frontend/build/web"),
     ("neurohub", "Neurohub/frontend/build/web"),
 ]:
     full_path = REPO_ROOT / path

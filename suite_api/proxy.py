@@ -46,6 +46,7 @@ async def proxy_to_worker(
     *,
     timeout: float = 30.0,
     target_path: str | None = None,
+    extra_headers: dict[str, str] | None = None,
 ) -> Response:
     """Forward an HTTP request to a worker service.
 
@@ -57,6 +58,8 @@ async def proxy_to_worker(
         worker_base_url: Base URL of the worker (e.g. http://localhost:8004).
         timeout:         httpx request timeout in seconds.
         target_path:     Optional worker path to use instead of request.url.path.
+        extra_headers:   Additional headers to send to the worker (e.g. an
+                         X-API-Key the client doesn't have but the worker requires).
     """
     path = target_path if target_path is not None else request.url.path
     target_url = f"{worker_base_url.rstrip('/')}{path}"
@@ -64,6 +67,8 @@ async def proxy_to_worker(
         target_url = f"{target_url}?{request.url.query}"
 
     headers = _forward_headers(request)
+    if extra_headers:
+        headers.update(extra_headers)
     body = await request.body()
 
     try:

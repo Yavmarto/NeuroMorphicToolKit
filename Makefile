@@ -109,9 +109,16 @@ LAVA_BACKEND_PORT ?= 8012
 NEUROCNL_PHYSICS_PORT ?= 8006
 SNN_MLIR_COMPILER_PORT ?= 8007
 JUPYTER_PORT ?= 8008
+# Set AKIDA_NATIVE=1 when REMOTE_HOST has a real Akida card served by the
+# native neurochip.service systemd unit — see docker-compose.akida-native.yml.
+# This keeps port 8002 out of the eviction list below (it's intentionally
+# owned by that service, not a stray process) and switches docker-ex-deploy
+# to route the Docker stack's Akida access to it instead of the SDK-less
+# containerized stub worker.
+AKIDA_NATIVE ?= 0
 NATIVE_WORKER_PORTS := $(LAUNCHER_CONTROL_PORT) $(SUITE_API_PORT) $(NEUROSENSE_PORT) \
-	$(NEUROBENCH_PORT) $(NEUROCHIP_PORT) $(LAVA_BACKEND_PORT) $(NEUROCNL_PHYSICS_PORT) \
-	$(SNN_MLIR_COMPILER_PORT) $(JUPYTER_PORT)
+	$(NEUROBENCH_PORT) $(if $(filter 1,$(AKIDA_NATIVE)),,$(NEUROCHIP_PORT)) $(LAVA_BACKEND_PORT) \
+	$(NEUROCNL_PHYSICS_PORT) $(SNN_MLIR_COMPILER_PORT) $(JUPYTER_PORT)
 # Set DOCKER_EX_PRUNE=1 to run `docker builder prune` before deploy (slower; rarely needed).
 DOCKER_EX_PRUNE ?=
 # Set DOCKER_EX_RSYNC_VERBOSE=1 to list every rsync'd file (debug only).
@@ -173,6 +180,10 @@ docker-ex-deploy:
 		$(if $(DOCKER_EX_RSYNC_VERBOSE),-v,) \
 		$(RSYNC_EXCLUDES) \
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
+	@if [ "$(AKIDA_NATIVE)" = "1" ]; then \
+		echo "==> Ensuring native neurochip.service is running on $(REMOTE_HOST)..."; \
+		ssh $(SSH_OPTS) $(REMOTE_HOST) "sudo -n systemctl is-active --quiet neurochip.service || sudo -n systemctl start neurochip.service"; \
+	fi
 	@echo "==> Evicting any native process on ports $(NATIVE_WORKER_PORTS) on $(REMOTE_HOST)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(foreach p,$(NATIVE_WORKER_PORTS),$(p)/tcp) 2>/dev/null || true"
 	@if [ -n "$(DOCKER_EX_PRUNE)" ]; then \
@@ -180,8 +191,17 @@ docker-ex-deploy:
 		ssh $(SSH_OPTS) $(REMOTE_HOST) "docker builder prune -f --keep-storage=20GB"; \
 	fi
 	@echo "==> Building and starting full backend stack on $(REMOTE_HOST) (--build picks up source changes)..."
-	REMOTE_HOST="$(REMOTE_HOST)" DEPLOY_DIR="$(DEPLOY_DIR)" LAUNCHER_CONTROL_PORT="$(LAUNCHER_CONTROL_PORT)" SSH_OPTS="$(SSH_OPTS)" \
-		scripts/remote_docker_compose_up.sh
+	@if [ "$(AKIDA_NATIVE)" = "1" ]; then \
+		echo "==> Fetching Akida worker API key from $(REMOTE_HOST)..."; \
+		AKIDA_KEY="$$(ssh $(SSH_OPTS) $(REMOTE_HOST) 'sudo -n cat /opt/neurochip-akida-host/credentials/api-token')"; \
+		REMOTE_HOST="$(REMOTE_HOST)" DEPLOY_DIR="$(DEPLOY_DIR)" LAUNCHER_CONTROL_PORT="$(LAUNCHER_CONTROL_PORT)" SSH_OPTS="$(SSH_OPTS)" \
+			COMPOSE_FILE_ARGS="-f docker-compose.yml -f docker-compose.akida-native.yml" \
+			NEUROCHIP_HW_WORKER_API_KEY="$$AKIDA_KEY" \
+			scripts/remote_docker_compose_up.sh; \
+	else \
+		REMOTE_HOST="$(REMOTE_HOST)" DEPLOY_DIR="$(DEPLOY_DIR)" LAUNCHER_CONTROL_PORT="$(LAUNCHER_CONTROL_PORT)" SSH_OPTS="$(SSH_OPTS)" \
+			scripts/remote_docker_compose_up.sh; \
+	fi
 	@echo "==> Full backend ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
 
 docker-ex-all: secrets-init docker-ex-deploy

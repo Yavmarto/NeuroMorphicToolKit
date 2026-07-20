@@ -193,7 +193,7 @@
     "installStrategy": "pip",
     "startStrategy": "none",
     "uvicornTarget": "",
-    "hasFrontend": false,
+    "hasFrontend": true,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurosense",

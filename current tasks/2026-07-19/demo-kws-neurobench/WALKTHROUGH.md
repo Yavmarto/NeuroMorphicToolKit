@@ -10,26 +10,102 @@ silicon. See design rationale in `~/.claude/plans/looking-at-my-project-optimize
 
 ## Run order
 
-1. **Backends + launcher.** `docker compose up -d`; `curl -s localhost:8000/health` → `{"status":"ok"}`; then `make dev` (or `cd nmtk/neuro_toolkit && flutter run -d macos`).
-2. **Model canvas.** Load `keyword_spotting.cnl` into the CNL panel → Sync to Canvas. Toggle CNL ↔ NIR ↔ canvas to show all three mirror the same graph (the headline feature). Validation must pass.
-3. **Train canvas.** Build the DAG: dataLoader(SpeechCommands) → spikeEncoder(rate/MFCC) → timeLoop → forwardPass → CrossEntropy → backward(surrogate/BPTT) → Adam → spikeRecorder. `training_config.json`: set `export_nir=true`. Train in the Jupyter worker (snnTorch). Target ≥ 0.75 top-1 (the benchmark `pass_threshold`). Save the emitted NIR as `trained.nir`.
-4. **Eval canvas.** DAG: data → network(trained.nir) → metrics = accuracy, activation_sparsity, synaptic_operations, memory_kb (exactly the `keyword_spotting.json` metrics).
-5. **Neurobench.** `POST /run` the builtin `keyword_spotting` benchmark; fill `results_vs_baseline.md`.
-6. **Ablation sweep.** `POST /sweep` over firing threshold (or timesteps); save accuracy-vs-energy plot.
-7. **Hardware.** Export `trained.nir` via `neurocnl/neurocnl/export/{loihi,spinnaker2,sinabs}_exporter.py` for your board → deploy through the matching `Neurochip/.../routers/*` route → record on-hardware accuracy + energy (label estimated vs measured; Neurochip `estimation.py` for estimates).
+All steps below are clicks inside the running NeuroStudio app (`make dev`, or
+`cd nmtk/neuro_toolkit && flutter run -d macos`) once the backends are up
+(`docker compose up -d`; `curl -s localhost:8000/health` → `{"status":"ok"}`
+is just the pre-flight check, not something the demo itself does).
+
+1. **Model canvas.** Load `keyword_spotting.cnl` into the CNL panel → Sync to Canvas. Toggle CNL ↔ NIR ↔ canvas to show all three mirror the same graph (the headline feature). Validation must pass.
+
+2. **Train canvas — one-time offline prep (can't be avoided in-app):** neither
+   "SpeechCommands" nor "MFCC" is a real option anywhere in the Train canvas —
+   the dataLoader node's **Format** dropdown only offers
+   `auto, tonic_nmnist, tonic_shd, npy, pt, hdf5`, and there's no registered
+   `speech_commands` dataset (the catalog only has
+   `mnist_spike, nmnist, dvs_gesture, shd, ntidigits`). Google Speech Commands
+   isn't auto-downloadable and MFCC extraction isn't built in — you must
+   precompute it yourself once, outside the app: download Speech Commands,
+   extract 20-bin MFCC features per clip, save as a single `.pt` tensor
+   (features + labels) on the machine running the backend. This is a real
+   manual step, not a UI gap you can click around — say so on camera rather
+   than pretending otherwise.
+
+   **Script (run once, locally):**
+   ```bash
+   pip install torch torchaudio   # skip if already installed
+   python3 scripts/prep_speech_commands_mfcc.py
+   # → downloads ~2.3 GB to data/speech_commands_raw/
+   # → writes  data/speech_commands_mfcc20.pt  (~90 MB, all three splits)
+   #   tensor: TensorDataset( float32(N,20), int64(N,) )  35 classes
+   ```
+   Smoke-test first with `--dry-run` (200 clips/split, takes ~10 s).
+
+   **Smoke-test:**
+   ```bash
+   python3 scripts/prep_speech_commands_mfcc.py --dry-run --out /tmp/kws_smoke.pt
+   ```
+
+   **Copy into the Docker backend (local compose):**
+   ```bash
+   # Find the suite_api container name
+   docker ps --filter name=suite_api --format '{{.Names}}'
+   # Copy the file in
+   docker cp data/speech_commands_mfcc20.pt <container>:/home/app/data/speech_commands_mfcc20.pt
+   ```
+
+   **Copy to the remote host (moosebuntu) and into its container:**
+   ```bash
+   rsync -avz data/speech_commands_mfcc20.pt moosebuntu@192.168.2.51:~/NeuroMorphicToolKit/data/
+   ssh moosebuntu@192.168.2.51 \
+     "docker cp ~/NeuroMorphicToolKit/data/speech_commands_mfcc20.pt \
+       \$(docker ps --filter name=suite_api -q):/home/app/data/speech_commands_mfcc20.pt"
+   ```
+
+   The path to enter in the UI:  `/home/app/data/speech_commands_mfcc20.pt`
+
+3. **Train canvas — build the DAG**, with these exact node parameters (as
+   they appear in each node's property panel):
+   - **dataLoader** — Format = `pt`; Dataset Path = `/home/app/data/speech_commands_mfcc20.pt`; Batch Size = `32`; Shuffle = on.
+   - **spikeEncoder** — Encoding = `rate` (the closest real option to a rate-coded MFCC front end — document this substitution, don't claim "MFCC encoding" is a dropdown choice); Time Window = `25`.
+   - **timeLoop** — Time Steps = `25`.
+   - **forwardPass** — no configurable fields (read-only "Eval Mode" indicator).
+   - **crossEntropyLoss** — Label Smoothing = `0.0`.
+   - **surrogateBackward** — Function = `fast_sigmoid`; Slope = `25.0`. (Use this node, not a separate "BPTT" node — there isn't one with a configurable panel.)
+   - **adamOptimiser** — Learning Rate = `0.001`; Weight Decay = `0.0`; Beta 1 = `0.9`; Beta 2 = `0.999`.
+   - **spikeRecorder** — no configurable fields.
+   - Gear icon (Pipeline Settings) — Epochs = `50` (raise if accuracy plateaus below the 0.75 target); Random Seed = `42`.
+   - `export_nir=true` is set automatically when you use the Run step below — not a separate field to hunt for.
+
+4. **Run step → click Start.** This generates and executes the training notebook server-side (snnTorch) with live epoch/loss progress — no manual notebook execution needed. Target ≥ 0.75 top-1 (the benchmark `pass_threshold`); the trained NIR is picked up automatically by the next step.
+5. **Eval canvas.** DAG: data → network(trained model) → metrics = accuracy, activation_sparsity, synaptic_operations, memory_kb (exactly the `keyword_spotting.json` metrics).
+6. **Results step → Run Benchmark.** Runs the builtin NeuroBench `keyword_spotting` benchmark and shows the results table in-app; fill `results_vs_baseline.md` from it.
+7. **Results step → Deploy to Hardware.** Select a target and click through its readiness/deploy buttons in order — in-app, real click-paths for:
+   - **Akida** (`akida_workspace.dart`) — Check Readiness → Map Runtime → Generate Package/Install/Run. See `AKIDA_DEPLOYMENT.md` for the full walkthrough and caveats.
+   - **Lava / Loihi2** (`lava_workspace.dart`) — Check Readiness → Run, against the Neurochip Loihi2 simulator contract.
+
+   Record on-hardware (Akida) and simulator (Lava/Loihi2) accuracy + energy;
+   label estimated vs measured (Neurochip's power/latency estimation is
+   surfaced in the same workspace).
+
+   SpiNNaker2 and Sinabs are export/preview-only in the app today (no in-app
+   deploy-to-hardware call exists for either) — don't present them as
+   one-click; if you need those boards, that's a separate follow-up, not part
+   of this demo's live flow.
 
 ## Result tables to fill
 
-`results_vs_baseline.md` — our model vs seeded NeuroBench v1.0 baselines (CPU/PyTorch, Loihi2/Lava, SpiNNaker2, Xylo):
+`results_vs_baseline.md` — our model vs seeded NeuroBench v1.0 baselines (CPU/PyTorch, Loihi2/Lava, SpiNNaker2, Xylo). The demo covers a subset of the "Ours" rows in-app (snnTorch sim, Akida on-hardware/simulator, Lava/Loihi2 simulator) — SpiNNaker2/Xylo/CPU rows can only be filled with the published NeuroBench baseline numbers, not our own reproduction:
 
 | Backend | Top-1 acc | Activation sparsity | Synaptic ops | Memory (KB) |
 |---|---|---|---|---|
 | Ours (snnTorch sim) | | | | |
-| Ours (on-hardware) | | | | |
-| NeuroBench published | | | | |
+| Ours (Akida, on-hardware) | | | | |
+| Ours (Lava/Loihi2, simulator) | | | | |
+| NeuroBench published (CPU/PyTorch, Loihi2/Lava, SpiNNaker2, Xylo) | | | | |
 
 ## Honest caveats (say these — they read as competence)
 - LIF-only by design (CubaLIF crashes on brian2/pynn/akida per `nir_support.py`).
 - brian2/pynn/akida LIF is graded `approximate` (some params hardcoded) → quote snnTorch/Lava as primary.
-- Training runs in the Jupyter worker, separate from the in-process Nengo preview.
+- Training executes server-side when you click Start (a real notebook run, not a mock) — the in-process Nengo preview elsewhere in the app is a separate, faster, non-training path; don't conflate the two on camera.
 - MFCC preprocessing only (Speech2Spikes is proprietary and blocked in `neurobench_executor.py`).
+- Akida's on-chip activation is a quantized, fused-into-layer nonlinearity, not literal spiking integrate-and-fire — see `AKIDA_DEPLOYMENT.md` for the full caveat.

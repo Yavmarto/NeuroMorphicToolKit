@@ -236,7 +236,7 @@ neuro hub search "braille dataset" --json
 
 ### `neuro studio run` — generate and run a NeuroStudio notebook
 
-Reads a NeuroStudio workspace file (`*.neurocnl-workspace.json`, saved from the
+Reads a NeuroStudio workspace file (`*.nmtk`, saved from the
 NeuroStudio GUI's File > Save), generates a Jupyter notebook from its CNL spec via
 the `neurocnl` backend, runs it, and streams live training progress until it
 finishes.
@@ -261,8 +261,8 @@ URL resolves from `--registry`, then the `neurocnl` port in
 **Examples:**
 
 ```bash
-neuro studio run my-project.neurocnl-workspace.json
-neuro studio run my-project.neurocnl-workspace.json --framework lava_sim --epochs 100 --json
+neuro studio run my-project.nmtk
+neuro studio run my-project.nmtk --framework lava_sim --epochs 100 --json
 ```
 
 ---

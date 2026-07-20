@@ -45,7 +45,7 @@ So `neurocli` most likely belongs in the "developer tooling / project bootstrap"
 - `neuro status` / `neuro install` / `neuro run` — headless module lifecycle helpers
 - `neuro hub login` / `push` / `pull` / `search` — talk to the Neurohub Global Registry
   over its `/api/v1` API using `neurohub://` URIs
-- `neuro studio run` — read a NeuroStudio workspace file (`*.neurocnl-workspace.json`),
+- `neuro studio run` — read a NeuroStudio workspace file (`*.nmtk`),
   generate a Jupyter notebook from its CNL spec via the `neurocnl` backend, and run it,
   streaming live training progress
 
