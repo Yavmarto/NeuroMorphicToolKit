@@ -63,8 +63,58 @@ is just the pre-flight check, not something the demo itself does).
 
    The path to enter in the UI:  `/home/app/data/speech_commands_mfcc20.pt`
 
-3. **Train canvas — build the DAG**, with these exact node parameters (as
-   they appear in each node's property panel):
+3. **Train canvas — build the DAG.**
+
+   Place these 9 nodes (the 8 from before, **plus `validationLoop`** — see
+   why below), then wire these exact **port name → port name** connections
+   (port names/types are fixed per node type, from `pipeline_dag.dart`'s
+   `inputPorts`/`outputPorts`; each row is one wire from the source node's
+   named output dot to the target node's named input dot):
+
+   | # | From node . output port | To node . input port |
+   |---|---|---|
+   | 1 | dataLoader . `data` | spikeEncoder . `data` |
+   | 2 | spikeEncoder . `spikes` | timeLoop . `spikes` |
+   | 3 | timeLoop . `spikes` | forwardPass . `input` |
+   | 4 | forwardPass . `spikes` | crossEntropyLoss . `spikes` |
+   | 5 | dataLoader . `labels` | crossEntropyLoss . `labels` |
+   | 6 | forwardPass . `spikes` | spikeRecorder . `input` |
+   | 7 | crossEntropyLoss . `loss` | surrogateBackward . `loss` |
+   | 8 | surrogateBackward . `gradients` | adamOptimiser . `gradients` |
+   | 9 | adamOptimiser . `model` | validationLoop . `model` |
+   | 10 | dataLoader . `data` | validationLoop . `val_data` |
+
+   Notes on the non-obvious ones:
+   - **Row 1 and row 5 are both wires out of dataLoader** — it has two output
+     dots (`data` and `labels`); don't assume one wire covers both. Row 10 is
+     a *third* wire out of dataLoader's `data` dot (fanning out to both
+     spikeEncoder and validationLoop) — same "one dot, multiple wires"
+     pattern as forwardPass below.
+   - **Row 4 and row 6 are both wires out of forwardPass's single `spikes`
+     output dot** — one output port fans out to two different target nodes
+     (crossEntropyLoss and spikeRecorder). This is the one place a node has
+     more outgoing wires than output dots — that's expected, a single dot can
+     feed multiple input dots.
+   - **Why `validationLoop` is required, not optional:** without it, nothing
+     in the generated notebook ever writes trained weights to disk — the
+     `torch.save(net.state_dict(), 'best_model.pt')` checkpoint is only
+     emitted when a `validationLoop` node is present and wired to a model
+     input. Skip this node and the Eval canvas will silently evaluate a
+     **fresh, randomly-initialized** network instead of your trained one —
+     this is exactly what produced a near-chance (~1.5%) eval accuracy after
+     an otherwise-normal 50-epoch training run. `export_nir=true` does *not*
+     substitute for this — it does not currently regenerate weights from the
+     trained model.
+   - Leave `validationLoop`'s own parameters at their defaults
+     (`every_n_epochs=1`, `save_best_checkpoint=on`, `checkpoint_metric =
+     val_accuracy`, `checkpoint_mode = max`) — no need to change anything in
+     its property panel.
+   - forwardPass also has an optional `model` **input** dot — leave it
+     unconnected; it's only used if you add a State Reset/scheduler node,
+     which this DAG doesn't need.
+
+   Now set these exact node parameters (as they appear in each node's
+   property panel):
    - **dataLoader** — Format = `pt`; Dataset Path = `/home/app/data/speech_commands_mfcc20.pt`; Batch Size = `32`; Shuffle = on.
    - **spikeEncoder** — Encoding = `rate` (the closest real option to a rate-coded MFCC front end — document this substitution, don't claim "MFCC encoding" is a dropdown choice); Time Window = `25`.
    - **timeLoop** — Time Steps = `25`.
@@ -77,8 +127,41 @@ is just the pre-flight check, not something the demo itself does).
    - `export_nir=true` is set automatically when you use the Run step below — not a separate field to hunt for.
 
 4. **Run step → click Start.** This generates and executes the training notebook server-side (snnTorch) with live epoch/loss progress — no manual notebook execution needed. Target ≥ 0.75 top-1 (the benchmark `pass_threshold`); the trained NIR is picked up automatically by the next step.
-5. **Eval canvas.** DAG: data → network(trained model) → metrics = accuracy, activation_sparsity, synaptic_operations, memory_kb (exactly the `keyword_spotting.json` metrics).
-6. **Results step → Run Benchmark.** Runs the builtin NeuroBench `keyword_spotting` benchmark and shows the results table in-app; fill `results_vs_baseline.md` from it.
+5. **Eval canvas.** There is no separate "network" node type — place
+   **dataLoader** (or **testLoader**), **forwardPass**, and **accuracyMetric**
+   (dataLoader/forwardPass are the same node types as the Train canvas), then
+   wire:
+
+   | # | From node . output port | To node . input port |
+   |---|---|---|
+   | 1 | dataLoader . `data` | forwardPass . `input` |
+   | 2 | forwardPass . `spikes` | accuracyMetric . `spikes` |
+   | 3 | dataLoader . `labels` | accuracyMetric . `labels` |
+
+   Row 3 is a wire straight from dataLoader to accuracyMetric, bypassing
+   forwardPass — same "one node, two output wires" pattern as the Train
+   canvas's dataLoader. **Correction — forwardPass's `model` input is *not*
+   auto-populated:** there is no mechanism that carries trained weights from
+   the Train canvas into a separately-generated Eval notebook. Without the
+   `validationLoop` checkpoint node added to the Train DAG in step 3 (which
+   writes `best_model.pt` next to the notebook), Eval silently evaluates a
+   fresh random-init network and gives a near-chance result — this is not
+   automatic, it depends on step 3's `validationLoop` node having run first.
+   **accuracyMetric is the only one of the four `keyword_spotting.json`
+   metrics available as an Eval-canvas node** — `activation_sparsity`,
+   `synaptic_operations`, and `memory_kb` are not canvas nodes at all; they're
+   computed by the NeuroBench benchmark run in step 6 below, so don't go
+   looking for extra metric nodes to wire in for them.
+6. **Results step → Run Benchmark.** ⚠️ **Currently unreliable/likely broken** — the
+   `NeurobenchPanel` widget that owns this button isn't wired into the Results
+   step anywhere in the frontend, and its backend call omits a required
+   `network_path`, which should hard-error rather than return a real score.
+   If you see epoch/accuracy numbers displayed here, verify they're not
+   actually the Train canvas's own training telemetry bleeding through — treat
+   this step as needing its own investigation before trusting any number it
+   shows, and don't present it live until that's resolved. When it does work,
+   it's meant to run the builtin NeuroBench `keyword_spotting` benchmark and
+   show the results table in-app to fill `results_vs_baseline.md` from.
 7. **Results step → Deploy to Hardware.** Select a target and click through its readiness/deploy buttons in order — in-app, real click-paths for:
    - **Akida** (`akida_workspace.dart`) — Check Readiness → Map Runtime → Generate Package/Install/Run. See `AKIDA_DEPLOYMENT.md` for the full walkthrough and caveats.
    - **Lava / Loihi2** (`lava_workspace.dart`) — Check Readiness → Run, against the Neurochip Loihi2 simulator contract.

@@ -48,3 +48,7 @@ filtered-unused-functions.json
 
 # Workspaces
 nmtk-workspaces/
+data/speech_commands_mfcc20_test.pt
+data/speech_commands_mfcc20_train.pt
+workspaces/kws.nmtk
+workspaces/speech_commands_mfcc20.pt
