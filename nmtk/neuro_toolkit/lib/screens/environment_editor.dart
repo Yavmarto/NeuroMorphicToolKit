@@ -212,7 +212,7 @@ class _EnvironmentEditorScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(title),
-        content: ZetaTextInput(
+        content: NmtkTextInput(
           controller: controller,
           placeholder: placeholder,
         ),
@@ -406,7 +406,7 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
               Row(
                 children: [
                   Expanded(
-                    child: ZetaTextInput(
+                    child: NmtkTextInput(
                       controller: _addController,
                       placeholder: 'Package (e.g. cowsay or numpy==1.26)',
                       onFieldSubmitted: (_) =>
@@ -441,12 +441,23 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
       );
     }
     if (pkgState.error != null) {
-      return Text(
-        pkgState.error!,
-        style: Zeta.of(context)
-            .textStyles
-            .bodySmall
-            .apply(color: zeta.colors.mainNegative),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            pkgState.error!,
+            style: Zeta.of(context)
+                .textStyles
+                .bodySmall
+                .apply(color: zeta.colors.mainNegative),
+          ),
+          SizedBox(height: context.nmtkTokens.compactGap),
+          ZetaButton.outline(
+            label: 'Retry',
+            onPressed: () =>
+                ref.read(environmentPackageProvider(env.slug).notifier).load(),
+          ),
+        ],
       );
     }
     final pkgs = pkgState.packages;
@@ -513,6 +524,11 @@ class _ExportDialog extends ConsumerWidget {
           ZetaButton.text(
             onPressed: () => Navigator.pop(context),
             label: 'Close',
+          ),
+          ZetaButton(
+            onPressed: () =>
+                ref.invalidate(environmentExportProvider(env.slug)),
+            label: 'Retry',
           ),
         ],
       ),
@@ -680,7 +696,7 @@ class _ImportDialogState extends State<_ImportDialog> {
             Text('Environment name',
                 style: Zeta.of(context).textStyles.labelMedium),
             SizedBox(height: context.nmtkTokens.compactGap),
-            ZetaTextInput(
+            NmtkTextInput(
               controller: _nameController,
               placeholder: 'e.g. Shared experiment',
             ),

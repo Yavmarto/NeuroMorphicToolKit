@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
@@ -81,33 +82,48 @@ class LauncherBootstrapHost extends ConsumerWidget {
             ),
           );
         },
-        home: bootstrapAsync.when(
-          loading: () =>
-              const Scaffold(body: Center(child: _BootstrapLoadingView())),
-          error: (_, __) => _buildSetupScreen(ref, null),
-          data: (data) {
-            if (data.isReady) {
-              // Hand off to the main app shell inside a new ProviderScope that
-              // injects the resolved bootstrap state and control API service.
-              return ProviderScope(
-                overrides: [
-                  launcherBootstrapStateProvider
-                      .overrideWithValue(data.bootstrapState!),
-                  controlApiServiceProvider
-                      .overrideWithValue(data.controlApiService!),
-                ],
-                child: const NeuroToolkitApp(),
-              );
-            }
-            return _buildSetupScreen(ref, data);
-          },
+        // Wrapped here (inside `home`) rather than in the `builder` above --
+        // `home`'s widget becomes the Navigator's initial route page, a
+        // descendant of that Navigator's Overlay. `builder`'s `child` IS the
+        // Navigator, so a SelectionArea there sits ABOVE the Overlay, and
+        // SelectableRegion's `Overlay.of(context)` ancestor lookup fails
+        // ("No Overlay widget found").
+        home: SelectionArea(
+          child: bootstrapAsync.when(
+            loading: () => Scaffold(
+              body: Center(
+                child: _BootstrapLoadingView(
+                  targetHost: settings.launcherControlApiBaseUrl,
+                ),
+              ),
+            ),
+            error: (_, __) => _buildSetupScreen(ref, null),
+            data: (data) {
+              if (data.isReady) {
+                // Hand off to the main app shell inside a new ProviderScope that
+                // injects the resolved bootstrap state and control API service.
+                return ProviderScope(
+                  overrides: [
+                    launcherBootstrapStateProvider
+                        .overrideWithValue(data.bootstrapState!),
+                    controlApiServiceProvider
+                        .overrideWithValue(data.controlApiService!),
+                  ],
+                  child: const NeuroToolkitApp(),
+                );
+              }
+              return _buildSetupScreen(ref, data);
+            },
+          ),
         ),
       ),
     );
   }
 
   Widget _buildSetupScreen(WidgetRef ref, LauncherBootstrapData? data) {
-    final controlApiInput = data?.controlApiService?.baseUri.host ?? '';
+    final controlApiInput = data?.suggestedInstallHost ??
+        data?.controlApiService?.baseUri.host ??
+        '';
     return FirstRunSetupScreen(
       requirePython: false,
       requireLauncher: true,
@@ -125,6 +141,7 @@ class LauncherBootstrapHost extends ConsumerWidget {
           data?.bootstrapState != null && data?.controlApiService != null
               ? ServerSetupMode.setup
               : ServerSetupMode.connect,
+      launcherSetupInitialHost: data?.suggestedInstallHost,
       onLauncherSetupCompleted: () =>
           ref.read(launcherBootstrapProvider.notifier).saveAndRetry(''),
     );
@@ -169,14 +186,52 @@ class NeuroToolkitApp extends ConsumerWidget {
   }
 }
 
-class _BootstrapLoadingView extends StatelessWidget {
-  const _BootstrapLoadingView();
+/// Shows elapsed time and the target host while `_runBootstrap()` polls —
+/// that probe is bounded (up to ~20s per attempt, occasionally two attempts
+/// back to back) but a single static message for the whole wait reads as
+/// frozen. Ticking seconds makes an already-bounded wait legible instead.
+class _BootstrapLoadingView extends StatefulWidget {
+  const _BootstrapLoadingView({this.targetHost});
+
+  final String? targetHost;
+
+  @override
+  State<_BootstrapLoadingView> createState() => _BootstrapLoadingViewState();
+}
+
+class _BootstrapLoadingViewState extends State<_BootstrapLoadingView> {
+  late final Timer _timer;
+  int _elapsedSeconds = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _elapsedSeconds++);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final target = widget.targetHost?.trim();
+    final base = target != null && target.isNotEmpty
+        ? 'Connecting to $target…'
+        : 'Connecting to the launcher control API…';
+    final message = _elapsedSeconds < 15
+        ? '$base ($_elapsedSeconds s)'
+        : '$base ($_elapsedSeconds s)\n\nFirst-time connections can take up '
+            'to a minute while the server checks itself and starts up.';
     return NmtkShellReadinessStateView.fromState(
       NmtkShellReadinessState.warmingUp,
-      message: 'Connecting to the launcher control API…',
+      message: message,
     );
   }
 }

@@ -75,3 +75,14 @@ monitoring/
 .sisyphus/
 .impeccable/
 .tmp_manual_ui/
+
+# Prevent massive context uploads
+scripts/data/
+paper/
+codeflow-report.json
+nmtk/neuro_toolkit/build/
+nmtk/neuro_toolkit/.dart_tool/
+nmtk_ui_core/build/
+nmtk_ui_core/.dart_tool/
+neurocnl/frontend/rust/target/
+

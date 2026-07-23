@@ -14,8 +14,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # ---------------------------------------------------------------------------
 # Global base state (required by sub-scripts before sourcing).
 # ---------------------------------------------------------------------------
-CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-${LAUNCHER_CONTROL_PORT:-8091}}"
-LAUNCHER_CONTROL_PORT="${LAUNCHER_CONTROL_PORT:-8091}"
+CONTROL_API_PORT="${NMTK_CONTROL_API_PORT:-${LAUNCHER_CONTROL_PORT:-8090}}"
+LAUNCHER_CONTROL_PORT="${LAUNCHER_CONTROL_PORT:-8090}"
 
 # ---------------------------------------------------------------------------
 # Source sub-scripts (defines all functions; does not execute side-effects).
@@ -154,19 +154,19 @@ CONTROL_API_URL=""
 if [[ "$USE_DOCKER" == "true" ]]; then
   # Docker Compose manages both suite_api and launcher-control.
   # Always poll via loopback — the host machine may not route to its own LAN IP.
-  _poll_url="http://localhost:${LAUNCHER_CONTROL_PORT:-8091}"
+  _poll_url="http://localhost:${LAUNCHER_CONTROL_PORT:-8090}"
   # Resolve the URL that the Flutter app will use to reach the control service.
   if [[ "$TARGET_PLATFORM" == android* || "$TARGET_PLATFORM" == ios* || "$FLUTTER_DEVICE" == "ios" ]]; then
-    CONTROL_API_URL="http://$HOST_IP:${LAUNCHER_CONTROL_PORT:-8091}"
+    CONTROL_API_URL="http://$HOST_IP:${LAUNCHER_CONTROL_PORT:-8090}"
   else
-    CONTROL_API_URL="http://localhost:${LAUNCHER_CONTROL_PORT:-8091}"
+    CONTROL_API_URL="http://localhost:${LAUNCHER_CONTROL_PORT:-8090}"
   fi
   # Docker Compose already started the container; poll via loopback.
   wait_for_control_api "$_poll_url"
 
 elif [[ -n "$REMOTE_HOST_IP" ]]; then
   # Backend is on a remote server (docker-ex targets).
-  CONTROL_API_URL="http://$REMOTE_HOST_IP:${LAUNCHER_CONTROL_PORT:-8091}"
+  CONTROL_API_URL="http://$REMOTE_HOST_IP:${LAUNCHER_CONTROL_PORT:-8090}"
   echo "==> Using remote launcher control API at $CONTROL_API_URL"
   wait_for_control_api "$CONTROL_API_URL"
 
@@ -184,7 +184,6 @@ else
   # --- SECTION: Control API ---
   start_control_api "$CONTROL_API_BIND_HOST" "true" ""
   CONTROL_API_URL="http://$CONTROL_API_PUBLIC_HOST:$CONTROL_API_PORT"
-  wait_for_suite_api "$CONTROL_API_URL"
 fi
 
 # ---------------------------------------------------------------------------
@@ -204,9 +203,16 @@ cd "$REPO_ROOT/nmtk/neuro_toolkit"
 flutter_args=(
   run
   -d "$FLUTTER_DEVICE"
-  --dart-define="NMTK_CONTROL_API_BASE_URL=$CONTROL_API_URL"
-  --dart-define="NMTK_CONTROL_API_PORT=${LAUNCHER_CONTROL_PORT:-8091}"
 )
+if [[ "$USE_DOCKER" == "true" || -n "$REMOTE_HOST_IP" ]]; then
+  # Explicit target requested via --docker/--remote-host: force the app onto
+  # it. For the plain local branch, leave this unset so the app falls back to
+  # its own remembered host / connect screen instead of a stale local default.
+  flutter_args+=(
+    --dart-define="NMTK_CONTROL_API_BASE_URL=$CONTROL_API_URL"
+    --dart-define="NMTK_CONTROL_API_PORT=${LAUNCHER_CONTROL_PORT:-8090}"
+  )
+fi
 if [[ -n "$SUITE_API_URL" ]]; then
   flutter_args+=(--dart-define="SUITE_API_URL=$SUITE_API_URL")
 fi

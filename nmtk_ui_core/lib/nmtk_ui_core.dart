@@ -67,3 +67,4 @@ export 'visualization/fragment_shader_renderer.dart';
 export 'visualization/wgpu_native_renderer.dart';
 export 'visualization/renderer_registry.dart';
 export 'visualization/tile_grid_renderer.dart';
+export 'widgets/nmtk_text_input.dart';

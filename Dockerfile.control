@@ -39,7 +39,8 @@ EXPOSE 8091
 
 # --no-manage-suite-api: Docker Compose owns suite_api lifecycle, not us.
 # Internal port is always 8091. LAUNCHER_CONTROL_PORT in docker-compose.yml
-# controls only the host-side published port, not what this process listens on.
+# controls only the host-side published port (default 8090, matching the
+# Flutter app's NMTK_CONTROL_API_PORT default so bare-IP connections work).
 CMD ["python", "scripts/launcher_control_service.py", \
      "--host", "0.0.0.0", \
      "--port", "8091", \

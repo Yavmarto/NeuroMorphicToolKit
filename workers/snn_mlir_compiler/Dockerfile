@@ -59,4 +59,8 @@ WORKDIR /repo
 COPY workers/snn_mlir_compiler/ workers/snn_mlir_compiler/
 ENV NMTK_SNN_OPT_PATH=/usr/local/bin/snn-opt
 
+RUN groupadd --system appgroup && useradd --system --gid appgroup appuser \
+ && chown -R appuser:appgroup /repo
+USER appuser
+
 CMD ["uvicorn", "workers.snn_mlir_compiler.main:app", "--host", "0.0.0.0", "--port", "8007"]

@@ -73,10 +73,14 @@ class ModuleLifecycleMixin:
             saved = saved_states.get(module_id, {})
             module = dict(raw)
             module["directory"] = str(_module_root(module))
-            module["version"] = str(saved.get("version", module.get("version", "0.0.0")))
+            module["version"] = str(
+                saved.get("version", module.get("version", "0.0.0"))
+            )
             module["versionPinned"] = bool(saved.get("versionPinned", False))
             saved_remote_version = str(
-                saved.get("remoteVersion", module.get("remoteVersion", module["version"]))
+                saved.get(
+                    "remoteVersion", module.get("remoteVersion", module["version"])
+                )
             )
             module["remoteVersion"] = (
                 module["version"]
@@ -289,9 +293,7 @@ class ModuleLifecycleMixin:
                 # managed by suite_api.
                 ok, status_code, health_text = self._probe_health(module)
                 if ok:
-                    next_status = _status_for_health_response(
-                        status_code, PREFLIGHT_OK
-                    )
+                    next_status = _status_for_health_response(status_code, PREFLIGHT_OK)
                     self._update_module_fields(
                         module_id,
                         status=next_status,
@@ -300,14 +302,18 @@ class ModuleLifecycleMixin:
                 else:
                     deployment = module.get("deployment") or {}
                     compose_profile = (
-                        deployment.get("composeProfile", "") if isinstance(deployment, dict) else ""
+                        deployment.get("composeProfile", "")
+                        if isinstance(deployment, dict)
+                        else ""
                     )
                     hint = (
                         f" Start it with: docker compose --profile {compose_profile} up"
                         if compose_profile
                         else " Start the external service before launching this module."
                     )
-                    msg = f"Waiting for service on port {_effective_port(module)}.{hint}"
+                    msg = (
+                        f"Waiting for service on port {_effective_port(module)}.{hint}"
+                    )
                     self._update_module_fields(module_id, healthStatus=msg)
                     # Status remains 'starting'; health poll will transition to running when available.
                     return
@@ -321,7 +327,9 @@ class ModuleLifecycleMixin:
                     status=STATUS_INDEX["error"],
                     healthStatus=suite_api_result.message,
                 )
-                raise RuntimeError(suite_api_result.message or "suite_api is unavailable")
+                raise RuntimeError(
+                    suite_api_result.message or "suite_api is unavailable"
+                )
             self._update_module_fields(
                 module_id,
                 status=STATUS_INDEX["running"],
@@ -649,7 +657,12 @@ class ModuleLifecycleMixin:
                 ok_count += 1
             elif state == "degraded_optional_capability":
                 degraded_count += 1
-            elif state in {"provision_failed", "overlay_missing", "preflight_failed", "error"}:
+            elif state in {
+                "provision_failed",
+                "overlay_missing",
+                "preflight_failed",
+                "error",
+            }:
                 fatal_count += 1
 
             pynq_boards.append(

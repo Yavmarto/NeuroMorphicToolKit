@@ -33,7 +33,7 @@ final class WorkspaceNotifierProvider
   WorkspaceNotifier create() => WorkspaceNotifier();
 }
 
-String _$workspaceNotifierHash() => r'f2a8ce678f9c5a1eb913cbaf218ce0e86f360e51';
+String _$workspaceNotifierHash() => r'2729519c11916e1b5139be360acb47894f036202';
 
 abstract class _$WorkspaceNotifier extends $AsyncNotifier<WorkspaceState> {
   FutureOr<WorkspaceState> build();

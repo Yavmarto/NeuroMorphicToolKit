@@ -20,6 +20,8 @@ class LauncherBootstrapState {
     required this.status,
     required this.baseUri,
     this.message,
+    this.controlApiReachable = false,
+    this.hostReachableNoServer = false,
   });
 
   factory LauncherBootstrapState.ready(Uri baseUri, {String? message}) {
@@ -27,23 +29,41 @@ class LauncherBootstrapState {
       status: LauncherBootstrapStatus.ready,
       baseUri: baseUri,
       message: message,
+      controlApiReachable: true,
     );
   }
 
   factory LauncherBootstrapState.preflightFailed(
     Uri baseUri,
-    String message,
-  ) {
+    String message, {
+    bool controlApiReachable = false,
+    bool hostReachableNoServer = false,
+  }) {
     return LauncherBootstrapState(
       status: LauncherBootstrapStatus.preflightFailed,
       baseUri: baseUri,
       message: message,
+      controlApiReachable: controlApiReachable,
+      hostReachableNoServer: hostReachableNoServer,
     );
   }
 
   final LauncherBootstrapStatus status;
   final Uri baseUri;
   final String? message;
+
+  /// True whenever the control API's `/health` endpoint answered at all —
+  /// even if the target isn't fully ready (e.g. a local `suite_api` install
+  /// problem). Distinct from [canUseControlApi]: the deploy/setup wizard only
+  /// needs the control API reachable, not the whole target fully ready.
+  final bool controlApiReachable;
+
+  /// True when the target's TCP connection was actively refused rather than
+  /// timing out — the host itself answered, it just has no launcher control
+  /// API installed on that port yet. A timeout/unreachable host leaves this
+  /// false, since that usually means a wrong address rather than a clean,
+  /// installable target.
+  final bool hostReachableNoServer;
 
   bool get canUseControlApi => status == LauncherBootstrapStatus.ready;
 }
@@ -168,8 +188,12 @@ class LauncherControlBootstrapService {
     final explicitBaseUri = _explicitBaseUri();
     if (explicitBaseUri != null) {
       final deadline = DateTime.now().add(startupTimeout);
+      var lastControlApiReachable = false;
+      var lastHostReachableNoServer = false;
       while (DateTime.now().isBefore(deadline)) {
         final health = await _probeHealth(explicitBaseUri);
+        lastControlApiReachable = health.controlApiReachable;
+        lastHostReachableNoServer = health.hostReachableNoServer;
         if (health.ready) {
           return LauncherBootstrapState.ready(explicitBaseUri);
         }
@@ -177,14 +201,25 @@ class LauncherControlBootstrapService {
           return LauncherBootstrapState.preflightFailed(
             explicitBaseUri,
             health.failureMessage!,
+            controlApiReachable: health.controlApiReachable,
           );
+        }
+        // A refused connection means nothing is installed on this host —
+        // don't keep polling, there's nothing that will ever answer.
+        if (health.hostReachableNoServer) {
+          break;
         }
         await Future<void>.delayed(pollInterval);
       }
       return LauncherBootstrapState.preflightFailed(
         explicitBaseUri,
-        'Preflight failed: configured launcher control API did not become ready at '
-        '$explicitBaseUri within ${startupTimeout.inSeconds}s.',
+        lastHostReachableNoServer
+            ? 'No launcher server found at $explicitBaseUri. The host is '
+                'reachable, but nothing is installed there yet.'
+            : 'Preflight failed: configured launcher control API did not become ready at '
+                '$explicitBaseUri within ${startupTimeout.inSeconds}s.',
+        controlApiReachable: lastControlApiReachable,
+        hostReachableNoServer: lastHostReachableNoServer,
       );
     }
 
@@ -201,6 +236,7 @@ class LauncherControlBootstrapService {
       return LauncherBootstrapState.preflightFailed(
         localBaseUri,
         existingHealth.failureMessage!,
+        controlApiReachable: existingHealth.controlApiReachable,
       );
     }
 
@@ -247,8 +283,10 @@ class LauncherControlBootstrapService {
     }
 
     final deadline = DateTime.now().add(startupTimeout);
+    var lastControlApiReachable = false;
     while (DateTime.now().isBefore(deadline)) {
       final health = await _probeHealth(localBaseUri);
+      lastControlApiReachable = health.controlApiReachable;
       if (health.ready) {
         return LauncherBootstrapState.ready(localBaseUri);
       }
@@ -256,6 +294,7 @@ class LauncherControlBootstrapService {
         return LauncherBootstrapState.preflightFailed(
           localBaseUri,
           health.failureMessage!,
+          controlApiReachable: health.controlApiReachable,
         );
       }
       await Future<void>.delayed(pollInterval);
@@ -265,6 +304,7 @@ class LauncherControlBootstrapService {
       localBaseUri,
       'Preflight failed: local launcher control API did not become ready at '
       '$localBaseUri within ${startupTimeout.inSeconds}s.',
+      controlApiReachable: lastControlApiReachable,
     );
   }
 
@@ -284,39 +324,65 @@ class LauncherControlBootstrapService {
   }
 
   Future<_HealthProbeResult> _probeHealth(Uri baseUri) async {
+    http.Response response;
     try {
-      final response = await _client
+      response = await _client
           .get(baseUri.replace(path: '/health'))
           .timeout(const Duration(seconds: 2));
-      if (response.statusCode != 200) {
-        return const _HealthProbeResult.notReady();
-      }
-      if (response.body.isEmpty) {
-        return const _HealthProbeResult.ready();
-      }
-      final decoded = jsonDecode(response.body);
-      if (decoded is! Map<String, dynamic>) {
-        return const _HealthProbeResult.ready();
-      }
-      final suiteApiStatus = (decoded['suiteApiStatus'] as String?)?.trim();
-      final suiteApiMessage = (decoded['suiteApiMessage'] as String?)?.trim();
-      if (suiteApiStatus == null ||
-          suiteApiStatus.isEmpty ||
-          suiteApiStatus == 'ready' ||
-          suiteApiStatus == 'disabled') {
-        return const _HealthProbeResult.ready();
-      }
-      if (suiteApiStatus == 'preflight_failed' || suiteApiStatus == 'failed') {
-        return _HealthProbeResult.failed(
-          suiteApiMessage == null || suiteApiMessage.isEmpty
-              ? 'Preflight failed: suite_api could not start.'
-              : 'Preflight failed: $suiteApiMessage',
-        );
-      }
-      return const _HealthProbeResult.notReady();
+    } on SocketException catch (error) {
+      // The OS actively refused the connection — the host answered at the
+      // network level, it just has nothing listening on this port. A
+      // timeout/unreachable host (handled by the catch-all below) usually
+      // means a wrong address instead, so keep that distinct.
+      return _HealthProbeResult.notReady(
+        hostReachableNoServer: _isConnectionRefused(error),
+      );
     } catch (_) {
+      // Genuine transport-level failure — the control API never answered.
       return const _HealthProbeResult.notReady();
     }
+
+    // From here on something answered at the transport level, so the control
+    // API itself is reachable regardless of what its body says.
+    if (response.statusCode != 200) {
+      return const _HealthProbeResult.notReady(controlApiReachable: true);
+    }
+    if (response.body.isEmpty) {
+      return const _HealthProbeResult.ready();
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      return const _HealthProbeResult.ready();
+    }
+    final suiteApiStatus = (decoded['suiteApiStatus'] as String?)?.trim();
+    final suiteApiMessage = (decoded['suiteApiMessage'] as String?)?.trim();
+    if (suiteApiStatus == null ||
+        suiteApiStatus.isEmpty ||
+        suiteApiStatus == 'ready' ||
+        suiteApiStatus == 'disabled') {
+      return const _HealthProbeResult.ready();
+    }
+    if (suiteApiStatus == 'preflight_failed' || suiteApiStatus == 'failed') {
+      return _HealthProbeResult.failed(
+        suiteApiMessage == null || suiteApiMessage.isEmpty
+            ? 'Preflight failed: suite_api could not start.'
+            : 'Preflight failed: $suiteApiMessage',
+      );
+    }
+    return const _HealthProbeResult.notReady(controlApiReachable: true);
+  }
+
+  /// `errno` values for ECONNREFUSED across the platforms this app targets —
+  /// the only case that means "host reachable, nothing listening on this
+  /// port" rather than "couldn't reach the host at all."
+  static bool _isConnectionRefused(SocketException error) {
+    const econnrefusedByPlatform = <int>{
+      61, // macOS / BSD
+      111, // Linux
+      10061, // Windows (WSAECONNREFUSED)
+    };
+    final code = error.osError?.errorCode;
+    return code != null && econnrefusedByPlatform.contains(code);
   }
 
   _LaunchSpec _resolveLaunchSpec() {
@@ -365,15 +431,31 @@ class _LaunchSpec {
 }
 
 class _HealthProbeResult {
-  const _HealthProbeResult._({required this.ready, this.failureMessage});
+  const _HealthProbeResult._({
+    required this.ready,
+    this.failureMessage,
+    this.controlApiReachable = false,
+    this.hostReachableNoServer = false,
+  });
 
-  const _HealthProbeResult.ready() : this._(ready: true);
+  const _HealthProbeResult.ready()
+      : this._(ready: true, controlApiReachable: true);
 
-  const _HealthProbeResult.notReady() : this._(ready: false);
+  const _HealthProbeResult.notReady({
+    bool controlApiReachable = false,
+    bool hostReachableNoServer = false,
+  }) : this._(
+          ready: false,
+          controlApiReachable: controlApiReachable,
+          hostReachableNoServer: hostReachableNoServer,
+        );
 
   const _HealthProbeResult.failed(String message)
-      : this._(ready: false, failureMessage: message);
+      : this._(
+            ready: false, failureMessage: message, controlApiReachable: true);
 
   final bool ready;
   final String? failureMessage;
+  final bool controlApiReachable;
+  final bool hostReachableNoServer;
 }

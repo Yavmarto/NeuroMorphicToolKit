@@ -15,4 +15,9 @@ RUN pip install --no-cache-dir \
 COPY workers/neurochip_hw/ /app/
 COPY Neurochip/ /repo/Neurochip/
 RUN pip install --no-cache-dir /repo/Neurochip
+
+RUN groupadd --system appgroup && useradd --system --gid appgroup appuser \
+ && chown -R appuser:appgroup /app /repo
+USER appuser
+
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002"]

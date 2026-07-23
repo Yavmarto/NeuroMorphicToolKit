@@ -1,3 +1,6 @@
 {
-  "fingerprint": "97fd65bd79bae9ba9c8f2f090440e49433d8ed103f46dbadac93335c7a47b1d1"
+  "capabilityWarnings": [
+    "NeuroChip Studio hardware extras (akida, brian2, snn-mlir) are not installable on this machine and have been disabled; other modules are unaffected."
+  ],
+  "fingerprint": "dde99e23fc7acc830f5cd681846b31ecc8576dbcb9998b7122a3c9e9a8b2a37a"
 }

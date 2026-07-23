@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
 
 /// Tracks a failed WebView page load for a given module.
 class ModuleLoadFailure {
@@ -20,6 +21,7 @@ class ModuleErrorView extends StatelessWidget {
     required this.failure,
     required this.isRemoteHosted,
     required this.onRetry,
+    this.onChangeServer,
     super.key,
   });
 
@@ -33,13 +35,19 @@ class ModuleErrorView extends StatelessWidget {
 
   final VoidCallback onRetry;
 
+  /// Only meaningful when [isRemoteHosted] — this failure is about the
+  /// whole remote launcher host, not one module's port, so offer a way
+  /// back to the Connect/Setup screen alongside retry.
+  final VoidCallback? onChangeServer;
+
   @override
   Widget build(BuildContext context) {
     final hostHint = isRemoteHosted
         ? 'Confirm that ${failure.uri} is reachable from the Android device '
             'and that the suite API is serving the module frontend on that host.'
-        : 'Confirm that the launcher host is configured correctly for mobile '
-            'and that the suite API is reachable from this device.';
+        : 'Confirm the launcher host is reachable and that this module\'s '
+            'service is running — externally managed services like Jupyter '
+            'need to be started separately from the launcher.';
 
     return NmtkEmptyState(
       title: '${module.name} Page Could Not Load',
@@ -51,11 +59,10 @@ class ModuleErrorView extends StatelessWidget {
       icon:
           Icons.language_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       tone: NmtkTone.warning,
-      action: NmtkPrimaryButton(
-        onPressed: onRetry,
-        icon: ZetaIcons.refresh,
-        label: 'Retry Load',
-        tone: NmtkTone.warning,
+      action: ConnectionErrorActions(
+        onRetry: onRetry,
+        retryLabel: 'Retry Load',
+        onChangeServer: onChangeServer,
       ),
     );
   }

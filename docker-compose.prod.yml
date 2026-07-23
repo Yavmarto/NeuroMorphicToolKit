@@ -1,6 +1,6 @@
 services:
   suite_api:
-    image: ghcr.io/yavmarto/neuromorphictoolkit/suite-api:latest
+    image: ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest
     restart: always
     read_only: true
     tmpfs:
@@ -21,7 +21,7 @@ services:
       - monitoring-net
 
   neurosense-hw-worker:
-    image: ghcr.io/yavmarto/neuromorphictoolkit/neurosense-hw-worker:latest
+    image: ghcr.io/completed-spoon-6/neuromorphictoolkit/neurosense-hw-worker:latest
     restart: always
     read_only: true
     tmpfs:
@@ -38,7 +38,7 @@ services:
       - ALL
 
   neurobench-runner-worker:
-    image: ghcr.io/yavmarto/neuromorphictoolkit/neurobench-runner-worker:latest
+    image: ghcr.io/completed-spoon-6/neuromorphictoolkit/neurobench-runner-worker:latest
     restart: always
     read_only: true
     tmpfs:
@@ -55,7 +55,7 @@ services:
       - ALL
 
   neurochip-hw-worker:
-    image: ghcr.io/yavmarto/neuromorphictoolkit/neurochip-hw-worker:latest
+    image: ghcr.io/completed-spoon-6/neuromorphictoolkit/neurochip-hw-worker:latest
     restart: always
     read_only: true
     tmpfs:
@@ -73,7 +73,7 @@ services:
       - ALL
 
   neurocnl-physics-worker:
-    image: ghcr.io/yavmarto/neuromorphictoolkit/neurocnl-physics-worker:latest
+    image: ghcr.io/completed-spoon-6/neuromorphictoolkit/neurocnl-physics-worker:latest
     restart: always
     read_only: true
     tmpfs:
@@ -88,7 +88,7 @@ services:
       - ALL
 
   lava-backend:
-    image: ghcr.io/yavmarto/neuromorphictoolkit/lava-backend:latest
+    image: ghcr.io/completed-spoon-6/neuromorphictoolkit/lava-backend:latest
     restart: always
     read_only: true
     tmpfs:
@@ -103,7 +103,7 @@ services:
       - ALL
 
   launcher-control:
-    image: ghcr.io/yavmarto/neuromorphictoolkit/launcher-control:latest
+    image: ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest
     restart: always
     read_only: true
     tmpfs:
@@ -115,7 +115,24 @@ services:
       - ALL
 
   jupyter-server:
-    image: ghcr.io/yavmarto/neuromorphictoolkit/jupyter-server:latest
+    image: ghcr.io/completed-spoon-6/neuromorphictoolkit/jupyter-server:latest
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # snn-mlir-compiler is build-only in the base compose file and a runtime
+  # dependency of suite_api / neurobench-runner-worker. Without this image
+  # override a source-free `docker compose ... up` on a server with no repo
+  # would try to build it from context "." and fail. Published via the same
+  # release workflow as the other first-party services.
+  snn-mlir-compiler:
+    image: ghcr.io/completed-spoon-6/neuromorphictoolkit/snn-mlir-compiler:latest
     restart: always
     read_only: true
     tmpfs:

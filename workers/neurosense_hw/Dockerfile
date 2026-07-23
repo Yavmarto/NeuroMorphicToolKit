@@ -15,4 +15,9 @@ RUN pip install --no-cache-dir -r /tmp/neurosense-pip-requirements.txt
 COPY workers/neurosense_hw/ workers/neurosense_hw/
 COPY Neurosense/ /repo/Neurosense/
 RUN pip install --no-cache-dir /repo/Neurosense
+
+RUN groupadd --system appgroup && useradd --system --gid appgroup appuser \
+ && chown -R appuser:appgroup /repo
+USER appuser
+
 CMD ["uvicorn", "workers.neurosense_hw.main:app", "--host", "0.0.0.0", "--port", "8004"]

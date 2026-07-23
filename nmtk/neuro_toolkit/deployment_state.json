@@ -2,87 +2,2294 @@
   "jobs": [
     {
       "blockingInputNeeded": "",
-      "error": "",
+      "error": "Could not create deploy directory on remote: MooseRyzen@192.168.2.34: Permission denied (publickey,password).",
       "events": [
         {
-          "createdAt": "2026-05-06T21:02:50.347407+00:00",
-          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
-          "message": "Validating standalone backend prerequisites",
+          "createdAt": "2026-07-21T18:41:05.946469+00:00",
+          "jobId": "3308ebd4-f451-4b80-94bd-a4d35a963d4f",
+          "message": "Validating Docker backend prerequisites",
           "percent": 10,
           "stage": "preflight_running"
         },
         {
-          "createdAt": "2026-05-06T21:02:50.403173+00:00",
-          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
-          "message": "Preparing Python runtime plan",
-          "percent": 30,
+          "createdAt": "2026-07-21T18:41:05.947102+00:00",
+          "jobId": "3308ebd4-f451-4b80-94bd-a4d35a963d4f",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
           "stage": "installing"
         },
         {
-          "createdAt": "2026-05-06T21:02:50.458724+00:00",
-          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
-          "message": "Writing standalone service configuration",
-          "percent": 55,
-          "stage": "installing"
-        },
-        {
-          "createdAt": "2026-05-06T21:02:50.514176+00:00",
-          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
-          "message": "Running backend health verification",
-          "percent": 80,
-          "stage": "verifying"
-        },
-        {
-          "createdAt": "2026-05-06T21:02:50.569662+00:00",
-          "jobId": "7204bdb8-a258-4c0d-be9c-cfb492534962",
-          "message": "Standalone backend target is configured",
-          "percent": 100,
-          "stage": "completed"
+          "createdAt": "2026-07-21T18:41:06.137729+00:00",
+          "jobId": "3308ebd4-f451-4b80-94bd-a4d35a963d4f",
+          "message": "Could not create deploy directory on remote: MooseRyzen@192.168.2.34: Permission denied (publickey,password).",
+          "percent": 20.0,
+          "stage": "failed"
         }
       ],
-      "id": "7204bdb8-a258-4c0d-be9c-cfb492534962",
-      "lastLogLine": "Standalone backend target is configured",
+      "id": "3308ebd4-f451-4b80-94bd-a4d35a963d4f",
+      "lastLogLine": "Could not create deploy directory on remote: MooseRyzen@192.168.2.34: Permission denied (publickey,password).",
       "logs": [
-        "Validating standalone backend prerequisites",
-        "Preparing Python runtime plan",
-        "Writing standalone service configuration",
-        "Running backend health verification",
-        "Standalone backend target is configured"
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: MooseRyzen@192.168.2.34: Permission denied (publickey,password)."
       ],
-      "mode": "standalone",
-      "percent": 100,
-      "stage": "completed",
-      "stageLabel": "Ready",
-      "startedAt": "2026-05-06T21:02:50.346856+00:00",
-      "targetId": "This-machine",
-      "terminalOutcome": "completed",
-      "updatedAt": "2026-05-06T21:02:50.570182+00:00"
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: MooseRyzen@192.168.2.34: Permission denied (publickey,password).",
+      "startedAt": "2026-07-21T18:41:05.946031+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-21T18:41:06.138141+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "sshpass is required for SSH password authentication but was not found",
+      "events": [
+        {
+          "createdAt": "2026-07-21T19:25:17.423922+00:00",
+          "jobId": "8b7282c2-d59e-4d8d-a9e8-70851e86fa23",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-21T19:25:17.424498+00:00",
+          "jobId": "8b7282c2-d59e-4d8d-a9e8-70851e86fa23",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-21T19:25:17.428118+00:00",
+          "jobId": "8b7282c2-d59e-4d8d-a9e8-70851e86fa23",
+          "message": "sshpass is required for SSH password authentication but was not found",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "8b7282c2-d59e-4d8d-a9e8-70851e86fa23",
+      "lastLogLine": "sshpass is required for SSH password authentication but was not found",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "sshpass is required for SSH password authentication but was not found"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "sshpass is required for SSH password authentication but was not found",
+      "startedAt": "2026-07-21T19:25:17.423561+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-21T19:25:17.428463+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "sshpass is required for SSH password authentication but was not found",
+      "events": [
+        {
+          "createdAt": "2026-07-21T19:27:51.476969+00:00",
+          "jobId": "73ca340c-c3b5-4d13-97e5-c3e25d903e60",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-21T19:27:51.477626+00:00",
+          "jobId": "73ca340c-c3b5-4d13-97e5-c3e25d903e60",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-21T19:27:51.478056+00:00",
+          "jobId": "73ca340c-c3b5-4d13-97e5-c3e25d903e60",
+          "message": "sshpass is required for SSH password authentication but was not found",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "73ca340c-c3b5-4d13-97e5-c3e25d903e60",
+      "lastLogLine": "sshpass is required for SSH password authentication but was not found",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "sshpass is required for SSH password authentication but was not found"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "sshpass is required for SSH password authentication but was not found",
+      "startedAt": "2026-07-21T19:27:51.476488+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-21T19:27:51.478253+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "events": [
+        {
+          "createdAt": "2026-07-21T19:34:02.981824+00:00",
+          "jobId": "82e12878-0ccc-4c52-887d-fae8a8719479",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-21T19:34:02.982354+00:00",
+          "jobId": "82e12878-0ccc-4c52-887d-fae8a8719479",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-21T19:34:03.532524+00:00",
+          "jobId": "82e12878-0ccc-4c52-887d-fae8a8719479",
+          "message": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "82e12878-0ccc-4c52-887d-fae8a8719479",
+      "lastLogLine": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password)."
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "startedAt": "2026-07-21T19:34:02.981424+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-21T19:34:03.533114+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "events": [
+        {
+          "createdAt": "2026-07-21T19:34:20.833040+00:00",
+          "jobId": "137f9021-1584-44ef-96b6-6c8ff05d847c",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-21T19:34:20.833743+00:00",
+          "jobId": "137f9021-1584-44ef-96b6-6c8ff05d847c",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-21T19:34:20.955937+00:00",
+          "jobId": "137f9021-1584-44ef-96b6-6c8ff05d847c",
+          "message": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "137f9021-1584-44ef-96b6-6c8ff05d847c",
+      "lastLogLine": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password)."
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "startedAt": "2026-07-21T19:34:20.832485+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-21T19:34:20.956581+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "events": [
+        {
+          "createdAt": "2026-07-21T19:37:10.741965+00:00",
+          "jobId": "3adea2fa-a4df-4b2c-b0f5-7395ac5e7456",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-21T19:37:10.744145+00:00",
+          "jobId": "3adea2fa-a4df-4b2c-b0f5-7395ac5e7456",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-21T19:37:10.869229+00:00",
+          "jobId": "3adea2fa-a4df-4b2c-b0f5-7395ac5e7456",
+          "message": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "3adea2fa-a4df-4b2c-b0f5-7395ac5e7456",
+      "lastLogLine": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password)."
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "startedAt": "2026-07-21T19:37:10.739739+00:00",
+      "targetId": "MooseRyzen",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-21T19:37:10.870790+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "events": [
+        {
+          "createdAt": "2026-07-21T21:44:02.031454+00:00",
+          "jobId": "8c147ab9-e84f-49da-9183-3ca2feb436a3",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-21T21:44:02.032787+00:00",
+          "jobId": "8c147ab9-e84f-49da-9183-3ca2feb436a3",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-21T21:44:02.570849+00:00",
+          "jobId": "8c147ab9-e84f-49da-9183-3ca2feb436a3",
+          "message": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "8c147ab9-e84f-49da-9183-3ca2feb436a3",
+      "lastLogLine": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password)."
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "startedAt": "2026-07-21T21:44:02.030398+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-21T21:44:02.572229+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "events": [
+        {
+          "createdAt": "2026-07-22T06:23:19.459407+00:00",
+          "jobId": "a235b51e-aafe-4527-9870-5088f34b5644",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T06:23:19.460027+00:00",
+          "jobId": "a235b51e-aafe-4527-9870-5088f34b5644",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T06:23:19.583701+00:00",
+          "jobId": "a235b51e-aafe-4527-9870-5088f34b5644",
+          "message": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "a235b51e-aafe-4527-9870-5088f34b5644",
+      "lastLogLine": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password)."
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "startedAt": "2026-07-22T06:23:19.458783+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T06:23:19.586556+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "events": [
+        {
+          "createdAt": "2026-07-22T06:26:06.774789+00:00",
+          "jobId": "ac075698-1721-43d4-8c94-58f723e6fce2",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T06:26:06.775405+00:00",
+          "jobId": "ac075698-1721-43d4-8c94-58f723e6fce2",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T06:26:06.895682+00:00",
+          "jobId": "ac075698-1721-43d4-8c94-58f723e6fce2",
+          "message": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "ac075698-1721-43d4-8c94-58f723e6fce2",
+      "lastLogLine": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password)."
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "startedAt": "2026-07-22T06:26:06.774156+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T06:26:06.896523+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "events": [
+        {
+          "createdAt": "2026-07-22T07:33:53.457794+00:00",
+          "jobId": "cc380c53-d00c-4a9b-8d07-b06ef10ccbed",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T07:33:53.459288+00:00",
+          "jobId": "cc380c53-d00c-4a9b-8d07-b06ef10ccbed",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T07:33:55.307262+00:00",
+          "jobId": "cc380c53-d00c-4a9b-8d07-b06ef10ccbed",
+          "message": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "cc380c53-d00c-4a9b-8d07-b06ef10ccbed",
+      "lastLogLine": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "startedAt": "2026-07-22T07:33:53.455095+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T07:33:55.308250+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "events": [
+        {
+          "createdAt": "2026-07-22T07:58:48.991144+00:00",
+          "jobId": "4a1358bf-fcc5-403c-afa9-ef178b84e2d4",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T07:58:48.994729+00:00",
+          "jobId": "4a1358bf-fcc5-403c-afa9-ef178b84e2d4",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T07:58:50.652270+00:00",
+          "jobId": "4a1358bf-fcc5-403c-afa9-ef178b84e2d4",
+          "message": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "4a1358bf-fcc5-403c-afa9-ef178b84e2d4",
+      "lastLogLine": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "startedAt": "2026-07-22T07:58:48.988548+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T07:58:50.654064+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "events": [
+        {
+          "createdAt": "2026-07-22T10:17:23.161135+00:00",
+          "jobId": "65ac01e6-fa26-44dc-9362-16c7365b582a",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T10:17:23.163942+00:00",
+          "jobId": "65ac01e6-fa26-44dc-9362-16c7365b582a",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T10:17:24.917251+00:00",
+          "jobId": "65ac01e6-fa26-44dc-9362-16c7365b582a",
+          "message": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "65ac01e6-fa26-44dc-9362-16c7365b582a",
+      "lastLogLine": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "startedAt": "2026-07-22T10:17:23.159139+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T10:17:24.923308+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "events": [
+        {
+          "createdAt": "2026-07-22T10:42:00.628392+00:00",
+          "jobId": "efdf8d74-42f5-452e-ae07-f3008adece27",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T10:42:00.634079+00:00",
+          "jobId": "efdf8d74-42f5-452e-ae07-f3008adece27",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T10:42:01.370661+00:00",
+          "jobId": "efdf8d74-42f5-452e-ae07-f3008adece27",
+          "message": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "efdf8d74-42f5-452e-ae07-f3008adece27",
+      "lastLogLine": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "startedAt": "2026-07-22T10:42:00.626423+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T10:42:01.376676+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "events": [
+        {
+          "createdAt": "2026-07-22T10:59:19.978369+00:00",
+          "jobId": "4ce6f812-64a3-4165-8002-dce9d1465ef7",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T10:59:19.982092+00:00",
+          "jobId": "4ce6f812-64a3-4165-8002-dce9d1465ef7",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T10:59:20.602951+00:00",
+          "jobId": "4ce6f812-64a3-4165-8002-dce9d1465ef7",
+          "message": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "4ce6f812-64a3-4165-8002-dce9d1465ef7",
+      "lastLogLine": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
+      "startedAt": "2026-07-22T10:59:19.969504+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T10:59:20.607208+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
+      "events": [
+        {
+          "createdAt": "2026-07-22T11:20:07.425687+00:00",
+          "jobId": "67cabb68-82b5-4c61-80d8-10ea161fc959",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T11:20:08.047940+00:00",
+          "jobId": "67cabb68-82b5-4c61-80d8-10ea161fc959",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:25:08.408504+00:00",
+          "jobId": "67cabb68-82b5-4c61-80d8-10ea161fc959",
+          "message": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "67cabb68-82b5-4c61-80d8-10ea161fc959",
+      "lastLogLine": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
+      "startedAt": "2026-07-22T11:20:07.424911+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T11:25:08.411472+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
+      "events": [
+        {
+          "createdAt": "2026-07-22T11:21:43.335247+00:00",
+          "jobId": "6770241c-e3d0-4af2-bb76-4edf50d29b0d",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T11:21:45.182853+00:00",
+          "jobId": "6770241c-e3d0-4af2-bb76-4edf50d29b0d",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:26:46.979458+00:00",
+          "jobId": "6770241c-e3d0-4af2-bb76-4edf50d29b0d",
+          "message": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "6770241c-e3d0-4af2-bb76-4edf50d29b0d",
+      "lastLogLine": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
+      "startedAt": "2026-07-22T11:21:43.334556+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T11:26:46.981397+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Source sync to remote timed out after 300s",
+      "events": [
+        {
+          "createdAt": "2026-07-22T11:53:16.877316+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T11:53:17.372512+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:53:22.776409+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (5s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:53:27.780276+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (10s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:53:32.781736+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (15s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:53:37.782865+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (20s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:53:42.789034+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (25s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:53:50.556649+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (32s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:53:55.558238+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (37s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:00.564191+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (42s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:05.566309+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (47s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:10.572610+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (52s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:15.576250+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (57s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:20.582227+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (62s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:25.588592+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (67s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:30.594830+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (72s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:35.600785+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (77s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:40.603785+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (82s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:45.609914+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (87s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:50.612712+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (92s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:54:55.619288+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (97s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:00.625341+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (102s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:05.629226+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (107s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:10.635271+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (112s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:15.640977+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (117s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:20.645230+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (122s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:25.648043+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (127s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:30.653975+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (132s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:35.659966+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (137s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:40.665713+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (142s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:45.671755+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (147s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:50.677869+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (152s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:55:55.690751+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (157s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:00.698243+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (162s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:05.703100+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (167s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:10.704360+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (172s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:15.709842+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (177s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:20.716159+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (182s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:25.719739+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (187s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:30.721331+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (192s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:35.728622+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (197s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:40.735506+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (202s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:45.743212+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (207s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:50.757598+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (212s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:56:55.764144+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (217s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:00.770968+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (222s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:05.776953+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (227s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:10.783327+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (233s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:15.789284+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (238s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:20.795066+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (243s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:25.801866+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (248s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:30.806886+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (253s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:35.815397+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (258s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:40.828620+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (263s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:45.831301+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (268s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:50.837742+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (273s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:57:55.844547+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (278s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:58:00.850692+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (283s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:58:05.857165+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (288s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:58:10.862749+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (293s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:58:15.869334+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (298s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:58:20.885965+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Syncing source code to 192.168.2.34 (303s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T11:58:20.905135+00:00",
+          "jobId": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+          "message": "Source sync to remote timed out after 300s",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "c85621d7-6547-4f71-bb21-89a8a2e4087d",
+      "lastLogLine": "Source sync to remote timed out after 300s",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Syncing source code to 192.168.2.34 (5s elapsed)",
+        "Syncing source code to 192.168.2.34 (10s elapsed)",
+        "Syncing source code to 192.168.2.34 (15s elapsed)",
+        "Syncing source code to 192.168.2.34 (20s elapsed)",
+        "Syncing source code to 192.168.2.34 (25s elapsed)",
+        "Syncing source code to 192.168.2.34 (32s elapsed)",
+        "Syncing source code to 192.168.2.34 (37s elapsed)",
+        "Syncing source code to 192.168.2.34 (42s elapsed)",
+        "Syncing source code to 192.168.2.34 (47s elapsed)",
+        "Syncing source code to 192.168.2.34 (52s elapsed)",
+        "Syncing source code to 192.168.2.34 (57s elapsed)",
+        "Syncing source code to 192.168.2.34 (62s elapsed)",
+        "Syncing source code to 192.168.2.34 (67s elapsed)",
+        "Syncing source code to 192.168.2.34 (72s elapsed)",
+        "Syncing source code to 192.168.2.34 (77s elapsed)",
+        "Syncing source code to 192.168.2.34 (82s elapsed)",
+        "Syncing source code to 192.168.2.34 (87s elapsed)",
+        "Syncing source code to 192.168.2.34 (92s elapsed)",
+        "Syncing source code to 192.168.2.34 (97s elapsed)",
+        "Syncing source code to 192.168.2.34 (102s elapsed)",
+        "Syncing source code to 192.168.2.34 (107s elapsed)",
+        "Syncing source code to 192.168.2.34 (112s elapsed)",
+        "Syncing source code to 192.168.2.34 (117s elapsed)",
+        "Syncing source code to 192.168.2.34 (122s elapsed)",
+        "Syncing source code to 192.168.2.34 (127s elapsed)",
+        "Syncing source code to 192.168.2.34 (132s elapsed)",
+        "Syncing source code to 192.168.2.34 (137s elapsed)",
+        "Syncing source code to 192.168.2.34 (142s elapsed)",
+        "Syncing source code to 192.168.2.34 (147s elapsed)",
+        "Syncing source code to 192.168.2.34 (152s elapsed)",
+        "Syncing source code to 192.168.2.34 (157s elapsed)",
+        "Syncing source code to 192.168.2.34 (162s elapsed)",
+        "Syncing source code to 192.168.2.34 (167s elapsed)",
+        "Syncing source code to 192.168.2.34 (172s elapsed)",
+        "Syncing source code to 192.168.2.34 (177s elapsed)",
+        "Syncing source code to 192.168.2.34 (182s elapsed)",
+        "Syncing source code to 192.168.2.34 (187s elapsed)",
+        "Syncing source code to 192.168.2.34 (192s elapsed)",
+        "Syncing source code to 192.168.2.34 (197s elapsed)",
+        "Syncing source code to 192.168.2.34 (202s elapsed)",
+        "Syncing source code to 192.168.2.34 (207s elapsed)",
+        "Syncing source code to 192.168.2.34 (212s elapsed)",
+        "Syncing source code to 192.168.2.34 (217s elapsed)",
+        "Syncing source code to 192.168.2.34 (222s elapsed)",
+        "Syncing source code to 192.168.2.34 (227s elapsed)",
+        "Syncing source code to 192.168.2.34 (233s elapsed)",
+        "Syncing source code to 192.168.2.34 (238s elapsed)",
+        "Syncing source code to 192.168.2.34 (243s elapsed)",
+        "Syncing source code to 192.168.2.34 (248s elapsed)",
+        "Syncing source code to 192.168.2.34 (253s elapsed)",
+        "Syncing source code to 192.168.2.34 (258s elapsed)",
+        "Syncing source code to 192.168.2.34 (263s elapsed)",
+        "Syncing source code to 192.168.2.34 (268s elapsed)",
+        "Syncing source code to 192.168.2.34 (273s elapsed)",
+        "Syncing source code to 192.168.2.34 (278s elapsed)",
+        "Syncing source code to 192.168.2.34 (283s elapsed)",
+        "Syncing source code to 192.168.2.34 (288s elapsed)",
+        "Syncing source code to 192.168.2.34 (293s elapsed)",
+        "Syncing source code to 192.168.2.34 (298s elapsed)",
+        "Syncing source code to 192.168.2.34 (303s elapsed)",
+        "Source sync to remote timed out after 300s"
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Source sync to remote timed out after 300s",
+      "startedAt": "2026-07-22T11:53:16.876315+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T11:58:20.906139+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
+      "events": [
+        {
+          "createdAt": "2026-07-22T12:23:15.916723+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T12:23:16.887818+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:23:22.433852+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (5s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:23:27.435644+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (10s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:23:32.442242+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (15s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:23:37.445376+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (20s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:23:42.448538+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (25s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:23:47.459649+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (30s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:23:52.464904+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (35s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:23:57.467761+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (40s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:02.469625+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (45s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:07.471664+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (50s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:12.477223+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (55s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:17.483186+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (60s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:22.489206+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (65s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:27.492360+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (70s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:32.498501+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (75s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:37.504981+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (80s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:42.511033+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (85s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:47.515840+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (90s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:52.521679+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (95s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:24:57.522555+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (100s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:02.525325+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (105s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:07.531749+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (110s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:12.535633+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (115s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:17.539114+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (120s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:22.544905+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (125s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:27.551445+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (130s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:32.556809+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (135s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:37.562894+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (140s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:42.563987+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (145s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:47.568093+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (150s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:52.574117+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (155s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:25:57.579954+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (160s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:02.585764+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (165s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:07.591726+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (170s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:12.594410+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (175s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:17.600560+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (180s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:22.606314+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (185s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:27.612775+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (190s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:32.614343+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (195s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:37.619201+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (200s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:42.622269+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (205s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:47.625114+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (210s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:52.629321+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (215s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:26:57.633015+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (220s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:02.637904+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (225s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:07.641372+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (230s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:12.644246+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (235s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:17.652950+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (240s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:22.658963+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (245s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:27.665002+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (250s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:32.669699+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (255s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:37.673942+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (260s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:42.674940+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (265s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:47.676484+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (270s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:52.683103+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (275s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:27:57.689292+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (280s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:28:02.695445+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (285s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:28:07.701854+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (290s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:28:12.705679+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (295s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:28:17.712078+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Syncing source code to 192.168.2.34 (300s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:28:17.726913+00:00",
+          "jobId": "f77ae867-8940-4027-858d-bc52df1e54f9",
+          "message": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "f77ae867-8940-4027-858d-bc52df1e54f9",
+      "lastLogLine": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Syncing source code to 192.168.2.34 (5s elapsed)",
+        "Syncing source code to 192.168.2.34 (10s elapsed)",
+        "Syncing source code to 192.168.2.34 (15s elapsed)",
+        "Syncing source code to 192.168.2.34 (20s elapsed)",
+        "Syncing source code to 192.168.2.34 (25s elapsed)",
+        "Syncing source code to 192.168.2.34 (30s elapsed)",
+        "Syncing source code to 192.168.2.34 (35s elapsed)",
+        "Syncing source code to 192.168.2.34 (40s elapsed)",
+        "Syncing source code to 192.168.2.34 (45s elapsed)",
+        "Syncing source code to 192.168.2.34 (50s elapsed)",
+        "Syncing source code to 192.168.2.34 (55s elapsed)",
+        "Syncing source code to 192.168.2.34 (60s elapsed)",
+        "Syncing source code to 192.168.2.34 (65s elapsed)",
+        "Syncing source code to 192.168.2.34 (70s elapsed)",
+        "Syncing source code to 192.168.2.34 (75s elapsed)",
+        "Syncing source code to 192.168.2.34 (80s elapsed)",
+        "Syncing source code to 192.168.2.34 (85s elapsed)",
+        "Syncing source code to 192.168.2.34 (90s elapsed)",
+        "Syncing source code to 192.168.2.34 (95s elapsed)",
+        "Syncing source code to 192.168.2.34 (100s elapsed)",
+        "Syncing source code to 192.168.2.34 (105s elapsed)",
+        "Syncing source code to 192.168.2.34 (110s elapsed)",
+        "Syncing source code to 192.168.2.34 (115s elapsed)",
+        "Syncing source code to 192.168.2.34 (120s elapsed)",
+        "Syncing source code to 192.168.2.34 (125s elapsed)",
+        "Syncing source code to 192.168.2.34 (130s elapsed)",
+        "Syncing source code to 192.168.2.34 (135s elapsed)",
+        "Syncing source code to 192.168.2.34 (140s elapsed)",
+        "Syncing source code to 192.168.2.34 (145s elapsed)",
+        "Syncing source code to 192.168.2.34 (150s elapsed)",
+        "Syncing source code to 192.168.2.34 (155s elapsed)",
+        "Syncing source code to 192.168.2.34 (160s elapsed)",
+        "Syncing source code to 192.168.2.34 (165s elapsed)",
+        "Syncing source code to 192.168.2.34 (170s elapsed)",
+        "Syncing source code to 192.168.2.34 (175s elapsed)",
+        "Syncing source code to 192.168.2.34 (180s elapsed)",
+        "Syncing source code to 192.168.2.34 (185s elapsed)",
+        "Syncing source code to 192.168.2.34 (190s elapsed)",
+        "Syncing source code to 192.168.2.34 (195s elapsed)",
+        "Syncing source code to 192.168.2.34 (200s elapsed)",
+        "Syncing source code to 192.168.2.34 (205s elapsed)",
+        "Syncing source code to 192.168.2.34 (210s elapsed)",
+        "Syncing source code to 192.168.2.34 (215s elapsed)",
+        "Syncing source code to 192.168.2.34 (220s elapsed)",
+        "Syncing source code to 192.168.2.34 (225s elapsed)",
+        "Syncing source code to 192.168.2.34 (230s elapsed)",
+        "Syncing source code to 192.168.2.34 (235s elapsed)",
+        "Syncing source code to 192.168.2.34 (240s elapsed)",
+        "Syncing source code to 192.168.2.34 (245s elapsed)",
+        "Syncing source code to 192.168.2.34 (250s elapsed)",
+        "Syncing source code to 192.168.2.34 (255s elapsed)",
+        "Syncing source code to 192.168.2.34 (260s elapsed)",
+        "Syncing source code to 192.168.2.34 (265s elapsed)",
+        "Syncing source code to 192.168.2.34 (270s elapsed)",
+        "Syncing source code to 192.168.2.34 (275s elapsed)",
+        "Syncing source code to 192.168.2.34 (280s elapsed)",
+        "Syncing source code to 192.168.2.34 (285s elapsed)",
+        "Syncing source code to 192.168.2.34 (290s elapsed)",
+        "Syncing source code to 192.168.2.34 (295s elapsed)",
+        "Syncing source code to 192.168.2.34 (300s elapsed)",
+        "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync."
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
+      "startedAt": "2026-07-22T12:23:15.915823+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T12:28:17.728369+00:00"
+    },
+    {
+      "blockingInputNeeded": "",
+      "error": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
+      "events": [
+        {
+          "createdAt": "2026-07-22T12:44:21.798390+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Validating Docker backend prerequisites",
+          "percent": 10,
+          "stage": "preflight_running"
+        },
+        {
+          "createdAt": "2026-07-22T12:44:22.322023+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:44:27.757253+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (5s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:44:32.761639+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (10s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:44:37.764079+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (15s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:44:42.766555+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (20s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:44:47.773127+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (25s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:44:52.778029+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (30s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:44:57.784551+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (35s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:02.786557+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (40s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:07.792464+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (45s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:12.797245+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (50s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:17.803270+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (55s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:22.804941+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (60s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:27.809982+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (65s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:32.811528+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (70s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:37.815638+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (75s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:42.821682+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (80s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:47.828270+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (85s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:52.834879+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (90s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:45:57.841325+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (95s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:02.844767+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (100s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:07.851495+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (105s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:12.852547+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (110s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:17.860874+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (115s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:22.867483+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (120s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:27.873478+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (125s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:32.878570+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (130s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:37.880895+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (135s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:42.886857+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (140s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:47.892520+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (145s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:52.894252+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (150s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:46:57.900326+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (155s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:02.902857+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (160s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:07.905487+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (165s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:12.911523+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (170s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:17.917418+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (175s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:22.923317+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (180s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:27.927609+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (185s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:32.933573+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (190s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:37.939512+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (195s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:42.944081+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (200s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:47.950033+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (205s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:52.955991+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (210s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:47:57.957906+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (215s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:02.960203+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (220s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:07.965262+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (225s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:12.971456+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (230s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:17.977548+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (235s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:22.984101+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (240s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:27.986762+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (245s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:32.991627+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (250s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:37.997773+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (255s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:43.003868+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (260s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:48.006788+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (265s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:53.011259+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (270s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:48:58.017673+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (275s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:49:03.024278+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (280s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:49:08.026730+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (285s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:49:13.032862+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (290s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:49:18.038613+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (295s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:49:23.044782+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Syncing source code to 192.168.2.34 (300s elapsed)",
+          "percent": 20,
+          "stage": "installing"
+        },
+        {
+          "createdAt": "2026-07-22T12:49:23.060474+00:00",
+          "jobId": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+          "message": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
+          "percent": 20.0,
+          "stage": "failed"
+        }
+      ],
+      "id": "3d2450e4-1f20-40f8-83d3-3dbc41b93d47",
+      "lastLogLine": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
+      "logs": [
+        "Validating Docker backend prerequisites",
+        "Syncing source code to 192.168.2.34",
+        "Syncing source code to 192.168.2.34 (5s elapsed)",
+        "Syncing source code to 192.168.2.34 (10s elapsed)",
+        "Syncing source code to 192.168.2.34 (15s elapsed)",
+        "Syncing source code to 192.168.2.34 (20s elapsed)",
+        "Syncing source code to 192.168.2.34 (25s elapsed)",
+        "Syncing source code to 192.168.2.34 (30s elapsed)",
+        "Syncing source code to 192.168.2.34 (35s elapsed)",
+        "Syncing source code to 192.168.2.34 (40s elapsed)",
+        "Syncing source code to 192.168.2.34 (45s elapsed)",
+        "Syncing source code to 192.168.2.34 (50s elapsed)",
+        "Syncing source code to 192.168.2.34 (55s elapsed)",
+        "Syncing source code to 192.168.2.34 (60s elapsed)",
+        "Syncing source code to 192.168.2.34 (65s elapsed)",
+        "Syncing source code to 192.168.2.34 (70s elapsed)",
+        "Syncing source code to 192.168.2.34 (75s elapsed)",
+        "Syncing source code to 192.168.2.34 (80s elapsed)",
+        "Syncing source code to 192.168.2.34 (85s elapsed)",
+        "Syncing source code to 192.168.2.34 (90s elapsed)",
+        "Syncing source code to 192.168.2.34 (95s elapsed)",
+        "Syncing source code to 192.168.2.34 (100s elapsed)",
+        "Syncing source code to 192.168.2.34 (105s elapsed)",
+        "Syncing source code to 192.168.2.34 (110s elapsed)",
+        "Syncing source code to 192.168.2.34 (115s elapsed)",
+        "Syncing source code to 192.168.2.34 (120s elapsed)",
+        "Syncing source code to 192.168.2.34 (125s elapsed)",
+        "Syncing source code to 192.168.2.34 (130s elapsed)",
+        "Syncing source code to 192.168.2.34 (135s elapsed)",
+        "Syncing source code to 192.168.2.34 (140s elapsed)",
+        "Syncing source code to 192.168.2.34 (145s elapsed)",
+        "Syncing source code to 192.168.2.34 (150s elapsed)",
+        "Syncing source code to 192.168.2.34 (155s elapsed)",
+        "Syncing source code to 192.168.2.34 (160s elapsed)",
+        "Syncing source code to 192.168.2.34 (165s elapsed)",
+        "Syncing source code to 192.168.2.34 (170s elapsed)",
+        "Syncing source code to 192.168.2.34 (175s elapsed)",
+        "Syncing source code to 192.168.2.34 (180s elapsed)",
+        "Syncing source code to 192.168.2.34 (185s elapsed)",
+        "Syncing source code to 192.168.2.34 (190s elapsed)",
+        "Syncing source code to 192.168.2.34 (195s elapsed)",
+        "Syncing source code to 192.168.2.34 (200s elapsed)",
+        "Syncing source code to 192.168.2.34 (205s elapsed)",
+        "Syncing source code to 192.168.2.34 (210s elapsed)",
+        "Syncing source code to 192.168.2.34 (215s elapsed)",
+        "Syncing source code to 192.168.2.34 (220s elapsed)",
+        "Syncing source code to 192.168.2.34 (225s elapsed)",
+        "Syncing source code to 192.168.2.34 (230s elapsed)",
+        "Syncing source code to 192.168.2.34 (235s elapsed)",
+        "Syncing source code to 192.168.2.34 (240s elapsed)",
+        "Syncing source code to 192.168.2.34 (245s elapsed)",
+        "Syncing source code to 192.168.2.34 (250s elapsed)",
+        "Syncing source code to 192.168.2.34 (255s elapsed)",
+        "Syncing source code to 192.168.2.34 (260s elapsed)",
+        "Syncing source code to 192.168.2.34 (265s elapsed)",
+        "Syncing source code to 192.168.2.34 (270s elapsed)",
+        "Syncing source code to 192.168.2.34 (275s elapsed)",
+        "Syncing source code to 192.168.2.34 (280s elapsed)",
+        "Syncing source code to 192.168.2.34 (285s elapsed)",
+        "Syncing source code to 192.168.2.34 (290s elapsed)",
+        "Syncing source code to 192.168.2.34 (295s elapsed)",
+        "Syncing source code to 192.168.2.34 (300s elapsed)",
+        "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync."
+      ],
+      "mode": "docker",
+      "percent": 20.0,
+      "stage": "failed",
+      "stageLabel": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
+      "startedAt": "2026-07-22T12:44:21.797270+00:00",
+      "targetId": "Remote-backend",
+      "terminalOutcome": "failed",
+      "updatedAt": "2026-07-22T12:49:23.061793+00:00"
     }
   ],
-  "selectedTargetId": "This-machine",
+  "selectedTargetId": "Remote-backend",
   "targets": [
     {
       "apiServer": "",
-      "authMode": "none",
+      "authMode": "ssh_password",
       "backendPort": 9000,
       "context": "",
-      "createdAt": "2026-05-06T21:02:50.342727+00:00",
-      "displayName": "This machine",
+      "createdAt": "2026-07-21T19:37:10.717732+00:00",
+      "displayName": "MooseRyzen",
       "domain": "",
-      "host": "",
-      "id": "This-machine",
+      "host": "192.168.2.34",
+      "id": "MooseRyzen",
       "imageTag": "latest",
       "installRoot": "",
-      "lastDeployedVersion": "latest",
-      "lastFailureReason": "",
-      "lastReadiness": "ready",
-      "mode": "standalone",
+      "lastDeployedVersion": "",
+      "lastFailureReason": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
+      "lastReadiness": "failed",
+      "mode": "docker",
       "namespace": "nmtk",
-      "secretRefs": {},
+      "secretRefs": {
+        "sshPassword": "file-secret:1f32ebf7e40dfb9483c3520e"
+      },
       "sshPort": 22,
-      "targetType": "local",
-      "updatedAt": "2026-05-06T21:02:50.570689+00:00",
-      "username": ""
+      "targetType": "remote_host",
+      "updatedAt": "2026-07-21T19:37:10.871548+00:00",
+      "username": "mooseryzen"
+    },
+    {
+      "apiServer": "",
+      "authMode": "ssh_password",
+      "backendPort": 9000,
+      "context": "",
+      "createdAt": "2026-07-22T12:44:21.768275+00:00",
+      "displayName": "Remote backend",
+      "domain": "",
+      "host": "192.168.2.34",
+      "id": "Remote-backend",
+      "imageTag": "latest",
+      "installRoot": "",
+      "lastDeployedVersion": "",
+      "lastFailureReason": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
+      "lastReadiness": "failed",
+      "mode": "docker",
+      "namespace": "nmtk",
+      "secretRefs": {
+        "sshPassword": "file-secret:60d27e34a303b8b265053d54"
+      },
+      "sshPort": 22,
+      "targetType": "remote_host",
+      "updatedAt": "2026-07-22T12:49:23.062566+00:00",
+      "username": "nmtk"
     }
   ]
 }

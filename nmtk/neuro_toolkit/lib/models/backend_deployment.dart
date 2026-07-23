@@ -18,6 +18,7 @@ class DeploymentTarget {
     this.lastReadiness = 'unknown',
     this.lastDeployedVersion = '',
     this.lastFailureReason = '',
+    this.updatedAt,
   });
 
   final String id;
@@ -38,6 +39,7 @@ class DeploymentTarget {
   final String lastReadiness;
   final String lastDeployedVersion;
   final String lastFailureReason;
+  final DateTime? updatedAt;
 
   factory DeploymentTarget.fromJson(Map<String, dynamic> json) {
     return DeploymentTarget(
@@ -59,6 +61,7 @@ class DeploymentTarget {
       lastReadiness: json['lastReadiness'] as String? ?? 'unknown',
       lastDeployedVersion: json['lastDeployedVersion'] as String? ?? '',
       lastFailureReason: json['lastFailureReason'] as String? ?? '',
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
     );
   }
 
@@ -113,6 +116,23 @@ class DeploymentPreflightResult {
   }
 }
 
+class RemoteUserBootstrapResult {
+  const RemoteUserBootstrapResult({
+    required this.username,
+    required this.sshPrivateKey,
+  });
+
+  final String username;
+  final String sshPrivateKey;
+
+  factory RemoteUserBootstrapResult.fromJson(Map<String, dynamic> json) {
+    return RemoteUserBootstrapResult(
+      username: json['username'] as String? ?? '',
+      sshPrivateKey: json['sshPrivateKey'] as String? ?? '',
+    );
+  }
+}
+
 class DeploymentJob {
   const DeploymentJob({
     required this.id,
@@ -123,6 +143,7 @@ class DeploymentJob {
     required this.stageLabel,
     required this.logs,
     this.error = '',
+    this.updatedAt,
   });
 
   final String id;
@@ -133,6 +154,7 @@ class DeploymentJob {
   final String stageLabel;
   final List<String> logs;
   final String error;
+  final DateTime? updatedAt;
 
   bool get isTerminal =>
       stage == 'completed' || stage == 'failed' || stage == 'cancelled';
@@ -149,6 +171,7 @@ class DeploymentJob {
           .map((dynamic value) => value.toString())
           .toList(growable: false),
       error: json['error'] as String? ?? '',
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
     );
   }
 }

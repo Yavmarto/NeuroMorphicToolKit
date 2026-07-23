@@ -155,6 +155,13 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 )
                 return
 
+            if method == "POST" and path == "/api/launcher/deployment/bootstrap-remote-user":
+                self._send_json(
+                    HTTPStatus.OK,
+                    self.server.state.bootstrap_remote_deploy_user(body or {}),
+                )
+                return
+
             if method == "POST" and path == "/api/launcher/deployment/jobs":
                 self._send_json(
                     HTTPStatus.ACCEPTED,

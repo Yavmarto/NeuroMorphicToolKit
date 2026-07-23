@@ -27,4 +27,9 @@ RUN pip install --no-cache-dir --no-deps /repo/neurocnl
 
 # job_store writes jobs.db here; /repo is mounted :ro at runtime
 ENV NEUROCNL_DATA_DIR=/tmp
+
+RUN groupadd --system appgroup && useradd --system --gid appgroup appuser \
+ && chown -R appuser:appgroup /repo
+USER appuser
+
 CMD ["uvicorn", "workers.neurocnl_physics.main:app", "--host", "0.0.0.0", "--port", "8006"]

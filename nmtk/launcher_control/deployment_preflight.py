@@ -52,7 +52,7 @@ def run_preflight(target: DeploymentTarget, *, repo_root: Path) -> DeploymentPre
     if degraded:
         return DeploymentPreflightResult(
             status="degraded",
-            message="degraded optional capability: deployment can continue with warnings",
+            message="Preflight passed with warnings",
             degraded_findings=degraded,
             suggested_recovery="Review the degraded capability warnings before continuing.",
         )

@@ -25,6 +25,7 @@ class FirstRunSetupScreen extends ConsumerWidget {
     this.allowLauncherConnect = true,
     this.launcherSetupAvailable = true,
     this.launcherSetupUnavailableMessage,
+    this.launcherSetupInitialHost,
     this.onLauncherSetupCompleted,
     this.openOnBackendStep = false,
   });
@@ -40,6 +41,11 @@ class FirstRunSetupScreen extends ConsumerWidget {
   final bool allowLauncherConnect;
   final bool launcherSetupAvailable;
   final String? launcherSetupUnavailableMessage;
+
+  /// When set, the backend provisioning form defaults to "Remote server"
+  /// with this host pre-filled — used when bootstrap found a reachable-but-
+  /// uninstalled host and wants to steer the user straight into installing.
+  final String? launcherSetupInitialHost;
   final VoidCallback? onLauncherSetupCompleted;
   final bool openOnBackendStep;
 
@@ -83,6 +89,7 @@ class FirstRunSetupScreen extends ConsumerWidget {
                           : initialLauncherStep,
                       onSetupCompleted: onLauncherSetupCompleted,
                       setupUnavailableMessage: launcherSetupUnavailableMessage,
+                      setupInitialHost: launcherSetupInitialHost,
                     ),
                   if (pythonReady) ...[
                     SizedBox(height: context.nmtkTokens.sectionGap),

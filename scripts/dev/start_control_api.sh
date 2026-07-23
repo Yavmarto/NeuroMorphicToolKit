@@ -3,7 +3,7 @@
 #
 # Can be sourced by run_dev.sh (preferred) or executed standalone:
 #   REPO_ROOT=/path/to/repo PYTHON3=python3 \
-#   CONTROL_API_PORT=8091 bash scripts/dev/start_control_api.sh
+#   CONTROL_API_PORT=8090 bash scripts/dev/start_control_api.sh
 #
 # Side-effect when sourced: sets CONTROL_API_PID in the calling shell.
 #
@@ -20,7 +20,7 @@ _START_CTRL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   REPO_ROOT="${REPO_ROOT:-$(cd "$_START_CTRL_DIR/../.." && pwd)}"
   PYTHON3="${PYTHON3:-python3}"
-  CONTROL_API_PORT="${CONTROL_API_PORT:-8091}"
+  CONTROL_API_PORT="${CONTROL_API_PORT:-8090}"
   source "$_START_CTRL_DIR/lib.sh"
   source "$_START_CTRL_DIR/reserve_ports.sh"
   CONTROL_API_PID=""

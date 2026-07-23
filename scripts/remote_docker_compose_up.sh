@@ -3,7 +3,7 @@ set -u
 
 remote_host="${REMOTE_HOST:?REMOTE_HOST is required}"
 deploy_dir="${DEPLOY_DIR:-~/nmtk-deploy}"
-launcher_control_port="${LAUNCHER_CONTROL_PORT:-8091}"
+launcher_control_port="${LAUNCHER_CONTROL_PORT:-8090}"
 ssh_opts="${SSH_OPTS:-}"
 remote_ip="${remote_host#*@}"
 compose_file_args="${COMPOSE_FILE_ARGS:-}"

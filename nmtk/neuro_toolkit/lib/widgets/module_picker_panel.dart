@@ -8,6 +8,7 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
 
 /// A scrollable grid of module cards.
 ///
@@ -34,6 +35,11 @@ class ModulePickerPanel extends ConsumerWidget {
         message: moduleStateAsync.error.toString(),
         icon: ZetaIcons.cloud_off,
         tone: NmtkTone.danger,
+        action: ConnectionErrorActions(
+          onRetry: () => ref.invalidate(moduleProvider),
+          onChangeServer: () =>
+              ref.read(launcherBootstrapProvider.notifier).saveAndRetry(''),
+        ),
       );
     }
 

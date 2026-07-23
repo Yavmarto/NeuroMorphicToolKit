@@ -11,6 +11,7 @@ class LauncherBootstrapData {
     this.bootstrapState,
     this.controlApiService,
     this.setupMessage,
+    this.suggestedInstallHost,
   });
 
   factory LauncherBootstrapData.ready({
@@ -28,12 +29,14 @@ class LauncherBootstrapData {
     LauncherBootstrapState? bootstrapState,
     ControlApiService? controlApiService,
     String? message,
+    String? suggestedInstallHost,
   }) {
     return LauncherBootstrapData._(
       isReady: false,
       bootstrapState: bootstrapState,
       controlApiService: controlApiService,
       setupMessage: message,
+      suggestedInstallHost: suggestedInstallHost,
     );
   }
 
@@ -48,4 +51,11 @@ class LauncherBootstrapData {
 
   /// Human-readable message shown in the setup/connect screen.
   final String? setupMessage;
+
+  /// The host/IP the user typed that turned out to be reachable but with no
+  /// launcher server installed on it — a clean provisioning target. When
+  /// set, the setup wizard should default to it (target: remote host)
+  /// instead of "This machine." Distinct from [controlApiService], which in
+  /// this case points at this machine's own orchestrator, not this host.
+  final String? suggestedInstallHost;
 }

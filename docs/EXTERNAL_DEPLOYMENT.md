@@ -2,6 +2,14 @@
 
 This document outlines how to deploy the NeuroMorphicToolKit (NMTK) backend to an external server or a Kubernetes cluster on your local network.
 
+> **App-driven setup (source-free).** The NMTK desktop app sets up a remote
+> Docker backend by copying only `docker-compose.yml` + `docker-compose.prod.yml`
+> (+ `monitoring/`) to the server and running `docker compose pull && up -d
+> --wait` — it pulls prebuilt images from GHCR, no repo or `make` on the
+> server. This requires the images to be published and public first; see
+> [PUBLISHING_IMAGES.md](PUBLISHING_IMAGES.md). The `make docker-ex*` targets
+> below remain the source-build path for development.
+
 ## 1. Docker Deployment (SSH-based)
 **Status:** Highly Recommended for quick setup.
 
@@ -63,7 +71,7 @@ The launcher control service can render and apply Kubernetes manifests automatic
 ### Prerequisites
 1. **kubectl:** Installed and configured with access to your target cluster.
 2. **Cluster Access:** Your kubeconfig context must have permissions to create Namespaces, Deployments, Services, ConfigMaps, and Secrets.
-3. **Container Images:** The `suite_api` image must be available in a registry accessible by the cluster (default: `ghcr.io/completed-spoon-6/neurocnl`).
+3. **Container Images:** The `suite_api` image must be available in a registry accessible by the cluster (default: `ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api`).
 
 ### Via Launcher Control API
 1. **Create a Kubernetes target:**

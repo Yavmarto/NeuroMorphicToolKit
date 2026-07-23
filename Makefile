@@ -96,7 +96,7 @@ docker-all:
 # Deployment variables (can be overridden on command line)
 REMOTE_HOST ?=
 DEPLOY_DIR ?= ~/nmtk-deploy
-LAUNCHER_CONTROL_PORT ?= 8091
+LAUNCHER_CONTROL_PORT ?= 8090
 # Every other host port docker-compose.yml binds for a service that can ALSO
 # run natively via the standalone launcher (modules.json installStrategy).
 # Defaults mirror docker-compose.yml's own `${VAR:-default}` fallbacks so
@@ -167,6 +167,35 @@ secrets-init:
 	    echo "GRAFANA_ADMIN_PASSWORD=$$(openssl rand -base64 32)" >> $(DEPLOY_DIR)/.env; \
 	  echo "secrets-init: OK (GRAFANA_ADMIN_PASSWORD present)"'
 
+## One-time host setup: install scoped NOPASSWD sudoers rules and the akida-key
+## reader script so that all subsequent deploys run without any sudo password
+## prompt.  Requires a single interactive sudo password the first time.
+## Safe to re-run; sudoers file is replaced atomically via visudo -c.
+.PHONY: remote-setup
+remote-setup:
+	@if [ -z "$(REMOTE_HOST)" ]; then \
+		echo "Error: REMOTE_HOST is not set. Example: make remote-setup REMOTE_HOST=user@host"; \
+		exit 1; \
+	fi
+	$(eval REMOTE_USER := $(shell echo "$(REMOTE_HOST)" | cut -d@ -f1))
+	@echo "==> Installing NMTK deploy sudoers rules on $(REMOTE_HOST) (one-time, interactive sudo required)..."
+	ssh -t $(SSH_OPTS) $(REMOTE_HOST) '\
+	  set -e; \
+	  RUSER="$(REMOTE_USER)"; \
+	  SUDOERS_FILE=/etc/sudoers.d/nmtk-deploy; \
+	  AKIDA_KEY_SCRIPT=/usr/local/bin/nmtk-read-akida-key; \
+	  FUSER="$$(which fuser)"; \
+	  SYSTEMCTL="$$(which systemctl)"; \
+	  printf "%s ALL=(ALL) NOPASSWD: %s\n" "$$RUSER" "$$FUSER" > /tmp/nmtk-sudoers.tmp; \
+	  printf "%s ALL=(ALL) NOPASSWD: %s is-active --quiet neurochip.service\n" "$$RUSER" "$$SYSTEMCTL" >> /tmp/nmtk-sudoers.tmp; \
+	  printf "%s ALL=(ALL) NOPASSWD: %s start neurochip.service\n" "$$RUSER" "$$SYSTEMCTL" >> /tmp/nmtk-sudoers.tmp; \
+	  printf "%s ALL=(ALL) NOPASSWD: %s\n" "$$RUSER" "$$AKIDA_KEY_SCRIPT" >> /tmp/nmtk-sudoers.tmp; \
+	  visudo -c -f /tmp/nmtk-sudoers.tmp && sudo cp /tmp/nmtk-sudoers.tmp "$$SUDOERS_FILE" && sudo chmod 0440 "$$SUDOERS_FILE"; \
+	  rm -f /tmp/nmtk-sudoers.tmp; \
+	  printf "#!/bin/sh\ncat /opt/neurochip-akida-host/credentials/api-token\n" | sudo tee "$$AKIDA_KEY_SCRIPT" > /dev/null; \
+	  sudo chmod 0755 "$$AKIDA_KEY_SCRIPT"; \
+	  echo "remote-setup: OK — passwordless sudo configured for deploy commands"'
+
 ## Sync repo to remote, rebuild images when sources change, start full backend stack.
 .PHONY: docker-ex-deploy
 docker-ex-deploy:
@@ -174,6 +203,8 @@ docker-ex-deploy:
 		echo "Error: REMOTE_HOST is not set. Example: make docker-ex-all REMOTE_HOST=user@192.168.1.50"; \
 		exit 1; \
 	fi
+	@ssh $(SSH_OPTS) $(REMOTE_HOST) "test -f /etc/sudoers.d/nmtk-deploy" 2>/dev/null || \
+		$(MAKE) --no-print-directory remote-setup REMOTE_HOST=$(REMOTE_HOST)
 	@echo "==> Syncing backend source to $(REMOTE_HOST):$(DEPLOY_DIR) (rsync, incremental)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
 	rsync -a --delete -v -e "ssh $(SSH_OPTS)" \
@@ -182,10 +213,10 @@ docker-ex-deploy:
 		. $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@if [ "$(AKIDA_NATIVE)" = "1" ]; then \
 		echo "==> Ensuring native neurochip.service is running on $(REMOTE_HOST)..."; \
-		ssh $(SSH_OPTS) $(REMOTE_HOST) "sudo -n systemctl is-active --quiet neurochip.service || sudo -n systemctl start neurochip.service"; \
+		ssh $(SSH_OPTS) $(REMOTE_HOST) "sudo systemctl is-active --quiet neurochip.service || sudo systemctl start neurochip.service"; \
 	fi
 	@echo "==> Evicting any native process on ports $(NATIVE_WORKER_PORTS) on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(foreach p,$(NATIVE_WORKER_PORTS),$(p)/tcp) 2>/dev/null || true"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "sudo fuser -k $(foreach p,$(NATIVE_WORKER_PORTS),$(p)/tcp) 2>/dev/null || true"
 	@if [ -n "$(DOCKER_EX_PRUNE)" ]; then \
 		echo "==> Pruning stale build cache on $(REMOTE_HOST) (keeping 20GB most-recent)..."; \
 		ssh $(SSH_OPTS) $(REMOTE_HOST) "docker builder prune -f --keep-storage=20GB"; \
@@ -193,7 +224,7 @@ docker-ex-deploy:
 	@echo "==> Building and starting full backend stack on $(REMOTE_HOST) (--build picks up source changes)..."
 	@if [ "$(AKIDA_NATIVE)" = "1" ]; then \
 		echo "==> Fetching Akida worker API key from $(REMOTE_HOST)..."; \
-		AKIDA_KEY="$$(ssh $(SSH_OPTS) $(REMOTE_HOST) 'sudo -n cat /opt/neurochip-akida-host/credentials/api-token')"; \
+		AKIDA_KEY="$$(ssh $(SSH_OPTS) $(REMOTE_HOST) 'sudo nmtk-read-akida-key')"; \
 		REMOTE_HOST="$(REMOTE_HOST)" DEPLOY_DIR="$(DEPLOY_DIR)" LAUNCHER_CONTROL_PORT="$(LAUNCHER_CONTROL_PORT)" SSH_OPTS="$(SSH_OPTS)" \
 			COMPOSE_FILE_ARGS="-f docker-compose.yml -f docker-compose.akida-native.yml" \
 			NEUROCHIP_HW_WORKER_API_KEY="$$AKIDA_KEY" \
@@ -224,7 +255,7 @@ deploy-prod: secrets-init
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
 	rsync -a -v -e "ssh $(SSH_OPTS)" docker-compose.yml docker-compose.prod.yml $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Evicting any native process on ports $(NATIVE_WORKER_PORTS) on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "fuser -k $(foreach p,$(NATIVE_WORKER_PORTS),$(p)/tcp) 2>/dev/null || true"
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "sudo fuser -k $(foreach p,$(NATIVE_WORKER_PORTS),$(p)/tcp) 2>/dev/null || true"
 	@echo "==> Pulling and starting full backend stack on $(REMOTE_HOST)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.prod.yml pull && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait --remove-orphans"
 	@echo "==> Production backend ready."

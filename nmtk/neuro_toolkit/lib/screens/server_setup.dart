@@ -22,6 +22,7 @@ class ServerSetupScreen extends ConsumerStatefulWidget {
     this.initialMode = ServerSetupMode.connect,
     this.onSetupCompleted,
     this.setupUnavailableMessage,
+    this.setupInitialHost,
   });
 
   /// Initial text for the host input field.  The widget owns its controller
@@ -39,6 +40,10 @@ class ServerSetupScreen extends ConsumerStatefulWidget {
   final ServerSetupMode initialMode;
   final VoidCallback? onSetupCompleted;
   final String? setupUnavailableMessage;
+
+  /// When set, the provisioning form defaults to "Remote server" with this
+  /// host pre-filled instead of "This machine."
+  final String? setupInitialHost;
 
   @override
   ConsumerState<ServerSetupScreen> createState() => _ServerSetupScreenState();
@@ -149,7 +154,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
     if (text == null || text.isEmpty) {
       return null;
     }
-    return Text(
+    return SelectableText(
       text,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: _connectError != null
@@ -168,7 +173,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
           style: Theme.of(context).textTheme.labelMedium,
         ),
         SizedBox(height: context.nmtkTokens.compactGap),
-        ZetaTextInput(
+        NmtkTextInput(
           controller: _controller,
           focusNode: _focusNode,
           placeholder: '192.168.1.50',
@@ -217,6 +222,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
           child: _mode == ServerSetupMode.setup
               ? BackendSetupForm(
                   onDeploymentReady: widget.onSetupCompleted,
+                  initialHost: widget.setupInitialHost,
                 )
               : Text(
                   'Already have a launcher host? Connect above instead. If not, use this path to create a new backend target here.',

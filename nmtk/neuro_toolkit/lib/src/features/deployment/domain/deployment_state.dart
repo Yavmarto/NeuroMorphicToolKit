@@ -9,5 +9,10 @@ abstract class DeploymentState with _$DeploymentState {
     @Default([]) List<DeploymentTarget> targets,
     DeploymentJob? activeJob,
     @Default(false) bool isReady,
+    // Set instead of silently clearing activeJob when the notifier loses
+    // contact with a running job (staleness watchdog / repeated poll
+    // failures) -- the UI must always show an honest reason rather than
+    // falling through to an unrelated stale card.
+    String? connectionLostReason,
   }) = _DeploymentState;
 }

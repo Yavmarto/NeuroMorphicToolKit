@@ -21,7 +21,6 @@ import urllib.error
 import urllib.request
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any
 
 from .config import REPO_ROOT, SUITE_API_ENV_ROOT
 from .preflight_types import PreflightResult
@@ -41,11 +40,19 @@ SUITE_API_STATUS_STARTING = "starting"
 SUITE_API_STATUS_READY = "ready"
 SUITE_API_STATUS_PREFLIGHT_FAILED = "preflight_failed"
 
-_NEUROCNL_SUITE_API_EXTRAS = "training,studio,rockpool,synsense,norse"
+_NEUROCNL_SUITE_API_CORE_EXTRAS = "training,rockpool,synsense,norse"
+_NEUROCNL_SUITE_API_STUDIO_EXTRA = "studio"
+_NEUROCNL_STUDIO_DEGRADED_WARNING = (
+    "NeuroChip Studio hardware extras (akida, brian2, snn-mlir) are not "
+    "installable on this machine and have been disabled; other modules are "
+    "unaffected."
+)
 
 
 def _suite_api_bind_host() -> str:
-    return str(os.environ.get("NMTK_UVICORN_HOST") or "127.0.0.1").strip() or "127.0.0.1"
+    return (
+        str(os.environ.get("NMTK_UVICORN_HOST") or "127.0.0.1").strip() or "127.0.0.1"
+    )
 
 
 def _suite_api_base_url() -> str:
@@ -87,10 +94,53 @@ def _suite_api_dev_install_paths() -> tuple[Path, ...]:
     )
 
 
-def _suite_api_install_target(install_path: Path) -> str:
-    if install_path.name == "neurocnl":
-        return f"{install_path}[{_NEUROCNL_SUITE_API_EXTRAS}]"
-    return str(install_path)
+def _pip_install_editable(
+    venv_python: Path, target: str
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [str(venv_python), "-m", "pip", "install", "-e", target],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _install_neurocnl(venv_python: Path, install_path: Path) -> str | None:
+    """Installs neurocnl for suite_api. If the optional `studio` extra (which
+    carries the akida/brian2/snn-mlir hardware SDKs) can't be installed on
+    this machine, retries with just the core extras so the rest of suite_api
+    still comes up. Returns a capability warning when degraded, else None.
+    """
+    full_target = (
+        f"{install_path}[{_NEUROCNL_SUITE_API_CORE_EXTRAS},"
+        f"{_NEUROCNL_SUITE_API_STUDIO_EXTRA}]"
+    )
+    result = _pip_install_editable(venv_python, full_target)
+    if result.returncode == 0:
+        return None
+
+    core_target = f"{install_path}[{_NEUROCNL_SUITE_API_CORE_EXTRAS}]"
+    core_result = _pip_install_editable(venv_python, core_target)
+    if core_result.returncode != 0:
+        raise RuntimeError(
+            core_result.stderr.strip()
+            or core_result.stdout.strip()
+            or f"Failed to install {install_path}"
+        )
+    return _NEUROCNL_STUDIO_DEGRADED_WARNING
+
+
+def _read_suite_api_capability_warnings(env_dir: Path) -> list[str]:
+    stamp_path = _suite_api_env_stamp(env_dir)
+    if not stamp_path.exists():
+        return []
+    try:
+        data = json.loads(stamp_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return []
+    warnings = data.get("capabilityWarnings")
+    return [str(warning) for warning in warnings] if isinstance(warnings, list) else []
 
 
 def _suite_api_env_fingerprint_files() -> tuple[Path, ...]:
@@ -178,7 +228,9 @@ class SuiteApiServiceMixin:
         if not self._manage_suite_api:
             return PreflightResult(status=PREFLIGHT_OK)
         if self._suite_api_status == SUITE_API_STATUS_READY:
-            return PreflightResult(status=PREFLIGHT_OK, message="Managed by suite_api")
+            return PreflightResult(
+                status=PREFLIGHT_OK, message=self._suite_api_ready_message()
+            )
         if self._suite_api_status == SUITE_API_STATUS_STARTING:
             return PreflightResult(
                 status=PREFLIGHT_FAILED,
@@ -203,7 +255,9 @@ class SuiteApiServiceMixin:
         if stamp_path.exists():
             try:
                 saved_fingerprint = str(
-                    json.loads(stamp_path.read_text(encoding="utf-8")).get("fingerprint")
+                    json.loads(stamp_path.read_text(encoding="utf-8")).get(
+                        "fingerprint"
+                    )
                     or ""
                 )
             except (json.JSONDecodeError, OSError):
@@ -232,19 +286,18 @@ class SuiteApiServiceMixin:
             needs_install = True
 
         if needs_install:
+            capability_warnings: list[str] = []
             for install_path in _suite_api_dev_install_paths():
                 if not install_path.exists():
                     raise RuntimeError(
                         f"suite_api dependency checkout not found: {install_path}"
                     )
-                install_target = _suite_api_install_target(install_path)
-                result = subprocess.run(
-                    [str(venv_python), "-m", "pip", "install", "-e", install_target],
-                    cwd=REPO_ROOT,
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                )
+                if install_path.name == "neurocnl":
+                    warning = _install_neurocnl(venv_python, install_path)
+                    if warning:
+                        capability_warnings.append(warning)
+                    continue
+                result = _pip_install_editable(venv_python, str(install_path))
                 if result.returncode != 0:
                     raise RuntimeError(
                         result.stderr.strip()
@@ -252,7 +305,14 @@ class SuiteApiServiceMixin:
                         or f"Failed to install {install_path}"
                     )
             stamp_path.write_text(
-                json.dumps({"fingerprint": fingerprint}, indent=2, sort_keys=True),
+                json.dumps(
+                    {
+                        "fingerprint": fingerprint,
+                        "capabilityWarnings": capability_warnings,
+                    },
+                    indent=2,
+                    sort_keys=True,
+                ),
                 encoding="utf-8",
             )
 
@@ -286,13 +346,21 @@ class SuiteApiServiceMixin:
             daemon=True,
         ).start()
 
+    def _suite_api_ready_message(self) -> str:
+        warnings = _read_suite_api_capability_warnings(_suite_api_env_dir())
+        if warnings:
+            return "Managed by suite_api (" + "; ".join(warnings) + ")"
+        return "Managed by suite_api"
+
     def _ensure_suite_api_ready(self) -> None:
         if not self._manage_suite_api or self._shutdown.is_set():
             return
 
         ok, _message = _suite_api_health_probe()
         if ok:
-            self._set_suite_api_state(SUITE_API_STATUS_READY, "Managed by suite_api")
+            self._set_suite_api_state(
+                SUITE_API_STATUS_READY, self._suite_api_ready_message()
+            )
             return
 
         self._set_suite_api_state(
@@ -302,7 +370,10 @@ class SuiteApiServiceMixin:
         try:
             python_path = self._suite_api_python()
         except RuntimeError as exc:
-            self._set_suite_api_state(SUITE_API_STATUS_PREFLIGHT_FAILED, str(exc))
+            self._set_suite_api_state(
+                SUITE_API_STATUS_PREFLIGHT_FAILED,
+                f"suite_api could not finish installing its Python environment: {exc}",
+            )
             return
 
         process = subprocess.Popen(
@@ -333,13 +404,17 @@ class SuiteApiServiceMixin:
         while time.monotonic() < deadline and not self._shutdown.is_set():
             ok, message = _suite_api_health_probe()
             if ok:
-                self._set_suite_api_state(SUITE_API_STATUS_READY, "Managed by suite_api")
+                self._set_suite_api_state(
+                    SUITE_API_STATUS_READY, self._suite_api_ready_message()
+                )
                 return
             if process.poll() is not None:
                 startup_logs = "\n".join(self._suite_api_logs).strip()
                 self._set_suite_api_state(
                     SUITE_API_STATUS_PREFLIGHT_FAILED,
-                    startup_logs or message or f"suite_api exited with code {process.returncode}",
+                    startup_logs
+                    or message
+                    or f"suite_api exited with code {process.returncode}",
                 )
                 return
             time.sleep(0.5)

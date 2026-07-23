@@ -110,6 +110,15 @@ if [ -d "$PREV_APP/Contents/Resources/nmtk" ]; then
   echo "==> Cleaning previous bundled launcher package from build output..."
   rm -rf "$PREV_APP/Contents/Resources/nmtk"
 fi
+if [ -d "$PREV_APP/Contents/Resources/bin" ] \
+   || [ -d "$PREV_APP/Contents/Resources/monitoring" ] \
+   || [ -f "$PREV_APP/Contents/Resources/docker-compose.yml" ]; then
+  echo "==> Cleaning previous bundled deploy manifests / tools from build output..."
+  rm -rf "$PREV_APP/Contents/Resources/bin" \
+         "$PREV_APP/Contents/Resources/monitoring" \
+         "$PREV_APP/Contents/Resources/docker-compose.yml" \
+         "$PREV_APP/Contents/Resources/docker-compose.prod.yml"
+fi
 
 # --- Build Flutter app ---
 if [ "$SKIP_FLUTTER" = false ]; then
@@ -208,6 +217,50 @@ rsync -a \
   --exclude='*.pyc' \
   "$REPO_ROOT/nmtk/launcher_control/" \
   "$APP_PATH/Contents/Resources/nmtk/launcher_control/"
+
+# --- Bundle deployment manifests (source-free server setup) ---
+# The launcher resolves these under REPO_ROOT, which is Contents/Resources
+# in a bundle (nmtk/launcher_control/config.py). Shipping them lets the app
+# stand up a remote backend by pulling published images — no repo needed.
+echo "==> Bundling deployment manifests..."
+RES_DIR="$APP_PATH/Contents/Resources"
+cp "$REPO_ROOT/docker-compose.yml"      "$RES_DIR/docker-compose.yml"
+cp "$REPO_ROOT/docker-compose.prod.yml" "$RES_DIR/docker-compose.prod.yml"
+rm -rf "$RES_DIR/monitoring"
+rsync -a --exclude='__pycache__' "$REPO_ROOT/monitoring/" "$RES_DIR/monitoring/"
+
+# --- Bundle sshpass (SSH password auth with no host dependency) ---
+# A clean end-user Mac has no sshpass. The launcher prefers
+# Contents/Resources/bin/sshpass (deployment_executors._bundled_or_path).
+# Provide SSHPASS_BIN=/path/to/sshpass to use a specific (e.g. universal)
+# binary; otherwise copy from PATH; otherwise build from source.
+echo "==> Bundling sshpass..."
+BIN_DIR="$RES_DIR/bin"
+mkdir -p "$BIN_DIR"
+if [ -n "${SSHPASS_BIN:-}" ] && [ -x "$SSHPASS_BIN" ]; then
+  cp "$SSHPASS_BIN" "$BIN_DIR/sshpass"
+elif command -v sshpass >/dev/null 2>&1; then
+  cp "$(command -v sshpass)" "$BIN_DIR/sshpass"
+else
+  echo "  sshpass not on PATH; building from source..."
+  SSHPASS_VER=1.10
+  TMP_SP="$(mktemp -d)"
+  if curl -fsSL "https://downloads.sourceforge.net/project/sshpass/sshpass/${SSHPASS_VER}/sshpass-${SSHPASS_VER}.tar.gz" -o "$TMP_SP/sshpass.tar.gz" \
+     && tar -xzf "$TMP_SP/sshpass.tar.gz" -C "$TMP_SP" \
+     && ( cd "$TMP_SP/sshpass-${SSHPASS_VER}" \
+          && ./configure --prefix="$TMP_SP/out" >/dev/null \
+          && make >/dev/null && make install >/dev/null ); then
+    cp "$TMP_SP/out/bin/sshpass" "$BIN_DIR/sshpass"
+  else
+    echo "  WARNING: could not obtain sshpass — SSH password auth will not"
+    echo "           work in the bundled app. Set SSHPASS_BIN or install sshpass."
+  fi
+  rm -rf "$TMP_SP"
+fi
+if [ -f "$BIN_DIR/sshpass" ]; then
+  chmod +x "$BIN_DIR/sshpass"
+  # Signed by the code-sign step below (ad-hoc --deep, or the sign helper).
+fi
 
 # --- Report bundle size ---
 echo "==> Bundle contents:"

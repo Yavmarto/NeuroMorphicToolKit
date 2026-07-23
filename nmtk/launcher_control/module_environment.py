@@ -21,7 +21,7 @@ from packaging.version import InvalidVersion
 from packaging.version import parse as parse_version
 
 from .config import REPO_ROOT
-from .runtime_shared import _hash_file, _module_root
+from .runtime_shared import _module_root
 from .suite_api_service import DEFAULT_SUITE_API_PORT
 
 
@@ -206,7 +206,9 @@ def _normalize_akida_runtime_config(raw: Any) -> dict[str, Any] | None:
             if str(value).strip()
         ],
         "docsUrl": str(raw.get("docsUrl") or "").strip(),
-        "localModeFallback": str(raw.get("localModeFallback") or "simulator_only").strip(),
+        "localModeFallback": str(
+            raw.get("localModeFallback") or "simulator_only"
+        ).strip(),
     }
 
 
@@ -262,7 +264,9 @@ def _is_externally_managed_service(module: dict[str, Any]) -> bool:
     return port is not None and port != DEFAULT_SUITE_API_PORT
 
 
-def _external_service_health_url(module: dict[str, Any], host: str = "127.0.0.1") -> str:
+def _external_service_health_url(
+    module: dict[str, Any], host: str = "127.0.0.1"
+) -> str:
     """Build the health-probe URL for an externally managed service.
 
     Args:

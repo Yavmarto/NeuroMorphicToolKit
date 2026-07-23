@@ -197,6 +197,10 @@ void main() {
     expect(state.status, LauncherBootstrapStatus.preflightFailed);
     expect(state.message, contains('suite_api venv install failed'));
     expect(environment.startedCommands, isEmpty);
+    // The control API answered /health — it's reachable even though the
+    // target (suite_api) isn't ready, so "Set up a new server" shouldn't be
+    // blocked on this.
+    expect(state.controlApiReachable, isTrue);
   });
 
   test('returns preflight failure when Python is unavailable', () async {
@@ -214,6 +218,8 @@ void main() {
 
     expect(state.status, LauncherBootstrapStatus.preflightFailed);
     expect(state.message, contains('Python 3 was not found'));
+    // Genuinely unreachable — /health never answered.
+    expect(state.controlApiReachable, isFalse);
   });
 
   test('waits until suite_api reports ready', () async {
@@ -292,5 +298,53 @@ void main() {
     expect(
         state.message, contains('suite_api runtime dependencies are missing'));
     expect(environment.startedCommands, hasLength(1));
+    expect(state.controlApiReachable, isTrue);
+  });
+
+  test(
+      'detects a clean unprovisioned host via connection-refused, without '
+      'waiting out the full timeout', () async {
+    var healthChecks = 0;
+    final client = MockClient((request) async {
+      healthChecks += 1;
+      throw const SocketException(
+        'Connection refused',
+        osError: OSError('Connection refused', 61),
+      );
+    });
+    final service = LauncherControlBootstrapService(
+      client: client,
+      startupTimeout: const Duration(seconds: 5),
+      pollInterval: const Duration(milliseconds: 10),
+      explicitBaseUriOverride: Uri.parse('http://192.168.1.99:8090'),
+    );
+
+    final state = await service.ensureReady();
+
+    expect(state.status, LauncherBootstrapStatus.preflightFailed);
+    expect(state.hostReachableNoServer, isTrue);
+    expect(state.message, contains('reachable'));
+    expect(state.message, contains('nothing is installed'));
+    // Connection-refused is deterministic — stop polling instead of burning
+    // the full 5s timeout.
+    expect(healthChecks, lessThan(10));
+  });
+
+  test('treats a timed-out/unreachable host as not installable', () async {
+    final client = MockClient((request) async {
+      throw const SocketException('Network is unreachable');
+    });
+    final service = LauncherControlBootstrapService(
+      client: client,
+      startupTimeout: const Duration(milliseconds: 50),
+      pollInterval: const Duration(milliseconds: 10),
+      explicitBaseUriOverride: Uri.parse('http://10.0.0.1:8090'),
+    );
+
+    final state = await service.ensureReady();
+
+    expect(state.status, LauncherBootstrapStatus.preflightFailed);
+    expect(state.hostReachableNoServer, isFalse);
+    expect(state.controlApiReachable, isFalse);
   });
 }

@@ -9,13 +9,21 @@ import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/environment_editor.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
+import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
 
 GoRouter createGoRouter() {
   return GoRouter(
     initialLocation: '/workspace',
     routes: [
       ShellRoute(
-        builder: (context, state, child) => MainScreen(child: child),
+        // SelectionArea belongs here, not in MaterialApp.router's own
+        // `builder` -- this callback runs inside the Navigator's page/Overlay
+        // machinery, so SelectionArea ends up a descendant of the Overlay
+        // (required by SelectableRegion). Wrapping the Navigator itself from
+        // outside (as MaterialApp.router's `builder` would) puts it above
+        // the Overlay instead, which throws "No Overlay widget found".
+        builder: (context, state, child) =>
+            SelectionArea(child: MainScreen(child: child)),
         routes: [
           // Root redirects to workspace — handles any legacy deep links.
           GoRoute(
@@ -183,6 +191,12 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 NmtkShellReadinessState.error,
                 message: bootstrapState.message ??
                     'Preflight failed: launcher control API could not start.',
+                action: ConnectionErrorActions(
+                  onRetry: () => ref.invalidate(launcherBootstrapProvider),
+                  onChangeServer: () => ref
+                      .read(launcherBootstrapProvider.notifier)
+                      .saveAndRetry(''),
+                ),
               ),
             ),
           ),

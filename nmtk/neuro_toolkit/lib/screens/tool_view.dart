@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
@@ -12,6 +13,7 @@ import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
+import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
 import 'package:neuro_toolkit/widgets/module_error_view.dart';
 import 'package:neuro_toolkit/widgets/module_icon.dart';
 import 'package:neuro_toolkit/widgets/module_loading_view.dart';
@@ -457,10 +459,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     Module module,
     ModuleLoadFailure failure,
   ) {
+    final isRemoteHosted = _usesRemoteHostedServices();
     return ModuleErrorView(
       module: module,
       failure: failure,
-      isRemoteHosted: _usesRemoteHostedServices(),
+      isRemoteHosted: isRemoteHosted,
       onRetry: () async {
         setState(() {
           _moduleLoadFailures.remove(module.id);
@@ -468,6 +471,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         });
         await _activateModule(module.id, requestFocus: false);
       },
+      // Every module depends on the same one launcher server — "change
+      // server" always means reconnecting the whole app, never a per-module
+      // override, so it's offered regardless of local vs. remote.
+      onChangeServer: () =>
+          ref.read(launcherBootstrapProvider.notifier).saveAndRetry(''),
     );
   }
 
@@ -643,13 +651,18 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               ].join('\n\n'),
               icon: ZetaIcons.error_outline,
               tone: NmtkTone.danger,
-              action: ZetaButton.primary(
-                onPressed: () => _activateModule(
+              action: ConnectionErrorActions(
+                onRetry: () => _activateModule(
                   module.id,
                   requestFocus: false,
                 ),
-                leadingIcon: ZetaIcons.refresh,
-                label: 'Retry Start',
+                retryLabel: 'Retry Start',
+                // Every module depends on the same one launcher server —
+                // "change server" always means reconnecting the whole app,
+                // never a per-module override.
+                onChangeServer: () => ref
+                    .read(launcherBootstrapProvider.notifier)
+                    .saveAndRetry(''),
               ),
             )
           : session == null || !isReady
@@ -714,6 +727,34 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     });
 
     if (moduleState == null || workspaceState == null) {
+      final loadError = moduleStateAsync.error ?? workspaceStateAsync.error;
+      if (loadError != null) {
+        return Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: NmtkEmptyState(
+                  title: 'Could Not Load Workspace',
+                  message: nmtkUserFacingError(loadError),
+                  icon: ZetaIcons.cloud_off,
+                  tone: NmtkTone.danger,
+                  action: ConnectionErrorActions(
+                    onRetry: () {
+                      ref.invalidate(moduleProvider);
+                      ref.invalidate(workspaceProvider);
+                    },
+                    onChangeServer: () => ref
+                        .read(launcherBootstrapProvider.notifier)
+                        .saveAndRetry(''),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 

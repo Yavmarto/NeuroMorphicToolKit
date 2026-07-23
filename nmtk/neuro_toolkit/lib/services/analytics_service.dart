@@ -244,6 +244,21 @@ class AnalyticsService {
     }
   }
 
+  // Mirrors SECRET_FIELD_NAMES in deployment_contracts.py plus the two
+  // root-bootstrap credential fields -- any of these appearing anywhere in
+  // a logged request/response body must never reach disk in plaintext.
+  static const _sensitiveJsonKeys = {
+    'password',
+    'sshPassword',
+    'sshPrivateKey',
+    'privateKey',
+    'bearerToken',
+    'token',
+    'kubeconfig',
+    'rootPassword',
+    'rootPrivateKey',
+  };
+
   String _summarizePayload(String? payload, {int maxChars = 4000}) {
     if (payload == null) {
       return '';
@@ -252,9 +267,37 @@ class AnalyticsService {
     if (normalized.isEmpty) {
       return '';
     }
-    if (normalized.length <= maxChars) {
-      return normalized;
+    final redacted = _redactSensitiveJson(normalized);
+    if (redacted.length <= maxChars) {
+      return redacted;
     }
-    return '${normalized.substring(0, maxChars)}… [truncated]';
+    return '${redacted.substring(0, maxChars)}… [truncated]';
+  }
+
+  /// Redacts sensitive fields in a JSON request/response body before it's
+  /// ever written to the local activity log. Non-JSON bodies are left as-is
+  /// (matches prior behavior for those) -- this method must never throw.
+  String _redactSensitiveJson(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      return jsonEncode(_redactValue(decoded));
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  dynamic _redactValue(dynamic value) {
+    if (value is Map) {
+      return value.map(
+        (dynamic key, dynamic v) => MapEntry(
+          key,
+          _sensitiveJsonKeys.contains(key) ? '<redacted>' : _redactValue(v),
+        ),
+      );
+    }
+    if (value is List) {
+      return value.map(_redactValue).toList();
+    }
+    return value;
   }
 }

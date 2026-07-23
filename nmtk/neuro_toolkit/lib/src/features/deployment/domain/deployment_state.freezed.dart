@@ -16,7 +16,12 @@ T _$identity<T>(T value) => value;
 mixin _$DeploymentState {
   List<DeploymentTarget> get targets;
   DeploymentJob? get activeJob;
-  bool get isReady;
+  bool
+      get isReady; // Set instead of silently clearing activeJob when the notifier loses
+// contact with a running job (staleness watchdog / repeated poll
+// failures) -- the UI must always show an honest reason rather than
+// falling through to an unrelated stale card.
+  String? get connectionLostReason;
 
   /// Create a copy of DeploymentState
   /// with the given fields replaced by the non-null parameter values.
@@ -34,16 +39,22 @@ mixin _$DeploymentState {
             const DeepCollectionEquality().equals(other.targets, targets) &&
             (identical(other.activeJob, activeJob) ||
                 other.activeJob == activeJob) &&
-            (identical(other.isReady, isReady) || other.isReady == isReady));
+            (identical(other.isReady, isReady) || other.isReady == isReady) &&
+            (identical(other.connectionLostReason, connectionLostReason) ||
+                other.connectionLostReason == connectionLostReason));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType,
-      const DeepCollectionEquality().hash(targets), activeJob, isReady);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(targets),
+      activeJob,
+      isReady,
+      connectionLostReason);
 
   @override
   String toString() {
-    return 'DeploymentState(targets: $targets, activeJob: $activeJob, isReady: $isReady)';
+    return 'DeploymentState(targets: $targets, activeJob: $activeJob, isReady: $isReady, connectionLostReason: $connectionLostReason)';
   }
 }
 
@@ -54,7 +65,10 @@ abstract mixin class $DeploymentStateCopyWith<$Res> {
       _$DeploymentStateCopyWithImpl;
   @useResult
   $Res call(
-      {List<DeploymentTarget> targets, DeploymentJob? activeJob, bool isReady});
+      {List<DeploymentTarget> targets,
+      DeploymentJob? activeJob,
+      bool isReady,
+      String? connectionLostReason});
 }
 
 /// @nodoc
@@ -73,6 +87,7 @@ class _$DeploymentStateCopyWithImpl<$Res>
     Object? targets = null,
     Object? activeJob = freezed,
     Object? isReady = null,
+    Object? connectionLostReason = freezed,
   }) {
     return _then(_self.copyWith(
       targets: null == targets
@@ -87,6 +102,10 @@ class _$DeploymentStateCopyWithImpl<$Res>
           ? _self.isReady
           : isReady // ignore: cast_nullable_to_non_nullable
               as bool,
+      connectionLostReason: freezed == connectionLostReason
+          ? _self.connectionLostReason
+          : connectionLostReason // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -185,14 +204,15 @@ extension DeploymentStatePatterns on DeploymentState {
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
     TResult Function(List<DeploymentTarget> targets, DeploymentJob? activeJob,
-            bool isReady)?
+            bool isReady, String? connectionLostReason)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _DeploymentState() when $default != null:
-        return $default(_that.targets, _that.activeJob, _that.isReady);
+        return $default(_that.targets, _that.activeJob, _that.isReady,
+            _that.connectionLostReason);
       case _:
         return orElse();
     }
@@ -214,13 +234,14 @@ extension DeploymentStatePatterns on DeploymentState {
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
     TResult Function(List<DeploymentTarget> targets, DeploymentJob? activeJob,
-            bool isReady)
+            bool isReady, String? connectionLostReason)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _DeploymentState():
-        return $default(_that.targets, _that.activeJob, _that.isReady);
+        return $default(_that.targets, _that.activeJob, _that.isReady,
+            _that.connectionLostReason);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -241,13 +262,14 @@ extension DeploymentStatePatterns on DeploymentState {
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
     TResult? Function(List<DeploymentTarget> targets, DeploymentJob? activeJob,
-            bool isReady)?
+            bool isReady, String? connectionLostReason)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _DeploymentState() when $default != null:
-        return $default(_that.targets, _that.activeJob, _that.isReady);
+        return $default(_that.targets, _that.activeJob, _that.isReady,
+            _that.connectionLostReason);
       case _:
         return null;
     }
@@ -260,7 +282,8 @@ class _DeploymentState implements DeploymentState {
   const _DeploymentState(
       {final List<DeploymentTarget> targets = const [],
       this.activeJob,
-      this.isReady = false})
+      this.isReady = false,
+      this.connectionLostReason})
       : _targets = targets;
 
   final List<DeploymentTarget> _targets;
@@ -277,6 +300,12 @@ class _DeploymentState implements DeploymentState {
   @override
   @JsonKey()
   final bool isReady;
+// Set instead of silently clearing activeJob when the notifier loses
+// contact with a running job (staleness watchdog / repeated poll
+// failures) -- the UI must always show an honest reason rather than
+// falling through to an unrelated stale card.
+  @override
+  final String? connectionLostReason;
 
   /// Create a copy of DeploymentState
   /// with the given fields replaced by the non-null parameter values.
@@ -294,16 +323,22 @@ class _DeploymentState implements DeploymentState {
             const DeepCollectionEquality().equals(other._targets, _targets) &&
             (identical(other.activeJob, activeJob) ||
                 other.activeJob == activeJob) &&
-            (identical(other.isReady, isReady) || other.isReady == isReady));
+            (identical(other.isReady, isReady) || other.isReady == isReady) &&
+            (identical(other.connectionLostReason, connectionLostReason) ||
+                other.connectionLostReason == connectionLostReason));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType,
-      const DeepCollectionEquality().hash(_targets), activeJob, isReady);
+  int get hashCode => Object.hash(
+      runtimeType,
+      const DeepCollectionEquality().hash(_targets),
+      activeJob,
+      isReady,
+      connectionLostReason);
 
   @override
   String toString() {
-    return 'DeploymentState(targets: $targets, activeJob: $activeJob, isReady: $isReady)';
+    return 'DeploymentState(targets: $targets, activeJob: $activeJob, isReady: $isReady, connectionLostReason: $connectionLostReason)';
   }
 }
 
@@ -316,7 +351,10 @@ abstract mixin class _$DeploymentStateCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {List<DeploymentTarget> targets, DeploymentJob? activeJob, bool isReady});
+      {List<DeploymentTarget> targets,
+      DeploymentJob? activeJob,
+      bool isReady,
+      String? connectionLostReason});
 }
 
 /// @nodoc
@@ -335,6 +373,7 @@ class __$DeploymentStateCopyWithImpl<$Res>
     Object? targets = null,
     Object? activeJob = freezed,
     Object? isReady = null,
+    Object? connectionLostReason = freezed,
   }) {
     return _then(_DeploymentState(
       targets: null == targets
@@ -349,6 +388,10 @@ class __$DeploymentStateCopyWithImpl<$Res>
           ? _self.isReady
           : isReady // ignore: cast_nullable_to_non_nullable
               as bool,
+      connectionLostReason: freezed == connectionLostReason
+          ? _self.connectionLostReason
+          : connectionLostReason // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }

@@ -101,21 +101,22 @@ COPY workers/jupyter_server/requirements.txt /app/requirements.txt
 # SAME RUN (not a later one) so they never get committed to their own image
 # layer.
 RUN grep -vE '^torch($|[<>=; ])' /app/requirements.txt > /tmp/reqs-joint.txt \
- && pip wheel --no-cache-dir -r /tmp/reqs-joint.txt -w /wheels \
+ && pip install --no-cache-dir --dry-run --report /tmp/report.json -r /tmp/reqs-joint.txt \
+ && python -c "import json; data=json.load(open('/tmp/report.json')); print('\n'.join(f\"{p['metadata']['name']}=={p['metadata']['version']}\" for p in data.get('install', [])))" > /tmp/resolved.txt \
  && grep -E '^(jupyterlab|jupyter_server|ipykernel)' /app/requirements.txt > /tmp/reqs-01-jupyter.txt \
- && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-01-jupyter.txt \
+ && pip install --no-cache-dir -c /tmp/resolved.txt -r /tmp/reqs-01-jupyter.txt \
  && grep -E '^(numpy|pandas|matplotlib|seaborn|tqdm)' /app/requirements.txt > /tmp/reqs-02-scientific.txt \
- && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-02-scientific.txt \
+ && pip install --no-cache-dir -c /tmp/resolved.txt -r /tmp/reqs-02-scientific.txt \
  && grep -E '^(torch|pytorch-lightning|jax)' /app/requirements.txt > /tmp/reqs-03-dl.txt \
- && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-03-dl.txt \
+ && pip install --no-cache-dir -c /tmp/resolved.txt -r /tmp/reqs-03-dl.txt \
  && grep -E '^(snntorch|norse|rockpool|sinabs|spyx|nengo|tonic)' /app/requirements.txt > /tmp/reqs-04-snn.txt \
- && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-04-snn.txt \
+ && pip install --no-cache-dir -c /tmp/resolved.txt -r /tmp/reqs-04-snn.txt \
  && grep -E '^(nir|nirtorch|sc-neurocore)' /app/requirements.txt > /tmp/reqs-05-nir.txt \
- && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-05-nir.txt \
+ && pip install --no-cache-dir -c /tmp/resolved.txt -r /tmp/reqs-05-nir.txt \
  && grep -E '^(brian2|PyNN|akida|cnn2snn|lava-nc)' /app/requirements.txt > /tmp/reqs-06-frameworks.txt \
- && pip install --no-cache-dir --no-index --find-links=/wheels -r /tmp/reqs-06-frameworks.txt \
+ && pip install --no-cache-dir -c /tmp/resolved.txt -r /tmp/reqs-06-frameworks.txt \
  && pip check \
- && rm -rf /wheels /tmp/reqs-*.txt
+ && rm -rf /tmp/report.json /tmp/resolved.txt /tmp/reqs-*.txt
 
 # Install neurocnl with all extras (brings nir and framework bindings).
 # Heavy torch/framework layers above are already cached so this is fast.
@@ -134,7 +135,7 @@ RUN python -m ipykernel install --sys-prefix \
 # NMTK environment manager — a Jupyter Server extension that clones this
 # immutable base kernel into customisable per-user environments. Installed into
 # the base env so it runs in-process with the server. User environments and
-# their kernelspecs live under /root (the persisted notebooks volume).
+# their kernelspecs live under /home/appuser (the persisted notebooks volume).
 COPY workers/jupyter_server/nmtk_env_manager/ /tmp/nmtk_env_manager/
 RUN pip install --no-cache-dir --no-build-isolation /tmp/nmtk_env_manager \
  && rm -rf /tmp/nmtk_env_manager
@@ -144,23 +145,27 @@ COPY workers/jupyter_server/nmtk_client/ /tmp/nmtk_client/
 RUN pip install --no-cache-dir /tmp/nmtk_client \
  && rm -rf /tmp/nmtk_client
 
-# Starter notebooks — seeded into the persistent /root volume by entrypoint.sh
+# Starter notebooks — seeded into the persistent /home/appuser volume by entrypoint.sh
 # only when the file does not already exist (preserves user edits on restart).
 COPY workers/jupyter_server/notebooks/ /app/notebooks/
 
 COPY workers/jupyter_server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Pin the Jupyter data dir under the persisted /root volume so the --user
+# Pin the Jupyter data dir under the persisted /home/appuser volume so the --user
 # kernelspecs written by cloned environments survive container restarts.
-ENV JUPYTER_DATA_DIR=/root/.local/share/jupyter
+ENV JUPYTER_DATA_DIR=/home/appuser/.local/share/jupyter
 
 COPY workers/jupyter_server/jupyter_server_config.py /app/jupyter_server_config.py
 
 # Notebooks are stored in the user's home directory by default, matching
 # standard JupyterLab behaviour.  Override JUPYTER_NOTEBOOK_DIR at runtime
 # (e.g. via a Docker volume mount) to persist notebooks outside the container.
-ENV JUPYTER_NOTEBOOK_DIR=/root
+ENV JUPYTER_NOTEBOOK_DIR=/home/appuser
+
+RUN groupadd --system appgroup && useradd --system -m --gid appgroup appuser \
+ && chown -R appuser:appgroup /app /home/appuser
+USER appuser
 
 EXPOSE 8008
 

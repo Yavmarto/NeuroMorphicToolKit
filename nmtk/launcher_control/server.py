@@ -1066,7 +1066,6 @@ from .suite_api_service import (
     _suite_api_env_fingerprint,
     _suite_api_env_python,
     _suite_api_env_stamp,
-    _suite_api_install_target,
     _suite_api_pythonpath,
 )
 from .module_environment import (
@@ -1534,6 +1533,9 @@ class LauncherControlState(
 
     def deployment_preflight(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._deployment.preflight(payload)
+
+    def bootstrap_remote_deploy_user(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self._deployment.bootstrap_remote_user(payload)
 
     def create_deployment_job(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._deployment.create_job(payload)

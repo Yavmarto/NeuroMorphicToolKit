@@ -250,6 +250,18 @@ class ControlApiService {
     );
   }
 
+  Future<RemoteUserBootstrapResult> bootstrapRemoteDeployUser(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _client.post(
+      _uri('/api/launcher/deployment/bootstrap-remote-user'),
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+    await _ensureSuccess(response);
+    return RemoteUserBootstrapResult.fromJson(await _readJsonResponse(response));
+  }
+
   Future<DeploymentJob> createDeploymentJob(
       Map<String, dynamic> payload) async {
     final response = await _client.post(
@@ -703,20 +715,20 @@ class _LoggedHttpClient extends http.BaseClient {
     final requestBody = _requestBody(request);
     try {
       final response = await _inner.send(request).timeout(
-        _requestTimeout,
-        onTimeout: () => throw TimeoutException(
-          'Control API request timed out: ${request.method} ${request.url}',
-          _requestTimeout,
-        ),
-      );
+            _requestTimeout,
+            onTimeout: () => throw TimeoutException(
+              'Control API request timed out: ${request.method} ${request.url}',
+              _requestTimeout,
+            ),
+          );
       final bytes = await response.stream.toBytes().timeout(
-        _requestTimeout,
-        onTimeout: () => throw TimeoutException(
-          'Control API response body timed out: '
-          '${request.method} ${request.url}',
-          _requestTimeout,
-        ),
-      );
+            _requestTimeout,
+            onTimeout: () => throw TimeoutException(
+              'Control API response body timed out: '
+              '${request.method} ${request.url}',
+              _requestTimeout,
+            ),
+          );
       stopwatch.stop();
       final responseBody = utf8.decode(bytes, allowMalformed: true);
       await _analytics?.recordBackendActivity(

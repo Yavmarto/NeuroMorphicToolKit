@@ -152,6 +152,47 @@ def _extract_mfcc_features(
     return features
 
 
+def _patch_torchaudio_load() -> None:
+    """Route torchaudio.load through soundfile instead of TorchCodec.
+
+    Newer torchaudio hardcodes TorchCodec (which needs a system ffmpeg) for
+    `load()`, ignoring the `backend=` kwarg entirely. Speech Commands clips
+    are plain 16-bit PCM WAV, so soundfile alone decodes them fine and avoids
+    the extra native dependency. `torchaudio.datasets.utils._load_waveform`
+    looks up `torchaudio.load` at call time, so reassigning it here redirects
+    every dataset read without touching torchaudio internals.
+    """
+    import torch
+    import torchaudio
+
+    try:
+        import soundfile as sf
+    except ImportError:
+        log.error("soundfile is not installed.  Run: pip install soundfile")
+        sys.exit(1)
+
+    def _load(
+        uri,
+        frame_offset: int = 0,
+        num_frames: int = -1,
+        normalize: bool = True,
+        channels_first: bool = True,
+        format=None,
+        buffer_size: int = 4096,
+        backend=None,
+    ):
+        data, sample_rate = sf.read(uri, dtype="float32", always_2d=True)
+        waveform = torch.from_numpy(data.T)  # (channel, time)
+        if frame_offset or num_frames != -1:
+            end = None if num_frames == -1 else frame_offset + num_frames
+            waveform = waveform[:, frame_offset:end]
+        if not channels_first:
+            waveform = waveform.T
+        return waveform, sample_rate
+
+    torchaudio.load = _load
+
+
 def _build_transform(n_mfcc: int, sr: int):
     """Construct the torchaudio MFCC transform once and reuse it."""
     try:
@@ -245,6 +286,8 @@ def main() -> None:
     except ImportError:
         log.error("PyTorch is not installed.  Run: pip install torch torchaudio")
         sys.exit(1)
+
+    _patch_torchaudio_load()
 
     out_path: Path = args.out.resolve()
     download_dir: Path = args.download_dir.resolve()

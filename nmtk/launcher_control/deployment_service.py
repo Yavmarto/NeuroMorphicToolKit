@@ -14,6 +14,7 @@ from .deployment_contracts import (
     DeploymentTarget,
     TERMINAL_JOB_STAGES,
     redact_payload,
+    redact_text,
     utc_now_iso,
 )
 from .deployment_executors import executor_for_mode
@@ -49,6 +50,23 @@ class DeploymentService:
             return True
         selected = self._store.selected_target()
         return bool(selected and selected.get("lastReadiness") == "ready")
+
+    def bootstrap_remote_user(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """One-time root SSH bootstrap: create a dedicated non-root deploy user.
+
+        Deliberately bypasses `self._store` entirely -- root credentials in
+        `payload` are used for a single SSH session and never persisted.
+        """
+        from .deployment_user_bootstrap import ssh_root_bootstrap
+
+        return ssh_root_bootstrap(
+            host=str(payload.get("host") or ""),
+            ssh_port=int(payload.get("sshPort") or 22),
+            root_username=str(payload.get("rootUsername") or "root"),
+            root_password=str(payload.get("rootPassword") or ""),
+            root_private_key=str(payload.get("rootPrivateKey") or ""),
+            deploy_username=str(payload.get("deployUsername") or "nmtk"),
+        )
 
     def preflight(self, payload: dict[str, Any]) -> dict[str, Any]:
         target_payload = payload.get("target")
@@ -122,7 +140,11 @@ class DeploymentService:
             secret_resolver=self._store.resolve_secret,
         )
         try:
-            executor.run(target, lambda stage, message, percent: self._emit(job, stage, message, percent))
+            executor.run(
+                target,
+                lambda stage, message, percent: self._emit(job, stage, message, percent),
+                log=lambda line: self._emit_log(job, line),
+            )
             if self._is_cancelled(job.id):
                 self.cancel_job(job.id)
                 return
@@ -164,6 +186,32 @@ class DeploymentService:
         job.stage_label = message
         job.last_log_line = message
         job.logs.append(message)
+        job.events.append(event.to_json())
+        job.updated_at = utc_now_iso()
+        self._store.save_job(job)
+
+    def _emit_log(self, job: DeploymentJob, line: str) -> None:
+        """Append a raw remote-command output line to the job's log tail.
+
+        Unlike `_emit`, this does NOT change `stage`, `percent`, or
+        `stage_label` — the headline keeps showing the high-level phase
+        while real terminal output streams underneath it. The line is
+        redacted (mirroring `DeploymentEvent.to_json`) and empty lines are
+        dropped. An event is appended too so the SSE stream carries it.
+        """
+        if self._is_cancelled(job.id) and job.stage not in TERMINAL_JOB_STAGES:
+            raise RuntimeError("Deployment cancelled")
+        clean = redact_text(line.strip())
+        if not clean:
+            return
+        event = DeploymentEvent(
+            job_id=job.id,
+            stage=job.stage,
+            message=clean,
+            percent=job.percent,
+        )
+        job.last_log_line = clean
+        job.logs.append(clean)
         job.events.append(event.to_json())
         job.updated_at = utc_now_iso()
         self._store.save_job(job)

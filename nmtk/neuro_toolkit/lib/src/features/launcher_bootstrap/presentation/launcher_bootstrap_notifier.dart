@@ -53,6 +53,45 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
     ).ensureReady();
 
     if (!bootstrap.canUseControlApi) {
+      // The control API answered but the target isn't fully ready (e.g. a
+      // local suite_api install problem). "Set up a new server" only needs
+      // the control API reachable — it orchestrates deployments itself — so
+      // don't block it on whatever's wrong with the target's own readiness.
+      if (bootstrap.controlApiReachable) {
+        return LauncherBootstrapData.needsSetup(
+          bootstrapState: bootstrap,
+          controlApiService: ControlApiService(
+            baseUri: bootstrap.baseUri,
+            analyticsService: ref.read(analyticsServiceProvider),
+          ),
+          message: bootstrap.message,
+        );
+      }
+      // Nothing answered at this target at all. If the user pointed at a
+      // specific host, this machine's own local orchestrator may still be
+      // usable to provision it — the local orchestrator is what actually
+      // runs the SSH/docker install, not the target itself.
+      if (explicitBaseUri != null && !isMobile && !kIsWeb) {
+        final localBootstrap =
+            await LauncherControlBootstrapService().ensureReady();
+        if (localBootstrap.canUseControlApi ||
+            localBootstrap.controlApiReachable) {
+          return LauncherBootstrapData.needsSetup(
+            bootstrapState: localBootstrap,
+            controlApiService: ControlApiService(
+              baseUri: localBootstrap.baseUri,
+              analyticsService: ref.read(analyticsServiceProvider),
+            ),
+            message: bootstrap.message,
+            // Only steer the wizard at this specific host when it's
+            // confirmed reachable (connection refused, not a timeout) —
+            // otherwise it may just be a typo/wrong address, and suggesting
+            // an install there would be misleading.
+            suggestedInstallHost:
+                bootstrap.hostReachableNoServer ? explicitBaseUri.host : null,
+          );
+        }
+      }
       return LauncherBootstrapData.needsSetup(
         message: bootstrap.message,
       );
