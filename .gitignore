@@ -52,6 +52,9 @@ data/speech_commands_mfcc20_test.pt
 data/speech_commands_mfcc20_train.pt
 workspaces/kws.nmtk
 workspaces/speech_commands_mfcc20.pt
+.idea
+data/speech_commands_mfcc20_test_norm.pt
+data/speech_commands_mfcc20_train_norm.pt
 data/speech_commands_raw
 .idea
 scripts/data/speech_commands_raw
