@@ -23,14 +23,12 @@ run_remote() {
   ssh ${ssh_opts} "${remote_host}" "$1"
 }
 
-if run_remote "${compose_cmd}" >"${log_file}" 2>&1; then
-  cat "${log_file}"
-  exit 0
-else
-  status=$?
-fi
+run_remote "${compose_cmd}" 2>&1 | tee "${log_file}"
+status=${PIPESTATUS[0]}
 
-cat "${log_file}"
+if [ "${status}" -eq 0 ]; then
+  exit 0
+fi
 
 if ! grep -q "invalid tar header" "${log_file}"; then
   exit "${status}"
