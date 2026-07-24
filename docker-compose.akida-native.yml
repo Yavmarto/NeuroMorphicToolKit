@@ -14,10 +14,11 @@
 services:
 
   neurochip-hw-worker:
-    # Compose merges sequences (like ports:) by concatenation by default, so a
-    # plain `ports: []` here would NOT remove the base file's mapping — the
-    # !reset tag is required to actually clear it and stop publishing 8002.
-    ports: !reset []
+    # Instead of relying on !reset [] (which fails on some older Docker Compose
+    # versions), we place the worker in a dormant profile. This prevents it from
+    # starting at all, guaranteeing it won't fight the native service for port 8002.
+    profiles:
+      - donotstart
 
   suite_api:
     extra_hosts:
