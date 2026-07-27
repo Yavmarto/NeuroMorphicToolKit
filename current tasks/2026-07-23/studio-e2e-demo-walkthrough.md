@@ -83,102 +83,95 @@ the canvas/pipeline screen.
 
 ## 3. Setup step
 
-1. Framework: pick **`snntorch_sim`** as the simulator/training backend.
-2. Dataset: open the dataset picker and select **SHD** ("Spiking Heidelberg
-   Digits"). Clicking "Download dataset" here uses a separate,
-   Firebase-backed fetch path — note that it isn't actually required for
-   this demo to work; the real data comes from `tonic`'s own auto-download,
-   set up in the next step. Don't assume the Setup click alone makes
-   training functional.
+1. Framework: pick **`snntorch_sim`**. This target has two distinct surfaces:
+   the fixed-weight runtime simulator and the generated snnTorch notebook
+   training path; this walkthrough exercises the latter.
+2. Dataset: select **SHD** ("Spiking Heidelberg Digits"). The Setup download
+   status is useful evidence that the catalog path works, but it is not the
+   notebook's data source: the generated notebook uses `tonic.datasets.SHD`
+   and downloads its own train/test archives into the notebook's `data/`
+   directory.
+3. Ensure the notebook environment has `tonic`, `torch`, and `snntorch`.
+   If the generated notebook reports `pip install tonic`, install it in the
+   notebook kernel environment and regenerate; do not treat a successful
+   Setup download alone as successful training.
 
 ## 4. Model / Training DAG / Eval DAG steps
 
-- **Model step**: confirm `shd_digit_classifier.cnl`'s network is reflected
-  (3 populations, as in step 2.5). Click through each node and confirm these
-  literal property-panel values (verified directly against the backend's
-  `canonical_from_cnl()` output for this exact template, not guessed from the
-  CNL source alone — field labels come from
-  `frontend/lib/providers/canvas/nir_types_provider.dart`):
-  - `input` (nir.Input): **Size** 700.
-  - `cochlea` (nir.LIF): **Neurons** 700, **Tau** 0.02s, **Threshold** 0.8,
-    **Resistance** 1.0, **Leak** 0.0.
-  - `w_cochlea_hidden` (nir.Linear): **Rows** 128 (→ hidden), **Cols** 700
-    (→ cochlea) — the `(→ name)`/`(← name)` annotation is this session's fix
-    (`frontend/lib/widgets/canvas/property_panel.dart`); confirm it actually
-    renders next to the label, not just the bare number.
-  - `hidden` (nir.LIF): **Neurons** 128, **Tau** 0.02s, **Threshold** 0.6,
-    **Resistance** 1.0, **Leak** 0.0.
-  - `w_hidden_classes` (nir.Linear): **Rows** 20 (→ classes), **Cols** 128
-    (→ hidden).
-  - `classes` (nir.LIF): **Neurons** 20, **Tau** 0.03s, **Threshold** 0.7,
-    **Resistance** 1.0, **Leak** 0.0.
-  - `output` (nir.Output): **Size** 20.
-
-  Two fields will look "wrong" and aren't part of this session's fix — call
-  them out during a demo rather than let them look like new bugs:
-  - **Time Step** on every LIF node will show the form default **0.0001s**,
-    not the network's real declared timestep (**0.001s**, from `Define a
-    network ... with timestep 0.001`). The backend puts the network's `dt`
-    on the node's `metadata` map, but the property panel only ever reads
-    `node.parameters`, which has no `dt` key for LIF nodes — so the two never
-    meet. Pre-existing gap, not touched this session.
-  - **Fill** on both Linear nodes will show a real-looking decimal (e.g.
-    `0.0466...`, `0.0613...`), not the `1.0` default — but that's the raw
-    weight matrix's `[0][0]` entry (`weight.flat[0]` in
-    `backend/app/services/nir_graph_serializer.py`), not an actual fill
-    value. Both templates' weights are Xavier-initialized full matrices
-    (`weight_init: "xavier"` metadata), not a uniform fill — so this field
-    never meant anything for them and shouldn't be read as one.
-- **Training DAG**: the app auto-builds this the first time you open the tab
-  (`buildDefaultPhases()`, keyed on the `snntorch_sim` framework choice —
-  same fixed chain regardless of which network is loaded). Confirm the real
-  chain renders:
-  `dataLoader → stateReset → timeLoop → forwardPass → mseCountLoss →
-  surrogateBackward → adamOptimiser → lossLogger`, plus a parallel
-  validation branch off the optimiser: `testLoader → validationLoop`.
-  Click through each node and confirm/set these literal parameter values
-  (all in the node's property panel — this is the CNL-free node-graph
-  editing referenced above):
-  - `dataLoader`: a blue "SHD · from setup" chip should already show at the
-    top of the panel. **Change Format from `auto` to `tonic_shd`** in the
-    dropdown (`auto`/`tonic_nmnist`/`tonic_shd`/`npy`/`pt`/`hdf5`) — this is
-    the one value that actually matters; leaving it on `auto` silently
-    generates a non-functional placeholder loader instead of real code.
-    Also confirm `batch_size: 32`, `shuffle: true`, `time_window_ms: 1`.
+- **Model step**: load `shd_digit_classifier.cnl` from the gallery entry
+  defined by `backend/app/templates/shd_digit_classifier.cnl` and
+  `backend/app/routers/templates.py`. Confirm the available graph is
+  `input(700) → cochlea(700) → hidden(128) → classes(20) → output(20)`;
+  do not widen it to `700 → 256 → 256 → 20` for the first smoke run.
+- **Training DAG**: keep the available data, state, time, forward, backward,
+  optimiser, logging, and validation nodes. Set the nodes as follows:
+  - `dataLoader`: **Format `tonic_shd`**, `batch_size: 32`,
+    `shuffle: true`, `time_window_ms: 4`.
   - `stateReset`, `forwardPass`, `lossLogger`: no parameters.
-  - `timeLoop`: `num_steps: 25`.
-  - `mseCountLoss`: `correct_rate: 0.8`, `incorrect_rate: 0.2`.
+  - `timeLoop`: leave the available `num_steps: 25` default; tonic framing
+    controls the actual padded sequence length when `time_window_ms` is set.
+  - Replace the default `mseCountLoss` with the available **`ceCountLoss`**
+    node. There is no `ceRateLoss` node in the current frontend/backend
+    contract, so do not add that name manually to the canvas or guide.
   - `surrogateBackward`: `function: fast_sigmoid`, `slope: 25.0`.
   - `adamOptimiser`: `lr: 0.001`, `weight_decay: 0.0`, `beta1: 0.9`,
     `beta2: 0.999`.
-  - `testLoader` (validation branch): same "SHD · from setup" chip — set
-    **Format to `tonic_shd`** here too, `batch_size: 32`, `shuffle: false`.
-  - `validationLoop`: `every_n_epochs: 1`, `save_best_checkpoint: true`,
-    `checkpoint_metric: val_accuracy`, `checkpoint_mode: max`.
-- **Eval DAG**: same auto-build-once behavior. Confirm the real chain:
-  `testLoader → stateReset → forwardPass → accuracyMetric`.
-  - `testLoader`: **Format `tonic_shd`**, `batch_size: 32`, `shuffle: false`.
-  - `stateReset`, `forwardPass`: no parameters.
-  - `accuracyMetric`: `top_k: 1`.
+  - Validation branch: wire a `testLoader` to `validationLoop.val_data`,
+    set `Format: tonic_shd`, `batch_size: 32`, `shuffle: false`,
+    `time_window_ms: 4`, and set `every_n_epochs: 1`,
+    `save_best_checkpoint: true`, `checkpoint_metric: val_accuracy`,
+    `checkpoint_mode: max`.
+- **Eval DAG**: use `testLoader → stateReset → forwardPass →
+  accuracyMetric`. Set `testLoader` to `Format: tonic_shd`, `batch_size: 32`,
+  `shuffle: false`, `time_window_ms: 4`, and keep `accuracyMetric` at `top_k: 1`.
 
-(The chain/names above correct an earlier version of this doc, which said
-`dataLoader → forwardPass → ceCountLoss → surrogateBackward → adamOptimiser`
-for Training and `dataLoader → forwardPass → accuracyMetric` for Eval — wrong
-loss-node name and missing `stateReset`/`timeLoop`/`lossLogger`/
-`validationLoop`/`testLoader` throughout.)
+The generated backend code is the source of truth for the tensor boundary:
+Tonic frames use SHD microsecond timestamps, so `time_window_ms: 4` becomes
+`ToFrame(..., time_window=4000)`. `PadTensors(batch_first=False)` and the
+snntorch model together produce `[T, B, N]`; `ceCountLoss` consumes that
+spike train with `[B]` integer targets, while validation/evaluation reduce
+over time and use `argmax(-1)` over the class dimension.
 
 ## 5. Notebook step
 
-Generate cells, run them. On first Run, `tonic` downloads SHD itself over the
-network (on moosebuntu, since that's where the backend runs per step 1) —
-this can take a few minutes the first time. Confirm no "implausible firing
-threshold" warning cell appears (that warning fires when a network is
-authored without a sensible declared timestep — it shouldn't for
-`shd_digit_classifier.cnl`).
+Generate the notebook and inspect the generated cells before running:
+
+1. Dataset cell: `tonic.datasets.SHD`, a `ToFrame` transform, and
+   `PadTensors(batch_first=False)` must all be present.
+2. Architecture cell: `class Net` must load the generated
+   `weights_snntorch_sim_<hash>.npz` artifact.
+3. Train cell: the loss call must be `loss_fn(spk_out, targets)` and the
+   validation call must use `_vl_spk_out` with `_vl_targets`.
+4. Run the notebook in order. Record these as separate checkpoints:
+   dataset download, notebook generation, first batch, first loss/backward,
+   validation event, and final evaluation accuracy. A download is not a
+   training result.
+
+The notebook's optional Python-export cell now requires a saved notebook in
+its workspace directory and discovers the single `.ipynb` file there; it no
+longer invokes `nbconvert` with notebook-undefined `__file__`. If there are
+multiple notebooks in that directory, follow the cell's actionable error
+instead of guessing which file to export.
 
 ## 6. Run step
 
-Watch live per-epoch metrics stream in as training runs.
+Watch the streamed train and validation events. Treat shape warnings,
+dimension errors, no validation event, repeated zero loss, or a zero-spike
+network as a failed run to report and diagnose; do not call the run
+"successful" because the SHD archive downloaded.
+
+### Smaller custom KWS alternative
+
+The repository also contains `neurocnl/examples/keyword_spotting.cnl` and
+`scripts/data/speech_commands_mfcc20.pt`, but this is **not** the primary
+Studio recipe: the CNL file is an example rather than a confirmed gallery
+template, and the bundled `.pt` artifact does not establish a true held-out
+test split. To experiment with it, run
+`scripts/prep_speech_commands_mfcc.py`, apply
+`scripts/normalize_mfcc_features.py`, mount the resulting `.pt` file through
+the `dataLoader`'s existing `format: pt` and `dataset_path` fields, and label
+any evaluation as custom-data smoke evidence unless separate train/test
+artifacts are supplied.
 
 ## 7. Deploy step — Akida (already fully wired)
 

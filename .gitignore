@@ -61,3 +61,5 @@ scripts/data/speech_commands_raw
 workspaces/e2e.ipynb
 workspaces/e2e.nmtk
 workspaces/shd-e2e.ipynb.nmtk
+workspaces
+data
