@@ -38,6 +38,7 @@ class NmtkMobileScaffold extends StatefulWidget {
     this.backTooltip = 'Back',
     this.brandFallbackText = 'NMTK',
     this.appBar,
+    this.floatingActionButton,
   });
 
   final List<NmtkSidebarItem> navItems;
@@ -88,6 +89,9 @@ class NmtkMobileScaffold extends StatefulWidget {
   /// one (e.g. [NmtkTopAppBar]) — used when a screen needs consistent top
   /// chrome (like a Settings action) across both mobile and desktop layouts.
   final PreferredSizeWidget? appBar;
+
+  /// Optional floating action button to display.
+  final Widget? floatingActionButton;
 
   @override
   State<NmtkMobileScaffold> createState() => _NmtkMobileScaffoldState();
@@ -254,8 +258,8 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
           top: false,
           child: Material(color: scheme.surface, child: widget.child),
         ),
-        floatingActionButton:
-            (widget.onNewFile != null ||
+        floatingActionButton: widget.floatingActionButton ??
+            ((widget.onNewFile != null ||
                 widget.onOpenFile != null ||
                 widget.onSaveFile != null ||
                 widget.onSaveFileAs != null)
@@ -266,7 +270,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                 // ZETA-MIGRATION-EXEMPT: no Zeta equivalent for document-edit icon
                 child: const Icon(Icons.edit_document),
               )
-            : null,
+            : null),
         bottomNavigationBar:
             (widget.showBottomNavigation && useBottomNavigation)
             ? NavigationBar(

@@ -16,388 +16,96 @@
         "nirArtifactCache": null,
         "pipelineState": {
           "parseStatus": "success",
-          "validateStatus": "success",
+          "validateStatus": "error",
           "generateStatus": "idle",
           "simulateStatus": "idle",
-          "deployReadinessStatus": "success",
+          "deployReadinessStatus": "idle",
           "parseResult": {
             "sentences": [
               {
                 "line": 6,
-                "raw": "Define a Input named input.",
+                "raw": "Define a Input named nir.Input_1785146275001.",
                 "parsed": {
                   "concept": "Input",
-                  "subject": "input",
+                  "subject": "nir.Input_1785146275001",
                   "action": "",
                   "verb": "Define",
                   "negated": false,
                   "condition": ""
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 7,
-                "raw": "Define a LIF named cochlea.",
-                "parsed": {
-                  "concept": "LIF",
-                  "subject": "cochlea",
-                  "action": "",
-                  "verb": "Define",
-                  "negated": false,
-                  "condition": ""
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 8,
-                "raw": "Define a Linear named w_cochlea_hidden.",
-                "parsed": {
-                  "concept": "Linear",
-                  "subject": "w_cochlea_hidden",
-                  "action": "",
-                  "verb": "Define",
-                  "negated": false,
-                  "condition": ""
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 9,
-                "raw": "Define a LIF named hidden.",
-                "parsed": {
-                  "concept": "LIF",
-                  "subject": "hidden",
-                  "action": "",
-                  "verb": "Define",
-                  "negated": false,
-                  "condition": ""
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 10,
-                "raw": "Define a Linear named w_hidden_classes.",
-                "parsed": {
-                  "concept": "Linear",
-                  "subject": "w_hidden_classes",
-                  "action": "",
-                  "verb": "Define",
-                  "negated": false,
-                  "condition": ""
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 11,
-                "raw": "Define a LIF named classes.",
-                "parsed": {
-                  "concept": "LIF",
-                  "subject": "classes",
-                  "action": "",
-                  "verb": "Define",
-                  "negated": false,
-                  "condition": ""
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 12,
-                "raw": "Define a Output named output.",
-                "parsed": {
-                  "concept": "Output",
-                  "subject": "output",
-                  "action": "",
-                  "verb": "Define",
-                  "negated": false,
-                  "condition": ""
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 15,
-                "raw": "Connect input to cochlea.",
-                "parsed": {
-                  "concept": "Connect",
-                  "subject": "input",
-                  "action": "",
-                  "verb": "Connect",
-                  "negated": false,
-                  "condition": "cochlea"
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 16,
-                "raw": "Connect cochlea to w_cochlea_hidden.",
-                "parsed": {
-                  "concept": "Connect",
-                  "subject": "cochlea",
-                  "action": "",
-                  "verb": "Connect",
-                  "negated": false,
-                  "condition": "w_cochlea_hidden"
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 17,
-                "raw": "Connect w_cochlea_hidden to hidden.",
-                "parsed": {
-                  "concept": "Connect",
-                  "subject": "w_cochlea_hidden",
-                  "action": "",
-                  "verb": "Connect",
-                  "negated": false,
-                  "condition": "hidden"
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 18,
-                "raw": "Connect hidden to w_hidden_classes.",
-                "parsed": {
-                  "concept": "Connect",
-                  "subject": "hidden",
-                  "action": "",
-                  "verb": "Connect",
-                  "negated": false,
-                  "condition": "w_hidden_classes"
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 19,
-                "raw": "Connect w_hidden_classes to classes.",
-                "parsed": {
-                  "concept": "Connect",
-                  "subject": "w_hidden_classes",
-                  "action": "",
-                  "verb": "Connect",
-                  "negated": false,
-                  "condition": "classes"
-                },
-                "valid": true,
-                "error": null,
-                "error_detail": null
-              },
-              {
-                "line": 20,
-                "raw": "Connect classes to output.",
-                "parsed": {
-                  "concept": "Connect",
-                  "subject": "classes",
-                  "action": "",
-                  "verb": "Connect",
-                  "negated": false,
-                  "condition": "output"
                 },
                 "valid": true,
                 "error": null,
                 "error_detail": null
               }
             ],
-            "total": 13,
+            "total": 1,
             "errors": 0
           },
           "validateResult": {
             "layer1": {
               "overall": true,
-              "passed": [
-                {
-                  "name": "cochlea/nir_lif_time_constant_positive",
-                  "description": "NIR invariant 'cochlea/nir_lif_time_constant_positive' satisfied",
-                  "result": true,
-                  "code": "cochlea/nir_lif_time_constant_positive",
-                  "message": "NIR invariant 'cochlea/nir_lif_time_constant_positive' satisfied",
-                  "hint": null,
-                  "examples": [],
-                  "line": null,
-                  "source": "layer1",
-                  "field": null,
-                  "value": null,
-                  "lines": [],
-                  "raw": null,
-                  "severity": null
-                },
-                {
-                  "name": "cochlea/nir_lif_resistance_positive",
-                  "description": "NIR invariant 'cochlea/nir_lif_resistance_positive' satisfied",
-                  "result": true,
-                  "code": "cochlea/nir_lif_resistance_positive",
-                  "message": "NIR invariant 'cochlea/nir_lif_resistance_positive' satisfied",
-                  "hint": null,
-                  "examples": [],
-                  "line": null,
-                  "source": "layer1",
-                  "field": null,
-                  "value": null,
-                  "lines": [],
-                  "raw": null,
-                  "severity": null
-                },
-                {
-                  "name": "cochlea/nir_lif_threshold_above_leak",
-                  "description": "NIR invariant 'cochlea/nir_lif_threshold_above_leak' satisfied",
-                  "result": true,
-                  "code": "cochlea/nir_lif_threshold_above_leak",
-                  "message": "NIR invariant 'cochlea/nir_lif_threshold_above_leak' satisfied",
-                  "hint": null,
-                  "examples": [],
-                  "line": null,
-                  "source": "layer1",
-                  "field": null,
-                  "value": null,
-                  "lines": [],
-                  "raw": null,
-                  "severity": null
-                },
-                {
-                  "name": "hidden/nir_lif_time_constant_positive",
-                  "description": "NIR invariant 'hidden/nir_lif_time_constant_positive' satisfied",
-                  "result": true,
-                  "code": "hidden/nir_lif_time_constant_positive",
-                  "message": "NIR invariant 'hidden/nir_lif_time_constant_positive' satisfied",
-                  "hint": null,
-                  "examples": [],
-                  "line": null,
-                  "source": "layer1",
-                  "field": null,
-                  "value": null,
-                  "lines": [],
-                  "raw": null,
-                  "severity": null
-                },
-                {
-                  "name": "hidden/nir_lif_resistance_positive",
-                  "description": "NIR invariant 'hidden/nir_lif_resistance_positive' satisfied",
-                  "result": true,
-                  "code": "hidden/nir_lif_resistance_positive",
-                  "message": "NIR invariant 'hidden/nir_lif_resistance_positive' satisfied",
-                  "hint": null,
-                  "examples": [],
-                  "line": null,
-                  "source": "layer1",
-                  "field": null,
-                  "value": null,
-                  "lines": [],
-                  "raw": null,
-                  "severity": null
-                },
-                {
-                  "name": "hidden/nir_lif_threshold_above_leak",
-                  "description": "NIR invariant 'hidden/nir_lif_threshold_above_leak' satisfied",
-                  "result": true,
-                  "code": "hidden/nir_lif_threshold_above_leak",
-                  "message": "NIR invariant 'hidden/nir_lif_threshold_above_leak' satisfied",
-                  "hint": null,
-                  "examples": [],
-                  "line": null,
-                  "source": "layer1",
-                  "field": null,
-                  "value": null,
-                  "lines": [],
-                  "raw": null,
-                  "severity": null
-                },
-                {
-                  "name": "classes/nir_lif_time_constant_positive",
-                  "description": "NIR invariant 'classes/nir_lif_time_constant_positive' satisfied",
-                  "result": true,
-                  "code": "classes/nir_lif_time_constant_positive",
-                  "message": "NIR invariant 'classes/nir_lif_time_constant_positive' satisfied",
-                  "hint": null,
-                  "examples": [],
-                  "line": null,
-                  "source": "layer1",
-                  "field": null,
-                  "value": null,
-                  "lines": [],
-                  "raw": null,
-                  "severity": null
-                },
-                {
-                  "name": "classes/nir_lif_resistance_positive",
-                  "description": "NIR invariant 'classes/nir_lif_resistance_positive' satisfied",
-                  "result": true,
-                  "code": "classes/nir_lif_resistance_positive",
-                  "message": "NIR invariant 'classes/nir_lif_resistance_positive' satisfied",
-                  "hint": null,
-                  "examples": [],
-                  "line": null,
-                  "source": "layer1",
-                  "field": null,
-                  "value": null,
-                  "lines": [],
-                  "raw": null,
-                  "severity": null
-                },
-                {
-                  "name": "classes/nir_lif_threshold_above_leak",
-                  "description": "NIR invariant 'classes/nir_lif_threshold_above_leak' satisfied",
-                  "result": true,
-                  "code": "classes/nir_lif_threshold_above_leak",
-                  "message": "NIR invariant 'classes/nir_lif_threshold_above_leak' satisfied",
-                  "hint": null,
-                  "examples": [],
-                  "line": null,
-                  "source": "layer1",
-                  "field": null,
-                  "value": null,
-                  "lines": [],
-                  "raw": null,
-                  "severity": null
-                }
-              ],
+              "passed": [],
               "failed": [],
               "warnings": []
             },
             "layer2": {
-              "overall": true,
+              "overall": false,
               "checks_passed": [
                 "empty_network",
-                "zero_edge_network",
-                "single_node_network",
                 "self_referencing_connection",
                 "orphan_population"
               ],
-              "checks_failed": [],
-              "neurons_found": [
-                "classes",
-                "cochlea",
-                "hidden"
-              ]
+              "checks_failed": [
+                {
+                  "code": "zero_edge_network",
+                  "message": "Nodes declared but no Connect statements found.",
+                  "hint": "Rewrite the affected sentences so the network topology and cross-references agree.",
+                  "examples": [
+                    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0"
+                  ],
+                  "line": null,
+                  "raw": null,
+                  "source": "layer2",
+                  "field": null,
+                  "value": null,
+                  "lines": [],
+                  "name": null,
+                  "reason": "Nodes declared but no Connect statements found.",
+                  "check": "zero_edge_network",
+                  "detail": "Nodes declared but no Connect statements found.",
+                  "result": null,
+                  "description": "Nodes declared but no Connect statements found.",
+                  "severity": null
+                },
+                {
+                  "code": "single_node_network",
+                  "message": "Network contains only one node: 'nir.Input_1785146275001'.",
+                  "hint": "Rewrite the affected sentences so the network topology and cross-references agree.",
+                  "examples": [
+                    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0"
+                  ],
+                  "line": null,
+                  "raw": null,
+                  "source": "layer2",
+                  "field": null,
+                  "value": null,
+                  "lines": [],
+                  "name": null,
+                  "reason": "Network contains only one node: 'nir.Input_1785146275001'.",
+                  "check": "single_node_network",
+                  "detail": "Network contains only one node: 'nir.Input_1785146275001'.",
+                  "result": null,
+                  "description": "Network contains only one node: 'nir.Input_1785146275001'.",
+                  "severity": null
+                }
+              ],
+              "neurons_found": []
             },
-            "overall": true,
+            "overall": false,
             "backend_support": {
               "backend": "nir",
-              "verdict": "faithful",
-              "supported_concepts": [
-                "classes",
-                "cochlea",
-                "hidden"
-              ],
+              "verdict": "approximate",
+              "supported_concepts": [],
               "approximated_concepts": [],
               "unsupported_concepts": [],
               "warnings": []
@@ -405,9 +113,7 @@
           },
           "generateResult": null,
           "simulateResult": null,
-          "deployReadinessResult": {
-            "status": "ok"
-          },
+          "deployReadinessResult": null,
           "errorMessage": null,
           "simulationStartTime": null,
           "requestedDuration": null
@@ -185685,7 +185391,7 @@
       }
     ],
     "activeFileId": "untitled-1",
-    "workspaceName": "Untitled Workspace",
+    "workspaceName": "studio-e2e-shd",
     "workspaceSourceKind": null,
     "activePanel": "validation",
     "activePipelineStep": "trainingSandbox",
@@ -185939,49 +185645,49 @@
     "nodeLayout": {
       "input": {
         "x": 45.0,
-        "y": 222.0,
+        "y": 30.0,
         "width": 150.0,
         "height": 132.0,
         "isVisible": true
       },
       "cochlea": {
         "x": 285.0,
-        "y": 222.0,
+        "y": 30.0,
         "width": 150.0,
         "height": 132.0,
         "isVisible": true
       },
       "w_cochlea_hidden": {
         "x": 525.0,
-        "y": 222.0,
+        "y": 30.0,
         "width": 150.0,
         "height": 132.0,
         "isVisible": true
       },
       "hidden": {
-        "x": 765.0,
-        "y": 222.0,
+        "x": 1005.0,
+        "y": 30.0,
         "width": 150.0,
         "height": 132.0,
         "isVisible": true
       },
       "w_hidden_classes": {
-        "x": 1005.0,
-        "y": 222.0,
+        "x": 1245.0,
+        "y": 30.0,
         "width": 150.0,
         "height": 132.0,
         "isVisible": true
       },
       "classes": {
-        "x": 1245.0,
-        "y": 222.0,
+        "x": 1485.0,
+        "y": 30.0,
         "width": 150.0,
         "height": 132.0,
         "isVisible": true
       },
       "output": {
-        "x": 1485.0,
-        "y": 222.0,
+        "x": 1725.0,
+        "y": 30.0,
         "width": 150.0,
         "height": 132.0,
         "isVisible": true

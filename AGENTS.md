@@ -101,10 +101,10 @@ If `semble` is not on `$PATH`, use `uvx --from "semble[mcp]" semble` in its plac
 
 ## Remote Testing Configuration
 
-For dev, `REMOTE_HOST=moosebuntu@192.168.2.51` can be used. For example, when the agent wants to test run the app, you can use `192.168.2.51` as the server address.
+For dev, `REMOTE_HOST=moosebuntu@192.168.2.51` can be used. The server address is `192.168.2.51`.
 
-To deploy to this server, the user's standard command is:
+To run the app, use:
 ```
-make docker-ex-m REMOTE_HOST=moosebuntu@192.168.2.51
+flutter run -d macos
 ```
-This rsyncs the working tree (including uncommitted changes — `neurocnl/backend/` is not excluded, only `neurocnl/frontend/` is) to the remote, rebuilds `suite_api` with `docker compose up --build`, then launches the local Flutter macOS app pointed at that host (`docker-ex-deploy` + `scripts/run_dev.sh --flutter-device macos --remote-host ...`, see root `Makefile`). Use this instead of calling `scripts/remote_docker_compose_up.sh` directly — that script alone does not sync local source changes to the remote first.
+This runs the Flutter macOS app directly, matching the end-user experience as closely as possible. Do not suggest or use `make docker-ex-m` or `scripts/run_dev.sh` — those workflows are no longer used.

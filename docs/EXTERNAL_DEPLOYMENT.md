@@ -5,8 +5,9 @@ This document outlines how to deploy the NeuroMorphicToolKit (NMTK) backend to a
 > **App-driven setup (source-free).** The NMTK desktop app sets up a remote
 > Docker backend by copying only `docker-compose.yml` + `docker-compose.prod.yml`
 > (+ `monitoring/`) to the server and running `docker compose pull && up -d
-> --wait` — it pulls prebuilt images from GHCR, no repo or `make` on the
-> server. This requires the images to be published and public first; see
+> --remove-orphans`, then verifies the required Suite API health endpoint. It
+> pulls prebuilt images from GHCR, no repo or `make` on the server. This
+> requires the images to be published and public first; see
 > [PUBLISHING_IMAGES.md](PUBLISHING_IMAGES.md). The `make docker-ex*` targets
 > below remain the source-build path for development.
 
@@ -60,6 +61,52 @@ docker-ex-i: docker-ex
 1. **SSH Access:** Ensure you have SSH key-based authentication set up to the target server.
 2. **Server Tools:** The target server must have `docker` and the `docker-compose-plugin` installed.
 3. **Network:** Both machines should be on the same local network subnet.
+
+### Using Podman instead of Docker
+
+Every `docker-ex*`/`deploy-prod` Makefile target and `scripts/run_dev.sh --docker`
+accept a `CONTAINER_ENGINE` override (default `docker`):
+
+```bash
+make docker-ex-deploy REMOTE_HOST=user@192.168.1.50 CONTAINER_ENGINE=podman
+make deploy-prod       REMOTE_HOST=user@192.168.1.50 CONTAINER_ENGINE=podman
+./scripts/run_dev.sh --container-engine podman --flutter-device macos
+```
+
+- The target server needs **Podman + a Compose provider** installed. The NMTK
+  client installs Podman when needed, starts the SSH user's rootless
+  `podman.socket`, and routes the Compose provider through
+  `unix:///run/user/<uid>/podman/podman.sock`; no rootful Docker daemon is
+  required.
+- Rootless Podman uses a per-user systemd socket. For manual diagnostics, run
+  `systemctl --user enable --now podman.socket` as the deploy user and set
+  `DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock` before invoking
+  Compose. SSH-only service accounts may also need
+  `sudo loginctl enable-linger <username>`.
+- The published GHCR images are plain OCI images, so `docker-compose.prod.yml`'s
+  `image:` pull path works unmodified under Podman.
+- `remote-setup`'s sudoers rules (`fuser`, `systemctl`, the Akida key script)
+  never touch Docker itself, so rootless Podman needs no extra sudoers entries.
+- The stack is CPU-only and Linux/amd64-only either way — nothing here is
+  Docker-Desktop-specific except `host.docker.internal`, which is already
+  wired through a plain `extra_hosts: host-gateway` entry that Podman also
+  understands.
+- Remote deployments include `docker-compose.remote.yml`. It keeps the
+  internal worker ports (including Lava on `8012`) private on the Compose
+  network, so an existing native service or stale rootless-port helper cannot
+  block startup. Only the client-facing Suite API (`9000`), launcher control
+  API (`8090`), and Jupyter (`8008`) remain published for the Flutter app.
+- Before Compose startup, the launcher probes the client-facing ports and
+  removes only containers carrying the current or legacy NMTK Compose project
+  labels across Docker and Podman. It then runs the project-scoped
+  `compose down --remove-orphans` without removing volumes, so stale NMTK
+  bindings are released without stopping unrelated containers. If a remaining
+  client-facing port is owned by another service, the deployment log identifies
+  its runtime, Compose project, container, and listening process.
+- Remote startup does not use a global Compose `--wait`, because that would
+  turn an optional Lava healthcheck failure into a core deployment failure.
+  Suite API readiness is checked separately; the deployment log records Lava
+  as degraded when its health history or direct `/health` probe is unavailable.
 
 ---
 

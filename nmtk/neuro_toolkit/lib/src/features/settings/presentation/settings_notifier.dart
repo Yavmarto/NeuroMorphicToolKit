@@ -21,6 +21,7 @@ class SettingsNotifier extends _$SettingsNotifier {
   static const String _moduleSettingsKey = 'module_settings';
   static const String _launcherControlApiBaseUrlKey =
       'launcher_control_api_base_url';
+  static const String _suiteApiBaseUrlKey = 'suite_api_base_url';
 
   late final SharedPreferences _prefs;
 
@@ -36,6 +37,7 @@ class SettingsNotifier extends _$SettingsNotifier {
     final logLevel = LogLevel.values[_prefs.getInt(_logLevelKey) ?? 0];
     final launcherControlApiBaseUrl =
         _prefs.getString(_launcherControlApiBaseUrlKey);
+    final suiteApiBaseUrl = _prefs.getString(_suiteApiBaseUrlKey);
 
     Map<String, Map<String, dynamic>> moduleSettings = {};
     final String? moduleSettingsJson = _prefs.getString(_moduleSettingsKey);
@@ -64,6 +66,7 @@ class SettingsNotifier extends _$SettingsNotifier {
       logLevel: logLevel,
       moduleSettings: moduleSettings,
       launcherControlApiBaseUrl: launcherControlApiBaseUrl,
+      suiteApiBaseUrl: suiteApiBaseUrl,
     );
   }
 
@@ -121,6 +124,26 @@ class SettingsNotifier extends _$SettingsNotifier {
 
     state = state.whenData(
       (s) => s.copyWith(launcherControlApiBaseUrl: normalizedUrl),
+    );
+  }
+
+  Future<void> setSuiteApiBaseUrl(String? value) async {
+    final trimmed = value?.trim() ?? '';
+    String? normalizedUrl;
+    if (trimmed.isNotEmpty) {
+      final withScheme = trimmed.contains('://') ? trimmed : 'http://$trimmed';
+      final parsed = Uri.parse(withScheme);
+      normalizedUrl = parsed.hasPort
+          ? parsed.toString()
+          : parsed.replace(port: 9000).toString();
+    }
+    if (normalizedUrl == null) {
+      await _prefs.remove(_suiteApiBaseUrlKey);
+    } else {
+      await _prefs.setString(_suiteApiBaseUrlKey, normalizedUrl);
+    }
+    state = state.whenData(
+      (settings) => settings.copyWith(suiteApiBaseUrl: normalizedUrl),
     );
   }
 

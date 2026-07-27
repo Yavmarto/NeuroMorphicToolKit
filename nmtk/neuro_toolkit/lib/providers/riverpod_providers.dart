@@ -4,8 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:neuro_toolkit/routing/router.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/deployment/client_deployment_service.dart';
+import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 import 'package:neuro_toolkit/services/environment_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
+import 'package:neuro_toolkit/src/features/launcher_bootstrap/presentation/launcher_bootstrap_notifier.dart';
 
 // Re-export generated Riverpod providers for convenience
 export 'package:neuro_toolkit/src/features/app/presentation/app_notifier.dart'
@@ -43,16 +47,26 @@ final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   );
 });
 
+final deploymentServiceProvider = Provider<DeploymentService>((ref) {
+  return ClientDeploymentService();
+});
+
+final updateServiceProvider = Provider<UpdateService>((ref) {
+  return UpdateService();
+});
+
 final launcherBootstrapStateProvider = Provider<LauncherBootstrapState>((ref) {
-  return LauncherBootstrapState.ready(ControlApiService.resolveBaseUri());
+  final result = ref.watch(launcherBootstrapProvider).value;
+  return result?.bootstrapState ?? LauncherBootstrapState.noServerSelected();
 });
 
 final controlApiServiceProvider = Provider<ControlApiService>((ref) {
-  final bootstrapState = ref.watch(launcherBootstrapStateProvider);
-  return ControlApiService(
-    baseUri: bootstrapState.baseUri,
-    analyticsService: ref.watch(analyticsServiceProvider),
-  );
+  final result = ref.watch(launcherBootstrapProvider).value;
+  final controlApiService = result?.controlApiService;
+  if (controlApiService == null) {
+    throw StateError('No launcher server has been selected.');
+  }
+  return controlApiService;
 });
 
 final environmentApiServiceProvider = Provider<EnvironmentApiService>((ref) {

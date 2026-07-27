@@ -20,11 +20,11 @@ from pathlib import Path
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    await neurohub_startup()
+    # await neurohub_startup()
     await neurocnl_startup(app)
     yield
     await neurocnl_shutdown()
-    await neurohub_shutdown()
+    # await neurohub_shutdown()
 
 
 app = FastAPI(
@@ -63,8 +63,8 @@ app.include_router(neurobench_router)
 from suite_api.domains.neurosense.router import router as neurosense_router  # noqa: E402
 app.include_router(neurosense_router)
 
-from suite_api.domains.neurohub.router import router as neurohub_router  # noqa: E402
-app.include_router(neurohub_router)
+# from suite_api.domains.neurohub.router import router as neurohub_router  # noqa: E402
+# app.include_router(neurohub_router)
 
 from suite_api.domains.jupyter.router import router as jupyter_router  # noqa: E402
 app.include_router(jupyter_router)

@@ -59,7 +59,7 @@ class NmtkProgressCard extends StatelessWidget {
           ),
           if (errorText != null) ...[
             const SizedBox(height: 8),
-            SelectableText(
+            Text(
               errorText!,
               style: Zeta.of(
                 context,

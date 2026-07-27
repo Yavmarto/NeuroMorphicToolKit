@@ -22,6 +22,7 @@ mixin _$SettingsState {
   LogLevel get logLevel;
   Map<String, Map<String, dynamic>> get moduleSettings;
   String? get launcherControlApiBaseUrl;
+  String? get suiteApiBaseUrl;
 
   /// Create a copy of SettingsState
   /// with the given fields replaced by the non-null parameter values.
@@ -52,7 +53,9 @@ mixin _$SettingsState {
                 .equals(other.moduleSettings, moduleSettings) &&
             (identical(other.launcherControlApiBaseUrl,
                     launcherControlApiBaseUrl) ||
-                other.launcherControlApiBaseUrl == launcherControlApiBaseUrl));
+                other.launcherControlApiBaseUrl == launcherControlApiBaseUrl) &&
+            (identical(other.suiteApiBaseUrl, suiteApiBaseUrl) ||
+                other.suiteApiBaseUrl == suiteApiBaseUrl));
   }
 
   @override
@@ -65,11 +68,12 @@ mixin _$SettingsState {
       fontSizeFactor,
       logLevel,
       const DeepCollectionEquality().hash(moduleSettings),
-      launcherControlApiBaseUrl);
+      launcherControlApiBaseUrl,
+      suiteApiBaseUrl);
 
   @override
   String toString() {
-    return 'SettingsState(telemetryEnabled: $telemetryEnabled, remoteEndpoint: $remoteEndpoint, themeMode: $themeMode, isHighContrast: $isHighContrast, fontSizeFactor: $fontSizeFactor, logLevel: $logLevel, moduleSettings: $moduleSettings, launcherControlApiBaseUrl: $launcherControlApiBaseUrl)';
+    return 'SettingsState(telemetryEnabled: $telemetryEnabled, remoteEndpoint: $remoteEndpoint, themeMode: $themeMode, isHighContrast: $isHighContrast, fontSizeFactor: $fontSizeFactor, logLevel: $logLevel, moduleSettings: $moduleSettings, launcherControlApiBaseUrl: $launcherControlApiBaseUrl, suiteApiBaseUrl: $suiteApiBaseUrl)';
   }
 }
 
@@ -87,7 +91,8 @@ abstract mixin class $SettingsStateCopyWith<$Res> {
       double fontSizeFactor,
       LogLevel logLevel,
       Map<String, Map<String, dynamic>> moduleSettings,
-      String? launcherControlApiBaseUrl});
+      String? launcherControlApiBaseUrl,
+      String? suiteApiBaseUrl});
 }
 
 /// @nodoc
@@ -111,6 +116,7 @@ class _$SettingsStateCopyWithImpl<$Res>
     Object? logLevel = null,
     Object? moduleSettings = null,
     Object? launcherControlApiBaseUrl = freezed,
+    Object? suiteApiBaseUrl = freezed,
   }) {
     return _then(_self.copyWith(
       telemetryEnabled: null == telemetryEnabled
@@ -144,6 +150,10 @@ class _$SettingsStateCopyWithImpl<$Res>
       launcherControlApiBaseUrl: freezed == launcherControlApiBaseUrl
           ? _self.launcherControlApiBaseUrl
           : launcherControlApiBaseUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      suiteApiBaseUrl: freezed == suiteApiBaseUrl
+          ? _self.suiteApiBaseUrl
+          : suiteApiBaseUrl // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }
@@ -250,7 +260,8 @@ extension SettingsStatePatterns on SettingsState {
             double fontSizeFactor,
             LogLevel logLevel,
             Map<String, Map<String, dynamic>> moduleSettings,
-            String? launcherControlApiBaseUrl)?
+            String? launcherControlApiBaseUrl,
+            String? suiteApiBaseUrl)?
         $default, {
     required TResult orElse(),
   }) {
@@ -265,7 +276,8 @@ extension SettingsStatePatterns on SettingsState {
             _that.fontSizeFactor,
             _that.logLevel,
             _that.moduleSettings,
-            _that.launcherControlApiBaseUrl);
+            _that.launcherControlApiBaseUrl,
+            _that.suiteApiBaseUrl);
       case _:
         return orElse();
     }
@@ -294,7 +306,8 @@ extension SettingsStatePatterns on SettingsState {
             double fontSizeFactor,
             LogLevel logLevel,
             Map<String, Map<String, dynamic>> moduleSettings,
-            String? launcherControlApiBaseUrl)
+            String? launcherControlApiBaseUrl,
+            String? suiteApiBaseUrl)
         $default,
   ) {
     final _that = this;
@@ -308,7 +321,8 @@ extension SettingsStatePatterns on SettingsState {
             _that.fontSizeFactor,
             _that.logLevel,
             _that.moduleSettings,
-            _that.launcherControlApiBaseUrl);
+            _that.launcherControlApiBaseUrl,
+            _that.suiteApiBaseUrl);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -336,7 +350,8 @@ extension SettingsStatePatterns on SettingsState {
             double fontSizeFactor,
             LogLevel logLevel,
             Map<String, Map<String, dynamic>> moduleSettings,
-            String? launcherControlApiBaseUrl)?
+            String? launcherControlApiBaseUrl,
+            String? suiteApiBaseUrl)?
         $default,
   ) {
     final _that = this;
@@ -350,7 +365,8 @@ extension SettingsStatePatterns on SettingsState {
             _that.fontSizeFactor,
             _that.logLevel,
             _that.moduleSettings,
-            _that.launcherControlApiBaseUrl);
+            _that.launcherControlApiBaseUrl,
+            _that.suiteApiBaseUrl);
       case _:
         return null;
     }
@@ -368,7 +384,8 @@ class _SettingsState implements SettingsState {
       this.fontSizeFactor = 1.0,
       this.logLevel = LogLevel.info,
       final Map<String, Map<String, dynamic>> moduleSettings = const {},
-      this.launcherControlApiBaseUrl})
+      this.launcherControlApiBaseUrl,
+      this.suiteApiBaseUrl})
       : _moduleSettings = moduleSettings;
 
   @override
@@ -399,6 +416,8 @@ class _SettingsState implements SettingsState {
 
   @override
   final String? launcherControlApiBaseUrl;
+  @override
+  final String? suiteApiBaseUrl;
 
   /// Create a copy of SettingsState
   /// with the given fields replaced by the non-null parameter values.
@@ -429,7 +448,9 @@ class _SettingsState implements SettingsState {
                 .equals(other._moduleSettings, _moduleSettings) &&
             (identical(other.launcherControlApiBaseUrl,
                     launcherControlApiBaseUrl) ||
-                other.launcherControlApiBaseUrl == launcherControlApiBaseUrl));
+                other.launcherControlApiBaseUrl == launcherControlApiBaseUrl) &&
+            (identical(other.suiteApiBaseUrl, suiteApiBaseUrl) ||
+                other.suiteApiBaseUrl == suiteApiBaseUrl));
   }
 
   @override
@@ -442,11 +463,12 @@ class _SettingsState implements SettingsState {
       fontSizeFactor,
       logLevel,
       const DeepCollectionEquality().hash(_moduleSettings),
-      launcherControlApiBaseUrl);
+      launcherControlApiBaseUrl,
+      suiteApiBaseUrl);
 
   @override
   String toString() {
-    return 'SettingsState(telemetryEnabled: $telemetryEnabled, remoteEndpoint: $remoteEndpoint, themeMode: $themeMode, isHighContrast: $isHighContrast, fontSizeFactor: $fontSizeFactor, logLevel: $logLevel, moduleSettings: $moduleSettings, launcherControlApiBaseUrl: $launcherControlApiBaseUrl)';
+    return 'SettingsState(telemetryEnabled: $telemetryEnabled, remoteEndpoint: $remoteEndpoint, themeMode: $themeMode, isHighContrast: $isHighContrast, fontSizeFactor: $fontSizeFactor, logLevel: $logLevel, moduleSettings: $moduleSettings, launcherControlApiBaseUrl: $launcherControlApiBaseUrl, suiteApiBaseUrl: $suiteApiBaseUrl)';
   }
 }
 
@@ -466,7 +488,8 @@ abstract mixin class _$SettingsStateCopyWith<$Res>
       double fontSizeFactor,
       LogLevel logLevel,
       Map<String, Map<String, dynamic>> moduleSettings,
-      String? launcherControlApiBaseUrl});
+      String? launcherControlApiBaseUrl,
+      String? suiteApiBaseUrl});
 }
 
 /// @nodoc
@@ -490,6 +513,7 @@ class __$SettingsStateCopyWithImpl<$Res>
     Object? logLevel = null,
     Object? moduleSettings = null,
     Object? launcherControlApiBaseUrl = freezed,
+    Object? suiteApiBaseUrl = freezed,
   }) {
     return _then(_SettingsState(
       telemetryEnabled: null == telemetryEnabled
@@ -523,6 +547,10 @@ class __$SettingsStateCopyWithImpl<$Res>
       launcherControlApiBaseUrl: freezed == launcherControlApiBaseUrl
           ? _self.launcherControlApiBaseUrl
           : launcherControlApiBaseUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      suiteApiBaseUrl: freezed == suiteApiBaseUrl
+          ? _self.suiteApiBaseUrl
+          : suiteApiBaseUrl // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }

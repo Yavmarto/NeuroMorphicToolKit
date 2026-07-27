@@ -11,7 +11,6 @@ class NmtkErrorCard extends StatelessWidget {
     this.title = 'Workflow Error',
     this.subtitle = 'The workflow stopped before completion.',
     this.action,
-    this.selectable = true,
     this.prefix,
   });
 
@@ -19,7 +18,6 @@ class NmtkErrorCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Widget? action;
-  final bool selectable;
   final Widget? prefix;
 
   @override
@@ -35,23 +33,16 @@ class NmtkErrorCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (prefix != null) ...[prefix!, const SizedBox(height: 8)],
-          selectable
-              ? SelectableText(
-                  message,
-                  style: Zeta.of(
-                    context,
-                  ).textStyles.bodyMedium.copyWith(color: errColor),
-                )
-              : Text(
-                  message,
-                  style: Zeta.of(
-                    context,
-                  ).textStyles.bodyMedium.copyWith(color: errColor),
-                ),
+          Text(
+            message,
+            style: Zeta.of(
+              context,
+            ).textStyles.bodyMedium.copyWith(color: errColor),
+          ),
         ],
       ),
     );
 
-    return selectable ? SelectionArea(child: card) : card;
+    return card;
   }
 }

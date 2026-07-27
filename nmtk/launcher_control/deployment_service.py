@@ -9,6 +9,7 @@ from typing import Any
 from uuid import uuid4
 
 from .deployment_contracts import (
+    DEPLOYMENT_CONTAINER_ENGINES,
     DeploymentEvent,
     DeploymentJob,
     DeploymentTarget,
@@ -46,7 +47,11 @@ class DeploymentService:
         return self._store.selected_target()
 
     def is_ready(self) -> bool:
-        if os.environ.get('NMTK_BACKEND_DEPLOYMENT_READY', '').lower() in ('1', 'true', 'yes'):
+        if os.environ.get("NMTK_BACKEND_DEPLOYMENT_READY", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
             return True
         selected = self._store.selected_target()
         return bool(selected and selected.get("lastReadiness") == "ready")
@@ -59,6 +64,10 @@ class DeploymentService:
         """
         from .deployment_user_bootstrap import ssh_root_bootstrap
 
+        container_engine = str(payload.get("containerEngine") or "docker")
+        if container_engine not in DEPLOYMENT_CONTAINER_ENGINES:
+            raise ValueError(f"Unsupported container engine: {container_engine}")
+
         return ssh_root_bootstrap(
             host=str(payload.get("host") or ""),
             ssh_port=int(payload.get("sshPort") or 22),
@@ -66,6 +75,7 @@ class DeploymentService:
             root_password=str(payload.get("rootPassword") or ""),
             root_private_key=str(payload.get("rootPrivateKey") or ""),
             deploy_username=str(payload.get("deployUsername") or "nmtk"),
+            container_engine=container_engine,
         )
 
     def preflight(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -88,6 +98,7 @@ class DeploymentService:
             id=str(payload.get("id") or uuid4()),
             target_id=target.id,
             mode=str(payload.get("mode") or target.mode),
+            clean_install=bool(payload.get("cleanInstall") or False),
         )
         self._store.save_job(job)
         thread = threading.Thread(
@@ -142,8 +153,11 @@ class DeploymentService:
         try:
             executor.run(
                 target,
-                lambda stage, message, percent: self._emit(job, stage, message, percent),
+                lambda stage, message, percent: self._emit(
+                    job, stage, message, percent
+                ),
                 log=lambda line: self._emit_log(job, line),
+                clean_install=job.clean_install,
             )
             if self._is_cancelled(job.id):
                 self.cancel_job(job.id)
@@ -168,11 +182,17 @@ class DeploymentService:
             self._store.save_job(job)
             self._store.update_target_readiness(
                 target.id,
-                readiness="failed",
+                readiness=(
+                    "degraded"
+                    if str(exc).startswith("degraded optional capability:")
+                    else "failed"
+                ),
                 failure_reason=str(exc),
             )
 
-    def _emit(self, job: DeploymentJob, stage: str, message: str, percent: float) -> None:
+    def _emit(
+        self, job: DeploymentJob, stage: str, message: str, percent: float
+    ) -> None:
         if self._is_cancelled(job.id) and stage not in TERMINAL_JOB_STAGES:
             raise RuntimeError("Deployment cancelled")
         event = DeploymentEvent(

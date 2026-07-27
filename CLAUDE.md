@@ -12,7 +12,7 @@
     Every answer must include a short description of what the problem is (exactly 2 sentences), how it was solved (exactly 2 sentences), and where to notice the difference and restart info (exactly 2 sentences). All in plain English.
   </end_of_task_reporting>
   <deployment>
-    User's standard command to deploy to their dev server: `make docker-ex-m REMOTE_HOST=moosebuntu@192.168.2.51`. Run from repo root — rsyncs uncommitted local changes, rebuilds `suite_api`, launches the Flutter macOS app against that host. See root `AGENTS.md` / `Makefile` (`docker-ex-m` → `docker-ex-deploy`).
+    User's standard command to run/test the app: `flutter run -d macos`, run from `nmtk/neuro_toolkit`. The dev backend at `moosebuntu@192.168.2.51` is already running — this does not deploy or rebuild anything, it just launches the Flutter macOS app locally. `make docker-ex-m` / `scripts/run_dev.sh` are deprecated — do not suggest or use them (see root `AGENTS.md`, "Remote Testing Configuration"). Since plain `flutter run` passes no `--dart-define` pointing at the remote host, the app boots against its hardcoded `127.0.0.1` default and lands on `/setup` with no backend found — use the "Already have a server running?" field on that screen (`backend_setup.dart`) to connect directly to `192.168.2.51`.
   </deployment>
 </agent_instructions>
 ## GBrain Configuration (configured by /setup-gbrain)

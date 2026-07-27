@@ -9,6 +9,7 @@ import 'package:neuro_toolkit/services/bundle_manager.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 
 enum LauncherBootstrapStatus {
+  noServerSelected,
   notStarted,
   starting,
   ready,
@@ -18,7 +19,7 @@ enum LauncherBootstrapStatus {
 class LauncherBootstrapState {
   const LauncherBootstrapState({
     required this.status,
-    required this.baseUri,
+    this.baseUri,
     this.message,
     this.controlApiReachable = false,
     this.hostReachableNoServer = false,
@@ -30,6 +31,13 @@ class LauncherBootstrapState {
       baseUri: baseUri,
       message: message,
       controlApiReachable: true,
+    );
+  }
+
+  factory LauncherBootstrapState.noServerSelected() {
+    return const LauncherBootstrapState(
+      status: LauncherBootstrapStatus.noServerSelected,
+      message: 'Choose a launcher server before opening the workspace.',
     );
   }
 
@@ -49,7 +57,7 @@ class LauncherBootstrapState {
   }
 
   final LauncherBootstrapStatus status;
-  final Uri baseUri;
+  final Uri? baseUri;
   final String? message;
 
   /// True whenever the control API's `/health` endpoint answered at all —
@@ -173,6 +181,7 @@ class LauncherControlBootstrapService {
   final Uri? _explicitBaseUriOverride;
 
   LauncherBootstrapState? _cachedState;
+  Process? _ownedProcess;
 
   Future<LauncherBootstrapState> ensureReady() async {
     final cached = _cachedState;
@@ -180,6 +189,14 @@ class LauncherControlBootstrapService {
       return cached;
     }
     final resolved = await _ensureReadyInternal();
+    _cachedState = resolved;
+    return resolved;
+  }
+
+  /// Starts or reuses the local controller only after the user explicitly
+  /// chooses the setup flow. Normal application startup must never call this.
+  Future<LauncherBootstrapState> ensureLocalReady() async {
+    final resolved = await _ensureLocalReady();
     _cachedState = resolved;
     return resolved;
   }
@@ -223,13 +240,25 @@ class LauncherControlBootstrapService {
       );
     }
 
+    return _ensureLocalReady();
+  }
+
+  Future<LauncherBootstrapState> _ensureLocalReady() async {
     final localBaseUri = _localBaseUri();
     if (_environment.isWeb || !_environment.isNativeDesktop) {
       return LauncherBootstrapState.ready(localBaseUri);
     }
 
+    // Kill any stale orphan from a previous session before probing so that
+    // code changes to the Python service always take effect on restart.
+    // We only do this once per app lifetime: if _ownedProcess is already set,
+    // the current process was started by this instance and is up-to-date.
+    if (_ownedProcess == null) {
+      await _killStaleLauncherProcess();
+    }
+
     final existingHealth = await _probeHealth(localBaseUri);
-    if (existingHealth.ready) {
+    if (existingHealth.ready && _ownedProcess != null) {
       return LauncherBootstrapState.ready(localBaseUri);
     }
     if (existingHealth.failureMessage != null) {
@@ -258,7 +287,7 @@ class LauncherControlBootstrapService {
     }
 
     try {
-      await _environment.startProcess(
+      final process = await _environment.startProcess(
         python,
         <String>[
           launchSpec.scriptPath,
@@ -275,6 +304,7 @@ class LauncherControlBootstrapService {
           if (_environment.isBundled) 'NMTK_BUNDLED_MODE': '1',
         },
       );
+      _ownedProcess = process;
     } catch (error) {
       return LauncherBootstrapState.preflightFailed(
         localBaseUri,
@@ -321,6 +351,21 @@ class LauncherControlBootstrapService {
 
   Uri _localBaseUri() {
     return Uri.parse('http://127.0.0.1:${ControlApiService.configuredPort}');
+  }
+
+  /// Kill any orphaned launcher_control_service.py process left over from a
+  /// previous app session. Uses `pkill -f` on macOS/Linux which matches the
+  /// full command line, so it's precise enough to avoid killing unrelated
+  /// Python processes.
+  Future<void> _killStaleLauncherProcess() async {
+    if (!Platform.isMacOS && !Platform.isLinux) return;
+    try {
+      await Process.run('pkill', ['-f', 'launcher_control_service.py']);
+      // Give the OS a moment to reclaim the port before we probe/start.
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+    } catch (_) {
+      // pkill not available or no matching process — safe to ignore.
+    }
   }
 
   Future<_HealthProbeResult> _probeHealth(Uri baseUri) async {

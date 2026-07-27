@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ENGINE="${1:-docker}"
+BACKEND_PORT="${2:-9000}"
+IMAGE_TAG="${3:-latest}"
+CLEAN_INSTALL="${4:-false}"
+PUBLIC_HOST="${5:-127.0.0.1}"
+STATUS_FILE="${6:-deployment.status}"
+LOG_FILE="${7:-deployment.log}"
+
+write_status() {
+  printf '%s|%s|%s\n' "$1" "$2" "$3" >"$STATUS_FILE"
+  printf '[nmtk-deploy] %s\n' "$3" >>"$LOG_FILE"
+}
+
+compose() {
+  "$ENGINE" compose \
+    --project-name nmtk \
+    -f docker-compose.yml \
+    -f docker-compose.prod.yml \
+    -f docker-compose.remote.yml \
+    "$@"
+}
+
+trap 'write_status failed 100 "Deployment failed; inspect deployment.log"' ERR
+
+export SUITE_API_PORT="$BACKEND_PORT"
+export LAUNCHER_CONTROL_PORT=8090
+export NMTK_IMAGE_TAG="$IMAGE_TAG"
+export JUPYTER_PUBLIC_URL="http://$PUBLIC_HOST:8008/lab"
+
+write_status preflight_running 10 "Validating container provider"
+"$ENGINE" info >>"$LOG_FILE" 2>&1
+compose config --quiet >>"$LOG_FILE" 2>&1
+
+if [ "$CLEAN_INSTALL" = "true" ]; then
+  write_status installing_prerequisites 20 "Removing existing data volumes"
+  compose down -v --remove-orphans >>"$LOG_FILE" 2>&1 || true
+else
+  compose down --remove-orphans >>"$LOG_FILE" 2>&1 || true
+fi
+
+write_status pulling_images 45 "Pulling backend images"
+compose pull >>"$LOG_FILE" 2>&1
+
+write_status starting_containers 80 "Starting backend containers"
+compose up -d --remove-orphans >>"$LOG_FILE" 2>&1
+
+write_status verifying_suite_api 90 "Waiting for Suite API"
+for _attempt in $(seq 1 60); do
+  if curl --silent --show-error --fail \
+    "http://127.0.0.1:$BACKEND_PORT/api/suite/health" \
+    >>"$LOG_FILE" 2>&1; then
+    break
+  fi
+  sleep 2
+done
+curl --silent --show-error --fail \
+  "http://127.0.0.1:$BACKEND_PORT/api/suite/health" \
+  >>"$LOG_FILE" 2>&1
+
+write_status verifying_launcher_control 96 "Waiting for launcher control"
+for _attempt in $(seq 1 60); do
+  if curl --silent --show-error --fail \
+    "http://127.0.0.1:8090/health" >>"$LOG_FILE" 2>&1; then
+    break
+  fi
+  sleep 2
+done
+curl --silent --show-error --fail \
+  "http://127.0.0.1:8090/health" >>"$LOG_FILE" 2>&1
+
+write_status verifying_optional_capabilities 98 "Checking optional capabilities"
+if ! curl --silent --show-error --fail \
+  "http://127.0.0.1:8008/api/status" >>"$LOG_FILE" 2>&1; then
+  printf '%s\n' \
+    "degraded optional capability: Jupyter is not ready; core services are available." \
+    >>"$LOG_FILE"
+fi
+
+write_status completed 100 "Backend and launcher control are ready"

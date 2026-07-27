@@ -15,6 +15,7 @@ class DeploymentTarget {
     this.apiServer = '',
     this.imageTag = 'latest',
     this.domain = '',
+    this.containerEngine = 'docker',
     this.lastReadiness = 'unknown',
     this.lastDeployedVersion = '',
     this.lastFailureReason = '',
@@ -36,6 +37,7 @@ class DeploymentTarget {
   final String apiServer;
   final String imageTag;
   final String domain;
+  final String containerEngine;
   final String lastReadiness;
   final String lastDeployedVersion;
   final String lastFailureReason;
@@ -58,6 +60,7 @@ class DeploymentTarget {
       apiServer: json['apiServer'] as String? ?? '',
       imageTag: json['imageTag'] as String? ?? 'latest',
       domain: json['domain'] as String? ?? '',
+      containerEngine: json['containerEngine'] as String? ?? 'docker',
       lastReadiness: json['lastReadiness'] as String? ?? 'unknown',
       lastDeployedVersion: json['lastDeployedVersion'] as String? ?? '',
       lastFailureReason: json['lastFailureReason'] as String? ?? '',
@@ -81,7 +84,43 @@ class DeploymentTarget {
         'apiServer': apiServer,
         'imageTag': imageTag,
         'domain': domain,
+        'containerEngine': containerEngine,
+        'lastReadiness': lastReadiness,
+        'lastDeployedVersion': lastDeployedVersion,
+        'lastFailureReason': lastFailureReason,
+        if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       };
+
+  DeploymentTarget copyWith({
+    String? host,
+    String? apiServer,
+    String? lastReadiness,
+    String? lastFailureReason,
+    DateTime? updatedAt,
+  }) {
+    return DeploymentTarget(
+      id: id,
+      displayName: displayName,
+      targetType: targetType,
+      mode: mode,
+      authMode: authMode,
+      backendPort: backendPort,
+      host: host ?? this.host,
+      sshPort: sshPort,
+      username: username,
+      installRoot: installRoot,
+      namespace: namespace,
+      context: context,
+      apiServer: apiServer ?? this.apiServer,
+      imageTag: imageTag,
+      domain: domain,
+      containerEngine: containerEngine,
+      lastReadiness: lastReadiness ?? this.lastReadiness,
+      lastDeployedVersion: lastDeployedVersion,
+      lastFailureReason: lastFailureReason ?? this.lastFailureReason,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
 
 class DeploymentPreflightResult {
@@ -172,6 +211,39 @@ class DeploymentJob {
           .toList(growable: false),
       error: json['error'] as String? ?? '',
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'targetId': targetId,
+        'mode': mode,
+        'stage': stage,
+        'percent': percent,
+        'stageLabel': stageLabel,
+        'logs': logs,
+        'error': error,
+        if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      };
+
+  DeploymentJob copyWith({
+    String? stage,
+    double? percent,
+    String? stageLabel,
+    List<String>? logs,
+    String? error,
+    DateTime? updatedAt,
+  }) {
+    return DeploymentJob(
+      id: id,
+      targetId: targetId,
+      mode: mode,
+      stage: stage ?? this.stage,
+      percent: percent ?? this.percent,
+      stageLabel: stageLabel ?? this.stageLabel,
+      logs: logs ?? this.logs,
+      error: error ?? this.error,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

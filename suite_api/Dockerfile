@@ -61,8 +61,6 @@ RUN addgroup --system app && adduser --system --ingroup app app \
 # Chowning /repo recursively was walking thousands of inodes for no benefit.
 ENV HOME=/home/app
 ENV XDG_CACHE_HOME=/home/app/.cache
-ENV NEUROCNL_DATA_DIR=/home/app/data
-ENV NEUROHUB_DB_URL=sqlite:////home/app/data/neurohub.db
 ENV NMTK_REPO_ROOT=/repo
 USER app
 EXPOSE 9000

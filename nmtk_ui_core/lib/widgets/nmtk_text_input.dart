@@ -27,6 +27,7 @@ class NmtkTextInput extends StatefulWidget {
     this.suffix,
     this.errorText,
     this.validator,
+    this.valueSanitizer,
   });
 
   final TextEditingController? controller;
@@ -46,6 +47,10 @@ class NmtkTextInput extends StatefulWidget {
   final Widget? suffix;
   final String? errorText;
   final FormFieldValidator<String>? validator;
+
+  /// Optionally normalizes input before it is exposed to callers or written
+  /// back to [controller]. This keeps constrained fields usable while focused.
+  final String Function(String value)? valueSanitizer;
 
   @override
   State<NmtkTextInput> createState() => _NmtkTextInputState();
@@ -84,16 +89,18 @@ class _NmtkTextInputState extends State<NmtkTextInput> {
       oldWidget.controller?.removeListener(_onControllerChanged);
       widget.controller?.addListener(_onControllerChanged);
     }
-    
+
     if (oldWidget.focusNode != widget.focusNode) {
       if (oldWidget.focusNode == null) _focusNode.dispose();
       _focusNode = widget.focusNode ?? FocusNode();
     }
 
     if (_focusNode.hasFocus) return;
-    
+
     final newText = widget.controller?.text ?? widget.initialValue ?? '';
-    if ((oldWidget.initialValue != widget.initialValue || oldWidget.controller != widget.controller) && _lastValue != newText) {
+    if ((oldWidget.initialValue != widget.initialValue ||
+            oldWidget.controller != widget.controller) &&
+        _lastValue != newText) {
       _stableInitialValue = newText;
       _lastValue = newText;
     }
@@ -110,32 +117,44 @@ class _NmtkTextInputState extends State<NmtkTextInput> {
 
   @override
   Widget build(BuildContext context) {
-    return ZetaTextInput(
-      initialValue: _stableInitialValue,
-      focusNode: _focusNode,
-      label: widget.label,
-      hintText: widget.hintText,
-      placeholder: widget.placeholder,
-      keyboardType: widget.keyboardType,
-      obscureText: widget.obscureText,
-      // maxLines/minLines aren't forwarded: zeta_flutter 1.4.5's
-      // ZetaTextInput has no such parameters. Kept on this widget's own API
-      // so callers don't break; currently a no-op until Zeta adds support.
-      disabled: widget.disabled,
-      prefix: widget.prefix,
-      suffix: widget.suffix,
-      errorText: widget.errorText,
-      onChange: (String? value) {
-        if (value == null || widget.disabled) return;
-        _lastValue = value;
-        widget.onChange?.call(value);
-        if (widget.controller != null && widget.controller!.text != value) {
-          widget.controller!.removeListener(_onControllerChanged);
-          widget.controller!.text = value;
-          widget.controller!.addListener(_onControllerChanged);
-        }
-      },
-      onFieldSubmitted: widget.onFieldSubmitted,
+    // Disabled so an ambient SelectionArea/SelectableRegion ancestor doesn't
+    // also try to track keyboard/selection state for this focused field --
+    // nesting a focused EditableText under an active SelectableRegion
+    // without opting out is a known trigger for HardwareKeyboard's
+    // "!_pressedKeys.containsKey(event.physicalKey)" assertion on desktop.
+    return SelectionContainer.disabled(
+      child: ZetaTextInput(
+        initialValue: _stableInitialValue,
+        focusNode: _focusNode,
+        label: widget.label,
+        hintText: widget.hintText,
+        placeholder: widget.placeholder,
+        keyboardType: widget.keyboardType,
+        obscureText: widget.obscureText,
+        // maxLines/minLines aren't forwarded: zeta_flutter 1.4.5's
+        // ZetaTextInput has no such parameters. Kept on this widget's own API
+        // so callers don't break; currently a no-op until Zeta adds support.
+        disabled: widget.disabled,
+        prefix: widget.prefix,
+        suffix: widget.suffix,
+        errorText: widget.errorText,
+        onChange: (String? value) {
+          if (value == null || widget.disabled) return;
+          final sanitized = widget.valueSanitizer?.call(value) ?? value;
+          _lastValue = sanitized;
+          widget.onChange?.call(sanitized);
+          if (widget.controller != null &&
+              widget.controller!.text != sanitized) {
+            widget.controller!.removeListener(_onControllerChanged);
+            widget.controller!.value = TextEditingValue(
+              text: sanitized,
+              selection: TextSelection.collapsed(offset: sanitized.length),
+            );
+            widget.controller!.addListener(_onControllerChanged);
+          }
+        },
+        onFieldSubmitted: widget.onFieldSubmitted,
+      ),
     );
   }
 }

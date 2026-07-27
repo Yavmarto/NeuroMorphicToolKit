@@ -2,8 +2,8 @@
 
 set -e
 
-# Use the provided username or fallback to the current gh cli user/system user
-GITHUB_USER=${1:-$(gh api user -q ".login" 2>/dev/null || echo "$USER")}
+# Use the provided org/username or fallback to the canonical GitHub org for this repo
+GITHUB_USER=${1:-completed-spoon-6}
 GITHUB_USER=$(echo "$GITHUB_USER" | tr '[:upper:]' '[:lower:]')
 REPO_NAME="neuromorphictoolkit"
 

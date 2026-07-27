@@ -8,9 +8,25 @@ ssh_opts="${SSH_OPTS:-}"
 remote_ip="${remote_host#*@}"
 compose_file_args="${COMPOSE_FILE_ARGS:-}"
 neurochip_hw_worker_api_key="${NEUROCHIP_HW_WORKER_API_KEY:-}"
+container_engine="${CONTAINER_ENGINE:-docker}"
 
-compose_cmd="cd ${deploy_dir} && BUILDKIT_STEP_LOG_MAX_SIZE=-1 DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 LAUNCHER_CONTROL_PORT=${launcher_control_port} JUPYTER_PUBLIC_URL=http://${remote_ip}:8008/lab NEUROCHIP_HW_WORKER_API_KEY=${neurochip_hw_worker_api_key} docker compose ${compose_file_args} up --build -d --wait --remove-orphans"
-repair_cmd="cd ${deploy_dir} && { docker compose rm -sf suite_api 2>/dev/null || true; docker image rm -f nmtk-deploy-suite_api:latest neuromorphictoolkit-suite_api:latest 2>/dev/null || true; docker builder prune -f --keep-storage=20GB; }"
+# BuildKit env vars only mean something to Docker; Podman ignores them anyway,
+# but keep the command line clean for the case it doesn't.
+if [ "${container_engine}" = "docker" ]; then
+  build_env="BUILDKIT_STEP_LOG_MAX_SIZE=-1 DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1"
+else
+  build_env=""
+fi
+
+compose_cmd="cd ${deploy_dir} && ${build_env} LAUNCHER_CONTROL_PORT=${launcher_control_port} JUPYTER_PUBLIC_URL=http://${remote_ip}:8008/lab NEUROCHIP_HW_WORKER_API_KEY=${neurochip_hw_worker_api_key} ${container_engine} compose ${compose_file_args} up --build -d --wait --remove-orphans"
+
+# Known Docker export bug ("invalid tar header") repair path — Docker-specific,
+# both in the bug itself and in the image-name guesses. Podman doesn't need it.
+if [ "${container_engine}" = "docker" ]; then
+  repair_cmd="cd ${deploy_dir} && { docker compose rm -sf suite_api 2>/dev/null || true; docker image rm -f nmtk-deploy-suite_api:latest neuromorphictoolkit-suite_api:latest 2>/dev/null || true; docker builder prune -f --keep-storage=20GB; }"
+else
+  repair_cmd=""
+fi
 
 log_file="$(mktemp)"
 cleanup() {
@@ -30,7 +46,7 @@ if [ "${status}" -eq 0 ]; then
   exit 0
 fi
 
-if ! grep -q "invalid tar header" "${log_file}"; then
+if [ -z "${repair_cmd}" ] || ! grep -q "invalid tar header" "${log_file}"; then
   exit "${status}"
 fi
 

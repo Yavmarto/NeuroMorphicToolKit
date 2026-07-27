@@ -58,7 +58,7 @@ final class LauncherBootstrapNotifierProvider extends $AsyncNotifierProvider<
 }
 
 String _$launcherBootstrapNotifierHash() =>
-    r'b7e51657976303d510d9f9726c35f9f4ab1bf43f';
+    r'80a9099e5f7ed09a94f2930636f37cb2198642c3';
 
 /// Drives the pre-app bootstrap flow: probing the launcher control API, loading
 /// launcher settings, and surfacing the combined result to the widget tree.

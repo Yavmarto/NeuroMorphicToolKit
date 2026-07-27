@@ -8,7 +8,7 @@ class NmtkToasts {
     ScaffoldMessenger.of(context).showSnackBar(
       ZetaSnackBar(
         context: context,
-        content: SelectionArea(child: Text(message)),
+        content: Text(message),
         type: ZetaSnackBarType.positive,
       ),
     );
@@ -18,7 +18,7 @@ class NmtkToasts {
     ScaffoldMessenger.of(context).showSnackBar(
       ZetaSnackBar(
         context: context,
-        content: SelectionArea(child: Text(message)),
+        content: Text(message),
         type: ZetaSnackBarType.error,
       ),
     );
@@ -28,7 +28,7 @@ class NmtkToasts {
     ScaffoldMessenger.of(context).showSnackBar(
       ZetaSnackBar(
         context: context,
-        content: SelectionArea(child: Text(message)),
+        content: Text(message),
         type: ZetaSnackBarType.warning,
       ),
     );

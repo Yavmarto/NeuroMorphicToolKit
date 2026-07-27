@@ -64,6 +64,50 @@ docker compose exec suite_api bash
 curl http://localhost:9000/api/suite/health
 ```
 
+### Podman Compose cannot connect to `podman.sock`
+
+Rootless Podman exposes the Docker-compatible API through a per-user socket;
+installing the Podman CLI alone does not start that socket. The launcher setup
+now starts and verifies it automatically, but a manual SSH diagnostic is:
+
+```bash
+systemctl --user enable --now podman.socket
+export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
+curl --unix-socket "/run/user/$(id -u)/podman/podman.sock" http://localhost/_ping
+```
+
+For an SSH-only account whose user systemd session disappears after logout,
+enable lingering once with `sudo loginctl enable-linger "$USER"`, then retry
+the deployment from the launcher.
+
+### Remote deployment reports Lava as degraded
+
+Lava is an optional accelerator for the core Suite API. The remote launcher
+starts the core stack without waiting for Lava's healthcheck, verifies the
+client-facing Suite API separately, and reports Lava capability failures as
+degraded instead of failing an otherwise usable deployment.
+
+The deployment log includes `[nmtk-lava]` inspection lines with the container
+health history, configured healthcheck, image ID, and a direct `/health` probe.
+If the probe fails, use those lines together with `lava-backend` logs to
+distinguish an HTTP failure, a stale image, or a container-provider health
+reporting problem. Lava-dependent simulation requests remain unavailable until
+the Lava worker becomes usable; retry the deployment after correcting the
+reported cause.
+### Remote Podman reports `rootlessport ... address already in use`
+
+The remote deployment automatically removes host bindings for internal
+workers, including Lava's port `8012`, and cleans up the existing NMTK Compose
+project before starting it again. This avoids collisions from stale
+`containers-rootlessport` helpers without stopping unrelated services.
+
+If the error names port `9000`, `8090`, or `8008`, the launcher has already
+reconciled NMTK-labelled containers from the current and legacy Compose
+projects across Docker and Podman. Check the deployment log's
+`[nmtk-port-owner]` lines; only a non-NMTK service shown there needs to be moved
+or stopped before retrying. Do not use a broad `fuser -k` command because it
+can stop services unrelated to NMTK.
+
 ### `curl http://localhost:9000/api/suite/health` returns connection refused
 
 The backend is not running. Start it:

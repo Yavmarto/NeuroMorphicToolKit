@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
@@ -151,5 +152,51 @@ void main() {
     expect(find.byType(ModuleLoadingView), findsOneWidget);
     expect(find.text('Waiting for NeuroStudio'), findsOneWidget);
     expect(find.text('Waiting for Bench'), findsNothing);
+  });
+
+  testWidgets('Change Server navigates directly to the setup route', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      initialLocation: '/workspace',
+      routes: [
+        GoRoute(
+          path: '/workspace',
+          builder: (context, state) => const ToolViewScreen(),
+        ),
+        GoRoute(
+          path: '/setup',
+          builder: (context, state) => const Scaffold(
+            body: Text('Backend setup route'),
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+          controlApiServiceProvider.overrideWithValue(
+            ControlApiService(
+              baseUri: Uri.parse('http://192.168.2.51:8090'),
+              analyticsService: AnalyticsService(),
+            ),
+          ),
+          moduleProvider.overrideWith(() => _FakeModuleNotifier()),
+          workspaceProvider.overrideWith(() => _FakeWorkspaceNotifier()),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byTooltip('Change Server'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+
+    expect(find.text('Backend setup route'), findsOneWidget);
   });
 }

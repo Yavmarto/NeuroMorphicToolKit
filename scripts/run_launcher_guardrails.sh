@@ -155,6 +155,9 @@ fi
 print_header "Launcher Unit Tests"
 capture_stage "launcher_unit_tests" "$PYTHON3" -m pytest tests/launcher_control/ || STATUS=1
 
+print_header "Deployment Asset Bundle"
+capture_stage "deployment_asset_bundle" "$PYTHON3" scripts/sync_flutter_deployment_assets.py --check || STATUS=1
+
 print_header "Launcher Flutter Tests"
 capture_stage "launcher_flutter_tests" bash -lc "
 cd '$ROOT_DIR/nmtk/neuro_toolkit'

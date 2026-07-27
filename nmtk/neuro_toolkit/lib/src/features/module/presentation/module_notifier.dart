@@ -20,7 +20,7 @@ class ModuleNotifier extends _$ModuleNotifier {
 
   @override
   Future<ModuleState> build() async {
-    _updateService = UpdateService();
+    _updateService = ref.read(updateServiceProvider);
     final bootstrapState = ref.watch(launcherBootstrapStateProvider);
 
     if (!bootstrapState.canUseControlApi) {

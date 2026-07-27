@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import re
+import shlex
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
@@ -11,6 +13,7 @@ from uuid import uuid4
 
 DEPLOYMENT_TARGET_TYPES = {"local", "remote_host", "kubernetes_cluster"}
 DEPLOYMENT_MODES = {"standalone", "docker", "kubernetes"}
+DEPLOYMENT_CONTAINER_ENGINES = {"docker", "podman"}
 DEPLOYMENT_AUTH_MODES = {
     "none",
     "ssh_key",
@@ -75,6 +78,164 @@ def redact_payload(payload: Any) -> Any:
     return payload
 
 
+def encode_remote_script(
+    script: str,
+    *,
+    env: dict[str, str] | None = None,
+) -> str:
+    """Encode `script` as a single argv-safe remote command.
+
+    Base64-encoding avoids any shell-quoting hazard from the script's own
+    content (heredocs, `$()` substitutions, embedded quotes) -- the encoded
+    form contains only `[A-Za-z0-9+/=]`, none of which need escaping, and
+    decoding happens entirely on the remote side. Shared by
+    `deployment_user_bootstrap` (root bootstrap script) and
+    `deployment_executors` (deploy-time engine install) so both transmit
+    multi-line remote scripts the same safe way. When `env` is provided,
+    variables are attached to the decoder's Bash process rather than the
+    pipeline's `echo` process, so the decoded script can read them.
+    """
+    encoded = base64.b64encode(script.encode("utf-8")).decode("ascii")
+    pipeline = f"echo {encoded} | base64 -d | bash"
+    if not env:
+        return pipeline
+    assignments = " ".join(
+        f"{key}={shlex.quote(value)}" for key, value in env.items()
+    )
+    return f"env {assignments} bash -c {shlex.quote(pipeline)}"
+
+
+def sudo_elevation_preamble() -> str:
+    """Bash `sudo_cmd`/`sudo_available` helpers plus a hard-fail guard.
+
+    `sudo_cmd` feeds a sudo password via `NMTK_DEPLOY_SUDO_PASSWORD` (set by
+    the caller) through `sudo -S`, or falls back to passwordless `sudo -n`
+    -- which also covers a literal root login for free, since root never
+    needs a sudo password. The trailing guard fails fast with an actionable
+    message when neither path can elevate, rather than letting later
+    privileged steps fail with a cryptic permission error.
+    """
+    return """sudo_cmd() {
+  if [ -n "${NMTK_DEPLOY_SUDO_PASSWORD:-}" ]; then
+    printf '%s\\n' "$NMTK_DEPLOY_SUDO_PASSWORD" | sudo -S -p "" "$@"
+  else
+    sudo -n "$@"
+  fi
+}
+sudo_available() {
+  if [ -n "${NMTK_DEPLOY_SUDO_PASSWORD:-}" ]; then
+    printf '%s\\n' "$NMTK_DEPLOY_SUDO_PASSWORD" | sudo -S -p "" true >/dev/null 2>&1
+  else
+    sudo -n true >/dev/null 2>&1
+  fi
+}
+
+if ! sudo_available; then
+  echo "[nmtk-bootstrap] ERROR: this account cannot run privileged commands (no root session, no passwordless/NOPASSWD sudo, and no sudo password available). Use a password-based login for an admin account, true root credentials, or configure NOPASSWD sudo for this account." >&2
+  exit 1
+fi
+"""
+
+
+def container_engine_install_commands(container_engine: str) -> str:
+    """Bash that installs `container_engine` on a remote host, via `sudo_cmd`.
+
+    Assumes `sudo_cmd`/`sudo_available` (see `sudo_elevation_preamble`) are
+    already defined in the surrounding script.
+
+    `container_engine="podman"` installs Podman + podman-compose via `apt`
+    (Debian/Ubuntu only -- matches the actual deploy target; unlike Docker
+    there's no distro-agnostic install one-liner). Podman is rootless by
+    design, so unlike the Docker branch there is no `usermod -aG <group>`
+    step here.
+    """
+    if container_engine == "podman":
+        return """if command -v podman >/dev/null 2>&1; then
+  echo "[nmtk-bootstrap] Podman already installed"
+else
+  echo "[nmtk-bootstrap] Podman not found -- installing via apt (Debian/Ubuntu)..."
+  if ! command -v apt-get >/dev/null 2>&1; then
+    echo "[nmtk-bootstrap] ERROR: apt-get not found; automatic Podman install only supports Debian/Ubuntu. Install podman + podman-compose manually and retry." >&2
+    exit 1
+  fi
+  sudo_cmd env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+  sudo_cmd env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq podman podman-compose
+  echo "[nmtk-bootstrap] Podman installed"
+fi
+"""
+    return """if getent group docker >/dev/null 2>&1; then
+  echo "[nmtk-bootstrap] Docker Engine already installed"
+else
+  echo "[nmtk-bootstrap] Docker Engine not found \u2014 installing via get.docker.com..."
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL https://get.docker.com | sudo_cmd sh
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO- https://get.docker.com | sudo_cmd sh
+  else
+    echo "[nmtk-bootstrap] ERROR: neither curl nor wget available; cannot install Docker" >&2
+    exit 1
+  fi
+  echo "[nmtk-bootstrap] Docker Engine installed"
+fi
+"""
+
+
+def podman_runtime_setup_script() -> str:
+    """Build the remote script that prepares rootless Podman's API socket."""
+    return """#!/usr/bin/env bash
+set -euo pipefail
+
+UID_VALUE="$(id -u)"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$UID_VALUE}"
+SOCKET_PATH="$XDG_RUNTIME_DIR/podman/podman.sock"
+export DOCKER_HOST="unix://$SOCKET_PATH"
+
+enable_linger() {
+  if ! command -v loginctl >/dev/null 2>&1; then
+    return 0
+  fi
+  if [ -n "${NMTK_DEPLOY_SUDO_PASSWORD:-}" ]; then
+    printf '%s\n' "$NMTK_DEPLOY_SUDO_PASSWORD" |
+      sudo -S -p "" loginctl enable-linger "$USER"
+  else
+    sudo -n loginctl enable-linger "$USER"
+  fi
+}
+
+enable_linger >/dev/null 2>&1 || true
+if command -v systemctl >/dev/null 2>&1 &&
+   systemctl --user enable --now podman.socket >/dev/null 2>&1; then
+  :
+else
+  mkdir -p "$XDG_RUNTIME_DIR/podman"
+  if [ ! -S "$SOCKET_PATH" ]; then
+    nohup podman system service --time=0 "unix://$SOCKET_PATH" \
+      >/tmp/nmtk-podman-service.log 2>&1 &
+  fi
+fi
+
+for _attempt in 1 2 3 4 5 6 7 8 9 10; do
+  if [ -S "$SOCKET_PATH" ]; then
+    break
+  fi
+  sleep 1
+done
+
+if [ ! -S "$SOCKET_PATH" ]; then
+  echo "[nmtk-podman] ERROR: rootless Podman socket was not created at $SOCKET_PATH. Enable a user systemd session or install a working Podman system service." >&2
+  exit 1
+fi
+
+if command -v curl >/dev/null 2>&1 &&
+   ! curl --silent --show-error --fail --unix-socket "$SOCKET_PATH" \
+      http://localhost/_ping >/dev/null; then
+  echo "[nmtk-podman] ERROR: Podman socket exists at $SOCKET_PATH but its API did not respond. Check the podman.socket user service and runtime logs." >&2
+  exit 1
+fi
+
+echo "[nmtk-podman] rootless Podman API ready at $DOCKER_HOST"
+"""
+
 @dataclass(frozen=True)
 class DeploymentCapability:
     supported_modes: tuple[str, ...] = ("standalone", "docker", "kubernetes")
@@ -94,7 +255,9 @@ class DeploymentCapability:
             return cls()
         supported_modes = tuple(
             mode
-            for mode in (str(item).strip() for item in payload.get("supportedModes", []))
+            for mode in (
+                str(item).strip() for item in payload.get("supportedModes", [])
+            )
             if mode in DEPLOYMENT_MODES
         )
         required_ports = tuple(
@@ -119,7 +282,9 @@ class DeploymentCapability:
             default_container_image=str(payload.get("defaultContainerImage") or ""),
             compose_profile=str(payload.get("composeProfile") or ""),
             chart_template_id=str(payload.get("chartTemplateId") or ""),
-            startup_timeout_seconds=float(payload.get("startupTimeoutSeconds") or 120.0),
+            startup_timeout_seconds=float(
+                payload.get("startupTimeoutSeconds") or 120.0
+            ),
             readiness_timeout_seconds=float(
                 payload.get("readinessTimeoutSeconds") or 120.0
             ),
@@ -157,6 +322,7 @@ class DeploymentTarget:
     api_server: str = ""
     image_tag: str = "latest"
     domain: str = ""
+    container_engine: str = "docker"
     secret_refs: dict[str, str] = field(default_factory=dict)
     last_readiness: str = "unknown"
     last_deployed_version: str = ""
@@ -166,19 +332,32 @@ class DeploymentTarget:
 
     @classmethod
     def from_json(cls, payload: dict[str, Any]) -> "DeploymentTarget":
-        display_name = str(payload.get("displayName") or payload.get("display_name") or "")
-        target_type = str(payload.get("targetType") or payload.get("target_type") or "local")
+        display_name = str(
+            payload.get("displayName") or payload.get("display_name") or ""
+        )
+        target_type = str(
+            payload.get("targetType") or payload.get("target_type") or "local"
+        )
         mode = str(payload.get("mode") or "standalone")
         auth_mode = str(payload.get("authMode") or payload.get("auth_mode") or "none")
+        container_engine = str(
+            payload.get("containerEngine")
+            or payload.get("container_engine")
+            or "docker"
+        )
         if target_type not in DEPLOYMENT_TARGET_TYPES:
             raise ValueError(f"Unsupported deployment target type: {target_type}")
         if mode not in DEPLOYMENT_MODES:
             raise ValueError(f"Unsupported deployment mode: {mode}")
         if auth_mode not in DEPLOYMENT_AUTH_MODES:
             raise ValueError(f"Unsupported deployment auth mode: {auth_mode}")
+        if container_engine not in DEPLOYMENT_CONTAINER_ENGINES:
+            raise ValueError(f"Unsupported container engine: {container_engine}")
         target_id = str(payload.get("id") or "").strip()
         if not target_id:
-            target_id = slugify(display_name or f"{target_type}-{mode}", fallback=str(uuid4()))
+            target_id = slugify(
+                display_name or f"{target_type}-{mode}", fallback=str(uuid4())
+            )
         if not display_name:
             display_name = target_id
         return cls(
@@ -190,14 +369,23 @@ class DeploymentTarget:
             host=str(payload.get("host") or ""),
             ssh_port=int(payload.get("sshPort") or payload.get("ssh_port") or 22),
             username=str(payload.get("username") or ""),
-            install_root=str(payload.get("installRoot") or payload.get("install_root") or ""),
-            backend_port=int(payload.get("backendPort") or payload.get("backend_port") or 9000),
+            install_root=str(
+                payload.get("installRoot") or payload.get("install_root") or ""
+            ),
+            backend_port=int(
+                payload.get("backendPort") or payload.get("backend_port") or 9000
+            ),
             namespace=str(payload.get("namespace") or ""),
             context=str(payload.get("context") or ""),
             api_server=str(payload.get("apiServer") or payload.get("api_server") or ""),
-            image_tag=str(payload.get("imageTag") or payload.get("image_tag") or "latest"),
+            image_tag=str(
+                payload.get("imageTag") or payload.get("image_tag") or "latest"
+            ),
             domain=str(payload.get("domain") or ""),
-            secret_refs=dict(payload.get("secretRefs") or payload.get("secret_refs") or {}),
+            container_engine=container_engine,
+            secret_refs=dict(
+                payload.get("secretRefs") or payload.get("secret_refs") or {}
+            ),
             last_readiness=str(payload.get("lastReadiness") or "unknown"),
             last_deployed_version=str(payload.get("lastDeployedVersion") or ""),
             last_failure_reason=str(payload.get("lastFailureReason") or ""),
@@ -222,6 +410,7 @@ class DeploymentTarget:
             "apiServer": self.api_server,
             "imageTag": self.image_tag,
             "domain": self.domain,
+            "containerEngine": self.container_engine,
             "secretRefs": dict(self.secret_refs),
             "lastReadiness": self.last_readiness,
             "lastDeployedVersion": self.last_deployed_version,
@@ -267,7 +456,11 @@ class DeploymentEvent:
         }
 
     def to_sse(self) -> str:
-        return "event: progress\ndata: " + json.dumps(self.to_json(), sort_keys=True) + "\n\n"
+        return (
+            "event: progress\ndata: "
+            + json.dumps(self.to_json(), sort_keys=True)
+            + "\n\n"
+        )
 
 
 @dataclass
@@ -275,6 +468,7 @@ class DeploymentJob:
     id: str
     target_id: str
     mode: str
+    clean_install: bool = False
     stage: str = "queued"
     percent: float = 0.0
     stage_label: str = "Queued"
@@ -313,6 +507,7 @@ class DeploymentJob:
             "id": self.id,
             "targetId": self.target_id,
             "mode": self.mode,
+            "cleanInstall": self.clean_install,
             "stage": self.stage,
             "percent": self.percent,
             "stageLabel": self.stage_label,

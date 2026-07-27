@@ -1,8 +1,10 @@
 import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 import 'package:neuro_toolkit/src/features/deployment/domain/deployment_state.dart';
 
 part 'deployment_notifier.g.dart';
@@ -10,47 +12,30 @@ part 'deployment_notifier.g.dart';
 @riverpod
 class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
   static const _maxConsecutivePollFailures = 3;
+  static const _maxJobStaleness = Duration(minutes: 30);
 
   Timer? _pollTimer;
   bool _pollInFlight = false;
   int _consecutivePollFailures = 0;
 
+  DeploymentService get _service => ref.read(deploymentServiceProvider);
+
   @override
   Future<DeploymentState> build() async {
-    final controlApi = ref.watch(controlApiServiceProvider);
-    final settings = await controlApi.fetchSettings();
-    final targets = await controlApi.fetchDeploymentTargets();
-
-    ref.onDispose(() {
-      _pollTimer?.cancel();
-    });
-
-    return DeploymentState(
-      targets: targets,
-      isReady: settings.backendDeploymentReady,
-    );
+    final snapshot = await ref.watch(deploymentServiceProvider).load();
+    ref.onDispose(() => _pollTimer?.cancel());
+    if (snapshot.activeJob != null && !snapshot.activeJob!.isTerminal) {
+      unawaited(Future<void>.microtask(_startPolling));
+    }
+    return _stateFromSnapshot(snapshot);
   }
 
   Future<void> refresh() async {
     try {
-      final controlApi = ref.read(controlApiServiceProvider);
-      final settings = await controlApi.fetchSettings();
-      final targets = await controlApi.fetchDeploymentTargets();
-
-      final currentState = state.value;
-      if (currentState != null) {
-        state = AsyncData(currentState.copyWith(
-          targets: targets,
-          isReady: settings.backendDeploymentReady,
-        ));
-      } else {
-        state = AsyncData(DeploymentState(
-          targets: targets,
-          isReady: settings.backendDeploymentReady,
-        ));
-      }
-    } catch (e, st) {
-      state = AsyncError(e, st);
+      final snapshot = await _service.load();
+      state = AsyncData(_stateFromSnapshot(snapshot));
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
     }
   }
 
@@ -68,68 +53,11 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     String namespace = '',
     String context = '',
     String apiServer = '',
-  }) async {
-    final payload = _targetPayload(
-      targetType: targetType,
-      mode: mode,
-      displayName: displayName,
-      host: host,
-      username: username,
-      sshPort: sshPort,
-      authMethod: authMethod,
-      sshPassword: sshPassword,
-      sshPrivateKey: sshPrivateKey,
-      backendPort: backendPort,
-      namespace: namespace,
-      context: context,
-      apiServer: apiServer,
-    );
-    return ref.read(controlApiServiceProvider).preflightDeploymentTarget(
-      <String, dynamic>{'target': payload},
-    );
-  }
-
-  /// One-time root SSH bootstrap: creates a dedicated non-root deploy user
-  /// on the remote host. `rootPassword`/`rootPrivateKey` are sent to the
-  /// local control API for a single SSH session and are never persisted by
-  /// it — the returned credentials are the only thing meant to be kept,
-  /// exactly as if the user had pasted a private key in manually.
-  Future<RemoteUserBootstrapResult> bootstrapRemoteUser({
-    required String host,
-    required int sshPort,
-    required String rootUsername,
-    String rootPassword = '',
-    String rootPrivateKey = '',
+    String containerEngine = 'docker',
+    String kubeconfig = '',
   }) {
-    return ref.read(controlApiServiceProvider).bootstrapRemoteDeployUser(
-      <String, dynamic>{
-        'host': host,
-        'sshPort': sshPort,
-        'rootUsername': rootUsername,
-        if (rootPassword.isNotEmpty) 'rootPassword': rootPassword,
-        if (rootPrivateKey.isNotEmpty) 'rootPrivateKey': rootPrivateKey,
-      },
-    );
-  }
-
-  Future<void> deploy({
-    required String targetType,
-    required String mode,
-    required String displayName,
-    String host = '',
-    String username = '',
-    int sshPort = 22,
-    String authMethod = 'ssh_key',
-    String sshPassword = '',
-    String sshPrivateKey = '',
-    int backendPort = 9000,
-    String namespace = '',
-    String context = '',
-    String apiServer = '',
-  }) async {
-    final controlApi = ref.read(controlApiServiceProvider);
-    final target = await controlApi.createDeploymentTarget(
-      _targetPayload(
+    return _service.preflight(
+      _request(
         targetType: targetType,
         mode: mode,
         displayName: displayName,
@@ -143,35 +71,149 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
         namespace: namespace,
         context: context,
         apiServer: apiServer,
+        containerEngine: containerEngine,
+        kubeconfig: kubeconfig,
       ),
     );
-    final activeJob = await controlApi.createDeploymentJob(
-      <String, dynamic>{'targetId': target.id, 'mode': mode},
+  }
+
+  Future<RemoteUserBootstrapResult> bootstrapRemoteUser({
+    required String host,
+    required int sshPort,
+    required String rootUsername,
+    String rootPassword = '',
+    String rootPrivateKey = '',
+    String containerEngine = 'docker',
+  }) {
+    return _service.bootstrapRemoteUser(
+      host: host,
+      sshPort: sshPort,
+      rootUsername: rootUsername,
+      rootPassword: rootPassword,
+      rootPrivateKey: rootPrivateKey,
+      containerEngine: containerEngine,
     );
+  }
 
-    final currentState = state.value;
-    if (currentState != null) {
-      state = AsyncData(currentState.copyWith(
-        activeJob: activeJob,
-        connectionLostReason: null,
-      ));
-    }
-
+  Future<DeploymentJob> deploy({
+    required String targetType,
+    required String mode,
+    required String displayName,
+    String host = '',
+    String username = '',
+    int sshPort = 22,
+    String authMethod = 'ssh_key',
+    String sshPassword = '',
+    String sshPrivateKey = '',
+    int backendPort = 9000,
+    String namespace = '',
+    String context = '',
+    String apiServer = '',
+    String containerEngine = 'docker',
+    String kubeconfig = '',
+    bool cleanInstall = false,
+  }) async {
+    final job = await _service.deploy(
+      _request(
+        targetType: targetType,
+        mode: mode,
+        displayName: displayName,
+        host: host,
+        username: username,
+        sshPort: sshPort,
+        authMethod: authMethod,
+        sshPassword: sshPassword,
+        sshPrivateKey: sshPrivateKey,
+        backendPort: backendPort,
+        namespace: namespace,
+        context: context,
+        apiServer: apiServer,
+        containerEngine: containerEngine,
+        kubeconfig: kubeconfig,
+        cleanInstall: cleanInstall,
+      ),
+    );
+    final current = state.value ?? const DeploymentState();
+    state = AsyncData(
+      current.copyWith(activeJob: job, connectionLostReason: null),
+    );
     _startPolling();
+    return job;
   }
 
   Future<void> cancelActiveJob() async {
-    final currentState = state.value;
-    final job = currentState?.activeJob;
-    if (job == null) return;
-
-    final controlApi = ref.read(controlApiServiceProvider);
-    final updatedJob = await controlApi.cancelDeploymentJob(job.id);
-
-    state = AsyncData(currentState!.copyWith(activeJob: updatedJob));
+    final current = state.value;
+    final job = current?.activeJob;
+    if (current == null || job == null) return;
+    final updated = await _service.cancelJob(job.id);
+    state = AsyncData(current.copyWith(activeJob: updated));
   }
 
-  Map<String, dynamic> _targetPayload({
+  Future<DeploymentJob?> recoverActiveJob() async {
+    final current = state.value;
+    final job = current?.activeJob;
+    if (current == null || job == null || !job.isTerminal) return null;
+    final retried = await _service.retryJob(job.id);
+    if (retried == null) return null;
+    state = AsyncData(
+      current.copyWith(activeJob: retried, connectionLostReason: null),
+    );
+    _startPolling();
+    return retried;
+  }
+
+  /// Restarts just the Jupyter container for the current target, without
+  /// redeploying the rest of the backend. Unlike [recoverActiveJob], this
+  /// works from anywhere in the app, not only while the setup screen's job
+  /// is still in view.
+  Future<void> retryJupyter() async {
+    final current = state.value;
+    if (current == null) return;
+    final target = _targetForRetry(current);
+    if (target == null) return;
+    try {
+      await _service.retryJupyter(target.id);
+      await refresh();
+    } catch (error) {
+      final job = current.activeJob;
+      if (job == null) return;
+      // Keep the "degraded optional capability: Jupyter" prefix so the
+      // existing Recover-Jupyter affordance (gated on that exact prefix)
+      // stays visible for another attempt instead of disappearing on
+      // failure.
+      state = AsyncData(
+        current.copyWith(
+          activeJob: job.copyWith(
+            error: 'degraded optional capability: Jupyter restart failed: '
+                '$error',
+          ),
+        ),
+      );
+    }
+  }
+
+  DeploymentTarget? _targetForRetry(DeploymentState current) {
+    final job = current.activeJob;
+    if (job != null) {
+      for (final candidate in current.targets) {
+        if (candidate.id == job.targetId) return candidate;
+      }
+    }
+    if (current.targets.isEmpty) return null;
+    var mostRecent = current.targets.first;
+    for (final candidate in current.targets.skip(1)) {
+      final currentUpdatedAt = mostRecent.updatedAt;
+      final candidateUpdatedAt = candidate.updatedAt;
+      if (candidateUpdatedAt != null &&
+          (currentUpdatedAt == null ||
+              candidateUpdatedAt.isAfter(currentUpdatedAt))) {
+        mostRecent = candidate;
+      }
+    }
+    return mostRecent;
+  }
+
+  DeploymentRequest _request({
     required String targetType,
     required String mode,
     required String displayName,
@@ -185,111 +227,90 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     required String namespace,
     required String context,
     required String apiServer,
+    required String containerEngine,
+    required String kubeconfig,
+    bool cleanInstall = false,
   }) {
-    return <String, dynamic>{
-      'displayName': displayName,
-      'targetType': targetType,
-      'mode': mode,
-      'authMode': targetType == 'local'
-          ? 'none'
-          : targetType == 'kubernetes_cluster'
-              ? 'kubeconfig'
-              : authMethod,
-      'host': host,
-      'username': username,
-      'sshPort': sshPort,
-      if (targetType == 'remote_host' && authMethod == 'ssh_password')
-        'sshPassword': sshPassword,
-      if (targetType == 'remote_host' && authMethod == 'ssh_key')
-        'sshPrivateKey': sshPrivateKey,
-      'backendPort': backendPort,
-      'namespace': namespace,
-      'context': context,
-      'apiServer': apiServer,
-    };
+    return DeploymentRequest(
+      targetType: targetType,
+      mode: mode,
+      displayName: displayName,
+      host: host,
+      username: username,
+      sshPort: sshPort,
+      authMethod: authMethod,
+      sshPassword: sshPassword,
+      sshPrivateKey: sshPrivateKey,
+      backendPort: backendPort,
+      namespace: namespace,
+      context: context,
+      apiServer: apiServer,
+      containerEngine: containerEngine,
+      kubeconfig: kubeconfig,
+      cleanInstall: cleanInstall,
+    );
+  }
+
+  DeploymentState _stateFromSnapshot(DeploymentSnapshot snapshot) {
+    return DeploymentState(
+      targets: snapshot.targets,
+      activeJob: snapshot.activeJob,
+      isReady: snapshot.isReady,
+    );
   }
 
   void _startPolling() {
     _pollTimer?.cancel();
     _consecutivePollFailures = 0;
     _pollTimer = Timer.periodic(const Duration(seconds: 1), _pollTick);
-    // Jobs here can fail in well under a second (e.g. an instant SSH auth
-    // rejection) — waiting for the first periodic tick would leave the UI
-    // showing nothing but the initial state for a whole second, reading as
-    // frozen. Check right away instead of waiting.
     unawaited(_pollTick(_pollTimer!));
   }
 
-  static const _maxJobStaleness = Duration(seconds: 45);
-
   Future<void> _pollTick(Timer timer) async {
-    final currentState = state.value;
-    final job = currentState?.activeJob;
-    if (job == null) {
+    final current = state.value;
+    final job = current?.activeJob;
+    if (current == null || job == null) {
       timer.cancel();
       return;
     }
-
-    // Staleness watchdog, checked before the in-flight guard below: if a
-    // poll request never resolves (e.g. a hung connection while the backend
-    // restarts), _pollInFlight can latch true forever, silently freezing
-    // this job's displayed state indefinitely with nothing to break out of
-    // it. Using the job's own updatedAt — the same number shown to the user
-    // as "updated Xs ago" — as a hard ceiling means the display is never
-    // allowed to go stale without also self-healing.
     final updatedAt = job.updatedAt;
     if (updatedAt != null &&
         DateTime.now().difference(updatedAt) > _maxJobStaleness) {
       timer.cancel();
-      _pollInFlight = false;
-      final latestState = state.value;
-      if (latestState != null) {
-        state = AsyncData(latestState.copyWith(
-          activeJob: null,
+      state = AsyncData(
+        current.copyWith(
           connectionLostReason:
-              'Lost contact with the deploy job after ${_maxJobStaleness.inSeconds}s '
-              'without an update — it may still be running on the server.',
-        ));
-      }
-      await refresh();
+              'This deployment has not reported progress for 30 minutes. '
+              'Reopen setup to inspect and recover it.',
+        ),
+      );
       return;
     }
-
     if (_pollInFlight) return;
-
     _pollInFlight = true;
-    final controlApi = ref.read(controlApiServiceProvider);
     try {
-      final updatedJob = await controlApi.fetchDeploymentJob(job.id);
+      final updated = await _service.fetchJob(job.id);
       _consecutivePollFailures = 0;
-      // Apply the polled job before branching on terminal/non-terminal —
-      // otherwise a terminal (failed/completed) payload gets discarded below
-      // and the UI keeps showing the last in-progress snapshot forever.
-      state = AsyncData(currentState!.copyWith(activeJob: updatedJob));
-      if (updatedJob.isTerminal) {
-        timer.cancel();
-        await refresh();
-      }
-    } catch (e) {
-      // A single stalled poll shouldn't clear an in-progress job — but
-      // repeated failures mean we can no longer trust this activeJob is
-      // still accurate, so fall back to the persisted target state
-      // (lastReadiness/lastFailureReason) instead of polling forever in
-      // silence.
+      final snapshot = await _service.load();
+      state = AsyncData(
+        DeploymentState(
+          targets: snapshot.targets,
+          activeJob: updated,
+          isReady: updated.stage == DeploymentPhase.completed.wireName,
+        ),
+      );
+      if (updated.isTerminal) timer.cancel();
+    } catch (_) {
       _consecutivePollFailures++;
       if (_consecutivePollFailures >= _maxConsecutivePollFailures) {
         timer.cancel();
-        final latestState = state.value;
-        if (latestState != null) {
-          state = AsyncData(latestState.copyWith(
-            activeJob: null,
+        state = AsyncData(
+          current.copyWith(
             connectionLostReason:
-                'Lost contact with the deploy job after '
-                '$_maxConsecutivePollFailures failed status checks — it may '
-                'still be running on the server.',
-          ));
-        }
-        await refresh();
+                'The client could not inspect the deployment after three '
+                'attempts. The detached server job may still be running.',
+          ),
+        );
       }
     } finally {
       _pollInFlight = false;

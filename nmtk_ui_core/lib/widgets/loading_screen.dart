@@ -217,7 +217,7 @@ class _WaitingContent extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            SelectableText(
+            Text(
               message,
               textAlign: TextAlign.center,
               style: Zeta.of(
@@ -266,7 +266,7 @@ class _DegradedContent extends StatelessWidget {
             const SizedBox(height: 10),
             SizedBox(
               width: width,
-              child: SelectableText(
+              child: Text(
                 message,
                 textAlign: TextAlign.center,
                 style: Zeta.of(context).textStyles.bodyMedium.copyWith(
@@ -314,7 +314,7 @@ class _FailedContent extends StatelessWidget {
             children: [
               Icon(ZetaIcons.error_outline, color: tokens.errorColor, size: 36),
               const SizedBox(height: 12),
-              SelectableText(
+              Text(
                 message,
                 textAlign: TextAlign.center,
                 style: Zeta.of(context).textStyles.bodyMedium.copyWith(

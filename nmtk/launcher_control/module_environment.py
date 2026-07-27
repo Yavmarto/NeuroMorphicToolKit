@@ -276,9 +276,10 @@ def _external_service_health_url(
     """
     port = _effective_port(module)
     deployment = module.get("deployment") or {}
+    probe_host = deployment.get("internalProbeHost") or host
     raw_path = deployment.get("healthPath", "") if isinstance(deployment, dict) else ""
     health_path = str(raw_path).strip() or "/health"
-    return f"http://{host}:{port}{health_path}"
+    return f"http://{probe_host}:{port}{health_path}"
 
 
 def _normalized_import_list(raw: Any) -> list[str]:

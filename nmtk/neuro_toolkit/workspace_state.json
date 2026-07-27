@@ -1,10 +1,10 @@
 {
-  "focusedModuleId": "jupyter",
+  "focusedModuleId": "neurocnl",
   "sessions": [
     {
       "deepLink": null,
       "moduleId": "neurocnl",
-      "readinessState": "opening",
+      "readinessState": "ready",
       "restoreState": {},
       "surfaceMode": "native"
     },
@@ -32,7 +32,7 @@
     {
       "deepLink": null,
       "moduleId": "jupyter",
-      "readinessState": "ready",
+      "readinessState": "opening",
       "restoreState": {},
       "surfaceMode": "embedded"
     }

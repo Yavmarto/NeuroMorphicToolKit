@@ -16,5 +16,6 @@ abstract class SettingsState with _$SettingsState {
     @Default(LogLevel.info) LogLevel logLevel,
     @Default({}) Map<String, Map<String, dynamic>> moduleSettings,
     String? launcherControlApiBaseUrl,
+    String? suiteApiBaseUrl,
   }) = _SettingsState;
 }

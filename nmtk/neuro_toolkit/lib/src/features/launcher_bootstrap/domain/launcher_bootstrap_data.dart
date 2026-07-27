@@ -10,6 +10,7 @@ class LauncherBootstrapData {
     required this.isReady,
     this.bootstrapState,
     this.controlApiService,
+    this.launcherSettings,
     this.setupMessage,
     this.suggestedInstallHost,
   });
@@ -17,11 +18,13 @@ class LauncherBootstrapData {
   factory LauncherBootstrapData.ready({
     required LauncherBootstrapState bootstrapState,
     required ControlApiService controlApiService,
+    required LauncherControlSettings launcherSettings,
   }) {
     return LauncherBootstrapData._(
       isReady: true,
       bootstrapState: bootstrapState,
       controlApiService: controlApiService,
+      launcherSettings: launcherSettings,
     );
   }
 
@@ -48,6 +51,9 @@ class LauncherBootstrapData {
 
   /// Populated when [bootstrapState] is not null and the API responded.
   final ControlApiService? controlApiService;
+
+  /// The verified launcher settings used to admit the app into the workspace.
+  final LauncherControlSettings? launcherSettings;
 
   /// Human-readable message shown in the setup/connect screen.
   final String? setupMessage;

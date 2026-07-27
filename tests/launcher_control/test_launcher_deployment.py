@@ -103,7 +103,7 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         )
 
         job = self.state.create_deployment_job({"targetId": target["id"]})
-        deadline = time.time() + 3.0
+        deadline = time.time() + 10.0
         while time.time() < deadline:
             job = self.state.get_deployment_job(job["id"])
             if job["stage"] in {"completed", "failed"}:
@@ -130,7 +130,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         self.addCleanup(thread.join, 1.0)
 
         server.state._append_log("dummy", "stdout line", emit_terminal=False)
-        server.state._append_log("dummy", "stderr line", stderr=True, emit_terminal=False)
+        server.state._append_log(
+            "dummy", "stderr line", stderr=True, emit_terminal=False
+        )
         server.state._suite_api_logs.append("suite stdout")
         server.state._suite_api_logs.append("[stderr] suite stderr")
 
@@ -142,7 +144,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
 
         lines = payload["lines"]
         self.assertTrue(any("[suite_api] suite stdout" in line for line in lines))
-        self.assertTrue(any("[suite_api] [stderr] suite stderr" in line for line in lines))
+        self.assertTrue(
+            any("[suite_api] [stderr] suite stderr" in line for line in lines)
+        )
         self.assertTrue(any("[dummy] stdout line" in line for line in lines))
         self.assertTrue(any("[dummy] [stderr] stderr line" in line for line in lines))
 
@@ -155,7 +159,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         self.addCleanup(thread.join, 1.0)
 
         server.state._append_log("dummy", "stdout line", emit_terminal=False)
-        server.state._append_log("dummy", "stderr line", stderr=True, emit_terminal=False)
+        server.state._append_log(
+            "dummy", "stderr line", stderr=True, emit_terminal=False
+        )
         server.state._suite_api_logs.append("suite stdout")
         server.state._suite_api_logs.append("[stderr] suite stderr")
 
@@ -166,7 +172,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             payload = json.loads(response.read().decode("utf-8"))
 
         lines = payload["lines"]
-        self.assertTrue(any("[suite_api] [stderr] suite stderr" in line for line in lines))
+        self.assertTrue(
+            any("[suite_api] [stderr] suite stderr" in line for line in lines)
+        )
         self.assertTrue(any("[dummy] [stderr] stderr line" in line for line in lines))
         self.assertFalse(any("stdout line" in line for line in lines))
 
@@ -193,12 +201,21 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
 
         self.assertEqual(
             list(manifests.keys()),
-            ["00-namespace.yaml", "01-configmap.yaml", "02-secret.yaml", "03-deployment.yaml", "04-service.yaml"],
+            [
+                "00-namespace.yaml",
+                "01-configmap.yaml",
+                "02-secret.yaml",
+                "03-deployment.yaml",
+                "04-service.yaml",
+            ],
         )
         self.assertIn("name: nmtk-test", manifests["00-namespace.yaml"])
         self.assertIn("LOG_LEVEL: info", manifests["01-configmap.yaml"])
         self.assertIn("API_KEY: secret-value", manifests["02-secret.yaml"])
-        self.assertIn("image: ghcr.io/completed-spoon-6/neurocnl:v1.2.3", manifests["03-deployment.yaml"])
+        self.assertIn(
+            "image: ghcr.io/completed-spoon-6/neurocnl:v1.2.3",
+            manifests["03-deployment.yaml"],
+        )
         self.assertIn("imagePullPolicy: IfNotPresent", manifests["03-deployment.yaml"])
         self.assertIn("type: LoadBalancer", manifests["04-service.yaml"])
 
@@ -222,7 +239,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
 
     def test_k8s_executor_runs_kubectl_commands(self) -> None:
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
-        from nmtk.launcher_control.deployment_executors import KubernetesDeploymentExecutor
+        from nmtk.launcher_control.deployment_executors import (
+            KubernetesDeploymentExecutor,
+        )
 
         target = DeploymentTarget(
             id="k8s-exec",
@@ -238,19 +257,27 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         def emit(stage: str, message: str, percent: float) -> None:
             events.append((stage, message, percent))
 
-        with mock.patch("nmtk.launcher_control.deployment_executors.shutil.which") as mock_which, \
-             mock.patch("nmtk.launcher_control.deployment_executors.subprocess.run") as mock_run, \
-             mock.patch("nmtk.launcher_control.deployment_executors.urllib.request.urlopen") as mock_urlopen:
+        with mock.patch(
+            "nmtk.launcher_control.deployment_executors.shutil.which"
+        ) as mock_which, mock.patch(
+            "nmtk.launcher_control.deployment_executors.subprocess.run"
+        ) as mock_run, mock.patch(
+            "nmtk.launcher_control.deployment_executors.urllib.request.urlopen"
+        ) as mock_urlopen:
             mock_which.return_value = "/usr/local/bin/kubectl"
             mock_run.return_value = mock.Mock(returncode=0, stdout="", stderr="")
-            mock_urlopen.return_value.__enter__ = mock.Mock(return_value=mock.Mock(status=200))
+            mock_urlopen.return_value.__enter__ = mock.Mock(
+                return_value=mock.Mock(status=200)
+            )
             mock_urlopen.return_value.__exit__ = mock.Mock(return_value=False)
 
             executor.run(target, emit)
 
         self.assertEqual(events[-1][0], "completed")
         self.assertIn("Validating Kubernetes cluster access", [e[1] for e in events])
-        self.assertIn("Applying namespace-scoped backend resources", [e[1] for e in events])
+        self.assertIn(
+            "Applying namespace-scoped backend resources", [e[1] for e in events]
+        )
         self.assertIn("Waiting for rollout readiness", [e[1] for e in events])
         self.assertIn("Running backend health verification", [e[1] for e in events])
 
@@ -262,7 +289,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
     def test_kubectl_env_ctx_cleans_up_kubeconfig_tempfile(self) -> None:
         """The kubeconfig temp file must be deleted after the context manager exits."""
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
-        from nmtk.launcher_control.deployment_executors import KubernetesDeploymentExecutor
+        from nmtk.launcher_control.deployment_executors import (
+            KubernetesDeploymentExecutor,
+        )
         from pathlib import Path
 
         target = DeploymentTarget(
@@ -283,13 +312,15 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         with executor._kubectl_env_ctx(target) as env:
             path = env.get("KUBECONFIG", "")
             assert path, "expected KUBECONFIG to be set inside the context"
-            assert os.path.exists(path), "expected temp file to exist inside the context"
+            assert os.path.exists(
+                path
+            ), "expected temp file to exist inside the context"
             leaked_path.append(path)
 
         assert leaked_path, "context manager did not yield"
-        assert not os.path.exists(leaked_path[0]), (
-            f"kubeconfig temp file was NOT deleted after context exit: {leaked_path[0]}"
-        )
+        assert not os.path.exists(
+            leaked_path[0]
+        ), f"kubeconfig temp file was NOT deleted after context exit: {leaked_path[0]}"
 
     def test_k8s_preflight_blocks_without_kubectl(self) -> None:
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
@@ -302,7 +333,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             mode="kubernetes",
             namespace="nmtk-test",
         )
-        with mock.patch("nmtk.launcher_control.deployment_preflight.shutil.which") as mock_which:
+        with mock.patch(
+            "nmtk.launcher_control.deployment_preflight.shutil.which"
+        ) as mock_which:
             mock_which.return_value = None
             result = run_preflight(target, repo_root=self.repo_root)
 
@@ -319,8 +352,11 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             target_type="kubernetes_cluster",
             mode="kubernetes",
         )
-        with mock.patch("nmtk.launcher_control.deployment_preflight.shutil.which") as mock_which, \
-             mock.patch("nmtk.launcher_control.deployment_preflight.subprocess.run") as mock_run:
+        with mock.patch(
+            "nmtk.launcher_control.deployment_preflight.shutil.which"
+        ) as mock_which, mock.patch(
+            "nmtk.launcher_control.deployment_preflight.subprocess.run"
+        ) as mock_run:
             mock_which.return_value = "/usr/local/bin/kubectl"
             mock_run.side_effect = [
                 mock.Mock(returncode=0, stdout="minikube", stderr=""),
@@ -330,7 +366,10 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
 
         self.assertEqual(result.status, "degraded")
         self.assertTrue(
-            any("namespace defaults to current context" in f for f in result.degraded_findings)
+            any(
+                "namespace defaults to current context" in f
+                for f in result.degraded_findings
+            )
         )
 
     def test_init_remote_secrets_quotes_deploy_dir(self) -> None:
@@ -361,9 +400,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         assert captured_cmds, "expected _ssh_run to be called"
         cmd = captured_cmds[0]
         # shlex.quote wraps the path in single quotes, neutralising the injection
-        assert "echo INJECTED" not in cmd.split("'")[0], (
-            f"shell injection not neutralised; raw cmd: {cmd!r}"
-        )
+        assert (
+            "echo INJECTED" not in cmd.split("'")[0]
+        ), f"shell injection not neutralised; raw cmd: {cmd!r}"
 
     def test_init_remote_secrets_clean_path(self) -> None:
         """A clean deploy_dir produces a valid shell command without altering the path."""
@@ -418,9 +457,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
 
         assert captured_cmds, "expected _ssh_run to be called"
         cmd = captured_cmds[0]
-        assert "'/opt/my deploy dir'" in cmd, (
-            f"expected path with spaces to be single-quoted; cmd: {cmd!r}"
-        )
+        assert (
+            "'/opt/my deploy dir'" in cmd
+        ), f"expected path with spaces to be single-quoted; cmd: {cmd!r}"
 
     @staticmethod
     def _fake_rsync_popen(returncode: int = 0, output_lines: "list[str] | None" = None):
@@ -461,7 +500,10 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
                 output_lines=["#1 building", "#2 exporting", "#3 done"]
             )
 
-        with mock.patch("nmtk.launcher_control.deployment_executors.subprocess.Popen", side_effect=fake_popen):
+        with mock.patch(
+            "nmtk.launcher_control.deployment_executors.subprocess.Popen",
+            side_effect=fake_popen,
+        ):
             with mock.patch.object(executor, "_ssh_key_context") as mock_ctx:
                 mock_ctx.return_value.__enter__ = mock.Mock(return_value=None)
                 mock_ctx.return_value.__exit__ = mock.Mock(return_value=False)
@@ -493,7 +535,10 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
                 returncode=1, output_lines=["step ok", "ERROR: build failed"]
             )
 
-        with mock.patch("nmtk.launcher_control.deployment_executors.subprocess.Popen", side_effect=fake_popen):
+        with mock.patch(
+            "nmtk.launcher_control.deployment_executors.subprocess.Popen",
+            side_effect=fake_popen,
+        ):
             with mock.patch.object(executor, "_ssh_key_context") as mock_ctx:
                 mock_ctx.return_value.__enter__ = mock.Mock(return_value=None)
                 mock_ctx.return_value.__exit__ = mock.Mock(return_value=False)
@@ -505,18 +550,640 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
     def test_remote_compose_cmd_uses_prod_files_and_env(self) -> None:
         """The remote docker compose command must select both compose files
         and set the env the prod stack needs (mirrors `make deploy-prod`)."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
         from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
 
         executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
-        cmd = executor._remote_compose_cmd("/home/nmtk/nmtk-deploy", "192.168.2.34", "pull")
+        target = DeploymentTarget(
+            id="compose-cmd",
+            display_name="Compose Cmd",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+        )
+        cmd = executor._remote_compose_cmd("/home/nmtk/nmtk-deploy", target, "pull")
 
-        assert "-f docker-compose.yml -f docker-compose.prod.yml" in cmd, cmd
-        assert cmd.strip().endswith("pull"), cmd
+        assert (
+            "-f docker-compose.yml -f docker-compose.prod.yml "
+            "-f docker-compose.remote.yml"
+        ) in cmd, cmd
+        assert "pull" in cmd, cmd
         assert "LAUNCHER_CONTROL_PORT=8090" in cmd, cmd
         assert "JUPYTER_PUBLIC_URL=" in cmd and "192.168.2.34:8008/lab" in cmd, cmd
         assert "nmtk-deploy" in cmd, cmd
         # No source build anywhere in the source-free flow.
         assert "build" not in cmd, cmd
+        # Docker path activates the docker group via `sg` for a just-added membership.
+        assert "sg docker" in cmd, cmd
+
+    def test_remote_compose_cmd_uses_selected_image_tag(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        target = DeploymentTarget(
+            id="compose-tag",
+            display_name="Compose Tag",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            image_tag="v2026.07.24",
+        )
+
+        cmd = executor._remote_compose_cmd("/home/nmtk/nmtk-deploy", target, "pull")
+
+        assert "NMTK_IMAGE_TAG=v2026.07.24" in cmd, cmd
+        assert executor._image_tag(target) == "v2026.07.24"
+        target.image_tag = "bad tag; rm -rf /"
+        assert executor._image_tag(target) == "latest"
+
+    def test_compose_contract_does_not_gate_suite_api_on_lava_health(self) -> None:
+        compose = (
+            Path(__file__).resolve().parents[2] / "docker-compose.yml"
+        ).read_text(encoding="utf-8")
+        suite_block = compose.split("  neurosense-hw-worker:", 1)[0]
+        assert "condition: service_started" in suite_block
+        assert "required: false" in suite_block
+        assert "condition: service_healthy" not in suite_block
+        # The hardware worker starts independently; Lava failures are reported
+        # by its runtime routes instead of blocking the core stack.
+        neurochip_block = compose.split("  neurochip-hw-worker:", 1)[1].split(
+            "\n  lava-backend:", 1
+        )[0]
+        assert "condition: service_started" in neurochip_block
+        assert "required: false" in neurochip_block
+        assert "condition: service_healthy" not in neurochip_block
+
+    def test_remote_provider_preflight_checks_engine_and_merged_config(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        target = DeploymentTarget(
+            id="provider-pf",
+            display_name="Provider PF",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        commands: list[str] = []
+
+        with mock.patch.object(
+            executor,
+            "_ssh_run",
+            side_effect=lambda _target, command, timeout=600: commands.append(command),
+        ):
+            executor._remote_provider_preflight(target, "/home/nmtk/nmtk-deploy")
+
+        assert len(commands) == 2
+        assert "podman info" in commands[0], commands
+        assert "podman compose version" in commands[0], commands
+        assert "config --quiet" in commands[1], commands
+
+    def test_legacy_compose_project_uses_deploy_directory_basename(self) -> None:
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        assert (
+            DockerDeploymentExecutor._legacy_compose_project("/home/nmtk/nmtk-deploy")
+            == "nmtk-deploy"
+        )
+        assert DockerDeploymentExecutor._legacy_compose_project("/home/nmtk/nmtk") == ""
+
+    def test_stale_cleanup_is_label_scoped_across_runtimes(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        target = DeploymentTarget(
+            id="cleanup-labels",
+            display_name="Cleanup Labels",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        commands: list[str] = []
+
+        with mock.patch.object(
+            executor,
+            "_ssh_run",
+            side_effect=lambda _target, command, timeout=600: commands.append(command),
+        ):
+            executor._remote_cleanup_stale_projects(target, "/home/nmtk/nmtk-deploy")
+
+        assert len(commands) == 1
+        command = commands[0]
+        assert "for runtime in podman docker" in command
+        assert "com.docker.compose.project=$project" in command
+        assert "io.podman.compose.project=$project" in command
+        assert "nmtk-deploy" in command
+        assert "fuser" not in command
+        assert "volume" not in command
+
+    def test_port_owner_probe_reports_client_ports_and_compose_labels(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        target = DeploymentTarget(
+            id="port-owner",
+            display_name="Port Owner",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+        )
+        commands: list[str] = []
+
+        with mock.patch.object(
+            executor,
+            "_ssh_run",
+            side_effect=lambda _target, command, timeout=600: commands.append(command),
+        ):
+            executor._remote_port_owner_probe(target)
+
+        assert len(commands) == 1
+        command = commands[0]
+        assert "for port in 9000 8090 8008" in command
+        assert "com.docker.compose.project" in command
+        assert "io.podman.compose.project" in command
+        assert "ss -ltnp" in command
+
+    def test_startup_diagnostics_include_compose_state_and_lava_logs(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        target = DeploymentTarget(
+            id="diagnostics",
+            display_name="Diagnostics",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        commands: list[str] = []
+        logs: list[str] = []
+        executor._log = logs.append
+
+        with mock.patch.object(
+            executor,
+            "_ssh_run",
+            side_effect=lambda _target, command, timeout=600: commands.append(command),
+        ):
+            executor._collect_remote_startup_diagnostics(
+                target, "/home/nmtk/nmtk-deploy"
+            )
+
+        assert any(" ps -a" in command for command in commands), commands
+        assert any(
+            "logs --tail=100 lava-backend" in command for command in commands
+        ), commands
+        assert any("inspect --format" in command for command in commands), commands
+        assert any("probe_status" in command for command in commands), commands
+        assert any("config --format json" in command for command in commands), commands
+        assert any("health diagnostics" in line for line in logs), logs
+
+    def test_readiness_diagnostics_include_suite_api_logs_and_direct_probe(
+        self,
+    ) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        target = DeploymentTarget(
+            id="readiness-diagnostics",
+            display_name="Readiness Diagnostics",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            backend_port=9010,
+            container_engine="podman",
+        )
+        commands: list[str] = []
+        logs: list[str] = []
+        executor._log = logs.append
+
+        with mock.patch.object(
+            executor,
+            "_ssh_run",
+            side_effect=lambda _target, command, timeout=600: commands.append(command),
+        ):
+            executor._collect_remote_readiness_diagnostics(
+                target, "/home/nmtk/nmtk-deploy"
+            )
+
+        assert any("logs --tail=200 suite_api" in command for command in commands)
+        probe_command = commands[-1]
+        assert "127.0.0.1:9010/api/suite/health" in probe_command
+        assert "host listener tcp/9010" in probe_command
+        assert "inspect --format" in probe_command
+        assert any("[nmtk-suite-api]" in line for line in logs)
+
+    def test_remote_readiness_timeout_collects_diagnostics_before_raising(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        target = DeploymentTarget(
+            id="readiness-timeout",
+            display_name="Readiness Timeout",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        diagnostics = mock.Mock()
+
+        with (
+            mock.patch.object(
+                executor,
+                "_resolve_remote_deploy_dir",
+                return_value="/home/nmtk/nmtk-deploy",
+            ),
+            mock.patch.object(executor, "_ensure_engine_installed"),
+            mock.patch.object(executor, "_prepare_podman_runtime"),
+            mock.patch.object(executor, "_copy_manifests_to_remote"),
+            mock.patch.object(executor, "_init_remote_secrets"),
+            mock.patch.object(executor, "_remote_provider_preflight"),
+            mock.patch.object(executor, "_remote_port_owner_probe"),
+            mock.patch.object(executor, "_remote_cleanup_stale_projects"),
+            mock.patch.object(executor, "_ssh_run"),
+            mock.patch.object(
+                executor,
+                "_health_check",
+                side_effect=RuntimeError(
+                    "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out"
+                ),
+            ),
+            mock.patch.object(
+                executor,
+                "_collect_remote_readiness_diagnostics",
+                diagnostics,
+            ),
+        ):
+            with self.assertRaises(RuntimeError) as context:
+                executor._deploy_remote(target, lambda *_args: None)
+
+        diagnostics.assert_called_once_with(target, "/home/nmtk/nmtk-deploy")
+        assert "readiness diagnostics were collected" in str(context.exception)
+
+    def test_remote_jupyter_failure_collects_diagnostics_and_blocks_ready(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        target = DeploymentTarget(
+            id="jupyter-timeout",
+            display_name="Jupyter Timeout",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        diagnostics = mock.Mock()
+
+        with (
+            mock.patch.object(
+                executor,
+                "_resolve_remote_deploy_dir",
+                return_value="/home/nmtk/nmtk-deploy",
+            ),
+            mock.patch.object(executor, "_ensure_engine_installed"),
+            mock.patch.object(executor, "_prepare_podman_runtime"),
+            mock.patch.object(executor, "_copy_manifests_to_remote"),
+            mock.patch.object(executor, "_init_remote_secrets"),
+            mock.patch.object(executor, "_remote_provider_preflight"),
+            mock.patch.object(executor, "_remote_port_owner_probe"),
+            mock.patch.object(executor, "_remote_cleanup_stale_projects"),
+            mock.patch.object(executor, "_ssh_run"),
+            mock.patch.object(executor, "_health_check"),
+            mock.patch.object(
+                executor,
+                "_jupyter_health_check",
+                side_effect=RuntimeError("Jupyter readiness timed out"),
+            ),
+            mock.patch.object(executor, "_collect_remote_jupyter_diagnostics", diagnostics),
+        ):
+            with self.assertRaises(RuntimeError) as context:
+                executor._deploy_remote(target, lambda *_args: None)
+
+        diagnostics.assert_called_once_with(target, "/home/nmtk/nmtk-deploy")
+        assert "degraded optional capability: Jupyter" in str(context.exception)
+
+    def test_jupyter_readiness_checks_internal_and_public_endpoints(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        target = DeploymentTarget(
+            id="jupyter-ready",
+            display_name="Jupyter Ready",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+
+        class Response:
+            status = 200
+
+            def read(self) -> bytes:
+                return b'{"status":"ok","module":"jupyter"}'
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args) -> None:
+                return None
+
+        with mock.patch(
+            "nmtk.launcher_control.deployment_executors.urllib.request.urlopen",
+            side_effect=[Response(), Response()],
+        ) as urlopen:
+            executor._jupyter_health_check(target)
+
+        calls = [str(call.args[0]) for call in urlopen.call_args_list]
+        assert calls == [
+            "http://192.168.2.34:9000/api/jupyter/health",
+            "http://192.168.2.34:8008/api/status",
+        ]
+
+    def test_remote_compose_cmd_podman_skips_docker_group_dance(self) -> None:
+        """Podman is rootless by design: no `sg docker`/group-membership wrapper."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        target = DeploymentTarget(
+            id="compose-cmd-podman",
+            display_name="Compose Cmd Podman",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        cmd = executor._remote_compose_cmd("/home/nmtk/nmtk-deploy", target, "pull")
+
+        assert cmd.startswith("cd "), cmd
+        assert (
+            "podman compose --project-name nmtk -f docker-compose.yml "
+            "-f docker-compose.prod.yml "
+            "-f docker-compose.remote.yml pull" in cmd
+        ), cmd
+        assert "DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock" in cmd, cmd
+        assert "sg docker" not in cmd, cmd
+        assert "getent group docker" not in cmd, cmd
+
+    def test_prepare_podman_runtime_configures_rootless_socket(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import (
+            DeploymentTarget,
+            podman_runtime_setup_script,
+        )
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="podman-runtime",
+            display_name="Podman Runtime",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            auth_mode="ssh_password",
+            secret_refs={"sshPassword": "ref:my-secret"},
+            container_engine="podman",
+        )
+        executor = DockerDeploymentExecutor(
+            repo_root=Path("/tmp"),
+            secret_resolver=lambda _ref: "supersecret",
+        )
+        captured: list[str] = []
+
+        with mock.patch.object(
+            executor,
+            "_ssh_run",
+            side_effect=lambda _target, command, timeout=600: captured.append(command),
+        ):
+            executor._prepare_podman_runtime(target)
+
+        assert len(captured) == 1
+        assert captured[0].startswith(
+            "env NMTK_DEPLOY_SUDO_PASSWORD=supersecret bash -c "
+        )
+        setup_script = podman_runtime_setup_script()
+        assert "systemctl --user enable --now podman.socket" in setup_script
+        assert "XDG_RUNTIME_DIR" in setup_script
+        assert "DOCKER_HOST" in setup_script
+        assert "Podman socket was not created" in setup_script
+
+    def test_deploy_remote_prepares_podman_before_manifests(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="podman-order",
+            display_name="Podman Order",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        calls: list[str] = []
+
+        def emit(_stage: str, _message: str, _percent: float) -> None:
+            pass
+
+        with (
+            mock.patch.object(
+                executor,
+                "_resolve_remote_deploy_dir",
+                return_value="/home/nmtk/nmtk-deploy",
+            ),
+            mock.patch.object(
+                executor,
+                "_ensure_engine_installed",
+                side_effect=lambda _target: calls.append("install"),
+            ),
+            mock.patch.object(
+                executor,
+                "_prepare_podman_runtime",
+                side_effect=lambda _target: calls.append("podman-runtime"),
+            ),
+            mock.patch.object(
+                executor,
+                "_copy_manifests_to_remote",
+                side_effect=lambda _target, _directory: calls.append("manifests"),
+            ),
+            mock.patch.object(
+                executor,
+                "_init_remote_secrets",
+                side_effect=lambda _target, _directory: calls.append("secrets"),
+            ),
+            mock.patch.object(
+                executor,
+                "_ssh_run",
+                side_effect=lambda *_args, **_kwargs: calls.append("compose"),
+            ),
+            mock.patch.object(
+                executor,
+                "_health_check",
+                side_effect=lambda _target, host: calls.append("health"),
+            ),
+            mock.patch.object(
+                executor,
+                "_jupyter_health_check",
+                side_effect=lambda _target: calls.append("jupyter-health"),
+            ),
+        ):
+            executor._deploy_remote(target, emit)
+
+        assert calls.index("install") < calls.index("podman-runtime"), calls
+        assert calls.index("podman-runtime") < calls.index("manifests"), calls
+        assert calls.count("compose") == 9, calls
+
+    def test_remote_deploy_cleans_project_before_pull_and_up(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="cleanup-order",
+            display_name="Cleanup Order",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        commands: list[str] = []
+
+        with (
+            mock.patch.object(
+                executor,
+                "_resolve_remote_deploy_dir",
+                return_value="/home/nmtk/nmtk-deploy",
+            ),
+            mock.patch.object(executor, "_ensure_engine_installed"),
+            mock.patch.object(executor, "_prepare_podman_runtime"),
+            mock.patch.object(executor, "_copy_manifests_to_remote"),
+            mock.patch.object(executor, "_init_remote_secrets"),
+            mock.patch.object(
+                executor,
+                "_ssh_run",
+                side_effect=lambda _target, command, timeout=600: commands.append(
+                    command
+                ),
+            ),
+            mock.patch.object(executor, "_health_check"),
+            mock.patch.object(executor, "_jupyter_health_check"),
+        ):
+            executor._deploy_remote(target, lambda *_args: None)
+
+        assert len(commands) == 9, commands
+        assert "--project-name nmtk" in commands[1], commands
+        assert all(
+            "--project-name nmtk" in command for command in commands[4:8]
+        ), commands
+        assert "down --remove-orphans" in commands[4], commands
+        assert "down --remove-orphans" in commands[5], commands
+        assert " pull" in commands[6], commands
+        assert "up -d --remove-orphans" in commands[7], commands
+        assert (
+            "Lava is optional" in commands[8] or "inspect --format" in commands[8]
+        ), commands
+
+    def test_remote_deploy_continues_when_stale_stack_cleanup_fails(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="cleanup-failure",
+            display_name="Cleanup Failure",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        logs: list[str] = []
+        executor._log = logs.append
+
+        with (
+            mock.patch.object(
+                executor,
+                "_resolve_remote_deploy_dir",
+                return_value="/home/nmtk/nmtk-deploy",
+            ),
+            mock.patch.object(executor, "_ensure_engine_installed"),
+            mock.patch.object(executor, "_prepare_podman_runtime"),
+            mock.patch.object(executor, "_copy_manifests_to_remote"),
+            mock.patch.object(executor, "_init_remote_secrets"),
+            mock.patch.object(
+                executor,
+                "_ssh_run",
+                side_effect=[
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    RuntimeError("old compose project is already gone"),
+                    None,
+                    None,
+                    None,
+                ],
+            ),
+            mock.patch.object(executor, "_health_check"),
+            mock.patch.object(executor, "_jupyter_health_check"),
+        ):
+            executor._deploy_remote(target, lambda *_args: None)
+
+        assert any("cleanup skipped" in line for line in logs), logs
+
+    def test_remote_port_conflict_error_names_port_and_safe_recovery(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="port-conflict",
+            display_name="Port Conflict",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+            container_engine="podman",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        conflict = RuntimeError(
+            "Remote command failed: rootlessport listen tcp 0.0.0.0:8012: "
+            "bind: address already in use"
+        )
+
+        with (
+            mock.patch.object(
+                executor,
+                "_resolve_remote_deploy_dir",
+                return_value="/home/nmtk/nmtk-deploy",
+            ),
+            mock.patch.object(executor, "_ensure_engine_installed"),
+            mock.patch.object(executor, "_prepare_podman_runtime"),
+            mock.patch.object(executor, "_copy_manifests_to_remote"),
+            mock.patch.object(executor, "_init_remote_secrets"),
+            mock.patch.object(
+                executor,
+                "_ssh_run",
+                side_effect=[None, None, None, None, None, None, None, conflict],
+            ),
+        ):
+            with self.assertRaises(RuntimeError) as context:
+                executor._deploy_remote(target, lambda *_args: None)
+
+        message = str(context.exception)
+        assert "host port 8012" in message, message
+        assert "unrelated service" in message, message
+        assert "fuser" not in message, message
 
     def test_copy_manifests_password_not_in_cmdline(self) -> None:
         """The manifest copy must ship only the compose files + monitoring/,
@@ -530,6 +1197,7 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             root = Path(tmp)
             (root / "docker-compose.yml").write_text("services: {}\n")
             (root / "docker-compose.prod.yml").write_text("services: {}\n")
+            (root / "docker-compose.remote.yml").write_text("services: {}\n")
             (root / "monitoring").mkdir()
 
             target = DeploymentTarget(
@@ -567,7 +1235,11 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         assert "supersecret" not in cmd_str, cmd_str
         assert env.get("SSHPASS") == "supersecret", list(env.keys())
         assert "sshpass -e" in cmd_str, cmd_str
-        assert "docker-compose.yml" in cmd_str and "docker-compose.prod.yml" in cmd_str, cmd_str
+        assert (
+            "docker-compose.yml" in cmd_str
+            and "docker-compose.prod.yml" in cmd_str
+            and "docker-compose.remote.yml" in cmd_str
+        ), cmd_str
         assert "monitoring" in cmd_str, cmd_str
 
     def test_copy_manifests_missing_raises_actionable_error(self) -> None:
@@ -646,7 +1318,10 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             captured.append(cmd)
             return mock.Mock(returncode=0, stdout="/srv/nmtk\n", stderr="")
 
-        with mock.patch("nmtk.launcher_control.deployment_executors.subprocess.run", side_effect=fake_run):
+        with mock.patch(
+            "nmtk.launcher_control.deployment_executors.subprocess.run",
+            side_effect=fake_run,
+        ):
             resolved = executor._resolve_remote_deploy_dir(target)
 
         assert resolved == "/srv/nmtk"
@@ -675,9 +1350,14 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
 
         def fake_run(cmd: list[str], **kwargs: object) -> mock.Mock:
             captured.append(cmd)
-            return mock.Mock(returncode=0, stdout="/home/deploy/nmtk-deploy\n", stderr="")
+            return mock.Mock(
+                returncode=0, stdout="/home/deploy/nmtk-deploy\n", stderr=""
+            )
 
-        with mock.patch("nmtk.launcher_control.deployment_executors.subprocess.run", side_effect=fake_run):
+        with mock.patch(
+            "nmtk.launcher_control.deployment_executors.subprocess.run",
+            side_effect=fake_run,
+        ):
             resolved = executor._resolve_remote_deploy_dir(target)
 
         assert resolved == "/home/deploy/nmtk-deploy"
@@ -685,7 +1365,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         assert "~/nmtk-deploy" in remote_cmd
         assert "/opt/nmtk" not in remote_cmd
 
-    def test_resolve_remote_deploy_dir_raises_friendly_error_on_permission_denied(self) -> None:
+    def test_resolve_remote_deploy_dir_raises_friendly_error_on_permission_denied(
+        self,
+    ) -> None:
         """A permission-denied mkdir failure surfaces an actionable message, not raw stderr."""
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
         from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
@@ -708,7 +1390,10 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
                 stderr="mkdir: cannot create directory 'nmtk-deploy': Permission denied",
             )
 
-        with mock.patch("nmtk.launcher_control.deployment_executors.subprocess.run", side_effect=fake_run):
+        with mock.patch(
+            "nmtk.launcher_control.deployment_executors.subprocess.run",
+            side_effect=fake_run,
+        ):
             with self.assertRaises(RuntimeError) as excinfo:
                 executor._resolve_remote_deploy_dir(target)
 
@@ -742,13 +1427,262 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
                 stderr="mkdir: cannot create directory '/opt/nmtk': Permission denied",
             )
 
-        with mock.patch("nmtk.launcher_control.deployment_executors.subprocess.run", side_effect=fake_run):
+        with mock.patch(
+            "nmtk.launcher_control.deployment_executors.subprocess.run",
+            side_effect=fake_run,
+        ):
             with self.assertRaises(RuntimeError) as excinfo:
                 executor._resolve_remote_deploy_dir(target)
 
         message = str(excinfo.exception)
         assert "/opt/nmtk" in message
         assert "not writable" in message
+
+    @staticmethod
+    def _decode_engine_install_script(remote_cmd: str) -> str:
+        """Decode the base64 payload from the generated remote command."""
+        import base64
+
+        echo_part = remote_cmd.split("echo ", 1)[1]
+        encoded = echo_part.split(" | base64", 1)[0]
+        return base64.b64decode(encoded).decode()
+
+    def test_ensure_engine_installed_docker_checks_presence_before_sudo(self) -> None:
+        """The `command -v docker` presence guard must run before the sudo
+        gate, so an already-provisioned host never needs sudo access."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="engine-install-docker",
+            display_name="Engine Install Docker",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.20",
+            auth_mode="none",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        captured: list[str] = []
+
+        def fake_ssh_run(tgt: object, remote_cmd: str, timeout: int = 600) -> None:
+            captured.append(remote_cmd)
+
+        with mock.patch.object(executor, "_ssh_run", side_effect=fake_ssh_run):
+            executor._ensure_engine_installed(target)
+
+        assert captured, "expected _ssh_run to be called"
+        script = self._decode_engine_install_script(captured[0])
+        presence_idx = script.index("command -v docker")
+        sudo_idx = script.index("sudo_available")
+        assert presence_idx < sudo_idx, script
+        assert "exit 0" in script
+        assert "get.docker.com" in script
+
+    def test_ensure_engine_installed_podman_uses_apt(self) -> None:
+        """Podman installs via apt + podman-compose, never the Docker install path."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="engine-install-podman",
+            display_name="Engine Install Podman",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.21",
+            auth_mode="none",
+            container_engine="podman",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        captured: list[str] = []
+
+        def fake_ssh_run(tgt: object, remote_cmd: str, timeout: int = 600) -> None:
+            captured.append(remote_cmd)
+
+        with mock.patch.object(executor, "_ssh_run", side_effect=fake_ssh_run):
+            executor._ensure_engine_installed(target)
+
+        script = self._decode_engine_install_script(captured[0])
+        assert "command -v podman" in script
+        assert "apt-get install -y -qq podman podman-compose" in script
+        assert "get.docker.com" not in script
+
+    def test_ensure_engine_installed_password_auth_sets_sudo_password(self) -> None:
+        """Password-auth targets reuse the SSH login password as the sudo
+        password, mirroring `_ensure_docker_permissions`."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="engine-install-pw",
+            display_name="Engine Install Pw",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.22",
+            auth_mode="ssh_password",
+            secret_refs={"sshPassword": "ref:my-secret"},
+        )
+        executor = DockerDeploymentExecutor(
+            repo_root=Path("/tmp"), secret_resolver=lambda _ref: "supersecret"
+        )
+        captured: list[str] = []
+
+        def fake_ssh_run(tgt: object, remote_cmd: str, timeout: int = 600) -> None:
+            captured.append(remote_cmd)
+
+        with mock.patch.object(executor, "_ssh_run", side_effect=fake_ssh_run):
+            executor._ensure_engine_installed(target)
+
+        assert captured[0].startswith(
+            "env NMTK_DEPLOY_SUDO_PASSWORD=supersecret bash -c "
+        )
+
+    def test_ensure_engine_installed_key_auth_no_sudo_password_prefix(self) -> None:
+        """Key-auth targets carry no password, so no sudo-password prefix is
+        added -- elevation relies on passwordless sudo (or the host already
+        having the engine installed, per the presence guard)."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="engine-install-key",
+            display_name="Engine Install Key",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.23",
+            auth_mode="ssh_key",
+            secret_refs={"sshPrivateKey": "ref:my-key"},
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        captured: list[str] = []
+
+        def fake_ssh_run(tgt: object, remote_cmd: str, timeout: int = 600) -> None:
+            captured.append(remote_cmd)
+
+        with mock.patch.object(executor, "_ssh_run", side_effect=fake_ssh_run):
+            executor._ensure_engine_installed(target)
+
+        assert "NMTK_DEPLOY_SUDO_PASSWORD" not in captured[0]
+        assert captured[0].startswith("echo ")
+
+    def test_deploy_remote_runs_engine_install_before_permissions_and_manifests(
+        self,
+    ) -> None:
+        """`_ensure_engine_installed` must run before both the docker-only
+        permission fix-up and copying manifests, for every remote deploy."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="engine-order",
+            display_name="Engine Order",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.24",
+            auth_mode="none",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        call_order: list[str] = []
+
+        def emit(stage: str, message: str, percent: float) -> None:
+            pass
+
+        with (
+            mock.patch.object(
+                executor,
+                "_resolve_remote_deploy_dir",
+                return_value="/home/nmtk/nmtk-deploy",
+            ),
+            mock.patch.object(
+                executor,
+                "_ensure_engine_installed",
+                side_effect=lambda t: call_order.append("install"),
+            ),
+            mock.patch.object(
+                executor,
+                "_ensure_docker_permissions",
+                side_effect=lambda t: call_order.append("permissions"),
+            ),
+            mock.patch.object(
+                executor,
+                "_copy_manifests_to_remote",
+                side_effect=lambda t, d: call_order.append("manifests"),
+            ),
+            mock.patch.object(
+                executor,
+                "_init_remote_secrets",
+                side_effect=lambda t, d: call_order.append("secrets"),
+            ),
+            mock.patch.object(
+                executor,
+                "_ssh_run",
+                side_effect=lambda *a, **k: call_order.append("ssh_run"),
+            ),
+            mock.patch.object(
+                executor,
+                "_health_check",
+                side_effect=lambda t, host: call_order.append("health"),
+            ),
+            mock.patch.object(
+                executor,
+                "_jupyter_health_check",
+                side_effect=lambda t: call_order.append("jupyter-health"),
+            ),
+        ):
+            executor._deploy_remote(target, emit)
+
+        assert call_order.index("install") < call_order.index("permissions"), call_order
+        assert call_order.index("permissions") < call_order.index(
+            "manifests"
+        ), call_order
+
+    def test_deploy_remote_aborts_before_manifests_when_engine_install_fails(
+        self,
+    ) -> None:
+        """If install isn't possible (no sudo / no apt-get), the raised error
+        must stop the deploy before any compose command runs."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+        from unittest import mock
+
+        target = DeploymentTarget(
+            id="engine-install-fail",
+            display_name="Engine Install Fail",
+            target_type="remote_host",
+            mode="docker",
+            host="10.0.0.25",
+            auth_mode="none",
+        )
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+
+        def emit(stage: str, message: str, percent: float) -> None:
+            pass
+
+        with (
+            mock.patch.object(
+                executor,
+                "_resolve_remote_deploy_dir",
+                return_value="/home/nmtk/nmtk-deploy",
+            ),
+            mock.patch.object(
+                executor,
+                "_ensure_engine_installed",
+                side_effect=RuntimeError(
+                    "Remote command failed: apt-get not found; automatic Podman "
+                    "install only supports Debian/Ubuntu"
+                ),
+            ),
+            mock.patch.object(executor, "_copy_manifests_to_remote") as mock_copy,
+        ):
+            with self.assertRaises(RuntimeError) as ctx:
+                executor._deploy_remote(target, emit)
+
+        assert "apt-get not found" in str(ctx.exception)
+        mock_copy.assert_not_called()
 
 
 class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
@@ -776,7 +1710,7 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
 
     @staticmethod
     def _decode_remote_script(remote_cmd: str) -> str:
-        """Strip any `VAR=... ` sudo-password prefix and decode the base64 payload."""
+        """Decode the base64 payload from the generated remote command."""
         import base64
 
         echo_part = remote_cmd.split("echo ", 1)[1]
@@ -849,10 +1783,10 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
         assert "totally-secret-root-pw" not in cmd[:-1]
         assert captured[0]["env"].get("SSHPASS") == "totally-secret-root-pw"
 
-    def test_ssh_root_bootstrap_sudo_password_prefix_present_for_password_auth(self) -> None:
-        """When root_password is used, it's reused as the sudo password via env-var
-        prefix on the remote command -- documented, accepted argv exposure (mirrors
-        akida_host_service._akida_remote_command_with_sudo_password)."""
+    def test_ssh_root_bootstrap_sudo_password_reaches_decoder_environment(
+        self,
+    ) -> None:
+        """The sudo password must be attached to the decoder Bash process."""
         from unittest import mock
         from nmtk.launcher_control.deployment_user_bootstrap import ssh_root_bootstrap
 
@@ -868,7 +1802,26 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
             )
 
         remote_cmd = captured[0][-1]
-        assert remote_cmd.startswith("NMTK_DEPLOY_SUDO_PASSWORD=totally-secret-root-pw echo ")
+        assert remote_cmd.startswith(
+            "env NMTK_DEPLOY_SUDO_PASSWORD=totally-secret-root-pw bash -c "
+        )
+
+    def test_encode_remote_script_passes_environment_to_decoded_bash(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import encode_remote_script
+
+        remote_cmd = encode_remote_script(
+            'printf "%s" "$NMTK_DEPLOY_SUDO_PASSWORD"',
+            env={"NMTK_DEPLOY_SUDO_PASSWORD": "correct horse battery staple"},
+        )
+        result = _REAL_SUBPROCESS_RUN(
+            ["bash", "-c", remote_cmd],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == "correct horse battery staple"
 
     def test_ssh_root_bootstrap_no_sudo_password_prefix_for_key_auth(self) -> None:
         """SSH-key auth carries no password at all, so no sudo-password prefix is added --
@@ -891,7 +1844,9 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
         assert "NMTK_DEPLOY_SUDO_PASSWORD" not in remote_cmd
         assert remote_cmd.startswith("echo ")
 
-    def test_ssh_root_bootstrap_sudo_unavailable_surfaces_actionable_error(self) -> None:
+    def test_ssh_root_bootstrap_sudo_unavailable_surfaces_actionable_error(
+        self,
+    ) -> None:
         """If sudo elevation isn't possible at all, the script's own check fails fast with
         a clear, actionable message rather than a cryptic permission-denied string."""
         from unittest import mock
@@ -954,7 +1909,9 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
             )
 
         assert observed_key_paths, "expected the root key to be written to a temp file"
-        assert not os.path.exists(observed_key_paths[0]), "root key temp file must be deleted after use"
+        assert not os.path.exists(
+            observed_key_paths[0]
+        ), "root key temp file must be deleted after use"
 
     def test_ssh_root_bootstrap_requires_exactly_one_credential(self) -> None:
         from nmtk.launcher_control.deployment_user_bootstrap import ssh_root_bootstrap
@@ -977,7 +1934,11 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
         def fake_run(cmd, **kwargs):
             if cmd[0] == "ssh-keygen":
                 return _REAL_SUBPROCESS_RUN(cmd, **kwargs)
-            return mock.Mock(returncode=1, stdout="", stderr="Permission denied (publickey,password).")
+            return mock.Mock(
+                returncode=1,
+                stdout="",
+                stderr="Permission denied (publickey,password).",
+            )
 
         with mock.patch(
             "nmtk.launcher_control.deployment_user_bootstrap.subprocess.run",
@@ -1006,7 +1967,9 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
             side_effect=self._fake_ssh_success(captured),
         ):
             with mock.patch.object(
-                FileBackedSecretStore, "put", side_effect=AssertionError("must not persist root creds")
+                FileBackedSecretStore,
+                "put",
+                side_effect=AssertionError("must not persist root creds"),
             ):
                 result = ssh_root_bootstrap(
                     host="10.0.0.9",

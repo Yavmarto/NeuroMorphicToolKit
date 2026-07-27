@@ -1,0 +1,14 @@
+{
+  "bundleVersion": 1,
+  "files": {
+    "docker-compose.prod.yml": "09d95e31655f9b86afc54ea15ee9031e1f3266782d5eb966aff37e0e02245043",
+    "docker-compose.remote.yml": "b7c43a7da1f5f50505ef36246ee12494c0a2e34de97a0fb9b537645fd220c84c",
+    "docker-compose.yml": "a0bdcac522f369fceee04feb57e7ff9ee036fc99caaac027c80f539d33842387",
+    "install.sh": "f46b768f7865a4a335ea7769e2e5043f04e7a927ac3f459615d0c65625839186",
+    "monitoring/alertmanager/alertmanager.yml": "5e37524bbb610300cc965e41488b3c9d11fa5886f55d1196e5949ccf21da9d0e",
+    "monitoring/loki/loki-config.yml": "414e3dadeb587963c52740adc3097af79710eb6d8bf7b5e7da648008469cd8c6",
+    "monitoring/prometheus/alert_rules.yml": "44becb4686525477082c3aeb8f46d5824db0c827b1c15b8bf2de05c60e6597fa",
+    "monitoring/prometheus/prometheus.yml": "518175682a0c76dd1862768d6b99bc3821248d2d57e094f01344fe557ee9ac1f",
+    "monitoring/promtail/promtail-config.yml": "5ea9a58984e2e3de3a5a337bb3b8245ed01d6c8be395a5aa506af8127b1d329b"
+  }
+}

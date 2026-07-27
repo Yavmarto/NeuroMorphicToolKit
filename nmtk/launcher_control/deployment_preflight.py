@@ -20,7 +20,9 @@ def port_is_open(host: str, port: int, timeout: float = 0.5) -> bool:
         return False
 
 
-def run_preflight(target: DeploymentTarget, *, repo_root: Path) -> DeploymentPreflightResult:
+def run_preflight(
+    target: DeploymentTarget, *, repo_root: Path
+) -> DeploymentPreflightResult:
     blocking: list[str] = []
     degraded: list[str] = []
 
@@ -90,13 +92,20 @@ def _docker_preflight(
     blocking: list[str],
     degraded: list[str],
 ) -> None:
+    engine = target.container_engine or "docker"
+    engine_label = engine.capitalize()
     if target.target_type == "local":
-        docker = shutil.which("docker")
-        if docker is None:
-            blocking.append("preflight failed: Docker CLI is not installed")
+        engine_bin = shutil.which(engine)
+        if engine_bin is None:
+            blocking.append(f"preflight failed: {engine_label} CLI is not installed")
             return
+        compose_version_cmd = (
+            [engine_bin, "compose", "version"]
+            if engine == "docker"
+            else [engine_bin, "compose", "--version"]
+        )
         result = subprocess.run(
-            [docker, "compose", "version"],
+            compose_version_cmd,
             capture_output=True,
             text=True,
             check=False,
@@ -104,12 +113,14 @@ def _docker_preflight(
         )
         if result.returncode != 0:
             degraded.append(
-                "degraded optional capability: Docker Compose plugin was not confirmed"
+                f"degraded optional capability: {engine_label} Compose plugin was not confirmed"
             )
         return
     _standalone_preflight(target, blocking, degraded)
     if target.target_type == "remote_host":
-        degraded.append("degraded optional capability: remote Docker daemon is validated during install")
+        degraded.append(
+            f"degraded optional capability: remote {engine_label} runtime is validated during install"
+        )
 
 
 def _kubernetes_preflight(
@@ -122,7 +133,9 @@ def _kubernetes_preflight(
         blocking.append("preflight failed: kubectl is not installed")
         return
     if not target.namespace:
-        degraded.append("degraded optional capability: namespace defaults to current context")
+        degraded.append(
+            "degraded optional capability: namespace defaults to current context"
+        )
 
     env = dict(os.environ)
     base_cmd = [kubectl]
@@ -138,7 +151,9 @@ def _kubernetes_preflight(
         env=env,
     )
     if result.returncode != 0 and not target.context:
-        blocking.append("preflight failed: kubeconfig current context could not be resolved")
+        blocking.append(
+            "preflight failed: kubeconfig current context could not be resolved"
+        )
         return
 
     cluster_result = subprocess.run(

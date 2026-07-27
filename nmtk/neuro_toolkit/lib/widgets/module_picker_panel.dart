@@ -37,8 +37,7 @@ class ModulePickerPanel extends ConsumerWidget {
         tone: NmtkTone.danger,
         action: ConnectionErrorActions(
           onRetry: () => ref.invalidate(moduleProvider),
-          onChangeServer: () =>
-              ref.read(launcherBootstrapProvider.notifier).saveAndRetry(''),
+          onChangeServer: () => context.go('/setup'),
         ),
       );
     }

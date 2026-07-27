@@ -44,6 +44,7 @@ fi
 # ---------------------------------------------------------------------------
 FLUTTER_DEVICE=""
 USE_DOCKER="false"
+CONTAINER_ENGINE="docker"
 CONTROL_API_PID=""
 JUPYTER_PID=""
 # CONTROL_API_BIND_HOST and CONTROL_API_PUBLIC_HOST are only used in the
@@ -58,9 +59,13 @@ usage() {
 Usage: ./scripts/run_dev.sh --flutter-device <device> [options]
 
 Options:
-  --flutter-device <device>  Desktop Flutter target to run.
-  --docker                   Use Docker for the backend services (starts all containers).
-  --remote-host <ip>         Use an external remote host for the backend.
+  --flutter-device <device>     Desktop Flutter target to run.
+  --docker                      Use Docker for the backend services (starts all containers).
+  --container-engine <engine>   Use <engine> (docker|podman) for the backend services.
+                                 Implies --docker semantics; --docker is an alias for
+                                 --container-engine docker. Podman requires podman-compose
+                                 on PATH (`podman compose` shells out to it).
+  --remote-host <ip>            Use an external remote host for the backend.
 EOF
 }
 
@@ -84,7 +89,13 @@ while [ "$#" -gt 0 ]; do
       ;;
     --docker)
       USE_DOCKER="true"
+      CONTAINER_ENGINE="docker"
       shift
+      ;;
+    --container-engine)
+      USE_DOCKER="true"
+      CONTAINER_ENGINE="${2:-}"
+      shift 2
       ;;
     --remote-host)
       REMOTE_HOST_IP="$2"
@@ -111,6 +122,16 @@ if [ -z "$FLUTTER_DEVICE" ]; then
   exit 1
 fi
 
+if [[ "$USE_DOCKER" == "true" && "$CONTAINER_ENGINE" != "docker" && "$CONTAINER_ENGINE" != "podman" ]]; then
+  echo "ERROR: --container-engine must be 'docker' or 'podman' (got '$CONTAINER_ENGINE')." >&2
+  exit 1
+fi
+
+if [[ "$CONTAINER_ENGINE" == "podman" ]] && ! command -v podman >/dev/null 2>&1; then
+  echo "ERROR: podman not found on PATH. Install podman (and podman-compose) or use --container-engine docker." >&2
+  exit 1
+fi
+
 trap cleanup EXIT INT TERM
 
 # ---------------------------------------------------------------------------
@@ -132,18 +153,22 @@ if [[ -n "$REMOTE_HOST_IP" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# --- SECTION: Docker ---
+# --- SECTION: Docker / Podman ---
 # ---------------------------------------------------------------------------
 if [[ "$USE_DOCKER" == "true" ]]; then
   echo "------------------------------------------------------------"
-  echo "==> Starting full Docker stack..."
+  echo "==> Starting full $CONTAINER_ENGINE stack..."
   echo "------------------------------------------------------------"
-  # Optional: NMTK_DOCKER_PRUNE=1 runs builder prune first (slower; use after disk-full builds).
+  # Optional: NMTK_DOCKER_PRUNE=1 prunes stale build cache first (slower; use after disk-full builds).
   if [[ "${NMTK_DOCKER_PRUNE:-}" == "1" ]]; then
-    echo "==> Pruning stale build cache (keeping 20GB most-recent)..."
-    docker builder prune -f --keep-storage=20GB
+    echo "==> Pruning stale build cache..."
+    if [[ "$CONTAINER_ENGINE" == "docker" ]]; then
+      docker builder prune -f --keep-storage=20GB
+    else
+      podman system prune -f
+    fi
   fi
-  docker compose up --build -d
+  "$CONTAINER_ENGINE" compose up --build -d
 fi
 
 CONTROL_API_URL=""

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
@@ -57,6 +58,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   bool _workspaceInitializing = false;
 
   Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
+
+  String _launcherConnectionLabel() {
+    final baseUri = _launcherBaseUri();
+    return 'Connected: ${baseUri.authority}';
+  }
 
   bool _usesRemoteHostedServices() {
     if (kIsWeb) {
@@ -177,6 +183,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Future<void> _initializeWorkspace({bool forceFocus = false}) async {
+    if (!mounted) return;
     if (_workspaceInitializing) {
       return;
     }
@@ -220,13 +227,17 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           )
           .toList(growable: false);
       final targetModuleId = _preferredModuleId(
-              eligibleModules, workspaceState.focusedModuleId, forceFocus) ??
+            eligibleModules,
+            workspaceState.focusedModuleId,
+            forceFocus,
+          ) ??
           eligibleModules.first.id;
 
       await ref.read(workspaceProvider.notifier).ensureDefaultSessionsOnce(
             sessions: desiredSessions,
             focusedModuleId: targetModuleId,
           );
+      if (!mounted) return;
 
       _workspaceInitialized = true;
       await _activateModule(targetModuleId, requestFocus: true);
@@ -294,6 +305,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     String moduleId, {
     required bool requestFocus,
   }) async {
+    if (!mounted) return;
     final moduleState = ref.read(moduleProvider).value;
     final workspaceState = ref.read(workspaceProvider).value;
     if (moduleState == null || workspaceState == null) return;
@@ -320,29 +332,38 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     } else if (requestFocus) {
       await ref.read(workspaceProvider.notifier).focusSession(moduleId);
     }
-    if (mounted) {
-      setState(() {
-        _activeModuleId = moduleId;
-        _moduleLoadFailures.remove(moduleId);
-      });
-    }
+    if (!mounted) return;
+
+    setState(() {
+      _activeModuleId = moduleId;
+      _moduleLoadFailures.remove(moduleId);
+    });
 
     if (currentSession != null &&
         currentSession.readinessState != desiredReadiness) {
-      await ref.read(workspaceProvider.notifier).updateSession(
-            moduleId,
-            readinessState: desiredReadiness,
-          );
+      await ref
+          .read(workspaceProvider.notifier)
+          .updateSession(moduleId, readinessState: desiredReadiness);
+      if (!mounted) return;
     }
 
     if (module.status != ModuleStatus.running &&
         module.status != ModuleStatus.degraded &&
         module.status != ModuleStatus.starting) {
-      await ref.read(workspaceProvider.notifier).updateSession(
-            moduleId,
-            readinessState: 'warming_up',
-          );
-      await ref.read(moduleProvider.notifier).launchModule(moduleId);
+      await ref
+          .read(workspaceProvider.notifier)
+          .updateSession(moduleId, readinessState: 'warming_up');
+      if (!mounted) return;
+      // Jupyter runs as its own Docker container, external to launcher
+      // control (startStrategy "none") -- launchModule() there can only
+      // re-probe its health, not actually restart it. retryJupyter() is the
+      // real fix: it reaches the container over SSH, same as the setup
+      // screen's "Recover Jupyter" button.
+      if (moduleId == 'jupyter') {
+        await ref.read(backendDeploymentProvider.notifier).retryJupyter();
+      } else {
+        await ref.read(moduleProvider.notifier).launchModule(moduleId);
+      }
     }
   }
 
@@ -414,11 +435,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         if (request.isForMainFrame == false) {
           return;
         }
-        _recordModuleLoadFailure(
-          module.id,
-          request.url,
-          error.description,
-        );
+        _recordModuleLoadFailure(module.id, request.url, error.description);
       },
       onReceivedHttpError: (controller, request, errorResponse) {
         // Same main-frame guard as above: a 404 on a JupyterLab sub-resource
@@ -430,20 +447,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         final message = statusCode == null
             ? 'Embedded module request failed before the page could load.'
             : 'Embedded module returned HTTP $statusCode instead of a frontend page.';
-        _recordModuleLoadFailure(
-          module.id,
-          request.url,
-          message,
-        );
+        _recordModuleLoadFailure(module.id, request.url, message);
       },
     );
   }
 
-  void _recordModuleLoadFailure(
-    String moduleId,
-    Uri uri,
-    String message,
-  ) {
+  void _recordModuleLoadFailure(String moduleId, Uri uri, String message) {
     if (!mounted) {
       return;
     }
@@ -474,8 +483,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       // Every module depends on the same one launcher server — "change
       // server" always means reconnecting the whole app, never a per-module
       // override, so it's offered regardless of local vs. remote.
-      onChangeServer: () =>
-          ref.read(launcherBootstrapProvider.notifier).saveAndRetry(''),
+      onChangeServer: () => context.go('/setup'),
     );
   }
 
@@ -490,6 +498,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     Module currentModule,
     Uri requestUri,
   ) async {
+    if (!mounted) return false;
     final moduleState = ref.read(moduleProvider).value;
     if (moduleState == null) return false;
 
@@ -511,12 +520,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           deepLink: launcherDeepLinkFromUri(navigation.targetUri),
           readinessState: 'opening',
         );
+    if (!mounted) return false;
 
     if (_controllers.containsKey(targetModule.id)) {
       _pendingModuleRequests.remove(targetModule.id);
       await _controllers[targetModule.id]!.loadUrl(
         urlRequest: URLRequest(url: WebUri.uri(navigation.targetUri)),
       );
+      if (!mounted) return false;
     }
 
     await _activateModule(targetModule.id, requestFocus: true);
@@ -526,6 +537,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   Future<bool> _handleHostedModuleNavigationRequest(
     NmtkHostNavigationRequest request,
   ) async {
+    if (!mounted) return false;
     final moduleState = ref.read(moduleProvider).value;
     final workspaceState = ref.read(workspaceProvider).value;
     if (moduleState == null || workspaceState == null) return false;
@@ -537,7 +549,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     final existingSession = workspaceState.sessions
         .where(
-            (WorkspaceSession session) => session.moduleId == targetModule.id)
+          (WorkspaceSession session) => session.moduleId == targetModule.id,
+        )
         .cast<WorkspaceSession?>()
         .firstWhere(
           (WorkspaceSession? session) => session != null,
@@ -562,6 +575,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             readinessState: readinessState,
           );
     }
+    if (!mounted) return false;
 
     await _activateModule(targetModule.id, requestFocus: true);
     return true;
@@ -652,17 +666,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               icon: ZetaIcons.error_outline,
               tone: NmtkTone.danger,
               action: ConnectionErrorActions(
-                onRetry: () => _activateModule(
-                  module.id,
-                  requestFocus: false,
-                ),
+                onRetry: () => _activateModule(module.id, requestFocus: false),
                 retryLabel: 'Retry Start',
                 // Every module depends on the same one launcher server —
                 // "change server" always means reconnecting the whole app,
                 // never a per-module override.
-                onChangeServer: () => ref
-                    .read(launcherBootstrapProvider.notifier)
-                    .saveAndRetry(''),
+                onChangeServer: () => context.go('/setup'),
               ),
             )
           : session == null || !isReady
@@ -745,9 +754,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                       ref.invalidate(moduleProvider);
                       ref.invalidate(workspaceProvider);
                     },
-                    onChangeServer: () => ref
-                        .read(launcherBootstrapProvider.notifier)
-                        .saveAndRetry(''),
+                    onChangeServer: () => context.go('/setup'),
                   ),
                 ),
               ),
@@ -786,23 +793,33 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     if (eligibleModules.isEmpty) {
       if (isMobile) {
-        return const NmtkMobileScaffold(
-          navItems: [],
+        return NmtkMobileScaffold(
+          navItems: const [],
           selectedIndex: 0,
           pageTitle: 'NeuroToolkit',
-          child: ModulePickerPanel(),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => context.go('/setup'),
+            tooltip: 'Change Server',
+            icon: const Icon(ZetaIcons.server),
+            label: Text(_launcherConnectionLabel()),
+          ),
+          child: const ModulePickerPanel(),
         );
       }
       return Scaffold(
         backgroundColor: tokens.shellBackground,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => context.go('/setup'),
+          tooltip: 'Change Server',
+          icon: const Icon(ZetaIcons.server),
+          label: Text(_launcherConnectionLabel()),
+        ),
         body: const SafeArea(
           top: false,
           bottom: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: ModulePickerPanel()),
-            ],
+            children: [Expanded(child: ModulePickerPanel())],
           ),
         ),
       );
@@ -832,8 +849,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       });
     }
 
-    final selectedIndex = navItems
-        .indexWhere((NmtkSidebarItem item) => item.id == desiredModuleId);
+    final selectedIndex = navItems.indexWhere(
+      (NmtkSidebarItem item) => item.id == desiredModuleId,
+    );
     final clampedIndex = selectedIndex < 0 ? 0 : selectedIndex;
 
     final sessionsByModuleId = <String, WorkspaceSession>{
@@ -864,8 +882,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               ? mobileModules.first.id
               : desiredModuleId)
           : desiredModuleId;
-      final mobileSelectedIndex =
-          mobileNavItems.indexWhere((item) => item.id == mobileActiveId);
+      final mobileSelectedIndex = mobileNavItems.indexWhere(
+        (item) => item.id == mobileActiveId,
+      );
       final mobileClampedIndex =
           mobileSelectedIndex < 0 ? 0 : mobileSelectedIndex;
       return NmtkMobileScaffold(
@@ -877,6 +896,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           }
         },
         showBottomNavigation: false,
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => context.go('/setup'),
+          tooltip: 'Change Server',
+          icon: const Icon(ZetaIcons.server),
+          label: Text(_launcherConnectionLabel()),
+        ),
         // Only the active module's content is built here — unlike an
         // IndexedStack (which would build and keep every eligible module's
         // full subtree alive simultaneously, including full nested apps for
@@ -906,6 +931,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     return Scaffold(
       backgroundColor: tokens.shellBackground,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.go('/setup'),
+        tooltip: 'Change Server',
+        icon: const Icon(ZetaIcons.server),
+        label: Text(_launcherConnectionLabel()),
+      ),
       body: SafeArea(
         top: false,
         bottom: false,

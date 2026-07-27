@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
@@ -33,26 +32,66 @@ class LauncherControlSettings {
 
   factory LauncherControlSettings.fromJson(Map<String, dynamic> json) {
     return LauncherControlSettings(
-      logLevel: json['logLevel'] as String? ?? 'info',
-      mujocoAvailable: json['mujocoAvailable'] as bool? ?? false,
-      pythonAvailable: json['pythonAvailable'] as bool? ?? true,
-      pynqBoards: (json['pynqBoards'] as List<dynamic>? ?? const <dynamic>[])
-          .whereType<Map<String, dynamic>>()
-          .map(PynqPairedBoard.fromJson)
-          .toList(growable: false),
-      akidaHosts: (json['akidaHosts'] as List<dynamic>? ?? const <dynamic>[])
-          .whereType<Map<String, dynamic>>()
-          .map(AkidaPairedHost.fromJson)
-          .toList(growable: false),
-      selectedAkidaHostId: json['selectedAkidaHostId'] as String?,
-      backendDeploymentReady: json['backendDeploymentReady'] as bool? ?? false,
-      selectedBackendDeploymentTarget: json['selectedBackendDeploymentTarget']
-              is Map<String, dynamic>
-          ? DeploymentTarget.fromJson(
-              json['selectedBackendDeploymentTarget'] as Map<String, dynamic>,
-            )
+      logLevel:
+          json['logLevel'] is String ? json['logLevel'] as String : 'info',
+      mujocoAvailable: json['mujocoAvailable'] is bool
+          ? json['mujocoAvailable'] as bool
+          : false,
+      pythonAvailable: json['pythonAvailable'] is bool
+          ? json['pythonAvailable'] as bool
+          : true,
+      // Hardware inventories are optional capabilities. A stale record from
+      // an older launcher must not prevent the core launcher from opening.
+      pynqBoards: _parseOptionalEntries(
+        json['pynqBoards'],
+        PynqPairedBoard.fromJson,
+      ),
+      akidaHosts: _parseOptionalEntries(
+        json['akidaHosts'],
+        AkidaPairedHost.fromJson,
+      ),
+      selectedAkidaHostId: json['selectedAkidaHostId'] is String
+          ? json['selectedAkidaHostId'] as String
           : null,
+      backendDeploymentReady: json['backendDeploymentReady'] is bool
+          ? json['backendDeploymentReady'] as bool
+          : false,
+      selectedBackendDeploymentTarget: _parseOptionalEntry(
+        json['selectedBackendDeploymentTarget'],
+        DeploymentTarget.fromJson,
+      ),
     );
+  }
+
+  static List<T> _parseOptionalEntries<T>(
+    Object? value,
+    T Function(Map<String, dynamic>) parser,
+  ) {
+    if (value is! List<dynamic>) {
+      return const <Never>[];
+    }
+    final parsed = <T>[];
+    for (final entry in value.whereType<Map<String, dynamic>>()) {
+      final item = _parseOptionalEntry(entry, parser);
+      if (item != null) {
+        parsed.add(item);
+      }
+    }
+    return List<T>.unmodifiable(parsed);
+  }
+
+  static T? _parseOptionalEntry<T>(
+    Object? value,
+    T Function(Map<String, dynamic>) parser,
+  ) {
+    if (value is! Map<String, dynamic>) {
+      return null;
+    }
+    try {
+      return parser(value);
+    } on Object {
+      return null;
+    }
   }
 
   AkidaPairedHost? get selectedAkidaHost {
@@ -72,10 +111,10 @@ class LauncherControlSettings {
 class ControlApiService {
   ControlApiService({
     http.Client? client,
-    Uri? baseUri,
+    required Uri baseUri,
     AnalyticsService? analyticsService,
   })  : _client = _LoggedHttpClient(client ?? http.Client(), analyticsService),
-        _baseUri = baseUri ?? resolveBaseUri();
+        _baseUri = baseUri;
 
   final http.Client _client;
   final Uri _baseUri;
@@ -92,45 +131,38 @@ class ControlApiService {
         defaultValue: 8090,
       );
 
-  static Uri resolveBaseUri({Uri? fallbackBaseUri}) {
-    final configuredBaseUrl = ControlApiService.configuredBaseUrl;
-    if (configuredBaseUrl.isNotEmpty) {
-      return Uri.parse(configuredBaseUrl);
+  static Uri normalizeBaseUri(String input) {
+    var value = input.trim();
+    if (value.isEmpty) {
+      throw const FormatException('Enter a server host or IP address.');
+    }
+    if (!value.contains('://')) {
+      value = 'http://$value';
     }
 
-    if (fallbackBaseUri != null) {
-      return fallbackBaseUri;
+    final uri = Uri.tryParse(value);
+    if (uri == null ||
+        uri.host.trim().isEmpty ||
+        (uri.scheme != 'http' && uri.scheme != 'https') ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasQuery ||
+        uri.hasFragment ||
+        (uri.path.isNotEmpty && uri.path != '/')) {
+      throw const FormatException(
+        'Enter a host, IP address, or HTTP(S) launcher URL.',
+      );
     }
 
-    if (kIsWeb) {
-      final baseHost = Uri.base.host.trim();
-      final host =
-          baseHost.isEmpty || baseHost == '0.0.0.0' ? 'localhost' : baseHost;
-      final scheme = Uri.base.scheme.trim().isEmpty ? 'http' : Uri.base.scheme;
-      return Uri(
-          scheme: scheme, host: host, port: ControlApiService.configuredPort);
-    }
-
-    return Uri.parse('http://127.0.0.1:${ControlApiService.configuredPort}');
+    return uri.replace(
+      port: uri.hasPort ? uri.port : configuredPort,
+      path: '',
+      query: null,
+      fragment: null,
+    );
   }
 
   static String normalizeBaseUrl(String input) {
-    var value = input.trim();
-    if (value.isEmpty) {
-      return value;
-    }
-    if (!value.startsWith('http://') && !value.startsWith('https://')) {
-      value = 'http://$value';
-    }
-    while (value.endsWith('/')) {
-      value = value.substring(0, value.length - 1);
-    }
-    final uri = Uri.tryParse(value);
-    if (uri != null && !uri.hasPort) {
-      value =
-          '${uri.scheme}://${uri.host}:${ControlApiService.configuredPort}${uri.path}';
-    }
-    return value;
+    return normalizeBaseUri(input).toString();
   }
 
   static bool isLoopbackHost(String host) {
@@ -211,80 +243,6 @@ class ControlApiService {
     final response = await _client.get(_uri('/api/launcher/settings'));
     await _ensureSuccess(response);
     return LauncherControlSettings.fromJson(await _readJsonResponse(response));
-  }
-
-  Future<List<DeploymentTarget>> fetchDeploymentTargets() async {
-    final response =
-        await _client.get(_uri('/api/launcher/deployment/targets'));
-    await _ensureSuccess(response);
-    final decoded = await _readJsonList(response);
-    return decoded
-        .whereType<Map<String, dynamic>>()
-        .map(DeploymentTarget.fromJson)
-        .toList(growable: false);
-  }
-
-  Future<DeploymentTarget> createDeploymentTarget(
-    Map<String, dynamic> payload,
-  ) async {
-    final response = await _client.post(
-      _uri('/api/launcher/deployment/targets'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    );
-    await _ensureSuccess(response);
-    return DeploymentTarget.fromJson(await _readJsonResponse(response));
-  }
-
-  Future<DeploymentPreflightResult> preflightDeploymentTarget(
-    Map<String, dynamic> payload,
-  ) async {
-    final response = await _client.post(
-      _uri('/api/launcher/deployment/preflight'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    );
-    await _ensureSuccess(response);
-    return DeploymentPreflightResult.fromJson(
-      await _readJsonResponse(response),
-    );
-  }
-
-  Future<RemoteUserBootstrapResult> bootstrapRemoteDeployUser(
-    Map<String, dynamic> payload,
-  ) async {
-    final response = await _client.post(
-      _uri('/api/launcher/deployment/bootstrap-remote-user'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    );
-    await _ensureSuccess(response);
-    return RemoteUserBootstrapResult.fromJson(await _readJsonResponse(response));
-  }
-
-  Future<DeploymentJob> createDeploymentJob(
-      Map<String, dynamic> payload) async {
-    final response = await _client.post(
-      _uri('/api/launcher/deployment/jobs'),
-      headers: const {'Content-Type': 'application/json'},
-      body: jsonEncode(payload),
-    );
-    await _ensureSuccess(response);
-    return DeploymentJob.fromJson(await _readJsonResponse(response));
-  }
-
-  Future<DeploymentJob> fetchDeploymentJob(String jobId) async {
-    final response =
-        await _client.get(_uri('/api/launcher/deployment/jobs/$jobId'));
-    await _ensureSuccess(response);
-    return DeploymentJob.fromJson(await _readJsonResponse(response));
-  }
-
-  Future<DeploymentJob> cancelDeploymentJob(String jobId) async {
-    final response =
-        await _client.post(_uri('/api/launcher/deployment/jobs/$jobId/cancel'));
-    await _ensureSuccess(response);
-    return DeploymentJob.fromJson(await _readJsonResponse(response));
   }
 
   Future<void> updateSettings({

@@ -13,12 +13,16 @@ been pasted in manually.
 
 from __future__ import annotations
 
-import base64
 import os
 import shlex
 import subprocess
 import tempfile
 
+from .deployment_contracts import (
+    container_engine_install_commands,
+    encode_remote_script,
+    sudo_elevation_preamble,
+)
 from .deployment_executors import build_ssh_argv
 
 __all__ = ["ssh_root_bootstrap", "build_bootstrap_script", "generate_ed25519_keypair"]
@@ -36,7 +40,17 @@ def generate_ed25519_keypair() -> tuple[str, str]:
     with tempfile.TemporaryDirectory(prefix="nmtk-keygen-") as tmpdir:
         key_path = os.path.join(tmpdir, "nmtk_deploy_key")
         result = subprocess.run(
-            ["ssh-keygen", "-t", "ed25519", "-N", "", "-C", "nmtk-deploy", "-f", key_path],
+            [
+                "ssh-keygen",
+                "-t",
+                "ed25519",
+                "-N",
+                "",
+                "-C",
+                "nmtk-deploy",
+                "-f",
+                key_path,
+            ],
             capture_output=True,
             text=True,
             check=False,
@@ -52,7 +66,9 @@ def generate_ed25519_keypair() -> tuple[str, str]:
     return private_key, public_key
 
 
-def build_bootstrap_script(*, deploy_username: str, public_key_line: str) -> str:
+def build_bootstrap_script(
+    *, deploy_username: str, public_key_line: str, container_engine: str = "docker"
+) -> str:
     """Build the remote bash script that creates the deploy user.
 
     Idempotent: if the user already exists, it's reused (not recreated) and
@@ -76,33 +92,28 @@ def build_bootstrap_script(*, deploy_username: str, public_key_line: str) -> str
     `sudo -S` and a heredoc both want to read the password/content from the
     same stdin, and the heredoc content would be swallowed by the password
     read instead of reaching the target file.
+
+    Engine install commands (and the `sudo_cmd`/`sudo_available` preamble)
+    are shared with `deployment_executors.DockerDeploymentExecutor`'s
+    deploy-time install-if-missing step -- see `deployment_contracts`.
     """
     quoted_user = shlex.quote(deploy_username)
+    install_block = container_engine_install_commands(container_engine)
+    if container_engine != "podman":
+        # Bootstrap-specific: grant the newly-created user docker access.
+        # Not part of the shared install commands since the deploy-time
+        # install step (an existing user) handles its own group fix-up
+        # separately via _ensure_docker_permissions.
+        install_block += (
+            '\nsudo_cmd usermod -aG docker "$DEPLOY_USER"\n'
+            "echo \"[nmtk-bootstrap] added '$DEPLOY_USER' to the docker group\"\n"
+        )
     return f"""#!/usr/bin/env bash
 set -euo pipefail
 
 DEPLOY_USER={quoted_user}
 
-sudo_cmd() {{
-  if [ -n "${{NMTK_DEPLOY_SUDO_PASSWORD:-}}" ]; then
-    printf '%s\\n' "$NMTK_DEPLOY_SUDO_PASSWORD" | sudo -S -p "" "$@"
-  else
-    sudo -n "$@"
-  fi
-}}
-sudo_available() {{
-  if [ -n "${{NMTK_DEPLOY_SUDO_PASSWORD:-}}" ]; then
-    printf '%s\\n' "$NMTK_DEPLOY_SUDO_PASSWORD" | sudo -S -p "" true >/dev/null 2>&1
-  else
-    sudo -n true >/dev/null 2>&1
-  fi
-}}
-
-if ! sudo_available; then
-  echo "[nmtk-bootstrap] ERROR: this account cannot run privileged commands (no root session, no passwordless/NOPASSWD sudo, and no sudo password available). Use a password-based login for an admin account, true root credentials, or configure NOPASSWD sudo for this account." >&2
-  exit 1
-fi
-
+{sudo_elevation_preamble()}
 if id -u "$DEPLOY_USER" >/dev/null 2>&1; then
   echo "[nmtk-bootstrap] user '$DEPLOY_USER' already exists; reusing account and rotating its SSH key"
 else
@@ -110,13 +121,7 @@ else
   sudo_cmd useradd --create-home --shell /bin/bash "$DEPLOY_USER"
 fi
 
-if getent group docker >/dev/null 2>&1; then
-  sudo_cmd usermod -aG docker "$DEPLOY_USER"
-  echo "[nmtk-bootstrap] added '$DEPLOY_USER' to the docker group"
-else
-  echo "[nmtk-bootstrap] WARNING: 'docker' group not found on this host yet -- skipping group membership; add it once Docker Engine is installed (usermod -aG docker $DEPLOY_USER)" >&2
-fi
-
+{install_block}
 HOME_DIR="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
 PUBKEY_TMP="$(mktemp)"
 cat > "$PUBKEY_TMP" <<'NMTK_PUBKEY_EOF'
@@ -130,18 +135,6 @@ echo "[nmtk-bootstrap] done"
 """
 
 
-def _remote_command_for_script(script: str) -> str:
-    """Encode `script` as a single argv-safe remote command.
-
-    Base64-encoding avoids any shell-quoting hazard from the script's own
-    content (heredocs, `$()`  substitutions, embedded quotes) — the encoded
-    form contains only `[A-Za-z0-9+/=]`, none of which need escaping, and
-    decoding happens entirely on the remote side.
-    """
-    encoded = base64.b64encode(script.encode("utf-8")).decode("ascii")
-    return f"echo {encoded} | base64 -d | bash"
-
-
 def ssh_root_bootstrap(
     *,
     host: str,
@@ -150,6 +143,7 @@ def ssh_root_bootstrap(
     root_password: str = "",
     root_private_key: str = "",
     deploy_username: str = DEFAULT_DEPLOY_USERNAME,
+    container_engine: str = "docker",
     timeout: int = 60,
 ) -> dict[str, str]:
     """Bootstrap a dedicated non-root deploy user via a one-time root SSH session.
@@ -164,23 +158,19 @@ def ssh_root_bootstrap(
         raise ValueError("Provide exactly one of root_password or root_private_key")
 
     private_key_pem, public_key_line = generate_ed25519_keypair()
-    script = build_bootstrap_script(deploy_username=deploy_username, public_key_line=public_key_line)
-    remote_cmd = _remote_command_for_script(script)
-    if root_password:
-        # Reuse the SSH login password as the sudo password too -- mirrors
-        # akida_host_service._akida_remote_command_with_sudo_password's
-        # established convention in this codebase (same account, same
-        # password serves both SSH auth and sudo elevation). This covers
-        # the common case where `root_username` isn't literal root but a
-        # sudo-capable admin account. Note: unlike the SSH login password
-        # (which only ever travels via the SSHPASS env var, never argv),
-        # this sudo password is embedded in `remote_cmd`, which becomes an
-        # argv item of the local `ssh` subprocess below -- a narrower,
-        # already-accepted tradeoff in this codebase (same as Akida's),
-        # since there's no other way to deliver an env var to a
-        # non-interactive `ssh host "cmd"` invocation. Never logged or
-        # persisted.
-        remote_cmd = f"NMTK_DEPLOY_SUDO_PASSWORD={shlex.quote(root_password)} {remote_cmd}"
+    script = build_bootstrap_script(
+        deploy_username=deploy_username,
+        public_key_line=public_key_line,
+        container_engine=container_engine,
+    )
+    remote_cmd = encode_remote_script(
+        script,
+        env=(
+            {"NMTK_DEPLOY_SUDO_PASSWORD": root_password}
+            if root_password
+            else None
+        ),
+    )
 
     key_path = None
     try:
@@ -212,9 +202,14 @@ def ssh_root_bootstrap(
                 pass
 
     if result.returncode != 0:
-        stderr = result.stderr.strip() or result.stdout.strip() or "root bootstrap failed"
+        stderr = (
+            result.stderr.strip() or result.stdout.strip() or "root bootstrap failed"
+        )
         hint = ""
-        if "[nmtk-bootstrap] creating user" in result.stdout and "[nmtk-bootstrap] done" not in result.stdout:
+        if (
+            "[nmtk-bootstrap] creating user" in result.stdout
+            and "[nmtk-bootstrap] done" not in result.stdout
+        ):
             hint = (
                 f" (the '{deploy_username}' account may have been partially created"
                 " -- retrying this step is safe and will finish the setup)"

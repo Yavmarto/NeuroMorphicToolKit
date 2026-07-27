@@ -350,14 +350,13 @@ void main() {
     expect(find.text('Reconnect the device and retry.'), findsOneWidget);
   });
 
-  testWidgets('NmtkErrorCard renders plain text when selectable is disabled', (
+  testWidgets('NmtkErrorCard renders non-selectable error text', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
       buildHarness(
         const NmtkErrorCard(
           message: 'The deploy command returned exit code 1.',
-          selectable: false,
         ),
       ),
     );
@@ -370,7 +369,7 @@ void main() {
     expect(find.byType(SelectableText), findsNothing);
   });
 
-  testWidgets('NmtkErrorCard renders selectable text by default', (
+  testWidgets('NmtkErrorCard renders its default error text', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -382,14 +381,14 @@ void main() {
     );
 
     expect(find.text('Workflow Error'), findsOneWidget);
-    expect(find.byType(SelectableText), findsOneWidget);
+    expect(find.byType(SelectableText), findsNothing);
     expect(
       find.text('The deploy command returned exit code 1.'),
       findsOneWidget,
     );
   });
 
-  testWidgets('NmtkErrorCard renders selectable text with prefix and action', (
+  testWidgets('NmtkErrorCard renders text with prefix and action', (
     WidgetTester tester,
   ) async {
     var retried = false;
@@ -398,7 +397,6 @@ void main() {
       buildHarness(
         NmtkErrorCard(
           message: 'The runtime log is available for inspection.',
-          selectable: true,
           prefix: const Text('Captured stderr'),
           action: TextButton(
             onPressed: () {
@@ -411,7 +409,7 @@ void main() {
     );
 
     expect(find.text('Captured stderr'), findsOneWidget);
-    expect(find.byType(SelectableText), findsOneWidget);
+    expect(find.byType(SelectableText), findsNothing);
     expect(find.text('Retry'), findsOneWidget);
 
     await tester.tap(find.text('Retry'));

@@ -78,20 +78,20 @@ dev-web:
 	@./scripts/run_dev.sh --flutter-device chrome
 
 docker:
-	@./scripts/run_dev.sh --docker --flutter-device "$(FLUTTER_DEVICE)"
+	@./scripts/run_dev.sh --container-engine "$(CONTAINER_ENGINE)" --flutter-device "$(FLUTTER_DEVICE)"
 
 docker-a:
 	@$(MAKE) check-devices
 	@echo "==> Using Android device: $(ANDROID_DEVICE)"
-	@./scripts/run_dev.sh --docker --flutter-device "$(ANDROID_DEVICE)"
+	@./scripts/run_dev.sh --container-engine "$(CONTAINER_ENGINE)" --flutter-device "$(ANDROID_DEVICE)"
 
 docker-i:
 	@$(MAKE) check-devices
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
-	@./scripts/run_dev.sh --docker --flutter-device "$(IOS_DEVICE)"
+	@./scripts/run_dev.sh --container-engine "$(CONTAINER_ENGINE)" --flutter-device "$(IOS_DEVICE)"
 
 docker-all:
-	@./scripts/run_dev.sh --docker --flutter-device "$(FLUTTER_DEVICE)"
+	@./scripts/run_dev.sh --container-engine "$(CONTAINER_ENGINE)" --flutter-device "$(FLUTTER_DEVICE)"
 
 # Deployment variables (can be overridden on command line)
 REMOTE_HOST ?=
@@ -121,6 +121,9 @@ NATIVE_WORKER_PORTS := $(LAUNCHER_CONTROL_PORT) $(SUITE_API_PORT) $(NEUROSENSE_P
 	$(NEUROCNL_PHYSICS_PORT) $(SNN_MLIR_COMPILER_PORT) $(JUPYTER_PORT)
 # Set DOCKER_EX_PRUNE=1 to run `docker builder prune` before deploy (slower; rarely needed).
 DOCKER_EX_PRUNE ?=
+# Container engine used for all compose/build/prune calls below: docker (default) or podman.
+# Podman path requires `podman-compose` on REMOTE_HOST (`podman compose` shells out to it).
+CONTAINER_ENGINE ?= docker
 # Set DOCKER_EX_RSYNC_VERBOSE=1 to list every rsync'd file (debug only).
 DOCKER_EX_RSYNC_VERBOSE ?=
 # SSH ControlMaster: reuses a single TCP connection across all ssh/rsync calls in one make run.
@@ -218,19 +221,25 @@ docker-ex-deploy:
 	@echo "==> Evicting any native process on ports $(NATIVE_WORKER_PORTS) on $(REMOTE_HOST)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "sudo fuser -k $(foreach p,$(NATIVE_WORKER_PORTS),$(p)/tcp) 2>/dev/null || true"
 	@if [ -n "$(DOCKER_EX_PRUNE)" ]; then \
-		echo "==> Pruning stale build cache on $(REMOTE_HOST) (keeping 20GB most-recent)..."; \
-		ssh $(SSH_OPTS) $(REMOTE_HOST) "docker builder prune -f --keep-storage=20GB"; \
+		echo "==> Pruning stale build cache on $(REMOTE_HOST)..."; \
+		if [ "$(CONTAINER_ENGINE)" = "docker" ]; then \
+			ssh $(SSH_OPTS) $(REMOTE_HOST) "docker builder prune -f --keep-storage=20GB"; \
+		else \
+			ssh $(SSH_OPTS) $(REMOTE_HOST) "podman system prune -f"; \
+		fi; \
 	fi
-	@echo "==> Building and starting full backend stack on $(REMOTE_HOST) (--build picks up source changes)..."
+	@echo "==> Building and starting full backend stack on $(REMOTE_HOST) via $(CONTAINER_ENGINE) (--build picks up source changes)..."
 	@if [ "$(AKIDA_NATIVE)" = "1" ]; then \
 		echo "==> Fetching Akida worker API key from $(REMOTE_HOST)..."; \
 		AKIDA_KEY="$$(ssh $(SSH_OPTS) $(REMOTE_HOST) 'sudo nmtk-read-akida-key')"; \
 		REMOTE_HOST="$(REMOTE_HOST)" DEPLOY_DIR="$(DEPLOY_DIR)" LAUNCHER_CONTROL_PORT="$(LAUNCHER_CONTROL_PORT)" SSH_OPTS="$(SSH_OPTS)" \
+			CONTAINER_ENGINE="$(CONTAINER_ENGINE)" \
 			COMPOSE_FILE_ARGS="-f docker-compose.yml -f docker-compose.akida-native.yml" \
 			NEUROCHIP_HW_WORKER_API_KEY="$$AKIDA_KEY" \
 			scripts/remote_docker_compose_up.sh; \
 	else \
 		REMOTE_HOST="$(REMOTE_HOST)" DEPLOY_DIR="$(DEPLOY_DIR)" LAUNCHER_CONTROL_PORT="$(LAUNCHER_CONTROL_PORT)" SSH_OPTS="$(SSH_OPTS)" \
+			CONTAINER_ENGINE="$(CONTAINER_ENGINE)" \
 			scripts/remote_docker_compose_up.sh; \
 	fi
 	@echo "==> Full backend ready. Suite API at http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):9000"
@@ -256,8 +265,8 @@ deploy-prod: secrets-init
 	rsync -a -v -e "ssh $(SSH_OPTS)" docker-compose.yml docker-compose.prod.yml $(REMOTE_HOST):$(DEPLOY_DIR)/
 	@echo "==> Evicting any native process on ports $(NATIVE_WORKER_PORTS) on $(REMOTE_HOST)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "sudo fuser -k $(foreach p,$(NATIVE_WORKER_PORTS),$(p)/tcp) 2>/dev/null || true"
-	@echo "==> Pulling and starting full backend stack on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.prod.yml pull && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait --remove-orphans"
+	@echo "==> Pulling and starting full backend stack on $(REMOTE_HOST) via $(CONTAINER_ENGINE)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab $(CONTAINER_ENGINE) compose -f docker-compose.yml -f docker-compose.prod.yml pull && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab $(CONTAINER_ENGINE) compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait --remove-orphans"
 	@echo "==> Production backend ready."
 
 .PHONY: dev-sync
@@ -297,8 +306,8 @@ docker-ex-down:
 		echo "Error: REMOTE_HOST is not set. Example: make docker-ex-down REMOTE_HOST=user@192.168.1.50"; \
 		exit 1; \
 	fi
-	@echo "==> Stopping Docker containers on $(REMOTE_HOST)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && docker compose down"
+	@echo "==> Stopping containers on $(REMOTE_HOST) via $(CONTAINER_ENGINE)..."
+	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && $(CONTAINER_ENGINE) compose down"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload

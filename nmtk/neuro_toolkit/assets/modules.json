@@ -22,6 +22,7 @@
     "localDeps": [
       "Neuro-Dream-Hand/"
     ],
+    "showInLauncherNav": true,
     "hasFrontend": true,
     "frontendStatus": "Yes",
     "requiresMuJoCo": false,
@@ -272,6 +273,7 @@
     "remoteUrl": "",
     "required": false,
     "deployment": {
+      "internalProbeHost": "lava-backend",
       "supportedModes": [
         "docker"
       ],
@@ -307,6 +309,7 @@
     "remoteUrl": "",
     "required": false,
     "deployment": {
+      "internalProbeHost": "jupyter-server",
       "supportedModes": [
         "standalone",
         "docker"

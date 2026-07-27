@@ -283,6 +283,7 @@ class DeploymentCapability {
     this.chartTemplateId = '',
     this.startupTimeoutSeconds = 120,
     this.readinessTimeoutSeconds = 120,
+    this.internalProbeHost = '',
   });
 
   final List<String> supportedModes;
@@ -295,6 +296,7 @@ class DeploymentCapability {
   final String chartTemplateId;
   final double startupTimeoutSeconds;
   final double readinessTimeoutSeconds;
+  final String internalProbeHost;
 
   factory DeploymentCapability.fromJson(Map<String, dynamic> json) {
     return DeploymentCapability(
@@ -326,6 +328,7 @@ class DeploymentCapability {
           (json['startupTimeoutSeconds'] as num?)?.toDouble() ?? 120,
       readinessTimeoutSeconds:
           (json['readinessTimeoutSeconds'] as num?)?.toDouble() ?? 120,
+      internalProbeHost: json['internalProbeHost'] as String? ?? '',
     );
   }
 
@@ -340,6 +343,7 @@ class DeploymentCapability {
         'chartTemplateId': chartTemplateId,
         'startupTimeoutSeconds': startupTimeoutSeconds,
         'readinessTimeoutSeconds': readinessTimeoutSeconds,
+        'internalProbeHost': internalProbeHost,
       };
 }
 

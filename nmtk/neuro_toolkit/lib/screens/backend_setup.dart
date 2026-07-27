@@ -1,27 +1,114 @@
 import 'dart:async';
+import 'dart:io';
 
-import 'package:flutter/foundation.dart' show mapEquals;
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb, mapEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/src/features/deployment/domain/deployment_state.dart';
+
+class BackendSetupScreen extends StatelessWidget {
+  const BackendSetupScreen({
+    super.key,
+    required this.onDeploymentReady,
+    this.onQuickConnect,
+    this.onQuickConnectSuccess,
+    this.initialHost,
+    this.message,
+    this.localDeploymentAvailable,
+  });
+
+  final Future<void> Function(DeploymentTarget target) onDeploymentReady;
+  final Future<String?> Function(String input)? onQuickConnect;
+  final void Function()? onQuickConnectSuccess;
+  final String? initialHost;
+  final String? message;
+  final bool? localDeploymentAvailable;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 980),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(context.nmtkTokens.sectionGap * 1.5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Set up your backend',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  SizedBox(height: context.nmtkTokens.compactGap),
+                  Text(
+                    message ??
+                        'Choose where the backend should run. NeuroToolkit '
+                            'will install it and connect automatically.',
+                  ),
+                  SizedBox(height: context.nmtkTokens.sectionGap * 1.5),
+                  BackendSetupForm(
+                    initialHost: initialHost,
+                    localDeploymentAvailable: localDeploymentAvailable,
+                    onQuickConnect: onQuickConnect,
+                    onQuickConnectSuccess: onQuickConnectSuccess,
+                    onDeploymentReady: onDeploymentReady,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class InAppBackendSetupScreen extends ConsumerWidget {
+  const InAppBackendSetupScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(launcherBootstrapProvider.notifier);
+    return BackendSetupScreen(
+      onQuickConnect: notifier.connectToLauncher,
+      onQuickConnectSuccess: () {
+        try {
+          context.go('/workspace');
+        } on Object catch (error) {
+          unawaited(notifier.recordRouteHandoffFailure(error));
+        }
+      },
+      onDeploymentReady: notifier.connectToDeploymentTarget,
+    );
+  }
+}
 
 class BackendSetupForm extends ConsumerStatefulWidget {
   const BackendSetupForm({
     super.key,
     this.onDeploymentReady,
+    this.onQuickConnect,
+    this.onQuickConnectSuccess,
     this.initialHost,
+    this.localDeploymentAvailable,
   });
 
-  final VoidCallback? onDeploymentReady;
+  final Future<void> Function(DeploymentTarget target)? onDeploymentReady;
+  final Future<String?> Function(String input)? onQuickConnect;
+  final void Function()? onQuickConnectSuccess;
 
   /// When set, the form opens on "Remote server" with this host pre-filled
   /// instead of defaulting to "This machine."
   final String? initialHost;
+  final bool? localDeploymentAvailable;
 
   @override
   ConsumerState<BackendSetupForm> createState() => _BackendSetupFormState();
@@ -48,34 +135,56 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   // fields don't affect deploy-target preflight/deploy state.
   bool _bootstrapWithRoot = false;
   String _rootAuthMethod = 'ssh_password';
-  final TextEditingController _rootUsername =
-      TextEditingController(text: 'root');
+  final TextEditingController _rootUsername = TextEditingController(
+    text: 'root',
+  );
   final TextEditingController _rootPassword = TextEditingController();
   final TextEditingController _rootPrivateKey = TextEditingController();
   bool _isBootstrapping = false;
   String? _bootstrapMessage;
   bool _bootstrapFailed = false;
-  final TextEditingController _backendPort =
-      TextEditingController(text: '9000');
+  bool _obscureSshPassword = true;
+  bool _obscureRootPassword = true;
+  final TextEditingController _backendPort = TextEditingController(
+    text: '9000',
+  );
   final TextEditingController _namespace = TextEditingController(text: 'nmtk');
   final TextEditingController _context = TextEditingController();
   final TextEditingController _apiServer = TextEditingController();
+  final TextEditingController _kubeconfig = TextEditingController();
+  String? _kubeconfigName;
   DeploymentPreflightResult? _preflight;
   Map<String, String>? _preflightSnapshot;
   bool _isWorking = false;
+  bool _cleanInstall = false;
+  String? _hostError;
+  String? _submittedDeploymentJobId;
   bool _completionQueued = false;
+  final TextEditingController _quickConnectHost = TextEditingController();
+  bool _isQuickConnecting = false;
+  String? _quickConnectError;
   Timer? _heartbeatTimer;
   // Ticks once a second while a job is active, purely to keep the "updated
   // Xs ago" readout live. Deliberately NOT a setState() call — see
   // _buildStatusSection for why.
   final ValueNotifier<int> _tick = ValueNotifier<int>(0);
 
+  bool get _canRunLocally =>
+      widget.localDeploymentAvailable ??
+      (!kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.macOS ||
+              defaultTargetPlatform == TargetPlatform.windows ||
+              defaultTargetPlatform == TargetPlatform.linux));
+
   @override
   void initState() {
     super.initState();
     final initialHost = widget.initialHost?.trim() ?? '';
-    _targetType = initialHost.isNotEmpty ? 'remote_host' : 'local';
-    _mode = 'standalone';
+    _targetType = initialHost.isNotEmpty || !_canRunLocally
+        ? 'remote_host'
+        : 'local';
+    _mode = 'docker';
+    _quickConnectHost.text = initialHost;
     _displayName = TextEditingController(
       text: _targetType == 'remote_host' ? 'Remote backend' : 'This machine',
     );
@@ -131,9 +240,11 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     _namespace.dispose();
     _context.dispose();
     _apiServer.dispose();
+    _kubeconfig.dispose();
     _rootUsername.dispose();
     _rootPassword.dispose();
     _rootPrivateKey.dispose();
+    _quickConnectHost.dispose();
     super.dispose();
   }
 
@@ -145,19 +256,39 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final tokens = NmtkShellTokens.of(context);
     final activeJob = deploymentState?.activeJob;
 
-    if (isReady && !_completionQueued) {
+    final submittedJobCompleted =
+        activeJob?.id == _submittedDeploymentJobId &&
+        activeJob?.stage == 'completed';
+    if (submittedJobCompleted && isReady && !_completionQueued) {
       _completionQueued = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.onDeploymentReady?.call();
-      });
+      DeploymentTarget? target;
+      for (final candidate
+          in deploymentState?.targets ?? const <DeploymentTarget>[]) {
+        if (candidate.id == activeJob?.targetId) {
+          target = candidate;
+          break;
+        }
+      }
+      final completedTarget = target;
+      if (completedTarget != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final callback = widget.onDeploymentReady;
+          if (callback != null) {
+            unawaited(callback(completedTarget));
+          }
+        });
+      }
     }
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _syncHeartbeat(activeJob));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _syncHeartbeat(activeJob),
+    );
 
     return Column(
       key: const ValueKey<String>('backend-setup-form'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _buildQuickConnectSection(tokens),
+        SizedBox(height: tokens.sectionGap),
         _buildTargetSection(tokens),
         SizedBox(height: tokens.sectionGap),
         _buildModeSection(tokens),
@@ -211,15 +342,16 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   }
 
   Map<String, String> _currentCredentialSnapshot() => {
-        'targetType': _targetType,
-        'mode': _mode,
-        'host': _host.text,
-        'username': _username.text,
-        'sshPort': _sshPort.text,
-        'authMethod': _authMethod,
-        'sshPassword': _sshPassword.text,
-        'sshPrivateKey': _sshPrivateKey.text,
-      };
+    'targetType': _targetType,
+    'mode': _mode,
+    'host': _host.text,
+    'username': _username.text,
+    'sshPort': _sshPort.text,
+    'authMethod': _authMethod,
+    'sshPassword': _sshPassword.text,
+    'sshPrivateKey': _sshPrivateKey.text,
+    'kubeconfig': _kubeconfig.text,
+  };
 
   /// Shows exactly one status view at a time, in priority order, so a
   /// stale card is never shown next to a fresh one:
@@ -267,6 +399,88 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     return mostRecent;
   }
 
+  Widget _buildQuickConnectSection(NmtkShellTokens tokens) {
+    return NmtkSurfaceCard(
+      child: Padding(
+        padding: EdgeInsets.all(tokens.sectionGap),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Already have a server running?'),
+            SizedBox(height: tokens.compactGap),
+            _field(_quickConnectHost, 'Server host or IP'),
+            SizedBox(height: tokens.compactGap),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ZetaButton(
+                key: const Key('backend-setup-quick-connect'),
+                onPressed: _isQuickConnecting ? null : _handleQuickConnect,
+                label: _isQuickConnecting ? 'Connecting…' : 'Connect',
+              ),
+            ),
+            if (_quickConnectError != null) ...[
+              SizedBox(height: tokens.compactGap),
+              NmtkStatusBanner(
+                key: const Key('backend-setup-quick-connect-error'),
+                title: 'Could not connect',
+                content: Text(_quickConnectError!),
+                tone: NmtkTone.danger,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleQuickConnect() async {
+    final host = _quickConnectHost.text.trim();
+    if (host.isEmpty) {
+      setState(() {
+        _quickConnectError = 'Enter a server host or IP address.';
+      });
+      return;
+    }
+    setState(() {
+      _isQuickConnecting = true;
+      _quickConnectError = null;
+    });
+    try {
+      final quickConnect = widget.onQuickConnect;
+      String? error;
+      if (quickConnect != null) {
+        error = await quickConnect(host);
+        if (mounted && error == null) {
+          widget.onQuickConnectSuccess?.call();
+        }
+      } else {
+        final target = DeploymentTarget(
+          id: 'quick-connect-$host',
+          displayName: host,
+          targetType: 'remote_host',
+          mode: 'docker',
+          authMode: 'none',
+          backendPort: 9000,
+          host: host,
+        );
+        await widget.onDeploymentReady?.call(target);
+      }
+      if (mounted && error != null) {
+        setState(() => _quickConnectError = error);
+      }
+    } on Object {
+      if (mounted) {
+        setState(() {
+          _quickConnectError =
+              'The launcher could not be checked. Confirm the address and '
+              'try again.';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isQuickConnecting = false);
+    }
+  }
+
   Widget _buildTargetSection(NmtkShellTokens tokens) {
     return NmtkSurfaceCard(
       child: Padding(
@@ -280,7 +494,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               spacing: 12,
               runSpacing: 12,
               children: [
-                _choice('This machine', 'local'),
+                if (_canRunLocally) _choice('This machine', 'local'),
                 _choice('Remote server', 'remote_host'),
                 _choice('Existing Kubernetes cluster', 'kubernetes_cluster'),
               ],
@@ -294,7 +508,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   Widget _buildModeSection(NmtkShellTokens tokens) {
     final modes = _targetType == 'kubernetes_cluster'
         ? const <String>['kubernetes']
-        : const <String>['standalone', 'docker'];
+        : const <String>['standalone', 'docker', 'podman'];
     if (!modes.contains(_mode)) {
       _mode = modes.first;
     }
@@ -334,7 +548,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             _field(_displayName, 'Display name'),
             if (_targetType == 'remote_host') ...[
               SizedBox(height: tokens.compactGap),
-              _field(_host, 'IP address or hostname'),
+              _field(_host, 'SSH host', errorText: _hostError),
               SizedBox(height: tokens.compactGap),
               _field(_username, 'SSH username'),
               SizedBox(height: tokens.compactGap),
@@ -352,7 +566,21 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               ),
               SizedBox(height: tokens.compactGap),
               if (_authMethod == 'ssh_password')
-                _field(_sshPassword, 'SSH password', obscureText: true)
+                _field(
+                  _sshPassword,
+                  'SSH password',
+                  obscureText: _obscureSshPassword,
+                  suffix: IconButton(
+                    icon: Icon(
+                      _obscureSshPassword
+                          ? ZetaIcons.visibility_off
+                          : ZetaIcons.visibility,
+                    ),
+                    onPressed: () => setState(
+                      () => _obscureSshPassword = !_obscureSshPassword,
+                    ),
+                  ),
+                )
               else
                 _multilineField(
                   _sshPrivateKey,
@@ -380,11 +608,32 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             ],
             if (_targetType == 'kubernetes_cluster') ...[
               SizedBox(height: tokens.compactGap),
+              ZetaButton.outline(
+                onPressed: _pickKubeconfig,
+                leadingIcon: ZetaIcons.upload,
+                label: _kubeconfigName == null
+                    ? 'Import kubeconfig'
+                    : 'Kubeconfig: $_kubeconfigName',
+              ),
+              SizedBox(height: tokens.compactGap),
               _field(_context, 'Kube context'),
               SizedBox(height: tokens.compactGap),
               _field(_namespace, 'Namespace'),
               SizedBox(height: tokens.compactGap),
               _field(_apiServer, 'API server override'),
+            ],
+            if (_targetType != 'kubernetes_cluster') ...[
+              SizedBox(height: tokens.sectionGap),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Clean install (Factory Reset)'),
+                subtitle: const Text(
+                  'Wipes existing backend data volumes before deploying. '
+                  'This erases all database contents.',
+                ),
+                value: _cleanInstall,
+                onChanged: (value) => setState(() => _cleanInstall = value),
+              ),
             ],
           ],
         ),
@@ -393,22 +642,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   }
 
   /// Renders the optional "I only have root access" sub-form. Returns a
-  /// list (spread into the parent Column) rather than a single Widget so it
-  /// can render nothing extra beyond the explanatory text when the control
-  /// API isn't reachable over loopback -- root creds must never cross a
-  /// non-loopback control-API connection as plaintext HTTP.
+  /// list (spread into the parent Column) rather than a single Widget.
   List<Widget> _buildRootBootstrapSection(NmtkShellTokens tokens) {
-    final controlApiHost = ref.read(controlApiServiceProvider).baseUri.host;
-    if (!ControlApiService.isLoopbackHost(controlApiHost)) {
-      return [
-        Text(
-          'Root bootstrap is only available when the control service runs '
-          'on this machine.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ];
-    }
-
     final host = _host.text.trim();
     return [
       SwitchListTile(
@@ -443,13 +678,31 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         ),
         SizedBox(height: tokens.compactGap),
         if (_rootAuthMethod == 'ssh_password')
-          _field(_rootPassword, 'Admin password', obscureText: true)
+          _field(
+            _rootPassword,
+            'Admin password',
+            obscureText: _obscureRootPassword,
+            suffix: IconButton(
+              icon: Icon(
+                _obscureRootPassword
+                    ? ZetaIcons.visibility_off
+                    : ZetaIcons.visibility,
+              ),
+              onPressed: () =>
+                  setState(() => _obscureRootPassword = !_obscureRootPassword),
+            ),
+          )
         else
-          _multilineField(_rootPrivateKey, 'Admin SSH private key (paste contents)'),
+          _multilineField(
+            _rootPrivateKey,
+            'Admin SSH private key (paste contents)',
+          ),
         SizedBox(height: tokens.compactGap),
         ZetaButton(
           onPressed: _isBootstrapping ? null : _bootstrapRemoteUser,
-          label: _isBootstrapping ? 'Creating deploy user...' : 'Create deploy user',
+          label: _isBootstrapping
+              ? 'Creating deploy user...'
+              : 'Create deploy user',
           type: ZetaButtonType.subtle,
         ),
       ],
@@ -471,35 +724,43 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       _bootstrapFailed = false;
     });
     try {
-      final result =
-          await ref.read(backendDeploymentProvider.notifier).bootstrapRemoteUser(
-                host: _host.text,
-                sshPort: int.tryParse(_sshPort.text) ?? 22,
-                rootUsername: _rootUsername.text,
-                rootPassword:
-                    _rootAuthMethod == 'ssh_password' ? _rootPassword.text : '',
-                rootPrivateKey:
-                    _rootAuthMethod == 'ssh_key' ? _rootPrivateKey.text : '',
-              );
-      setState(() {
-        _username.text = result.username;
-        _authMethod = 'ssh_key';
-        _sshPrivateKey.text = result.sshPrivateKey;
-        _rootPassword.clear();
-        _rootPrivateKey.clear();
-        _bootstrapWithRoot = false;
-        _bootstrapFailed = false;
-        _bootstrapMessage =
-            'SSH username and authentication above were replaced with the '
-            'generated "${result.username}" account (SSH key auth) on '
-            '${_host.text}. The admin credentials you entered were used '
-            'once and are not saved.';
-      });
+      final result = await ref
+          .read(backendDeploymentProvider.notifier)
+          .bootstrapRemoteUser(
+            host: _host.text,
+            sshPort: int.tryParse(_sshPort.text) ?? 22,
+            rootUsername: _rootUsername.text,
+            rootPassword: _rootAuthMethod == 'ssh_password'
+                ? _rootPassword.text
+                : '',
+            rootPrivateKey: _rootAuthMethod == 'ssh_key'
+                ? _rootPrivateKey.text
+                : '',
+            containerEngine: _mode == 'podman' ? 'podman' : 'docker',
+          );
+      if (mounted) {
+        setState(() {
+          _username.text = result.username;
+          _authMethod = 'ssh_key';
+          _sshPrivateKey.text = result.sshPrivateKey;
+          _rootPassword.clear();
+          _rootPrivateKey.clear();
+          _bootstrapWithRoot = false;
+          _bootstrapFailed = false;
+          _bootstrapMessage =
+              'SSH username and authentication above were replaced with the '
+              'generated "${result.username}" account (SSH key auth) on '
+              '${_host.text}. The admin credentials you entered were used '
+              'once and are not saved.';
+        });
+      }
     } catch (e) {
-      setState(() {
-        _bootstrapFailed = true;
-        _bootstrapMessage = '$e';
-      });
+      if (mounted) {
+        setState(() {
+          _bootstrapFailed = true;
+          _bootstrapMessage = '$e';
+        });
+      }
     } finally {
       if (mounted) setState(() => _isBootstrapping = false);
     }
@@ -510,10 +771,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   /// code to match on, but read as jargon and duplicate the card's own
   /// status heading when shown to the user.
   String _displayFinding(String finding) {
-    const prefixes = [
-      'preflight failed: ',
-      'degraded optional capability: ',
-    ];
+    const prefixes = ['preflight failed: ', 'degraded optional capability: '];
     for (final prefix in prefixes) {
       if (finding.toLowerCase().startsWith(prefix)) {
         final rest = finding.substring(prefix.length);
@@ -579,6 +837,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   Widget _buildJobStatusCard(DeploymentJob job, NmtkShellTokens tokens) {
     final isTerminal = job.isTerminal;
     final isSuccess = job.stage == 'completed';
+    final isJupyterDegraded = job.error.startsWith(
+      'degraded optional capability: Jupyter',
+    );
     // Phase updates (_emit server-side) copy their message into stageLabel,
     // so the last log entry duplicates the headline — but raw streamed
     // output lines (_emit_log) do not. Drop the last entry only when it
@@ -601,8 +862,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final headline = !isTerminal
         ? '${job.percent.round()}% — ${job.stageLabel}'
         : isSuccess
-            ? 'Deployed'
-            : 'Failed: ${job.error.isNotEmpty ? job.error : job.stageLabel}';
+        ? 'Deployed'
+        : isJupyterDegraded
+        ? 'Notebook capability needs recovery'
+        : 'Failed: ${job.error.isNotEmpty ? job.error : job.stageLabel}';
 
     return NmtkSurfaceCard(
       child: Padding(
@@ -614,10 +877,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               children: [
                 Icon(
                   !isTerminal
-                      ? Icons.sync
+                      ? ZetaIcons.sync
                       : isSuccess
-                          ? Icons.check_circle
-                          : Icons.error,
+                      ? ZetaIcons.check_circle
+                      : ZetaIcons.error,
                   color: isTerminal
                       ? (isSuccess ? Colors.green : Colors.red)
                       : null,
@@ -653,6 +916,13 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                       : history)
                 Text(line),
             ],
+            if (isJupyterDegraded) ...[
+              SizedBox(height: tokens.compactGap),
+              const Text(
+                'The backend is reachable, but Jupyter is not ready yet. '
+                'Recovering keeps existing notebook data.',
+              ),
+            ],
           ],
         ),
       ),
@@ -665,6 +935,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         return 'Deployed';
       case 'failed':
         return 'Failed';
+      case 'degraded':
+        return 'Notebook capability needs recovery';
       default:
         return 'Not yet deployed';
     }
@@ -676,10 +948,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   /// on a live poll surviving, so a real failure (e.g. an SSH auth
   /// rejection) is never invisible to the user. Explicitly labeled as
   /// history, not live status.
-  Widget _buildLastResultCard(
-    DeploymentTarget target,
-    NmtkShellTokens tokens,
-  ) {
+  Widget _buildLastResultCard(DeploymentTarget target, NmtkShellTokens tokens) {
     return NmtkSurfaceCard(
       child: Padding(
         padding: EdgeInsets.all(tokens.sectionGap),
@@ -709,7 +978,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           label: 'Validate connection',
         ),
         ZetaButton(
-          onPressed: _isWorking ||
+          key: const Key('backend-setup-deploy'),
+          onPressed:
+              _isWorking ||
                   (_preflight != null && _preflight!.status == 'failed')
               ? null
               : _deploy,
@@ -721,6 +992,14 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             onPressed: () =>
                 ref.read(backendDeploymentProvider.notifier).cancelActiveJob(),
             label: 'Cancel',
+          ),
+        if (job != null &&
+            job.isTerminal &&
+            job.error.startsWith('degraded optional capability: Jupyter'))
+          ZetaButton(
+            onPressed: _isWorking ? null : _recoverJupyter,
+            label: 'Recover Jupyter',
+            type: ZetaButtonType.subtle,
           ),
       ],
     );
@@ -757,23 +1036,33 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     TextEditingController controller,
     String label, {
     bool obscureText = false,
+    Widget? suffix,
+    String? errorText,
+    String Function(String value)? valueSanitizer,
   }) {
     return NmtkTextInput(
       controller: controller,
       label: label,
       obscureText: obscureText,
+      suffix: suffix,
+      errorText: errorText,
+      valueSanitizer: valueSanitizer,
     );
   }
 
   Widget _multilineField(TextEditingController controller, String label) {
-    return TextField(
-      controller: controller,
-      minLines: 4,
-      maxLines: 8,
-      style: const TextStyle(fontFamily: 'JetBrainsMono', fontSize: 12),
-      decoration: InputDecoration(
-        border: const OutlineInputBorder(),
-        labelText: label,
+    // Disabled for the same reason as NmtkTextInput -- see its build() --
+    // this field bypasses that wrapper and builds TextField directly.
+    return SelectionContainer.disabled(
+      child: TextField(
+        controller: controller,
+        minLines: 4,
+        maxLines: 8,
+        style: const TextStyle(fontFamily: 'JetBrainsMono', fontSize: 12),
+        decoration: InputDecoration(
+          border: const OutlineInputBorder(),
+          labelText: label,
+        ),
       ),
     );
   }
@@ -786,14 +1075,39 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     );
   }
 
+  Future<void> _pickKubeconfig() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['yaml', 'yml', 'config'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final selected = result.files.single;
+    final bytes =
+        selected.bytes ??
+        (selected.path == null
+            ? null
+            : await File(selected.path!).readAsBytes());
+    if (bytes == null) return;
+    if (!mounted) return;
+    setState(() {
+      _kubeconfig.text = String.fromCharCodes(bytes);
+      _kubeconfigName = selected.name;
+      _preflight = null;
+    });
+  }
+
   Future<void> _runPreflight() async {
+    if (!_validateRemoteHost()) return;
     setState(() => _isWorking = true);
     // Captured before the await so it reflects exactly what was validated,
     // not whatever the fields happen to hold once the request resolves.
     final snapshot = _currentCredentialSnapshot();
-    final result = await ref.read(backendDeploymentProvider.notifier).preflight(
+    final result = await ref
+        .read(backendDeploymentProvider.notifier)
+        .preflight(
           targetType: _targetType,
-          mode: _mode,
+          mode: _mode == 'podman' ? 'docker' : _mode,
           displayName: _displayName.text,
           host: _host.text,
           username: _username.text,
@@ -805,15 +1119,20 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           namespace: _namespace.text,
           context: _context.text,
           apiServer: _apiServer.text,
+          containerEngine: _mode == 'podman' ? 'podman' : 'docker',
+          kubeconfig: _kubeconfig.text,
         );
-    setState(() {
-      _preflight = result;
-      _preflightSnapshot = snapshot;
-      _isWorking = false;
-    });
+    if (mounted) {
+      setState(() {
+        _preflight = result;
+        _preflightSnapshot = snapshot;
+        _isWorking = false;
+      });
+    }
   }
 
   Future<void> _deploy() async {
+    if (!_validateRemoteHost()) return;
     setState(() {
       _isWorking = true;
       _completionQueued = false;
@@ -824,9 +1143,11 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       _preflight = null;
       _preflightSnapshot = null;
     });
-    await ref.read(backendDeploymentProvider.notifier).deploy(
+    final job = await ref
+        .read(backendDeploymentProvider.notifier)
+        .deploy(
           targetType: _targetType,
-          mode: _mode,
+          mode: _mode == 'podman' ? 'docker' : _mode,
           displayName: _displayName.text,
           host: _host.text,
           username: _username.text,
@@ -838,25 +1159,51 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           namespace: _namespace.text,
           context: _context.text,
           apiServer: _apiServer.text,
+          containerEngine: _mode == 'podman' ? 'podman' : 'docker',
+          kubeconfig: _kubeconfig.text,
+          cleanInstall: _cleanInstall,
         );
     if (mounted) {
-      setState(() => _isWorking = false);
+      setState(() {
+        _submittedDeploymentJobId = job.id;
+        _isWorking = false;
+      });
     }
   }
 
+  Future<void> _recoverJupyter() async {
+    setState(() => _isWorking = true);
+    // Restarts only the Jupyter container over SSH -- unlike the old
+    // recoverActiveJob() path, this doesn't rerun the entire install just to
+    // nudge one already-degraded optional service.
+    await ref.read(backendDeploymentProvider.notifier).retryJupyter();
+    if (mounted) setState(() => _isWorking = false);
+  }
+
+  bool _validateRemoteHost() {
+    if (_targetType != 'remote_host') return true;
+    final valid = _host.text.trim().isNotEmpty;
+    setState(() {
+      _hostError = valid ? null : 'Enter the SSH host.';
+    });
+    return valid;
+  }
+
   String _modeLabel(String mode) {
-    if (mode == 'docker') {
-      return 'Docker';
-    }
-    if (mode == 'kubernetes') {
-      return 'Kubernetes';
-    }
+    if (mode == 'docker') return 'Docker';
+    if (mode == 'podman') return 'Podman';
+    if (mode == 'kubernetes') return 'Kubernetes';
     return 'Standalone';
   }
 
   String _modeDescription(String mode) {
     if (mode == 'docker') {
-      return 'Docker runs the backend in containers and is easier to move and reset.';
+      return 'Docker runs the backend in containers and is easier to move and reset. '
+          '${_targetType == 'remote_host' ? 'If missing on the remote host, deployment installs it automatically.' : 'Install it on this machine before deploying.'}';
+    }
+    if (mode == 'podman') {
+      return 'Podman is rootless and needs no background daemon. '
+          '${_targetType == 'remote_host' ? 'If missing on the remote host, deployment installs it automatically via apt (Debian/Ubuntu) as long as the account has sudo access -- no separate step required.' : 'Install it on this machine before deploying.'}';
     }
     if (mode == 'kubernetes') {
       return 'Kubernetes is best when you already operate a cluster.';

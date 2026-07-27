@@ -1,19 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:neuro_toolkit/screens/first_run_setup_screen.dart';
+import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/environment_editor.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
-import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
 
-GoRouter createGoRouter() {
+GoRouter createGoRouter({String initialLocation = '/workspace'}) {
   return GoRouter(
-    initialLocation: '/workspace',
+    initialLocation: initialLocation,
     routes: [
       ShellRoute(
         // SelectionArea belongs here, not in MaterialApp.router's own
@@ -26,15 +27,13 @@ GoRouter createGoRouter() {
             SelectionArea(child: MainScreen(child: child)),
         routes: [
           // Root redirects to workspace — handles any legacy deep links.
-          GoRoute(
-            path: '/',
-            redirect: (context, state) => '/workspace',
-          ),
+          GoRoute(path: '/', redirect: (context, state) => '/workspace'),
           GoRoute(
             path: '/workspace',
             name: 'workspace',
             builder: (context, state) {
-              final moduleId = state.uri.queryParameters['moduleId'];
+              final moduleId =
+                  state.uri.queryParameters['moduleId'] ?? 'neurocnl';
               return ToolViewScreen(initialModuleId: moduleId);
             },
           ),
@@ -59,7 +58,7 @@ GoRouter createGoRouter() {
           GoRoute(
             path: '/setup',
             name: 'setup',
-            builder: (context, state) => const InAppFirstRunSetupScreen(),
+            builder: (context, state) => const InAppBackendSetupScreen(),
           ),
           GoRoute(
             path: '/environments',
@@ -121,8 +120,8 @@ GoRouter createGoRouter() {
 }
 
 // ---------------------------------------------------------------------------
-// MainScreen — thin shell wrapper that gates the app on Python / bootstrap
-// readiness. Navigation chrome is provided by NmtkDesktopScaffold inside
+// MainScreen — thin shell wrapper that gates the app on backend readiness.
+// Navigation chrome is provided by NmtkDesktopScaffold inside
 // ToolViewScreen; this widget only renders its own Scaffold for error/gate
 // states that appear before the workspace is reachable.
 // ---------------------------------------------------------------------------
@@ -143,6 +142,35 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bootstrapAsync = ref.watch(launcherBootstrapProvider);
+    final bootstrapData = bootstrapAsync.value;
+    if (bootstrapAsync.isLoading && bootstrapData == null) {
+      final targetHost = ref
+          .watch(settingsProvider)
+          .value
+          ?.launcherControlApiBaseUrl;
+      return Scaffold(
+        body: Center(
+          child: _LauncherBootstrapLoadingView(targetHost: targetHost),
+        ),
+      );
+    }
+    if (bootstrapAsync.hasError || bootstrapData == null) {
+      return _buildSetupScreen(
+        context,
+        message:
+            'Preflight failed while checking the launcher host. '
+            'Confirm the address and try again.',
+      );
+    }
+    if (!bootstrapData.isReady) {
+      return _buildSetupScreen(
+        context,
+        message: bootstrapData.setupMessage,
+        initialHost: bootstrapData.suggestedInstallHost,
+      );
+    }
+
     final moduleStateAsync = ref.watch(moduleProvider);
     final moduleState = moduleStateAsync.value;
     final bootstrapState = ref.watch(launcherBootstrapStateProvider);
@@ -168,39 +196,15 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       if (moduleState.pendingLauncherUpdate == null) {
         _updateDialogQueued = false;
       }
-
-      // Gate: Python not detected — unified first-run flow (own Scaffold).
-      if (!moduleState.pythonAvailable && !moduleStateAsync.isLoading) {
-        return const FirstRunSetupScreen(
-          requirePython: true,
-          requireLauncher: false,
-        );
-      }
     }
 
     // Gate: launcher control API could not start — show error Scaffold.
     if (bootstrapState.status == LauncherBootstrapStatus.preflightFailed) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('NeuroToolkit')),
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: NmtkShellReadinessStateView.fromState(
-                NmtkShellReadinessState.error,
-                message: bootstrapState.message ??
-                    'Preflight failed: launcher control API could not start.',
-                action: ConnectionErrorActions(
-                  onRetry: () => ref.invalidate(launcherBootstrapProvider),
-                  onChangeServer: () => ref
-                      .read(launcherBootstrapProvider.notifier)
-                      .saveAndRetry(''),
-                ),
-              ),
-            ),
-          ),
-        ),
+      return _buildSetupScreen(
+        context,
+        message:
+            bootstrapState.message ??
+            'Preflight failed: launcher control API could not start.',
       );
     }
 
@@ -209,10 +213,28 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     return widget.child;
   }
 
-  void _showLauncherUpdateDialog(
-    BuildContext context,
-    WidgetRef ref,
-  ) {
+  Widget _buildSetupScreen(
+    BuildContext context, {
+    String? message,
+    String? initialHost,
+  }) {
+    final notifier = ref.read(launcherBootstrapProvider.notifier);
+    return BackendSetupScreen(
+      message: message,
+      initialHost: initialHost,
+      onQuickConnect: notifier.connectToLauncher,
+      onQuickConnectSuccess: () {
+        try {
+          context.go('/workspace');
+        } on Object catch (error) {
+          unawaited(notifier.recordRouteHandoffFailure(error));
+        }
+      },
+      onDeploymentReady: notifier.connectToDeploymentTarget,
+    );
+  }
+
+  void _showLauncherUpdateDialog(BuildContext context, WidgetRef ref) {
     final moduleState = ref.read(moduleProvider).value;
     final update = moduleState?.pendingLauncherUpdate;
     if (update == null) return;
@@ -234,10 +256,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
             const SizedBox(height: 16),
             Text(
               'Release Notes:',
-              style: Zeta.of(context)
-                  .textStyles
-                  .bodyMedium
-                  .copyWith(fontWeight: FontWeight.bold),
+              style: Zeta.of(
+                context,
+              ).textStyles.bodyMedium.copyWith(fontWeight: FontWeight.bold),
             ),
             Text(releaseNotes),
           ],
@@ -261,6 +282,56 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Keeps long first-time probes legible without replacing the setup form
+/// during user-initiated Quick Connect attempts.
+class _LauncherBootstrapLoadingView extends StatefulWidget {
+  const _LauncherBootstrapLoadingView({this.targetHost});
+
+  final String? targetHost;
+
+  @override
+  State<_LauncherBootstrapLoadingView> createState() =>
+      _LauncherBootstrapLoadingViewState();
+}
+
+class _LauncherBootstrapLoadingViewState
+    extends State<_LauncherBootstrapLoadingView> {
+  late final Timer _timer;
+  int _elapsedSeconds = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _elapsedSeconds++);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final target = widget.targetHost?.trim();
+    final base = target != null && target.isNotEmpty
+        ? 'Connecting to $target…'
+        : 'Connecting to the launcher control API…';
+    final message = _elapsedSeconds < 15
+        ? '$base ($_elapsedSeconds s)'
+        : '$base ($_elapsedSeconds s)\n\nFirst-time connections can take up '
+              'to a minute while the server checks itself and starts up.';
+    return NmtkShellReadinessStateView.fromState(
+      NmtkShellReadinessState.warmingUp,
+      message: message,
     );
   }
 }

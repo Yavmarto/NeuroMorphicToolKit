@@ -1,0 +1,31 @@
+services:
+  # These services communicate over backend-net and do not need host
+  # published ports during a remote Flutter deployment. Removing the
+  # bindings avoids collisions with native services and stale rootlessport
+  # helpers on the target host.
+  suite_api:
+    user: "0:0"
+
+  neurosense-hw-worker:
+    ports: !reset []
+    user: "0:0"
+
+  neurobench-runner-worker:
+    ports: !reset []
+    user: "0:0"
+
+  neurochip-hw-worker:
+    ports: !reset []
+    user: "0:0"
+
+  lava-backend:
+    ports: !reset []
+
+  neurocnl-physics-worker:
+    ports: !reset []
+
+  snn-mlir-compiler:
+    ports: !reset []
+
+  launcher-control:
+    user: "0:0"
