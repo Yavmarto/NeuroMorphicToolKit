@@ -9,6 +9,7 @@ import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
@@ -154,7 +155,7 @@ void main() {
     expect(find.text('Waiting for Bench'), findsNothing);
   });
 
-  testWidgets('Change Server navigates directly to the setup route', (
+  testWidgets('Server Connection button shows IP and opens dismissable popup', (
     tester,
   ) async {
     final router = GoRouter(
@@ -193,10 +194,17 @@ void main() {
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.byTooltip('Change Server'));
+
+    // Verify button shows IP only
+    expect(find.text('192.168.2.51'), findsOneWidget);
+
+    // Tap button to open dismissable popup containing the full setup screen
+    await tester.tap(find.byTooltip('Server Connection'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
-    expect(find.text('Backend setup route'), findsOneWidget);
+    // Verify popup dialog appears with BackendSetupScreen inside
+    expect(find.byType(BackendSetupScreen), findsOneWidget);
+    expect(find.text('Set up your backend'), findsOneWidget);
   });
 }

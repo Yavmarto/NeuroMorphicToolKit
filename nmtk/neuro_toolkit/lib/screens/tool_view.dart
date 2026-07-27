@@ -12,6 +12,7 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
@@ -59,9 +60,94 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
 
-  String _launcherConnectionLabel() {
+  String _launcherConnectionHost() {
     final baseUri = _launcherBaseUri();
-    return 'Connected: ${baseUri.authority}';
+    final host = baseUri.host.trim();
+    if (host.isNotEmpty) return host;
+    final auth = baseUri.authority.trim();
+    if (auth.isNotEmpty) return auth.split(':').first;
+    return 'localhost';
+  }
+
+  void _showServerConnectionPopup(BuildContext context) {
+    final baseUri = _launcherBaseUri();
+    final connectionText = 'Connected: ${baseUri.authority}';
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: NmtkDesignTokens.dialogShape,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: SizedBox(
+          width: 900,
+          height: 700,
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2E7D32),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      connectionText,
+                      style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(ZetaIcons.close),
+                      tooltip: 'Close',
+                      onPressed: () => Navigator.of(dialogContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: InAppBackendSetupScreen(
+                  onComplete: () {
+                    if (Navigator.of(dialogContext).canPop()) {
+                      Navigator.of(dialogContext).pop();
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildServerConnectionButton(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: () => _showServerConnectionPopup(context),
+      tooltip: 'Server Connection',
+      icon: Container(
+        width: 8,
+        height: 8,
+        decoration: const BoxDecoration(
+          color: Color(0xFF2E7D32),
+          shape: BoxShape.circle,
+        ),
+      ),
+      label: Text(_launcherConnectionHost()),
+    );
   }
 
   bool _usesRemoteHostedServices() {
@@ -653,49 +739,57 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final isReady = module.status == ModuleStatus.running ||
         module.status == ModuleStatus.degraded;
 
-    return KeyedSubtree(
-      key: ValueKey(module.id),
-      child: launchBlocked
-          ? NmtkEmptyState(
-              title: '${module.name} Could Not Start',
-              message: [
-                module.statusMessage ?? 'This module could not be started.',
-                if (module.capabilityWarnings.isNotEmpty)
-                  module.capabilityWarnings.join('\n'),
-              ].join('\n\n'),
-              icon: ZetaIcons.error_outline,
-              tone: NmtkTone.danger,
-              action: ConnectionErrorActions(
-                onRetry: () => _activateModule(module.id, requestFocus: false),
-                retryLabel: 'Retry Start',
-                // Every module depends on the same one launcher server —
-                // "change server" always means reconnecting the whole app,
-                // never a per-module override.
-                onChangeServer: () => context.go('/setup'),
-              ),
-            )
-          : session == null || !isReady
-              ? _buildLoadingState(module)
-              : loadFailure != null
-                  ? _buildModuleLoadFailureState(module, loadFailure)
-                  : session.surfaceMode == 'native'
-                      ? NmtkHostNavigationScope(
-                          navigator: _handleHostedModuleNavigationRequest,
-                          child: NativeSurfaceRegistry.build(
-                            module.id,
-                            session,
-                            initialServerUrl: _nativeSurfaceServerUrl(module),
-                          ),
-                        )
-                      : supported
-                          ? _buildWebView(module)
-                          : NmtkEmptyState(
-                              title: 'WebView Not Supported',
-                              message:
-                                  '${module.name} cannot be displayed on this platform.',
-                              icon: ZetaIcons.warning_outline,
-                              tone: NmtkTone.warning,
+    // SelectionContainer.disabled: the module workspace (canvases, steppers,
+    // buttons) must not inherit the app-wide SelectionArea from router.dart —
+    // Scrollable's text-selection-drag autoscroll trips Flutter's "Drag
+    // target size is larger than scrollable size" assert on any short/thin
+    // scrollable in that subtree, causing bounce/jank on first press or drag.
+    return SelectionContainer.disabled(
+      child: KeyedSubtree(
+        key: ValueKey(module.id),
+        child: launchBlocked
+            ? NmtkEmptyState(
+                title: '${module.name} Could Not Start',
+                message: [
+                  module.statusMessage ?? 'This module could not be started.',
+                  if (module.capabilityWarnings.isNotEmpty)
+                    module.capabilityWarnings.join('\n'),
+                ].join('\n\n'),
+                icon: ZetaIcons.error_outline,
+                tone: NmtkTone.danger,
+                action: ConnectionErrorActions(
+                  onRetry: () =>
+                      _activateModule(module.id, requestFocus: false),
+                  retryLabel: 'Retry Start',
+                  // Every module depends on the same one launcher server —
+                  // "change server" always means reconnecting the whole app,
+                  // never a per-module override.
+                  onChangeServer: () => context.go('/setup'),
+                ),
+              )
+            : session == null || !isReady
+                ? _buildLoadingState(module)
+                : loadFailure != null
+                    ? _buildModuleLoadFailureState(module, loadFailure)
+                    : session.surfaceMode == 'native'
+                        ? NmtkHostNavigationScope(
+                            navigator: _handleHostedModuleNavigationRequest,
+                            child: NativeSurfaceRegistry.build(
+                              module.id,
+                              session,
+                              initialServerUrl: _nativeSurfaceServerUrl(module),
                             ),
+                          )
+                        : supported
+                            ? _buildWebView(module)
+                            : NmtkEmptyState(
+                                title: 'WebView Not Supported',
+                                message:
+                                    '${module.name} cannot be displayed on this platform.',
+                                icon: ZetaIcons.warning_outline,
+                                tone: NmtkTone.warning,
+                              ),
+      ),
     );
   }
 
@@ -797,23 +891,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           navItems: const [],
           selectedIndex: 0,
           pageTitle: 'NeuroToolkit',
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => context.go('/setup'),
-            tooltip: 'Change Server',
-            icon: const Icon(ZetaIcons.server),
-            label: Text(_launcherConnectionLabel()),
-          ),
+          floatingActionButton: _buildServerConnectionButton(context),
           child: const ModulePickerPanel(),
         );
       }
       return Scaffold(
         backgroundColor: tokens.shellBackground,
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => context.go('/setup'),
-          tooltip: 'Change Server',
-          icon: const Icon(ZetaIcons.server),
-          label: Text(_launcherConnectionLabel()),
-        ),
+        floatingActionButton: _buildServerConnectionButton(context),
         body: const SafeArea(
           top: false,
           bottom: false,
@@ -896,12 +980,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           }
         },
         showBottomNavigation: false,
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => context.go('/setup'),
-          tooltip: 'Change Server',
-          icon: const Icon(ZetaIcons.server),
-          label: Text(_launcherConnectionLabel()),
-        ),
+        floatingActionButton: _buildServerConnectionButton(context),
         // Only the active module's content is built here — unlike an
         // IndexedStack (which would build and keep every eligible module's
         // full subtree alive simultaneously, including full nested apps for
@@ -931,12 +1010,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     return Scaffold(
       backgroundColor: tokens.shellBackground,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/setup'),
-        tooltip: 'Change Server',
-        icon: const Icon(ZetaIcons.server),
-        label: Text(_launcherConnectionLabel()),
-      ),
+      floatingActionButton: _buildServerConnectionButton(context),
       body: SafeArea(
         top: false,
         bottom: false,

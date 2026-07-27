@@ -72,21 +72,41 @@ class BackendSetupScreen extends StatelessWidget {
 }
 
 class InAppBackendSetupScreen extends ConsumerWidget {
-  const InAppBackendSetupScreen({super.key});
+  const InAppBackendSetupScreen({super.key, this.onComplete});
+
+  final VoidCallback? onComplete;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(backendDeploymentProvider, (previous, next) {
+      final prevReady = previous?.value?.isReady ?? false;
+      final nextReady = next.value?.isReady ?? false;
+      if (!prevReady && nextReady) {
+        if (onComplete != null) {
+          onComplete!.call();
+        } else {
+          try {
+            context.go('/workspace');
+          } on Object catch (_) {}
+        }
+      }
+    });
+
     final notifier = ref.read(launcherBootstrapProvider.notifier);
     return BackendSetupScreen(
       onQuickConnect: notifier.connectToLauncher,
       onQuickConnectSuccess: () {
+        onComplete?.call();
         try {
           context.go('/workspace');
         } on Object catch (error) {
           unawaited(notifier.recordRouteHandoffFailure(error));
         }
       },
-      onDeploymentReady: notifier.connectToDeploymentTarget,
+      onDeploymentReady: (target) async {
+        await notifier.connectToDeploymentTarget(target);
+        onComplete?.call();
+      },
     );
   }
 }
@@ -180,9 +200,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   void initState() {
     super.initState();
     final initialHost = widget.initialHost?.trim() ?? '';
-    _targetType = initialHost.isNotEmpty || !_canRunLocally
-        ? 'remote_host'
-        : 'local';
+    _targetType =
+        initialHost.isNotEmpty || !_canRunLocally ? 'remote_host' : 'local';
     _mode = 'docker';
     _quickConnectHost.text = initialHost;
     _displayName = TextEditingController(
@@ -256,8 +275,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final tokens = NmtkShellTokens.of(context);
     final activeJob = deploymentState?.activeJob;
 
-    final submittedJobCompleted =
-        activeJob?.id == _submittedDeploymentJobId &&
+    final submittedJobCompleted = activeJob?.id == _submittedDeploymentJobId &&
         activeJob?.stage == 'completed';
     if (submittedJobCompleted && isReady && !_completionQueued) {
       _completionQueued = true;
@@ -342,16 +360,16 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   }
 
   Map<String, String> _currentCredentialSnapshot() => {
-    'targetType': _targetType,
-    'mode': _mode,
-    'host': _host.text,
-    'username': _username.text,
-    'sshPort': _sshPort.text,
-    'authMethod': _authMethod,
-    'sshPassword': _sshPassword.text,
-    'sshPrivateKey': _sshPrivateKey.text,
-    'kubeconfig': _kubeconfig.text,
-  };
+        'targetType': _targetType,
+        'mode': _mode,
+        'host': _host.text,
+        'username': _username.text,
+        'sshPort': _sshPort.text,
+        'authMethod': _authMethod,
+        'sshPassword': _sshPassword.text,
+        'sshPrivateKey': _sshPrivateKey.text,
+        'kubeconfig': _kubeconfig.text,
+      };
 
   /// Shows exactly one status view at a time, in priority order, so a
   /// stale card is never shown next to a fresh one:
@@ -624,15 +642,18 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             ],
             if (_targetType != 'kubernetes_cluster') ...[
               SizedBox(height: tokens.sectionGap),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Clean install (Factory Reset)'),
-                subtitle: const Text(
-                  'Wipes existing backend data volumes before deploying. '
-                  'This erases all database contents.',
+              Material(
+                type: MaterialType.transparency,
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Clean install (Factory Reset)'),
+                  subtitle: const Text(
+                    'Wipes existing backend data volumes before deploying. '
+                    'This erases all database contents.',
+                  ),
+                  value: _cleanInstall,
+                  onChanged: (value) => setState(() => _cleanInstall = value),
                 ),
-                value: _cleanInstall,
-                onChanged: (value) => setState(() => _cleanInstall = value),
               ),
             ],
           ],
@@ -646,15 +667,18 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   List<Widget> _buildRootBootstrapSection(NmtkShellTokens tokens) {
     final host = _host.text.trim();
     return [
-      SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        title: const Text("I don't have a dedicated deploy account yet"),
-        subtitle: const Text(
-          'Use an existing admin/root account once to create one -- that '
-          "account's credentials are never saved.",
+      Material(
+        type: MaterialType.transparency,
+        child: SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text("I don't have a dedicated deploy account yet"),
+          subtitle: const Text(
+            'Use an existing admin/root account once to create one -- that '
+            "account's credentials are never saved.",
+          ),
+          value: _bootstrapWithRoot,
+          onChanged: (value) => setState(() => _bootstrapWithRoot = value),
         ),
-        value: _bootstrapWithRoot,
-        onChanged: (value) => setState(() => _bootstrapWithRoot = value),
       ),
       if (_bootstrapWithRoot) ...[
         SizedBox(height: tokens.compactGap),
@@ -730,12 +754,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             host: _host.text,
             sshPort: int.tryParse(_sshPort.text) ?? 22,
             rootUsername: _rootUsername.text,
-            rootPassword: _rootAuthMethod == 'ssh_password'
-                ? _rootPassword.text
-                : '',
-            rootPrivateKey: _rootAuthMethod == 'ssh_key'
-                ? _rootPrivateKey.text
-                : '',
+            rootPassword:
+                _rootAuthMethod == 'ssh_password' ? _rootPassword.text : '',
+            rootPrivateKey:
+                _rootAuthMethod == 'ssh_key' ? _rootPrivateKey.text : '',
             containerEngine: _mode == 'podman' ? 'podman' : 'docker',
           );
       if (mounted) {
@@ -862,10 +884,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final headline = !isTerminal
         ? '${job.percent.round()}% — ${job.stageLabel}'
         : isSuccess
-        ? 'Deployed'
-        : isJupyterDegraded
-        ? 'Notebook capability needs recovery'
-        : 'Failed: ${job.error.isNotEmpty ? job.error : job.stageLabel}';
+            ? 'Deployed'
+            : isJupyterDegraded
+                ? 'Notebook capability needs recovery'
+                : 'Failed: ${job.error.isNotEmpty ? job.error : job.stageLabel}';
 
     return NmtkSurfaceCard(
       child: Padding(
@@ -879,8 +901,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                   !isTerminal
                       ? ZetaIcons.sync
                       : isSuccess
-                      ? ZetaIcons.check_circle
-                      : ZetaIcons.error,
+                          ? ZetaIcons.check_circle
+                          : ZetaIcons.error,
                   color: isTerminal
                       ? (isSuccess ? Colors.green : Colors.red)
                       : null,
@@ -910,10 +932,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             ],
             if (history.isNotEmpty) ...[
               SizedBox(height: tokens.compactGap),
-              for (final line
-                  in history.length > 3
-                      ? history.sublist(history.length - 3)
-                      : history)
+              for (final line in history.length > 3
+                  ? history.sublist(history.length - 3)
+                  : history)
                 Text(line),
             ],
             if (isJupyterDegraded) ...[
@@ -979,8 +1000,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         ),
         ZetaButton(
           key: const Key('backend-setup-deploy'),
-          onPressed:
-              _isWorking ||
+          onPressed: _isWorking ||
                   (_preflight != null && _preflight!.status == 'failed')
               ? null
               : _deploy,
@@ -1083,8 +1103,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     );
     if (result == null || result.files.isEmpty) return;
     final selected = result.files.single;
-    final bytes =
-        selected.bytes ??
+    final bytes = selected.bytes ??
         (selected.path == null
             ? null
             : await File(selected.path!).readAsBytes());
@@ -1103,9 +1122,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     // Captured before the await so it reflects exactly what was validated,
     // not whatever the fields happen to hold once the request resolves.
     final snapshot = _currentCredentialSnapshot();
-    final result = await ref
-        .read(backendDeploymentProvider.notifier)
-        .preflight(
+    final result = await ref.read(backendDeploymentProvider.notifier).preflight(
           targetType: _targetType,
           mode: _mode == 'podman' ? 'docker' : _mode,
           displayName: _displayName.text,
@@ -1143,9 +1160,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       _preflight = null;
       _preflightSnapshot = null;
     });
-    final job = await ref
-        .read(backendDeploymentProvider.notifier)
-        .deploy(
+    final job = await ref.read(backendDeploymentProvider.notifier).deploy(
           targetType: _targetType,
           mode: _mode == 'podman' ? 'docker' : _mode,
           displayName: _displayName.text,
