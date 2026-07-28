@@ -7,6 +7,10 @@ services:
       - /tmp
       - /run
       - /home/app/data
+      # The canonical notebook lives in Jupyter's volume. Suite API keeps an
+      # execution mirror here so kernel requests do not need a Contents API
+      # round-trip; the image user must be able to create workspace folders.
+      - /home/app/notebooks:mode=1777
     environment:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1

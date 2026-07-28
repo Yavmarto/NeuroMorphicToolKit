@@ -19,3 +19,10 @@ def test_remote_deploy_repairs_workspace_volume_before_unprivileged_start() -> N
     assert "compose ps -a" in install_script
     assert "compose logs --tail 200 suite_api launcher-control" in install_script
     assert "Suite API did not become ready; diagnostics captured." in install_script
+
+
+def test_production_suite_api_has_a_writable_ephemeral_notebook_mirror() -> None:
+    """Read-only production Suite API must still support generated notebook execution."""
+    prod_override = (ROOT / "docker-compose.prod.yml").read_text()
+
+    assert "- /home/app/notebooks:mode=1777" in prod_override
