@@ -182,6 +182,9 @@ class DeploymentJob {
     required this.stageLabel,
     required this.logs,
     this.error = '',
+    this.bundleVersion = 0,
+    this.bundleManifestHash = '',
+    this.imageTag = 'latest',
     this.updatedAt,
   });
 
@@ -193,6 +196,9 @@ class DeploymentJob {
   final String stageLabel;
   final List<String> logs;
   final String error;
+  final int bundleVersion;
+  final String bundleManifestHash;
+  final String imageTag;
   final DateTime? updatedAt;
 
   bool get isTerminal =>
@@ -210,6 +216,9 @@ class DeploymentJob {
           .map((dynamic value) => value.toString())
           .toList(growable: false),
       error: json['error'] as String? ?? '',
+      bundleVersion: json['bundleVersion'] as int? ?? 0,
+      bundleManifestHash: json['bundleManifestHash'] as String? ?? '',
+      imageTag: json['imageTag'] as String? ?? 'latest',
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
     );
   }
@@ -223,6 +232,9 @@ class DeploymentJob {
         'stageLabel': stageLabel,
         'logs': logs,
         'error': error,
+        'bundleVersion': bundleVersion,
+        'bundleManifestHash': bundleManifestHash,
+        'imageTag': imageTag,
         if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       };
 
@@ -232,6 +244,9 @@ class DeploymentJob {
     String? stageLabel,
     List<String>? logs,
     String? error,
+    int? bundleVersion,
+    String? bundleManifestHash,
+    String? imageTag,
     DateTime? updatedAt,
   }) {
     return DeploymentJob(
@@ -243,6 +258,9 @@ class DeploymentJob {
       stageLabel: stageLabel ?? this.stageLabel,
       logs: logs ?? this.logs,
       error: error ?? this.error,
+      bundleVersion: bundleVersion ?? this.bundleVersion,
+      bundleManifestHash: bundleManifestHash ?? this.bundleManifestHash,
+      imageTag: imageTag ?? this.imageTag,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +17,65 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 typedef DeploymentPersistenceFactory = Future<DeploymentPersistence> Function();
+
+class DeploymentAssetBundle {
+  const DeploymentAssetBundle({
+    required this.version,
+    required this.manifestHash,
+    required this.fileHashes,
+  });
+
+  final int version;
+  final String manifestHash;
+  final Map<String, String> fileHashes;
+
+  factory DeploymentAssetBundle.fromManifestBytes(Uint8List bytes) {
+    final payload = jsonDecode(utf8.decode(bytes));
+    if (payload is! Map<String, dynamic>) {
+      throw const FormatException('Deployment manifest must be a JSON object.');
+    }
+    final version = payload['bundleVersion'];
+    final files = payload['files'];
+    if (version is! int || version <= 0 || files is! Map<String, dynamic>) {
+      throw const FormatException(
+          'Deployment manifest is missing bundle metadata.');
+    }
+    final fileHashes = <String, String>{
+      for (final entry in files.entries)
+        if (entry.value is String && (entry.value as String).isNotEmpty)
+          entry.key: entry.value as String,
+    };
+    if (fileHashes.length != files.length) {
+      throw const FormatException(
+          'Deployment manifest contains an invalid file hash.');
+    }
+    return DeploymentAssetBundle(
+      version: version,
+      manifestHash: sha256.convert(bytes).toString(),
+      fileHashes: Map.unmodifiable(fileHashes),
+    );
+  }
+
+  static void validateRemoteChecksums({
+    required DeploymentAssetBundle bundle,
+    required Map<String, String> actualChecksums,
+  }) {
+    final expected = <String, String>{
+      ...bundle.fileHashes,
+      'deployment-manifest.json': bundle.manifestHash,
+    };
+    final mismatches = expected.entries
+        .where((entry) => actualChecksums[entry.key] != entry.value)
+        .map((entry) => entry.key)
+        .toList(growable: false);
+    if (mismatches.isNotEmpty) {
+      throw StateError(
+        'Uploaded deployment bundle verification failed for '
+        '${mismatches.join(', ')}.',
+      );
+    }
+  }
+}
 
 class ClientDeploymentService implements DeploymentService {
   ClientDeploymentService({
@@ -50,6 +110,7 @@ class ClientDeploymentService implements DeploymentService {
     'monitoring/prometheus/prometheus.yml',
     'monitoring/promtail/promtail-config.yml',
   ];
+  static const _releaseImageTag = 'latest';
 
   final AssetBundle _assets;
   final http.Client _httpClient;
@@ -272,6 +333,7 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
 
   @override
   Future<DeploymentJob> deploy(DeploymentRequest request) async {
+    final bundle = await _loadDeploymentBundle();
     final targetId = _newId('target');
     final jobId = _newId('deploy');
     final target = DeploymentTarget.fromJson(
@@ -288,11 +350,14 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
       percent: 0,
       stageLabel: 'Deployment queued',
       logs: const [],
+      bundleVersion: bundle.version,
+      bundleManifestHash: bundle.manifestHash,
+      imageTag: _releaseImageTag,
       updatedAt: DateTime.now(),
     );
     _jobs[jobId] = job;
     await store.saveActiveJob(job);
-    _runningJobs[jobId] = _runDeployment(job, target, request);
+    _runningJobs[jobId] = _runDeployment(job, target, request, bundle);
     unawaited(_runningJobs[jobId]!.whenComplete(() {
       _runningJobs.remove(jobId);
     }));
@@ -438,10 +503,11 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     DeploymentJob job,
     DeploymentTarget target,
     DeploymentRequest request,
+    DeploymentAssetBundle bundle,
   ) async {
     try {
       if (request.targetType == 'remote_host') {
-        await _startRemoteDeployment(job, target, request);
+        await _startRemoteDeployment(job, target, request, bundle);
       } else if (request.targetType == 'kubernetes_cluster') {
         await _runKubernetesDeployment(job, target, request);
       } else {
@@ -464,6 +530,7 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     DeploymentJob job,
     DeploymentTarget target,
     DeploymentRequest request,
+    DeploymentAssetBundle bundle,
   ) async {
     await _emit(job, DeploymentPhase.connecting, 5, 'Connecting with SSH');
     final client = await _connect(request);
@@ -486,9 +553,18 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         job,
         DeploymentPhase.uploadingAssets,
         25,
-        'Uploading deployment assets',
+        'Uploading deployment bundle v${bundle.version} '
+        '(${_shortHash(bundle.manifestHash)})',
       );
       await _uploadAssets(client, deployDir);
+      await _verifyRemoteAssets(client, deployDir, bundle);
+      await _emit(
+        job,
+        DeploymentPhase.uploadingAssets,
+        30,
+        'Verified deployment bundle v${bundle.version} '
+        '(${_shortHash(bundle.manifestHash)})',
+      );
       final status = '$jobDir/${job.id}.status';
       final log = '$jobDir/${job.id}.log';
       final pid = '$jobDir/${job.id}.pid';
@@ -497,7 +573,7 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         'install.sh',
         request.containerEngine,
         request.backendPort.toString(),
-        'latest',
+        job.imageTag,
         request.cleanInstall.toString(),
         request.host,
         status,
@@ -744,6 +820,46 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
       }
     }
   }
+
+  Future<DeploymentAssetBundle> _loadDeploymentBundle() async {
+    final data =
+        await _assets.load('assets/deployment/deployment-manifest.json');
+    return DeploymentAssetBundle.fromManifestBytes(
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+    );
+  }
+
+  Future<void> _verifyRemoteAssets(
+    SSHClient client,
+    String deployDir,
+    DeploymentAssetBundle bundle,
+  ) async {
+    final files = <String>[
+      ...bundle.fileHashes.keys,
+      'deployment-manifest.json',
+    ];
+    final result = await client.runWithResult(
+      'cd ${_shellQuote(deployDir)} && sha256sum '
+      '${files.map(_shellQuote).join(' ')}',
+    );
+    if (result.exitCode != 0) {
+      throw StateError('Could not verify uploaded deployment assets.');
+    }
+    final checksums = <String, String>{};
+    for (final line in utf8.decode(result.stdout).split('\n')) {
+      final match = RegExp(r'^([a-fA-F0-9]{64})\\s+\\*?(.+)$').firstMatch(line);
+      if (match != null) {
+        checksums[match.group(2)!] = match.group(1)!.toLowerCase();
+      }
+    }
+    DeploymentAssetBundle.validateRemoteChecksums(
+      bundle: bundle,
+      actualChecksums: checksums,
+    );
+  }
+
+  static String _shortHash(String hash) =>
+      hash.length <= 12 ? hash : hash.substring(0, 12);
 
   Future<Directory> _materializeAssets() async {
     final support = await getApplicationSupportDirectory();

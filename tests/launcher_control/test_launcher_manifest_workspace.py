@@ -288,6 +288,24 @@ class TestLauncherManifestWorkspace(LauncherControlServiceTestBase):
         self.assertEqual(updated["sessions"], [])
         self.assertIsNone(updated["focusedModuleId"])
 
+    def test_workspace_update_stays_usable_when_preferences_cannot_persist(
+        self,
+    ) -> None:
+        with (
+            mock.patch(
+                "nmtk.launcher_control.workspace_service._write_workspace",
+                side_effect=PermissionError("state volume is read-only"),
+            ),
+            self.assertLogs(
+                "nmtk.launcher_control.workspace_service", level="WARNING"
+            ) as logs,
+        ):
+            updated = self.state.create_workspace_session({"moduleId": "dummy"})
+
+        self.assertEqual(updated["focusedModuleId"], "dummy")
+        self.assertEqual(updated["sessions"][0]["moduleId"], "dummy")
+        self.assertIn("could not be persisted", "\n".join(logs.output))
+
     def test_workspace_reload_restores_saved_sessions(self) -> None:
         workspace_file = (
             self.repo_root / "nmtk" / "neuro_toolkit" / "workspace_state.json"

@@ -13,6 +13,8 @@ import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
+import 'package:neuro_toolkit/src/features/deployment/domain/deployment_state.dart';
+import 'package:neuro_toolkit/src/features/deployment/presentation/deployment_notifier.dart';
 import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
 import 'package:neuro_toolkit/widgets/module_loading_view.dart';
@@ -91,6 +93,11 @@ class _FakeWorkspaceNotifier extends WorkspaceNotifier {
 
   @override
   Future<void> closeSession(String moduleId) async {}
+}
+
+class _ReadyDeploymentNotifier extends BackendDeploymentNotifier {
+  @override
+  Future<DeploymentState> build() async => const DeploymentState(isReady: true);
 }
 
 void main() {
@@ -187,6 +194,9 @@ void main() {
           ),
           moduleProvider.overrideWith(() => _FakeModuleNotifier()),
           workspaceProvider.overrideWith(() => _FakeWorkspaceNotifier()),
+          backendDeploymentProvider.overrideWith(
+            () => _ReadyDeploymentNotifier(),
+          ),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -195,8 +205,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    // Verify button shows IP only
-    expect(find.text('192.168.2.51'), findsOneWidget);
+    // Verify button identifies the connected server.
+    expect(find.text('Connected: 192.168.2.51:8090'), findsOneWidget);
 
     // Tap button to open dismissable popup containing the full setup screen
     await tester.tap(find.byTooltip('Server Connection'));
@@ -204,7 +214,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     // Verify popup dialog appears with BackendSetupScreen inside
+    expect(find.byType(Dialog), findsOneWidget);
     expect(find.byType(BackendSetupScreen), findsOneWidget);
     expect(find.text('Set up your backend'), findsOneWidget);
+    expect(find.byType(ToolViewScreen), findsOneWidget);
   });
 }

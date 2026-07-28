@@ -162,18 +162,22 @@ class DeploymentService:
             if self._is_cancelled(job.id):
                 self.cancel_job(job.id)
                 return
-            job.stage = "completed"
-            job.percent = 100
-            job.stage_label = "Ready"
-            job.terminal_outcome = "completed"
-            job.updated_at = utc_now_iso()
-            self._store.save_job(job)
+            # A completed job promises that the selected deployment is ready.
+            # Persist that state before making the terminal result observable
+            # so clients cannot receive "completed" and then see readiness
+            # still unset during the same refresh.
             self._store.set_selected_target(target.id)
             self._store.update_target_readiness(
                 target.id,
                 readiness="ready",
                 deployed_version=target.image_tag,
             )
+            job.stage = "completed"
+            job.percent = 100
+            job.stage_label = "Ready"
+            job.terminal_outcome = "completed"
+            job.updated_at = utc_now_iso()
+            self._store.save_job(job)
         except Exception as exc:  # noqa: BLE001
             self._emit(job, "failed", str(exc), job.percent)
             job.error = str(exc)

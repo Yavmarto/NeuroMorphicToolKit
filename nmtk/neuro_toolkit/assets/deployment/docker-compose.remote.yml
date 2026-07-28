@@ -26,6 +26,3 @@ services:
 
   snn-mlir-compiler:
     ports: !reset []
-
-  launcher-control:
-    user: "0:0"

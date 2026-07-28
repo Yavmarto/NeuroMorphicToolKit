@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse, urlunparse
+
+LOGGER = logging.getLogger(__name__)
+
 
 def _read_workspace(path: Path) -> dict[str, Any]:
     try:
@@ -17,9 +21,7 @@ def _read_workspace(path: Path) -> dict[str, Any]:
 
 def _write_workspace(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
-    )
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
 class WorkspaceStateMixin:
@@ -58,7 +60,9 @@ class WorkspaceStateMixin:
         surface_mode = str(payload.get("surfaceMode") or "embedded").strip().lower()
         if surface_mode not in {"embedded", "native"}:
             surface_mode = "embedded"
-        readiness_state = str(payload.get("readinessState") or "opening").strip().lower()
+        readiness_state = (
+            str(payload.get("readinessState") or "opening").strip().lower()
+        )
         if readiness_state not in {
             "opening",
             "warming_up",
@@ -100,8 +104,10 @@ class WorkspaceStateMixin:
             return deep_link
         if uri.path in {"/", ""}:
             rewritten_path = "/canvas"
-        elif uri.path.startswith("/projects") or uri.path.startswith("/sweep") or uri.path.startswith(
-            "/export"
+        elif (
+            uri.path.startswith("/projects")
+            or uri.path.startswith("/sweep")
+            or uri.path.startswith("/export")
         ):
             rewritten_path = f"/canvas{uri.path}"
         else:
@@ -122,7 +128,18 @@ class WorkspaceStateMixin:
         return deduped
 
     def _persist_workspace(self) -> None:
-        _write_workspace(self._workspace_file, self._workspace)
+        try:
+            _write_workspace(self._workspace_file, self._workspace)
+        except OSError:
+            # Workspace state only controls launcher tabs and focus. Keep the
+            # current in-memory session usable when a mounted state volume is
+            # unavailable rather than turning a preference write into a client
+            # error that blocks module startup or reload.
+            LOGGER.warning(
+                "Workspace preference state could not be persisted; "
+                "continuing with the in-memory workspace.",
+                exc_info=True,
+            )
 
     def get_workspace(self) -> dict[str, Any]:
         with self._lock:
@@ -147,18 +164,17 @@ class WorkspaceStateMixin:
                 )
                 self._workspace["sessions"] = sessions
             if "focusedModuleId" in payload:
-                focused_module_id = str(payload.get("focusedModuleId") or "").strip() or None
+                focused_module_id = (
+                    str(payload.get("focusedModuleId") or "").strip() or None
+                )
                 if focused_module_id and not any(
                     session["moduleId"] == focused_module_id for session in sessions
                 ):
                     raise KeyError(f"Unknown workspace session '{focused_module_id}'")
                 self._workspace["focusedModuleId"] = focused_module_id
-            elif (
-                self._workspace["focusedModuleId"] is not None
-                and not any(
-                    session["moduleId"] == self._workspace["focusedModuleId"]
-                    for session in sessions
-                )
+            elif self._workspace["focusedModuleId"] is not None and not any(
+                session["moduleId"] == self._workspace["focusedModuleId"]
+                for session in sessions
             ):
                 self._workspace["focusedModuleId"] = (
                     sessions[-1]["moduleId"] if sessions else None
@@ -196,4 +212,3 @@ class WorkspaceStateMixin:
                 )
             self._persist_workspace()
             return self.get_workspace()
-

@@ -34,6 +34,32 @@ class _FakeDeploymentNotifier extends BackendDeploymentNotifier {
   Future<DeploymentState> build() async => initialState;
 
   @override
+  Future<DeploymentPreflightResult> preflight({
+    required String targetType,
+    required String mode,
+    required String displayName,
+    String host = '',
+    String username = '',
+    int sshPort = 22,
+    String authMethod = 'ssh_key',
+    String sshPassword = '',
+    String sshPrivateKey = '',
+    int backendPort = 9000,
+    String namespace = '',
+    String context = '',
+    String apiServer = '',
+    String containerEngine = 'docker',
+    String kubeconfig = '',
+  }) async =>
+      const DeploymentPreflightResult(
+        status: 'ok',
+        message: 'Ready',
+        blockingFindings: [],
+        degradedFindings: [],
+        suggestedRecovery: '',
+      );
+
+  @override
   Future<DeploymentJob> deploy({
     required String targetType,
     required String mode,
@@ -178,6 +204,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-validate')));
+    await tester.tap(find.byKey(const Key('backend-setup-validate')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-deploy')));
     await tester.tap(find.byKey(const Key('backend-setup-deploy')));
     await tester.pump();
     expect(completionCount, 0);
@@ -214,8 +244,11 @@ void main() {
 
     // At a phone height the deploy button sits below the fold; scroll it
     // into view before tapping, matching how a real user would reach it.
-    await tester.ensureVisible(find.byKey(const Key('backend-setup-deploy')));
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-validate')));
     await tester.pump();
+    await tester.tap(find.byKey(const Key('backend-setup-validate')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-deploy')));
     await tester.tap(find.byKey(const Key('backend-setup-deploy')));
     await tester.pump();
     expect(completionCount, 0);

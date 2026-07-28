@@ -81,14 +81,13 @@ class InAppBackendSetupScreen extends ConsumerWidget {
     ref.listen(backendDeploymentProvider, (previous, next) {
       final prevReady = previous?.value?.isReady ?? false;
       final nextReady = next.value?.isReady ?? false;
-      if (!prevReady && nextReady) {
-        if (onComplete != null) {
-          onComplete!.call();
-        } else {
-          try {
-            context.go('/workspace');
-          } on Object catch (_) {}
-        }
+      // A setup dialog can be opened while the current backend is already
+      // ready. Its initial provider load must not be treated as a successful
+      // form submission and dismiss the dialog immediately.
+      if (onComplete == null && !prevReady && nextReady) {
+        try {
+          context.go('/workspace');
+        } on Object catch (_) {}
       }
     });
 
@@ -96,7 +95,10 @@ class InAppBackendSetupScreen extends ConsumerWidget {
     return BackendSetupScreen(
       onQuickConnect: notifier.connectToLauncher,
       onQuickConnectSuccess: () {
-        onComplete?.call();
+        if (onComplete != null) {
+          onComplete!.call();
+          return;
+        }
         try {
           context.go('/workspace');
         } on Object catch (error) {
@@ -208,16 +210,22 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       text: _targetType == 'remote_host' ? 'Remote backend' : 'This machine',
     );
     _host = TextEditingController(text: initialHost);
-    // Credential fields are wired to _tick rather than driving the status
-    // panel's AnimatedBuilder directly — see _onCredentialFieldChanged.
+    // Deployment fields are wired to _tick rather than driving the status
+    // panel's AnimatedBuilder directly — see _onConfigurationFieldChanged.
     for (final controller in [
+      _displayName,
       _host,
       _username,
       _sshPort,
       _sshPassword,
       _sshPrivateKey,
+      _backendPort,
+      _namespace,
+      _context,
+      _apiServer,
+      _kubeconfig,
     ]) {
-      controller.addListener(_onCredentialFieldChanged);
+      controller.addListener(_onConfigurationFieldChanged);
     }
   }
 
@@ -230,10 +238,19 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   /// Deferring to a post-frame callback, and touching only our own private
   /// `_tick` notifier — never the raw text controllers themselves — avoids
   /// both re-entering that resync and rebuilding the text fields at all.
-  void _onCredentialFieldChanged() {
+  void _onConfigurationFieldChanged() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _tick.value++;
+      if (!mounted) return;
+      _tick.value++;
+      if (_preflight != null || _preflightSnapshot != null) {
+        setState(_clearPreflight);
+      }
     });
+  }
+
+  void _clearPreflight() {
+    _preflight = null;
+    _preflightSnapshot = null;
   }
 
   @override
@@ -241,13 +258,19 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     _heartbeatTimer?.cancel();
     _tick.dispose();
     for (final controller in [
+      _displayName,
       _host,
       _username,
       _sshPort,
       _sshPassword,
       _sshPrivateKey,
+      _backendPort,
+      _namespace,
+      _context,
+      _apiServer,
+      _kubeconfig,
     ]) {
-      controller.removeListener(_onCredentialFieldChanged);
+      controller.removeListener(_onConfigurationFieldChanged);
     }
     _displayName.dispose();
     _host.dispose();
@@ -362,14 +385,26 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   Map<String, String> _currentCredentialSnapshot() => {
         'targetType': _targetType,
         'mode': _mode,
+        'displayName': _displayName.text,
         'host': _host.text,
         'username': _username.text,
         'sshPort': _sshPort.text,
         'authMethod': _authMethod,
         'sshPassword': _sshPassword.text,
         'sshPrivateKey': _sshPrivateKey.text,
+        'backendPort': _backendPort.text,
+        'namespace': _namespace.text,
+        'context': _context.text,
+        'apiServer': _apiServer.text,
         'kubeconfig': _kubeconfig.text,
       };
+
+  bool get _hasFreshPreflight =>
+      _preflight != null &&
+      mapEquals(_preflightSnapshot, _currentCredentialSnapshot());
+
+  bool get _hasFreshSuccessfulPreflight =>
+      _hasFreshPreflight && _preflight!.status == 'ok';
 
   /// Shows exactly one status view at a time, in priority order, so a
   /// stale card is never shown next to a fresh one:
@@ -387,8 +422,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       return _buildConnectionLostCard(lostReason, tokens);
     }
     final preflight = _preflight;
-    if (preflight != null &&
-        mapEquals(_preflightSnapshot, _currentCredentialSnapshot())) {
+    if (preflight != null && _hasFreshPreflight) {
       return _buildPreflightCard(preflight, tokens);
     }
     final targets = state?.targets ?? const <DeploymentTarget>[];
@@ -527,9 +561,6 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final modes = _targetType == 'kubernetes_cluster'
         ? const <String>['kubernetes']
         : const <String>['standalone', 'docker', 'podman'];
-    if (!modes.contains(_mode)) {
-      _mode = modes.first;
-    }
     return NmtkSurfaceCard(
       child: Padding(
         padding: EdgeInsets.all(tokens.sectionGap),
@@ -827,14 +858,27 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     NmtkShellTokens tokens,
   ) {
     final isFailed = preflight.status == 'failed';
+    final hasWarnings = preflight.degradedFindings.isNotEmpty;
     return NmtkSurfaceCard(
       child: Padding(
         padding: EdgeInsets.all(tokens.sectionGap),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(isFailed ? 'Preflight failed' : preflight.message),
+            Text(
+              isFailed
+                  ? 'Validation failed'
+                  : hasWarnings
+                      ? 'Ready to deploy with optional capability warnings'
+                      : 'Ready to deploy',
+            ),
             SizedBox(height: tokens.compactGap),
+            Text(preflight.message),
+            SizedBox(height: tokens.compactGap),
+            const Text(
+              'Validation checks the selected server and prerequisites only; '
+              'it does not install, modify, or deploy anything.',
+            ),
             for (final finding in [
               ...preflight.blockingFindings,
               ...preflight.degradedFindings,
@@ -843,6 +887,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             if (preflight.suggestedRecovery.isNotEmpty) ...[
               SizedBox(height: tokens.compactGap),
               Text(preflight.suggestedRecovery),
+            ],
+            if (isFailed) ...[
+              SizedBox(height: tokens.compactGap),
+              const Text('Deployment remains locked until validation passes.'),
             ],
           ],
         ),
@@ -881,6 +929,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final secondsAgo = updatedAt == null
         ? null
         : DateTime.now().difference(updatedAt).inSeconds;
+    final bundleIdentity = job.bundleVersion > 0
+        ? 'Bundle v${job.bundleVersion} · ${job.bundleManifestHash.length <= 12 ? job.bundleManifestHash : job.bundleManifestHash.substring(0, 12)} · image ${job.imageTag}'
+        : null;
     final headline = !isTerminal
         ? '${job.percent.round()}% — ${job.stageLabel}'
         : isSuccess
@@ -937,6 +988,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                   : history)
                 Text(line),
             ],
+            if (bundleIdentity != null) ...[
+              SizedBox(height: tokens.compactGap),
+              Text(bundleIdentity),
+            ],
             if (isJupyterDegraded) ...[
               SizedBox(height: tokens.compactGap),
               const Text(
@@ -990,23 +1045,30 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   }
 
   Widget _buildActions(DeploymentJob? job) {
+    final canDeploy = !_isWorking && _hasFreshSuccessfulPreflight;
+    final validationGuidance = _hasFreshSuccessfulPreflight
+        ? 'Validation passed for the current configuration. Deploying will '
+            'install or update the backend on the selected target.'
+        : _hasFreshPreflight
+            ? 'Fix the validation findings above, then validate again to '
+                'unlock deployment.'
+            : 'Validate the current configuration to unlock deployment. '
+                'Validation does not make any server changes.';
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       children: [
         ZetaButton(
+          key: const Key('backend-setup-validate'),
           onPressed: _isWorking ? null : _runPreflight,
-          label: 'Validate connection',
+          label: _isWorking ? 'Validating server…' : 'Validate server',
         ),
         ZetaButton(
           key: const Key('backend-setup-deploy'),
-          onPressed: _isWorking ||
-                  (_preflight != null && _preflight!.status == 'failed')
-              ? null
-              : _deploy,
-          label: 'Review and deploy',
-          type: ZetaButtonType.subtle,
+          onPressed: canDeploy ? _deploy : null,
+          label: 'Deploy backend',
         ),
+        Text(validationGuidance),
         if (job != null && !job.isTerminal)
           ZetaButton.text(
             onPressed: () =>
@@ -1040,12 +1102,13 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               _displayName.text = 'This machine';
             } else if (value == 'remote_host') {
               _displayName.text = 'Remote backend';
+              if (_mode == 'kubernetes') _mode = 'standalone';
             } else {
               _displayName.text = 'NMTK cluster';
               _mode = 'kubernetes';
             }
           }
-          _preflight = null;
+          _clearPreflight();
           _completionQueued = false;
         });
       },
@@ -1091,7 +1154,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     return ChoiceChip(
       label: Text(label),
       selected: _authMethod == value,
-      onSelected: (_) => setState(() => _authMethod = value),
+      onSelected: (_) => setState(() {
+        _authMethod = value;
+        _clearPreflight();
+      }),
     );
   }
 
@@ -1112,7 +1178,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     setState(() {
       _kubeconfig.text = String.fromCharCodes(bytes);
       _kubeconfigName = selected.name;
-      _preflight = null;
+      _clearPreflight();
     });
   }
 
@@ -1149,6 +1215,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   }
 
   Future<void> _deploy() async {
+    if (!_hasFreshSuccessfulPreflight) return;
     if (!_validateRemoteHost()) return;
     setState(() {
       _isWorking = true;
@@ -1157,8 +1224,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       // for display (per _buildStatusPanel's snapshot match) and can
       // resurface mid-deploy as soon as activeJob briefly goes null, reading
       // as an unrelated, stale card.
-      _preflight = null;
-      _preflightSnapshot = null;
+      _clearPreflight();
     });
     final job = await ref.read(backendDeploymentProvider.notifier).deploy(
           targetType: _targetType,

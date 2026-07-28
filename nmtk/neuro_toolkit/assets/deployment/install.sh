@@ -44,6 +44,22 @@ fi
 write_status pulling_images 45 "Pulling backend images"
 compose pull >>"$LOG_FILE" 2>&1
 
+write_status starting_containers 70 "Preparing launcher workspace storage"
+# Older remote deployments ran launcher-control as root and could leave this
+# named volume root-owned. The image itself runs as appuser, so normalize the
+# persistent paths before starting the normal unprivileged service. This keeps
+# UI-only workspace preferences writable across reloads without asking the
+# end user to repair container permissions manually.
+if ! compose run --rm --no-deps --user 0:0 \
+  --cap-add CHOWN \
+  --entrypoint sh launcher-control \
+  -c 'mkdir -p /app/state /app/data && chown -R appuser:appuser /app/state /app/data' \
+  >>"$LOG_FILE" 2>&1; then
+  printf '%s\n' \
+    '[nmtk-deploy] Workspace preference storage could not be migrated; continuing because backend deployment is unaffected.' \
+    >>"$LOG_FILE"
+fi
+
 write_status starting_containers 80 "Starting backend containers"
 compose up -d --remove-orphans >>"$LOG_FILE" 2>&1
 

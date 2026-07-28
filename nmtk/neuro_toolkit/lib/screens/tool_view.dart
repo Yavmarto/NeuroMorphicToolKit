@@ -60,93 +60,71 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
 
-  String _launcherConnectionHost() {
-    final baseUri = _launcherBaseUri();
-    final host = baseUri.host.trim();
-    if (host.isNotEmpty) return host;
-    final auth = baseUri.authority.trim();
-    if (auth.isNotEmpty) return auth.split(':').first;
-    return 'localhost';
-  }
-
   void _showServerConnectionPopup(BuildContext context) {
-    final baseUri = _launcherBaseUri();
-    final connectionText = 'Connected: ${baseUri.authority}';
+    final connectionText = 'Connected: ${_launcherBaseUri().authority}';
+    var isOpen = true;
 
     showDialog<void>(
       context: context,
       barrierDismissible: true,
-      builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: NmtkDesignTokens.dialogShape,
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(
-          width: 900,
-          height: 700,
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2E7D32),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      connectionText,
-                      style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(ZetaIcons.close),
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(dialogContext).pop(),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: InAppBackendSetupScreen(
-                  onComplete: () {
-                    if (Navigator.of(dialogContext).canPop()) {
-                      Navigator.of(dialogContext).pop();
-                    }
-                  },
-                ),
-              ),
-            ],
+      builder: (dialogContext) {
+        void dismissDialog() {
+          if (!isOpen) return;
+          isOpen = false;
+          Navigator.of(dialogContext).pop();
+        }
+
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: NmtkDesignTokens.dialogShape,
           ),
-        ),
-      ),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900, maxHeight: 700),
+            child: SizedBox(
+              width: 900,
+              height: 700,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          connectionText,
+                          style: Zeta.of(dialogContext).textStyles.titleMedium,
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(ZetaIcons.close),
+                          tooltip: 'Close',
+                          onPressed: dismissDialog,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: InAppBackendSetupScreen(onComplete: dismissDialog),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildServerConnectionButton(BuildContext context) {
+    final connectionText = 'Connected: ${_launcherBaseUri().authority}';
     return FloatingActionButton.extended(
       onPressed: () => _showServerConnectionPopup(context),
       tooltip: 'Server Connection',
-      icon: Container(
-        width: 8,
-        height: 8,
-        decoration: const BoxDecoration(
-          color: Color(0xFF2E7D32),
-          shape: BoxShape.circle,
-        ),
-      ),
-      label: Text(_launcherConnectionHost()),
+      icon: const Icon(ZetaIcons.server),
+      label: Text(connectionText),
     );
   }
 

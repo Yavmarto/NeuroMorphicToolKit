@@ -24,7 +24,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             report = self.state.doctor_report()
 
         preflight.assert_not_called()
-        self.assertEqual(report["modules"][0]["preflightMessage"], "Module not installed")
+        self.assertEqual(
+            report["modules"][0]["preflightMessage"], "Module not installed"
+        )
 
     def test_wrapper_runs_without_external_pythonpath(self) -> None:
         env = os.environ.copy()
@@ -102,8 +104,12 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             mock.patch.object(self.state, "_kill_process_on_port"),
             mock.patch.object(self.state, "_stream_logs"),
             mock.patch.object(self.state, "_watch_process_exit"),
-            mock.patch.object(self.state, "_probe_health", return_value=(True, 200, "ok")),
-            mock.patch.object(launcher_server.subprocess, "Popen", return_value=_FakeProcess()) as popen,
+            mock.patch.object(
+                self.state, "_probe_health", return_value=(True, 200, "ok")
+            ),
+            mock.patch.object(
+                launcher_server.subprocess, "Popen", return_value=_FakeProcess()
+            ) as popen,
         ):
             self.state._start_sync(module_id)
 
@@ -167,8 +173,12 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             mock.patch.object(self.state, "_kill_process_on_port"),
             mock.patch.object(self.state, "_stream_logs"),
             mock.patch.object(self.state, "_watch_process_exit"),
-            mock.patch.object(self.state, "_probe_health", return_value=(True, 200, "ok")),
-            mock.patch.object(launcher_server.subprocess, "Popen", return_value=_FakeProcess()),
+            mock.patch.object(
+                self.state, "_probe_health", return_value=(True, 200, "ok")
+            ),
+            mock.patch.object(
+                launcher_server.subprocess, "Popen", return_value=_FakeProcess()
+            ),
         ):
             self.state._start_sync("dummy")
 
@@ -191,7 +201,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         with self.assertRaises(RuntimeError) as exc_info:
             self.state._start_sync("dummy")
 
-        self.assertIn("suite_api runtime dependencies are missing", str(exc_info.exception))
+        self.assertIn(
+            "suite_api runtime dependencies are missing", str(exc_info.exception)
+        )
         payload = self.state.serialize_module("dummy")
         self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["error"])
         self.assertEqual(payload["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
@@ -201,7 +213,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module = self.state._get_module("dummy")
         module["status"] = launcher_server.STATUS_INDEX["installed"]
         with (
-            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(
+                launcher_module_lifecycle, "_global_preflight_checks", return_value=[]
+            ),
             mock.patch.object(
                 self.state,
                 "_preflight_module",
@@ -218,7 +232,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         self.assertEqual(report["fatalCount"], 1)
         self.assertEqual(report["degradedCount"], 0)
         self.assertEqual(report["okCount"], 0)
-        self.assertEqual(report["modules"][0]["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
+        self.assertEqual(
+            report["modules"][0]["preflightStatus"], launcher_server.PREFLIGHT_FAILED
+        )
         self.assertIn("fastapi", report["modules"][0]["preflightMessage"])
 
     def test_doctor_report_marks_suite_api_failure_as_blocking_for_monolith_modules(
@@ -230,21 +246,29 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module["port"] = launcher_server.DEFAULT_SUITE_API_PORT  # monolith port
         self.state._manage_suite_api = True
         self.state._suite_api_status = launcher_server.SUITE_API_STATUS_PREFLIGHT_FAILED
-        self.state._suite_api_message = "suite_api port 9000 is occupied by another process"
+        self.state._suite_api_message = (
+            "suite_api port 9000 is occupied by another process"
+        )
 
-        with mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]):
+        with mock.patch.object(
+            launcher_module_lifecycle, "_global_preflight_checks", return_value=[]
+        ):
             report = self.state.doctor_report()
 
         self.assertEqual(report["status"], "error")
         self.assertEqual(report["fatalCount"], 1)
-        self.assertEqual(report["modules"][0]["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
+        self.assertEqual(
+            report["modules"][0]["preflightStatus"], launcher_server.PREFLIGHT_FAILED
+        )
         self.assertIn("port 9000", report["modules"][0]["preflightMessage"])
 
     def test_doctor_report_keeps_optional_capability_degradation_nonfatal(self) -> None:
         module = self.state._get_module("dummy")
         module["status"] = launcher_server.STATUS_INDEX["installed"]
         with (
-            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(
+                launcher_module_lifecycle, "_global_preflight_checks", return_value=[]
+            ),
             mock.patch.object(
                 self.state,
                 "_preflight_module",
@@ -297,11 +321,15 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module = self.state._get_module("dummy")
         module["uvicornTarget"] = ""
         module["startStrategy"] = "none"
-        module["deployment"] = {"composeProfile": "notebooks", "healthPath": "/api/status"}
+        module["deployment"] = {
+            "composeProfile": "notebooks",
+            "healthPath": "/api/status",
+        }
 
-        with mock.patch.object(self.state, "_probe_health", return_value=(False, 0, None)):
+        with mock.patch.object(
+            self.state, "_probe_health", return_value=(False, 0, None)
+        ):
             self.state._start_sync("dummy")
-
 
         payload = self.state.serialize_module("dummy")
         self.assertEqual(payload["status"], 0)
@@ -324,7 +352,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         # Should be running despite suite_api being down
         self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["running"])
 
-    def test_probe_health_uses_deployment_health_path_for_external_service(self) -> None:
+    def test_probe_health_uses_deployment_health_path_for_external_service(
+        self,
+    ) -> None:
         """_probe_health should use deployment.healthPath for externally managed
         services, not the monolith /api/<id>/health pattern."""
         module = self.state._get_module("dummy")
@@ -353,14 +383,18 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module["startStrategy"] = "none"
 
         with (
-            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(
+                launcher_module_lifecycle, "_global_preflight_checks", return_value=[]
+            ),
             mock.patch.object(
                 self.state, "_probe_health", return_value=(True, 200, "ok")
             ),
         ):
             report = self.state.doctor_report()
 
-        self.assertEqual(report["modules"][0]["preflightStatus"], launcher_server.PREFLIGHT_OK)
+        self.assertEqual(
+            report["modules"][0]["preflightStatus"], launcher_server.PREFLIGHT_OK
+        )
         self.assertEqual(report["fatalCount"], 0)
         self.assertEqual(report["degradedCount"], 0)
 
@@ -371,11 +405,18 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module["status"] = launcher_server.STATUS_INDEX["installed"]
         module["uvicornTarget"] = ""
         module["startStrategy"] = "none"
-        module["deployment"] = {"composeProfile": "notebooks", "healthPath": "/api/status"}
+        module["deployment"] = {
+            "composeProfile": "notebooks",
+            "healthPath": "/api/status",
+        }
 
         with (
-            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
-            mock.patch.object(self.state, "_probe_health", return_value=(False, 0, None)),
+            mock.patch.object(
+                launcher_module_lifecycle, "_global_preflight_checks", return_value=[]
+            ),
+            mock.patch.object(
+                self.state, "_probe_health", return_value=(False, 0, None)
+            ),
         ):
             report = self.state.doctor_report()
 
@@ -404,12 +445,24 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             return (False, 0, None)
 
         with (
-            mock.patch.object(self.state, "_suite_api_health_probe" if False else "_probe_health",
-                               side_effect=probe_side_effect),
+            mock.patch.object(
+                self.state,
+                "_suite_api_health_probe" if False else "_probe_health",
+                side_effect=probe_side_effect,
+            ),
             mock.patch.object(self.state, "_shutdown") as mock_shutdown,
         ):
-            # Simulate one poll tick: wait returns False (not shut down), then True
-            mock_shutdown.wait.side_effect = [False, True]
+            # Simulate one poll tick, then stay shut down. A callable avoids a
+            # fragile finite iterator when another lifecycle worker observes
+            # the mocked shutdown event during test teardown.
+            poll_count = 0
+
+            def stop_after_first_poll(_: float) -> bool:
+                nonlocal poll_count
+                poll_count += 1
+                return poll_count > 1
+
+            mock_shutdown.wait.side_effect = stop_after_first_poll
             self.state._manage_suite_api = False
             self.state._health_poll_loop()
 
@@ -428,7 +481,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             }
         ]
         with (
-            mock.patch.object(launcher_module_lifecycle, "_global_preflight_checks", return_value=[]),
+            mock.patch.object(
+                launcher_module_lifecycle, "_global_preflight_checks", return_value=[]
+            ),
             mock.patch.object(
                 self.state,
                 "_preflight_module",
@@ -443,7 +498,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
 
         self.assertEqual(report["status"], "ok")
         self.assertEqual(report["akidaHosts"][0]["host"], "akida-box.local")
-        self.assertEqual(report["akidaHosts"][0]["baseUrl"], "http://akida-box.local:8002")
+        self.assertEqual(
+            report["akidaHosts"][0]["baseUrl"], "http://akida-box.local:8002"
+        )
 
     def test_render_doctor_report_uses_explicit_policy_terms(self) -> None:
         report = {
@@ -530,13 +587,17 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             return True
 
         with (
-            mock.patch.object(launcher_server.shutil, "which", return_value=str(flutter_bin)),
+            mock.patch.object(
+                launcher_server.shutil, "which", return_value=str(flutter_bin)
+            ),
             mock.patch.object(launcher_server.os, "access", side_effect=fake_access),
         ):
             checks = launcher_doctor_service._global_preflight_checks()
 
         flutter_check = next(check for check in checks if check["id"] == "flutter-sdk")
-        self.assertEqual(flutter_check["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
+        self.assertEqual(
+            flutter_check["preflightStatus"], launcher_server.PREFLIGHT_FAILED
+        )
         self.assertIn("not writable", str(flutter_check["preflightMessage"]))
 
     def test_main_returns_nonzero_for_fatal_doctor_report(self) -> None:
@@ -551,14 +612,18 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
 
         stdout = io.StringIO()
         with (
-            mock.patch.object(launcher_server, "LauncherControlState", return_value=fake_state),
+            mock.patch.object(
+                launcher_server, "LauncherControlState", return_value=fake_state
+            ),
             mock.patch.object(sys, "stdout", stdout),
         ):
             exit_code = launcher_server.main(["--doctor", "--json"])
 
         self.assertEqual(exit_code, 1)
         fake_state.shutdown.assert_called_once()
-        self.assertEqual(json.loads(stdout.getvalue()), fake_state.doctor_report.return_value)
+        self.assertEqual(
+            json.loads(stdout.getvalue()), fake_state.doctor_report.return_value
+        )
 
     def test_main_returns_zero_for_degraded_only_doctor_report(self) -> None:
         fake_state = mock.Mock()
@@ -579,14 +644,18 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
 
         stdout = io.StringIO()
         with (
-            mock.patch.object(launcher_server, "LauncherControlState", return_value=fake_state),
+            mock.patch.object(
+                launcher_server, "LauncherControlState", return_value=fake_state
+            ),
             mock.patch.object(sys, "stdout", stdout),
         ):
             exit_code = launcher_server.main(["--doctor", "--json"])
 
         self.assertEqual(exit_code, 0)
         fake_state.shutdown.assert_called_once()
-        self.assertEqual(json.loads(stdout.getvalue()), fake_state.doctor_report.return_value)
+        self.assertEqual(
+            json.loads(stdout.getvalue()), fake_state.doctor_report.return_value
+        )
 
     def test_preflight_repairs_stale_environment_once(self) -> None:
         module = self.state._get_module("dummy")
@@ -654,7 +723,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         self.assertEqual(result.status, launcher_server.PREFLIGHT_FAILED)
         self.assertIn("fastapi", result.message)
 
-    def test_preflight_accepts_recovered_poetry_probe_despite_stale_failed_fingerprint(self) -> None:
+    def test_preflight_accepts_recovered_poetry_probe_despite_stale_failed_fingerprint(
+        self,
+    ) -> None:
         self._write_poetry_pyproject()
         poetry_python = self.repo_root / "dummy_module" / ".venv" / "bin" / "python"
         poetry_python.parent.mkdir(parents=True, exist_ok=True)
@@ -663,7 +734,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module = self.state._get_module("dummy")
         module["environmentFingerprint"] = "stale-fingerprint"
         module["preflightStatus"] = launcher_server.PREFLIGHT_FAILED
-        module["preflightMessage"] = "Missing required dependency: fastapi (needed by app.main)"
+        module["preflightMessage"] = (
+            "Missing required dependency: fastapi (needed by app.main)"
+        )
 
         with (
             mock.patch.object(
@@ -725,7 +798,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         self.assertEqual(result.status, launcher_server.PREFLIGHT_OK)
         self.assertEqual(result.environment_fingerprint, "fingerprint-after")
 
-    def test_cleanup_module_environment_removes_disposable_poetry_artifacts(self) -> None:
+    def test_cleanup_module_environment_removes_disposable_poetry_artifacts(
+        self,
+    ) -> None:
         self._write_poetry_pyproject()
         install_dir = self.repo_root / "dummy_module"
         for venv_name in (".venv", "venv"):
@@ -742,7 +817,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         fallback_python.chmod(0o755)
 
         with (
-            mock.patch.object(launcher_module_install, "_poetry_command", return_value="poetry"),
+            mock.patch.object(
+                launcher_module_install, "_poetry_command", return_value="poetry"
+            ),
             mock.patch.object(launcher_server.subprocess, "run") as poetry_run,
         ):
             self.state._cleanup_module_environment("dummy")
@@ -764,11 +841,15 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         poetry_python = self._create_fake_poetry_python()
 
         with (
-            mock.patch.object(launcher_module_install, "_poetry_command", return_value="poetry"),
+            mock.patch.object(
+                launcher_module_install, "_poetry_command", return_value="poetry"
+            ),
             mock.patch.object(
                 launcher_server.subprocess,
                 "run",
-                return_value=mock.Mock(returncode=0, stdout=str(poetry_python.parents[1]), stderr=""),
+                return_value=mock.Mock(
+                    returncode=0, stdout=str(poetry_python.parents[1]), stderr=""
+                ),
             ),
             mock.patch.object(self.state, "_run_command") as run_command,
             mock.patch.object(
@@ -817,7 +898,10 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             )
         )
         self.assertFalse(
-            any(str(call[0]).endswith("/dummy_module/venv/bin/pip") for call in pip_calls)
+            any(
+                str(call[0]).endswith("/dummy_module/venv/bin/pip")
+                for call in pip_calls
+            )
         )
 
     def test_install_sync_bootstraps_pip_when_module_env_lacks_it(self) -> None:
@@ -907,7 +991,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             capability_warnings=[],
             environment_fingerprint=None,
         )
-        with mock.patch.object(self.state, "_preflight_module", return_value=failed_result):
+        with mock.patch.object(
+            self.state, "_preflight_module", return_value=failed_result
+        ):
             self.state.repair_module("dummy")
             task = self.state._tasks.get("dummy")
             if task:
@@ -915,7 +1001,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
 
         module = self.state._get_module("dummy")
         self.assertEqual(module["status"], launcher_server.STATUS_INDEX["error"])
-        self.assertEqual(module["healthStatus"], "Cannot find required dependency: torch")
+        self.assertEqual(
+            module["healthStatus"], "Cannot find required dependency: torch"
+        )
 
     def test_install_sync_cleans_venv_on_pip_failure(self) -> None:
         """When pip install fails, _install_sync removes the partial venv directory."""

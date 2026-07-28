@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 
 class _FakeDeploymentService implements DeploymentService {
+  _FakeDeploymentService({
+    this.preflightResult = const DeploymentPreflightResult(
+      status: 'ok',
+      message: 'ready',
+      blockingFindings: [],
+      degradedFindings: [],
+      suggestedRecovery: '',
+    ),
+  });
+
+  final DeploymentPreflightResult preflightResult;
+  int deployCalls = 0;
+
   @override
   Future<DeploymentSnapshot> load() async => const DeploymentSnapshot();
 
@@ -14,18 +28,21 @@ class _FakeDeploymentService implements DeploymentService {
   Future<DeploymentPreflightResult> preflight(
     DeploymentRequest request,
   ) async {
-    return const DeploymentPreflightResult(
-      status: 'ok',
-      message: 'ready',
-      blockingFindings: [],
-      degradedFindings: [],
-      suggestedRecovery: '',
-    );
+    return preflightResult;
   }
 
   @override
-  Future<DeploymentJob> deploy(DeploymentRequest request) {
-    throw UnimplementedError();
+  Future<DeploymentJob> deploy(DeploymentRequest request) async {
+    deployCalls++;
+    return const DeploymentJob(
+      id: 'deploy-job',
+      targetId: 'target',
+      mode: 'docker',
+      stage: 'queued',
+      percent: 0,
+      stageLabel: 'Queued',
+      logs: [],
+    );
   }
 
   @override
@@ -61,10 +78,15 @@ class _FakeDeploymentService implements DeploymentService {
   }
 }
 
-Widget _harness({bool? localDeploymentAvailable}) {
+Widget _harness({
+  bool? localDeploymentAvailable,
+  _FakeDeploymentService? deploymentService,
+}) {
   return ProviderScope(
     overrides: [
-      deploymentServiceProvider.overrideWithValue(_FakeDeploymentService()),
+      deploymentServiceProvider.overrideWithValue(
+        deploymentService ?? _FakeDeploymentService(),
+      ),
     ],
     child: MaterialApp(
       home: BackendSetupScreen(
@@ -87,6 +109,125 @@ void main() {
     expect(find.text('Server address'), findsNothing);
     expect(find.text('Save & Retry'), findsNothing);
     expect(find.text('Step 1 — Python'), findsNothing);
+  });
+
+  testWidgets('deployment stays locked until the current setup validates',
+      (tester) async {
+    final service = _FakeDeploymentService();
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: true, deploymentService: service),
+    );
+    await tester.pump();
+
+    final deploy = find.byKey(const Key('backend-setup-deploy'));
+    expect(tester.widget<ZetaButton>(deploy).onPressed, isNull);
+    expect(
+      find.textContaining('Validate the current configuration'),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(
+      find.byKey(const Key('backend-setup-validate')),
+    );
+    await tester.tap(find.byKey(const Key('backend-setup-validate')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ready to deploy'), findsOneWidget);
+    expect(tester.widget<ZetaButton>(deploy).onPressed, isNotNull);
+
+    await tester.enterText(find.byType(TextField).at(1), 'Renamed backend');
+    await tester.pump();
+    await tester.pump();
+
+    expect(tester.widget<ZetaButton>(deploy).onPressed, isNull);
+    expect(
+      find.textContaining('Validate the current configuration'),
+      findsOneWidget,
+    );
+
+    await tester.ensureVisible(
+      find.byKey(const Key('backend-setup-validate')),
+    );
+    await tester.tap(find.byKey(const Key('backend-setup-validate')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(deploy);
+    await tester.tap(deploy);
+    await tester.pumpAndSettle();
+
+    expect(service.deployCalls, 1);
+  });
+
+  testWidgets('failed validation keeps deployment locked with recovery copy',
+      (tester) async {
+    final service = _FakeDeploymentService(
+      preflightResult: const DeploymentPreflightResult(
+        status: 'failed',
+        message: 'SSH authentication failed.',
+        blockingFindings: ['Check the SSH username and credentials.'],
+        degradedFindings: [],
+        suggestedRecovery: 'Update the credentials and validate again.',
+      ),
+    );
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: true, deploymentService: service),
+    );
+    await tester.pump();
+
+    await tester.ensureVisible(
+      find.byKey(const Key('backend-setup-validate')),
+    );
+    await tester.tap(find.byKey(const Key('backend-setup-validate')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Validation failed'), findsOneWidget);
+    expect(
+      find.text('Deployment remains locked until validation passes.'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<ZetaButton>(
+            find.byKey(const Key('backend-setup-deploy')),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('optional validation warnings still allow deployment',
+      (tester) async {
+    final service = _FakeDeploymentService(
+      preflightResult: const DeploymentPreflightResult(
+        status: 'ok',
+        message: 'The server can run the backend.',
+        blockingFindings: [],
+        degradedFindings: ['Docker will be installed automatically.'],
+        suggestedRecovery: 'Review the optional warning, then continue.',
+      ),
+    );
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: true, deploymentService: service),
+    );
+    await tester.pump();
+
+    await tester.ensureVisible(
+      find.byKey(const Key('backend-setup-validate')),
+    );
+    await tester.tap(find.byKey(const Key('backend-setup-validate')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Ready to deploy with optional capability warnings'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<ZetaButton>(
+            find.byKey(const Key('backend-setup-deploy')),
+          )
+          .onPressed,
+      isNotNull,
+    );
   });
 
   testWidgets('mobile omits the impossible local deployment target',
