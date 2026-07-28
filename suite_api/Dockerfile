@@ -52,7 +52,8 @@ RUN pip install --no-cache-dir Neurobench/neurobench/ \
 
 # ── suite_api ─────────────────────────────────────────────────────────────────
 COPY suite_api/ suite_api/
-RUN pip install --no-cache-dir suite_api/
+RUN pip install --no-cache-dir suite_api/ \
+ && python -c "import suite_api.main"
 
 RUN addgroup --system app && adduser --system --ingroup app app \
  && mkdir -p /home/app/.cache /home/app/data /home/app/notebooks && chown -R app:app /home/app

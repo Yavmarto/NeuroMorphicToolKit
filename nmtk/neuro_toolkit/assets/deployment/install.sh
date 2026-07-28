@@ -9,9 +9,35 @@ PUBLIC_HOST="${5:-127.0.0.1}"
 STATUS_FILE="${6:-deployment.status}"
 LOG_FILE="${7:-deployment.log}"
 
+CURRENT_STAGE=""
+
 write_status() {
+  CURRENT_STAGE="$1"
   printf '%s|%s|%s\n' "$1" "$2" "$3" >"$STATUS_FILE"
   printf '[nmtk-deploy] %s\n' "$3" >>"$LOG_FILE"
+}
+
+capture_failure_diagnostics() {
+  printf '%s\n' '[nmtk-deploy] Capturing container diagnostics.' >>"$LOG_FILE"
+  printf '%s\n' '[nmtk-deploy] Container state:' >>"$LOG_FILE"
+  compose ps -a >>"$LOG_FILE" 2>&1 || true
+  printf '%s\n' '[nmtk-deploy] Suite API and launcher-control logs:' >>"$LOG_FILE"
+  compose logs --tail 200 suite_api launcher-control >>"$LOG_FILE" 2>&1 || true
+}
+
+handle_failure() {
+  capture_failure_diagnostics
+  case "$CURRENT_STAGE" in
+    verifying_suite_api)
+      write_status failed 100 "Suite API did not become ready; diagnostics captured."
+      ;;
+    verifying_launcher_control)
+      write_status failed 100 "Launcher control did not become ready; diagnostics captured."
+      ;;
+    *)
+      write_status failed 100 "Deployment failed; diagnostics captured."
+      ;;
+  esac
 }
 
 compose() {
@@ -23,7 +49,7 @@ compose() {
     "$@"
 }
 
-trap 'write_status failed 100 "Deployment failed; inspect deployment.log"' ERR
+trap handle_failure ERR
 
 export SUITE_API_PORT="$BACKEND_PORT"
 export LAUNCHER_CONTROL_PORT=8090

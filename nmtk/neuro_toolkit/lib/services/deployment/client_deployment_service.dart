@@ -648,7 +648,7 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         stageLabel: status.sublist(2).join('|'),
         logs: logs,
         error: stage == DeploymentPhase.failed.wireName
-            ? (logs.isEmpty ? 'Remote deployment failed.' : logs.last)
+            ? status.sublist(2).join('|')
             : '',
         updatedAt: DateTime.now(),
       );

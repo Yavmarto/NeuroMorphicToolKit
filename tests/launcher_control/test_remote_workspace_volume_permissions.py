@@ -16,3 +16,6 @@ def test_remote_deploy_repairs_workspace_volume_before_unprivileged_start() -> N
     assert "--cap-add FOWNER" not in install_script
     assert "chown -R appuser:appuser /app/state /app/data" in install_script
     assert "continuing because backend deployment is unaffected" in install_script
+    assert "compose ps -a" in install_script
+    assert "compose logs --tail 200 suite_api launcher-control" in install_script
+    assert "Suite API did not become ready; diagnostics captured." in install_script
