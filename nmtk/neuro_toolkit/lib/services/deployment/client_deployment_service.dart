@@ -75,6 +75,27 @@ class DeploymentAssetBundle {
       );
     }
   }
+
+  /// Parses the standard output format emitted by GNU and BusyBox sha256sum.
+  ///
+  /// This is deliberately separate from validation so a malformed command
+  /// response is reported as an operator-facing transport failure rather than
+  /// as though every uploaded file had changed.
+  static Map<String, String> parseRemoteChecksumOutput(String output) {
+    final checksums = <String, String>{};
+    for (final line in output.split('\n')) {
+      final match = RegExp(r'^([a-fA-F0-9]{64})\s+\*?(.+)$').firstMatch(line);
+      if (match != null) {
+        checksums[match.group(2)!] = match.group(1)!.toLowerCase();
+      }
+    }
+    if (checksums.isEmpty) {
+      throw const FormatException(
+        'Remote checksum verification returned unreadable output.',
+      );
+    }
+    return Map.unmodifiable(checksums);
+  }
 }
 
 class ClientDeploymentService implements DeploymentService {
@@ -845,13 +866,9 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     if (result.exitCode != 0) {
       throw StateError('Could not verify uploaded deployment assets.');
     }
-    final checksums = <String, String>{};
-    for (final line in utf8.decode(result.stdout).split('\n')) {
-      final match = RegExp(r'^([a-fA-F0-9]{64})\\s+\\*?(.+)$').firstMatch(line);
-      if (match != null) {
-        checksums[match.group(2)!] = match.group(1)!.toLowerCase();
-      }
-    }
+    final checksums = DeploymentAssetBundle.parseRemoteChecksumOutput(
+      utf8.decode(result.stdout),
+    );
     DeploymentAssetBundle.validateRemoteChecksums(
       bundle: bundle,
       actualChecksums: checksums,

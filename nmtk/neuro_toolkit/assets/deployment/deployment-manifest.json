@@ -1,5 +1,5 @@
 {
-  "bundleVersion": 2,
+  "bundleVersion": 3,
   "files": {
     "docker-compose.prod.yml": "09d95e31655f9b86afc54ea15ee9031e1f3266782d5eb966aff37e0e02245043",
     "docker-compose.remote.yml": "23b34d4599ff850d4ba909d57e35c84b604cd030c4b44e575dd03d2c9109c489",

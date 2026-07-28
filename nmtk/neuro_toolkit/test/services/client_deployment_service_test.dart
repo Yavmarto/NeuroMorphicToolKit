@@ -6,18 +6,42 @@ import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 
 void main() {
   test('deployment bundle verifies every uploaded asset checksum', () {
+    const deploymentFiles = <String>[
+      'docker-compose.yml',
+      'docker-compose.prod.yml',
+      'docker-compose.remote.yml',
+      'install.sh',
+      'monitoring/alertmanager/alertmanager.yml',
+      'monitoring/loki/loki-config.yml',
+      'monitoring/prometheus/alert_rules.yml',
+      'monitoring/prometheus/prometheus.yml',
+      'monitoring/promtail/promtail-config.yml',
+    ];
+    const checksum =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     final bundle = DeploymentAssetBundle.fromManifestBytes(
       Uint8List.fromList(
         utf8.encode(
-          '{"bundleVersion":2,"files":{"install.sh":"abc123"}}',
+          jsonEncode({
+            'bundleVersion': 3,
+            'files': {for (final file in deploymentFiles) file: checksum},
+          }),
         ),
       ),
+    );
+
+    final parsed = DeploymentAssetBundle.parseRemoteChecksumOutput(
+      <String>[
+        for (final file in deploymentFiles) '$checksum  $file',
+        '${bundle.manifestHash}  deployment-manifest.json',
+      ].join('\n'),
     );
 
     expect(
       () => DeploymentAssetBundle.validateRemoteChecksums(
         bundle: bundle,
         actualChecksums: {
+          for (final file in deploymentFiles) file: checksum,
           'install.sh': 'different',
           'deployment-manifest.json': bundle.manifestHash,
         },
@@ -34,11 +58,30 @@ void main() {
       () => DeploymentAssetBundle.validateRemoteChecksums(
         bundle: bundle,
         actualChecksums: {
-          'install.sh': 'abc123',
+          for (final file in deploymentFiles) file: checksum,
           'deployment-manifest.json': bundle.manifestHash,
         },
       ),
       returnsNormally,
+    );
+    expect(parsed, {
+      for (final file in deploymentFiles) file: checksum,
+      'deployment-manifest.json': bundle.manifestHash,
+    });
+  });
+
+  test('deployment bundle reports unreadable checksum output separately', () {
+    expect(
+      () => DeploymentAssetBundle.parseRemoteChecksumOutput(
+        'remote command did not produce checksums',
+      ),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          contains('unreadable output'),
+        ),
+      ),
     );
   });
 

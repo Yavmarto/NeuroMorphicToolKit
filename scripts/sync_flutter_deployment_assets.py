@@ -23,7 +23,7 @@ SOURCES = (
     Path("monitoring/promtail/promtail-config.yml"),
 )
 MANIFEST = DESTINATION / "deployment-manifest.json"
-BUNDLE_VERSION = 2
+BUNDLE_VERSION = 3
 
 
 def _manifest_payload() -> dict[str, object]:
