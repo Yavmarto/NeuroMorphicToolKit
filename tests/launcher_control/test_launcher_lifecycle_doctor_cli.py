@@ -209,6 +209,46 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         self.assertEqual(payload["preflightStatus"], launcher_server.PREFLIGHT_FAILED)
         self.assertIn("suite_api", payload["preflightMessage"])
 
+    def test_start_monolith_requires_suite_api_health_in_container_mode(self) -> None:
+        module = self.state._get_module("dummy")
+        module["startStrategy"] = "none"
+        module["port"] = launcher_server.DEFAULT_SUITE_API_PORT
+        self.state._manage_suite_api = False
+
+        with mock.patch.object(
+            launcher_module_lifecycle,
+            "_suite_api_health_probe",
+            return_value=(False, "connection refused"),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.state._start_sync("dummy")
+
+        payload = self.state.serialize_module("dummy")
+        self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["error"])
+        self.assertIn("not reachable", payload["healthStatus"])
+
+    def test_health_poll_promotes_waiting_monolith_after_suite_api_recovers(self) -> None:
+        module = self.state._get_module("dummy")
+        module["startStrategy"] = "none"
+        module["port"] = launcher_server.DEFAULT_SUITE_API_PORT
+        module["status"] = launcher_server.STATUS_INDEX["starting"]
+        self.state._manage_suite_api = False
+
+        with (
+            mock.patch.object(
+                launcher_module_lifecycle,
+                "_suite_api_health_probe",
+                return_value=(True, '{"status":"ok"}'),
+            ),
+            mock.patch.object(self.state, "_shutdown") as mock_shutdown,
+        ):
+            mock_shutdown.wait.side_effect = [False, True]
+            self.state._health_poll_loop()
+
+        payload = self.state.serialize_module("dummy")
+        self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["running"])
+        self.assertEqual(payload["healthStatus"], "Managed by suite_api")
+
     def test_doctor_report_marks_fatal_preflight_as_blocking(self) -> None:
         module = self.state._get_module("dummy")
         module["status"] = launcher_server.STATUS_INDEX["installed"]

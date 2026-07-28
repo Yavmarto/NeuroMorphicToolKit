@@ -11,6 +11,16 @@ from base import LauncherControlServiceTestBase
 
 
 class TestLauncherManifestWorkspace(LauncherControlServiceTestBase):
+    def test_suite_api_url_uses_compose_network_override(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {"NMTK_SUITE_API_URL": "http://suite_api:9000/"},
+            clear=False,
+        ):
+            self.assertEqual(
+                suite_api_service._suite_api_base_url(), "http://suite_api:9000"
+            )
+
     def test_modules_endpoint_returns_manifest_data(self) -> None:
         payload = self.state.serialize_modules()
 

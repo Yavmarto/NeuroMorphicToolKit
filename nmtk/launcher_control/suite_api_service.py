@@ -56,6 +56,12 @@ def _suite_api_bind_host() -> str:
 
 
 def _suite_api_base_url() -> str:
+    # In a container deployment launcher-control and suite_api are separate
+    # services.  The default keeps the standalone launcher behaviour, while
+    # compose supplies the service-network address for deployed backends.
+    configured = str(os.environ.get("NMTK_SUITE_API_URL") or "").strip()
+    if configured:
+        return configured.rstrip("/")
     return f"http://127.0.0.1:{DEFAULT_SUITE_API_PORT}"
 
 
@@ -225,21 +231,46 @@ class SuiteApiServiceMixin:
             self._suite_api_message = message
 
     def _suite_api_ready_result(self) -> PreflightResult:
-        if not self._manage_suite_api:
-            return PreflightResult(status=PREFLIGHT_OK)
-        if self._suite_api_status == SUITE_API_STATUS_READY:
-            return PreflightResult(
-                status=PREFLIGHT_OK, message=self._suite_api_ready_message()
-            )
-        if self._suite_api_status == SUITE_API_STATUS_STARTING:
+        # A monolithic module is usable only when suite_api is actually
+        # reachable.  In container mode launcher-control does not own the
+        # suite_api process, but it must still probe it rather than declaring
+        # a module ready based on process ownership alone.
+        if self._manage_suite_api:
+            if self._suite_api_status == SUITE_API_STATUS_READY:
+                ok, _message = _suite_api_health_probe()
+                if ok:
+                    return PreflightResult(
+                        status=PREFLIGHT_OK, message=self._suite_api_ready_message()
+                    )
+                return PreflightResult(
+                    status=PREFLIGHT_FAILED,
+                    message=(
+                        "Suite API is not reachable from launcher control. "
+                        "Wait for the backend to start, then retry."
+                    ),
+                )
+            if self._suite_api_status == SUITE_API_STATUS_STARTING:
+                return PreflightResult(
+                    status=PREFLIGHT_FAILED,
+                    message=self._suite_api_message
+                    or "suite_api is still starting; wait for the control plane to finish booting",
+                )
             return PreflightResult(
                 status=PREFLIGHT_FAILED,
-                message=self._suite_api_message
-                or "suite_api is still starting; wait for the control plane to finish booting",
+                message=self._suite_api_message or "suite_api is unavailable",
+            )
+
+        ok, _message = _suite_api_health_probe()
+        if not ok:
+            return PreflightResult(
+                status=PREFLIGHT_FAILED,
+                message=(
+                    "Suite API is not reachable from launcher control. "
+                    "Wait for the backend to start, then retry."
+                ),
             )
         return PreflightResult(
-            status=PREFLIGHT_FAILED,
-            message=self._suite_api_message or "suite_api is unavailable",
+            status=PREFLIGHT_OK, message=self._suite_api_ready_message()
         )
 
     def _suite_api_python(self) -> str:

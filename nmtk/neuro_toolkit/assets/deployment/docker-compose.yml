@@ -146,6 +146,9 @@ services:
       - NMTK_STATE_DIR=/app/state
       - NMTK_DATA_DIR=/app/data
       - NMTK_BACKEND_DEPLOYMENT_READY=1
+      # launcher-control is a separate container, so Suite API must be
+      # checked on the compose network rather than its own loopback.
+      - NMTK_SUITE_API_URL=http://suite_api:9000
       # Internal Docker network URL for the Neurochip hardware worker.
       # This is the containerized stub worker (no Akida SDK installed — see
       # workers/neurochip_hw/Dockerfile), reachable from backend-net directly.

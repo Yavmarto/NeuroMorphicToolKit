@@ -150,7 +150,28 @@ class ClientDeploymentService implements DeploymentService {
   Future<DeploymentSnapshot> load() async {
     final store = await _store;
     final targets = await store.loadTargets();
-    final activeJob = store.loadActiveJob();
+    var activeJob = store.loadActiveJob();
+    // A previous desktop version could persist a completed remote job after
+    // only the server-local checks passed.  Recheck it from this device so a
+    // stale success never boots the workspace into an endless loading state.
+    final completedJob = activeJob;
+    if (completedJob != null &&
+        completedJob.stage == DeploymentPhase.completed.wireName) {
+      final target =
+          targets.where((candidate) => candidate.id == completedJob.targetId);
+      if (target.length == 1 && target.first.targetType == 'remote_host') {
+        try {
+          activeJob = await _verifyRemoteApis(
+            completedJob,
+            target.first,
+            attempts: 1,
+          );
+        } catch (_) {
+          activeJob = _clientReachabilityFailure(completedJob, target.first);
+          await store.saveActiveJob(activeJob);
+        }
+      }
+    }
     if (activeJob != null) _jobs[activeJob.id] = activeJob;
     return DeploymentSnapshot(
       targets: targets,
@@ -655,22 +676,8 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
       if (stage == DeploymentPhase.completed.wireName) {
         try {
           next = await _verifyRemoteApis(next, target);
-        } catch (error) {
-          // install.sh already confirmed readiness via loopback on the
-          // deploy host itself -- don't let a client-side external-
-          // reachability check block completion. Surface it as a warning;
-          // the bootstrap probe that runs immediately after this (via
-          // onDeploymentReady -> connectToDeploymentTarget ->
-          // LauncherControlBootstrapService.ensureReady) does its own
-          // authoritative, retrying check against the real host and will
-          // report a proper error if it's genuinely unreachable.
-          next = next.copyWith(
-            stage: DeploymentPhase.completed.wireName,
-            percent: 100,
-            stageLabel: 'Backend and launcher control are ready',
-            error: 'External verification warning: $error',
-            updatedAt: DateTime.now(),
-          );
+        } catch (_) {
+          next = _clientReachabilityFailure(next, target);
         }
       }
       return _updateJob(next);
@@ -895,10 +902,12 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     DeploymentJob job,
     DeploymentTarget target, {
     String? hostOverride,
+    int attempts = 60,
   }) async {
     final host = hostOverride ?? target.host;
     final suiteReady = await _waitForHealth(
       Uri.parse('http://$host:${target.backendPort}/api/suite/health'),
+      attempts: attempts,
     );
     if (!suiteReady) {
       throw StateError(
@@ -907,12 +916,37 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     }
     final launcherReady = await _waitForHealth(
       Uri.parse('http://$host:8090/health'),
+      attempts: attempts,
     );
     if (!launcherReady) {
       throw StateError(
         'Launcher control did not become ready at $host:8090.',
       );
     }
+    final neuroStudioReady = await _waitForHealth(
+      Uri.parse('http://$host:${target.backendPort}/api/neurocnl/health'),
+      attempts: attempts,
+    );
+    if (!neuroStudioReady) {
+      throw StateError(
+          'NeuroStudio did not become ready on the deployed server.');
+    }
+    final modulesResponse = await _waitForResponse(
+      Uri.parse('http://$host:8090/api/launcher/modules'),
+      attempts: attempts,
+    );
+    if (modulesResponse == null) {
+      throw StateError('Launcher control did not return its module list.');
+    }
+    final modules = jsonDecode(modulesResponse.body);
+    if (modules is! List ||
+        !modules.any((module) =>
+            module is Map<String, dynamic> && module['id'] == 'neurocnl')) {
+      throw StateError('NeuroStudio is not available from launcher control.');
+    }
+    await _startAndVerifyNeuroStudio(host, target.backendPort,
+        attempts: attempts);
+
     final jupyterReady = await _waitForHealth(
       Uri.parse('http://$host:8008/api/status'),
       attempts: 2,
@@ -947,11 +981,18 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
   }
 
   Future<bool> _waitForHealth(Uri uri, {int attempts = 60}) async {
+    return (await _waitForResponse(uri, attempts: attempts)) != null;
+  }
+
+  Future<http.Response?> _waitForResponse(
+    Uri uri, {
+    required int attempts,
+  }) async {
     for (var attempt = 0; attempt < attempts; attempt++) {
       try {
         final response =
             await _httpClient.get(uri).timeout(const Duration(seconds: 4));
-        if (response.statusCode == 200) return true;
+        if (response.statusCode == 200) return response;
       } catch (_) {
         // Startup connection failures are expected while containers warm.
       }
@@ -959,7 +1000,63 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         await Future<void>.delayed(const Duration(seconds: 2));
       }
     }
-    return false;
+    return null;
+  }
+
+  Future<void> _startAndVerifyNeuroStudio(
+    String host,
+    int backendPort, {
+    required int attempts,
+  }) async {
+    final launcherBase = Uri.parse('http://$host:8090');
+    final startResponse = await _httpClient
+        .post(launcherBase.resolve('/api/launcher/modules/neurocnl/start'))
+        .timeout(const Duration(seconds: 4));
+    if (startResponse.statusCode < 200 || startResponse.statusCode >= 300) {
+      throw StateError('Launcher control could not start NeuroStudio.');
+    }
+    for (var attempt = 0; attempt < attempts; attempt++) {
+      try {
+        final response = await _httpClient
+            .get(launcherBase.resolve('/api/launcher/modules/neurocnl'))
+            .timeout(const Duration(seconds: 4));
+        if (response.statusCode == 200) {
+          final module = jsonDecode(response.body);
+          if (module is Map<String, dynamic>) {
+            final status = module['status'];
+            if (status == 4 || status == 7) return;
+            if (status == 6) {
+              throw StateError(
+                  'NeuroStudio could not start on the deployed server.');
+            }
+          }
+        }
+      } catch (error) {
+        if (error is StateError) rethrow;
+      }
+      if (attempt + 1 < attempts) {
+        await Future<void>.delayed(const Duration(seconds: 1));
+      }
+    }
+    throw StateError(
+        'NeuroStudio did not become ready on the deployed server.');
+  }
+
+  DeploymentJob _clientReachabilityFailure(
+    DeploymentJob job,
+    DeploymentTarget target,
+  ) {
+    const message =
+        'The backend started on the server, but this Mac cannot reach it. '
+        'Check that the server is online and reachable from this network, then retry.';
+    return job.copyWith(
+      stage: DeploymentPhase.failed.wireName,
+      percent: 100,
+      stageLabel: 'Backend is not reachable from this device',
+      logs: [...job.logs, 'Client readiness check failed for ${target.host}.'],
+      error: message,
+      updatedAt: DateTime.now(),
+    );
   }
 
   Future<void> _runChecked(

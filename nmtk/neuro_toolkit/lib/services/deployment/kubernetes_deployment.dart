@@ -271,6 +271,7 @@ class KubernetesDeploymentService {
             'NMTK_STATE_DIR': '/app/state',
             'NMTK_DATA_DIR': '/app/data',
             'NMTK_BACKEND_DEPLOYMENT_READY': '1',
+            'NMTK_SUITE_API_URL': 'http://nmtk-suite-api:9000',
           },
         ),
         _service(

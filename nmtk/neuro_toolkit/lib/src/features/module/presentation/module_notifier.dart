@@ -14,9 +14,12 @@ part 'module_notifier.g.dart';
 
 @Riverpod(keepAlive: true)
 class ModuleNotifier extends _$ModuleNotifier {
+  static const _maxConsecutivePollFailures = 3;
+
   late final UpdateService _updateService;
   Timer? _refreshTimer;
   bool _pollInFlight = false;
+  int _consecutivePollFailures = 0;
 
   @override
   Future<ModuleState> build() async {
@@ -148,8 +151,22 @@ class ModuleNotifier extends _$ModuleNotifier {
       if (changed) {
         state = AsyncData(nextState);
       }
+      _consecutivePollFailures = 0;
     } catch (_) {
-      // Ignore polling errors to prevent breaking the UI on transient network drops
+      _consecutivePollFailures++;
+      if (_consecutivePollFailures < _maxConsecutivePollFailures) return;
+
+      final currentState = state.value;
+      if (currentState == null) return;
+      final updatedModules = currentState.modules.map((module) {
+        if (module.status != ModuleStatus.starting) return module;
+        return module.copyWith(
+          status: ModuleStatus.error,
+          healthStatus:
+              'Connection to the backend was lost. Retry or change server.',
+        );
+      }).toList(growable: false);
+      state = AsyncData(currentState.copyWith(modules: updatedModules));
     } finally {
       _pollInFlight = false;
     }

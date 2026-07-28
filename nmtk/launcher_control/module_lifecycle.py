@@ -426,6 +426,36 @@ class ModuleLifecycleMixin:
                         SUITE_API_STATUS_PREFLIGHT_FAILED,
                         message or "suite_api health probe failed",
                     )
+            # Monolithic modules have no dedicated process for the launcher
+            # to supervise.  Reconcile their transitional state explicitly so
+            # a restart or failed in-container connection cannot strand a
+            # workspace on an infinite "starting" screen.
+            with self._lock:
+                monolith_starting_ids = [
+                    module_id
+                    for module_id, module in self._modules.items()
+                    if module.get("status") == STATUS_INDEX["starting"]
+                    and _module_start_strategy(module) == "none"
+                    and not _is_externally_managed_service(module)
+                ]
+            if monolith_starting_ids:
+                suite_ready, _message = _suite_api_health_probe()
+                for module_id in monolith_starting_ids:
+                    if suite_ready:
+                        self._update_module_fields(
+                            module_id,
+                            status=STATUS_INDEX["running"],
+                            healthStatus="Managed by suite_api",
+                        )
+                    else:
+                        self._update_module_fields(
+                            module_id,
+                            status=STATUS_INDEX["error"],
+                            healthStatus=(
+                                "Suite API is not reachable from launcher "
+                                "control. Retry after the backend starts."
+                            ),
+                        )
             with self._lock:
                 module_ids = list(self._processes.keys())
             for module_id in module_ids:
