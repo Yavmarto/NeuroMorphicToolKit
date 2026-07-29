@@ -162,6 +162,27 @@ Defaults to `moosebuntu@192.168.2.51`; override with `REMOTE_HOST=`. Flags go th
 | any `Dockerfile` | rebuilds that service | |
 | `docker-compose*.yml` | recreates the stack | and warns that the app's asset bundle needs re-syncing |
 
+**Only backend runtime paths reach the host.** `scripts/rsync-excludes.txt` is an
+*allowlist*: it ends in `- *`, so a path is synced only if a `+` rule above names it. The
+included set is `docker-compose*.yml`, `Dockerfile*`, `.dockerignore`, `suite_api/`,
+`workers/`, `docker/`, `neurocnl/`, `Neurochip/`, `Neurohub/`, `Neurosense/`,
+`Neurobench/neurobench/`, `nmtk/launcher_control/`, `nmtk/neuro_toolkit/assets/` and
+`scripts/launcher_control_service.py` — every one of them traced to a Dockerfile `COPY`, a
+compose bind mount, or a path the backend reads at runtime. The `Makefile`, this file, all
+docs, `tests/`, `tools/`, `nmtk_ui_core/`, the Flutter app and the rest of `scripts/` never
+leave your machine. Rules are first-match-wins, so the junk block must stay above the `+`
+block. Adding a new backend directory means adding a `+` rule, or it silently never ships.
+
+Unlisted paths are also protected from `rsync --delete`, which is deliberate: host-owned
+state (`.env` from `make secrets-init`, `shared_assets/` uploads, `*.db`, `logs/`) survives
+every sync. Do **not** add `--delete-excluded` to get a tidy deploy dir — it would delete
+exactly those. To clear files a previous, wider filter left behind, list the host's deploy
+dir and remove the stale entries by name:
+
+```bash
+ssh moosebuntu@192.168.2.51 'ls -A ~/nmtk-deploy'
+```
+
 It needs no state file — `rsync --itemize-changes` reports exactly which paths differed from
 the host. To ask why it decided something, or to check the table without touching a host:
 
@@ -175,6 +196,22 @@ the older `make backend-update`.
 
 **If a change still doesn't appear after a sync**, restart the `suite_api` container before
 assuming the patch is wrong — that distinguishes a stale reloader from a bad fix.
+
+#### Port 8002 on the dev host belongs to the native Akida service
+
+`192.168.2.51` runs a real BrainChip Akida card served by the native `neurochip.service`
+systemd unit, which owns **port 8002**. The containerized `neurochip-hw-worker` has no Akida
+SDK (`workers/neurochip_hw/Dockerfile`), so it can never serve hardware routes there — it only
+fights for the port. `docker-compose.akida-native.yml` exists to park it in a `donotstart`
+profile and repoint `suite_api`/`launcher-control` at `host.docker.internal:8002`.
+
+- `make dev-update` detects this automatically (`systemctl is-active neurochip.service`, with a
+  port probe as fallback) and applies the overlay. Force with `AKIDA_NATIVE=1` / `=0`.
+- `make docker-ex-deploy` needs `AKIDA_NATIVE=1` passed **explicitly**, or it will try to bind
+  8002 and fail with `address already in use`. `Makefile:121` also uses that flag to keep 8002
+  out of its `fuser -k` eviction list.
+- **Never evict port 8002 on that host.** `sudo fuser -k 8002/tcp` kills the Akida service the
+  whole box exists to provide. `dev-update --evict-ports` refuses to touch it for this reason.
 
 ### Cutting a release
 

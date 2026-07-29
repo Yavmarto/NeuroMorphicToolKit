@@ -252,21 +252,17 @@ deploy-prod: secrets-init
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab $(CONTAINER_ENGINE) compose -f docker-compose.yml -f docker-compose.prod.yml pull && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab $(CONTAINER_ENGINE) compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait --remove-orphans"
 	@echo "==> Production backend ready."
 
+## Kept as an alias for muscle memory. It used to carry its own rsync +
+## `compose up -d`, which had no docker-compose.akida-native.yml handling and so
+## died with "port 8002 already in use" on any box running the native
+## neurochip.service. Delegating means one implementation of that logic.
 .PHONY: dev-sync
 dev-sync:
 	@if [ -z "$(REMOTE_HOST)" ]; then \
 		echo "Error: REMOTE_HOST is not set. Example: make dev-sync REMOTE_HOST=user@192.168.1.50"; \
 		exit 1; \
 	fi
-	@echo "==> Syncing backend source to $(REMOTE_HOST):$(DEPLOY_DIR) (rsync, incremental)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "mkdir -p $(DEPLOY_DIR)"
-	rsync -a --delete -v -e "ssh $(SSH_OPTS)" \
-		$(if $(DOCKER_EX_RSYNC_VERBOSE),-v,) \
-		$(RSYNC_EXCLUDES) \
-		. $(REMOTE_HOST):$(DEPLOY_DIR)/
-	@echo "==> Restarting container processes if necessary (live-reload handles python changes automatically)..."
-	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d"
-	@echo "==> Dev backend synced."
+	@REMOTE_HOST=$(REMOTE_HOST) bash scripts/dev_update.sh --skip-tests $(ARGS)
 
 # The default dev backend (AGENTS.md, "Updating the backend").
 DEV_BACKEND_HOST ?= moosebuntu@192.168.2.51
@@ -276,6 +272,9 @@ DEV_BACKEND_HOST ?= moosebuntu@192.168.2.51
 ## worker edit needs a rebuild while a suite_api edit needs nothing. Supersedes
 ## the old `backend-update` (which always did a plain rsync) and docker-ex-deploy
 ## (which always rebuilt all 14 images).
+## Auto-detects whether the host serves Akida from the native neurochip.service
+## and, if so, adds docker-compose.akida-native.yml so the SDK-less containerized
+## worker stops fighting it for port 8002. Force with AKIDA_NATIVE=1 / =0.
 ## Pass flags through with ARGS=, e.g. ARGS='--dry-run' or ARGS='--skip-tests'.
 .PHONY: dev-update
 dev-update:

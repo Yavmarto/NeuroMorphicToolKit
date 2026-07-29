@@ -163,7 +163,20 @@ COPY workers/jupyter_server/jupyter_server_config.py /app/jupyter_server_config.
 # (e.g. via a Docker volume mount) to persist notebooks outside the container.
 ENV JUPYTER_NOTEBOOK_DIR=/home/appuser
 
-RUN groupadd --system appgroup && useradd --system -m --gid appgroup appuser \
+# UID/GID pinned, not `useradd --system`. Two reasons, both already load-bearing:
+#   1. /home/appuser is a PERSISTED named volume (jupyter_notebooks). Docker only
+#      seeds a named volume from the image when the volume is empty, so the chown
+#      below never reaches an existing one — if a rebuild moved appuser to a
+#      different UID, every file in the volume would become unwritable and the
+#      server would crash-loop on its own runtime dir. `--system` allocates
+#      dynamically from the 100-999 range, so any change to the apt/pip package
+#      set above can silently shift it.
+#   2. nmtk/launcher_control/deployment_k8s_renderer.py hardcodes
+#      runAsUser/runAsGroup/fsGroup: 1000 for every rendered Deployment. A system
+#      UID could never match that, so on Kubernetes the container would run as a
+#      user with no write access to its own home.
+RUN groupadd --gid 1000 appgroup \
+ && useradd -m --uid 1000 --gid appgroup appuser \
  && chown -R appuser:appgroup /app /home/appuser
 USER appuser
 

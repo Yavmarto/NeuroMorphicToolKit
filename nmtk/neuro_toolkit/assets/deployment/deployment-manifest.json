@@ -3,7 +3,7 @@
   "files": {
     "docker-compose.prod.yml": "f582e7a6fdde70283e0440caabdac774940663c304e2c0c4943dec946a0f438d",
     "docker-compose.remote.yml": "23b34d4599ff850d4ba909d57e35c84b604cd030c4b44e575dd03d2c9109c489",
-    "docker-compose.yml": "a8898cdc6475a27be1148d26d426a77abd060b99f3a713b28e48ef9749041d44",
+    "docker-compose.yml": "000a4cc54ab2221faab26c855441506f5a6c2e34fe835fa46b60ae40201f83bd",
     "install.sh": "77f3a4221d7303f899281555f4a4141ddd082f341c5de6768b2da2bfb23fd4c0",
     "monitoring/alertmanager/alertmanager.yml": "5e37524bbb610300cc965e41488b3c9d11fa5886f55d1196e5949ccf21da9d0e",
     "monitoring/loki/loki-config.yml": "414e3dadeb587963c52740adc3097af79710eb6d8bf7b5e7da648008469cd8c6",

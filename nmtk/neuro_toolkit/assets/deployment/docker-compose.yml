@@ -31,6 +31,13 @@ services:
       - JUPYTER_PUBLIC_URL=${JUPYTER_PUBLIC_URL:-http://localhost:8008/lab}
       # Local mirror dir for kernel_runner; notebooks are also published to Jupyter via Contents API
       - JUPYTER_NOTEBOOK_DIR=/home/app/notebooks
+      # Where sqlite databases go. Without this the default is "." — i.e. WORKDIR /repo,
+      # which in dev is the host bind mount (docker-compose.dev.yml) that the non-root `app`
+      # user (suite_api/Dockerfile:73) cannot create files in. Both
+      # Neurobench/neurobench/app/services/result_store.py:9 and suite_api/config.py:8 read
+      # this, and both were writing into /repo. /home/app/data is created and chowned in
+      # suite_api/Dockerfile:58-61. neurocnl-physics-worker already does this (see below).
+      - NEUROCNL_DATA_DIR=/home/app/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/api/suite/health')"]
       start_period: 120s
