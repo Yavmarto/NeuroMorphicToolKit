@@ -250,9 +250,11 @@ class ControlApiService {
     );
   }
 
-  Future<bool> isAvailable() async {
+  Future<bool> isAvailable({
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
     try {
-      final response = await _client.get(_uri('/health'));
+      final response = await _client.get(_uri('/health')).timeout(timeout);
       return response.statusCode == 200;
     } catch (_) {
       return false;

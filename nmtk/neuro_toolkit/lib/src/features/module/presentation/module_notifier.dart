@@ -6,53 +6,58 @@ import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 part 'module_notifier.g.dart';
-
-/// Whether the last control-API poll reached the launcher backend. Drives the
-/// red/green dot on tool_view's server-connection button.
-///
-/// A Notifier rather than the shorter `StateProvider`: Riverpod 3 moved
-/// StateProvider into `package:flutter_riverpod/legacy.dart`, and this code is
-/// new — no reason to write it against an API upstream has already quarantined.
-/// Optimistic `true` on first build so the dot doesn't flash red before the
-/// first poll completes.
-class ServerConnectionStatus extends Notifier<bool> {
-  @override
-  bool build() => true;
-
-  void set({required bool connected}) => state = connected;
-}
-
-final serverConnectionStatusProvider =
-    NotifierProvider<ServerConnectionStatus, bool>(ServerConnectionStatus.new);
 
 @Riverpod(keepAlive: true)
 class ModuleNotifier extends _$ModuleNotifier {
   static const _maxConsecutivePollFailures = 3;
 
-  late final UpdateService _updateService;
+  // AsyncNotifier.build can rerun when the selected control service changes.
+  // This must be assignable on every build, not a one-shot late final.
+  late UpdateService _updateService;
   Timer? _refreshTimer;
-  bool _pollInFlight = false;
+  Uri? _activeServerUri;
+  int _serverGeneration = 0;
+  int? _pollInFlightGeneration;
   int _consecutivePollFailures = 0;
 
   @override
   Future<ModuleState> build() async {
     _updateService = ref.read(updateServiceProvider);
     final bootstrapState = ref.watch(launcherBootstrapStateProvider);
+    final controlApi = bootstrapState.canUseControlApi
+        ? ref.watch(controlApiServiceProvider)
+        : null;
+    final serverUri = controlApi?.baseUri ?? bootstrapState.baseUri;
+
+    if (_activeServerUri != serverUri) {
+      _activeServerUri = serverUri;
+      _serverGeneration++;
+      _consecutivePollFailures = 0;
+    }
+    final generation = _serverGeneration;
 
     if (!bootstrapState.canUseControlApi) {
       return const ModuleState();
     }
 
     try {
-      final state = await _reloadFromControlApi(includeLauncherUpdate: true);
+      final state = await _reloadFromControlApi(
+        controlApi: controlApi!,
+        includeLauncherUpdate: true,
+      );
+      if (!_isCurrentServer(generation, controlApi.baseUri)) {
+        return state;
+      }
       await _startSwitchableNavModules(state.modules);
+      if (!_isCurrentServer(generation, controlApi.baseUri)) {
+        return state;
+      }
 
       // Setup polling timer
       _startRefreshTimer();
@@ -76,9 +81,9 @@ class ModuleNotifier extends _$ModuleNotifier {
   UpdateChannel get currentChannel => _updateService.channel;
 
   Future<ModuleState> _reloadFromControlApi({
+    required ControlApiService controlApi,
     required bool includeLauncherUpdate,
   }) async {
-    final controlApi = ref.read(controlApiServiceProvider);
     final settings = await controlApi.fetchSettings();
     final fetchedModules = await controlApi.fetchModules(
       refreshUpdates: includeLauncherUpdate,
@@ -120,23 +125,34 @@ class ModuleNotifier extends _$ModuleNotifier {
     _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (state.isLoading || state.hasError) return;
-      unawaited(_pollUpdates());
+      unawaited(_pollCurrentServer());
     });
     ref.onDispose(() {
       _refreshTimer?.cancel();
     });
   }
 
-  Future<void> _pollUpdates() async {
-    if (_pollInFlight) return;
-    _pollInFlight = true;
-    bool connectionSuccess = false;
+  Future<void> _pollCurrentServer() {
+    final controlApi = ref.read(controlApiServiceProvider);
+    return _pollUpdates(
+      generation: _serverGeneration,
+      controlApi: controlApi,
+    );
+  }
+
+  Future<void> _pollUpdates({
+    required int generation,
+    required ControlApiService controlApi,
+  }) async {
+    if (_pollInFlightGeneration == generation) return;
+    _pollInFlightGeneration = generation;
     try {
-      final controlApi = ref.read(controlApiServiceProvider);
       final settings = await controlApi.fetchSettings();
       final fetchedModules =
           await controlApi.fetchModules(refreshUpdates: false);
-      connectionSuccess = true;
+      if (!_isCurrentServer(generation, controlApi.baseUri)) {
+        return;
+      }
 
       final currentState = state.value;
       if (currentState == null) return;
@@ -175,6 +191,9 @@ class ModuleNotifier extends _$ModuleNotifier {
       }
       _consecutivePollFailures = 0;
     } catch (_) {
+      if (!_isCurrentServer(generation, controlApi.baseUri)) {
+        return;
+      }
       _consecutivePollFailures++;
       if (_consecutivePollFailures < _maxConsecutivePollFailures) return;
 
@@ -190,11 +209,14 @@ class ModuleNotifier extends _$ModuleNotifier {
       }).toList(growable: false);
       state = AsyncData(currentState.copyWith(modules: updatedModules));
     } finally {
-      ref
-          .read(serverConnectionStatusProvider.notifier)
-          .set(connected: connectionSuccess);
-      _pollInFlight = false;
+      if (_pollInFlightGeneration == generation) {
+        _pollInFlightGeneration = null;
+      }
     }
+  }
+
+  bool _isCurrentServer(int generation, Uri baseUri) {
+    return generation == _serverGeneration && baseUri == _activeServerUri;
   }
 
   Future<void> _syncServerSettings(String logLevelName) async {
@@ -221,8 +243,11 @@ class ModuleNotifier extends _$ModuleNotifier {
       return;
     }
     try {
-      final newState =
-          await _reloadFromControlApi(includeLauncherUpdate: false);
+      final controlApi = ref.read(controlApiServiceProvider);
+      final newState = await _reloadFromControlApi(
+        controlApi: controlApi,
+        includeLauncherUpdate: false,
+      );
       state = AsyncData(newState);
     } catch (e, st) {
       state = AsyncError(nmtkUserFacingError(e), st);
@@ -314,7 +339,7 @@ class ModuleNotifier extends _$ModuleNotifier {
           state = AsyncData(latestState.copyWith(modules: newModules));
         }
       }
-      unawaited(_pollUpdates()); // Background reload
+      unawaited(_pollCurrentServer()); // Background reload
     } catch (e) {
       _setErrorState(moduleId, nmtkUserFacingError(e));
       debugPrint('Installation failed for $moduleId: $e');
@@ -349,7 +374,7 @@ class ModuleNotifier extends _$ModuleNotifier {
           state = AsyncData(latestState.copyWith(modules: newModules));
         }
       }
-      unawaited(_pollUpdates());
+      unawaited(_pollCurrentServer());
     } catch (e) {
       _setErrorState(moduleId, nmtkUserFacingError(e));
       debugPrint('Repair failed for $moduleId: $e');
@@ -392,7 +417,7 @@ class ModuleNotifier extends _$ModuleNotifier {
           state = AsyncData(latestState.copyWith(modules: newModules));
         }
       }
-      unawaited(_pollUpdates());
+      unawaited(_pollCurrentServer());
     } catch (e) {
       _setErrorState(moduleId, nmtkUserFacingError(e));
       debugPrint('Launch failed for $moduleId: $e');
@@ -431,7 +456,7 @@ class ModuleNotifier extends _$ModuleNotifier {
           state = AsyncData(latestState.copyWith(modules: newModules));
         }
       }
-      unawaited(_pollUpdates());
+      unawaited(_pollCurrentServer());
     } catch (e) {
       _setErrorState(moduleId, nmtkUserFacingError(e));
       debugPrint('Stop failed for $moduleId: $e');
@@ -472,7 +497,7 @@ class ModuleNotifier extends _$ModuleNotifier {
           state = AsyncData(latestState.copyWith(modules: newModules));
         }
       }
-      unawaited(_pollUpdates());
+      unawaited(_pollCurrentServer());
     } catch (e) {
       _setErrorState(moduleId, nmtkUserFacingError(e));
       debugPrint('Update failed for $moduleId: $e');
@@ -504,7 +529,7 @@ class ModuleNotifier extends _$ModuleNotifier {
     try {
       final controlApi = ref.read(controlApiServiceProvider);
       await controlApi.uninstallModule(moduleId);
-      unawaited(_pollUpdates());
+      unawaited(_pollCurrentServer());
     } catch (e) {
       debugPrint('Uninstall failed for $moduleId: $e');
     }
@@ -555,7 +580,11 @@ class ModuleNotifier extends _$ModuleNotifier {
 
   Future<void> checkForUpdates() async {
     try {
-      final newState = await _reloadFromControlApi(includeLauncherUpdate: true);
+      final controlApi = ref.read(controlApiServiceProvider);
+      final newState = await _reloadFromControlApi(
+        controlApi: controlApi,
+        includeLauncherUpdate: true,
+      );
       state = AsyncData(newState);
     } catch (e) {
       debugPrint('Update check failed: $e');

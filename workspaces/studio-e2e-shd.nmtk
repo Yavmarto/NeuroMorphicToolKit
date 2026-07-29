@@ -185305,7 +185305,7 @@
     "workspaceName": "studio-e2e-shd",
     "workspaceSourceKind": null,
     "activePanel": "validation",
-    "activePipelineStep": "trainingSandbox",
+    "activePipelineStep": "defineModel",
     "selectedBenchmarkId": null,
     "selectedBenchmarkName": null,
     "selectedDataset": null,

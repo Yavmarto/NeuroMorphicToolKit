@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,30 +27,76 @@ class _MemorySecretStorage implements DeploymentSecretStorage {
 }
 
 class _ManifestAssetBundle extends CachingAssetBundle {
+  _ManifestAssetBundle({
+    this.corruptedFile,
+    this.omittedManifestFile,
+    this.unexpectedManifestFile,
+    this.useOffsetByteData = false,
+  });
+
+  final String? corruptedFile;
+  final String? omittedManifestFile;
+  final String? unexpectedManifestFile;
+  final bool useOffsetByteData;
+
+  static const files = <String>[
+    'docker-compose.yml',
+    'docker-compose.prod.yml',
+    'docker-compose.remote.yml',
+    'install.sh',
+    'monitoring/alertmanager/alertmanager.yml',
+    'monitoring/loki/loki-config.yml',
+    'monitoring/prometheus/alert_rules.yml',
+    'monitoring/prometheus/prometheus.yml',
+    'monitoring/promtail/promtail-config.yml',
+  ];
+
+  static List<int> _fileBytes(String relative) =>
+      utf8.encode('fixture contents for $relative\n');
+
+  ByteData _byteData(List<int> bytes) {
+    final exact = Uint8List.fromList(bytes);
+    if (!useOffsetByteData) return ByteData.sublistView(exact);
+    final padded = Uint8List(exact.length + 7);
+    padded.setRange(3, 3 + exact.length, exact);
+    return ByteData.view(padded.buffer, 3, exact.length);
+  }
+
   @override
   Future<ByteData> load(String key) async {
-    const files = <String>[
-      'docker-compose.yml',
-      'docker-compose.prod.yml',
-      'docker-compose.remote.yml',
-      'install.sh',
-      'monitoring/alertmanager/alertmanager.yml',
-      'monitoring/loki/loki-config.yml',
-      'monitoring/prometheus/alert_rules.yml',
-      'monitoring/prometheus/prometheus.yml',
-      'monitoring/promtail/promtail-config.yml',
-    ];
-    final bytes = utf8.encode(
-      jsonEncode({
-        'bundleVersion': 5,
-        'files': {
-          for (final file in files)
-            file:
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
-        },
-      }),
-    );
-    return ByteData.sublistView(Uint8List.fromList(bytes));
+    const prefix = 'assets/deployment/';
+    if (!key.startsWith(prefix)) {
+      throw StateError('Unexpected fixture asset: $key');
+    }
+    final relative = key.substring(prefix.length);
+    if (relative == 'deployment-manifest.json') {
+      final hashes = <String, String>{
+        for (final file in files)
+          file: sha256.convert(_fileBytes(file)).toString(),
+      };
+      if (omittedManifestFile != null) {
+        hashes.remove(omittedManifestFile);
+      }
+      if (unexpectedManifestFile != null) {
+        hashes[unexpectedManifestFile!] =
+            sha256.convert(utf8.encode('unexpected fixture')).toString();
+      }
+      return _byteData(
+        utf8.encode(
+          jsonEncode({
+            'bundleVersion': 5,
+            'files': hashes,
+          }),
+        ),
+      );
+    }
+    if (!files.contains(relative)) {
+      throw StateError('Unexpected fixture asset: $key');
+    }
+    final bytes = relative == corruptedFile
+        ? utf8.encode('corrupted fixture contents for $relative\n')
+        : _fileBytes(relative);
+    return _byteData(bytes);
   }
 }
 
@@ -228,6 +275,163 @@ void _writeExecutable(Directory bin, String name, String contents) {
 
 ({
   Directory fixture,
+  List<ProcessResult> results,
+  String commandLog,
+}) _runDeploymentAccountFixture({
+  required bool userExists,
+  required bool groupExists,
+  int runs = 1,
+  bool failGroupCreation = false,
+  bool invalidHome = false,
+}) {
+  final fixture = Directory.systemTemp.createTempSync(
+    'nmtk-deployment-account-',
+  );
+  final bin = Directory('${fixture.path}/bin')..createSync();
+  final deployHome = Directory('${fixture.path}/deploy-home');
+  final userState = File('${fixture.path}/user-exists');
+  final groupState = File('${fixture.path}/group-exists');
+  final commandLog = File('${fixture.path}/commands.log');
+  if (userExists) {
+    userState.writeAsStringSync('present');
+    deployHome.createSync();
+  }
+  if (groupExists) groupState.writeAsStringSync('present');
+
+  _writeExecutable(
+    bin,
+    'timeout',
+    '#!/bin/bash\n'
+        'while [[ "\$1" == --* ]]; do shift; done\n'
+        'shift\n'
+        'exec "\$@"\n',
+  );
+  _writeExecutable(
+    bin,
+    'getent',
+    '#!/bin/bash\n'
+        'case "\$1:\$2" in\n'
+        '  group:nmtk-deploy)\n'
+        '    [[ -f "\$NMTK_GROUP_STATE" ]] || exit 2\n'
+        '    printf "nmtk-deploy:x:48333:\\n"\n'
+        '    ;;\n'
+        '  passwd:nmtk-deploy)\n'
+        '    [[ -f "\$NMTK_USER_STATE" ]] || exit 2\n'
+        '    printf "nmtk-deploy:x:48333:48333::%s:/bin/bash\\n" '
+        '"\$NMTK_DEPLOY_HOME"\n'
+        '    ;;\n'
+        '  *) exit 2 ;;\n'
+        'esac\n',
+  );
+  _writeExecutable(
+    bin,
+    'id',
+    '#!/bin/bash\n'
+        'if [[ "\$1" == "-u" && \$# -eq 1 ]]; then echo 0; exit 0; fi\n'
+        '[[ "\${!#}" == "nmtk-deploy" && '
+        '-f "\$NMTK_USER_STATE" ]] || exit 1\n'
+        '[[ "\$1" == "-u" ]] && echo 48333\n'
+        'exit 0\n',
+  );
+  _writeExecutable(
+    bin,
+    'groupadd',
+    '#!/bin/bash\n'
+        'printf "groupadd %s\\n" "\$*" >>"\$NMTK_FAKE_LOG"\n'
+        'if [[ "\$NMTK_FAIL_GROUP_CREATION" == "true" ]]; then\n'
+        '  printf "password=%s account database locked\\n" '
+        '"\$NMTK_FAKE_SECRET" >&2\n'
+        '  exit 10\n'
+        'fi\n'
+        '[[ "\$1" == "nmtk-deploy" ]] || exit 64\n'
+        '[[ ! -f "\$NMTK_GROUP_STATE" ]] || exit 9\n'
+        'touch "\$NMTK_GROUP_STATE"\n',
+  );
+  _writeExecutable(
+    bin,
+    'useradd',
+    '#!/bin/bash\n'
+        'printf "useradd %s\\n" "\$*" >>"\$NMTK_FAKE_LOG"\n'
+        '[[ -f "\$NMTK_GROUP_STATE" ]] || exit 6\n'
+        '[[ ! -f "\$NMTK_USER_STATE" ]] || exit 9\n'
+        '[[ " \$* " == *" --gid nmtk-deploy "* ]] || exit 65\n'
+        'touch "\$NMTK_USER_STATE"\n'
+        'mkdir -p "\$NMTK_DEPLOY_HOME"\n',
+  );
+  _writeExecutable(
+    bin,
+    'usermod',
+    '#!/bin/bash\n'
+        'printf "usermod %s\\n" "\$*" >>"\$NMTK_FAKE_LOG"\n'
+        '[[ -f "\$NMTK_GROUP_STATE" && -f "\$NMTK_USER_STATE" ]] || exit 6\n'
+        '[[ " \$* " == *" --gid nmtk-deploy nmtk-deploy "* ]] || exit 65\n',
+  );
+  _writeExecutable(
+    bin,
+    'rm',
+    '#!/bin/bash\n'
+        'if [[ "\$*" == *"/etc/sudoers.d/nmtk-deploy"* ]]; then\n'
+        '  printf "rm %s\\n" "\$*" >>"\$NMTK_FAKE_LOG"\n'
+        '  exit 0\n'
+        'fi\n'
+        'exec /bin/rm "\$@"\n',
+  );
+  _writeExecutable(
+    bin,
+    'install',
+    '#!/bin/bash\n'
+        'printf "install %s\\n" "\$*" >>"\$NMTK_FAKE_LOG"\n'
+        '[[ "\$1" == "-d" ]] || exit 0\n'
+        'mkdir -p "\${!#}"\n',
+  );
+
+  final completeScript = ClientDeploymentService.buildRemoteBootstrapScript(
+    containerEngine: 'docker',
+    factoryReset: false,
+  );
+  final preflightIndex = completeScript.indexOf(
+    '\nphase "preflight_running"',
+  );
+  final accountIndex = completeScript.indexOf(
+    '\nphase "bootstrapping_access"',
+  );
+  final credentialIndex = completeScript.indexOf(
+    '\ncapture_step 30 "deploy_account_failed" 26 \\\n'
+    '  "Preparing deployment credential workspace"',
+    accountIndex,
+  );
+  final accountScript = '${completeScript.substring(0, preflightIndex)}'
+      '${completeScript.substring(accountIndex, credentialIndex)}\n'
+      'terminal "✓ Deployment account fixture completed"\n';
+  final script = File('${fixture.path}/account.sh')
+    ..writeAsStringSync(accountScript);
+  final results = <ProcessResult>[
+    for (var run = 0; run < runs; run += 1)
+      Process.runSync(
+        'bash',
+        [script.path],
+        environment: {
+          ...Platform.environment,
+          'PATH': '${bin.path}:/usr/bin:/bin',
+          'NMTK_FAKE_LOG': commandLog.path,
+          'NMTK_USER_STATE': userState.path,
+          'NMTK_GROUP_STATE': groupState.path,
+          'NMTK_DEPLOY_HOME':
+              invalidHome ? 'relative/deploy-home' : deployHome.path,
+          'NMTK_FAIL_GROUP_CREATION': '$failGroupCreation',
+          'NMTK_FAKE_SECRET': 'temporary-admin-secret',
+        },
+      ),
+  ];
+  return (
+    fixture: fixture,
+    results: results,
+    commandLog: commandLog.existsSync() ? commandLog.readAsStringSync() : '',
+  );
+}
+
+({
+  Directory fixture,
   ProcessResult result,
   String commandLog,
 }) _runDeploymentCredentialFixture({
@@ -261,6 +465,10 @@ void _writeExecutable(Directory bin, String name, String contents) {
     bin,
     'getent',
     '#!/bin/bash\n'
+        'if [[ "\$1" == "group" && "\$2" == "nmtk-deploy" ]]; then\n'
+        '  printf "nmtk-deploy:x:48333:\\n"\n'
+        '  exit 0\n'
+        'fi\n'
         'if [[ "\$1" == "passwd" ]]; then\n'
         '  printf "nmtk-deploy:x:48333:48333::%s:/bin/bash\\n" '
         '"\$NMTK_DEPLOY_HOME"\n'
@@ -268,6 +476,7 @@ void _writeExecutable(Directory bin, String name, String contents) {
         'fi\n'
         'exit 1\n',
   );
+  _writeExecutable(bin, 'usermod', '#!/bin/bash\nexit 0\n');
   _writeExecutable(
     bin,
     'install',
@@ -335,6 +544,7 @@ void _writeExecutable(Directory bin, String name, String contents) {
   ProcessResult result,
   String commandLog,
 }) _runPodmanApiProvisioningFixture({
+  int systemctlEnableExit = 0,
   int systemctlStartExit = 0,
   bool systemctlCreatesSocket = false,
   bool requireFallbackForRemoteApi = false,
@@ -373,6 +583,9 @@ void _writeExecutable(Directory bin, String name, String contents) {
     'systemctl',
     '#!/bin/bash\n'
         'printf "systemctl %s\\n" "\$*" >>"\$NMTK_FAKE_LOG"\n'
+        'if [[ "\$*" == *" enable podman.socket"* ]]; then\n'
+        '  exit "\$NMTK_SYSTEMCTL_ENABLE_EXIT"\n'
+        'fi\n'
         'if [[ "\$*" == *" start podman.socket"* ]]; then\n'
         '  if [[ "\$NMTK_SYSTEMD_CREATES_SOCKET" == "true" ]]; then\n'
         "    python3 -c 'import socket,sys,time; "
@@ -455,6 +668,7 @@ void _writeExecutable(Directory bin, String name, String contents) {
       'NMTK_SOCKET': socket,
       'NMTK_FALLBACK_MARKER': fallbackMarker.path,
       'NMTK_SERVICE_PID': servicePid.path,
+      'NMTK_SYSTEMCTL_ENABLE_EXIT': '$systemctlEnableExit',
       'NMTK_SYSTEMCTL_START_EXIT': '$systemctlStartExit',
       'NMTK_SYSTEMD_CREATES_SOCKET': '$systemctlCreatesSocket',
       'NMTK_REQUIRE_FALLBACK': '$requireFallbackForRemoteApi',
@@ -509,6 +723,166 @@ Future<DeploymentPersistence> _completedRemotePersistence() async {
 }
 
 void main() {
+  test(
+      'deployment account reconciliation is idempotent for every partial state',
+      () {
+    final cases = <({
+      String name,
+      bool userExists,
+      bool groupExists,
+      int groupAdds,
+      int userAdds,
+      int userMods,
+    })>[
+      (
+        name: 'neither exists',
+        userExists: false,
+        groupExists: false,
+        groupAdds: 1,
+        userAdds: 1,
+        userMods: 1,
+      ),
+      (
+        name: 'group only',
+        userExists: false,
+        groupExists: true,
+        groupAdds: 0,
+        userAdds: 1,
+        userMods: 1,
+      ),
+      (
+        name: 'user only',
+        userExists: true,
+        groupExists: false,
+        groupAdds: 1,
+        userAdds: 0,
+        userMods: 2,
+      ),
+      (
+        name: 'both exist',
+        userExists: true,
+        groupExists: true,
+        groupAdds: 0,
+        userAdds: 0,
+        userMods: 2,
+      ),
+    ];
+
+    for (final testCase in cases) {
+      final fixture = _runDeploymentAccountFixture(
+        userExists: testCase.userExists,
+        groupExists: testCase.groupExists,
+        runs: 2,
+      );
+      addTearDown(() {
+        if (fixture.fixture.existsSync()) {
+          fixture.fixture.deleteSync(recursive: true);
+        }
+      });
+      final output = fixture.results
+          .map((result) => '${result.stdout}\n${result.stderr}')
+          .join('\n');
+
+      expect(
+        fixture.results.map((result) => result.exitCode),
+        everyElement(0),
+        reason: '${testCase.name}\n$output\n${fixture.commandLog}',
+      );
+      expect(
+        RegExp(r'^groupadd ', multiLine: true)
+            .allMatches(fixture.commandLog)
+            .length,
+        testCase.groupAdds,
+        reason: testCase.name,
+      );
+      expect(
+        RegExp(r'^useradd ', multiLine: true)
+            .allMatches(fixture.commandLog)
+            .length,
+        testCase.userAdds,
+        reason: testCase.name,
+      );
+      expect(
+        RegExp(r'^usermod ', multiLine: true)
+            .allMatches(fixture.commandLog)
+            .length,
+        testCase.userMods,
+        reason: testCase.name,
+      );
+      if (!testCase.userExists) {
+        expect(
+          fixture.commandLog,
+          contains(
+            'useradd --create-home --shell /bin/bash '
+            '--gid nmtk-deploy nmtk-deploy',
+          ),
+          reason: testCase.name,
+        );
+      }
+      expect(
+        output,
+        contains('✓ Deployment account fixture completed'),
+        reason: testCase.name,
+      );
+    }
+  });
+
+  test('deployment account failures are actionable and redact credentials', () {
+    final fixture = _runDeploymentAccountFixture(
+      userExists: false,
+      groupExists: false,
+      failGroupCreation: true,
+    );
+    addTearDown(() {
+      if (fixture.fixture.existsSync()) {
+        fixture.fixture.deleteSync(recursive: true);
+      }
+    });
+    final result = fixture.results.single;
+    final output = '${result.stdout}\n${result.stderr}';
+    final details = ClientDeploymentService.parseBootstrapFailureForTesting(
+      output,
+      exitCode: result.exitCode,
+      rootPassword: 'temporary-admin-secret',
+    );
+
+    expect(result.exitCode, 25, reason: output);
+    expect(output, contains('NMTK_SETUP_ERROR|deploy_account_failed|'));
+    expect(details.code, 'deploy_account_failed');
+    expect(details.summary, 'The deployment account could not be prepared');
+    expect(details.recovery, contains('Restart the server'));
+    expect(details.recovery, contains('Retry setup'));
+    expect(details.technicalDetails, contains('password=[redacted]'));
+    expect(
+      details.technicalDetails,
+      isNot(contains('temporary-admin-secret')),
+    );
+  });
+
+  test('deployment account rejects an unsafe home directory', () {
+    final fixture = _runDeploymentAccountFixture(
+      userExists: true,
+      groupExists: true,
+      invalidHome: true,
+    );
+    addTearDown(() {
+      if (fixture.fixture.existsSync()) {
+        fixture.fixture.deleteSync(recursive: true);
+      }
+    });
+    final result = fixture.results.single;
+    final output = '${result.stdout}\n${result.stderr}';
+
+    expect(result.exitCode, 25, reason: output);
+    expect(output, contains('Deployment account has no valid home directory'));
+    expect(output, contains('NMTK_SETUP_ERROR|deploy_account_failed|'));
+    expect(
+      fixture.commandLog,
+      isNot(contains('install -d -m 750')),
+      reason: 'A relative home path must never be created.',
+    );
+  });
+
   test('remote bootstrap reconciles both runtimes without broad sudo access',
       () {
     final script = ClientDeploymentService.buildRemoteBootstrapScript(
@@ -868,6 +1242,34 @@ void main() {
       ),
     );
     expect(output, contains('✓ Podman API fixture completed'));
+  });
+
+  test('missing user D-Bus cannot block the Podman fallback', () {
+    final fixture = _runPodmanApiProvisioningFixture(
+      systemctlEnableExit: 1,
+      systemctlStartExit: 1,
+    );
+    final output = '${fixture.result.stdout}\n${fixture.result.stderr}';
+
+    expect(
+      fixture.result.exitCode,
+      0,
+      reason: '$output\n${fixture.commandLog}',
+    );
+    expect(
+      fixture.commandLog,
+      contains('systemctl --user enable podman.socket'),
+    );
+    expect(
+      fixture.commandLog,
+      contains('systemctl --user start podman.socket'),
+    );
+    expect(fixture.commandLog, contains('fallback -f podman system service'));
+    expect(output, contains('✓ Podman API fixture completed'));
+    expect(
+      output,
+      isNot(contains('NMTK_SETUP_ERROR|deploy_account_failed|')),
+    );
   });
 
   test('a delayed healthy systemd Podman socket avoids fallback startup', () {
@@ -1377,6 +1779,91 @@ void main() {
     expect(snapshot.activeJob?.stage, isNot('failed'));
     expect(
         secrets._values.toString(), isNot(contains('temporary-admin-secret')));
+  });
+
+  test('deployment bundle accepts exact slices from offset asset data',
+      () async {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    final persistence = DeploymentPersistence(
+      preferences: await SharedPreferences.getInstance(),
+      secureStorage: _MemorySecretStorage(),
+    );
+    final service = ClientDeploymentService(
+      assets: _ManifestAssetBundle(useOffsetByteData: true),
+      persistenceFactory: () async => persistence,
+      ssh: _BlockingSshDeploymentService(),
+    );
+
+    final job = await service.setupRemoteServer(
+      const RemoteServerSetupRequest(
+        host: '192.168.2.35',
+        adminUsername: 'root',
+        adminPassword: 'temporary-admin-secret',
+        containerEngine: 'podman',
+      ),
+    );
+
+    expect(job.bundleVersion, 5);
+    expect(job.bundleManifestHash, hasLength(64));
+    expect(persistence.loadActiveJob()?.id, job.id);
+  });
+
+  test('invalid deployment bundles fail before persistence or SSH setup',
+      () async {
+    final cases = <({String name, AssetBundle assets})>[
+      (
+        name: 'mismatched contents',
+        assets: _ManifestAssetBundle(corruptedFile: 'docker-compose.yml'),
+      ),
+      (
+        name: 'missing manifest entry',
+        assets: _ManifestAssetBundle(omittedManifestFile: 'install.sh'),
+      ),
+      (
+        name: 'unexpected manifest entry',
+        assets: _ManifestAssetBundle(unexpectedManifestFile: 'unexpected.yml'),
+      ),
+    ];
+
+    for (final testCase in cases) {
+      var persistenceCalls = 0;
+      final service = ClientDeploymentService(
+        assets: testCase.assets,
+        persistenceFactory: () async {
+          persistenceCalls += 1;
+          throw StateError('Persistence must not be reached.');
+        },
+        ssh: _BlockingSshDeploymentService(),
+      );
+
+      await expectLater(
+        service.setupRemoteServer(
+          const RemoteServerSetupRequest(
+            host: '192.168.2.36',
+            adminUsername: 'root',
+            adminPassword: 'temporary-admin-secret',
+            containerEngine: 'podman',
+          ),
+        ),
+        throwsA(
+          isA<StateError>()
+              .having(
+                (error) => error.message,
+                'message',
+                'This app build contains an inconsistent deployment bundle. '
+                    'Update or reinstall NMTK, then retry setup. '
+                    'The server was not changed.',
+              )
+              .having(
+                (error) => error.toString(),
+                'safe error',
+                isNot(contains('temporary-admin-secret')),
+              ),
+        ),
+        reason: testCase.name,
+      );
+      expect(persistenceCalls, 0, reason: testCase.name);
+    }
   });
 
   test('factory reset is the only bootstrap mode that removes volumes', () {

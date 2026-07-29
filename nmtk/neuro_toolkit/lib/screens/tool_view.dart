@@ -57,11 +57,20 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   // transiently churn workspaceState.focusedModuleId, which remounts the
   // active module's KeyedSubtree and re-triggers its startup dialogs.
   bool _workspaceInitializing = false;
+  int _workspaceServerGeneration = 0;
 
   Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
 
   void _showServerConnectionPopup(BuildContext context) {
-    final connectionText = _launcherBaseUri().host;
+    final controlApi = ref.read(controlApiServiceProvider);
+    final connection = ref.read(serverConnectionProvider);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final effectiveConnection = connection.baseUri == controlApi.baseUri
+        ? connection
+        : ServerConnectionState(
+            phase: ServerConnectionPhase.checking,
+            baseUri: controlApi.baseUri,
+          );
     var isOpen = true;
 
     showDialog<void>(
@@ -71,9 +80,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         void dismissDialog() {
           if (!isOpen) return;
           isOpen = false;
-          Navigator.of(dialogContext).pop();
+          if (navigator.canPop()) {
+            navigator.pop();
+          }
         }
 
+        final tokens = NmtkShellTokens.of(dialogContext);
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: NmtkDesignTokens.dialogShape,
@@ -93,8 +105,18 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                     ),
                     child: Row(
                       children: [
+                        Icon(
+                          Icons.circle,
+                          color: _serverConnectionColor(
+                            effectiveConnection.phase,
+                            tokens,
+                          ),
+                          size: 14,
+                        ),
+                        const SizedBox(width: 8),
                         Text(
-                          connectionText,
+                          '${controlApi.baseUri.host} · '
+                          '${effectiveConnection.label}',
                           style: Zeta.of(dialogContext).textStyles.titleMedium,
                         ),
                         const Spacer(),
@@ -119,18 +141,37 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Widget _buildServerConnectionButton(BuildContext context) {
-    final connectionText = _launcherBaseUri().host;
-    final isConnected = ref.watch(serverConnectionStatusProvider);
+    final controlApi = ref.watch(controlApiServiceProvider);
+    final connection = ref.watch(serverConnectionProvider);
+    final effectiveConnection = connection.baseUri == controlApi.baseUri
+        ? connection
+        : ServerConnectionState(
+            phase: ServerConnectionPhase.checking,
+            baseUri: controlApi.baseUri,
+          );
+    final tokens = NmtkShellTokens.of(context);
     return FloatingActionButton.extended(
       onPressed: () => _showServerConnectionPopup(context),
       tooltip: 'Server Connection',
       icon: Icon(
         Icons.circle,
-        color: isConnected ? Zeta.of(context).colors.surfacePositive : Zeta.of(context).colors.surfaceNegative,
+        color: _serverConnectionColor(effectiveConnection.phase, tokens),
         size: 14,
       ),
-      label: Text(connectionText),
+      label: Text(controlApi.baseUri.host),
     );
+  }
+
+  Color _serverConnectionColor(
+    ServerConnectionPhase phase,
+    NmtkShellTokens tokens,
+  ) {
+    return switch (phase) {
+      ServerConnectionPhase.checking => tokens.runningColor,
+      ServerConnectionPhase.connected => tokens.healthyColor,
+      ServerConnectionPhase.unstable => tokens.warningColor,
+      ServerConnectionPhase.disconnected => tokens.errorColor,
+    };
   }
 
   bool _usesRemoteHostedServices() {
@@ -257,6 +298,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       return;
     }
     _workspaceInitializing = true;
+    final serverGeneration = _workspaceServerGeneration;
+    final serverKey = _launcherBaseUri().toString();
     try {
       final moduleStateAsync = ref.read(moduleProvider);
       final moduleState = moduleStateAsync.value;
@@ -266,12 +309,18 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           workspaceStateAsync.isLoading ||
           moduleState == null ||
           workspaceState == null) {
-        if (mounted) {
+        if (mounted &&
+            serverGeneration == _workspaceServerGeneration &&
+            serverKey == _launcherBaseUri().toString()) {
           _workspaceInitializing = false;
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             await _initializeWorkspace(forceFocus: forceFocus);
           });
         }
+        return;
+      }
+      if (serverGeneration != _workspaceServerGeneration ||
+          serverKey != _launcherBaseUri().toString()) {
         return;
       }
 
@@ -302,11 +351,19 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           ) ??
           eligibleModules.first.id;
 
+      if (serverGeneration != _workspaceServerGeneration ||
+          serverKey != _launcherBaseUri().toString()) {
+        return;
+      }
       await ref.read(workspaceProvider.notifier).ensureDefaultSessionsOnce(
             sessions: desiredSessions,
             focusedModuleId: targetModuleId,
           );
-      if (!mounted) return;
+      if (!mounted ||
+          serverGeneration != _workspaceServerGeneration ||
+          serverKey != _launcherBaseUri().toString()) {
+        return;
+      }
 
       _workspaceInitialized = true;
       await _activateModule(targetModuleId, requestFocus: true);
@@ -463,7 +520,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final initialUri =
         _pendingModuleRequests.remove(module.id) ?? _moduleUri(module);
     return InAppWebView(
-      key: ValueKey<String>('webview-${module.id}'),
+      key: ValueKey<String>(
+        'webview-${_launcherBaseUri().authority}-${module.id}',
+      ),
       initialUrlRequest: URLRequest(url: WebUri.uri(initialUri)),
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,
@@ -783,6 +842,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final workspaceStateAsync = ref.watch(workspaceProvider);
     final workspaceState = workspaceStateAsync.value;
     final tokens = NmtkShellTokens.of(context);
+    final currentServerKey =
+        ref.watch(controlApiServiceProvider).baseUri.toString();
 
     // Compute eligibleModules early so ref.listen can close over it.
     final eligibleModules = moduleState == null
@@ -810,6 +871,23 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         newId = eligibleModules.first.id;
       }
       if (newId != _activeModuleId) setState(() => _activeModuleId = newId);
+    });
+
+    ref.listen(controlApiServiceProvider, (previous, next) {
+      if (previous?.baseUri == next.baseUri) return;
+      _workspaceServerGeneration++;
+      _workspaceInitializing = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _workspaceInitialized = false;
+          _controllers.clear();
+          _pendingModuleRequests.clear();
+          _moduleLoadFailures.clear();
+          _prevModuleStatuses.clear();
+        });
+        unawaited(_initializeWorkspace());
+      });
     });
 
     if (moduleState == null || workspaceState == null) {
@@ -979,7 +1057,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                   child: child,
                 ),
                 child: KeyedSubtree(
-                  key: ValueKey<String>(mobileModules[mobileClampedIndex].id),
+                  key: ValueKey<String>(
+                    '$currentServerKey:${mobileModules[mobileClampedIndex].id}',
+                  ),
                   child: _buildModuleChild(
                     mobileModules[mobileClampedIndex],
                     sessionsByModuleId,
@@ -1009,7 +1089,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                   child: child,
                 ),
                 child: KeyedSubtree(
-                  key: ValueKey<String>(desiredModuleId),
+                  key: ValueKey<String>('$currentServerKey:$desiredModuleId'),
                   child: _buildModuleChild(activeModule, sessionsByModuleId),
                 ),
               ),

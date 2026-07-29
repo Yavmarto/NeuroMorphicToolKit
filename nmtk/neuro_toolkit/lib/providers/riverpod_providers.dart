@@ -15,7 +15,9 @@ import 'package:neuro_toolkit/src/features/launcher_bootstrap/presentation/launc
 export 'package:neuro_toolkit/src/features/app/presentation/app_notifier.dart'
     show appProvider;
 export 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart'
-    show moduleProvider, serverConnectionStatusProvider;
+    show moduleProvider;
+export 'package:neuro_toolkit/src/features/server_connection/presentation/server_connection_notifier.dart'
+    show ServerConnectionPhase, ServerConnectionState, serverConnectionProvider;
 export 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart'
     show workspaceProvider;
 export 'package:neuro_toolkit/src/features/settings/presentation/settings_notifier.dart'

@@ -18,6 +18,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 typedef DeploymentPersistenceFactory = Future<DeploymentPersistence> Function();
 
+class _DeploymentBundleIntegrityException implements Exception {
+  const _DeploymentBundleIntegrityException(this.files);
+
+  final List<String> files;
+}
+
 class DeploymentAssetBundle {
   const DeploymentAssetBundle({
     required this.version,
@@ -132,6 +138,9 @@ class ClientDeploymentService implements DeploymentService {
     'monitoring/promtail/promtail-config.yml',
   ];
   static const _releaseImageTag = 'latest';
+  static const _bundleIntegrityRecovery =
+      'This app build contains an inconsistent deployment bundle. '
+      'Update or reinstall NMTK, then retry setup. The server was not changed.';
 
   /// How long the administrator session may stay silent while no single server
   /// command is nominally running. Long enough to cover the gaps between steps,
@@ -810,7 +819,8 @@ fi
         ),
       'deploy_account_failed' => (
           'The deployment account could not be prepared',
-          'Check account-management and SSH directory permissions, then retry.',
+          'The app could not repair the server’s deployment account '
+              'automatically. Restart the server, then select Retry setup.',
         ),
       'podman_api_start_failed' => (
           'The Podman service could not be started',
@@ -894,6 +904,7 @@ set -euo pipefail
 ENGINE="__ENGINE__"
 FACTORY_RESET="__FACTORY_RESET__"
 DEPLOY_USER="nmtk-deploy"
+DEPLOY_GROUP="$DEPLOY_USER"
 PROJECTS="nmtk nmtk-deploy deploy"
 CURRENT_PHASE="preflight_running"
 RUNTIME_BASE="${NMTK_SETUP_RUNTIME_BASE:-/run/user}"
@@ -1328,12 +1339,22 @@ case "$ENGINE" in
 esac
 
 phase "bootstrapping_access" 17 "Preparing the NMTK deployment account"
+if getent group "$DEPLOY_GROUP" >/dev/null 2>&1; then
+  terminal "✓ Deployment group already exists"
+else
+  capture_step 30 "deploy_account_failed" 25 \
+    "Creating NMTK deployment group" "Deployment group created" \
+    groupadd "$DEPLOY_GROUP"
+fi
 if id "$DEPLOY_USER" >/dev/null 2>&1; then
   terminal "✓ Deployment account already exists"
+  capture_step 30 "deploy_account_failed" 25 \
+    "Aligning NMTK deployment account" "Deployment account aligned" \
+    usermod --gid "$DEPLOY_GROUP" "$DEPLOY_USER"
 else
   capture_step 30 "deploy_account_failed" 25 \
     "Creating NMTK deployment account" "Deployment account created" \
-    useradd --create-home --shell /bin/bash "$DEPLOY_USER"
+    useradd --create-home --shell /bin/bash --gid "$DEPLOY_GROUP" "$DEPLOY_USER"
 fi
 capture_step 30 "deploy_account_failed" 25 \
   "Removing legacy deployment permissions" "Legacy sudo rule removed" \
@@ -1347,6 +1368,24 @@ fi
 
 DEPLOY_HOME="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
 DEPLOY_UID="$(id -u "$DEPLOY_USER")"
+case "$DEPLOY_HOME" in
+  /*) ;;
+  *)
+    terminal "✗ Deployment account has no valid home directory"
+    fail "deploy_account_failed" 25 \
+      "The deployment account has no valid home directory."
+    ;;
+esac
+[ "$DEPLOY_HOME" != "/" ] || {
+  terminal "✗ Deployment account cannot use the filesystem root as its home"
+  fail "deploy_account_failed" 25 \
+    "The deployment account cannot use the filesystem root as its home."
+}
+if [ ! -d "$DEPLOY_HOME" ]; then
+  capture_step 30 "deploy_account_failed" 25 \
+    "Creating NMTK deployment home" "Deployment home created" \
+    install -d -m 750 -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" "$DEPLOY_HOME"
+fi
 capture_step 30 "deploy_account_failed" 26 \
   "Preparing deployment credential workspace" \
   "Deployment credential workspace prepared" \
@@ -1358,10 +1397,10 @@ capture_step 30 "deploy_account_failed" 26 \
   ssh-keygen -q -t ed25519 -N "" -f "$TEMPORARY_KEY"
 capture_step 30 "deploy_account_failed" 26 \
   "Preparing deployment account SSH access" "Deployment SSH directory prepared" \
-  install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$DEPLOY_HOME/.ssh"
+  install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" "$DEPLOY_HOME/.ssh"
 capture_step 30 "deploy_account_failed" 26 \
   "Installing the new deployment credential" "Deployment public key installed" \
-  install -m 600 -o "$DEPLOY_USER" -g "$DEPLOY_USER" \
+  install -m 600 -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" \
   "$TEMPORARY_KEY.pub" "$DEPLOY_HOME/.ssh/authorized_keys"
 
 if [ "$ENGINE" = "podman" ]; then
@@ -1372,13 +1411,8 @@ if [ "$ENGINE" = "podman" ]; then
   capture_step 30 "deploy_account_failed" 27 \
     "Preparing rootless Podman runtime" \
     "Rootless Podman runtime directory prepared" \
-    install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" \
+    install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" \
     "/run/user/$DEPLOY_UID"
-  capture_step 30 "deploy_account_failed" 27 \
-    "Enabling rootless Podman socket" "Rootless Podman socket enabled" \
-    runuser -u "$DEPLOY_USER" -- env \
-      "HOME=$DEPLOY_HOME" "XDG_RUNTIME_DIR=/run/user/$DEPLOY_UID" \
-      systemctl --user enable podman.socket
   NMTK_SETUP_AUTOMATIC_RECOVERY=true \
   capture_step 30 "podman_api_start_failed" 27 \
     "Starting or repairing rootless Podman API" \
@@ -1388,6 +1422,11 @@ if [ "$ENGINE" = "podman" ]; then
       bash -c '
         socket="$XDG_RUNTIME_DIR/podman/podman.sock"
         remote_url="unix://$socket"
+        # Non-interactive SSH sessions commonly have no user D-Bus even after
+        # lingering is enabled. Persist the socket when systemd is available,
+        # but never let that optional path block the detached Podman fallback.
+        timeout --signal=TERM --kill-after=1s 5s \
+          systemctl --user enable podman.socket >/dev/null 2>&1 || true
         timeout --signal=TERM --kill-after=1s 5s \
           systemctl --user start podman.socket >/dev/null 2>&1 || true
         for attempt in 1 2 3 4 5; do
@@ -2390,7 +2429,7 @@ exit 1
             SftpFileOpenMode.write,
       );
       try {
-        await remote.writeBytes(data.buffer.asUint8List());
+        await remote.writeBytes(_exactAssetBytes(data));
       } finally {
         await remote.close();
       }
@@ -2398,12 +2437,59 @@ exit 1
   }
 
   Future<DeploymentAssetBundle> _loadDeploymentBundle() async {
-    final data =
-        await _assets.load('assets/deployment/deployment-manifest.json');
-    return DeploymentAssetBundle.fromManifestBytes(
-      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
-    );
+    try {
+      final data =
+          await _assets.load('assets/deployment/deployment-manifest.json');
+      final bundle = DeploymentAssetBundle.fromManifestBytes(
+        _exactAssetBytes(data),
+      );
+      final expectedFiles = _assetFiles
+          .where((relative) => relative != 'deployment-manifest.json')
+          .toSet();
+      final manifestFiles = bundle.fileHashes.keys.toSet();
+      final invalidFiles = <String>{
+        ...expectedFiles.difference(manifestFiles),
+        ...manifestFiles.difference(expectedFiles),
+      };
+      final sha256Pattern = RegExp(r'^[a-f0-9]{64}$');
+
+      for (final relative in expectedFiles.intersection(manifestFiles)) {
+        final expectedHash = bundle.fileHashes[relative]!;
+        if (!sha256Pattern.hasMatch(expectedHash)) {
+          invalidFiles.add(relative);
+          continue;
+        }
+        try {
+          final asset = await _assets.load('assets/deployment/$relative');
+          final actualHash = sha256.convert(_exactAssetBytes(asset)).toString();
+          if (actualHash != expectedHash) invalidFiles.add(relative);
+        } on Object {
+          invalidFiles.add(relative);
+        }
+      }
+
+      if (invalidFiles.isNotEmpty) {
+        final sortedFiles = invalidFiles.toList()..sort();
+        throw _DeploymentBundleIntegrityException(sortedFiles);
+      }
+      return bundle;
+    } on _DeploymentBundleIntegrityException catch (error) {
+      debugPrint(
+        'NMTK deployment bundle integrity check failed for: '
+        '${error.files.join(', ')}',
+      );
+      throw StateError(_bundleIntegrityRecovery);
+    } on Object {
+      debugPrint(
+        'NMTK deployment bundle integrity check failed for: '
+        'deployment-manifest.json',
+      );
+      throw StateError(_bundleIntegrityRecovery);
+    }
   }
+
+  static Uint8List _exactAssetBytes(ByteData data) =>
+      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
 
   Future<void> _verifyRemoteAssets(
     SSHClient client,
@@ -2446,7 +2532,7 @@ exit 1
       final file = File(path.join(directory.path, relative));
       await file.parent.create(recursive: true);
       final data = await _assets.load('assets/deployment/$relative');
-      await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
+      await file.writeAsBytes(_exactAssetBytes(data), flush: true);
     }
     return directory;
   }

@@ -145,10 +145,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     final bootstrapAsync = ref.watch(launcherBootstrapProvider);
     final bootstrapData = bootstrapAsync.value;
     if (bootstrapAsync.isLoading && bootstrapData == null) {
-      final targetHost = ref
-          .watch(settingsProvider)
-          .value
-          ?.launcherControlApiBaseUrl;
+      final targetHost =
+          ref.watch(settingsProvider).value?.launcherControlApiBaseUrl;
       return Scaffold(
         body: Center(
           child: _LauncherBootstrapLoadingView(targetHost: targetHost),
@@ -158,8 +156,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     if (bootstrapAsync.hasError || bootstrapData == null) {
       return _buildSetupScreen(
         context,
-        message:
-            'Preflight failed while checking the launcher host. '
+        message: 'Preflight failed while checking the launcher host. '
             'Confirm the address and try again.',
       );
     }
@@ -202,8 +199,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     if (bootstrapState.status == LauncherBootstrapStatus.preflightFailed) {
       return _buildSetupScreen(
         context,
-        message:
-            bootstrapState.message ??
+        message: bootstrapState.message ??
             'Preflight failed: launcher control API could not start.',
       );
     }
@@ -222,7 +218,13 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     return BackendSetupScreen(
       message: message,
       initialHost: initialHost,
-      onQuickConnect: notifier.connectToLauncher,
+      onQuickConnect: (input) async {
+        final error = await notifier.connectToLauncher(input);
+        if (error == null) {
+          await _refreshServerBackedProviders();
+        }
+        return error;
+      },
       onQuickConnectSuccess: () {
         try {
           context.go('/workspace');
@@ -230,8 +232,21 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           unawaited(notifier.recordRouteHandoffFailure(error));
         }
       },
-      onDeploymentReady: notifier.connectToDeploymentTarget,
+      onDeploymentReady: (target) async {
+        await notifier.connectToDeploymentTarget(target);
+        await _refreshServerBackedProviders();
+      },
     );
+  }
+
+  Future<void> _refreshServerBackedProviders() async {
+    ref.invalidate(controlApiServiceProvider);
+    await Future.wait([
+      ref.refresh(moduleProvider.future),
+      ref.refresh(workspaceProvider.future),
+    ]);
+    ref.invalidate(serverConnectionProvider);
+    ref.invalidate(backendUpdateProvider);
   }
 
   void _showLauncherUpdateDialog(BuildContext context, WidgetRef ref) {
@@ -328,7 +343,7 @@ class _LauncherBootstrapLoadingViewState
     final message = _elapsedSeconds < 15
         ? '$base ($_elapsedSeconds s)'
         : '$base ($_elapsedSeconds s)\n\nFirst-time connections can take up '
-              'to a minute while the server checks itself and starts up.';
+            'to a minute while the server checks itself and starts up.';
     return NmtkShellReadinessStateView.fromState(
       NmtkShellReadinessState.warmingUp,
       message: message,

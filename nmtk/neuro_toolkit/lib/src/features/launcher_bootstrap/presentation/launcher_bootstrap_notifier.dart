@@ -11,26 +11,26 @@ import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 part 'launcher_bootstrap_notifier.g.dart';
 
-typedef LauncherBootstrapProbe =
-    Future<LauncherBootstrapState> Function(Uri baseUri);
+typedef LauncherBootstrapProbe = Future<LauncherBootstrapState> Function(
+    Uri baseUri);
 
 typedef LauncherControlApiFactory = ControlApiService Function(Uri baseUri);
-typedef LauncherSelectionSaver =
-    Future<void> Function(Uri launcherBaseUri, Uri? suiteBaseUri);
+typedef LauncherSelectionSaver = Future<void> Function(
+    Uri launcherBaseUri, Uri? suiteBaseUri);
 
 final launcherBootstrapProbeProvider = Provider<LauncherBootstrapProbe>((ref) {
   return (baseUri) => LauncherControlBootstrapService(
-    explicitBaseUriOverride: baseUri,
-  ).ensureReady();
+        explicitBaseUriOverride: baseUri,
+      ).ensureReady();
 });
 
 final launcherControlApiFactoryProvider = Provider<LauncherControlApiFactory>((
   ref,
 ) {
   return (baseUri) => ControlApiService(
-    baseUri: baseUri,
-    analyticsService: ref.read(analyticsServiceProvider),
-  );
+        baseUri: baseUri,
+        analyticsService: ref.read(analyticsServiceProvider),
+      );
 });
 
 final launcherSelectionSaverProvider = Provider<LauncherSelectionSaver>((ref) {
@@ -78,6 +78,7 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
     String rawInput, {
     DeploymentTarget? deployedTarget,
   }) async {
+    final previousSelection = state.value;
     late final Uri candidateBaseUri;
     try {
       candidateBaseUri = ControlApiService.normalizeBaseUri(rawInput);
@@ -85,7 +86,9 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
       final result = LauncherBootstrapData.needsSetup(
         message: error.message.toString(),
       );
-      state = AsyncData(result);
+      if (previousSelection?.isReady != true) {
+        state = AsyncData(result);
+      }
       return result.setupMessage;
     }
 
@@ -97,7 +100,11 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
     );
 
     if (!result.isReady) {
-      state = AsyncData(result);
+      // A candidate is not the active server until every admission check has
+      // passed. Keep a working selection mounted when a replacement fails.
+      if (previousSelection?.isReady != true) {
+        state = AsyncData(result);
+      }
       return result.setupMessage;
     }
 
@@ -223,9 +230,7 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
   }
 
   Future<void> _recordFailure(String stage, Object error, Uri? baseUri) async {
-    await ref
-        .read(analyticsServiceProvider)
-        .recordBackendActivity(
+    await ref.read(analyticsServiceProvider).recordBackendActivity(
           method: 'BOOTSTRAP',
           uri: baseUri ?? Uri.parse('launcher://bootstrap'),
           error: 'stage=$stage category=${_failureCategory(error)}',
@@ -253,9 +258,8 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
       'unreachable' =>
         'The launcher host could not be reached. Confirm the address and that '
             'the launcher service is running, then try again.',
-      _ =>
-        'Preflight failed while checking this launcher host. Confirm the '
-            'address and try again.',
+      _ => 'Preflight failed while checking this launcher host. Confirm the '
+          'address and try again.',
     };
   }
 
@@ -266,9 +270,8 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
       'invalid_response' =>
         'The launcher answered with settings this app could not read. Update '
             'the launcher service and try again.',
-      _ =>
-        'Preflight failed while loading settings from this launcher host. '
-            'Confirm the launcher service is healthy, then try again.',
+      _ => 'Preflight failed while loading settings from this launcher host. '
+          'Confirm the launcher service is healthy, then try again.',
     };
   }
 }

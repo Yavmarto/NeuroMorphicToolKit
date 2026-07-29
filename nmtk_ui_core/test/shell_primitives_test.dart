@@ -182,7 +182,7 @@ void main() {
       expect(find.text('Running with degraded capability'), findsOneWidget);
       expect(
         find.text('Hardware acceleration is unavailable.'),
-        findsNWidgets(2),
+        findsOneWidget,
       );
       expect(find.text('Degraded'), findsOneWidget);
 

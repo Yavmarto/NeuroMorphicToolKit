@@ -58,29 +58,41 @@ class NmtkShellReadinessStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasDetail = status.detailText != null;
+    final hasAction = action != null;
+    final hasChildContent = hasDetail || hasAction;
 
     return NmtkSurfaceCard(
       title: title,
       subtitle: message,
+      childGap: hasChildContent ? 10 : 0,
       leading: Icon(
         status.icon ?? ZetaIcons.info,
         size: 20,
         color: theme.colorScheme.primary,
       ),
       trailing: NmtkShellStatusBadge(status: status),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              status.detailText ?? message,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          if (action != null) ...[const SizedBox(width: 16), action!],
-        ],
-      ),
+      child: hasChildContent
+          ? Row(
+              children: [
+                if (hasDetail)
+                  Expanded(
+                    child: Text(
+                      status.detailText!,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                else
+                  const Spacer(),
+                if (hasAction) ...[
+                  if (hasDetail) const SizedBox(width: 16),
+                  action!,
+                ],
+              ],
+            )
+          : const SizedBox.shrink(),
     );
   }
 }

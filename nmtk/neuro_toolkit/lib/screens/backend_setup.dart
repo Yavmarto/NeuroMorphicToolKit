@@ -100,23 +100,42 @@ class InAppBackendSetupScreen extends ConsumerWidget {
 
     final notifier = ref.read(launcherBootstrapProvider.notifier);
     return BackendSetupScreen(
-      onQuickConnect: notifier.connectToLauncher,
-      onQuickConnectSuccess: () {
+      onQuickConnect: (input) async {
+        final error = await notifier.connectToLauncher(input);
+        if (error != null) {
+          return error;
+        }
+        await _refreshServerBackedProviders(ref);
         if (onComplete != null) {
           onComplete!.call();
-          return;
+          return null;
+        }
+        if (!context.mounted) {
+          return null;
         }
         try {
           context.go('/workspace');
         } on Object catch (error) {
           unawaited(notifier.recordRouteHandoffFailure(error));
         }
+        return null;
       },
       onDeploymentReady: (target) async {
         await notifier.connectToDeploymentTarget(target);
+        await _refreshServerBackedProviders(ref);
         onComplete?.call();
       },
     );
+  }
+
+  Future<void> _refreshServerBackedProviders(WidgetRef ref) async {
+    ref.invalidate(controlApiServiceProvider);
+    await Future.wait([
+      ref.refresh(moduleProvider.future),
+      ref.refresh(workspaceProvider.future),
+    ]);
+    ref.invalidate(serverConnectionProvider);
+    ref.invalidate(backendUpdateProvider);
   }
 }
 
@@ -559,7 +578,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       if (mounted && error != null) {
         setState(() => _quickConnectError = error);
       }
-    } on Object {
+    } on Object catch (error) {
+      debugPrint('Quick connect failed: $error');
       if (mounted) {
         setState(() {
           _quickConnectError =
