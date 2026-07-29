@@ -21,7 +21,19 @@ echo "────────────────────────�
 # 1. Update versions in submodules
 echo "📦 Updating versions and changelogs in submodules..."
 
-MODULES=("neurocnl" "Neuro-Dream-Hand" "Neurobench" "Neurosense" "Neurochip" "Neurohub")
+# Must stay in step with `.gitmodules`. Neurosim was missing here until
+# 2026-07-29, so it was never version-bumped, changelogged, or tagged by a
+# release; verify against `git config -f .gitmodules --get-regexp path` when
+# adding or removing a submodule.
+MODULES=(
+  "neurocnl"
+  "Neuro-Dream-Hand"
+  "Neurobench"
+  "Neurosense"
+  "Neurosim"
+  "Neurochip"
+  "Neurohub"
+)
 
 for mod in "${MODULES[@]}"; do
   if [ -d "$ROOT_DIR/$mod" ]; then
@@ -83,5 +95,9 @@ else
 fi
 
 echo "──────────────────────────────────────────────────────"
-echo "✅ Release $VERSION ready locally."
-echo "   Run 'git push origin main --tags' to trigger CI release pipelines."
+echo "✅ Release $VERSION tagged locally. Nothing has been pushed."
+echo "   Pushing correctly means submodules first, then the root repo, on the"
+echo "   'dev' branch — 'git push origin main --tags' is wrong for this repo and"
+echo "   skips every submodule tag created above."
+echo "   Use 'make release-publish VERSION=$VERSION', which does the whole"
+echo "   sequence (pre-flight, tag, push, watch CI, verify)."

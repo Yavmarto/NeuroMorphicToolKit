@@ -1,0 +1,70 @@
+# rsync exclude patterns for pushing backend source to a deploy host.
+# Single definition, consumed via `--exclude-from` by both the Makefile
+# (docker-ex-deploy, dev-sync) and scripts/dev_update.sh. A file rather than a
+# make variable because two patterns contain spaces, which make's word
+# splitting cannot carry.
+#
+# Anything excluded here is NOT synced, so a change to it can never take effect
+# on the backend host. Notably: the Flutter app's own sources (`lib/`, platform
+# dirs) and every module `frontend/` — the backend does not serve them.
+.git
+.env
+venv
+.venv
+__pycache__
+node_modules
+build/
+*.dill
+*.dill.track.dill
+.cache
+.mypy_cache
+.pytest_cache
+.ruff_cache
+logs/
+NMTK_SIDE/
+.hypothesis
+.kiro
+.understand-anything
+.sisyphus
+.impeccable
+.tmp_manual_ui
+.swarm/
+.opencode/
+.cursor/
+docs/
+issues/
+issues-archive/
+ai_safe/
+Neuro-Dream-Hand/
+paper/
+neurocnl/frontend/
+Neurohub/frontend/
+Neurochip/frontend/
+Neurobench/frontend/
+Neurosim/frontend/
+nmtk_ui_core/
+nmtk/neuro_toolkit/lib/
+nmtk/neuro_toolkit/build/
+nmtk/neuro_toolkit/.dart_tool/
+nmtk/neuro_toolkit/android/
+nmtk/neuro_toolkit/ios/
+nmtk/neuro_toolkit/macos/
+nmtk/neuro_toolkit/linux/
+nmtk/neuro_toolkit/windows/
+nmtk/neuro_toolkit/web/
+nmtk/packages/
+*.db
+*.sqlite
+data/
+server.log
+reports/
+skills/
+neurocli/
+.test-venv/
+.claude/
+.antigravitycli/
+.superpowers/
+.DS_Store
+UI - issues/
+NIR graphs/
+tasks/

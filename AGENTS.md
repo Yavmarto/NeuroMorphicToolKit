@@ -139,19 +139,53 @@ health-verify. Credentials and trusted host keys are already persisted per targe
 
 These exist to push *unreleased* source to a dev host. They are not end-user instructions.
 
-| Command | Use when | Cost |
-|---|---|---|
-| `make backend-update` | Python/asset edits (the common case) | rsync only; `suite_api` runs `uvicorn --reload` against a bind mount of the synced repo (`docker-compose.dev.yml`), so the change goes live without a rebuild |
-| `make docker-ex-deploy REMOTE_HOST=…` | a Dockerfile or a dependency changed | rebuilds every image |
-
 The dev backend runs on `192.168.2.51`, not locally — a local edit to any Python file under
 `neurocnl/backend/`, `suite_api/`, or `workers/` does nothing until it is synced there.
-`make backend-update` defaults to `moosebuntu@192.168.2.51`; override with `REMOTE_HOST=`.
 
-Two gotchas worth knowing before you debug a change that "didn't take":
+```bash
+make dev-update
+```
 
-- **`neurocnl/neurocnl/` needs a rebuild.** The `neurocnl` package is pip-installed
-  non-editable into the image (`suite_api/Dockerfile:30,51`), so only `neurocnl/backend/`
-  is picked up from the bind mount. Prefer putting fixes on the `backend/` side.
-- **If a change still doesn't appear after a sync**, restart the `suite_api` container
-  before assuming the patch is wrong — that distinguishes a stale reloader from a bad fix.
+One command for the daily loop. It runs the changed-module tests **first** (a failure aborts
+before anything reaches the host), syncs, then does the *minimum* to make the change live.
+Defaults to `moosebuntu@192.168.2.51`; override with `REMOTE_HOST=`. Flags go through
+`ARGS=`, e.g. `ARGS='--skip-tests'` or `ARGS='--dry-run'`.
+
+**The dev topology is not uniform, which is the whole reason this script exists:**
+
+| What you edited | What happens | Why |
+|---|---|---|
+| `suite_api/**`, `neurocnl/backend/**` | nothing needed | bind-mounted into `suite_api`; `uvicorn --reload` picks it up |
+| `neurocnl/neurocnl/**`, `Neurohub/**`, `Neurosense/**`, `Neurobench/neurobench/**` | rebuilds `suite_api` | pip-installed non-editable (`suite_api/Dockerfile:30,35,42,50-51`) — rsync moves the source but Python never sees it |
+| `workers/<name>/**` | rebuilds that one worker | workers get `--reload` but **no** bind mount, so the reloader watches the baked-in code |
+| `nmtk/launcher_control/**`, `nmtk/neuro_toolkit/assets/**` | restarts `launcher-control` | bind-mounted, applied on restart |
+| any `Dockerfile` | rebuilds that service | |
+| `docker-compose*.yml` | recreates the stack | and warns that the app's asset bundle needs re-syncing |
+
+It needs no state file — `rsync --itemize-changes` reports exactly which paths differed from
+the host. To ask why it decided something, or to check the table without touching a host:
+
+```bash
+make dev-update ARGS='--explain neurocnl/neurocnl/training/dag_topology.py'
+```
+
+`make docker-ex-deploy REMOTE_HOST=…` still exists for the rare case where you want every
+image rebuilt from scratch. `make dev-update` supersedes it for everyday work, and replaced
+the older `make backend-update`.
+
+**If a change still doesn't appear after a sync**, restart the `suite_api` container before
+assuming the patch is wrong — that distinguishes a stale reloader from a bad fix.
+
+### Cutting a release
+
+```bash
+make release-publish VERSION=1.2.0
+```
+
+Pre-flight gates (deployment-bundle sync, notices, `make ci`) → bump/changelog/tag via
+`scripts/release.sh` → one confirmation showing exactly what will be pushed → push submodules
+then root → watch both CI workflows → verify the images and the GitHub Release.
+
+It refuses to start on a dirty tree, because `scripts/release.sh` runs `git add -A` in every
+repo and would otherwise sweep unrelated work into the release commit. `ARGS='--dry-run'`
+runs every check and prints the plan without writing anything.

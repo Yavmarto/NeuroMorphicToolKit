@@ -42,9 +42,10 @@ help:
 	@echo "  make docker-ex-all-a REMOTE_HOST=user@ip - Same as docker-ex-a (alias)"
 	@echo "  make docker-ex-all-i REMOTE_HOST=user@ip - Same as docker-ex-i (alias)"
 	@echo "  make docker-ex-down REMOTE_HOST=user@ip - Stop and remove remote Docker containers"
-	@echo "  make backend-update           - Push source changes to the dev backend (no image rebuild)"
+	@echo "  make dev-update               - Daily: test, sync to the dev backend, rebuild only what needs it"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
-	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
+	@echo "  make release-publish VERSION=x.y.z - Cut, push, watch CI and verify a full release"
+	@echo "  make release VERSION=x.y.z    - Tag a release locally only (release-publish calls this)"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
 	@echo "  make clean-all                - Deep clean the entire monorepo"
 	@echo "  make notices                  - Regenerate THIRD_PARTY_NOTICES.md from manifests"
@@ -131,32 +132,13 @@ DOCKER_EX_RSYNC_VERBOSE ?=
 # The %h/%p/%r tokens are expanded by ssh itself, so this is safe when REMOTE_HOST is empty.
 SSH_OPTS ?= -o ControlMaster=auto -o ControlPath=/tmp/nmtk-ssh-%h-%p-%r -o ControlPersist=60s
 
-# rsync exclude list shared between docker-ex-deploy and dev-sync
-RSYNC_EXCLUDES := \
-	--exclude '.git' --exclude '.env' --exclude 'venv' --exclude '.venv' \
-	--exclude '__pycache__' --exclude 'node_modules' \
-	--exclude 'build/' --exclude '*.dill' --exclude '*.dill.track.dill' \
-	--exclude '.cache' --exclude '.mypy_cache' --exclude '.pytest_cache' \
-	--exclude '.ruff_cache' --exclude 'logs/' --exclude 'NMTK_SIDE/' \
-	--exclude '.hypothesis' --exclude '.kiro' \
-	--exclude '.understand-anything' --exclude '.sisyphus' \
-	--exclude '.impeccable' --exclude '.tmp_manual_ui' \
-	--exclude '.swarm/' --exclude '.opencode/' --exclude '.cursor/' \
-	--exclude 'docs/' --exclude 'issues/' --exclude 'issues-archive/' \
-	--exclude 'ai_safe/' --exclude 'Neuro-Dream-Hand/' --exclude 'paper/' \
-	--exclude 'neurocnl/frontend/' --exclude 'Neurohub/frontend/' \
-	--exclude 'Neurochip/frontend/' --exclude 'Neurobench/frontend/' \
-	--exclude 'Neurosim/frontend/' --exclude 'nmtk_ui_core/' \
-	--exclude 'nmtk/neuro_toolkit/lib/' --exclude 'nmtk/neuro_toolkit/build/' \
-	--exclude 'nmtk/neuro_toolkit/.dart_tool/' --exclude 'nmtk/neuro_toolkit/android/' \
-	--exclude 'nmtk/neuro_toolkit/ios/' --exclude 'nmtk/neuro_toolkit/macos/' \
-	--exclude 'nmtk/neuro_toolkit/linux/' --exclude 'nmtk/neuro_toolkit/windows/' \
-	--exclude 'nmtk/neuro_toolkit/web/' --exclude 'nmtk/packages/' \
-	--exclude '*.db' --exclude '*.sqlite' --exclude 'data/' \
-	--exclude 'server.log' --exclude 'reports/' --exclude 'skills/' \
-	--exclude 'neurocli/' --exclude '.test-venv/' --exclude '.claude/' \
-	--exclude '.antigravitycli/' --exclude '.superpowers/' --exclude '.DS_Store' \
-	--exclude 'UI - issues/' --exclude 'NIR graphs/' --exclude 'tasks/'
+# rsync exclude list shared between docker-ex-deploy, dev-sync and
+# scripts/dev_update.sh. Patterns live in a file, not inline here, because two
+# of them contain spaces ('UI - issues/', 'NIR graphs/') which make's word
+# splitting cannot carry — and so the shell scripts can reuse the same list
+# instead of duplicating 61 patterns.
+RSYNC_EXCLUDE_FILE := scripts/rsync-excludes.txt
+RSYNC_EXCLUDES := --exclude-from=$(RSYNC_EXCLUDE_FILE)
 
 ## Initialise required secrets on the remote host if they are missing.
 ## Safe to re-run — only fills gaps, never overwrites existing values.
@@ -286,16 +268,31 @@ dev-sync:
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d"
 	@echo "==> Dev backend synced."
 
-# The default dev backend (AGENTS.md, "Remote Testing Configuration").
+# The default dev backend (AGENTS.md, "Updating the backend").
 DEV_BACKEND_HOST ?= moosebuntu@192.168.2.51
 
-## Push source changes to the dev backend. Use this for Python/asset edits —
-## suite_api runs uvicorn --reload against a bind mount of the synced repo
-## (docker-compose.dev.yml), so the change is live without an image rebuild.
-## Reach for docker-ex-deploy only when a Dockerfile or a dependency changed.
-.PHONY: backend-update
-backend-update:
-	@$(MAKE) --no-print-directory dev-sync REMOTE_HOST=$(if $(REMOTE_HOST),$(REMOTE_HOST),$(DEV_BACKEND_HOST))
+## Daily driver. Runs the changed-module tests, syncs source to the dev host,
+## then does the *minimum* to make it live: only suite_api is bind-mounted, so a
+## worker edit needs a rebuild while a suite_api edit needs nothing. Supersedes
+## the old `backend-update` (which always did a plain rsync) and docker-ex-deploy
+## (which always rebuilt all 14 images).
+## Pass flags through with ARGS=, e.g. ARGS='--dry-run' or ARGS='--skip-tests'.
+.PHONY: dev-update
+dev-update:
+	@REMOTE_HOST=$(if $(REMOTE_HOST),$(REMOTE_HOST),$(DEV_BACKEND_HOST)) \
+		bash scripts/dev_update.sh $(ARGS)
+
+## Cut a release end to end: pre-flight gates, bump/changelog/tag via
+## scripts/release.sh, confirm once, push submodules then root, watch both CI
+## workflows, verify the published images and GitHub Release.
+## Pass flags through with ARGS=, e.g. ARGS='--dry-run' or ARGS='--yes'.
+.PHONY: release-publish
+release-publish:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error: VERSION is not set. Use 'make release-publish VERSION=x.y.z'"; \
+		exit 1; \
+	fi
+	@bash scripts/release_publish.sh $(VERSION) $(ARGS)
 
 docker-ex-a: secrets-init docker-ex-deploy
 	@$(MAKE) check-devices
