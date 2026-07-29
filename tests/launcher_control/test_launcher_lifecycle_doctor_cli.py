@@ -7,6 +7,7 @@ import nmtk.launcher_control.server as launcher_server
 import nmtk.launcher_control.module_lifecycle as launcher_module_lifecycle
 import nmtk.launcher_control.module_install as launcher_module_install
 import nmtk.launcher_control.doctor_service as launcher_doctor_service
+import nmtk.launcher_control.suite_api_service as launcher_suite_api_service
 from unittest import mock
 import os
 import subprocess
@@ -216,7 +217,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         self.state._manage_suite_api = False
 
         with mock.patch.object(
-            launcher_module_lifecycle,
+            launcher_suite_api_service,
             "_suite_api_health_probe",
             return_value=(False, "connection refused"),
         ):
@@ -227,7 +228,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["error"])
         self.assertIn("not reachable", payload["healthStatus"])
 
-    def test_health_poll_promotes_waiting_monolith_after_suite_api_recovers(self) -> None:
+    def test_health_poll_promotes_waiting_monolith_after_suite_api_recovers(
+        self,
+    ) -> None:
         module = self.state._get_module("dummy")
         module["startStrategy"] = "none"
         module["port"] = launcher_server.DEFAULT_SUITE_API_PORT

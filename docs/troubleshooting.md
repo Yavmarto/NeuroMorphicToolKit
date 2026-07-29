@@ -45,6 +45,95 @@ Kill the conflicting process and click **Launch** again. The launcher also attem
 
 ## Backends
 
+### Remote server setup does not connect
+
+The app considers a remote server connected only after the client can reach
+Suite API on port `9000`, launcher control on port `8090`, and NeuroStudio
+through those services. A server-local health check or a previously saved
+`ready` value is not enough.
+
+Select **View raw SSH output** on the current setup attempt to follow each
+exact command and the sanitized stdout and stderr returned by the server. The
+viewer does not invent success messages; nonzero exits and timeouts are marked
+as client metadata. It retains up to 2,000 lines or 512 KB and shows when older
+output was truncated. **Copy output** copies that safe transcript without
+protocol markers, administrator passwords, SSH private keys, or generated
+deployment credentials.
+
+Stdout and stderr both remain visible, but cleanup discovery reads stdout only
+and validates every container ID or volume name before removal. A line such as
+`level=warning` from Podman is diagnostic stderr and is never passed back to
+`podman rm`. The progress card shows the active command and the time since its
+last output; a silent `systemctl --user` command is terminated after 30 seconds
+rather than leaving setup at the same percentage indefinitely.
+
+Cleanup cannot wait indefinitely: Podman probes time out after 20 seconds,
+container inspection or removal after 60 seconds, account and socket changes
+after 30 seconds, package installation after 5 minutes, and the complete
+administrator session after 12 minutes. Closing the app interrupts that
+credential-dependent attempt, so the next launch asks for the administrator
+credential again instead of showing permanent progress.
+
+### Remote server setup stops at a percentage
+
+No stage can sit still forever. The app stops believing a setup attempt after
+three minutes without new progress — twenty-five minutes while backend images
+are downloading, which is legitimately slow and republishes its elapsed time
+every few seconds. The card then reads **Server setup stopped responding at
+N%** with the last step it managed, and **Retry setup** appears next to **View
+raw SSH output**.
+
+Retrying only asks for the administrator password again, because that
+credential is used once and never saved; the server address, container engine,
+and factory-reset choice are kept, with factory reset left off. Retrying
+cancels the stalled attempt before starting the new one, so two administrator
+sessions never run against the same host.
+
+Two silent-failure modes used to end here and no longer can:
+
+- **The server finished but the app kept waiting.** Preparing rootless Podman
+  intentionally leaves processes running (`loginctl enable-linger`, the
+  socket-activated Podman API), and those inherit the SSH channel, so the
+  channel never reaches end-of-file even after the script exits. The script now
+  announces its own exit and the app stops reading three seconds later instead
+  of waiting on end-of-file.
+- **A download or container start hung.** `install.sh` bounds every long step:
+  stopping containers after 5 minutes, downloading images after 20 minutes,
+  starting containers after 10 minutes. A timeout is reported as a named
+  failure with what to check, not left as an unchanging percentage.
+
+- **Administrator authentication failed:** check the IPv4 address, username,
+  and password/key. Administrator credentials are used once and are not saved.
+- **Existing NMTK services could not be removed safely:** Docker or Podman is
+  installed but the administrator cannot inspect/remove NMTK-labelled
+  containers. Fix that runtime's permissions or service, then retry.
+- **Podman storage for another account could not be inspected:** sudo already
+  succeeded. The terminal output names the affected account; repair that
+  account's Podman storage or runtime-directory ownership, then retry.
+- **Required service is unreachable:** allow inbound TCP `9000` and `8090` from
+  the client network and confirm the host firewall is not binding them only to
+  loopback.
+- **Degraded optional capability:** core setup succeeded, but an optional
+  service such as Jupyter is unavailable. Use **Recover Jupyter** without
+  factory-resetting server data.
+- **Container engine could not be installed:** confirm the server can reach its
+  package repositories and, for Docker, `get.docker.com`.
+- **Deployment account could not be prepared:** confirm the administrator can
+  create users and write the deployment account's `.ssh` directory.
+
+A failed reinstall and a connected server can both be true when preparation
+stops before changing the previous stack. The setup attempt explicitly reports
+whether fresh client-side probes can still reach that existing deployment; it
+never presents the old successful result as the outcome of the failed attempt.
+
+Normal setup reconciles NMTK containers across both Docker and Podman while
+preserving volumes. Enable **Factory reset server data** only when notebooks,
+databases, workspace state, and all NMTK volumes should be permanently erased.
+Dormant accounts are inspected only when they have Podman storage,
+configuration, or an active runtime. When such an account has no
+`/run/user/<uid>` directory, setup uses and removes a temporary user-owned
+runtime directory without enabling lingering or changing the account.
+
 ### `suite_api` does not start with Docker
 
 ```bash

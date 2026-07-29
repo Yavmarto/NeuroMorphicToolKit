@@ -22,6 +22,67 @@ _REAL_SUBPROCESS_RUN = subprocess.run
 
 
 class TestLauncherDeployment(LauncherControlServiceTestBase):
+    def test_persisted_remote_readiness_is_cleared_when_external_probes_fail(
+        self,
+    ) -> None:
+        from nmtk.launcher_control.deployment_service import DeploymentService
+
+        store = mock.Mock()
+        store.selected_target.return_value = {
+            "id": "remote-192-168-2-34",
+            "targetType": "remote_host",
+            "host": "192.168.2.34",
+            "backendPort": 9000,
+            "lastReadiness": "ready",
+        }
+        service = DeploymentService(store=store, repo_root=Path("/tmp"))
+
+        with mock.patch(
+            "nmtk.launcher_control.deployment_service.urllib.request.urlopen",
+            side_effect=OSError("connection refused"),
+        ):
+            self.assertFalse(service.is_ready())
+
+        store.update_target_readiness.assert_called_once_with(
+            "remote-192-168-2-34",
+            readiness="failed",
+            failure_reason=(
+                "Required client-facing services are not reachable from "
+                "launcher control at 192.168.2.34."
+            ),
+        )
+
+    def test_persisted_remote_readiness_requires_all_external_probes(self) -> None:
+        from nmtk.launcher_control.deployment_service import DeploymentService
+
+        store = mock.Mock()
+        store.selected_target.return_value = {
+            "id": "remote-192-168-2-34",
+            "targetType": "remote_host",
+            "host": "192.168.2.34",
+            "backendPort": 9000,
+            "lastReadiness": "ready",
+        }
+        response = mock.MagicMock(status=200)
+        response.__enter__.return_value = response
+        service = DeploymentService(store=store, repo_root=Path("/tmp"))
+
+        with mock.patch(
+            "nmtk.launcher_control.deployment_service.urllib.request.urlopen",
+            return_value=response,
+        ) as urlopen:
+            self.assertTrue(service.is_ready())
+
+        self.assertEqual(urlopen.call_count, 3)
+        requested_urls = [call.args[0] for call in urlopen.call_args_list]
+        self.assertIn("http://192.168.2.34:9000/api/suite/health", requested_urls)
+        self.assertIn("http://192.168.2.34:8090/health", requested_urls)
+        self.assertIn(
+            "http://192.168.2.34:9000/api/neurocnl/health",
+            requested_urls,
+        )
+        store.update_target_readiness.assert_not_called()
+
     def test_stream_logs_echoes_stdout_and_stderr_to_terminal(self) -> None:
         module_id = "dummy"
 
@@ -257,13 +318,17 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         def emit(stage: str, message: str, percent: float) -> None:
             events.append((stage, message, percent))
 
-        with mock.patch(
-            "nmtk.launcher_control.deployment_executors.shutil.which"
-        ) as mock_which, mock.patch(
-            "nmtk.launcher_control.deployment_executors.subprocess.run"
-        ) as mock_run, mock.patch(
-            "nmtk.launcher_control.deployment_executors.urllib.request.urlopen"
-        ) as mock_urlopen:
+        with (
+            mock.patch(
+                "nmtk.launcher_control.deployment_executors.shutil.which"
+            ) as mock_which,
+            mock.patch(
+                "nmtk.launcher_control.deployment_executors.subprocess.run"
+            ) as mock_run,
+            mock.patch(
+                "nmtk.launcher_control.deployment_executors.urllib.request.urlopen"
+            ) as mock_urlopen,
+        ):
             mock_which.return_value = "/usr/local/bin/kubectl"
             mock_run.return_value = mock.Mock(returncode=0, stdout="", stderr="")
             mock_urlopen.return_value.__enter__ = mock.Mock(
@@ -352,11 +417,14 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             target_type="kubernetes_cluster",
             mode="kubernetes",
         )
-        with mock.patch(
-            "nmtk.launcher_control.deployment_preflight.shutil.which"
-        ) as mock_which, mock.patch(
-            "nmtk.launcher_control.deployment_preflight.subprocess.run"
-        ) as mock_run:
+        with (
+            mock.patch(
+                "nmtk.launcher_control.deployment_preflight.shutil.which"
+            ) as mock_which,
+            mock.patch(
+                "nmtk.launcher_control.deployment_preflight.subprocess.run"
+            ) as mock_run,
+        ):
             mock_which.return_value = "/usr/local/bin/kubectl"
             mock_run.side_effect = [
                 mock.Mock(returncode=0, stdout="minikube", stderr=""),
@@ -510,9 +578,10 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
                 executor._ssh_run(target, "docker compose build")
 
         assert collected, "expected _ssh_run to forward output to the log channel"
+        assert collected[0] == "$ docker compose build", collected
         # The final line is always flushed so the last step stays visible.
         assert collected[-1] == "#3 done", collected
-        assert set(collected).issubset({"#1 building", "#2 exporting", "#3 done"})
+        assert set(collected[1:]).issubset({"#1 building", "#2 exporting", "#3 done"})
 
     def test_ssh_run_failure_raises_with_output_tail(self) -> None:
         """A non-zero remote command must raise with a tail of its output."""
@@ -678,8 +747,40 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         assert "com.docker.compose.project=$project" in command
         assert "io.podman.compose.project=$project" in command
         assert "nmtk-deploy" in command
+        assert "{{.ID}} {{.Names}}" in command
+        assert "jupyter-server" in command
         assert "fuser" not in command
         assert "volume" not in command
+
+    def test_factory_reset_cleanup_removes_only_labelled_volumes(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
+
+        executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
+        target = DeploymentTarget(
+            id="cleanup-volumes",
+            display_name="Cleanup Volumes",
+            target_type="remote_host",
+            mode="docker",
+            host="192.168.2.34",
+        )
+        commands: list[str] = []
+
+        with mock.patch.object(
+            executor,
+            "_ssh_run",
+            side_effect=lambda _target, command, timeout=600: commands.append(command),
+        ):
+            executor._remote_cleanup_stale_projects(
+                target,
+                "/home/nmtk/nmtk-deploy",
+                remove_volumes=True,
+            )
+
+        command = commands[0]
+        assert "volume ls -q --filter" in command
+        assert "volume rm -f" in command
+        assert "volume prune" not in command
 
     def test_port_owner_probe_reports_client_ports_and_compose_labels(self) -> None:
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
@@ -863,7 +964,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
                 "_jupyter_health_check",
                 side_effect=RuntimeError("Jupyter readiness timed out"),
             ),
-            mock.patch.object(executor, "_collect_remote_jupyter_diagnostics", diagnostics),
+            mock.patch.object(
+                executor, "_collect_remote_jupyter_diagnostics", diagnostics
+            ),
         ):
             with self.assertRaises(RuntimeError) as context:
                 executor._deploy_remote(target, lambda *_args: None)
@@ -1040,7 +1143,7 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
 
         assert calls.index("install") < calls.index("podman-runtime"), calls
         assert calls.index("podman-runtime") < calls.index("manifests"), calls
-        assert calls.count("compose") == 9, calls
+        assert calls.count("compose") == 8, calls
 
     def test_remote_deploy_cleans_project_before_pull_and_up(self) -> None:
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
@@ -1080,20 +1183,19 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         ):
             executor._deploy_remote(target, lambda *_args: None)
 
-        assert len(commands) == 9, commands
+        assert len(commands) == 8, commands
         assert "--project-name nmtk" in commands[1], commands
         assert all(
-            "--project-name nmtk" in command for command in commands[4:8]
+            "--project-name nmtk" in command for command in commands[4:7]
         ), commands
         assert "down --remove-orphans" in commands[4], commands
-        assert "down --remove-orphans" in commands[5], commands
-        assert " pull" in commands[6], commands
-        assert "up -d --remove-orphans" in commands[7], commands
+        assert " pull" in commands[5], commands
+        assert "up -d --remove-orphans" in commands[6], commands
         assert (
-            "Lava is optional" in commands[8] or "inspect --format" in commands[8]
+            "Lava is optional" in commands[7] or "inspect --format" in commands[7]
         ), commands
 
-    def test_remote_deploy_continues_when_stale_stack_cleanup_fails(self) -> None:
+    def test_remote_deploy_blocks_when_stale_stack_cleanup_fails(self) -> None:
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
         from nmtk.launcher_control.deployment_executors import DockerDeploymentExecutor
         from unittest import mock
@@ -1107,9 +1209,6 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             container_engine="podman",
         )
         executor = DockerDeploymentExecutor(repo_root=Path("/tmp"))
-        logs: list[str] = []
-        executor._log = logs.append
-
         with (
             mock.patch.object(
                 executor,
@@ -1127,20 +1226,16 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
                     None,
                     None,
                     None,
-                    None,
-                    None,
                     RuntimeError("old compose project is already gone"),
-                    None,
-                    None,
-                    None,
                 ],
             ),
             mock.patch.object(executor, "_health_check"),
             mock.patch.object(executor, "_jupyter_health_check"),
         ):
-            executor._deploy_remote(target, lambda *_args: None)
+            with self.assertRaises(RuntimeError) as context:
+                executor._deploy_remote(target, lambda *_args: None)
 
-        assert any("cleanup skipped" in line for line in logs), logs
+        assert "could not be reconciled safely" in str(context.exception)
 
     def test_remote_port_conflict_error_names_port_and_safe_recovery(self) -> None:
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
@@ -1171,10 +1266,12 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             mock.patch.object(executor, "_prepare_podman_runtime"),
             mock.patch.object(executor, "_copy_manifests_to_remote"),
             mock.patch.object(executor, "_init_remote_secrets"),
+            mock.patch.object(executor, "_remote_port_owner_probe"),
+            mock.patch.object(executor, "_collect_remote_startup_diagnostics"),
             mock.patch.object(
                 executor,
                 "_ssh_run",
-                side_effect=[None, None, None, None, None, None, None, conflict],
+                side_effect=[None, None, None, None, None, conflict],
             ),
         ):
             with self.assertRaises(RuntimeError) as context:
@@ -1288,12 +1385,130 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         self.assertEqual(job.percent, 52.0)
         self.assertEqual(job.stage_label, "Building Docker images on remote host")
         self.assertEqual(job.logs[-1], "#5 [build] compiling wheels")
+        self.assertEqual(job.terminal_output[-1], "#5 [build] compiling wheels")
         self.assertEqual(job.last_log_line, "#5 [build] compiling wheels")
         self.assertEqual(job.events[-1]["message"], "#5 [build] compiling wheels")
 
+        service._emit_log(job, "  indented server output")
+        self.assertEqual(job.terminal_output[-1], "  indented server output")
+
         # Empty/whitespace-only lines are dropped.
         service._emit_log(job, "   ")
-        self.assertEqual(len(job.logs), 1)
+        self.assertEqual(len(job.logs), 2)
+        service._cancel_log_persistence(job.id)
+
+    def test_high_volume_terminal_output_debounces_persistence(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentJob
+        from nmtk.launcher_control.deployment_service import DeploymentService
+        from unittest import mock
+
+        store = mock.Mock()
+        service = DeploymentService(store=store, repo_root=Path("/tmp"))
+        job = DeploymentJob(
+            id="job-volume",
+            target_id="t1",
+            mode="podman",
+            stage="installing",
+            percent=52.0,
+            stage_label="Installing",
+        )
+
+        for index in range(1_000):
+            service._emit_log(job, f"server output {index}")
+
+        writes_during_stream = store.save_job.call_count
+        self.assertLess(writes_during_stream, 20)
+        self.assertEqual(job.terminal_output[-1], "server output 999")
+
+        service._emit(job, "verifying", "Verifying", 80)
+
+        self.assertEqual(store.save_job.call_count, writes_during_stream + 1)
+        self.assertEqual(
+            store.save_job.call_args.args[0].terminal_output[-1], "server output 999"
+        )
+
+    def test_deployment_job_round_trips_structured_failure_details(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentJob
+
+        job = DeploymentJob(
+            id="job-failed",
+            target_id="remote-192-168-2-34",
+            mode="docker",
+            stage="failed",
+            error="Podman access failed",
+            terminal_output=[
+                "$ podman info",
+                "✗ podman info failed (exit 125)",
+            ],
+            requires_ephemeral_administrator=True,
+            failure_details={
+                "code": "podman_inspection_failed",
+                "phase": "reconciling_existing_install",
+                "summary": "Podman installations could not be inspected",
+                "recovery": "Check Podman access and retry.",
+                "technicalDetails": "podman info returned 125",
+                "exitCode": 29,
+                "existingConnectionReachable": True,
+            },
+        )
+
+        restored = DeploymentJob.from_json(job.to_json())
+
+        assert restored.failure_details is not None
+        self.assertEqual(restored.failure_details["code"], "podman_inspection_failed")
+        self.assertTrue(restored.failure_details["existingConnectionReachable"])
+        self.assertEqual(
+            restored.terminal_output[-1], "✗ podman info failed (exit 125)"
+        )
+        self.assertTrue(restored.requires_ephemeral_administrator)
+
+    def test_deployment_job_bounds_and_redacts_terminal_output(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentJob
+
+        job = DeploymentJob.from_json(
+            {
+                "id": "job-terminal",
+                "targetId": "remote",
+                "mode": "docker",
+                "terminalOutput": [
+                    *[f"$ check {index}" for index in range(250)],
+                    "password=temporary-secret",
+                    "NMTK_DEPLOY_PRIVATE_KEY_B64=cHJpdmF0ZQ==",
+                ],
+            }
+        )
+
+        payload = job.to_json()
+        self.assertLessEqual(len(payload["terminalOutput"]), 2_000)
+        report = "\n".join(payload["terminalOutput"])
+        self.assertNotIn("temporary-secret", report)
+        self.assertNotIn("cHJpdmF0ZQ==", report)
+
+    def test_deployment_job_marks_truncated_raw_ssh_output(self) -> None:
+        from nmtk.launcher_control.deployment_contracts import DeploymentJob
+
+        job = DeploymentJob.from_json(
+            {
+                "id": "job-terminal",
+                "targetId": "remote",
+                "mode": "docker",
+                "terminalOutput": [
+                    *[f"server output {index}" for index in range(2_100)],
+                    "Authorization: Bearer server-token",
+                    "https://operator:password@example.test/path",
+                    "\x1b[31mfailed\x1b[0m",
+                ],
+            }
+        )
+
+        report = "\n".join(job.to_json()["terminalOutput"])
+        self.assertEqual(
+            job.to_json()["terminalOutput"][0],
+            "[client: earlier SSH output truncated]",
+        )
+        self.assertNotIn("server-token", report)
+        self.assertNotIn("operator:password", report)
+        self.assertNotIn("\x1b", report)
 
     def test_resolve_remote_deploy_dir_uses_configured_install_root(self) -> None:
         """An explicitly configured install_root is used as-is, not overridden."""

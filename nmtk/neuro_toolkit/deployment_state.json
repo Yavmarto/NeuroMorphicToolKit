@@ -36,11 +36,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: MooseRyzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-21T18:41:05.946031+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-21T18:41:06.138141+00:00"
     },
     {
@@ -79,11 +81,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "sshpass is required for SSH password authentication but was not found",
       "startedAt": "2026-07-21T19:25:17.423561+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-21T19:25:17.428463+00:00"
     },
     {
@@ -122,11 +126,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "sshpass is required for SSH password authentication but was not found",
       "startedAt": "2026-07-21T19:27:51.476488+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-21T19:27:51.478253+00:00"
     },
     {
@@ -165,11 +171,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-21T19:34:02.981424+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-21T19:34:03.533114+00:00"
     },
     {
@@ -208,11 +216,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-21T19:34:20.832485+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-21T19:34:20.956581+00:00"
     },
     {
@@ -251,11 +261,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-21T19:37:10.739739+00:00",
       "targetId": "MooseRyzen",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-21T19:37:10.870790+00:00"
     },
     {
@@ -294,11 +306,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-21T21:44:02.030398+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-21T21:44:02.572229+00:00"
     },
     {
@@ -337,11 +351,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-22T06:23:19.458783+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T06:23:19.586556+00:00"
     },
     {
@@ -380,11 +396,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mooseryzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-22T06:26:06.774156+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T06:26:06.896523+00:00"
     },
     {
@@ -423,11 +441,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
       "startedAt": "2026-07-22T07:33:53.455095+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T07:33:55.308250+00:00"
     },
     {
@@ -466,11 +486,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
       "startedAt": "2026-07-22T07:58:48.988548+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T07:58:50.654064+00:00"
     },
     {
@@ -509,11 +531,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
       "startedAt": "2026-07-22T10:17:23.159139+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T10:17:24.923308+00:00"
     },
     {
@@ -552,11 +576,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
       "startedAt": "2026-07-22T10:42:00.626423+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T10:42:01.376676+00:00"
     },
     {
@@ -595,11 +621,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: mkdir: cannot create directory \u2018/opt/nmtk\u2019: Permission denied",
       "startedAt": "2026-07-22T10:59:19.969504+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T10:59:20.607208+00:00"
     },
     {
@@ -638,11 +666,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
       "startedAt": "2026-07-22T11:20:07.424911+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T11:25:08.411472+00:00"
     },
     {
@@ -681,11 +711,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Command '['rsync', '-av', '--delete', '-e', 'sshpass -e ssh -p 22 -o StrictHostKeyChecking=no', '--exclude', '.git', '--exclude', '.env', '--exclude', 'venv', '--exclude', '.venv', '--exclude', '__pycache__', '--exclude', 'node_modules', '--exclude', '*.pyc', '--exclude', 'build/', '--exclude', '*.dill', '--exclude', '*.dill.track.dill', '--exclude', '.cache', '--exclude', '.hypothesis', '--exclude', '.kiro', '--exclude', '.understand-anything', '--exclude', '.sisyphus', '--exclude', '.impeccable', '--exclude', '.tmp_manual_ui', '--exclude', '.swarm/', '--exclude', '.opencode/', '--exclude', '.cursor/', '--exclude', 'docs/', '--exclude', 'issues/', '--exclude', 'issues-archive/', '--exclude', 'ai_safe/', '--exclude', 'Neuro-Dream-Hand/', '--exclude', 'neurocnl/frontend/', '--exclude', 'Neurohub/frontend/', '--exclude', 'Neurochip/frontend/', '--exclude', 'Neurobench/frontend/', '--exclude', 'Neurosim/frontend/', '--exclude', 'nmtk_ui_core/', '--exclude', 'nmtk/neuro_toolkit/lib/', '--exclude', 'nmtk/neuro_toolkit/build/', '--exclude', 'nmtk/neuro_toolkit/.dart_tool/', '--exclude', 'nmtk/neuro_toolkit/android/', '--exclude', 'nmtk/neuro_toolkit/ios/', '--exclude', 'nmtk/neuro_toolkit/macos/', '--exclude', 'nmtk/neuro_toolkit/linux/', '--exclude', 'nmtk/neuro_toolkit/windows/', '--exclude', 'nmtk/neuro_toolkit/web/', '--exclude', 'nmtk/packages/', '/Users/yoshimartodihardjo/NeuroMorphicToolKit/', 'nmtk@192.168.2.34:/home/nmtk/nmtk-deploy/']' timed out after 300 seconds",
       "startedAt": "2026-07-22T11:21:43.334556+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T11:26:46.981397+00:00"
     },
     {
@@ -1204,11 +1236,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Source sync to remote timed out after 300s",
       "startedAt": "2026-07-22T11:53:16.876315+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T11:58:20.906139+00:00"
     },
     {
@@ -1727,11 +1761,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
       "startedAt": "2026-07-22T12:23:15.915823+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T12:28:17.728369+00:00"
     },
     {
@@ -2250,11 +2286,13 @@
       ],
       "mode": "docker",
       "percent": 20.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Source sync to remote timed out after 300s. rsync produced no output at all before the timeout -- this looks like the SSH connection never started transferring, not a large-but-slow sync.",
       "startedAt": "2026-07-22T12:44:21.797270+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-22T12:49:23.061793+00:00"
     },
     {
@@ -2325,11 +2363,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-23T20:20:52.188488+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-23T20:20:53.928239+00:00"
     },
     {
@@ -2360,11 +2400,13 @@
       ],
       "mode": "docker",
       "percent": 10.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: Permission denied, please try again.\nPermission denied, please try again.\nnmtk@192.168.2.34: Permission denied (publickey,password).. The default deploy directory under the SSH user's home directory could not be created \u2014 check that this account has a valid home directory and isn't a restricted/no-home service account.",
       "startedAt": "2026-07-24T08:16:22.809905+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T08:16:23.134547+00:00"
     },
     {
@@ -2435,11 +2477,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T08:17:26.243341+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T08:17:27.857534+00:00"
     },
     {
@@ -2510,11 +2554,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T08:35:12.973883+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T08:35:14.485319+00:00"
     },
     {
@@ -2585,11 +2631,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'prom/alertmanager:v0.25.0': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/prom/alertmanager:v0.25.0/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T08:51:30.119019+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T08:51:31.767951+00:00"
     },
     {
@@ -2660,11 +2708,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T09:13:53.682439+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:13:57.946852+00:00"
     },
     {
@@ -2735,11 +2785,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'grafana/grafana:9.5.2': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/grafana/grafana:9.5.2/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T09:22:39.684569+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:22:43.436630+00:00"
     },
     {
@@ -2810,11 +2862,13 @@
       ],
       "mode": "docker",
       "percent": 35.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Permission denied, please try again.\nPermission denied, please try again.\nmooseryzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-24T09:24:11.675090+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:24:13.696982+00:00"
     },
     {
@@ -2885,11 +2939,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/jupyter-server:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/jupyter-server:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T09:24:49.073220+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:24:53.293963+00:00"
     },
     {
@@ -2960,11 +3016,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T09:33:10.909680+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:33:15.080049+00:00"
     },
     {
@@ -3035,11 +3093,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'grafana/grafana:9.5.2': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/grafana/grafana:9.5.2/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T09:34:55.317413+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:34:59.056687+00:00"
     },
     {
@@ -3110,11 +3170,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'prom/alertmanager:v0.25.0': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/prom/alertmanager:v0.25.0/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T09:38:27.030638+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:38:30.862788+00:00"
     },
     {
@@ -3185,11 +3247,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurosense-hw-worker:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/neurosense-hw-worker:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T09:40:48.968177+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:40:52.750217+00:00"
     },
     {
@@ -3260,11 +3324,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T09:46:08.808544+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:46:12.598201+00:00"
     },
     {
@@ -3335,11 +3401,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T09:53:48.472038+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T09:53:52.658284+00:00"
     },
     {
@@ -3410,11 +3478,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurochip-hw-worker:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/neurochip-hw-worker:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T10:23:07.528531+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T10:23:11.670246+00:00"
     },
     {
@@ -3485,11 +3555,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurobench-runner-worker:latest': permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock: Get \"http://%2Fvar%2Frun%2Fdocker.sock/v1.51/images/ghcr.io/completed-spoon-6/neuromorphictoolkit/neurobench-runner-worker:latest/json\": dial unix /var/run/docker.sock: connect: permission denied",
       "startedAt": "2026-07-24T10:36:33.691697+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T10:36:37.809594+00:00"
     },
     {
@@ -3528,11 +3600,13 @@
       ],
       "mode": "docker",
       "percent": 15.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Command '['/opt/homebrew/bin/sshpass', '-e', 'ssh', '-p', '22', '-o', 'StrictHostKeyChecking=no', 'mooseryzen@192.168.2.34', \"sg docker -c 'docker ps -q' 2>/dev/null || docker ps -q\"]' timed out after 30 seconds",
       "startedAt": "2026-07-24T10:44:24.752380+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T10:44:55.937967+00:00"
     },
     {
@@ -3603,11 +3677,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Password: Invalid password.",
       "startedAt": "2026-07-24T10:48:48.670390+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T10:48:55.091736+00:00"
     },
     {
@@ -3686,11 +3762,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: unauthorized\ntime=\"2026-07-24T13:39:05+02:00\" level=warning msg=\"WARNING: Some service image(s) must be built from source by running:\\n    docker compose build suite_api snn-mlir-compiler launcher-control neurochip-hw-worker neurobench-runner-worker neurosense-hw-worker jupyter-server neurocnl-physics-worker lava-backend\"\nError response from daemon: error from registry: unauthorized\nunauthorized\nError response from daemon: error from registry: unauthorized\nunauthorized\nError response from daemon: error from registry: unauthorized\nunauthorized\nError response from daemon: error from registry: unauthorized\nunauthorized\nError response from daemon: error from registry: unauthorized\nunauthorized\nError response from daemon: error from registry: unauthorized\nunauthorized\nError response from daemon: error from registry: unauthorized\nunauthorized\nError response from daemon: error from registry: unauthorized\nunauthorized\nError response from daemon: error from registry: unauthorized\nunauthorized",
       "startedAt": "2026-07-24T11:38:58.955993+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T11:39:05.164103+00:00"
     },
     {
@@ -5305,11 +5383,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Container nmtk-deploy-suite_api-1 Starting\n Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-neurochip-hw-worker-1 Starting\n Container nmtk-deploy-suite_api-1 Started\n Container nmtk-deploy-jupyter-server-1 Starting\n Container nmtk-deploy-neurochip-hw-worker-1 Started\n Container nmtk-deploy-jupyter-server-1 Started\n Container nmtk-deploy-neurobench-runner-worker-1 Waiting\n Container nmtk-deploy-neurochip-hw-worker-1 Waiting\n Container nmtk-deploy-jupyter-server-1 Waiting\n Container nmtk-deploy-snn-mlir-compiler-1 Waiting\n Container nmtk-deploy-neurocnl-physics-worker-1 Waiting\n Container nmtk-deploy-launcher-control-1 Waiting\n Container nmtk-deploy-suite_api-1 Waiting\n Container nmtk-deploy-lava-backend-1 Waiting\n Container nmtk-deploy-neurosense-hw-worker-1 Waiting\n Container nmtk-deploy-launcher-control-1 Healthy\n Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-snn-mlir-compiler-1 Healthy\ncontainer nmtk-deploy-neurocnl-physics-worker-1 is unhealthy",
       "startedAt": "2026-07-24T11:46:20.960135+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T11:52:22.112304+00:00"
     },
     {
@@ -5420,11 +5500,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-neurochip-hw-worker-1 Starting\n Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-jupyter-server-1 Starting\n Container nmtk-deploy-jupyter-server-1 Started\n Container nmtk-deploy-neurochip-hw-worker-1 Started\n Container nmtk-deploy-neurosense-hw-worker-1 Waiting\n Container nmtk-deploy-jupyter-server-1 Waiting\n Container nmtk-deploy-suite_api-1 Waiting\n Container nmtk-deploy-lava-backend-1 Waiting\n Container nmtk-deploy-snn-mlir-compiler-1 Waiting\n Container nmtk-deploy-neurobench-runner-worker-1 Waiting\n Container nmtk-deploy-launcher-control-1 Waiting\n Container nmtk-deploy-neurocnl-physics-worker-1 Waiting\n Container nmtk-deploy-neurochip-hw-worker-1 Waiting\n Container nmtk-deploy-launcher-control-1 Healthy\n Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-snn-mlir-compiler-1 Healthy\n Container nmtk-deploy-suite_api-1 Healthy\ncontainer nmtk-deploy-jupyter-server-1 is unhealthy",
       "startedAt": "2026-07-24T12:01:41.576583+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T12:01:51.302299+00:00"
     },
     {
@@ -5543,11 +5625,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Container nmtk-deploy-neurocnl-physics-worker-1 Started\n Container nmtk-deploy-snn-mlir-compiler-1 Started\n Container nmtk-deploy-launcher-control-1 Started\n Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-suite_api-1 Starting\n Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-suite_api-1 Started\n Container nmtk-deploy-jupyter-server-1 Starting\n Container nmtk-deploy-jupyter-server-1 Started\n Container nmtk-deploy-neurocnl-physics-worker-1 Waiting\n Container nmtk-deploy-lava-backend-1 Waiting\n Container nmtk-deploy-launcher-control-1 Waiting\n Container nmtk-deploy-neurobench-runner-worker-1 Waiting\n Container nmtk-deploy-suite_api-1 Waiting\n Container nmtk-deploy-neurosense-hw-worker-1 Waiting\n Container nmtk-deploy-neurochip-hw-worker-1 Waiting\n Container nmtk-deploy-snn-mlir-compiler-1 Waiting\n Container nmtk-deploy-jupyter-server-1 Waiting\n Container nmtk-deploy-neurochip-hw-worker-1 Healthy\ncontainer nmtk-deploy-neurobench-runner-worker-1 is unhealthy",
       "startedAt": "2026-07-24T12:08:40.695659+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T12:09:00.136692+00:00"
     },
     {
@@ -5650,11 +5734,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Container nmtk-deploy-neurosense-hw-worker-1 Started\n Container nmtk-deploy-neurocnl-physics-worker-1 Started\n Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-jupyter-server-1 Starting\n Container nmtk-deploy-jupyter-server-1 Started\n Container nmtk-deploy-snn-mlir-compiler-1 Waiting\n Container nmtk-deploy-lava-backend-1 Waiting\n Container nmtk-deploy-neurosense-hw-worker-1 Waiting\n Container nmtk-deploy-neurochip-hw-worker-1 Waiting\n Container nmtk-deploy-suite_api-1 Waiting\n Container nmtk-deploy-jupyter-server-1 Waiting\n Container nmtk-deploy-neurocnl-physics-worker-1 Waiting\n Container nmtk-deploy-launcher-control-1 Waiting\n Container nmtk-deploy-neurobench-runner-worker-1 Waiting\n Container nmtk-deploy-snn-mlir-compiler-1 Healthy\n Container nmtk-deploy-suite_api-1 Healthy\n Container nmtk-deploy-lava-backend-1 Healthy\n Container nmtk-deploy-neurochip-hw-worker-1 Healthy\ncontainer nmtk-deploy-neurocnl-physics-worker-1 is unhealthy",
       "startedAt": "2026-07-24T12:09:58.170679+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T12:10:06.514842+00:00"
     },
     {
@@ -5701,11 +5787,13 @@
       ],
       "mode": "docker",
       "percent": 15.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: [nmtk-bootstrap] ERROR: this account cannot run privileged commands (no root session, no passwordless/NOPASSWD sudo, and no sudo password available). Use a password-based login for an admin account, true root credentials, or configure NOPASSWD sudo for this account.",
       "startedAt": "2026-07-24T14:47:02.372214+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T14:47:04.784899+00:00"
     },
     {
@@ -5752,11 +5840,13 @@
       ],
       "mode": "docker",
       "percent": 15.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: [nmtk-bootstrap] ERROR: this account cannot run privileged commands (no root session, no passwordless/NOPASSWD sudo, and no sudo password available). Use a password-based login for an admin account, true root credentials, or configure NOPASSWD sudo for this account.",
       "startedAt": "2026-07-24T15:06:15.966689+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T15:06:18.314031+00:00"
     },
     {
@@ -5891,11 +5981,13 @@
       ],
       "mode": "docker",
       "percent": 45.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: \u001b[4m>>>> Executing external compose provider \"/usr/libexec/docker/cli-plugins/docker-compose\". Please refer to the documentation for details. <<<<\n\u001b[0munable to get image 'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurosense-hw-worker:latest': Cannot connect to the Docker daemon at unix:///run/user/1000/podman/podman.sock. Is the docker daemon running?\nError: executing /usr/libexec/docker/cli-plugins/docker-compose -f docker-compose.yml -f docker-compose.prod.yml pull: exit status 1",
       "startedAt": "2026-07-24T15:15:19.754403+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T15:15:37.598385+00:00"
     },
     {
@@ -6494,11 +6586,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Container nmtk-deploy-neurobench-runner-worker-1 Created\n Container nmtk-deploy-neurocnl-physics-worker-1 Created\n Container nmtk-deploy-snn-mlir-compiler-1 Created\n Container nmtk-deploy-suite_api-1 Created\n Container nmtk-deploy-jupyter-server-1 Creating\n Container nmtk-deploy-jupyter-server-1 Created\n Container nmtk-deploy-neurochip-hw-worker-1 Created\n Container nmtk-deploy-launcher-control-1 Created\n Container nmtk-deploy-neurosense-hw-worker-1 Created\n Container nmtk-deploy-lava-backend-1 Starting\n Container nmtk-deploy-neurocnl-physics-worker-1 Starting\n Container nmtk-deploy-snn-mlir-compiler-1 Starting\n Container nmtk-deploy-launcher-control-1 Starting\n Container nmtk-deploy-neurobench-runner-worker-1 Starting\n Container nmtk-deploy-neurosense-hw-worker-1 Starting\n Container nmtk-deploy-neurobench-runner-worker-1 Started\n Container nmtk-deploy-neurosense-hw-worker-1 Started\n Container nmtk-deploy-neurocnl-physics-worker-1 Started\nError response from daemon: rootlessport listen tcp 0.0.0.0:8007: bind: address already in use\nError: executing /usr/libexec/docker/cli-plugins/docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait --remove-orphans: exit status 1",
       "startedAt": "2026-07-24T15:36:11.817431+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T15:42:15.285903+00:00"
     },
     {
@@ -6633,11 +6727,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: \u001b[4m>>>> Executing external compose provider \"/usr/libexec/docker/cli-plugins/docker-compose\". Please refer to the documentation for details. <<<<\n\u001b[0m Container nmtk-deploy-neurocnl-physics-worker-1 Recreate\n Container nmtk-deploy-neurobench-runner-worker-1 Recreate\n Container nmtk-deploy-neurosense-hw-worker-1 Recreate\n Container nmtk-deploy-neurocnl-physics-worker-1 Recreated\n Container nmtk-deploy-neurobench-runner-worker-1 Recreated\n Container nmtk-deploy-neurosense-hw-worker-1 Recreated\n Container nmtk-deploy-neurobench-runner-worker-1 Starting\n Container nmtk-deploy-neurocnl-physics-worker-1 Starting\n Container nmtk-deploy-launcher-control-1 Starting\n Container nmtk-deploy-neurosense-hw-worker-1 Starting\n Container nmtk-deploy-snn-mlir-compiler-1 Starting\n Container nmtk-deploy-lava-backend-1 Starting\n Container nmtk-deploy-neurocnl-physics-worker-1 Started\n Container nmtk-deploy-neurobench-runner-worker-1 Started\n Container nmtk-deploy-neurosense-hw-worker-1 Started\nError response from daemon: rootlessport listen tcp 0.0.0.0:8012: bind: address already in use\nError: executing /usr/libexec/docker/cli-plugins/docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --wait --remove-orphans: exit status 1",
       "startedAt": "2026-07-24T15:45:54.936970+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T15:46:11.846749+00:00"
     },
     {
@@ -6788,11 +6884,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote deployment could not bind host port 8090: it is already used by another service on the target host. Internal worker ports are automatically kept private; stop or reconfigure the unrelated service using port 8090, then retry deployment.",
       "startedAt": "2026-07-24T16:23:24.396892+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T16:26:33.006258+00:00"
     },
     {
@@ -6967,11 +7065,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote deployment could not bind host port 8090: it is already used by another service on the target host. Internal worker ports are automatically kept private; stop or reconfigure the unrelated service using port 8090, then retry deployment.",
       "startedAt": "2026-07-24T17:18:32.765849+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T17:21:40.504427+00:00"
     },
     {
@@ -7154,11 +7254,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote deployment could not bind host port 8090: it is already used by another service on the target host. Internal worker ports are automatically kept private; stop or reconfigure the unrelated service using port 8090, then retry deployment.",
       "startedAt": "2026-07-24T19:28:14.310545+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T19:31:21.803787+00:00"
     },
     {
@@ -7357,11 +7459,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Container nmtk-jupyter-server-1 Creating\n Container nmtk-jupyter-server-1 Created\n Container nmtk-launcher-control-1 Starting\n Container nmtk-lava-backend-1 Starting\n Container nmtk-neurobench-runner-worker-1 Starting\n Container nmtk-snn-mlir-compiler-1 Starting\n Container nmtk-neurosense-hw-worker-1 Starting\n Container nmtk-neurocnl-physics-worker-1 Starting\n Container nmtk-launcher-control-1 Started\n Container nmtk-neurocnl-physics-worker-1 Started\n Container nmtk-lava-backend-1 Started\n Container nmtk-lava-backend-1 Waiting\n Container nmtk-lava-backend-1 Waiting\n Container nmtk-neurobench-runner-worker-1 Started\n Container nmtk-neurosense-hw-worker-1 Started\n Container nmtk-snn-mlir-compiler-1 Started\n Container nmtk-lava-backend-1 Error dependency lava-backend failed to start\n Container nmtk-lava-backend-1 Error dependency lava-backend failed to start\ndependency failed to start: container nmtk-lava-backend-1 is unhealthy\nError: executing /usr/libexec/docker/cli-plugins/docker-compose --project-name nmtk -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.remote.yml up -d --wait --remove-orphans: exit status 1",
       "startedAt": "2026-07-24T19:33:43.961504+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T19:36:53.622419+00:00"
     },
     {
@@ -7552,11 +7656,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Container nmtk-jupyter-server-1 Creating\n Container nmtk-jupyter-server-1 Created\n Container nmtk-neurocnl-physics-worker-1 Starting\n Container nmtk-snn-mlir-compiler-1 Starting\n Container nmtk-neurobench-runner-worker-1 Starting\n Container nmtk-lava-backend-1 Starting\n Container nmtk-launcher-control-1 Starting\n Container nmtk-neurosense-hw-worker-1 Starting\n Container nmtk-snn-mlir-compiler-1 Started\n Container nmtk-lava-backend-1 Started\n Container nmtk-lava-backend-1 Waiting\n Container nmtk-lava-backend-1 Waiting\n Container nmtk-neurocnl-physics-worker-1 Started\n Container nmtk-neurobench-runner-worker-1 Started\n Container nmtk-neurosense-hw-worker-1 Started\n Container nmtk-launcher-control-1 Started\n Container nmtk-lava-backend-1 Error dependency lava-backend failed to start\n Container nmtk-lava-backend-1 Error dependency lava-backend failed to start\ndependency failed to start: container nmtk-lava-backend-1 is unhealthy\nError: executing /usr/libexec/docker/cli-plugins/docker-compose --project-name nmtk -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.remote.yml up -d --wait --remove-orphans: exit status 1",
       "startedAt": "2026-07-24T20:35:00.243342+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T20:38:17.796264+00:00"
     },
     {
@@ -7755,11 +7861,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Container nmtk-jupyter-server-1 Creating\n Container nmtk-jupyter-server-1 Created\n Container nmtk-launcher-control-1 Starting\n Container nmtk-snn-mlir-compiler-1 Starting\n Container nmtk-neurocnl-physics-worker-1 Starting\n Container nmtk-neurosense-hw-worker-1 Starting\n Container nmtk-neurobench-runner-worker-1 Starting\n Container nmtk-lava-backend-1 Starting\n Container nmtk-launcher-control-1 Started\n Container nmtk-lava-backend-1 Started\n Container nmtk-lava-backend-1 Waiting\n Container nmtk-lava-backend-1 Waiting\n Container nmtk-snn-mlir-compiler-1 Started\n Container nmtk-neurosense-hw-worker-1 Started\n Container nmtk-neurocnl-physics-worker-1 Started\n Container nmtk-neurobench-runner-worker-1 Started\n Container nmtk-lava-backend-1 Error dependency lava-backend failed to start\n Container nmtk-lava-backend-1 Error dependency lava-backend failed to start\ndependency failed to start: container nmtk-lava-backend-1 is unhealthy\nError: executing /usr/libexec/docker/cli-plugins/docker-compose --project-name nmtk -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.remote.yml up -d --wait --remove-orphans: exit status 1",
       "startedAt": "2026-07-24T22:17:43.348038+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-24T22:20:54.303258+00:00"
     },
     {
@@ -7814,11 +7922,13 @@
       ],
       "mode": "docker",
       "percent": 15.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Permission denied, please try again.\nPermission denied, please try again.\nmooseryzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-25T16:50:38.907896+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-25T16:50:40.220995+00:00"
     },
     {
@@ -8129,11 +8239,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote deployment could not bind host port 9000: it is already used by another service on the target host. Internal worker ports are automatically kept private; stop or reconfigure the unrelated service using port 9000, then retry deployment.",
       "startedAt": "2026-07-25T16:51:53.377699+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-25T16:55:17.759741+00:00"
     },
     {
@@ -8484,11 +8596,13 @@
       ],
       "mode": "docker",
       "percent": 80.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Container nmtk-neurocnl-physics-worker-1 Starting\n Container nmtk-neurosense-hw-worker-1 Starting\n Container nmtk-snn-mlir-compiler-1 Starting\n Container nmtk-launcher-control-1 Starting\n Container nmtk-lava-backend-1 Starting\n Container nmtk-neurobench-runner-worker-1 Starting\n Container nmtk-neurocnl-physics-worker-1 Started\n Container nmtk-lava-backend-1 Started\n Container nmtk-suite_api-1 Starting\n Container nmtk-lava-backend-1 Waiting\n Container nmtk-snn-mlir-compiler-1 Started\n Container nmtk-neurobench-runner-worker-1 Started\n Container nmtk-neurosense-hw-worker-1 Started\n Container nmtk-launcher-control-1 Started\n Container nmtk-suite_api-1 Started\n Container nmtk-jupyter-server-1 Starting\n Container nmtk-jupyter-server-1 Started\n Container nmtk-lava-backend-1 Error dependency lava-backend failed to start\ndependency failed to start: container nmtk-lava-backend-1 is unhealthy\nError: executing /usr/libexec/docker/cli-plugins/docker-compose --project-name nmtk -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.remote.yml up -d --wait --remove-orphans: exit status 1",
       "startedAt": "2026-07-25T19:22:18.009351+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-25T19:26:11.240684+00:00"
     },
     {
@@ -8735,11 +8849,13 @@
       ],
       "mode": "docker",
       "percent": 92.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out",
       "startedAt": "2026-07-25T20:12:51.500957+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-25T20:15:44.654424+00:00"
     },
     {
@@ -9058,11 +9174,13 @@
       ],
       "mode": "docker",
       "percent": 92.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out. Remote Suite API readiness diagnostics were collected; review the [nmtk-suite-api] log lines for container state, startup logs, and in-container probe results.",
       "startedAt": "2026-07-25T20:27:49.193334+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-25T20:30:49.181268+00:00"
     },
     {
@@ -9381,11 +9499,13 @@
       ],
       "mode": "docker",
       "percent": 92.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out. Remote Suite API readiness diagnostics were collected; review the [nmtk-suite-api] log lines for container state, startup logs, and in-container probe results.",
       "startedAt": "2026-07-25T21:05:50.843125+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-25T21:08:46.434715+00:00"
     },
     {
@@ -9416,11 +9536,13 @@
       ],
       "mode": "docker",
       "percent": 10.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Could not create deploy directory on remote: Connection closed by 192.168.2.34 port 22",
       "startedAt": "2026-07-26T08:34:02.880937+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T08:34:18.323535+00:00"
     },
     {
@@ -9739,11 +9861,13 @@
       ],
       "mode": "docker",
       "percent": 92.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out. Remote Suite API readiness diagnostics were collected; review the [nmtk-suite-api] log lines for container state, startup logs, and in-container probe results.",
       "startedAt": "2026-07-26T08:35:40.542973+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T08:38:51.997324+00:00"
     },
     {
@@ -9830,11 +9954,13 @@
       ],
       "mode": "docker",
       "percent": 35.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Remote command failed: Permission denied, please try again.\nPermission denied, please try again.\nmooseryzen@192.168.2.34: Permission denied (publickey,password).",
       "startedAt": "2026-07-26T09:10:12.313444+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T09:10:19.427485+00:00"
     },
     {
@@ -10153,11 +10279,13 @@
       ],
       "mode": "docker",
       "percent": 92.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out. Remote Suite API readiness diagnostics were collected; review the [nmtk-suite-api] log lines for container state, startup logs, and in-container probe results.",
       "startedAt": "2026-07-26T09:10:31.832941+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T09:13:31.944751+00:00"
     },
     {
@@ -10476,11 +10604,13 @@
       ],
       "mode": "docker",
       "percent": 92.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out. Remote Suite API readiness diagnostics were collected; review the [nmtk-suite-api] log lines for container state, startup logs, and in-container probe results.",
       "startedAt": "2026-07-26T09:15:44.709687+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T09:18:42.363734+00:00"
     },
     {
@@ -10799,11 +10929,13 @@
       ],
       "mode": "docker",
       "percent": 92.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out. Remote Suite API readiness diagnostics were collected; review the [nmtk-suite-api] log lines for container state, startup logs, and in-container probe results.",
       "startedAt": "2026-07-26T17:06:50.235838+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T17:09:55.193572+00:00"
     },
     {
@@ -10826,11 +10958,13 @@
       ],
       "mode": "docker",
       "percent": 0.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "DockerDeploymentExecutor.run() got an unexpected keyword argument 'clean_install'",
       "startedAt": "2026-07-26T18:58:30.902269+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T18:58:30.908986+00:00"
     },
     {
@@ -11157,11 +11291,13 @@
       ],
       "mode": "docker",
       "percent": 92.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out. Remote Suite API readiness diagnostics were collected; review the [nmtk-suite-api] log lines for container state, startup logs, and in-container probe results.",
       "startedAt": "2026-07-26T19:12:33.423213+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T19:15:38.496373+00:00"
     },
     {
@@ -11424,11 +11560,13 @@
       ],
       "mode": "docker",
       "percent": 92.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Backend health check timed out at http://192.168.2.34:9000/api/suite/health: timed out. Remote Suite API readiness diagnostics were collected; review the [nmtk-suite-api] log lines for container state, startup logs, and in-container probe results.",
       "startedAt": "2026-07-26T19:57:22.271634+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T20:00:26.045636+00:00"
     },
     {
@@ -11491,11 +11629,13 @@
       ],
       "mode": "docker",
       "percent": 25.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "Failed to copy deployment manifests to remote: Permission denied, please try again.\nPermission denied, please try again.\nmooseryzen@192.168.2.34: Permission denied (publickey,password).\nrsync(30930): error: unexpected end of file",
       "startedAt": "2026-07-26T20:12:03.384667+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T20:12:08.585198+00:00"
     },
     {
@@ -11766,11 +11906,13 @@
       ],
       "mode": "docker",
       "percent": 100.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "completed",
       "stageLabel": "Ready",
       "startedAt": "2026-07-26T20:12:15.280175+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "completed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-26T20:13:05.220071+00:00"
     },
     {
@@ -12065,11 +12207,13 @@
       ],
       "mode": "docker",
       "percent": 100.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "completed",
       "stageLabel": "Ready",
       "startedAt": "2026-07-27T09:30:42.812443+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "completed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-27T09:32:03.057536+00:00"
     },
     {
@@ -12356,11 +12500,13 @@
       ],
       "mode": "docker",
       "percent": 100.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "completed",
       "stageLabel": "Ready",
       "startedAt": "2026-07-27T10:57:01.701017+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "completed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-27T10:58:17.096288+00:00"
     },
     {
@@ -12647,11 +12793,13 @@
       ],
       "mode": "docker",
       "percent": 100.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "completed",
       "stageLabel": "Ready",
       "startedAt": "2026-07-27T11:12:27.907059+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "completed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-27T11:13:41.447215+00:00"
     },
     {
@@ -13018,11 +13166,13 @@
       ],
       "mode": "docker",
       "percent": 96.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "failed",
       "stageLabel": "degraded optional capability: Jupyter is not ready for CNLStudio notebooks. Remote Jupyter diagnostics were collected; use Recover Jupyter to retry the saved deployment without removing notebook data. Jupyter readiness timed out (internal http://192.168.2.34:9000/api/jupyter/health; public http://192.168.2.34:8008/api/status): HTTP Error 503: Service Unavailable",
       "startedAt": "2026-07-27T11:29:27.828722+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "failed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-27T11:32:54.001650+00:00"
     },
     {
@@ -13316,12 +13466,14 @@
         "Podman backend deployed to 192.168.2.34"
       ],
       "mode": "docker",
-      "percent": 100,
+      "percent": 100.0,
+      "requiresEphemeralAdministrator": false,
       "stage": "completed",
       "stageLabel": "Ready",
       "startedAt": "2026-07-27T11:33:59.088942+00:00",
       "targetId": "Remote-backend",
       "terminalOutcome": "completed",
+      "terminalOutput": [],
       "updatedAt": "2026-07-27T11:35:42.266606+00:00"
     }
   ],
@@ -13341,8 +13493,8 @@
       "imageTag": "latest",
       "installRoot": "",
       "lastDeployedVersion": "latest",
-      "lastFailureReason": "",
-      "lastReadiness": "ready",
+      "lastFailureReason": "Required client-facing services are not reachable from launcher control at 192.168.2.34.",
+      "lastReadiness": "failed",
       "mode": "docker",
       "namespace": "nmtk",
       "secretRefs": {
@@ -13350,7 +13502,7 @@
       },
       "sshPort": 22,
       "targetType": "remote_host",
-      "updatedAt": "2026-07-27T11:35:42.273178+00:00",
+      "updatedAt": "2026-07-28T20:46:32.023140+00:00",
       "username": "mooseryzen"
     }
   ]

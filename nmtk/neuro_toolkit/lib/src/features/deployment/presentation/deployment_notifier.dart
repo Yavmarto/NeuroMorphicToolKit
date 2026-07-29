@@ -12,7 +12,20 @@ part 'deployment_notifier.g.dart';
 @riverpod
 class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
   static const _maxConsecutivePollFailures = 3;
-  static const _maxJobStaleness = Duration(minutes: 30);
+
+  /// How long a deployment may report nothing new before the app stops
+  /// pretending it is still working.
+  ///
+  /// Pulling backend images is legitimately slow and only reports every few
+  /// seconds, so it keeps a long budget; every other stage is a sequence of
+  /// short steps, and silence there means something is wrong.
+  static const _maxJobStaleness = Duration(minutes: 3);
+  static const _maxPullStaleness = Duration(minutes: 25);
+
+  static Duration _stalenessBudgetFor(DeploymentJob job) =>
+      job.stage == DeploymentPhase.pullingImages.wireName
+          ? _maxPullStaleness
+          : _maxJobStaleness;
 
   Timer? _pollTimer;
   bool _pollInFlight = false;
@@ -95,6 +108,21 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     );
   }
 
+  Future<DeploymentJob> setupRemoteServer(
+    RemoteServerSetupRequest request,
+  ) async {
+    final job = await _service.setupRemoteServer(request);
+    final snapshot = await _service.load();
+    state = AsyncData(
+      _stateFromSnapshot(snapshot).copyWith(
+        activeJob: job,
+        connectionLostReason: null,
+      ),
+    );
+    _startPolling();
+    return job;
+  }
+
   Future<DeploymentJob> deploy({
     required String targetType,
     required String mode,
@@ -139,6 +167,25 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     );
     _startPolling();
     return job;
+  }
+
+  /// Retries a remote setup attempt that stalled or failed.
+  ///
+  /// A stalled attempt is still nominally running, so it is cancelled first —
+  /// otherwise two administrator sessions would race on the same host.
+  Future<DeploymentJob> retryRemoteSetup(
+    RemoteServerSetupRequest request,
+  ) async {
+    final job = state.value?.activeJob;
+    if (job != null && !job.isTerminal) {
+      try {
+        await _service.cancelJob(job.id);
+      } catch (_) {
+        // The stalled attempt may already be unreachable. Starting the retry
+        // matters more than tidying it up.
+      }
+    }
+    return setupRemoteServer(request);
   }
 
   Future<void> cancelActiveJob() async {
@@ -273,15 +320,16 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
       timer.cancel();
       return;
     }
-    final updatedAt = job.updatedAt;
-    if (updatedAt != null &&
-        DateTime.now().difference(updatedAt) > _maxJobStaleness) {
+    final lastProgressAt = job.lastProgressAt ?? job.updatedAt;
+    final budget = _stalenessBudgetFor(job);
+    if (lastProgressAt != null &&
+        DateTime.now().difference(lastProgressAt) > budget) {
       timer.cancel();
       state = AsyncData(
         current.copyWith(
-          connectionLostReason:
-              'This deployment has not reported progress for 30 minutes. '
-              'Reopen setup to inspect and recover it.',
+          connectionLostReason: 'This server has not reported progress for '
+              '${budget.inMinutes} minutes. Retry setup, or open the raw SSH '
+              'output to see the last thing it did.',
         ),
       );
       return;

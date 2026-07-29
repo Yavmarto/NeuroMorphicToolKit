@@ -33,6 +33,13 @@ class _FakeDeploymentService implements DeploymentService {
   }
 
   @override
+  Future<DeploymentJob> setupRemoteServer(
+    RemoteServerSetupRequest request,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<RemoteUserBootstrapResult> bootstrapRemoteUser({
     required String host,
     required int sshPort,

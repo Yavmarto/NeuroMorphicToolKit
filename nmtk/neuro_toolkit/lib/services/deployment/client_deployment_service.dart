@@ -133,6 +133,23 @@ class ClientDeploymentService implements DeploymentService {
   ];
   static const _releaseImageTag = 'latest';
 
+  /// How long the administrator session may stay silent while no single server
+  /// command is nominally running. Long enough to cover the gaps between steps,
+  /// short enough that a wedged bootstrap surfaces while the user is still
+  /// watching.
+  static const _bootstrapIdleTimeoutSeconds = 90;
+
+  /// Grace period for the transcript streams to reach EOF once the script has
+  /// reported its own exit. See [_drainTranscriptStreams].
+  static const _administratorDrainTimeout = Duration(seconds: 3);
+
+  /// Grace period for queued progress persistence once the session is over.
+  static const _streamedUpdateSettleTimeout = Duration(seconds: 10);
+
+  /// Upper bound on one status-file read. Without it a wedged SSH read stops
+  /// every later poll, because the notifier drops overlapping ticks.
+  static const _statusPollTimeout = Duration(seconds: 20);
+
   final AssetBundle _assets;
   final http.Client _httpClient;
   final DeploymentPersistenceFactory _persistenceFactory;
@@ -141,6 +158,11 @@ class ClientDeploymentService implements DeploymentService {
   final LocalDeploymentService _local;
   final Map<String, DeploymentJob> _jobs = {};
   final Map<String, Future<void>> _runningJobs = {};
+  final Map<String, DeploymentTarget> _pendingTargets = {};
+  final Map<String, DeploymentRequest> _pendingRequests = {};
+  final Map<String, _AdministratorOperation> _administratorOperations = {};
+  final Map<String, Timer> _operationHeartbeatTimers = {};
+  final Map<String, Timer> _terminalPersistenceTimers = {};
   DeploymentPersistence? _persistence;
 
   Future<DeploymentPersistence> get _store async =>
@@ -172,11 +194,48 @@ class ClientDeploymentService implements DeploymentService {
         }
       }
     }
+    final interruptedAdministratorSetup = activeJob != null &&
+        !activeJob.isTerminal &&
+        !_runningJobs.containsKey(activeJob.id) &&
+        (!_pendingTargets.containsKey(activeJob.id)) &&
+        (activeJob.requiresEphemeralAdministrator ||
+            !targets.any((target) => target.id == activeJob!.targetId) ||
+            {
+              DeploymentPhase.connecting.wireName,
+              DeploymentPhase.preflight.wireName,
+              DeploymentPhase.bootstrappingAccess.wireName,
+              DeploymentPhase.reconcilingExistingInstall.wireName,
+              DeploymentPhase.installingPrerequisites.wireName,
+            }.contains(activeJob.stage));
+    if (interruptedAdministratorSetup) {
+      activeJob = activeJob.copyWith(
+        stage: DeploymentPhase.failed.wireName,
+        percent: 100,
+        stageLabel: 'Remote setup was interrupted',
+        error: 'Setup stopped before its generated credential could be saved. '
+            'Enter the administrator credential and run setup again.',
+        terminalOutput: _boundedTerminalOutput([
+          ...activeJob.terminalOutput,
+          '[client: administrator setup was interrupted when the app closed]',
+        ]),
+        requiresEphemeralAdministrator: false,
+        failureDetails: const DeploymentFailureDetails(
+          code: 'administrator_setup_interrupted',
+          phase: 'bootstrapping_access',
+          summary: 'Administrator setup was interrupted',
+          recovery: 'Enter the administrator credential and run setup again.',
+        ),
+        clearActiveOperation: true,
+        updatedAt: DateTime.now(),
+      );
+      await store.saveActiveJob(activeJob);
+    }
     if (activeJob != null) _jobs[activeJob.id] = activeJob;
     return DeploymentSnapshot(
       targets: targets,
       activeJob: activeJob,
-      isReady: activeJob?.stage == DeploymentPhase.completed.wireName,
+      isReady: activeJob?.stage == DeploymentPhase.completed.wireName ||
+          activeJob?.failureDetails?.existingConnectionReachable == true,
     );
   }
 
@@ -321,6 +380,250 @@ fi
     required String rootPrivateKey,
     required String containerEngine,
   }) async {
+    return _bootstrapRemoteUser(
+      host: host,
+      sshPort: sshPort,
+      rootUsername: rootUsername,
+      rootPassword: rootPassword,
+      rootPrivateKey: rootPrivateKey,
+      containerEngine: containerEngine,
+      reinstallMode: RemoteReinstallMode.preserveData,
+      jobId: _newId('bootstrap'),
+    );
+  }
+
+  @override
+  Future<DeploymentJob> setupRemoteServer(
+    RemoteServerSetupRequest request,
+  ) async {
+    final host = _canonicalIpv4(request.host);
+    if (host == null) {
+      throw const FormatException(
+        'Enter a valid IPv4 address, for example 192.168.2.34.',
+      );
+    }
+    if (request.adminUsername.trim().isEmpty) {
+      throw const FormatException('Enter the administrator username.');
+    }
+    if (request.adminPassword.isEmpty && request.adminPrivateKey.isEmpty) {
+      throw const FormatException(
+        'Enter the administrator password or SSH private key.',
+      );
+    }
+    if (request.containerEngine != 'docker' &&
+        request.containerEngine != 'podman') {
+      throw const FormatException(
+        'Remote setup supports Docker or Podman.',
+      );
+    }
+
+    final bundle = await _loadDeploymentBundle();
+    final targetId = 'remote-${host.replaceAll('.', '-')}';
+    final jobId = _newId('deploy');
+    final target = DeploymentTarget(
+      id: targetId,
+      displayName: 'NMTK server $host',
+      targetType: 'remote_host',
+      mode: 'docker',
+      authMode: 'ssh_key',
+      host: host,
+      sshPort: request.sshPort,
+      username: 'nmtk-deploy',
+      backendPort: 9000,
+      containerEngine: request.containerEngine,
+      updatedAt: DateTime.now(),
+    );
+    final job = DeploymentJob(
+      id: jobId,
+      targetId: targetId,
+      mode: 'docker',
+      stage: DeploymentPhase.queued.wireName,
+      percent: 0,
+      stageLabel: 'Server setup queued',
+      logs: const [],
+      terminalOutput: const [],
+      requiresEphemeralAdministrator: true,
+      bundleVersion: bundle.version,
+      bundleManifestHash: bundle.manifestHash,
+      imageTag: _releaseImageTag,
+      updatedAt: DateTime.now(),
+    );
+    _jobs[jobId] = job;
+    _pendingTargets[jobId] = target;
+    await (await _store).saveActiveJob(job);
+    _runningJobs[jobId] = _runRemoteSetup(
+      job,
+      target,
+      request,
+      bundle,
+    );
+    unawaited(_runningJobs[jobId]!.whenComplete(() {
+      _runningJobs.remove(jobId);
+    }));
+    return job;
+  }
+
+  Future<void> _runRemoteSetup(
+    DeploymentJob job,
+    DeploymentTarget target,
+    RemoteServerSetupRequest setupRequest,
+    DeploymentAssetBundle bundle,
+  ) async {
+    final host = target.host;
+    try {
+      await _emit(
+        job,
+        DeploymentPhase.connecting,
+        2,
+        'Connecting with administrator access',
+      );
+      await _emit(
+        job,
+        DeploymentPhase.bootstrappingAccess,
+        5,
+        'Checking administrator access',
+      );
+      final bootstrap = await _bootstrapRemoteUser(
+        host: host,
+        sshPort: setupRequest.sshPort,
+        rootUsername: setupRequest.adminUsername.trim(),
+        rootPassword: setupRequest.adminPassword,
+        rootPrivateKey: setupRequest.adminPrivateKey,
+        containerEngine: setupRequest.containerEngine,
+        reinstallMode: setupRequest.reinstallMode,
+        onPhase: (phase, percent, label) => _emit(
+          job,
+          phase,
+          percent,
+          label,
+        ),
+        onOperation: (operation) => _setActiveOperation(job.id, operation),
+        onTerminalOutput: (line) => _appendTerminalOutput(job.id, line),
+        jobId: job.id,
+      );
+      final afterBootstrap = _jobs[job.id] ?? job;
+      if (afterBootstrap.stage == DeploymentPhase.cancelled.wireName) return;
+      final handoffJob = afterBootstrap.copyWith(
+        stage: DeploymentPhase.connecting.wireName,
+        percent: 18,
+        stageLabel: 'Connecting with deployment account',
+        logs: [
+          ...afterBootstrap.logs,
+          'Connecting with deployment account',
+        ],
+        requiresEphemeralAdministrator: false,
+        clearActiveOperation: true,
+        updatedAt: DateTime.now(),
+      );
+      await _updateJob(handoffJob);
+      final deploymentRequest = DeploymentRequest(
+        targetType: 'remote_host',
+        mode: 'docker',
+        displayName: target.displayName,
+        host: host,
+        username: bootstrap.username,
+        sshPort: setupRequest.sshPort,
+        authMethod: 'ssh_key',
+        sshPrivateKey: bootstrap.sshPrivateKey,
+        containerEngine: setupRequest.containerEngine,
+        cleanInstall:
+            setupRequest.reinstallMode == RemoteReinstallMode.factoryReset,
+      );
+      _pendingTargets[job.id] = target;
+      _pendingRequests[job.id] = deploymentRequest;
+      await _runDeployment(handoffJob, target, deploymentRequest, bundle);
+    } catch (error) {
+      final current = _jobs[job.id] ?? job;
+      if (current.stage == DeploymentPhase.cancelled.wireName) return;
+      final failure = await _remoteSetupFailureDetails(
+        error,
+        target,
+        setupRequest,
+        current.stage,
+      );
+      await _updateJob(
+        current.copyWith(
+          stage: DeploymentPhase.failed.wireName,
+          percent: 100,
+          stageLabel: failure.summary,
+          logs: [...current.logs, failure.summary],
+          error: failure.recovery,
+          failureDetails: failure,
+          terminalOutput: _boundedTerminalOutput([
+            ...current.terminalOutput,
+            if (current.terminalOutput.isEmpty ||
+                !current.terminalOutput.last.startsWith('[client:'))
+              '[client: ${failure.summary}]',
+          ]),
+          requiresEphemeralAdministrator: false,
+          clearActiveOperation: true,
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
+  }
+
+  Future<DeploymentFailureDetails> _remoteSetupFailureDetails(
+    Object error,
+    DeploymentTarget target,
+    RemoteServerSetupRequest request,
+    String currentPhase,
+  ) async {
+    final existingConnectionReachable = await _isApiReady(target);
+    if (error is _RemoteSetupException) {
+      return error.details.copyWithConnection(existingConnectionReachable);
+    }
+    final requestForRedaction = DeploymentRequest(
+      targetType: 'remote_host',
+      mode: 'docker',
+      displayName: target.displayName,
+      host: target.host,
+      username: request.adminUsername,
+      sshPort: request.sshPort,
+      authMethod:
+          request.adminPrivateKey.isNotEmpty ? 'ssh_key' : 'ssh_password',
+      sshPassword: request.adminPassword,
+      sshPrivateKey: request.adminPrivateKey,
+      containerEngine: request.containerEngine,
+    );
+    final detail = _boundedDiagnosticOutput(
+      redactForLogging(error.toString(), requestForRedaction),
+    );
+    final friendly = redactForLogging(
+      _friendlySshError(error),
+      requestForRedaction,
+    );
+    final isAuthentication =
+        friendly.toLowerCase().contains('authentication failed');
+    return DeploymentFailureDetails(
+      code: isAuthentication ? 'admin_authentication_failed' : 'ssh_failed',
+      phase: currentPhase,
+      summary: isAuthentication
+          ? 'Administrator authentication failed'
+          : 'Could not connect to the server',
+      recovery: friendly,
+      technicalDetails: detail,
+      existingConnectionReachable: existingConnectionReachable,
+    );
+  }
+
+  Future<RemoteUserBootstrapResult> _bootstrapRemoteUser({
+    required String host,
+    required int sshPort,
+    required String rootUsername,
+    required String rootPassword,
+    required String rootPrivateKey,
+    required String containerEngine,
+    required RemoteReinstallMode reinstallMode,
+    required String jobId,
+    Future<void> Function(
+      DeploymentPhase phase,
+      double percent,
+      String label,
+    )? onPhase,
+    Future<void> Function(DeploymentActiveOperation? operation)? onOperation,
+    Future<void> Function(String line)? onTerminalOutput,
+  }) async {
     final request = DeploymentRequest(
       targetType: 'remote_host',
       mode: containerEngine,
@@ -335,55 +638,1131 @@ fi
     );
     final client = await _connect(request);
     try {
-      final suffix = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
-      final temporaryKey = '/tmp/nmtk-deploy-$suffix';
-      final script = '''
-set -e
-DEPLOY_USER=nmtk-deploy
-id "\$DEPLOY_USER" >/dev/null 2>&1 || useradd --create-home --shell /bin/bash "\$DEPLOY_USER"
-ssh-keygen -q -t ed25519 -N "" -f ${_shellQuote(temporaryKey)}
-install -d -m 700 -o "\$DEPLOY_USER" -g "\$DEPLOY_USER" "/home/\$DEPLOY_USER/.ssh"
-cat ${_shellQuote('$temporaryKey.pub')} >>"/home/\$DEPLOY_USER/.ssh/authorized_keys"
-chown "\$DEPLOY_USER:\$DEPLOY_USER" "/home/\$DEPLOY_USER/.ssh/authorized_keys"
-chmod 600 "/home/\$DEPLOY_USER/.ssh/authorized_keys"
-printf '%s ALL=(ALL) NOPASSWD:ALL\\n' "\$DEPLOY_USER" >"/etc/sudoers.d/nmtk-deploy"
-chmod 440 "/etc/sudoers.d/nmtk-deploy"
-cat ${_shellQuote(temporaryKey)}
-rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
-''';
-      final elevated = rootUsername == 'root'
-          ? 'sh -c ${_shellQuote(script)}'
-          : rootPassword.isNotEmpty
-              ? 'printf %s\\\\n ${_shellQuote(rootPassword)} | '
-                  'sudo -S -p "" sh -c ${_shellQuote(script)}'
-              : 'sudo -n sh -c ${_shellQuote(script)}';
-      final result = await client.runWithResult(elevated);
+      final result = await _runAdministratorScript(
+        client,
+        script: buildRemoteBootstrapScript(
+          containerEngine: containerEngine,
+          factoryReset: reinstallMode == RemoteReinstallMode.factoryReset,
+        ),
+        rootUsername: rootUsername,
+        rootPassword: rootPassword,
+        onPhase: onPhase,
+        onOperation: onOperation,
+        onTerminalOutput: onTerminalOutput,
+        jobId: jobId,
+        redactionSecrets: [rootPassword, rootPrivateKey],
+      );
       if (result.exitCode != 0) {
+        throw _RemoteSetupException(
+          _bootstrapFailureDetails(
+            utf8.decode(result.stderr).trim(),
+            exitCode: result.exitCode ?? 1,
+            rootPassword: rootPassword,
+            rootPrivateKey: rootPrivateKey,
+          ),
+        );
+      }
+      final output = utf8.decode(result.stdout);
+      final encodedKey = output
+          .split('\n')
+          .where((line) => line.startsWith('NMTK_DEPLOY_PRIVATE_KEY_B64='))
+          .map((line) => line.substring('NMTK_DEPLOY_PRIVATE_KEY_B64='.length))
+          .lastOrNull;
+      if (encodedKey == null || encodedKey.isEmpty) {
         throw StateError(
-          'Could not create the deployment account: '
-          '${utf8.decode(result.stderr).trim()}',
+          'The server was prepared, but it did not return the generated '
+          'deployment credential. Retry setup.',
         );
       }
       return RemoteUserBootstrapResult(
         username: 'nmtk-deploy',
-        sshPrivateKey: utf8.decode(result.stdout).trim(),
+        sshPrivateKey: utf8.decode(base64Decode(encodedKey)),
       );
     } finally {
+      await onOperation?.call(null);
       client.close();
     }
   }
 
+  static String? _canonicalIpv4(String value) {
+    final parts = value.trim().split('.');
+    if (parts.length != 4) return null;
+    final normalized = <String>[];
+    for (final part in parts) {
+      if (part.isEmpty || !RegExp(r'^\d{1,3}$').hasMatch(part)) return null;
+      final number = int.tryParse(part);
+      if (number == null || number < 0 || number > 255) return null;
+      normalized.add(number.toString());
+    }
+    return normalized.join('.');
+  }
+
+  static DeploymentFailureDetails _bootstrapFailureDetails(
+    String stderr, {
+    required int exitCode,
+    required String rootPassword,
+    required String rootPrivateKey,
+  }) {
+    final sanitized = _boundedDiagnosticOutput(
+      _redactBootstrapOutput(stderr, rootPassword, rootPrivateKey),
+    );
+    final marker = RegExp(
+      r'NMTK_SETUP_ERROR\|([^|]+)\|([^|]+)\|(\d+)\|([^\r\n]+)',
+    ).allMatches(stderr).lastOrNull;
+    final code = marker?.group(1) ?? _legacyBootstrapCode(stderr);
+    final phase = marker?.group(2) ?? _phaseForFailureCode(code);
+    final details = _failureCopyForCode(code);
+    return DeploymentFailureDetails(
+      code: code,
+      phase: phase,
+      summary: details.$1,
+      recovery: details.$2,
+      technicalDetails: sanitized,
+      exitCode: int.tryParse(marker?.group(3) ?? '') ?? exitCode,
+    );
+  }
+
+  @visibleForTesting
+  static DeploymentFailureDetails parseBootstrapFailureForTesting(
+    String stderr, {
+    required int exitCode,
+    String rootPassword = '',
+    String rootPrivateKey = '',
+  }) {
+    return _bootstrapFailureDetails(
+      stderr,
+      exitCode: exitCode,
+      rootPassword: rootPassword,
+      rootPrivateKey: rootPrivateKey,
+    );
+  }
+
+  static String _legacyBootstrapCode(String stderr) {
+    final lower = stderr.toLowerCase();
+    if (lower.contains('sudo') &&
+        (lower.contains('password') ||
+            lower.contains('authentication') ||
+            lower.contains('privileged'))) {
+      return 'sudo_access_denied';
+    }
+    if (lower.contains('unsupported operating system')) {
+      return 'unsupported_os';
+    }
+    if (lower.contains('disk space')) return 'insufficient_disk';
+    if (lower.contains('installed but inaccessible')) {
+      return lower.contains('podman')
+          ? 'podman_inspection_failed'
+          : 'docker_inspection_failed';
+    }
+    if (lower.contains('cleanup failed')) return 'container_cleanup_failed';
+    return 'unknown_bootstrap_failure';
+  }
+
+  static String _phaseForFailureCode(String code) {
+    if (code.contains('cleanup') || code.contains('inspection')) {
+      return DeploymentPhase.reconcilingExistingInstall.wireName;
+    }
+    if (code.contains('install') || code == 'unsupported_os') {
+      return DeploymentPhase.installingPrerequisites.wireName;
+    }
+    if (code == 'insufficient_disk') {
+      return DeploymentPhase.preflight.wireName;
+    }
+    return DeploymentPhase.bootstrappingAccess.wireName;
+  }
+
+  static (String, String) _failureCopyForCode(String code) {
+    return switch (code) {
+      'sudo_access_denied' => (
+          'Administrator privileges could not be confirmed',
+          'Use an account that can run sudo, check its password, then retry.',
+        ),
+      'unsupported_os' => (
+          'This server operating system is not supported',
+          'Remote setup requires a Debian or Ubuntu Linux server.',
+        ),
+      'insufficient_disk' => (
+          'The server does not have enough free disk space',
+          'Free at least 5 GB on the server, then retry.',
+        ),
+      'docker_inspection_failed' => (
+          'Docker installations could not be inspected',
+          'Ensure Docker is running and the administrator can access it, then retry.',
+        ),
+      'podman_inspection_failed' => (
+          'Podman installations could not be inspected',
+          'Administrator access succeeded, but Podman storage for another '
+              'server account could not be inspected. Review the named user '
+              'in the terminal output, repair that account’s container '
+              'storage or runtime-directory ownership, then retry.',
+        ),
+      'container_cleanup_failed' => (
+          'Existing NMTK containers could not be removed safely',
+          'Review the administrator details, correct the reported container permission, then retry.',
+        ),
+      'volume_cleanup_failed' => (
+          'NMTK server data could not be erased safely',
+          'Review the volume permission shown in the details before retrying Factory Reset.',
+        ),
+      'engine_install_failed' => (
+          'The selected container engine could not be installed',
+          'Check package-manager and network access on the server, then retry.',
+        ),
+      'deploy_account_failed' => (
+          'The deployment account could not be prepared',
+          'Check account-management and SSH directory permissions, then retry.',
+        ),
+      'podman_api_start_failed' => (
+          'The Podman service could not be started',
+          'The app tried both supported Podman startup methods automatically. '
+              'Restart the server, then select Set up and connect again.',
+        ),
+      _ => (
+          'The server preparation command failed',
+          'Open the administrator details below, correct the reported server error, then retry.',
+        ),
+    };
+  }
+
+  static String _redactBootstrapOutput(
+    String value,
+    String rootPassword,
+    String rootPrivateKey,
+  ) {
+    var result = value;
+    for (final secret in [rootPassword, rootPrivateKey]) {
+      if (secret.isNotEmpty) result = result.replaceAll(secret, '[redacted]');
+    }
+    result = result.replaceAll(
+      RegExp(r'NMTK_DEPLOY_PRIVATE_KEY_B64=[A-Za-z0-9+/=]+'),
+      'NMTK_DEPLOY_PRIVATE_KEY_B64=[redacted]',
+    );
+    result = result.replaceAll(
+      RegExp(
+        r'-----BEGIN OPENSSH PRIVATE KEY-----[\s\S]*?-----END OPENSSH PRIVATE KEY-----',
+      ),
+      '[redacted private key]',
+    );
+    result = result.replaceAllMapped(
+      RegExp(
+        r'\b(password|token|api[_-]?key|secret)=([^\s]+)',
+        caseSensitive: false,
+      ),
+      (match) => '${match.group(1)}=[redacted]',
+    );
+    result = result.replaceAllMapped(
+      RegExp(
+        r'\b(NMTK_[A-Z0-9_]*(?:PASSWORD|TOKEN|PRIVATE_KEY|SECRET))=([^\s]+)',
+      ),
+      (match) => '${match.group(1)}=[redacted]',
+    );
+    result = result.replaceAllMapped(
+      RegExp(
+        r'(authorization:\s*(?:bearer|basic)\s+)([^\s]+)',
+        caseSensitive: false,
+      ),
+      (match) => '${match.group(1)}[redacted]',
+    );
+    result = result.replaceAllMapped(
+      RegExp(
+        r'([a-z][a-z0-9+.-]*://)([^/\s:@]+):([^@\s/]+)@',
+        caseSensitive: false,
+      ),
+      (match) => '${match.group(1)}[redacted]@',
+    );
+    result = result
+        .replaceAll(RegExp(r'\x1B\[[0-?]*[ -/]*[@-~]'), '')
+        .replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'), '');
+    return result;
+  }
+
+  static String _boundedDiagnosticOutput(String value) {
+    const maxCharacters = 8000;
+    final normalized = value.trim();
+    if (normalized.length <= maxCharacters) return normalized;
+    return '… output truncated …\n'
+        '${normalized.substring(normalized.length - maxCharacters)}';
+  }
+
+  static String buildRemoteBootstrapScript({
+    required String containerEngine,
+    required bool factoryReset,
+  }) {
+    final resetFlag = factoryReset ? 'true' : 'false';
+    return r'''
+set -euo pipefail
+ENGINE="__ENGINE__"
+FACTORY_RESET="__FACTORY_RESET__"
+DEPLOY_USER="nmtk-deploy"
+PROJECTS="nmtk nmtk-deploy deploy"
+CURRENT_PHASE="preflight_running"
+RUNTIME_BASE="${NMTK_SETUP_RUNTIME_BASE:-/run/user}"
+TEMP_RUNTIME_DIRS=()
+TEMP_COMMAND_DIRS=()
+TEMPORARY_KEY_DIR=""
+
+phase() {
+  CURRENT_PHASE="$1"
+  printf 'NMTK_SETUP_PHASE|%s|%s|%s\n' "$1" "$2" "$3"
+}
+fail() {
+  code="$1"
+  exit_code="$2"
+  message="$3"
+  trap - ERR
+  printf 'NMTK_SETUP_ERROR|%s|%s|%s|%s\n' \
+    "$code" "$CURRENT_PHASE" "$exit_code" "$message" >&2
+  exit "$exit_code"
+}
+trap 'exit_code=$?; printf "NMTK_SETUP_ERROR|unexpected_setup_failure|%s|%s|A server command failed unexpectedly.\\n" "$CURRENT_PHASE" "$exit_code" >&2' ERR
+
+terminal() {
+  printf 'NMTK_SETUP_TERMINAL|%s\n' "$1"
+}
+command_marker() {
+  printf 'NMTK_SETUP_COMMAND|%s\n' "$1"
+}
+command_exit_marker() {
+  printf 'NMTK_SETUP_COMMAND_EXIT|%s|%s\n' "$1" "$2"
+}
+step_marker() {
+  printf 'NMTK_SETUP_STEP|%s|%s|%s|%s\n' "$1" "$2" "$3" "$4"
+}
+# Announces that the script itself is finished. The client treats this as the
+# authoritative end of the administrator session: rootless Podman leaves
+# lingering processes that inherit this SSH channel, so waiting for channel EOF
+# would hang forever even though setup succeeded.
+done_marker() {
+  printf 'NMTK_SETUP_DONE|%s\n' "$1"
+}
+cleanup_temporary_setup_files() {
+  exit_code="$?"
+  trap - EXIT
+  cleanup_failed=0
+  key_cleanup_failed=0
+  cleanup_user=""
+  for runtime_entry in "${TEMP_RUNTIME_DIRS[@]-}"; do
+    [ -n "$runtime_entry" ] || continue
+    runtime_user="${runtime_entry%%:*}"
+    runtime_dir="${runtime_entry#*:}"
+    [ -n "$runtime_dir" ] || continue
+    case "$runtime_dir" in
+      /tmp/nmtk-podman-runtime.*)
+        set +e
+        timeout --signal=TERM --kill-after=5s 30s \
+          rm -rf -- "$runtime_dir"
+        cleanup_exit="$?"
+        set -e
+        if [ "$cleanup_exit" -ne 0 ]; then
+          cleanup_failed=1
+          cleanup_user="$runtime_user"
+          terminal "✗ Temporary Podman runtime cleanup failed for user $runtime_user"
+        fi
+        ;;
+      esac
+  done
+  if [ -n "$TEMPORARY_KEY_DIR" ]; then
+    case "$TEMPORARY_KEY_DIR" in
+      /tmp/nmtk-deploy-key.*)
+        set +e
+        timeout --signal=TERM --kill-after=5s 30s \
+          rm -rf -- "$TEMPORARY_KEY_DIR"
+        key_cleanup_exit="$?"
+        set -e
+        if [ "$key_cleanup_exit" -ne 0 ]; then
+          cleanup_failed=1
+          key_cleanup_failed=1
+          terminal "✗ Temporary deployment credential cleanup failed"
+        fi
+        ;;
+      esac
+  fi
+  for command_dir in "${TEMP_COMMAND_DIRS[@]-}"; do
+    case "$command_dir" in
+      /tmp/nmtk-command-output.*)
+        rm -rf -- "$command_dir" 2>/dev/null || true
+        ;;
+    esac
+  done
+  if [ "$cleanup_failed" -eq 1 ] && [ "$exit_code" -eq 0 ]; then
+    if [ "$key_cleanup_failed" -eq 1 ]; then
+      printf 'NMTK_SETUP_ERROR|deploy_account_failed|%s|26|%s\n' \
+        "$CURRENT_PHASE" \
+        "The temporary deployment credential directory could not be removed." >&2
+      done_marker 26
+      exit 26
+    else
+      printf 'NMTK_SETUP_ERROR|podman_inspection_failed|%s|29|%s\n' \
+        "$CURRENT_PHASE" \
+        "Administrator access succeeded, but the temporary Podman runtime for user $cleanup_user could not be removed." >&2
+      done_marker 29
+      exit 29
+    fi
+  fi
+  done_marker "$exit_code"
+  exit "$exit_code"
+}
+trap cleanup_temporary_setup_files EXIT
+STEP_OUTPUT=""
+STEP_ERROR=""
+terminate_residual_command_group() {
+  local group_pid="$1"
+  kill -TERM -- "-$group_pid" 2>/dev/null || return 0
+  for _ in {1..20}; do
+    kill -0 -- "-$group_pid" 2>/dev/null || return 0
+    sleep 0.05
+  done
+  kill -KILL -- "-$group_pid" 2>/dev/null || true
+}
+
+drain_capture_streams() {
+  local stdout_pid="$1"
+  local stderr_pid="$2"
+  local stdout_forced=0
+  local stderr_forced=0
+  local stdout_alive=0
+  local stderr_alive=0
+
+  for _ in {1..40}; do
+    stdout_alive=0
+    stderr_alive=0
+    kill -0 "$stdout_pid" 2>/dev/null && stdout_alive=1
+    kill -0 "$stderr_pid" 2>/dev/null && stderr_alive=1
+    [ "$stdout_alive" -eq 0 ] && [ "$stderr_alive" -eq 0 ] && break
+    sleep 0.05
+  done
+  if kill -0 "$stdout_pid" 2>/dev/null; then
+    stdout_forced=1
+    kill -TERM "$stdout_pid" 2>/dev/null || true
+  fi
+  if kill -0 "$stderr_pid" 2>/dev/null; then
+    stderr_forced=1
+    kill -TERM "$stderr_pid" 2>/dev/null || true
+  fi
+
+  wait "$stdout_pid"
+  stdout_tee_exit="$?"
+  wait "$stderr_pid"
+  stderr_tee_exit="$?"
+  [ "$stdout_forced" -eq 0 ] || stdout_tee_exit=0
+  [ "$stderr_forced" -eq 0 ] || stderr_tee_exit=0
+}
+
+capture_step() {
+  seconds="$1"
+  code="$2"
+  failure_exit="$3"
+  display="$4"
+  success="$5"
+  shift 5
+  automatic_recovery="${NMTK_SETUP_AUTOMATIC_RECOVERY:-false}"
+  step_marker start "$seconds" "$automatic_recovery" "$display"
+  printf -v rendered_command '%q ' "$@"
+  rendered_command="${rendered_command% }"
+  command_marker "$rendered_command"
+  output_dir="$(mktemp -d /tmp/nmtk-command-output.XXXXXX)"
+  TEMP_COMMAND_DIRS+=("$output_dir")
+  stdout_file="$output_dir/stdout"
+  stderr_file="$output_dir/stderr"
+  stdout_pipe="$output_dir/stdout.pipe"
+  stderr_pipe="$output_dir/stderr.pipe"
+  mkfifo "$stdout_pipe" "$stderr_pipe"
+  tee "$stdout_file" <"$stdout_pipe" &
+  stdout_tee_pid="$!"
+  tee "$stderr_file" <"$stderr_pipe" >&2 &
+  stderr_tee_pid="$!"
+  set +e
+  timeout --signal=TERM --kill-after=5s "${seconds}s" "$@" \
+    </dev/null >"$stdout_pipe" 2>"$stderr_pipe" &
+  command_group_pid="$!"
+  wait "$command_group_pid"
+  command_exit="$?"
+  terminate_residual_command_group "$command_group_pid"
+  drain_capture_streams "$stdout_tee_pid" "$stderr_tee_pid"
+  set -e
+  STEP_OUTPUT="$(cat "$stdout_file")"
+  STEP_ERROR="$(cat "$stderr_file")"
+  rm -rf -- "$output_dir"
+  if [ "$stdout_tee_exit" -ne 0 ] || [ "$stderr_tee_exit" -ne 0 ]; then
+    fail "unexpected_setup_failure" 28 \
+      "The server output stream could not be captured."
+  fi
+  if [ "$command_exit" -ne 0 ]; then
+    step_marker finish "$seconds" "$automatic_recovery" "$display"
+    if [ "$command_exit" -eq 124 ]; then
+      command_exit_marker timeout "$seconds"
+    else
+      command_exit_marker exit "$command_exit"
+    fi
+    fail "$code" "$failure_exit" "$display failed or timed out."
+  fi
+  step_marker finish "$seconds" "$automatic_recovery" "$display"
+}
+
+validated_container_ids() {
+  local input="$1"
+  local context="$2"
+  local valid
+  valid="$(printf '%s\n' "$input" |
+    awk 'NF && $0 ~ /^[0-9a-fA-F]+$/ &&
+      length($0) >= 12 && length($0) <= 64 {print}' | sort -u)"
+  malformed="$(printf '%s\n' "$input" |
+    awk 'NF && ($0 !~ /^[0-9a-fA-F]+$/ ||
+      length($0) < 12 || length($0) > 64) {print; exit}')"
+  [ -z "$malformed" ] ||
+    fail "podman_inspection_failed" 29 \
+      "$context returned an invalid container identifier."
+  printf '%s' "$valid"
+}
+
+validated_volume_names() {
+  local input="$1"
+  local context="$2"
+  local valid
+  valid="$(printf '%s\n' "$input" |
+    awk 'NF && $0 ~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/ {print}' | sort -u)"
+  malformed="$(printf '%s\n' "$input" |
+    awk 'NF && $0 !~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/ {print; exit}')"
+  [ -z "$malformed" ] ||
+    fail "volume_cleanup_failed" 31 \
+      "$context returned an invalid volume name."
+  printf '%s' "$valid"
+}
+
+if [ "$(id -u)" -ne 0 ]; then
+  terminal "✗ Administrator privileges were not granted"
+  fail "sudo_access_denied" 19 \
+    "The setup shell is not running with administrator privileges."
+fi
+terminal "✓ Administrator privileges confirmed"
+
+phase "preflight_running" 7 "Checking server compatibility"
+capture_step 30 "unsupported_os" 20 "Checking server operating system" \
+  "Server operating system identified" uname -s
+[ "$STEP_OUTPUT" = "Linux" ] || {
+  terminal "✗ Linux is required; found $STEP_OUTPUT"
+  fail "unsupported_os" 20 "Linux is required."
+}
+capture_step 30 "insufficient_disk" 21 "Checking free disk space" \
+  "Disk capacity checked" df -Pk /
+AVAILABLE_KB="$(printf '%s\n' "$STEP_OUTPUT" | awk 'NR==2 {print $4}')"
+[ "${AVAILABLE_KB:-0}" -ge 5242880 ] || {
+  terminal "✗ Less than 5 GB is available on the server"
+  fail "insufficient_disk" 21 "At least 5 GB of free disk space is required."
+}
+
+remove_runtime_objects() {
+  local runtime="$1"
+  local context="$2"
+  shift 2
+  command -v "$runtime" >/dev/null 2>&1 || return 0
+  if [ "$runtime" = "docker" ]; then
+    capture_step 20 "${runtime}_inspection_failed" 29 \
+      "Checking $context access" "$context is accessible" \
+      "$@" "$runtime" info --format \
+      'version={{.ServerVersion}} rootless=false storage={{.DockerRootDir}}'
+  else
+    capture_step 20 "${runtime}_inspection_failed" 29 \
+      "Checking $context access" "$context is accessible" \
+      "$@" "$runtime" info --format \
+      'version={{.Version.Version}} rootless={{.Host.Security.Rootless}} storage={{.Store.GraphRoot}}'
+  fi
+  capture_step 60 "${runtime}_inspection_failed" 29 \
+    "Inspecting $context containers" "$context containers inspected" \
+    "$@" "$runtime" ps -a --format '{{.ID}} {{.Names}}'
+  known_ids="$(printf '%s\n' "$STEP_OUTPUT" |
+    awk '$1 ~ /^[0-9a-fA-F]+$/ &&
+      length($1) >= 12 && length($1) <= 64 &&
+      $2 ~ /^(nmtk|nmtk-deploy|deploy)[_-](suite_api|neurosense-hw-worker|neurobench-runner-worker|neurochip-hw-worker|lava-backend|launcher-control|neurocnl-physics-worker|snn-mlir-compiler|jupyter-server)([-_][0-9]+)?$/ {print $1}')"
+  if [ -n "$known_ids" ]; then
+    known_id_list=()
+    while IFS= read -r object_id; do
+      [ -n "$object_id" ] && known_id_list+=("$object_id")
+    done <<<"$known_ids"
+    capture_step 60 "container_cleanup_failed" 30 \
+      "Removing known NMTK $runtime containers" \
+      "Known NMTK $runtime containers removed" \
+      "$@" "$runtime" rm -f "${known_id_list[@]}"
+  fi
+  for project in $PROJECTS; do
+    capture_step 60 "${runtime}_inspection_failed" 29 \
+      "Inspecting NMTK $runtime project $project" \
+      "$context project $project inspected" \
+      "$@" "$runtime" ps -aq \
+      --filter "label=com.docker.compose.project=$project"
+    ids="$STEP_OUTPUT"
+    capture_step 60 "${runtime}_inspection_failed" 29 \
+      "Inspecting legacy NMTK $runtime project $project" \
+      "$context legacy project $project inspected" \
+      "$@" "$runtime" ps -aq \
+      --filter "label=io.podman.compose.project=$project"
+    ids="$ids
+$STEP_OUTPUT"
+    ids="$(validated_container_ids "$ids" "$context project $project inspection")"
+    if [ -n "$ids" ]; then
+      id_list=()
+      while IFS= read -r object_id; do
+        [ -n "$object_id" ] && id_list+=("$object_id")
+      done <<<"$ids"
+      capture_step 60 "container_cleanup_failed" 30 \
+        "Removing NMTK $runtime project $project" \
+        "NMTK $runtime project $project removed" \
+        "$@" "$runtime" rm -f "${id_list[@]}"
+    fi
+    if [ "$FACTORY_RESET" = "true" ]; then
+      capture_step 60 "${runtime}_inspection_failed" 29 \
+        "Inspecting NMTK $runtime data for project $project" \
+        "$context project $project volumes inspected" \
+        "$@" "$runtime" volume ls -q \
+        --filter "label=com.docker.compose.project=$project"
+      volumes="$STEP_OUTPUT"
+      capture_step 60 "${runtime}_inspection_failed" 29 \
+        "Inspecting legacy NMTK $runtime data for project $project" \
+        "$context legacy project $project volumes inspected" \
+        "$@" "$runtime" volume ls -q \
+        --filter "label=io.podman.compose.project=$project"
+      volumes="$volumes
+$STEP_OUTPUT"
+      volumes="$(validated_volume_names "$volumes" \
+        "$context project $project volume inspection")"
+      if [ -n "$volumes" ]; then
+        volume_list=()
+        while IFS= read -r volume_name; do
+          [ -n "$volume_name" ] && volume_list+=("$volume_name")
+        done <<<"$volumes"
+        capture_step 60 "volume_cleanup_failed" 31 \
+          "Erasing NMTK $runtime data for project $project" \
+          "NMTK $runtime volumes removed" \
+          "$@" "$runtime" volume rm -f "${volume_list[@]}"
+      fi
+    fi
+  done
+}
+
+phase "reconciling_existing_install" 10 \
+  "Removing existing NMTK containers"
+if command -v docker >/dev/null 2>&1; then
+  capture_step 30 "docker_inspection_failed" 29 "Starting Docker service" \
+    "Docker service started" systemctl start docker
+  remove_runtime_objects docker docker
+fi
+if command -v podman >/dev/null 2>&1; then
+  remove_runtime_objects podman podman
+  while IFS=: read -r candidate _ uid gid _ home _; do
+    [ "$uid" -ge 1000 ] 2>/dev/null || continue
+    [ -d "$home" ] || continue
+
+    configured_storage="$home/.config/containers/storage.conf"
+    default_storage="$home/.local/share/containers/storage"
+    active_runtime="$RUNTIME_BASE/$uid"
+    if [ ! -e "$configured_storage" ] &&
+       [ ! -d "$default_storage" ] &&
+       [ ! -S "$active_runtime/podman/podman.sock" ] &&
+       [ ! -d "$active_runtime/libpod" ]; then
+      continue
+    fi
+
+    runtime_dir="$active_runtime"
+    if [ -d "$runtime_dir" ]; then
+      runtime_owner="$(stat -c '%u' "$runtime_dir" 2>/dev/null || true)"
+      if [ "$runtime_owner" != "$uid" ]; then
+        terminal "✗ Podman runtime directory for user $candidate has unsafe ownership"
+        fail "podman_inspection_failed" 29 \
+          "The Podman runtime directory for user $candidate is not owned by that user."
+      fi
+    else
+      capture_step 30 "podman_inspection_failed" 29 \
+        "Preparing Podman access for user $candidate" \
+        "Temporary Podman runtime prepared for user $candidate" \
+        mktemp -d "/tmp/nmtk-podman-runtime.${uid}.XXXXXX"
+      runtime_dir="$STEP_OUTPUT"
+      TEMP_RUNTIME_DIRS+=("$candidate:$runtime_dir")
+      capture_step 30 "podman_inspection_failed" 29 \
+        "Securing Podman access for user $candidate" \
+        "Temporary Podman runtime secured for user $candidate" \
+        bash -c 'chown "$1:$2" "$3" && chmod 700 "$3"' \
+        _ "$uid" "$gid" "$runtime_dir"
+    fi
+
+    remove_runtime_objects podman "podman (user $candidate)" \
+      runuser -u "$candidate" -- \
+      env "HOME=$home" "XDG_RUNTIME_DIR=$runtime_dir"
+  done </etc/passwd
+fi
+
+phase "installing_prerequisites" 13 "Preparing $ENGINE"
+case "$ENGINE" in
+  docker)
+    if ! command -v docker >/dev/null 2>&1; then
+      command -v curl >/dev/null 2>&1 ||
+        capture_step 300 "engine_install_failed" 24 \
+          "Installing server download support" "curl installed" \
+          bash -c 'apt-get update -qq &&
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq curl'
+      capture_step 300 "engine_install_failed" 24 \
+        "Installing Docker Engine" "Docker Engine installed" \
+        bash -c 'curl -fsSL https://get.docker.com | sh'
+    fi
+    capture_step 30 "engine_install_failed" 24 \
+      "Enabling Docker service" "Docker service enabled" \
+      systemctl enable --now docker
+    ;;
+  podman)
+    if ! command -v podman >/dev/null 2>&1; then
+      command -v apt-get >/dev/null 2>&1 ||
+        fail "unsupported_os" 22 \
+          "apt-get is required for automatic Podman installation."
+      capture_step 300 "engine_install_failed" 24 \
+        "Installing Podman and Compose support" \
+        "Podman and its Compose provider installed" \
+        bash -c 'apt-get update -qq &&
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq podman podman-compose'
+    fi
+    capture_step 20 "podman_inspection_failed" 29 \
+      "Checking Podman Compose support" "Podman Compose provider is available" \
+      podman compose version
+    ;;
+  *)
+    fail "engine_install_failed" 23 "Unsupported container engine: $ENGINE."
+    ;;
+esac
+
+phase "bootstrapping_access" 17 "Preparing the NMTK deployment account"
+if id "$DEPLOY_USER" >/dev/null 2>&1; then
+  terminal "✓ Deployment account already exists"
+else
+  capture_step 30 "deploy_account_failed" 25 \
+    "Creating NMTK deployment account" "Deployment account created" \
+    useradd --create-home --shell /bin/bash "$DEPLOY_USER"
+fi
+capture_step 30 "deploy_account_failed" 25 \
+  "Removing legacy deployment permissions" "Legacy sudo rule removed" \
+  rm -f /etc/sudoers.d/nmtk-deploy
+if getent group docker >/dev/null 2>&1; then
+  capture_step 30 "deploy_account_failed" 25 \
+    "Granting deployment account Docker access" \
+    "Deployment account can access Docker" \
+    usermod -aG docker "$DEPLOY_USER"
+fi
+
+DEPLOY_HOME="$(getent passwd "$DEPLOY_USER" | cut -d: -f6)"
+DEPLOY_UID="$(id -u "$DEPLOY_USER")"
+capture_step 30 "deploy_account_failed" 26 \
+  "Preparing deployment credential workspace" \
+  "Deployment credential workspace prepared" \
+  mktemp -d /tmp/nmtk-deploy-key.XXXXXX
+TEMPORARY_KEY_DIR="$STEP_OUTPUT"
+TEMPORARY_KEY="$TEMPORARY_KEY_DIR/id_ed25519"
+capture_step 30 "deploy_account_failed" 26 \
+  "Generating a new deployment credential" "Deployment credential generated" \
+  ssh-keygen -q -t ed25519 -N "" -f "$TEMPORARY_KEY"
+capture_step 30 "deploy_account_failed" 26 \
+  "Preparing deployment account SSH access" "Deployment SSH directory prepared" \
+  install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "$DEPLOY_HOME/.ssh"
+capture_step 30 "deploy_account_failed" 26 \
+  "Installing the new deployment credential" "Deployment public key installed" \
+  install -m 600 -o "$DEPLOY_USER" -g "$DEPLOY_USER" \
+  "$TEMPORARY_KEY.pub" "$DEPLOY_HOME/.ssh/authorized_keys"
+
+if [ "$ENGINE" = "podman" ]; then
+  capture_step 30 "deploy_account_failed" 27 \
+    "Enabling persistent rootless Podman access" \
+    "Deployment account lingering enabled" \
+    loginctl enable-linger "$DEPLOY_USER"
+  capture_step 30 "deploy_account_failed" 27 \
+    "Preparing rootless Podman runtime" \
+    "Rootless Podman runtime directory prepared" \
+    install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" \
+    "/run/user/$DEPLOY_UID"
+  capture_step 30 "deploy_account_failed" 27 \
+    "Enabling rootless Podman socket" "Rootless Podman socket enabled" \
+    runuser -u "$DEPLOY_USER" -- env \
+      "HOME=$DEPLOY_HOME" "XDG_RUNTIME_DIR=/run/user/$DEPLOY_UID" \
+      systemctl --user enable podman.socket
+  NMTK_SETUP_AUTOMATIC_RECOVERY=true \
+  capture_step 30 "podman_api_start_failed" 27 \
+    "Starting or repairing rootless Podman API" \
+    "Rootless Podman API started" \
+    runuser -u "$DEPLOY_USER" -- env \
+      "HOME=$DEPLOY_HOME" "XDG_RUNTIME_DIR=/run/user/$DEPLOY_UID" \
+      bash -c '
+        socket="$XDG_RUNTIME_DIR/podman/podman.sock"
+        remote_url="unix://$socket"
+        timeout --signal=TERM --kill-after=1s 5s \
+          systemctl --user start podman.socket >/dev/null 2>&1 || true
+        for attempt in 1 2 3 4 5; do
+          if [ -S "$socket" ] &&
+             podman --remote --url "$remote_url" info --format \
+               "version={{.Version.Version}} rootless={{.Host.Security.Rootless}} storage={{.Store.GraphRoot}}"; then
+            exit 0
+          fi
+          sleep 0.4
+        done
+
+        timeout --signal=TERM --kill-after=1s 5s \
+          systemctl --user stop podman.socket >/dev/null 2>&1 || true
+        mkdir -p "$XDG_RUNTIME_DIR/podman"
+        rm -f -- "$socket"
+        command -v setsid >/dev/null 2>&1 || {
+          printf "setsid is required to start the fallback Podman service\n" >&2
+          exit 1
+        }
+        setsid -f podman system service --time=0 "$remote_url" \
+          </dev/null >"$HOME/.nmtk-podman-service.log" 2>&1
+        for attempt in 1 2 3 4 5 6 7 8 9 10; do
+          if [ -S "$socket" ] &&
+             podman --remote --url "$remote_url" info --format \
+               "version={{.Version.Version}} rootless={{.Host.Security.Rootless}} storage={{.Store.GraphRoot}}"; then
+            exit 0
+          fi
+          sleep 0.5
+        done
+        printf "The rootless Podman API did not become ready after automatic recovery.\n" >&2
+        exit 1'
+  capture_step 20 "podman_api_start_failed" 27 \
+    "Verifying rootless Podman API" "Rootless Podman API is ready" \
+    runuser -u "$DEPLOY_USER" -- env \
+      "HOME=$DEPLOY_HOME" "XDG_RUNTIME_DIR=/run/user/$DEPLOY_UID" \
+      bash -c 'socket="$XDG_RUNTIME_DIR/podman/podman.sock"
+      for attempt in 1 2 3 4 5 6 7 8 9 10; do
+        if [ -S "$socket" ] &&
+           podman --remote --url "unix://$socket" info --format \
+             "version={{.Version.Version}} rootless={{.Host.Security.Rootless}} storage={{.Store.GraphRoot}}"; then
+          exit 0
+        fi
+        sleep 1
+      done
+      exit 1'
+fi
+
+step_marker start 40 false "Finalizing secure deployment handoff"
+set +e
+PRIVATE_KEY_B64="$(
+  timeout --signal=TERM --kill-after=1s 5s \
+    base64 <"$TEMPORARY_KEY" | tr -d '\n'
+)"
+key_encode_exit="$?"
+set -e
+[ "$key_encode_exit" -eq 0 ] ||
+  fail "deploy_account_failed" 26 \
+    "The generated deployment credential could not be secured for handoff."
+
+for runtime_entry in "${TEMP_RUNTIME_DIRS[@]-}"; do
+  [ -n "$runtime_entry" ] || continue
+  runtime_user="${runtime_entry%%:*}"
+  runtime_dir="${runtime_entry#*:}"
+  [ -n "$runtime_dir" ] || continue
+  case "$runtime_dir" in
+    /tmp/nmtk-podman-runtime.*)
+      set +e
+      timeout --signal=TERM --kill-after=1s 10s rm -rf -- "$runtime_dir"
+      cleanup_exit="$?"
+      set -e
+      [ "$cleanup_exit" -eq 0 ] ||
+        fail "podman_inspection_failed" 29 \
+          "The temporary Podman runtime for user $runtime_user could not be removed."
+      ;;
+  esac
+done
+TEMP_RUNTIME_DIRS=()
+
+set +e
+timeout --signal=TERM --kill-after=1s 10s \
+  rm -rf -- "$TEMPORARY_KEY_DIR"
+key_cleanup_exit="$?"
+set -e
+[ "$key_cleanup_exit" -eq 0 ] ||
+  fail "deploy_account_failed" 26 \
+    "The temporary deployment credential directory could not be removed."
+TEMPORARY_KEY_DIR=""
+
+terminal "✓ Server preparation completed"
+printf 'NMTK_DEPLOY_PRIVATE_KEY_B64=%s\n' "$PRIVATE_KEY_B64"
+unset PRIVATE_KEY_B64
+step_marker finish 40 false "Finalizing secure deployment handoff"
+'''
+        .replaceAll('__ENGINE__', containerEngine)
+        .replaceAll(
+          '__FACTORY_RESET__',
+          resetFlag,
+        );
+  }
+
+  Future<SSHRunResult> _runAdministratorScript(
+    SSHClient client, {
+    required String script,
+    required String rootUsername,
+    required String rootPassword,
+    required String jobId,
+    required List<String> redactionSecrets,
+    Future<void> Function(
+      DeploymentPhase phase,
+      double percent,
+      String label,
+    )? onPhase,
+    Future<void> Function(DeploymentActiveOperation? operation)? onOperation,
+    Future<void> Function(String line)? onTerminalOutput,
+  }) async {
+    final needsSudo = rootUsername != 'root';
+    final session = await client.execute(
+      administratorShellCommand(needsSudo: needsSudo),
+    );
+    _administratorOperations[jobId] = _AdministratorOperation(client, session);
+    Timer? idleWatchdog;
+    try {
+      final stdoutLines = <String>[];
+      final stderrLines = <String>[];
+      final operationTimeout = Completer<DeploymentFailureDetails>();
+      final scriptCompleted = Completer<int>();
+      var currentPhase = DeploymentPhase.bootstrappingAccess.wireName;
+      var streamedUpdates = Future<void>.value();
+      DeploymentActiveOperation? activeOperation;
+      var activeOperationTimeoutSeconds = 0;
+
+      // Every line the server prints rearms this timer, so no part of the
+      // bootstrap is left unguarded. The previous watchdog was armed only
+      // between a step's start and finish markers, which left the gaps between
+      // steps — and the whole tail after the last step — able to hang forever.
+      void armIdleWatchdog() {
+        idleWatchdog?.cancel();
+        if (scriptCompleted.isCompleted || operationTimeout.isCompleted) return;
+        final operation = activeOperation;
+        final seconds = operation == null
+            ? _bootstrapIdleTimeoutSeconds
+            : activeOperationTimeoutSeconds + 7;
+        idleWatchdog = Timer(Duration(seconds: seconds), () {
+          if (operationTimeout.isCompleted || scriptCompleted.isCompleted) {
+            return;
+          }
+          operationTimeout.complete(
+            operation == null
+                ? _administratorStallDetails(phase: currentPhase)
+                : _administratorStepTimeoutDetails(
+                    label: operation.label,
+                    timeoutSeconds: activeOperationTimeoutSeconds,
+                    phase: currentPhase,
+                  ),
+          );
+          session.kill(SSHSignal.TERM);
+          session.close();
+          client.close();
+        });
+      }
+
+      void handleLine(String line, List<String> destination) {
+        destination.add(line);
+        final doneMarker =
+            RegExp(r'^NMTK_SETUP_DONE\|(-?\d+)$').firstMatch(line);
+        if (doneMarker != null) {
+          idleWatchdog?.cancel();
+          if (!scriptCompleted.isCompleted) {
+            scriptCompleted.complete(int.parse(doneMarker.group(1)!));
+          }
+          return;
+        }
+        armIdleWatchdog();
+        final phaseMarker = RegExp(
+          r'^NMTK_SETUP_PHASE\|([^|]+)\|([^|]+)\|(.+)$',
+        ).firstMatch(line);
+        if (phaseMarker != null && onPhase != null) {
+          currentPhase = phaseMarker.group(1) ?? currentPhase;
+          final phase = DeploymentPhase.values.firstWhere(
+            (candidate) => candidate.wireName == phaseMarker.group(1),
+            orElse: () => DeploymentPhase.bootstrappingAccess,
+          );
+          streamedUpdates = streamedUpdates.then(
+            (_) => onPhase(
+              phase,
+              double.tryParse(phaseMarker.group(2) ?? '') ?? 5,
+              phaseMarker.group(3) ?? 'Preparing server',
+            ),
+          );
+          return;
+        }
+        final operationMarker = _bootstrapOperationMarker(line);
+        if (operationMarker != null) {
+          DeploymentActiveOperation? operation;
+          if (operationMarker.state == 'start') {
+            operation = DeploymentActiveOperation(
+              label: operationMarker.label,
+              startedAt: DateTime.now(),
+              timeoutSeconds: operationMarker.timeoutSeconds,
+              automaticRecovery: operationMarker.automaticRecovery,
+            );
+            activeOperationTimeoutSeconds = operationMarker.timeoutSeconds;
+          }
+          activeOperation = operation;
+          armIdleWatchdog();
+          if (onOperation != null) {
+            streamedUpdates = streamedUpdates.then(
+              (_) => onOperation(operation),
+            );
+          }
+          return;
+        }
+        if (onTerminalOutput == null) return;
+        final safeLine = _bootstrapTranscriptLine(
+          line,
+          rootPassword: redactionSecrets.elementAtOrNull(0) ?? '',
+          rootPrivateKey: redactionSecrets.elementAtOrNull(1) ?? '',
+        );
+        if (safeLine != null && safeLine.isNotEmpty) {
+          streamedUpdates =
+              streamedUpdates.then((_) => onTerminalOutput(safeLine));
+        }
+      }
+
+      final stdout = session.stdout
+          .cast<List<int>>()
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen((line) => handleLine(line, stdoutLines));
+      final stderr = session.stderr
+          .cast<List<int>>()
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .listen((line) => handleLine(line, stderrLines));
+      final input = needsSudo && rootPassword.isNotEmpty
+          ? '$rootPassword\n$script'
+          : script;
+      session.stdin.add(Uint8List.fromList(utf8.encode(input)));
+      await session.stdin.close();
+      armIdleWatchdog();
+      // The script announcing its own exit is authoritative. Channel EOF is
+      // not: sshd holds the channel open until every process that inherited
+      // this session's stdout and stderr has exited, and preparing rootless
+      // Podman deliberately leaves lingering processes behind.
+      final outcome = await Future.any<Object>([
+        scriptCompleted.future.then<Object>(_AdministratorSessionExit.new),
+        session
+            .waitForExit(timeout: const Duration(minutes: 12))
+            .then<Object>(_AdministratorSessionExit.new),
+        operationTimeout.future,
+      ]);
+      idleWatchdog?.cancel();
+      if (outcome is DeploymentFailureDetails) {
+        await Future.wait<void>([
+          stdout.cancel(),
+          stderr.cancel(),
+        ]);
+        await _settleStreamedUpdates(streamedUpdates);
+        throw _RemoteSetupException(outcome);
+      }
+      final exitCode = (outcome as _AdministratorSessionExit).exitCode;
+      if (exitCode == null && session.exitSignal == null) {
+        session.kill(SSHSignal.TERM);
+        session.close();
+        client.close();
+        await Future.wait<void>([
+          stdout.cancel(),
+          stderr.cancel(),
+        ]);
+        await _settleStreamedUpdates(streamedUpdates);
+        throw const _RemoteSetupException(
+          DeploymentFailureDetails(
+            code: 'administrator_session_timeout',
+            phase: 'bootstrapping_access',
+            summary: 'Administrator setup timed out',
+            recovery:
+                'Open the terminal output to identify the command that timed out, then retry.',
+          ),
+        );
+      }
+      await _drainTranscriptStreams(stdout, stderr);
+      session.close();
+      await _settleStreamedUpdates(streamedUpdates);
+      final stdoutBytes = utf8.encode(stdoutLines.join('\n'));
+      final stderrBytes = utf8.encode(stderrLines.join('\n'));
+      return SSHRunResult(
+        output: Uint8List.fromList([...stdoutBytes, ...stderrBytes]),
+        exitCode: exitCode ?? 1,
+        stdout: Uint8List.fromList(stdoutBytes),
+        stderr: Uint8List.fromList(stderrBytes),
+        exitSignal: session.exitSignal,
+      );
+    } finally {
+      idleWatchdog?.cancel();
+      if (identical(_administratorOperations[jobId]?.session, session)) {
+        _administratorOperations.remove(jobId);
+      }
+    }
+  }
+
+  /// Waits for the transcript streams to close, but never longer than
+  /// [_administratorDrainTimeout].
+  ///
+  /// A held-open channel is expected here rather than exceptional: the
+  /// deployment account's rootless Podman service and its pause processes
+  /// inherit this session's descriptors and outlive the script on purpose. Both
+  /// streams have already delivered every line the script printed, so nothing is
+  /// lost by giving up on EOF.
+  static Future<void> _drainTranscriptStreams(
+    StreamSubscription<String> stdout,
+    StreamSubscription<String> stderr, {
+    Duration timeout = _administratorDrainTimeout,
+  }) async {
+    try {
+      await Future.wait<void>([
+        stdout.asFuture<void>(),
+        stderr.asFuture<void>(),
+      ]).timeout(timeout);
+    } on TimeoutException {
+      // Expected when a lingering server process still holds the channel.
+    } on Object {
+      // The exit status already decided the outcome; a late channel error
+      // cannot invalidate output that was delivered line by line.
+    } finally {
+      await Future.wait<void>([stdout.cancel(), stderr.cancel()]);
+    }
+  }
+
+  @visibleForTesting
+  static Future<void> drainTranscriptStreamsForTesting(
+    StreamSubscription<String> stdout,
+    StreamSubscription<String> stderr, {
+    Duration timeout = _administratorDrainTimeout,
+  }) =>
+      _drainTranscriptStreams(stdout, stderr, timeout: timeout);
+
+  /// Lets the queued progress callbacks finish without letting a wedged write
+  /// block the deployment. Errors still propagate.
+  static Future<void> _settleStreamedUpdates(
+    Future<void> streamedUpdates, {
+    Duration timeout = _streamedUpdateSettleTimeout,
+  }) =>
+      streamedUpdates.timeout(timeout, onTimeout: () {});
+
+  @visibleForTesting
+  static Future<void> settleStreamedUpdatesForTesting(
+    Future<void> streamedUpdates, {
+    Duration timeout = _streamedUpdateSettleTimeout,
+  }) =>
+      _settleStreamedUpdates(streamedUpdates, timeout: timeout);
+
   @override
-  Future<DeploymentJob> deploy(DeploymentRequest request) async {
+  Future<DeploymentJob> deploy(DeploymentRequest request) =>
+      _deploy(request, persistTargetImmediately: true);
+
+  Future<DeploymentJob> _deploy(
+    DeploymentRequest request, {
+    required bool persistTargetImmediately,
+  }) async {
     final bundle = await _loadDeploymentBundle();
-    final targetId = _newId('target');
+    final targetId = request.targetType == 'remote_host'
+        ? 'remote-${request.host.trim().replaceAll('.', '-')}'
+        : _newId('target');
     final jobId = _newId('deploy');
     final target = DeploymentTarget.fromJson(
       request.toPublicJson(id: targetId)
         ..['updatedAt'] = DateTime.now().toIso8601String(),
     );
     final store = await _store;
-    await store.saveTarget(target, request);
+    if (persistTargetImmediately) {
+      await store.saveTarget(target, request);
+    } else {
+      _pendingTargets[jobId] = target;
+      _pendingRequests[jobId] = request;
+    }
     final job = DeploymentJob(
       id: jobId,
       targetId: targetId,
@@ -412,16 +1791,27 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     if (job == null || job.id != jobId) {
       throw StateError('Deployment job $jobId was not found on this device.');
     }
-    if (job.isTerminal || _runningJobs.containsKey(jobId)) return job;
-
-    final targets = await (await _store).loadTargets();
-    final target = targets.where((candidate) => candidate.id == job.targetId);
-    if (target.isEmpty) return job;
-    final request = await (await _store).requestForTarget(target.first);
-    if (target.first.targetType == 'remote_host') {
-      return _pollRemoteJob(job, target.first, request);
+    if (job.isTerminal) {
+      _pendingTargets.remove(jobId);
+      _pendingRequests.remove(jobId);
+      return job;
     }
-    if (await _isApiReady(target.first)) {
+    if (_runningJobs.containsKey(jobId)) return job;
+
+    final pendingTarget = _pendingTargets[jobId];
+    final pendingRequest = _pendingRequests[jobId];
+    final targets = await (await _store).loadTargets();
+    final savedTargets =
+        targets.where((candidate) => candidate.id == job.targetId);
+    final target =
+        pendingTarget ?? (savedTargets.isEmpty ? null : savedTargets.first);
+    if (target == null) return job;
+    final request =
+        pendingRequest ?? await (await _store).requestForTarget(target);
+    if (target.targetType == 'remote_host') {
+      return _pollRemoteJob(job, target, request);
+    }
+    if (await _isApiReady(target)) {
       return _updateJob(
         job.copyWith(
           stage: DeploymentPhase.completed.wireName,
@@ -436,11 +1826,35 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
 
   @override
   Future<DeploymentJob> cancelJob(String jobId) async {
-    final job = await fetchJob(jobId);
+    final bootstrapOperation = _administratorOperations.remove(jobId);
+    final job = _jobs[jobId] ?? await fetchJob(jobId);
+    if (bootstrapOperation != null) {
+      bootstrapOperation.session.kill(SSHSignal.TERM);
+      bootstrapOperation.session.close();
+      bootstrapOperation.client.close();
+      _pendingTargets.remove(jobId);
+      _pendingRequests.remove(jobId);
+      return _updateJob(
+        job.copyWith(
+          stage: DeploymentPhase.cancelled.wireName,
+          stageLabel: 'Server setup cancelled',
+          terminalOutput: _boundedTerminalOutput([
+            ...job.terminalOutput,
+            '[client: administrator setup cancelled]',
+          ]),
+          requiresEphemeralAdministrator: false,
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
+    final pendingTarget = _pendingTargets[jobId];
+    final pendingRequest = _pendingRequests[jobId];
     final targets = await (await _store).loadTargets();
     final matches = targets.where((target) => target.id == job.targetId);
-    if (matches.isNotEmpty && matches.first.targetType == 'remote_host') {
-      final request = await (await _store).requestForTarget(matches.first);
+    final target = pendingTarget ?? (matches.isEmpty ? null : matches.first);
+    if (target != null && target.targetType == 'remote_host') {
+      final request =
+          pendingRequest ?? await (await _store).requestForTarget(target);
       final client = await _connect(request);
       try {
         final deployDir = await _remoteDeployDir(client);
@@ -453,6 +1867,8 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         client.close();
       }
     }
+    _pendingTargets.remove(jobId);
+    _pendingRequests.remove(jobId);
     return _updateJob(
       job.copyWith(
         stage: DeploymentPhase.cancelled.wireName,
@@ -556,16 +1972,45 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         await _runLocalDeployment(job, target, request);
       }
     } catch (error) {
+      final current = _jobs[job.id] ?? job;
+      final safeError = redactForLogging(error.toString(), request);
+      final existingConnectionReachable = request.targetType == 'remote_host'
+          ? await _isApiReady(target)
+          : null;
+      final failure = DeploymentFailureDetails(
+        code: 'deployment_phase_failed',
+        phase: current.stage,
+        summary: _failureSummaryForPhase(current.stage),
+        recovery:
+            safeError.replaceFirst(RegExp(r'^(Bad state|Exception):\s*'), ''),
+        technicalDetails: _boundedDiagnosticOutput(safeError),
+        existingConnectionReachable: existingConnectionReachable,
+      );
       await _updateJob(
-        (_jobs[job.id] ?? job).copyWith(
+        current.copyWith(
           stage: DeploymentPhase.failed.wireName,
           percent: 100,
-          stageLabel: 'Deployment failed',
-          error: redactForLogging(error.toString(), request),
+          stageLabel: failure.summary,
+          error: failure.recovery,
+          failureDetails: failure,
           updatedAt: DateTime.now(),
         ),
       );
     }
+  }
+
+  static String _failureSummaryForPhase(String phase) {
+    return switch (phase) {
+      'installing_prerequisites' =>
+        'The selected container engine could not be prepared',
+      'uploading_assets' => 'The deployment bundle could not be uploaded',
+      'pulling_images' => 'The NMTK images could not be downloaded',
+      'starting_containers' => 'The NMTK services could not be started',
+      'verifying_suite_api' => 'The Suite API did not become reachable',
+      'verifying_launcher_control' =>
+        'Launcher control did not become reachable',
+      _ => 'Server deployment failed',
+    };
   }
 
   Future<void> _startRemoteDeployment(
@@ -574,22 +2019,34 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     DeploymentRequest request,
     DeploymentAssetBundle bundle,
   ) async {
-    await _emit(job, DeploymentPhase.connecting, 5, 'Connecting with SSH');
+    final progressFloor = _jobs[job.id]?.percent ?? 0;
+    await _emit(
+      job,
+      DeploymentPhase.connecting,
+      progressFloor > 5 ? progressFloor : 5,
+      'Connecting with SSH',
+    );
     final client = await _connect(request);
     try {
       await _emit(
         job,
         DeploymentPhase.installingPrerequisites,
-        12,
+        progressFloor > 12 ? progressFloor : 12,
         'Preparing ${request.containerEngine}',
       );
-      await _ensureRemoteEngine(client, request);
-      final deployDir = await _remoteDeployDir(client);
+      await _ensureRemoteEngine(client, request, job);
+      final deployDir = await _remoteDeployDir(
+        client,
+        job: job,
+        request: request,
+      );
       final jobDir = '$deployDir/.jobs';
       await _runChecked(
         client,
         'mkdir -p ${_shellQuote(deployDir)} ${_shellQuote(jobDir)}',
         'Could not create the deployment directory.',
+        job: job,
+        request: request,
       );
       await _emit(
         job,
@@ -598,8 +2055,19 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         'Uploading deployment bundle v${bundle.version} '
         '(${_shortHash(bundle.manifestHash)})',
       );
-      await _uploadAssets(client, deployDir);
-      await _verifyRemoteAssets(client, deployDir, bundle);
+      await _uploadAssets(
+        client,
+        deployDir,
+        job: job,
+        request: request,
+      );
+      await _verifyRemoteAssets(
+        client,
+        deployDir,
+        bundle,
+        job: job,
+        request: request,
+      );
       await _emit(
         job,
         DeploymentPhase.uploadingAssets,
@@ -631,6 +2099,8 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         client,
         command,
         'Could not start the detached deployment job.',
+        job: job,
+        request: request,
       );
     } finally {
       client.close();
@@ -646,11 +2116,13 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     try {
       final deployDir = await _remoteDeployDir(client);
       final jobDir = '$deployDir/.jobs';
-      final result = await client.runWithResult(
-        'cat ${_shellQuote('$jobDir/${job.id}.status')} 2>/dev/null; '
-        'printf "\\n---NMTK-LOG---\\n"; '
-        'tail -n 40 ${_shellQuote('$jobDir/${job.id}.log')} 2>/dev/null',
-      );
+      final result = await client
+          .runWithResult(
+            'cat ${_shellQuote('$jobDir/${job.id}.status')} 2>/dev/null; '
+            'printf "\\n---NMTK-LOG---\\n"; '
+            'tail -c 512000 ${_shellQuote('$jobDir/${job.id}.log')} 2>/dev/null',
+          )
+          .timeout(_statusPollTimeout);
       final output = utf8.decode(result.stdout);
       final sections = output.split('\n---NMTK-LOG---\n');
       final status = sections.first.trim().split('|');
@@ -663,15 +2135,37 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
               .map((line) => redactForLogging(line, request))
               .toList(growable: false)
           : job.logs;
+      final remoteLogLines = sections.length > 1
+          ? sections[1]
+              .split('\n')
+              .map((line) => redactForLogging(line, request))
+              .where((line) => line.isNotEmpty)
+              .toList(growable: false)
+          : const <String>[];
+      final percent = double.tryParse(status[1]) ?? job.percent;
+      final stageLabel = status.sublist(2).join('|');
+      final terminalOutput = _replaceRemoteInstallOutput(
+        job.terminalOutput,
+        remoteLogLines,
+      );
+      // Only real movement may refresh the progress clock. Stamping it on every
+      // poll made the notifier's staleness watchdog unreachable, which is how a
+      // dead deployment could keep looking alive indefinitely.
+      final reportedProgress = stage != job.stage ||
+          percent != job.percent ||
+          stageLabel != job.stageLabel ||
+          terminalOutput.length != job.terminalOutput.length;
       var next = job.copyWith(
         stage: stage,
-        percent: double.tryParse(status[1]) ?? job.percent,
-        stageLabel: status.sublist(2).join('|'),
+        percent: percent,
+        stageLabel: stageLabel,
         logs: logs,
+        terminalOutput: terminalOutput,
         error: stage == DeploymentPhase.failed.wireName
             ? status.sublist(2).join('|')
             : '',
         updatedAt: DateTime.now(),
+        lastProgressAt: reportedProgress ? DateTime.now() : job.lastProgressAt,
       );
       if (stage == DeploymentPhase.completed.wireName) {
         try {
@@ -679,6 +2173,15 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         } catch (_) {
           next = _clientReachabilityFailure(next, target);
         }
+      }
+      if (next.stage == DeploymentPhase.completed.wireName &&
+          _pendingRequests.containsKey(job.id)) {
+        await (await _store).saveTarget(target, request);
+        _pendingTargets.remove(job.id);
+        _pendingRequests.remove(job.id);
+      } else if (next.isTerminal) {
+        _pendingTargets.remove(job.id);
+        _pendingRequests.remove(job.id);
       }
       return _updateJob(next);
     } finally {
@@ -785,6 +2288,7 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
   Future<void> _ensureRemoteEngine(
     SSHClient client,
     DeploymentRequest request,
+    DeploymentJob job,
   ) async {
     final engine = request.containerEngine;
     final install = engine == 'podman'
@@ -800,6 +2304,8 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
       'command -v ${_shellQuote(engine)} >/dev/null 2>&1 || $elevated',
       'Could not install $engine. Use an administrator account or configure '
           'passwordless sudo, then retry.',
+      job: job,
+      request: request,
     );
     if (engine == 'docker') {
       final addGroup = request.sshPassword.isNotEmpty
@@ -810,13 +2316,46 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         client,
         'docker ps >/dev/null 2>&1 || $addGroup',
         'Docker is installed, but this SSH account cannot use it.',
+        job: job,
+        request: request,
+      );
+    } else {
+      await _runChecked(
+        client,
+        '''
+export XDG_RUNTIME_DIR="\${XDG_RUNTIME_DIR:-/run/user/\$(id -u)}"
+export DOCKER_HOST="unix://\$XDG_RUNTIME_DIR/podman/podman.sock"
+mkdir -p "\$XDG_RUNTIME_DIR/podman"
+systemctl --user enable --now podman.socket >/dev/null 2>&1 ||
+  (nohup podman system service --time=0 "\$DOCKER_HOST" >"\$HOME/.nmtk-podman-service.log" 2>&1 &)
+for attempt in 1 2 3 4 5; do
+  podman info >/dev/null 2>&1 && podman compose version >/dev/null 2>&1 && exit 0
+  sleep 1
+done
+exit 1
+''',
+        'Podman is installed, but its rootless service or Compose provider '
+            'is not ready.',
+        job: job,
+        request: request,
       );
     }
   }
 
-  Future<String> _remoteDeployDir(SSHClient client) async {
-    final bytes = await client.run('printf %s "\$HOME"');
-    final home = utf8.decode(bytes).trim();
+  Future<String> _remoteDeployDir(
+    SSHClient client, {
+    DeploymentJob? job,
+    DeploymentRequest? request,
+  }) async {
+    final result = job != null && request != null
+        ? await _runRemoteCommand(
+            client,
+            'printf %s "\$HOME"',
+            job: job,
+            request: request,
+          )
+        : await client.runWithResult('printf %s "\$HOME"');
+    final home = utf8.decode(result.stdout).trim();
     if (home.isEmpty) {
       throw StateError(
         'The SSH account has no home directory. Choose a normal login account.',
@@ -825,13 +2364,22 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     return '$home/.nmtk/deploy';
   }
 
-  Future<void> _uploadAssets(SSHClient client, String deployDir) async {
+  Future<void> _uploadAssets(
+    SSHClient client,
+    String deployDir, {
+    required DeploymentJob job,
+    required DeploymentRequest request,
+  }) async {
     final sftp = await client.sftp();
     for (final relative in _assetFiles) {
       final parent = path.posix.dirname(relative);
       if (parent != '.') {
-        await client.run(
+        await _runChecked(
+          client,
           'mkdir -p ${_shellQuote(path.posix.join(deployDir, parent))}',
+          'Could not create a remote deployment directory.',
+          job: job,
+          request: request,
         );
       }
       final data = await _assets.load('assets/deployment/$relative');
@@ -860,15 +2408,20 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
   Future<void> _verifyRemoteAssets(
     SSHClient client,
     String deployDir,
-    DeploymentAssetBundle bundle,
-  ) async {
+    DeploymentAssetBundle bundle, {
+    required DeploymentJob job,
+    required DeploymentRequest request,
+  }) async {
     final files = <String>[
       ...bundle.fileHashes.keys,
       'deployment-manifest.json',
     ];
-    final result = await client.runWithResult(
+    final result = await _runRemoteCommand(
+      client,
       'cd ${_shellQuote(deployDir)} && sha256sum '
       '${files.map(_shellQuote).join(' ')}',
+      job: job,
+      request: request,
     );
     if (result.exitCode != 0) {
       throw StateError('Could not verify uploaded deployment assets.');
@@ -1055,6 +2608,15 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
       stageLabel: 'Backend is not reachable from this device',
       logs: [...job.logs, 'Client readiness check failed for ${target.host}.'],
       error: message,
+      failureDetails: const DeploymentFailureDetails(
+        code: 'client_readiness_failed',
+        phase: 'verifying_suite_api',
+        summary: 'Backend is not reachable from this device',
+        recovery: message,
+        technicalDetails:
+            'Required client-facing health checks did not all return HTTP 200.',
+        existingConnectionReachable: false,
+      ),
       updatedAt: DateTime.now(),
     );
   }
@@ -1062,15 +2624,257 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
   Future<void> _runChecked(
     SSHClient client,
     String command,
-    String failureMessage,
-  ) async {
-    final result = await client.runWithResult(command);
+    String failureMessage, {
+    DeploymentJob? job,
+    DeploymentRequest? request,
+    Duration timeout = const Duration(minutes: 5),
+  }) async {
+    final result = job != null && request != null
+        ? await _runRemoteCommand(
+            client,
+            command,
+            job: job,
+            request: request,
+            timeout: timeout,
+          )
+        : await client.runWithResult(command);
     if (result.exitCode == 0) return;
-    final details = utf8.decode(result.stderr).trim();
+    final details = utf8.decode(result.output).trim();
     throw StateError(
       details.isEmpty ? failureMessage : '$failureMessage $details',
     );
   }
+
+  Future<SSHRunResult> _runRemoteCommand(
+    SSHClient client,
+    String command, {
+    required DeploymentJob job,
+    required DeploymentRequest request,
+    Duration timeout = const Duration(minutes: 5),
+  }) async {
+    await _appendTerminalOutput(
+      job.id,
+      '\$ ${redactForLogging(command, request)}',
+    );
+    final session = await client.execute(
+      'sh -c ${_shellQuote(command)} 2>&1',
+    );
+    final outputLines = <String>[];
+    var streamedUpdates = Future<void>.value();
+
+    void forward(String line) {
+      outputLines.add(line);
+      final safeLine = redactForLogging(line, request);
+      streamedUpdates =
+          streamedUpdates.then((_) => _appendTerminalOutput(job.id, safeLine));
+    }
+
+    final stdout = session.stdout
+        .cast<List<int>>()
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen(forward);
+    final stderr = session.stderr
+        .cast<List<int>>()
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen(forward);
+    await session.stdin.close();
+    final exitCode = await session.waitForExit(timeout: timeout);
+    if (exitCode == null && session.exitSignal == null) {
+      session.kill(SSHSignal.TERM);
+      session.close();
+      await Future.wait<void>([stdout.cancel(), stderr.cancel()]);
+      await _settleStreamedUpdates(streamedUpdates);
+      await _appendTerminalOutput(
+        job.id,
+        '[client: command timed out after ${timeout.inSeconds}s]',
+      );
+      throw StateError(
+        'The remote command timed out after ${timeout.inSeconds} seconds.',
+      );
+    }
+    await _drainTranscriptStreams(stdout, stderr);
+    session.close();
+    await _settleStreamedUpdates(streamedUpdates);
+    final combined = Uint8List.fromList(utf8.encode(outputLines.join('\n')));
+    final resolvedExitCode = exitCode ?? 1;
+    if (resolvedExitCode != 0) {
+      await _appendTerminalOutput(
+        job.id,
+        '[client: command exited $resolvedExitCode]',
+      );
+    }
+    return SSHRunResult(
+      output: combined,
+      exitCode: resolvedExitCode,
+      stdout: combined,
+      stderr: Uint8List(0),
+      exitSignal: session.exitSignal,
+    );
+  }
+
+  static List<String> _replaceRemoteInstallOutput(
+    List<String> existing,
+    List<String> remoteLines,
+  ) {
+    const marker = '[client: remote install output]';
+    final markerIndex = existing.indexOf(marker);
+    final bootstrapAndCommands = markerIndex == -1
+        ? List<String>.of(existing)
+        : existing.sublist(0, markerIndex);
+    if (remoteLines.isEmpty) {
+      return _boundedTerminalOutput(bootstrapAndCommands);
+    }
+    return _boundedTerminalOutput([
+      ...bootstrapAndCommands,
+      marker,
+      ...remoteLines,
+    ]);
+  }
+
+  static String? _bootstrapTranscriptLine(
+    String line, {
+    required String rootPassword,
+    required String rootPrivateKey,
+  }) {
+    if (line.startsWith('NMTK_SETUP_PHASE|') ||
+        line.startsWith('NMTK_SETUP_STEP|') ||
+        line.startsWith('NMTK_SETUP_DONE|') ||
+        line.startsWith('NMTK_SETUP_ERROR|') ||
+        line.startsWith('NMTK_SETUP_TERMINAL|') ||
+        line.startsWith('NMTK_DEPLOY_PRIVATE_KEY_B64=')) {
+      return null;
+    }
+    final commandMarker =
+        RegExp(r'^NMTK_SETUP_COMMAND\|(.*)$').firstMatch(line);
+    final commandExitMarker =
+        RegExp(r'^NMTK_SETUP_COMMAND_EXIT\|([^|]+)\|(.+)$').firstMatch(line);
+    final transcriptLine = commandMarker != null
+        ? '\$ ${commandMarker.group(1) ?? ''}'
+        : commandExitMarker?.group(1) == 'timeout'
+            ? '[client: command timed out after '
+                '${commandExitMarker?.group(2)}s]'
+            : commandExitMarker != null
+                ? '[client: command exited ${commandExitMarker.group(2)}]'
+                : line;
+    return _redactBootstrapOutput(
+      transcriptLine,
+      rootPassword,
+      rootPrivateKey,
+    );
+  }
+
+  static ({
+    String state,
+    int timeoutSeconds,
+    bool automaticRecovery,
+    String label,
+  })? _bootstrapOperationMarker(String line) {
+    final marker = RegExp(
+      r'^NMTK_SETUP_STEP\|(start|finish)\|(\d+)\|(true|false)\|([^|\r\n]+)$',
+    ).firstMatch(line);
+    final timeoutSeconds = int.tryParse(marker?.group(2) ?? '');
+    if (marker == null || timeoutSeconds == null || timeoutSeconds <= 0) {
+      return null;
+    }
+    return (
+      state: marker.group(1)!,
+      timeoutSeconds: timeoutSeconds,
+      automaticRecovery: marker.group(3) == 'true',
+      label: marker.group(4)!,
+    );
+  }
+
+  @visibleForTesting
+  static ({
+    String state,
+    int timeoutSeconds,
+    bool automaticRecovery,
+    String label,
+  })? parseBootstrapOperationMarkerForTesting(String line) {
+    return _bootstrapOperationMarker(line);
+  }
+
+  static DeploymentFailureDetails _administratorStepTimeoutDetails({
+    required String label,
+    required int timeoutSeconds,
+    required String phase,
+  }) {
+    return DeploymentFailureDetails(
+      code: 'administrator_step_timeout',
+      phase: phase,
+      summary: '$label timed out',
+      recovery: 'The app stopped this server step automatically. '
+          'Select Retry; if it times out again, open the raw SSH output to '
+          'identify the server problem.',
+      technicalDetails: '$label did not finish within its '
+          '$timeoutSeconds-second command timeout and cleanup grace.',
+      exitCode: 124,
+    );
+  }
+
+  /// Reported when the server stops printing anything while no single command
+  /// is nominally responsible — the gap that used to leave setup at the same
+  /// percentage indefinitely.
+  static DeploymentFailureDetails _administratorStallDetails({
+    required String phase,
+  }) {
+    return DeploymentFailureDetails(
+      code: 'administrator_stalled',
+      phase: phase,
+      summary: 'The server stopped reporting progress',
+      recovery: 'The app stopped waiting automatically. Select Retry; if it '
+          'stalls again, open the raw SSH output to see the last command the '
+          'server ran.',
+      technicalDetails: 'No server output arrived for '
+          '$_bootstrapIdleTimeoutSeconds seconds while no command was active.',
+      exitCode: 124,
+    );
+  }
+
+  @visibleForTesting
+  static DeploymentFailureDetails administratorStallForTesting({
+    required String phase,
+  }) {
+    return _administratorStallDetails(phase: phase);
+  }
+
+  @visibleForTesting
+  static DeploymentFailureDetails administratorStepTimeoutForTesting({
+    required String label,
+    required int timeoutSeconds,
+    required String phase,
+  }) {
+    return _administratorStepTimeoutDetails(
+      label: label,
+      timeoutSeconds: timeoutSeconds,
+      phase: phase,
+    );
+  }
+
+  @visibleForTesting
+  static String? parseBootstrapTranscriptLineForTesting(
+    String line, {
+    String rootPassword = '',
+    String rootPrivateKey = '',
+  }) =>
+      _bootstrapTranscriptLine(
+        line,
+        rootPassword: rootPassword,
+        rootPrivateKey: rootPrivateKey,
+      );
+
+  @visibleForTesting
+  static List<String> boundTerminalOutputForTesting(List<String> lines) =>
+      _boundedTerminalOutput(lines);
+
+  @visibleForTesting
+  static List<String> replaceRemoteInstallOutputForTesting(
+    List<String> existing,
+    List<String> remoteLines,
+  ) =>
+      _replaceRemoteInstallOutput(existing, remoteLines);
 
   Future<void> _runLocalChecked(
     String executable,
@@ -1104,6 +2908,7 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     String label,
   ) async {
     final current = _jobs[original.id] ?? original;
+    if (current.stage == DeploymentPhase.cancelled.wireName) return;
     await _updateJob(
       current.copyWith(
         stage: phase.wireName,
@@ -1111,14 +2916,119 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
         stageLabel: label,
         logs: [...current.logs, label],
         updatedAt: DateTime.now(),
+        lastProgressAt: DateTime.now(),
       ),
     );
   }
 
+  Future<void> _appendTerminalOutput(String jobId, String line) async {
+    final current = _jobs[jobId];
+    if (current == null ||
+        current.stage == DeploymentPhase.cancelled.wireName) {
+      return;
+    }
+    _jobs[jobId] = current.copyWith(
+      terminalOutput: _boundedTerminalOutput([
+        ...current.terminalOutput,
+        _redactBootstrapOutput(line, '', ''),
+      ]),
+      updatedAt: DateTime.now(),
+      lastProgressAt: DateTime.now(),
+    );
+    _terminalPersistenceTimers[jobId] ??= Timer(
+      const Duration(milliseconds: 300),
+      () {
+        _terminalPersistenceTimers.remove(jobId);
+        unawaited(_persistCurrentJob(jobId));
+      },
+    );
+  }
+
+  Future<void> _setActiveOperation(
+    String jobId,
+    DeploymentActiveOperation? operation,
+  ) async {
+    _operationHeartbeatTimers.remove(jobId)?.cancel();
+    final current = _jobs[jobId];
+    if (current == null ||
+        current.stage == DeploymentPhase.cancelled.wireName) {
+      return;
+    }
+    await _updateJob(
+      current.copyWith(
+        activeOperation: operation,
+        clearActiveOperation: operation == null,
+        updatedAt: DateTime.now(),
+        lastProgressAt: DateTime.now(),
+      ),
+    );
+    if (operation == null) return;
+    _operationHeartbeatTimers[jobId] = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) {
+        final latest = _jobs[jobId];
+        if (latest == null ||
+            latest.isTerminal ||
+            latest.activeOperation?.startedAt != operation.startedAt) {
+          _operationHeartbeatTimers.remove(jobId)?.cancel();
+          return;
+        }
+        unawaited(
+          _updateJob(latest.copyWith(updatedAt: DateTime.now())),
+        );
+      },
+    );
+  }
+
+  static List<String> _boundedTerminalOutput(List<String> lines) {
+    const maxLines = 2000;
+    const maxCharacters = 512000;
+    const truncationMarker = '[client: earlier SSH output truncated]';
+    final alreadyTruncated = lines.contains(truncationMarker);
+    final source = lines.where((line) => line != truncationMarker).toList();
+    var truncated = alreadyTruncated || source.length > maxLines;
+    final bounded = source.length > maxLines
+        ? source.sublist(source.length - maxLines)
+        : List<String>.of(source);
+    var characters = bounded.fold<int>(
+      0,
+      (total, line) => total + line.length + 1,
+    );
+    while (bounded.isNotEmpty && characters > maxCharacters) {
+      characters -= bounded.removeAt(0).length + 1;
+      truncated = true;
+    }
+    if (truncated) {
+      while (bounded.length >= maxLines) {
+        bounded.removeAt(0);
+      }
+      while (bounded.isNotEmpty &&
+          characters + truncationMarker.length + 1 > maxCharacters) {
+        characters -= bounded.removeAt(0).length + 1;
+      }
+      bounded.insert(0, truncationMarker);
+    }
+    return List<String>.unmodifiable(bounded);
+  }
+
   Future<DeploymentJob> _updateJob(DeploymentJob job) async {
+    if (job.isTerminal) {
+      _operationHeartbeatTimers.remove(job.id)?.cancel();
+      if (job.activeOperation != null) {
+        job = job.copyWith(clearActiveOperation: true);
+      }
+    }
+    _terminalPersistenceTimers.remove(job.id)?.cancel();
     _jobs[job.id] = job;
     await (await _store).saveActiveJob(job);
     return job;
+  }
+
+  Future<void> _persistCurrentJob(String jobId) async {
+    final current = _jobs[jobId];
+    if (current != null) {
+      await (await _store).saveActiveJob(current);
+    }
   }
 
   DeploymentPreflightResult _failedPreflight(String message) {
@@ -1164,9 +3074,35 @@ rm -f ${_shellQuote(temporaryKey)} ${_shellQuote('$temporaryKey.pub')}
     ]) {
       if (secret.isNotEmpty) result = result.replaceAll(secret, '[redacted]');
     }
-    return result;
+    return _redactBootstrapOutput(result, '', '');
   }
 
   static String _shellQuote(String value) =>
       "'${value.replaceAll("'", "'\"'\"'")}'";
+
+  @visibleForTesting
+  static String administratorShellCommand({required bool needsSudo}) =>
+      needsSudo ? 'sudo -S -p "" bash' : 'bash';
+}
+
+class _AdministratorOperation {
+  const _AdministratorOperation(this.client, this.session);
+
+  final SSHClient client;
+  final SSHSession session;
+}
+
+class _AdministratorSessionExit {
+  const _AdministratorSessionExit(this.exitCode);
+
+  final int? exitCode;
+}
+
+class _RemoteSetupException implements Exception {
+  const _RemoteSetupException(this.details);
+
+  final DeploymentFailureDetails details;
+
+  @override
+  String toString() => details.summary;
 }

@@ -22,6 +22,7 @@ from .deployment_contracts import (
     container_engine_install_commands,
     encode_remote_script,
     podman_runtime_setup_script,
+    redact_text,
     sudo_elevation_preamble,
 )
 from .deployment_k8s_renderer import render_manifests, write_manifests
@@ -110,8 +111,6 @@ class DeploymentExecutor:
     # Minimum gap between raw output lines forwarded to the log channel.
     # Bounds job-store writes when a remote command (e.g. docker build)
     # emits output faster than a human can read it.
-    _LOG_THROTTLE_SECONDS = 1.5
-
     def __init__(
         self,
         *,
@@ -216,7 +215,7 @@ class DockerDeploymentExecutor(DeploymentExecutor):
             raise RuntimeError(result.message)
 
         if target.target_type == "local":
-            self._deploy_local(target, emit)
+            self._deploy_local(target, emit, clean_install=clean_install)
         elif target.target_type == "remote_host":
             self._deploy_remote(target, emit, clean_install=clean_install)
         else:
@@ -228,7 +227,12 @@ class DockerDeploymentExecutor(DeploymentExecutor):
     # Local deployment
     # ------------------------------------------------------------------
 
-    def _deploy_local(self, target: DeploymentTarget, emit: ProgressCallback, clean_install: bool = False) -> None:
+    def _deploy_local(
+        self,
+        target: DeploymentTarget,
+        emit: ProgressCallback,
+        clean_install: bool = False,
+    ) -> None:
         engine = target.container_engine or "docker"
         docker = shutil.which(engine)
         if docker is None:
@@ -263,7 +267,9 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         tag = (target.image_tag or "latest").strip()
         return tag if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", tag) else "latest"
 
-    def _compose_down_local(self, docker: str, target: DeploymentTarget, volumes: bool = False) -> None:
+    def _compose_down_local(
+        self, docker: str, target: DeploymentTarget, volumes: bool = False
+    ) -> None:
         cmd = [docker, "compose", "down", "--remove-orphans"]
         if volumes:
             cmd.append("-v")
@@ -330,7 +336,12 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         "monitoring",
     )
 
-    def _deploy_remote(self, target: DeploymentTarget, emit: ProgressCallback, clean_install: bool = False) -> None:
+    def _deploy_remote(
+        self,
+        target: DeploymentTarget,
+        emit: ProgressCallback,
+        clean_install: bool = False,
+    ) -> None:
         if not target.host:
             raise RuntimeError("Remote host is required for remote Docker deployment")
 
@@ -354,15 +365,14 @@ class DockerDeploymentExecutor(DeploymentExecutor):
         self._remote_provider_preflight(target, deploy_dir)
         emit("installing", "Releasing stale NMTK port bindings", 40)
         self._remote_port_owner_probe(target)
-        self._remote_cleanup_stale_projects(target, deploy_dir)
+        self._remote_cleanup_stale_projects(
+            target,
+            deploy_dir,
+            remove_volumes=clean_install,
+        )
 
         emit("installing", "Stopping existing NMTK stack", 42)
         down_opts = "-v --remove-orphans" if clean_install else "--remove-orphans"
-        self._ssh_run(
-            target,
-            self._remote_compose_cmd(deploy_dir, target, f"down {down_opts}"),
-            timeout=300,
-        )
         try:
             self._ssh_run(
                 target,
@@ -586,7 +596,11 @@ fi
         return re.sub(r"[^a-zA-Z0-9_-]+", "-", name).strip("-_")
 
     def _remote_cleanup_stale_projects(
-        self, target: DeploymentTarget, deploy_dir: str
+        self,
+        target: DeploymentTarget,
+        deploy_dir: str,
+        *,
+        remove_volumes: bool = False,
     ) -> None:
         """Remove only NMTK-labelled containers from current and legacy projects.
 
@@ -595,12 +609,41 @@ fi
         basename as the project name before the executor pinned ``nmtk``.
         """
         legacy_project = self._legacy_compose_project(deploy_dir)
-        projects = [self._REMOTE_COMPOSE_PROJECT]
+        projects = [self._REMOTE_COMPOSE_PROJECT, "nmtk-deploy", "deploy"]
         if legacy_project and legacy_project not in projects:
             projects.append(legacy_project)
         project_words = " ".join(shlex.quote(project) for project in projects)
-        cleanup_script = f"""for runtime in podman docker; do
+        volume_cleanup = (
+            """
+    volumes="$(
+      {
+        "$runtime" volume ls -q --filter "label=com.docker.compose.project=$project"
+        "$runtime" volume ls -q --filter "label=io.podman.compose.project=$project"
+      } 2>/dev/null | awk 'NF' | sort -u
+    )"
+    if [ -n "$volumes" ]; then
+      printf '%s\\n' "$volumes" | while IFS= read -r volume; do
+        [ -n "$volume" ] && "$runtime" volume rm -f "$volume"
+      done
+    fi
+"""
+            if remove_volumes
+            else ""
+        )
+        cleanup_script = f"""set -e
+for runtime in podman docker; do
   command -v "$runtime" >/dev/null 2>&1 || continue
+  "$runtime" info >/dev/null
+  known_ids="$(
+    "$runtime" ps -a --format '{{{{.ID}}}} {{{{.Names}}}}' |
+      awk '$2 ~ /^(nmtk|nmtk-deploy|deploy)[_-](suite_api|neurosense-hw-worker|neurobench-runner-worker|neurochip-hw-worker|lava-backend|launcher-control|neurocnl-physics-worker|snn-mlir-compiler|jupyter-server)([-_][0-9]+)?$/ {{print $1}}'
+  )"
+  if [ -n "$known_ids" ]; then
+    echo "[nmtk-cleanup] runtime=$runtime removing known NMTK containers"
+    printf '%s\\n' "$known_ids" | while IFS= read -r id; do
+      [ -n "$id" ] && "$runtime" rm -f "$id" >/dev/null
+    done
+  fi
   for project in {project_words}; do
     ids="$(
       {{
@@ -611,14 +654,20 @@ fi
     [ -n "$ids" ] || continue
     echo "[nmtk-cleanup] runtime=$runtime project=$project removing labelled containers"
     printf '%s\\n' "$ids" | while IFS= read -r id; do
-      [ -n "$id" ] && "$runtime" rm -f "$id" >/dev/null 2>&1 || true
+      if [ -n "$id" ]; then
+        "$runtime" rm -f "$id" >/dev/null
+      fi
     done
+{volume_cleanup}
   done
 done"""
         try:
             self._ssh_run(target, cleanup_script, timeout=120)
         except RuntimeError as exc:
-            self._log(f"Stale NMTK container cleanup skipped: {exc}")
+            raise RuntimeError(
+                "Existing NMTK containers could not be reconciled safely "
+                f"across Docker and Podman: {exc}"
+            ) from exc
 
     def _remote_port_owner_probe(self, target: DeploymentTarget) -> None:
         """Log container labels and listeners for ports exposed to Flutter."""
@@ -1044,12 +1093,21 @@ done"""
 
         Popen + background-reader-thread + queue (rather than a blocking
         `subprocess.run`) so the long-running `docker compose pull`/`up` steps
-        stream their real output line-by-line to the UI. Forwarding is
-        throttled to at most one line per `_LOG_THROTTLE_SECONDS` because
-        docker emits many lines fast and every forwarded line is a job-store
-        disk write.
+        stream every real output line to the UI while the timeout remains
+        enforceable.
         """
         remote = f"{target.username}@{target.host}" if target.username else target.host
+        safe_remote_cmd = remote_cmd
+        for secret_ref in target.secret_refs.values():
+            if not secret_ref:
+                continue
+            try:
+                secret = self._resolve_secret(secret_ref)
+            except Exception:  # noqa: BLE001 - redaction must never block setup
+                continue
+            if secret:
+                safe_remote_cmd = safe_remote_cmd.replace(secret, "<redacted>")
+        self._log(f"$ {redact_text(safe_remote_cmd)}")
         with self._ssh_key_context(target) as key_path:
             ssh_args, ssh_env = self._ssh_base_args(target, key_path)
             cmd = ssh_args + [remote, remote_cmd]
@@ -1077,8 +1135,6 @@ done"""
             # but docker build can emit thousands of lines we don't retain.
             output_lines: list[str] = []
             start = time.monotonic()
-            last_forwarded = 0.0  # 0 => forward the very first line at once
-            pending: str | None = None  # newest line not yet forwarded
             stream_closed = False
             try:
                 while True:
@@ -1086,40 +1142,30 @@ done"""
                     if now - start > timeout:
                         proc.kill()
                         proc.wait()
+                        self._log(f"[client: command timed out after {timeout}s]")
                         raise RuntimeError(
                             f"Remote command timed out after {timeout}s: {remote_cmd}"
                         )
                     try:
-                        item = line_queue.get(timeout=self._LOG_THROTTLE_SECONDS)
+                        item = line_queue.get(timeout=0.25)
                     except queue.Empty:
                         pass
                     else:
                         if item is None:
                             stream_closed = True
                         else:
-                            stripped = item.rstrip()
+                            stripped = item.rstrip("\r\n")
                             if stripped:
                                 output_lines.append(stripped)
                                 if len(output_lines) > 40:
                                     del output_lines[0]
-                                pending = stripped
-
-                    now = time.monotonic()
-                    if (
-                        pending is not None
-                        and now - last_forwarded >= self._LOG_THROTTLE_SECONDS
-                    ):
-                        self._log(pending)
-                        pending = None
-                        last_forwarded = now
+                                self._log(stripped)
                     if stream_closed and proc.poll() is not None:
                         break
             finally:
                 returncode = proc.wait()
-            # Always surface the final line so the last step stays visible.
-            if pending is not None:
-                self._log(pending)
             if returncode != 0:
+                self._log(f"[client: command exited {returncode}]")
                 err = "\n".join(output_lines[-20:]).strip() or "SSH command failed"
                 raise RuntimeError(f"Remote command failed: {err}")
 
@@ -1219,7 +1265,9 @@ done"""
         worker. The second proves that the URL handed to CNLStudio's embedded
         browser is reachable from this launcher client.
         """
-        suite_url = f"http://{target.host}:{target.backend_port or 9000}/api/jupyter/health"
+        suite_url = (
+            f"http://{target.host}:{target.backend_port or 9000}/api/jupyter/health"
+        )
         public_url = f"http://{target.host}:8008/api/status"
         deadline = time.monotonic() + 120.0
         last_error = ""
@@ -1227,14 +1275,18 @@ done"""
             try:
                 with urllib.request.urlopen(suite_url, timeout=5.0) as response:
                     payload = response.read().decode("utf-8", errors="replace")
-                if response.status != 200 or '"status":"ok"' not in payload.replace(" ", ""):
+                if response.status != 200 or '"status":"ok"' not in payload.replace(
+                    " ", ""
+                ):
                     raise RuntimeError(
                         f"Suite API reported Jupyter unavailable: HTTP {response.status} {payload}"
                     )
                 with urllib.request.urlopen(public_url, timeout=5.0) as response:
                     if response.status == 200:
                         return
-                    raise RuntimeError(f"WebView Jupyter endpoint returned HTTP {response.status}")
+                    raise RuntimeError(
+                        f"WebView Jupyter endpoint returned HTTP {response.status}"
+                    )
             except Exception as exc:  # noqa: BLE001 - retry transient startup states
                 last_error = str(exc)
             time.sleep(5.0)

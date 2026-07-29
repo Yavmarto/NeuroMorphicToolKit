@@ -4,6 +4,8 @@ enum DeploymentPhase {
   queued,
   connecting,
   preflight,
+  bootstrappingAccess,
+  reconcilingExistingInstall,
   installingPrerequisites,
   uploadingAssets,
   pullingImages,
@@ -21,6 +23,9 @@ extension DeploymentPhaseWireName on DeploymentPhase {
         DeploymentPhase.queued => 'queued',
         DeploymentPhase.connecting => 'connecting',
         DeploymentPhase.preflight => 'preflight_running',
+        DeploymentPhase.bootstrappingAccess => 'bootstrapping_access',
+        DeploymentPhase.reconcilingExistingInstall =>
+          'reconciling_existing_install',
         DeploymentPhase.installingPrerequisites => 'installing_prerequisites',
         DeploymentPhase.uploadingAssets => 'uploading_assets',
         DeploymentPhase.pullingImages => 'pulling_images',
@@ -34,6 +39,36 @@ extension DeploymentPhaseWireName on DeploymentPhase {
         DeploymentPhase.failed => 'failed',
         DeploymentPhase.cancelled => 'cancelled',
       };
+}
+
+enum RemoteReinstallMode {
+  preserveData,
+  factoryReset,
+}
+
+/// Ephemeral administrator input for the one-action remote setup flow.
+///
+/// This type deliberately has no JSON serializer. Administrator credentials
+/// must remain in memory only and are replaced with a generated deploy key
+/// before a target is persisted.
+class RemoteServerSetupRequest {
+  const RemoteServerSetupRequest({
+    required this.host,
+    required this.adminUsername,
+    required this.containerEngine,
+    this.adminPassword = '',
+    this.adminPrivateKey = '',
+    this.sshPort = 22,
+    this.reinstallMode = RemoteReinstallMode.preserveData,
+  });
+
+  final String host;
+  final int sshPort;
+  final String adminUsername;
+  final String adminPassword;
+  final String adminPrivateKey;
+  final String containerEngine;
+  final RemoteReinstallMode reinstallMode;
 }
 
 class DeploymentRequest {
@@ -125,6 +160,12 @@ abstract class DeploymentService {
     required String rootPrivateKey,
     required String containerEngine,
   });
+
+  Future<DeploymentJob> setupRemoteServer(
+    RemoteServerSetupRequest request,
+  ) {
+    throw UnsupportedError('One-action remote setup is not supported.');
+  }
 
   Future<DeploymentJob> deploy(DeploymentRequest request);
 

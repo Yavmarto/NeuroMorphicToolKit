@@ -57,7 +57,15 @@ class DeploymentPersistence {
     DeploymentTarget target,
     DeploymentRequest request,
   ) async {
-    final targets = (await loadTargets()).toList();
+    final targets = (await loadTargets())
+        .where(
+          (candidate) =>
+              candidate.id == target.id ||
+              target.targetType != 'remote_host' ||
+              candidate.targetType != 'remote_host' ||
+              candidate.host != target.host,
+        )
+        .toList();
     final index = targets.indexWhere((candidate) => candidate.id == target.id);
     if (index == -1) {
       targets.add(target);

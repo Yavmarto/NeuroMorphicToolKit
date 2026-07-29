@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/backend_deployment.dart';
@@ -17,14 +18,19 @@ class _FakeDeploymentService implements DeploymentService {
       degradedFindings: [],
       suggestedRecovery: '',
     ),
+    this.snapshot = const DeploymentSnapshot(),
   });
 
   final DeploymentPreflightResult preflightResult;
+  final DeploymentSnapshot snapshot;
   int deployCalls = 0;
   DeploymentRequest? lastDeployRequest;
+  int setupCalls = 0;
+  RemoteServerSetupRequest? lastSetupRequest;
+  final List<String> cancelledJobIds = <String>[];
 
   @override
-  Future<DeploymentSnapshot> load() async => const DeploymentSnapshot();
+  Future<DeploymentSnapshot> load() async => snapshot;
 
   @override
   Future<DeploymentPreflightResult> preflight(
@@ -49,6 +55,23 @@ class _FakeDeploymentService implements DeploymentService {
   }
 
   @override
+  Future<DeploymentJob> setupRemoteServer(
+    RemoteServerSetupRequest request,
+  ) async {
+    setupCalls++;
+    lastSetupRequest = request;
+    return const DeploymentJob(
+      id: 'remote-setup-job',
+      targetId: 'remote-192-168-2-34',
+      mode: 'docker',
+      stage: 'queued',
+      percent: 0,
+      stageLabel: 'Queued',
+      logs: [],
+    );
+  }
+
+  @override
   Future<RemoteUserBootstrapResult> bootstrapRemoteUser({
     required String host,
     required int sshPort,
@@ -61,13 +84,20 @@ class _FakeDeploymentService implements DeploymentService {
   }
 
   @override
-  Future<DeploymentJob> cancelJob(String jobId) {
-    throw UnimplementedError();
+  Future<DeploymentJob> cancelJob(String jobId) async {
+    cancelledJobIds.add(jobId);
+    final activeJob = snapshot.activeJob;
+    if (activeJob == null || activeJob.id != jobId) {
+      throw StateError('Job $jobId was not found.');
+    }
+    return activeJob.copyWith(stage: 'cancelled');
   }
 
   @override
-  Future<DeploymentJob> fetchJob(String jobId) {
-    throw UnimplementedError();
+  Future<DeploymentJob> fetchJob(String jobId) async {
+    final activeJob = snapshot.activeJob;
+    if (activeJob != null && activeJob.id == jobId) return activeJob;
+    throw StateError('Job $jobId was not found.');
   }
 
   @override
@@ -316,6 +346,341 @@ void main() {
     expect(find.text('This machine'), findsNothing);
     expect(find.text('Remote server'), findsOneWidget);
     expect(find.text('Existing Kubernetes cluster'), findsOneWidget);
+    expect(find.text('Standalone'), findsNothing);
+    expect(find.text('Docker'), findsOneWidget);
+    expect(find.text('Podman'), findsOneWidget);
+  });
+
+  testWidgets('remote setup uses one action with ephemeral administrator input',
+      (tester) async {
+    final service = _FakeDeploymentService();
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: false, deploymentService: service),
+    );
+    await tester.pump();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(1), '192.168.2.34');
+    await tester.enterText(fields.at(3), 'temporary-admin-secret');
+    final setupButton =
+        find.byKey(const Key('backend-setup-set-up-and-connect'));
+    await tester.ensureVisible(setupButton);
+    await tester.tap(setupButton);
+    await tester.pumpAndSettle();
+
+    expect(service.setupCalls, 1);
+    expect(service.lastSetupRequest?.host, '192.168.2.34');
+    expect(service.lastSetupRequest?.adminUsername, 'root');
+    expect(service.lastSetupRequest?.adminPassword, 'temporary-admin-secret');
+    expect(service.lastSetupRequest?.containerEngine, 'docker');
+    expect(
+      service.lastSetupRequest?.reinstallMode,
+      RemoteReinstallMode.preserveData,
+    );
+  });
+
+  testWidgets('factory reset requires destructive confirmation',
+      (tester) async {
+    final service = _FakeDeploymentService();
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: false, deploymentService: service),
+    );
+    await tester.pump();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(1), '192.168.2.34');
+    await tester.enterText(fields.at(3), 'temporary-admin-secret');
+    final factoryReset = find.text('Factory reset server data');
+    await tester.ensureVisible(factoryReset);
+    await tester.tap(factoryReset);
+    await tester.pump();
+    final setupButton =
+        find.byKey(const Key('backend-setup-set-up-and-connect'));
+    await tester.ensureVisible(setupButton);
+    await tester.tap(setupButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Factory reset server data?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(service.setupCalls, 0);
+  });
+
+  testWidgets(
+      'failed setup explains the cause and keeps prior connection contextual',
+      (tester) async {
+    MethodCall? clipboardCall;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') clipboardCall = call;
+      return null;
+    });
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    const job = DeploymentJob(
+      id: 'failed-setup',
+      targetId: 'remote-192-168-2-34',
+      mode: 'docker',
+      stage: 'failed',
+      percent: 100,
+      stageLabel: 'Podman installations could not be inspected',
+      logs: <String>[
+        'Checking administrator access',
+        'Removing existing NMTK containers',
+      ],
+      terminalOutput: <String>[
+        r'$ podman info (user: deploy)',
+        '✗ podman info failed (exit 125)',
+        '  cannot connect to Podman socket',
+      ],
+      failureDetails: DeploymentFailureDetails(
+        code: 'podman_inspection_failed',
+        phase: 'reconciling_existing_install',
+        summary: 'Podman installations could not be inspected',
+        recovery: 'Ensure Podman is available for each server user and retry.',
+        technicalDetails: 'podman info returned exit status 125',
+        exitCode: 29,
+        existingConnectionReachable: true,
+      ),
+    );
+    final service = _FakeDeploymentService(
+      snapshot: const DeploymentSnapshot(
+        activeJob: job,
+        isReady: true,
+      ),
+    );
+
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: false, deploymentService: service),
+    );
+    await tester.pump();
+
+    expect(
+      find.text('Podman installations could not be inspected'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'The reinstall failed, but the existing server is still connected.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Deployed'), findsNothing);
+
+    final details =
+        find.byKey(const Key('deployment-view-details-failed-setup'));
+    await tester.ensureVisible(details);
+    await tester.tap(details);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Raw SSH output — 192.168.2.34'), findsOneWidget);
+    expect(
+      find.textContaining('cannot connect to Podman socket'),
+      findsOneWidget,
+    );
+    expect(find.text('Copy output'), findsOneWidget);
+    await tester.tap(find.text('Copy output'));
+    await tester.pumpAndSettle();
+    expect(
+      clipboardCall?.arguments.toString(),
+      contains(r'$ podman info (user: deploy)'),
+    );
+  });
+
+  testWidgets(
+      'active setup shows simple progress while raw commands stay hidden',
+      (tester) async {
+    final job = DeploymentJob(
+      id: 'active-setup',
+      targetId: 'remote-192-168-2-34',
+      mode: 'podman',
+      stage: 'bootstrapping_access',
+      percent: 17,
+      stageLabel: 'Preparing the NMTK deployment account',
+      logs: const ['Preparing the NMTK deployment account'],
+      terminalOutput: const [
+        r'$ systemctl --user enable podman.socket',
+        'Created symlink podman.socket',
+      ],
+      updatedAt: DateTime.now().subtract(const Duration(seconds: 4)),
+      activeOperation: DeploymentActiveOperation(
+        label: 'Verifying rootless Podman API',
+        startedAt: DateTime.now().subtract(const Duration(seconds: 7)),
+        timeoutSeconds: 20,
+        automaticRecovery: true,
+      ),
+    );
+    final service = _FakeDeploymentService(
+      snapshot: DeploymentSnapshot(activeJob: job),
+    );
+
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: false, deploymentService: service),
+    );
+    await tester.pump();
+
+    final progress = find.textContaining(
+      'Automatic recovery · Verifying rootless Podman API',
+    );
+    expect(progress, findsOneWidget);
+    final firstText = tester.widget<Text>(progress).data!;
+    final firstElapsed =
+        int.parse(RegExp(r'(\d+)s elapsed').firstMatch(firstText)!.group(1)!);
+    final laterText = BackendSetupForm.operationProgressLabelForTesting(
+      job.activeOperation!,
+      job.activeOperation!.startedAt.add(const Duration(seconds: 9)),
+    );
+    final laterElapsed =
+        int.parse(RegExp(r'(\d+)s elapsed').firstMatch(laterText)!.group(1)!);
+    expect(laterElapsed, greaterThan(firstElapsed));
+    expect(laterText, endsWith('up to 20s'));
+    expect(
+      BackendSetupForm.operationProgressLabelForTesting(
+        job.activeOperation!,
+        job.activeOperation!.startedAt.add(const Duration(seconds: 20)),
+      ),
+      'Automatic recovery · Verifying rootless Podman API · '
+      'timeout reached · stopping safely',
+    );
+    expect(
+      find.text(r'$ systemctl --user enable podman.socket'),
+      findsNothing,
+    );
+    expect(find.text('View raw SSH output'), findsOneWidget);
+  });
+
+  testWidgets('a setup that stopped reporting says so instead of showing 17%',
+      (tester) async {
+    // The reported bug: the job sat at 17% with a live progress bar forever.
+    // A job whose last real progress is older than the staleness budget must
+    // read as stopped, and must offer a way out.
+    final job = DeploymentJob(
+      id: 'stalled-setup',
+      targetId: 'remote-192-168-2-34',
+      mode: 'podman',
+      stage: 'bootstrapping_access',
+      percent: 17,
+      stageLabel: 'Preparing the NMTK deployment account',
+      logs: const ['Preparing the NMTK deployment account'],
+      updatedAt: DateTime.now(),
+      lastProgressAt: DateTime.now().subtract(const Duration(minutes: 10)),
+    );
+    final service = _FakeDeploymentService(
+      snapshot: DeploymentSnapshot(activeJob: job),
+    );
+
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: false, deploymentService: service),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      find.textContaining('Server setup stopped responding at 17%'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('deployment-stalled-reason-stalled-setup')),
+      findsOneWidget,
+    );
+    expect(
+      find.text('17% — Preparing the NMTK deployment account'),
+      findsNothing,
+    );
+    expect(find.text('Last step: Preparing the NMTK deployment account'),
+        findsOneWidget);
+    expect(find.text('View raw SSH output'), findsOneWidget);
+    expect(find.byKey(const Key('backend-setup-retry')), findsOneWidget);
+  });
+
+  testWidgets(
+      'retrying a stalled setup re-asks only for the administrator '
+      'credential', (tester) async {
+    final job = DeploymentJob(
+      id: 'stalled-setup',
+      targetId: 'remote-192-168-2-34',
+      mode: 'podman',
+      stage: 'bootstrapping_access',
+      percent: 17,
+      stageLabel: 'Preparing the NMTK deployment account',
+      logs: const [],
+      updatedAt: DateTime.now(),
+      lastProgressAt: DateTime.now().subtract(const Duration(minutes: 10)),
+    );
+    final service = _FakeDeploymentService(
+      snapshot: DeploymentSnapshot(activeJob: job),
+    );
+
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: false, deploymentService: service),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(1), '192.168.2.34');
+    await tester.pump();
+
+    final retry = find.byKey(const Key('backend-setup-retry'));
+    await tester.ensureVisible(retry);
+    await tester.tap(retry);
+    await tester.pumpAndSettle();
+
+    // The administrator credential is never persisted, so retrying has to ask
+    // for it — but it must say that instead of failing silently.
+    expect(service.setupCalls, 0);
+    expect(
+      find.textContaining('Enter the administrator password again to retry'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(fields.at(3), 'temporary-admin-secret');
+    await tester.pump();
+    await tester.ensureVisible(retry);
+    await tester.tap(retry);
+    await tester.pumpAndSettle();
+
+    expect(service.setupCalls, 1);
+    expect(service.cancelledJobIds, const <String>['stalled-setup']);
+    expect(service.lastSetupRequest?.host, '192.168.2.34');
+    expect(service.lastSetupRequest?.adminPassword, 'temporary-admin-secret');
+    expect(
+      service.lastSetupRequest?.reinstallMode,
+      RemoteReinstallMode.preserveData,
+    );
+  });
+
+  testWidgets('confirmed Factory Reset is disarmed before setup starts',
+      (tester) async {
+    final service = _FakeDeploymentService();
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: false, deploymentService: service),
+    );
+    await tester.pump();
+
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(1), '192.168.2.34');
+    await tester.enterText(fields.at(3), 'temporary-admin-secret');
+    final factoryReset = find.text('Factory reset server data');
+    await tester.ensureVisible(factoryReset);
+    await tester.tap(factoryReset);
+    await tester.pump();
+    final setupButton =
+        find.byKey(const Key('backend-setup-set-up-and-connect'));
+    await tester.ensureVisible(setupButton);
+    await tester.tap(setupButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Erase and reinstall'));
+    await tester.pumpAndSettle();
+
+    expect(service.setupCalls, 1);
+    expect(
+      service.lastSetupRequest?.reinstallMode,
+      RemoteReinstallMode.factoryReset,
+    );
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
   });
 
   testWidgets(
@@ -373,7 +738,7 @@ void main() {
     await tester.pump();
 
     final input = find.byType(TextField).first;
-    await tester.enterText(input, 'http://192.168.2.51:8090');
+    await tester.enterText(input, '192.168.2.51');
     await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
     await tester.pumpAndSettle();
 
@@ -384,7 +749,40 @@ void main() {
     expect(find.textContaining('could not be reached'), findsOneWidget);
     expect(
       tester.widget<TextField>(input).controller!.text,
+      '192.168.2.51',
+    );
+  });
+
+  testWidgets('quick connect rejects URLs and hostnames before connecting',
+      (tester) async {
+    var callbackCalled = false;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          deploymentServiceProvider.overrideWithValue(_FakeDeploymentService()),
+        ],
+        child: MaterialApp(
+          home: BackendSetupScreen(
+            localDeploymentAvailable: true,
+            onQuickConnect: (_) async {
+              callbackCalled = true;
+              return null;
+            },
+            onDeploymentReady: (_) async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.enterText(
+      find.byType(TextField).first,
       'http://192.168.2.51:8090',
     );
+    await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
+    await tester.pumpAndSettle();
+
+    expect(callbackCalled, isFalse);
+    expect(find.textContaining('Enter an IPv4 address'), findsOneWidget);
   });
 }

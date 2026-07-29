@@ -16,9 +16,44 @@ def test_remote_deploy_repairs_workspace_volume_before_unprivileged_start() -> N
     assert "--cap-add FOWNER" not in install_script
     assert "chown -R appuser:appuser /app/state /app/data" in install_script
     assert "continuing because backend deployment is unaffected" in install_script
-    assert "compose ps -a" in install_script
-    assert "compose logs --tail 200 suite_api launcher-control" in install_script
+    # Diagnostics run through compose_with_timeout so a wedged container runtime
+    # cannot turn failure capture into its own hang.
+    assert 'compose_with_timeout "$DIAGNOSTICS_TIMEOUT" ps -a' in install_script
+    assert (
+        'compose_with_timeout "$DIAGNOSTICS_TIMEOUT" \\\n'
+        "    logs --tail 200 suite_api launcher-control"
+    ) in install_script
     assert "Suite API did not become ready; diagnostics captured." in install_script
+    assert "cleanup_runtime docker" in install_script
+    assert "cleanup_runtime podman" in install_script
+    assert "reconciling_existing_install" in install_script
+    assert "Existing %s installation is not accessible" in install_script
+    assert 'if [ "$CLEAN_INSTALL" = "true" ]' in install_script
+    assert '"$runtime" volume rm -f $volumes' in install_script
+    assert "Factory reset removing" in install_script
+    assert "Preserving NMTK server data" in install_script
+
+
+def test_remote_install_bounds_every_registry_and_runtime_step() -> None:
+    """No install step may stall the app on an unchanging percentage."""
+    install_script = (DEPLOYMENT_ASSETS / "install.sh").read_text()
+
+    # Each long step runs under an explicit timeout instead of waiting forever.
+    assert 'compose_with_timeout "$DOWN_TIMEOUT" "${DOWN_ARGS[@]}"' in install_script
+    assert 'compose_with_timeout "$PULL_TIMEOUT" pull' in install_script
+    assert 'compose_with_timeout "$UP_TIMEOUT" up -d --remove-orphans' in install_script
+    assert "timeout --signal=TERM --kill-after=30s" in install_script
+
+    # A timeout is reported as an actionable failure, not left as progress.
+    assert "Downloading the backend images timed out after" in install_script
+    assert "Starting the backend containers timed out after" in install_script
+    assert "Stopping the existing NMTK containers timed out after" in install_script
+    assert "fail_stage" in install_script
+
+    # The pull republishes its stage so the client can tell slow from dead.
+    assert "Pulling backend images ($((SECONDS - pull_started))s elapsed)" in (
+        install_script
+    )
 
 
 def test_production_suite_api_has_a_writable_ephemeral_notebook_mirror() -> None:

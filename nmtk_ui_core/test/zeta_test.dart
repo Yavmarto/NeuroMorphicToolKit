@@ -6,13 +6,18 @@ void main() {
   testWidgets('Zeta colors test', (WidgetTester tester) async {
     await tester.pumpWidget(
       ZetaProvider(
-        child: Builder(
-          builder: (context) {
-            final zetaColors = Zeta.of(context).colors;
-            print(zetaColors.blue[10]);
-            print(zetaColors.blue[100]);
-            return Container();
-          },
+        builder: (context, lightTheme, darkTheme, themeMode) => MaterialApp(
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeMode,
+          home: Builder(
+            builder: (context) {
+              final zetaColors = Zeta.of(context).colors;
+              expect(zetaColors.mainPrimary, isA<Color>());
+              expect(zetaColors.mainDefault, isA<Color>());
+              return Container();
+            },
+          ),
         ),
       ),
     );

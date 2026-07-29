@@ -62,7 +62,56 @@ def redact_text(value: str) -> str:
         r"(?i)(api[-_]?key=)([^\s]+)",
     ):
         redacted = re.sub(pattern, r"\1<redacted>", redacted)
+    redacted = re.sub(
+        r"-----BEGIN (?:OPENSSH |RSA |EC )?PRIVATE KEY-----[\s\S]*?"
+        r"-----END (?:OPENSSH |RSA |EC )?PRIVATE KEY-----",
+        "<redacted private key>",
+        redacted,
+    )
+    redacted = re.sub(
+        r"NMTK_DEPLOY_PRIVATE_KEY_B64=[A-Za-z0-9+/=]+",
+        "NMTK_DEPLOY_PRIVATE_KEY_B64=<redacted>",
+        redacted,
+    )
+    redacted = re.sub(
+        r"(?i)(authorization:\s*(?:bearer|basic)\s+)([^\s]+)",
+        r"\1<redacted>",
+        redacted,
+    )
+    redacted = re.sub(
+        r"(?i)([a-z][a-z0-9+.-]*://)([^/\s:@]+):([^@\s/]+)@",
+        r"\1<redacted>@",
+        redacted,
+    )
+    redacted = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", redacted)
+    redacted = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", redacted)
     return redacted
+
+
+def bounded_terminal_output(lines: list[str]) -> list[str]:
+    max_lines = 2_000
+    max_characters = 512_000
+    truncation_marker = "[client: earlier SSH output truncated]"
+    already_truncated = any(str(line) == truncation_marker for line in lines)
+    sanitized = [
+        redact_text(str(line)) for line in lines if str(line) != truncation_marker
+    ]
+    truncated = already_truncated or len(sanitized) > max_lines
+    bounded = sanitized[-max_lines:]
+    while bounded and sum(len(line) + 1 for line in bounded) > max_characters:
+        bounded.pop(0)
+        truncated = True
+    if truncated:
+        while len(bounded) >= max_lines:
+            bounded.pop(0)
+        while (
+            bounded
+            and sum(len(line) + 1 for line in bounded) + len(truncation_marker) + 1
+            > max_characters
+        ):
+            bounded.pop(0)
+        bounded.insert(0, truncation_marker)
+    return bounded
 
 
 def redact_payload(payload: Any) -> Any:
@@ -99,9 +148,7 @@ def encode_remote_script(
     pipeline = f"echo {encoded} | base64 -d | bash"
     if not env:
         return pipeline
-    assignments = " ".join(
-        f"{key}={shlex.quote(value)}" for key, value in env.items()
-    )
+    assignments = " ".join(f"{key}={shlex.quote(value)}" for key, value in env.items())
     return f"env {assignments} bash -c {shlex.quote(pipeline)}"
 
 
@@ -235,6 +282,7 @@ fi
 
 echo "[nmtk-podman] rootless Podman API ready at $DOCKER_HOST"
 """
+
 
 @dataclass(frozen=True)
 class DeploymentCapability:
@@ -474,11 +522,14 @@ class DeploymentJob:
     stage_label: str = "Queued"
     last_log_line: str = ""
     logs: list[str] = field(default_factory=list)
+    terminal_output: list[str] = field(default_factory=list)
+    requires_ephemeral_administrator: bool = False
     started_at: str = field(default_factory=utc_now_iso)
     updated_at: str = field(default_factory=utc_now_iso)
     blocking_input_needed: str = ""
     terminal_outcome: str = ""
     error: str = ""
+    failure_details: dict[str, Any] | None = None
     events: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
@@ -492,11 +543,22 @@ class DeploymentJob:
             stage_label=str(payload.get("stageLabel") or "Queued"),
             last_log_line=str(payload.get("lastLogLine") or ""),
             logs=[str(item) for item in payload.get("logs", [])],
+            terminal_output=bounded_terminal_output(
+                list(payload.get("terminalOutput", []))
+            ),
+            requires_ephemeral_administrator=bool(
+                payload.get("requiresEphemeralAdministrator", False)
+            ),
             started_at=str(payload.get("startedAt") or utc_now_iso()),
             updated_at=str(payload.get("updatedAt") or utc_now_iso()),
             blocking_input_needed=str(payload.get("blockingInputNeeded") or ""),
             terminal_outcome=str(payload.get("terminalOutcome") or ""),
             error=str(payload.get("error") or ""),
+            failure_details=(
+                redact_payload(payload["failureDetails"])
+                if isinstance(payload.get("failureDetails"), dict)
+                else None
+            ),
             events=[
                 item for item in payload.get("events", []) if isinstance(item, dict)
             ],
@@ -513,10 +575,17 @@ class DeploymentJob:
             "stageLabel": self.stage_label,
             "lastLogLine": self.last_log_line,
             "logs": list(self.logs[-200:]),
+            "terminalOutput": bounded_terminal_output(self.terminal_output),
+            "requiresEphemeralAdministrator": (self.requires_ephemeral_administrator),
             "startedAt": self.started_at,
             "updatedAt": self.updated_at,
             "blockingInputNeeded": self.blocking_input_needed,
             "terminalOutcome": self.terminal_outcome,
             "error": self.error,
+            **(
+                {"failureDetails": redact_payload(self.failure_details)}
+                if self.failure_details is not None
+                else {}
+            ),
             "events": list(self.events[-200:]),
         }

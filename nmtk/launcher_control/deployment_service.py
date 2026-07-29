@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import threading
+import time
+import urllib.request
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -14,6 +16,7 @@ from .deployment_contracts import (
     DeploymentJob,
     DeploymentTarget,
     TERMINAL_JOB_STAGES,
+    bounded_terminal_output,
     redact_payload,
     redact_text,
     utc_now_iso,
@@ -30,6 +33,8 @@ class DeploymentService:
         self._lock = threading.RLock()
         self._cancelled: set[str] = set()
         self._threads: dict[str, threading.Thread] = {}
+        self._log_persistence_timers: dict[str, threading.Timer] = {}
+        self._remote_readiness_cache: tuple[str, float, bool] | None = None
 
     def list_targets(self) -> list[dict[str, Any]]:
         return self._store.list_targets()
@@ -54,7 +59,46 @@ class DeploymentService:
         ):
             return True
         selected = self._store.selected_target()
-        return bool(selected and selected.get("lastReadiness") == "ready")
+        if not selected or selected.get("lastReadiness") != "ready":
+            return False
+        if selected.get("targetType") != "remote_host":
+            return True
+
+        host = str(selected.get("host") or "").strip()
+        backend_port = int(selected.get("backendPort") or 9000)
+        target_id = str(selected.get("id") or "")
+        cache_key = f"{target_id}:{host}:{backend_port}"
+        cached = self._remote_readiness_cache
+        now = time.monotonic()
+        if cached and cached[0] == cache_key and now - cached[1] < 5:
+            return cached[2]
+
+        urls = (
+            f"http://{host}:{backend_port}/api/suite/health",
+            f"http://{host}:8090/health",
+            f"http://{host}:{backend_port}/api/neurocnl/health",
+        )
+        ready = bool(host and target_id)
+        if ready:
+            try:
+                for url in urls:
+                    with urllib.request.urlopen(url, timeout=1.5) as response:
+                        if response.status != 200:
+                            ready = False
+                            break
+            except (OSError, ValueError):
+                ready = False
+        self._remote_readiness_cache = (cache_key, now, ready)
+        if not ready and target_id:
+            self._store.update_target_readiness(
+                target_id,
+                readiness="failed",
+                failure_reason=(
+                    "Required client-facing services are not reachable from "
+                    f"launcher control at {host}."
+                ),
+            )
+        return ready
 
     def bootstrap_remote_user(self, payload: dict[str, Any]) -> dict[str, Any]:
         """One-time root SSH bootstrap: create a dedicated non-root deploy user.
@@ -113,7 +157,14 @@ class DeploymentService:
         return job.to_json()
 
     def get_job(self, job_id: str) -> dict[str, Any]:
-        return self._store.get_job(job_id).to_json()
+        job = self._store.get_job(job_id)
+        if job.stage in TERMINAL_JOB_STAGES:
+            with self._lock:
+                thread = self._threads.get(job_id)
+            if thread is not None and thread is not threading.current_thread():
+                thread.join(timeout=1)
+                job = self._store.get_job(job_id)
+        return job.to_json()
 
     def cancel_job(self, job_id: str) -> dict[str, Any]:
         with self._lock:
@@ -177,12 +228,25 @@ class DeploymentService:
             job.stage_label = "Ready"
             job.terminal_outcome = "completed"
             job.updated_at = utc_now_iso()
+            self._cancel_log_persistence(job.id)
             self._store.save_job(job)
         except Exception as exc:  # noqa: BLE001
-            self._emit(job, "failed", str(exc), job.percent)
-            job.error = str(exc)
+            failed_phase = job.stage
+            safe_error = redact_text(str(exc))
+            summary = self._failure_summary(failed_phase)
+            self._emit(job, "failed", summary, job.percent)
+            job.error = safe_error
+            job.failure_details = {
+                "code": "deployment_phase_failed",
+                "phase": failed_phase,
+                "summary": summary,
+                "recovery": safe_error,
+                "technicalDetails": safe_error[-8000:],
+                "existingConnectionReachable": self.is_ready(),
+            }
             job.terminal_outcome = "failed"
             job.updated_at = utc_now_iso()
+            self._cancel_log_persistence(job.id)
             self._store.save_job(job)
             self._store.update_target_readiness(
                 target.id,
@@ -191,8 +255,18 @@ class DeploymentService:
                     if str(exc).startswith("degraded optional capability:")
                     else "failed"
                 ),
-                failure_reason=str(exc),
+                failure_reason=safe_error,
             )
+
+    @staticmethod
+    def _failure_summary(stage: str) -> str:
+        return {
+            "installing": "The selected container engine could not be prepared",
+            "uploading_assets": "The deployment bundle could not be uploaded",
+            "pulling_images": "The NMTK images could not be downloaded",
+            "starting_containers": "The NMTK services could not be started",
+            "verifying": "Required NMTK services did not become reachable",
+        }.get(stage, "Server deployment failed")
 
     def _emit(
         self, job: DeploymentJob, stage: str, message: str, percent: float
@@ -212,6 +286,7 @@ class DeploymentService:
         job.logs.append(message)
         job.events.append(event.to_json())
         job.updated_at = utc_now_iso()
+        self._cancel_log_persistence(job.id)
         self._store.save_job(job)
 
     def _emit_log(self, job: DeploymentJob, line: str) -> None:
@@ -225,8 +300,8 @@ class DeploymentService:
         """
         if self._is_cancelled(job.id) and job.stage not in TERMINAL_JOB_STAGES:
             raise RuntimeError("Deployment cancelled")
-        clean = redact_text(line.strip())
-        if not clean:
+        clean = redact_text(line.rstrip("\r\n"))
+        if not clean.strip():
             return
         event = DeploymentEvent(
             job_id=job.id,
@@ -236,9 +311,35 @@ class DeploymentService:
         )
         job.last_log_line = clean
         job.logs.append(clean)
+        job.terminal_output = bounded_terminal_output([*job.terminal_output, clean])
         job.events.append(event.to_json())
         job.updated_at = utc_now_iso()
+        self._schedule_log_persistence(job)
+
+    def _schedule_log_persistence(self, job: DeploymentJob) -> None:
+        """Persist a growing transcript at most once per debounce window."""
+        with self._lock:
+            if job.id in self._log_persistence_timers:
+                return
+            timer = threading.Timer(
+                0.3,
+                self._persist_debounced_log,
+                args=(job,),
+            )
+            timer.daemon = True
+            self._log_persistence_timers[job.id] = timer
+            timer.start()
+
+    def _persist_debounced_log(self, job: DeploymentJob) -> None:
+        with self._lock:
+            self._log_persistence_timers.pop(job.id, None)
         self._store.save_job(job)
+
+    def _cancel_log_persistence(self, job_id: str) -> None:
+        with self._lock:
+            timer = self._log_persistence_timers.pop(job_id, None)
+        if timer is not None:
+            timer.cancel()
 
     def _is_cancelled(self, job_id: str) -> bool:
         with self._lock:
