@@ -42,6 +42,7 @@ help:
 	@echo "  make docker-ex-all-a REMOTE_HOST=user@ip - Same as docker-ex-a (alias)"
 	@echo "  make docker-ex-all-i REMOTE_HOST=user@ip - Same as docker-ex-i (alias)"
 	@echo "  make docker-ex-down REMOTE_HOST=user@ip - Stop and remove remote Docker containers"
+	@echo "  make backend-update           - Push source changes to the dev backend (no image rebuild)"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release VERSION=x.y.z    - Run the full release automation pipeline"
 	@echo "  make bump-version VERSION=x.y.z - Synchronize all versions across the monorepo"
@@ -284,6 +285,17 @@ dev-sync:
 	@echo "==> Restarting container processes if necessary (live-reload handles python changes automatically)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && LAUNCHER_CONTROL_PORT=$(LAUNCHER_CONTROL_PORT) JUPYTER_PUBLIC_URL=http://$$(echo $(REMOTE_HOST) | cut -d@ -f2):8008/lab docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d"
 	@echo "==> Dev backend synced."
+
+# The default dev backend (AGENTS.md, "Remote Testing Configuration").
+DEV_BACKEND_HOST ?= moosebuntu@192.168.2.51
+
+## Push source changes to the dev backend. Use this for Python/asset edits —
+## suite_api runs uvicorn --reload against a bind mount of the synced repo
+## (docker-compose.dev.yml), so the change is live without an image rebuild.
+## Reach for docker-ex-deploy only when a Dockerfile or a dependency changed.
+.PHONY: backend-update
+backend-update:
+	@$(MAKE) --no-print-directory dev-sync REMOTE_HOST=$(if $(REMOTE_HOST),$(REMOTE_HOST),$(DEV_BACKEND_HOST))
 
 docker-ex-a: secrets-init docker-ex-deploy
 	@$(MAKE) check-devices

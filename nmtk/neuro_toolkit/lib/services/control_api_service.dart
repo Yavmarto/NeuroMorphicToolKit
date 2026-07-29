@@ -174,6 +174,48 @@ class ControlApiService {
         normalized == '[::1]';
   }
 
+  /// Port suite_api listens on. The launcher control API is a different port
+  /// ([configuredPort]) on the same host.
+  static const int suiteApiPort = 9000;
+
+  /// Base URI of suite_api, derived from the launcher control host so that a
+  /// remote-endpoint setting is honoured. A loopback control host means the
+  /// backend is local too.
+  Uri get suiteApiBaseUri {
+    final isRemote = !isLoopbackHost(_baseUri.host);
+    return Uri(
+      scheme: isRemote && _baseUri.scheme.isNotEmpty ? _baseUri.scheme : 'http',
+      host: isRemote ? _baseUri.host : 'localhost',
+      port: suiteApiPort,
+    );
+  }
+
+  /// The release the running backend reports, or null when it cannot be read.
+  ///
+  /// `"dev"` is a real answer meaning "built from source, not a release" — the
+  /// caller must not offer an update against it. Null means the backend could
+  /// not be reached or is too old to report a version; either way, no update.
+  Future<String?> fetchBackendVersion() async {
+    try {
+      final response = await _client
+          .get(suiteApiBaseUri.replace(path: '/api/suite/health'))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) {
+        return null;
+      }
+      final decoded = await _readJsonResponse(response);
+      final version = decoded['version'];
+      if (version is! String || version.trim().isEmpty) {
+        return null;
+      }
+      return version.trim();
+    } catch (_) {
+      // Version reporting is strictly informational — a backend that cannot
+      // answer must never break the screen that asked.
+      return null;
+    }
+  }
+
   Uri _uri(String path) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
     return _baseUri.replace(path: normalizedPath);

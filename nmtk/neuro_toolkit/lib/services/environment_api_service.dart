@@ -98,7 +98,7 @@ class EnvironmentApiService {
   final ControlApiService _controlApi;
   final http.Client _client;
 
-  static const int _suiteApiPort = 9000;
+  static const int _suiteApiPort = ControlApiService.suiteApiPort;
   static const Duration _requestTimeout = Duration(seconds: 10);
 
   Uri _base() {
@@ -109,13 +109,9 @@ class EnvironmentApiService {
       final scheme = b.scheme.isEmpty ? 'http' : b.scheme;
       return Uri(scheme: scheme, host: host, port: _suiteApiPort);
     }
-    final control = _controlApi.baseUri;
-    final isRemote = !ControlApiService.isLoopbackHost(control.host);
-    return Uri(
-      scheme: isRemote && control.scheme.isNotEmpty ? control.scheme : 'http',
-      host: isRemote ? control.host : 'localhost',
-      port: _suiteApiPort,
-    );
+    // Single definition of "where suite_api is", shared with
+    // ControlApiService.fetchBackendVersion().
+    return _controlApi.suiteApiBaseUri;
   }
 
   Uri _uri(String path, [Map<String, String>? query]) =>

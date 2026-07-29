@@ -10,7 +10,27 @@ import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 part 'module_notifier.g.dart';
+
+/// Whether the last control-API poll reached the launcher backend. Drives the
+/// red/green dot on tool_view's server-connection button.
+///
+/// A Notifier rather than the shorter `StateProvider`: Riverpod 3 moved
+/// StateProvider into `package:flutter_riverpod/legacy.dart`, and this code is
+/// new — no reason to write it against an API upstream has already quarantined.
+/// Optimistic `true` on first build so the dot doesn't flash red before the
+/// first poll completes.
+class ServerConnectionStatus extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void set({required bool connected}) => state = connected;
+}
+
+final serverConnectionStatusProvider =
+    NotifierProvider<ServerConnectionStatus, bool>(ServerConnectionStatus.new);
 
 @Riverpod(keepAlive: true)
 class ModuleNotifier extends _$ModuleNotifier {
@@ -110,11 +130,13 @@ class ModuleNotifier extends _$ModuleNotifier {
   Future<void> _pollUpdates() async {
     if (_pollInFlight) return;
     _pollInFlight = true;
+    bool connectionSuccess = false;
     try {
       final controlApi = ref.read(controlApiServiceProvider);
       final settings = await controlApi.fetchSettings();
       final fetchedModules =
           await controlApi.fetchModules(refreshUpdates: false);
+      connectionSuccess = true;
 
       final currentState = state.value;
       if (currentState == null) return;
@@ -168,6 +190,9 @@ class ModuleNotifier extends _$ModuleNotifier {
       }).toList(growable: false);
       state = AsyncData(currentState.copyWith(modules: updatedModules));
     } finally {
+      ref
+          .read(serverConnectionStatusProvider.notifier)
+          .set(connected: connectionSuccess);
       _pollInFlight = false;
     }
   }

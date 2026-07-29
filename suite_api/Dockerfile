@@ -63,6 +63,13 @@ RUN addgroup --system app && adduser --system --ingroup app app \
 ENV HOME=/home/app
 ENV XDG_CACHE_HOME=/home/app/.cache
 ENV NMTK_REPO_ROOT=/repo
+# Stamped by .github/workflows/release-docker.yml so the running stack can
+# report which release it is (GET /api/suite/health). The default is what an
+# unstamped local/source build reports, and the app treats it as "not a
+# release" — i.e. never offer an in-app update against it.
+# Declared last so a version bump doesn't invalidate any earlier build layer.
+ARG NMTK_VERSION=dev
+ENV NMTK_VERSION=$NMTK_VERSION
 USER app
 EXPOSE 9000
 CMD ["uvicorn", "suite_api.main:app", "--host", "0.0.0.0", "--port", "9000"]

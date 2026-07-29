@@ -328,6 +328,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       key: const ValueKey<String>('backend-setup-form'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _buildUpdateBanner(tokens),
         _buildQuickConnectSection(tokens),
         SizedBox(height: tokens.sectionGap),
         _buildTargetSection(tokens),
@@ -1250,6 +1251,60 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         _isWorking = false;
       });
     }
+  }
+
+  /// One-tap backend update: validate, then redeploy in place.
+  ///
+  /// Reuses the ordinary validate-then-deploy path rather than adding a second
+  /// deployment route — `install.sh` already does `compose down` → `pull` →
+  /// `up -d`, which *is* an update. Validation is kept deliberately: it checks
+  /// SSH and the container engine before touching a backend that currently
+  /// works.
+  Future<void> _updateBackend() async {
+    // An update must never drop volumes — keeping workspaces and notebooks is
+    // the entire difference between this and a clean install.
+    if (_cleanInstall) {
+      setState(() => _cleanInstall = false);
+    }
+    await _runPreflight();
+    if (!mounted || !_hasFreshSuccessfulPreflight) return;
+    await _deploy();
+  }
+
+  Widget _buildUpdateBanner(NmtkShellTokens tokens) {
+    final update = ref.watch(backendUpdateProvider).value;
+    // Null covers every "nothing to offer" case — unreachable backend, source
+    // build, GitHub down, already current. Never guess at an update.
+    if (update == null) return const SizedBox.shrink();
+    return Padding(
+      padding: EdgeInsets.only(bottom: tokens.sectionGap),
+      child: NmtkSurfaceCard(
+        key: const Key('backend-update-available'),
+        child: Padding(
+          padding: EdgeInsets.all(tokens.sectionGap),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              NmtkStatusBanner(
+                title: 'Backend update available — ${update.version}',
+                content: const Text(
+                  'Your workspaces and notebooks are kept. The backend '
+                  'restarts while it updates, so finish any running training '
+                  'first.',
+                ),
+                tone: NmtkTone.info,
+              ),
+              SizedBox(height: tokens.compactGap),
+              ZetaButton(
+                key: const Key('backend-update-action'),
+                onPressed: _isWorking ? null : _updateBackend,
+                label: _isWorking ? 'Updating…' : 'Update backend',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _recoverJupyter() async {

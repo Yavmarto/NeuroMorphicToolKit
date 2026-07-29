@@ -108,3 +108,50 @@ To run the app, use:
 flutter run -d macos
 ```
 This runs the Flutter macOS app directly, matching the end-user experience as closely as possible. Do not suggest or use `make docker-ex-m` or `scripts/run_dev.sh` — those workflows are no longer used.
+
+## Updating the backend
+
+**End users never touch a terminal. There is no supported end-user path involving SSH,
+`make`, a shell script, `docker` commands, or systemd.** The app owns the entire lifecycle:
+Backend Setup deploys it, and an "Update backend" banner appears there when a newer release
+is published. Never write an end-user instruction that starts with a command.
+
+If an in-app path is missing for something a user needs, that is a gap to build in the app —
+not a reason to hand them a command.
+
+### End-user path (in-app only)
+
+The app pushes the compose bundle in `nmtk/neuro_toolkit/assets/deployment/` over SSH with
+`dartssh2` and runs `install.sh` on the host: `compose down` → `pull` → `up -d` →
+health-verify. Credentials and trusted host keys are already persisted per target in
+`FlutterSecureStorage`, so an update needs no re-entry and no re-typing of a host.
+
+- `client_deployment_service.dart:335` — `deploy(DeploymentRequest)`, the single entry point.
+- `backendUpdateProvider` (`lib/providers/riverpod_providers.dart`) — compares the release
+  the backend reports at `/api/suite/health` against the newest GitHub release, via
+  `UpdateService.checkForBackendUpdate`.
+- `cleanInstall` must stay **false** for an update. It is the flag that turns
+  `compose down` into `down -v`, which takes the user's workspaces and notebooks with it.
+- A backend built from source reports version `"dev"` and is deliberately never offered an
+  update — there is no release to compare it with.
+
+### Developer paths (terminal, unreleased source only)
+
+These exist to push *unreleased* source to a dev host. They are not end-user instructions.
+
+| Command | Use when | Cost |
+|---|---|---|
+| `make backend-update` | Python/asset edits (the common case) | rsync only; `suite_api` runs `uvicorn --reload` against a bind mount of the synced repo (`docker-compose.dev.yml`), so the change goes live without a rebuild |
+| `make docker-ex-deploy REMOTE_HOST=…` | a Dockerfile or a dependency changed | rebuilds every image |
+
+The dev backend runs on `192.168.2.51`, not locally — a local edit to any Python file under
+`neurocnl/backend/`, `suite_api/`, or `workers/` does nothing until it is synced there.
+`make backend-update` defaults to `moosebuntu@192.168.2.51`; override with `REMOTE_HOST=`.
+
+Two gotchas worth knowing before you debug a change that "didn't take":
+
+- **`neurocnl/neurocnl/` needs a rebuild.** The `neurocnl` package is pip-installed
+  non-editable into the image (`suite_api/Dockerfile:30,51`), so only `neurocnl/backend/`
+  is picked up from the bind mount. Prefer putting fixes on the `backend/` side.
+- **If a change still doesn't appear after a sync**, restart the `suite_api` container
+  before assuming the patch is wrong — that distinguishes a stale reloader from a bad fix.

@@ -120,6 +120,39 @@ class UpdateService {
     debugPrint('Differential update complete for ${module.id}');
   }
 
+  /// Newest backend release, or null when [runningVersion] is already current.
+  ///
+  /// The backend container images are built from the same monorepo tags as the
+  /// launcher (`.github/workflows/release-docker.yml` pushes on every `v*`), so
+  /// this asks the same repository as [checkForLauncherUpdate] — but compares
+  /// against the version the *backend* reports rather than the app's own, since
+  /// a current app can be pointed at a stale backend.
+  ///
+  /// Pass the value from `ControlApiService.fetchBackendVersion()`. A backend
+  /// built from source reports `"dev"`, which is deliberately never treated as
+  /// updatable: there is no release to compare it with.
+  Future<LauncherUpdate?> checkForBackendUpdate(String runningVersion) async {
+    if (runningVersion.trim().isEmpty || runningVersion.trim() == 'dev') {
+      return null;
+    }
+    try {
+      final release = await _fetchRepositoryRelease(
+        repositoryApiUri: _launcherRepositoryUri,
+        channel: channel,
+      );
+      if (release != null && isNewerVersion(runningVersion, release.version)) {
+        return LauncherUpdate(
+          version: release.version,
+          url: release.url,
+          releaseNotes: release.releaseNotes,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error checking for backend update: $e');
+    }
+    return null;
+  }
+
   static bool isNewerVersion(String current, String remote) {
     return _compareVersions(remote, current) > 0;
   }

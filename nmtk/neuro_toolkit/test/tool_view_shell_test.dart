@@ -206,7 +206,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // Verify button identifies the connected server.
-    expect(find.text('Connected: 192.168.2.51:8090'), findsOneWidget);
+    expect(find.text('192.168.2.51'), findsOneWidget);
 
     // Tap button to open dismissable popup containing the full setup screen
     await tester.tap(find.byTooltip('Server Connection'));

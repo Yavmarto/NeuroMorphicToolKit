@@ -3,6 +3,7 @@ GET /api/suite/health  — suite_api's own health.
 GET /api/suite/health/modules — aggregated health of all module backends.
 """
 import asyncio
+import os
 import time
 from typing import Any
 
@@ -12,6 +13,12 @@ from fastapi import APIRouter
 from suite_api.config import settings
 
 router = APIRouter()
+
+# Stamped into the image by .github/workflows/release-docker.yml (see
+# suite_api/Dockerfile's NMTK_VERSION ARG). "dev" means a local/source build:
+# the launcher reads that as "not a release" and never offers an in-app update
+# against it, since there is no release to compare with.
+BACKEND_VERSION = os.environ.get("NMTK_VERSION", "dev").strip() or "dev"
 
 # Probe suite_api's own in-process domain health endpoints.
 # After consolidation the standalone module services no longer exist;
@@ -29,7 +36,7 @@ MODULE_URLS: dict[str, str] = {
 
 @router.get("/health")
 async def suite_health() -> dict[str, str]:
-    return {"status": "ok", "service": "suite_api"}
+    return {"status": "ok", "service": "suite_api", "version": BACKEND_VERSION}
 
 
 @router.get("/health/modules")

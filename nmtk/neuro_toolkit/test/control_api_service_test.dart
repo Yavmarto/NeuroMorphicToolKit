@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 
 void main() {
@@ -74,5 +78,95 @@ void main() {
       settings.akidaHosts.single.controlApiUrl,
       'http://192.168.2.51:8090',
     );
+  });
+
+  group('suite API address', () {
+    ControlApiService serviceAt(String controlBaseUrl, {http.Client? client}) =>
+        ControlApiService(
+          baseUri: Uri.parse(controlBaseUrl),
+          client: client ?? MockClient((_) async => http.Response('{}', 200)),
+        );
+
+    test('a remote launcher host implies a remote backend', () {
+      expect(
+        serviceAt('http://192.168.2.51:8090').suiteApiBaseUri.toString(),
+        'http://192.168.2.51:9000',
+      );
+    });
+
+    test('a loopback launcher host implies a local backend', () {
+      expect(
+        serviceAt('http://127.0.0.1:8090').suiteApiBaseUri.toString(),
+        'http://localhost:9000',
+      );
+    });
+
+    test('the launcher scheme carries over to a remote backend', () {
+      expect(
+        serviceAt('https://backend.example:8443').suiteApiBaseUri.toString(),
+        'https://backend.example:9000',
+      );
+    });
+  });
+
+  group('ControlApiService.fetchBackendVersion', () {
+    Future<String?> versionFrom(http.Response Function(Uri) respond) {
+      return ControlApiService(
+        baseUri: Uri.parse('http://192.168.2.51:8090'),
+        client: MockClient((http.Request request) async => respond(request.url)),
+      ).fetchBackendVersion();
+    }
+
+    test('reads the version the backend reports', () async {
+      expect(
+        await versionFrom(
+          (uri) {
+            expect(uri.toString(), 'http://192.168.2.51:9000/api/suite/health');
+            return http.Response(
+              jsonEncode(<String, String>{
+                'status': 'ok',
+                'service': 'suite_api',
+                'version': 'v1.2.0',
+              }),
+              200,
+            );
+          },
+        ),
+        'v1.2.0',
+      );
+    });
+
+    test('returns null for a backend too old to report a version', () async {
+      // Pre-version-stamping backends answer health without the field; that is
+      // "unknown", not an error, and must not surface an update prompt.
+      expect(
+        await versionFrom(
+          (_) => http.Response(
+            jsonEncode(
+                <String, String>{'status': 'ok', 'service': 'suite_api'}),
+            200,
+          ),
+        ),
+        isNull,
+      );
+    });
+
+    test('returns null when the backend is unreachable or erroring', () async {
+      expect(await versionFrom((_) => http.Response('nope', 502)), isNull);
+      expect(
+        await ControlApiService(
+          baseUri: Uri.parse('http://192.168.2.51:8090'),
+          client: MockClient((_) async => throw http.ClientException('down')),
+        ).fetchBackendVersion(),
+        isNull,
+      );
+    });
+
+    test('returns null on a malformed body', () async {
+      expect(
+        await versionFrom((_) => http.Response('not json', 200)),
+        isNull,
+      );
+    });
   });
 }

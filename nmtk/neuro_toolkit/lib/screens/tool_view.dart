@@ -61,7 +61,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
 
   void _showServerConnectionPopup(BuildContext context) {
-    final connectionText = 'Connected: ${_launcherBaseUri().authority}';
+    final connectionText = _launcherBaseUri().host;
     var isOpen = true;
 
     showDialog<void>(
@@ -119,11 +119,16 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Widget _buildServerConnectionButton(BuildContext context) {
-    final connectionText = 'Connected: ${_launcherBaseUri().authority}';
+    final connectionText = _launcherBaseUri().host;
+    final isConnected = ref.watch(serverConnectionStatusProvider);
     return FloatingActionButton.extended(
       onPressed: () => _showServerConnectionPopup(context),
       tooltip: 'Server Connection',
-      icon: const Icon(ZetaIcons.server),
+      icon: Icon(
+        Icons.circle,
+        color: isConnected ? Zeta.of(context).colors.surfacePositive : Zeta.of(context).colors.surfaceNegative,
+        size: 14,
+      ),
       label: Text(connectionText),
     );
   }

@@ -175,11 +175,11 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.byType(BackendSetupScreen), findsNothing);
-      expect(find.text('Connected: 192.168.2.51:8090'), findsOneWidget);
+      expect(find.text('192.168.2.51'), findsOneWidget);
       expect(requestedPaths, contains('/api/launcher/modules'));
       expect(requestedPaths, contains('/api/launcher/workspace'));
 
-      await tester.tap(find.text('Connected: 192.168.2.51:8090'));
+      await tester.tap(find.text('192.168.2.51'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(BackendSetupScreen), findsOneWidget);

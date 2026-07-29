@@ -6,6 +6,7 @@ import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
 
 class _FakeDeploymentService implements DeploymentService {
   _FakeDeploymentService({
@@ -20,6 +21,7 @@ class _FakeDeploymentService implements DeploymentService {
 
   final DeploymentPreflightResult preflightResult;
   int deployCalls = 0;
+  DeploymentRequest? lastDeployRequest;
 
   @override
   Future<DeploymentSnapshot> load() async => const DeploymentSnapshot();
@@ -34,6 +36,7 @@ class _FakeDeploymentService implements DeploymentService {
   @override
   Future<DeploymentJob> deploy(DeploymentRequest request) async {
     deployCalls++;
+    lastDeployRequest = request;
     return const DeploymentJob(
       id: 'deploy-job',
       targetId: 'target',
@@ -81,12 +84,14 @@ class _FakeDeploymentService implements DeploymentService {
 Widget _harness({
   bool? localDeploymentAvailable,
   _FakeDeploymentService? deploymentService,
+  LauncherUpdate? backendUpdate,
 }) {
   return ProviderScope(
     overrides: [
       deploymentServiceProvider.overrideWithValue(
         deploymentService ?? _FakeDeploymentService(),
       ),
+      backendUpdateProvider.overrideWith((_) async => backendUpdate),
     ],
     child: MaterialApp(
       home: BackendSetupScreen(
@@ -109,6 +114,74 @@ void main() {
     expect(find.text('Server address'), findsNothing);
     expect(find.text('Save & Retry'), findsNothing);
     expect(find.text('Step 1 — Python'), findsNothing);
+  });
+
+  testWidgets('no update banner when the backend has nothing to update to',
+      (tester) async {
+    await tester.pumpWidget(_harness(localDeploymentAvailable: true));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('backend-update-available')), findsNothing);
+  });
+
+  testWidgets('an available backend release offers a one-tap update',
+      (tester) async {
+    final service = _FakeDeploymentService();
+    await tester.pumpWidget(_harness(
+      localDeploymentAvailable: true,
+      deploymentService: service,
+      backendUpdate: LauncherUpdate(
+        version: '1.2.0',
+        url: 'https://example.invalid/v1.2.0',
+        releaseNotes: 'notes',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('backend-update-available')), findsOneWidget);
+    expect(
+      find.text('Backend update available — 1.2.0'),
+      findsOneWidget,
+    );
+
+    final action = find.byKey(const Key('backend-update-action'));
+    await tester.ensureVisible(action);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+
+    // Validates and deploys in one tap — no separate "Validate server" press.
+    expect(service.deployCalls, 1);
+  });
+
+  testWidgets('updating never wipes volumes', (tester) async {
+    // The whole difference between an update and a clean install: `down -v`
+    // would take the user's workspaces and notebooks with it.
+    final service = _FakeDeploymentService();
+    await tester.pumpWidget(_harness(
+      localDeploymentAvailable: true,
+      deploymentService: service,
+      backendUpdate: LauncherUpdate(
+        version: '1.2.0',
+        url: 'https://example.invalid/v1.2.0',
+        releaseNotes: 'notes',
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final cleanInstallToggle = find.byType(SwitchListTile);
+    if (cleanInstallToggle.evaluate().isNotEmpty) {
+      await tester.ensureVisible(cleanInstallToggle.first);
+      await tester.tap(cleanInstallToggle.first);
+      await tester.pumpAndSettle();
+    }
+
+    final action = find.byKey(const Key('backend-update-action'));
+    await tester.ensureVisible(action);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+
+    expect(service.lastDeployRequest, isNotNull);
+    expect(service.lastDeployRequest!.cleanInstall, isFalse);
   });
 
   testWidgets('deployment stays locked until the current setup validates',

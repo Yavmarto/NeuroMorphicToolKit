@@ -12,8 +12,11 @@
     Every answer must include a short description of what the problem is (exactly 2 sentences), how it was solved (exactly 2 sentences), and where to notice the difference and restart info (exactly 2 sentences). All in plain English.
   </end_of_task_reporting>
   <deployment>
-    User's standard command to run/test the app: `flutter run -d macos`, run from `nmtk/neuro_toolkit`. The dev backend at `moosebuntu@192.168.2.51` is already running — this does not deploy or rebuild anything, it just launches the Flutter macOS app locally. `make docker-ex-m` / `scripts/run_dev.sh` are deprecated — do not suggest or use them (see root `AGENTS.md`, "Remote Testing Configuration"). Since plain `flutter run` passes no `--dart-define` pointing at the remote host, the app boots against its hardcoded `127.0.0.1` default and lands on `/setup` with no backend found — use the "Already have a server running?" field on that screen (`backend_setup.dart`) to connect directly to `192.168.2.51`.
+    User's standard command to run/test the app: `flutter run -d macos`, run from `nmtk/neuro_toolkit`. The dev backend at `moosebuntu@192.168.2.51` is already running — this does not deploy or rebuild anything, it just launches the Flutter macOS app locally. `make docker-ex-m` / `scripts/run_dev.sh` are deprecated — do not suggest or use them (see root `AGENTS.md`, "Updating the backend"). Since plain `flutter run` passes no `--dart-define` pointing at the remote host, the app boots against its hardcoded `127.0.0.1` default and lands on `/setup` with no backend found — use the "Already have a server running?" field on that screen (`backend_setup.dart`) to connect directly to `192.168.2.51`.
   </deployment>
+  <end_user_paths>
+    End users operate the app only — they never open a terminal. Never present SSH, `make`, `docker`, a shell script, or systemd as an end-user instruction, including for installing or updating the backend: the app owns that (Backend Setup deploys it; an "Update backend" banner appears when a release is newer). Terminal commands in `AGENTS.md` under "Developer paths" are for pushing unreleased source to a dev host — developer-only. If an in-app path is missing for something a user needs, propose building it in the app rather than handing over a command.
+  </end_user_paths>
 </agent_instructions>
 ## GBrain Configuration (configured by /setup-gbrain)
 - Engine: pglite

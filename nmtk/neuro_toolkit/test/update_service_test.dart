@@ -187,4 +187,74 @@ void main() {
       expect(update, '1.2.0-nightly.5');
     });
   });
+
+  group('UpdateService.checkForBackendUpdate', () {
+    UpdateService serviceReturning(String latestTag) => UpdateService(
+          client: MockClient((http.Request request) async {
+            if (request.url.path.endsWith('/releases')) {
+              return http.Response(
+                jsonEncode(<Map<String, dynamic>>[
+                  <String, dynamic>{
+                    'tag_name': latestTag,
+                    'html_url': 'https://example.invalid/$latestTag',
+                    'body': 'notes',
+                    'prerelease': false,
+                    'draft': false,
+                  },
+                ]),
+                200,
+              );
+            }
+            return http.Response('Not Found', 404);
+          }),
+          // The app's own version is deliberately newer than the backend's, to
+          // prove the comparison uses the backend version and not this.
+          packageInfoLoader: () async => PackageInfo(
+            appName: 'Neuro Toolkit',
+            packageName: 'neuro_toolkit',
+            version: '9.9.9',
+            buildNumber: '1',
+          ),
+        );
+
+    test('offers the release when the backend is behind', () async {
+      final update = await serviceReturning('v1.2.0')
+          .checkForBackendUpdate('1.1.0');
+
+      expect(update, isNotNull);
+      expect(update!.version, '1.2.0');
+    });
+
+    test('offers nothing when the backend is already current', () async {
+      expect(
+        await serviceReturning('v1.2.0').checkForBackendUpdate('1.2.0'),
+        isNull,
+      );
+    });
+
+    test('never offers an update against a source build', () async {
+      // "dev" is what an unstamped image reports; there is no release to
+      // compare it with, so offering an update would be meaningless.
+      expect(await serviceReturning('v1.2.0').checkForBackendUpdate('dev'),
+          isNull);
+      expect(
+          await serviceReturning('v1.2.0').checkForBackendUpdate('  '), isNull);
+    });
+
+    test('offers nothing when GitHub is unreachable', () async {
+      final service = UpdateService(
+        client: MockClient((http.Request request) async {
+          throw http.ClientException('offline');
+        }),
+        packageInfoLoader: () async => PackageInfo(
+          appName: 'Neuro Toolkit',
+          packageName: 'neuro_toolkit',
+          version: '1.0.0',
+          buildNumber: '1',
+        ),
+      );
+
+      expect(await service.checkForBackendUpdate('1.1.0'), isNull);
+    });
+  });
 }
