@@ -25,6 +25,11 @@ RUN pip install --no-cache-dir \
     sinabs \
     norse
 
+# Copy the shared custom-node SDK alongside NeuroCNL.  NeuroSim imports this
+# package directly at runtime, while keeping it at the repo root lets the
+# launcher and third-party custom nodes use the same public contract.
+COPY nmtk_sdk/ nmtk_sdk/
+
 # Copy source and install the package — heavy deps above already present
 COPY neurocnl/ neurocnl/
 RUN pip install --no-cache-dir "./neurocnl[training,studio,rockpool,synsense,norse]" \

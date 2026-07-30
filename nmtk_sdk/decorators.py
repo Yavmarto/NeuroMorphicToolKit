@@ -5,7 +5,7 @@ from typing import Any, Callable, Literal
 
 def param(
     *,
-    type: Literal["float", "int", "bool", "enum"],
+    type: Literal["float", "int", "bool", "enum", "text"],
     default: Any,
     label: str = "",
     description: str = "",
@@ -36,6 +36,7 @@ def param(
 def port(
     *,
     direction: Literal["input", "output"],
+    id: str | None = None,
     label: str = "",
     description: str = "",
 ) -> Callable[[Callable], Callable]:
@@ -43,7 +44,7 @@ def port(
 
     def decorator(fn: Callable) -> Callable:
         fn._port_meta = {
-            "id": fn.__name__,
+            "id": id or fn.__name__,
             "direction": direction,
             "label": label or fn.__name__,
             "description": description,

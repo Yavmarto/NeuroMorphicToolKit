@@ -36,6 +36,20 @@ that nothing could tell the user they were behind.
 | Wiring | `backendUpdateProvider` in `lib/providers/riverpod_providers.dart` |
 | UI | update banner + one-tap action in `backend_setup.dart` (`_buildUpdateBanner`, `_updateBackend`) |
 
+Backend Setup also shows the connected backend's current release at all times
+when it can be read. Released images display their semantic version; an
+unstamped source build displays **Development build** rather than pretending to
+be a published release.
+
+## Version maintenance contract
+
+- `GET /api/suite/health` is the runtime source of truth.
+- Release images receive `NMTK_VERSION` from the root `vX.Y.Z` tag.
+- `suite_api/pyproject.toml` carries the source/package copy of that version.
+- `scripts/release.sh` updates Suite API, the launcher, and shared UI versions
+  together. Agents must use the release tooling and must not hand-edit an
+  `NMTK_VERSION` value into Docker or compose configuration.
+
 ## Decisions that cost time — don't redo them
 
 - **`"dev"` is never updatable.** An unstamped/source build reports `"dev"`; there is no

@@ -135,6 +135,7 @@ class InAppBackendSetupScreen extends ConsumerWidget {
       ref.refresh(workspaceProvider.future),
     ]);
     ref.invalidate(serverConnectionProvider);
+    ref.invalidate(backendVersionProvider);
     ref.invalidate(backendUpdateProvider);
   }
 }
@@ -376,6 +377,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       key: const ValueKey<String>('backend-setup-form'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _buildBackendVersion(tokens),
         _buildUpdateBanner(tokens),
         _buildQuickConnectSection(tokens),
         SizedBox(height: tokens.sectionGap),
@@ -388,6 +390,24 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         SizedBox(height: tokens.sectionGap * 1.5),
         _buildActions(activeJob, deploymentState?.connectionLostReason),
       ],
+    );
+  }
+
+  Widget _buildBackendVersion(NmtkShellTokens tokens) {
+    final version = ref.watch(backendVersionProvider).value;
+    if (version == null) return const SizedBox.shrink();
+    final label = version == 'dev'
+        ? 'Backend version: Development build'
+        : 'Backend version: $version';
+    return Padding(
+      padding: EdgeInsets.only(bottom: tokens.sectionGap),
+      child: NmtkSurfaceCard(
+        key: const Key('backend-version'),
+        child: Padding(
+          padding: EdgeInsets.all(tokens.sectionGap),
+          child: Text(label),
+        ),
+      ),
     );
   }
 

@@ -72,7 +72,9 @@
 
 # Backend submodules. pip-installed into the images AND resolved by path from
 # /repo at runtime, so both the build and the mount need them.
-# suite_api/Dockerfile:29,45; workers/neurocnl_physics/Dockerfile:26.
+# suite_api/Dockerfile copies this shared runtime contract before NeuroCNL.
++ /nmtk_sdk/***
+# suite_api/Dockerfile:34,50; workers/neurocnl_physics/Dockerfile:26.
 + /neurocnl/***
 # suite_api/Dockerfile:44; Dockerfile.lava:7,12; workers/neurochip_hw/Dockerfile:16.
 + /Neurochip/***
@@ -99,7 +101,7 @@
 
 # --- everything else stays home --------------------------------------------
 # Makefile, AGENTS.md and the other root docs, pyproject.toml, tests/, tools/,
-# neurodocs/, .github/, nmtk_sdk/, nmtk_module_contracts/, nmtk_ui_core/, the
+# neurodocs/, .github/, nmtk_module_contracts/, nmtk_ui_core/, the
 # Flutter app itself, Neurosim/ (neurosim ships inside neurocnl/),
 # Neuro-Dream-Hand/, rust/, neurocli/, monitoring/ (the copy the app deploys
 # lives under nmtk/neuro_toolkit/assets/), skills/, paper/, reports/, output/,

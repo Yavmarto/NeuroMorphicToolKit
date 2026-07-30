@@ -246,6 +246,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       ref.refresh(workspaceProvider.future),
     ]);
     ref.invalidate(serverConnectionProvider);
+    ref.invalidate(backendVersionProvider);
     ref.invalidate(backendUpdateProvider);
   }
 

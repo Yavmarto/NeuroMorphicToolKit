@@ -215,6 +215,13 @@ profile and repoint `suite_api`/`launcher-control` at `host.docker.internal:8002
 
 ### Cutting a release
 
+The backend version is part of the unified NMTK release number. Backend-facing
+changes must keep `suite_api/pyproject.toml` release-ready; do not edit
+`NMTK_VERSION` in code or compose files, because release images receive it from
+the root `vX.Y.Z` tag. Always use the release tooling below, which updates the
+launcher, shared UI, and Suite API package versions together; verify the running
+value in **Backend Setup** or `GET /api/suite/health`.
+
 ```bash
 make release-publish VERSION=1.2.0
 ```

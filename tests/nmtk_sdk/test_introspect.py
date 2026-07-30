@@ -87,3 +87,19 @@ def test_cnl_template_empty():
 def test_source_path_stored():
     cb = introspect_node(_SampleNode, source_path="/tmp/my_node.py")
     assert cb.source_path == "/tmp/my_node.py"
+    assert cb.source_filename == "my_node.py"
+    assert cb.source_available is True
+    assert "source_path" not in cb.model_dump()
+
+
+def test_declared_identity_and_base_metadata_are_preserved():
+    class StableNode(_SampleNode):
+        node_id = "custom_stable_a1b2c3d4"
+        base_component_id = "lif_population"
+        base_nir_type = "nir.LIF"
+
+    cb = introspect_node(StableNode)
+
+    assert cb.id == "custom_stable_a1b2c3d4"
+    assert cb.base_component_id == "lif_population"
+    assert cb.base_nir_type == "nir.LIF"

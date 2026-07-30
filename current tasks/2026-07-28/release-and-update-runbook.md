@@ -62,6 +62,8 @@ make release VERSION=1.2.0
   `Neurochip`, `Neurohub` (their `pyproject.toml` / `frontend/pubspec.yaml`) — `Neurosim` was
   missing from this list until 2026-07-29, so releases before then never tagged it
 - bumps `nmtk/neuro_toolkit/pubspec.yaml` and `nmtk_ui_core/pubspec.yaml`
+- bumps `suite_api/pyproject.toml`, keeping the source-visible backend package
+  number aligned with the release stamped into backend images
 - regenerates each `CHANGELOG.md`
 - commits `chore(release): 1.2.0` and tags `v1.2.0` **in every submodule and in the root repo**
 
@@ -150,13 +152,15 @@ There are two independent things a user updates. Neither needs a shell.
 
 1. Open the app.
 2. Go to **Backend Setup**.
-3. If a newer release exists, a card appears at the top:
+3. The connected backend's current version is shown at the top. Source builds
+   are labelled **Development build**.
+4. If a newer release exists, a card appears below it:
    *"Backend update available — 1.2.0"*, noting that workspaces and notebooks are kept and
    that the backend restarts.
-4. **Finish any running training first** — the containers restart.
-5. Press **Update backend**. It validates the connection, then redeploys in place:
+5. **Finish any running training first** — the containers restart.
+6. Press **Update backend**. It validates the connection, then redeploys in place:
    `compose down` → `pull` → `up -d`, with health checks. Progress shows live.
-6. Done. No credentials to re-enter — SSH keys and passwords are already in the OS keychain.
+7. Done. No credentials to re-enter — SSH keys and passwords are already in the OS keychain.
 
 **Nothing is deleted.** The update always runs with clean-install off; that flag is the only
 thing that turns `compose down` into `down -v`, which would remove workspaces, notebooks, and

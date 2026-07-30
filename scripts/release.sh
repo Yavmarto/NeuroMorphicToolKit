@@ -74,7 +74,13 @@ done
 echo "──────────────────────────────────────────────────────"
 echo "📦 Updating core components..."
 
-CORE_FILES=("$ROOT_DIR/nmtk/neuro_toolkit/pubspec.yaml" "$ROOT_DIR/nmtk_ui_core/pubspec.yaml")
+# The runtime backend release is stamped from the root tag, while this package
+# metadata is the source-visible backend number. Keep all three aligned.
+CORE_FILES=(
+  "$ROOT_DIR/nmtk/neuro_toolkit/pubspec.yaml"
+  "$ROOT_DIR/nmtk_ui_core/pubspec.yaml"
+  "$ROOT_DIR/suite_api/pyproject.toml"
+)
 python3 "$SCRIPT_DIR/bump_version.py" "$VERSION" "${CORE_FILES[@]}"
 
 # 3. Update root repo

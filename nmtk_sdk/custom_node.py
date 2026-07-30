@@ -46,6 +46,14 @@ class CustomNode(metaclass=_CustomNodeMeta):
     icon: ClassVar[str] = "custom_node"
     version: ClassVar[str] = "1.0.0"
     author: ClassVar[str] = ""
+    # Stable identity is optional for legacy custom nodes. Newly created nodes
+    # receive one from the NeuroSim save API so display-name/author edits do not
+    # break canvas references.
+    node_id: ClassVar[str | None] = None
+    # A generated custom node may delegate to a built-in component/NIR operator
+    # until the author supplies an explicit framework implementation.
+    base_component_id: ClassVar[str | None] = None
+    base_nir_type: ClassVar[str | None] = None
 
     def to_nengo(self, params: dict[str, Any]) -> Any:
         raise NotImplementedError(f"{type(self).__name__} does not support nengo")

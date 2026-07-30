@@ -77,6 +77,20 @@ final environmentApiServiceProvider = Provider<EnvironmentApiService>((ref) {
   );
 });
 
+/// The release identifier reported by the connected backend.
+///
+/// `"dev"` means a source build. Null means there is no selected launcher, the
+/// backend is unreachable, or the backend predates version reporting.
+final backendVersionProvider = FutureProvider<String?>((ref) async {
+  final ControlApiService controlApi;
+  try {
+    controlApi = ref.watch(controlApiServiceProvider);
+  } on StateError {
+    return null;
+  }
+  return controlApi.fetchBackendVersion();
+});
+
 /// Whether the connected backend is behind the newest published release.
 ///
 /// Null when there is nothing to offer: no launcher selected, the backend is
@@ -85,13 +99,7 @@ final environmentApiServiceProvider = Provider<EnvironmentApiService>((ref) {
 /// update affordance only for a non-null value, so every failure mode
 /// degrades to "say nothing" rather than to a false prompt.
 final backendUpdateProvider = FutureProvider<LauncherUpdate?>((ref) async {
-  final ControlApiService controlApi;
-  try {
-    controlApi = ref.watch(controlApiServiceProvider);
-  } on StateError {
-    return null; // No launcher server selected yet.
-  }
-  final running = await controlApi.fetchBackendVersion();
+  final running = await ref.watch(backendVersionProvider.future);
   if (running == null) {
     return null;
   }

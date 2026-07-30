@@ -114,6 +114,7 @@ class _FakeDeploymentService implements DeploymentService {
 Widget _harness({
   bool? localDeploymentAvailable,
   _FakeDeploymentService? deploymentService,
+  String? backendVersion,
   LauncherUpdate? backendUpdate,
 }) {
   return ProviderScope(
@@ -121,6 +122,7 @@ Widget _harness({
       deploymentServiceProvider.overrideWithValue(
         deploymentService ?? _FakeDeploymentService(),
       ),
+      backendVersionProvider.overrideWith((_) async => backendVersion),
       backendUpdateProvider.overrideWith((_) async => backendUpdate),
     ],
     child: MaterialApp(
@@ -152,6 +154,28 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('backend-update-available')), findsNothing);
+  });
+
+  testWidgets('shows the connected backend release version', (tester) async {
+    await tester.pumpWidget(_harness(
+      localDeploymentAvailable: true,
+      backendVersion: '1.2.0',
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('backend-version')), findsOneWidget);
+    expect(find.text('Backend version: 1.2.0'), findsOneWidget);
+  });
+
+  testWidgets('labels an unstamped backend as a development build',
+      (tester) async {
+    await tester.pumpWidget(_harness(
+      localDeploymentAvailable: true,
+      backendVersion: 'dev',
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Backend version: Development build'), findsOneWidget);
   });
 
   testWidgets('an available backend release offers a one-tap update',

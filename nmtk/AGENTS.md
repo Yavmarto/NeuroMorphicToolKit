@@ -21,6 +21,8 @@ Constraints:
 - For launcher and module-lifecycle changes, run `bash ../scripts/run_launcher_guardrails.sh`. Use `bash ../scripts/run_launcher_guardrails.sh --with-integration` when the change alters manifest contracts or suite-visible startup behavior.
 - Treat launcher doctor `fatalCount > 0` as a blocker unless the task is to diagnose or fix that failure, and report `preflight failed` separately from `degraded optional capability`.
 - Launcher work is not complete until launcher doctor and launcher unit coverage pass. The canonical wrapper also runs `cd neuro_toolkit && flutter test`.
+- Backend Setup must keep the connected backend version visible. Its source is `GET /api/suite/health`; release images stamp `NMTK_VERSION` from the root release tag, while `scripts/release.sh` keeps `suite_api/pyproject.toml` aligned with the launcher release number.
+- Changes to backend version reporting, parsing, or display must update Suite API health tests, `ControlApiService` tests, Backend Setup widget tests, and the release/version documentation in the same change.
 
 Do NOT:
 - Add manifest fields in Dart without adding them to `assets/modules.json`.

@@ -5,5 +5,7 @@ suite_api.egg-info/SOURCES.txt
 suite_api.egg-info/dependency_links.txt
 suite_api.egg-info/requires.txt
 suite_api.egg-info/top_level.txt
+tests/test_health_router.py
 tests/test_jupyter_router.py
 tests/test_middleware.py
+tests/test_neurosim_custom_node_routes.py
