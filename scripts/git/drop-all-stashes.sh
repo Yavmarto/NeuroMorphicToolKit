@@ -20,7 +20,7 @@ drop_stashes_in_repo() {
   echo "──────────────────────────────────────────"
 
   cd "$dir"
-  
+
   local stashes
   stashes="$(git stash list 2>/dev/null || true)"
 

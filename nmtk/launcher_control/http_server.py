@@ -574,5 +574,3 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
 
     def _send_deployment_sse(self, job_id: str) -> None:
         stream_deployment_sse(self, job_id)
-
-

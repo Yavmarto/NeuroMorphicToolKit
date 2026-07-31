@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 import time
 import json
@@ -15,7 +16,6 @@ from pathlib import Path
 # Ensure we can import OmniParser utils
 sys.path.append(os.path.expanduser("~/OmniParser"))
 from util.utils import check_ocr_box, get_yolo_model, get_caption_model_processor, get_som_labeled_img
-import torch
 
 # ── Config ────────────────────────────────────────────────────────────────────
 OLLAMA_URL   = "http://127.0.0.1:11435/api/chat"
@@ -28,8 +28,7 @@ SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-import subprocess
+
 
 def get_window_rect_points():
     """Return (x, y, w, h) in points for neuro_toolkit's front window, or None
@@ -132,7 +131,7 @@ def build_element_summary(parsed_content_list: list, max_items: int = MAX_ELEMEN
     # Attach original index to each element
     for i, elem in enumerate(parsed_content_list):
         elem["original_id"] = str(i)
-        
+
     interactable = [e for e in parsed_content_list if e.get("interactivity")]
     text_only    = [e for e in parsed_content_list if not e.get("interactivity")]
 
@@ -242,11 +241,11 @@ def main(guide_path: str):
     task_instruction = load_guide(guide_path)
 
     report_lines = [
-        f"# Notebook Reproduction Report",
+        "# Notebook Reproduction Report",
         f"Generated: {datetime.now().isoformat()}",
         f"Guide: {guide_path}",
         "",
-        f"## Task",
+        "## Task",
         task_instruction,
         "",
         "## Steps",
@@ -261,7 +260,7 @@ def main(guide_path: str):
         model_name_or_path=os.path.expanduser("~/OmniParser/weights/icon_caption_florence"),
     )
 
-    print(f"Agent starting in 5 seconds — make CNLStudio the active window…")
+    print("Agent starting in 5 seconds — make CNLStudio the active window…")
     time.sleep(5)
 
     history = []

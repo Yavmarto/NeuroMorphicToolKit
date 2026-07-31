@@ -1,98 +1,154 @@
-# Recording Script (~3.5 min hybrid — live + pre-baked inserts, mobile on physical Android)
+# Recording Script (~3 minutes — MNIST result, Braille research, conditional Akida)
 
 ## Why this shape
-KWS is the wrong thing to *train live* (real Speech Commands training takes minutes); it's the right
-**credibility finale**. The live, zero-dead-air beats use **`cpg_rhythm`** — it compiles today, previews
-near-instantly (Nengo, 500ms cap, decoder-cached), and its mutual-inhibition oscillation is striking in the
-animated raster. Verified:
-- Live-simulatable specs are in **`neurocnl/backend/app/templates/`** (16 compile). `examples/` and
-  `Neurohub/shared_assets/` mostly throw `legacy_grammar` — **don't load those on camera.**
-  Confirmed compiling heroes: `cpg_rhythm` (6n), `reflex_arc` (5n), `looming_detector` (5n).
-- Cold-open eye-candy: Poisson **chip-die viz** (`viz_demo_screen.dart`) — ~1M-neuron tile grid, instant,
-  **keep slow (photosensitivity-throttled ~4.5fps default)**.
-- Mobile: **Neurobench is hidden on mobile**; canvas is touch-ready; physical Android needs a LAN host.
 
-## Pre-flight (before recording — off camera)
-1. **Backends up:** `docker compose up -d`; `curl -s localhost:8000/health` → `{"status":"ok"}`; demo routes
-   on (`NMTK_DEMO_ROUTES=true`, dev default).
-2. **Desktop launcher:** `make dev` (or `cd nmtk/neuro_toolkit && flutter run -d macos`).
-3. **Pre-bake insert A (KWS benchmark):** train `neurocnl/examples/keyword_spotting.cnl` offline via the
-   Train canvas / Jupyter worker, run the Neurobench `keyword_spotting` benchmark, capture the
-   results-vs-published table (fill `results_vs_baseline.md`).
-4. **Pre-bake insert B (hardware):** export the trained NIR (`neurocnl/neurocnl/export/…`) → deploy to your
-   board via the matching Neurochip route → capture on-hardware inference + energy.
-5. **Physical Android:** phone on the SAME Wi-Fi; get host LAN IP (`ipconfig getifaddr en0`); backend binds
-   `0.0.0.0`. Pre-build so the phone is already on the canvas screen:
-   `flutter run -d <device> --dart-define=NMTK_CONTROL_API_BASE_URL=http://<LAN-IP>:8090 --dart-define=SUITE_API_URL=http://<LAN-IP>:9000`
-6. Have `cpg_rhythm` ready (paste or template picker). Clean desktop, mic check, recorder 1080p+.
+This version removes keyword spotting from the video. The current KWS benchmark path is not
+trustworthy enough for a portfolio claim, while the feed-forward MNIST FCN has a measured Studio
+result of **92.45% test accuracy** and trains in five epochs.
 
-## Script — SHOW (do) / SAY (narrate)
+The video uses three pieces of evidence for three different claims:
 
-### 0:00–0:20 Cold open (live)
-- **SHOW:** Poisson chip-die viz (`viz_demo_screen`), high scale, slow playback, full-screen shimmer.
-- **SAY:** "This is a spiking neural network with about a million neurons, running as an event-driven
-  simulation. Neuromorphic computing is fast and low-power because, like the brain, almost nothing fires at
-  once. The problem is it's hard to design. I built a toolkit that fixes that."
+- **MNIST FCN:** the dependable end-to-end product demonstration.
+- **Braille RNN:** the research and debugging story, using the presenter's latest **~85%** run.
+- **Akida:** a pre-recorded hardware insert only if the exact physical-device path passes every
+  gate below; otherwise show package generation and describe power figures as estimates.
 
-### 0:20–0:35 Frame (live → launcher home)
-- **SHOW:** NMTK launcher catalog / NeuroStudio landing.
-- **SAY:** "You design the network in plain English, watch it become a runnable graph, simulate it, and
-  export it to real neuromorphic chips — all in one place."
+The intended audience is a hiring manager or general portfolio viewer. Keep the central story on
+what was built and what was measured; architecture details support that story instead of replacing
+it.
 
-### 0:35–1:25 Design in plain English + tri-view (live — THE headline)
-- **SHOW:** NeuroStudio → Model canvas → CNL panel. Paste `cpg_rhythm`. Point at two lines. **Validate**
-  (passes) → **Sync to Canvas** (nodes appear).
-- **SAY:** "I'm describing a central pattern generator — two neuron populations, an extensor and a flexor,
-  that inhibit each other. Watch: 'Define a LIF neuron named extensor…', 'flexor connects to
-  w_flexor_extensor', which loops back. That's the recurrent inhibition that creates rhythm."
-- **SHOW:** Toggle view mode **CNL → NIR → Canvas** (`StudioViewMode`). Same graph, three forms.
-- **SAY:** "The English compiles to NIR — the Neuromorphic Intermediate Representation the whole field is
-  standardizing on — and the graph, the text, and the IR are the same object. Edit one, the others update."
+## Recording gate — complete off camera
 
-### 1:25–2:05 Simulate live (live — payoff)
-- **SHOW:** Simulate surface → **Run**. Animated raster / dynamics view (`animated_snn_playback`,
-  `snn_dynamics_view`) reveals spikes as the cursor sweeps. Scrub. Point at alternating extensor/flexor
-  bursts.
-- **SAY:** "No training needed for this one — the structure does the work. Run it, and the oscillation
-  emerges: the two populations take turns firing. Top panel is firing rate, middle the spike raster, bottom
-  membrane voltage — cause and effect, side by side. This ran in well under a second."
+### MNIST evidence
 
-### 2:05–2:35 Credibility: keyword spotting (live spec + PRE-BAKED insert A)
-- **SHOW:** Briefly load `keyword_spotting.cnl` (deeper net). Cut to insert A: Neurobench
-  results-vs-published table.
-- **SAY:** "Toy demos are easy, so here's a real one: keyword spotting on Google Speech Commands — a
-  published NeuroBench benchmark. I trained it in the toolkit and benchmarked it against the paper.
-  Comparable accuracy — and here's the point of neuromorphic: the activation sparsity and synaptic-operation
-  count, the energy story."
+Follow `current tasks/2026-07-28/GUIDE-mnist-fcn-studio.md` and capture:
 
-### 2:35–3:00 Hardware (PRE-BAKED insert B)
-- **SHOW:** Insert B: NIR export → Neurochip deploy → on-hardware inference + energy readout.
-- **SAY:** "Same network, one export, and it runs on actual neuromorphic silicon — same predictions, real
-  measured energy. Design to chip without rewriting anything."
-- **HONEST LINE (say it):** "Everything spiking here is LIF, which maps cleanly to every backend; the
-  numbers I trust most are the simulator and on-hardware runs."
+1. The six-node `784 → 1000 → 10` feed-forward graph.
+2. The generated architecture showing two LIF layers, 25 timesteps, and 794,000 parameters.
+3. Five epochs of training with the validation result.
+4. The Eval output line confirming that `best_model.pt` loaded.
+5. The final test result.
 
-### 3:00–3:20 Mobile (live, physical Android)
-- **SHOW:** Cut to the phone (already on the canvas). Pinch-zoom, drag a node, tap **Run**, show the raster
-  on the touch screen.
-- **SAY:** "And it's the same app on a phone — the canvas is fully touch-driven, talking to the same backend
-  over the network. Design and simulate spiking networks from anywhere."
+Use **92.45%** in the narration only if the fresh recording remains close to that measured
+baseline. If it differs materially, say the newly observed number and investigate before recording;
+never reuse the old number over a contradictory screen.
 
-### 3:20–3:35 Close (live)
-- **SHOW:** Back to tri-view or chip-die viz.
-- **SAY:** "Plain English to a standard IR, live simulation, published-benchmark results, and real hardware
-  deployment — one toolkit. Thanks for watching."
+### Braille evidence
 
-## Tips
-- Record each segment as its own take; stitch in edit. Live beats + the two inserts are independent.
-- Keep the chip-die viz slow on camera (seizure-safety + reads better).
-- If `Sync to Canvas` errors live, you loaded a non-template spec — use only
-  `neurocnl/backend/app/templates/*.cnl`.
-- Pre-load the phone build; keep host + phone on one Wi-Fi.
+Capture the result screen from the current ~85% run and one useful training plot. Keep the claim
+narrow: this is a recurrent tactile-classification experiment reproduced in the Studio, not an
+Akida-compatible network and not a reproduction of the stale 92% reference result.
 
-## Dry-run before the real take
-1. `cpg_rhythm` → Validate passes → Sync populates → tri-view toggles all show the graph.
-2. Run preview → animated raster shows alternating bursts in < 1s.
-3. Chip-die viz streams at the slow rate.
-4. Phone connects (canvas loads, Run returns a raster) via the LAN-IP dart-defines.
-5. Inserts A and B captured and legible at 1080p.
+### Akida hardware gate
+
+Use the feed-forward MNIST network, never the recurrent Braille network. Record an
+**on-hardware** insert only after all of these are visible in one rehearsed run:
+
+1. Readiness identifies the Linux/Windows Akida host.
+2. Runtime status identifies a physical Akida device, not `AkidaSimulator` or
+   `software_fallback`.
+3. The mapped artifact contains the intended trained or explicitly quantized weights, not only the
+   untrained topology.
+4. Device mapping completes.
+5. Inference completes on fixed, saved inputs.
+6. Post-quantization accuracy is measured and recorded.
+7. Any energy value claimed as measured comes from non-null device telemetry with a known unit.
+
+If any gate fails, use the fallback insert: **Check Readiness → Map Runtime → Generate Package**.
+Narrate it as a deployment package or SDK handoff, not a completed chip run, and label
+Neurochip's profile-based power/latency figures as **estimated**.
+
+## Script — SHOW and SAY
+
+### 0:00–0:15 — Open with the result
+
+- **SHOW:** MNIST Eval result, then a quick cut to the graph.
+- **SAY:** “This spiking network classifies handwritten digits at about ninety-two percent test
+  accuracy. I built and trained it inside NeuroStudio, from the network graph through evaluation.”
+
+### 0:15–0:35 — Frame the product
+
+- **SHOW:** NeuroStudio's Model, Training, Eval, and Results steps.
+- **SAY:** “Neuromorphic software is usually fragmented across model formats, simulators, and
+  hardware tools. This toolkit puts the workflow in one place and keeps the network portable
+  through NIR, the Neuromorphic Intermediate Representation.”
+
+### 0:35–1:10 — Build the MNIST network
+
+- **SHOW:** The six-node Model canvas; select each Linear and LIF layer, then toggle Canvas and NIR
+  views.
+- **SAY:** “This is deliberately simple and recognizable: 784 image pixels, a thousand-neuron
+  spiking hidden layer, and ten output neurons. The visual graph compiles to NIR, so the same
+  architecture can be inspected and handed to different runtimes without redrawing it.”
+
+### 1:10–1:45 — Train and evaluate
+
+- **SHOW:** Training DAG briefly, then a pre-recorded five-epoch progress sequence, best-checkpoint
+  load, and final Eval result.
+- **SAY:** “The training pipeline is also visual: data, state reset, forward pass, spike-count
+  loss, surrogate-gradient backpropagation, optimisation, and validation. Five epochs reach about
+  ninety-two-point-five percent on the held-out test set, and the evaluation explicitly reloads the
+  best validation checkpoint.”
+
+Do not run all five epochs live. Use a short pre-recorded insert so the viewer sees real progress
+without dead time.
+
+### 1:45–2:10 — Braille research story
+
+- **SHOW:** Braille recurrent graph, training curve, and the current ~85% result.
+- **SAY:** “I also reproduced a harder tactile Braille experiment using a recurrent spiking
+  network. It reaches about eighty-five percent in my current run, and the valuable part was the
+  engineering process: isolating unstable training changes, fixing weight-initialisation drift,
+  and documenting a breaking snnTorch version difference instead of hiding it.”
+
+- **SAY:** “This recurrent model is not compatible with the current Akida exporter, which requires
+  a feed-forward chain, so I use the MNIST network for the deployment demonstration.”
+
+### 2:10–2:40 — Akida, choose exactly one narration
+
+#### Variant A — every physical-hardware gate passed
+
+- **SHOW:** Physical device identity, successful mapping, inference output, and measured
+  post-quantization accuracy; show power telemetry only when it passed the telemetry gate.
+- **SAY:** “The feed-forward network also fits the current Akida deployment path. Here the app
+  discovers the remote runtime, maps the quantized model to the physical device, and runs
+  inference; after quantization it measured [INSERT VERIFIED ACCURACY] on the recorded test set.”
+- **OPTIONAL SAY:** “The device reported [INSERT VALUE AND UNIT] during this run.”
+
+#### Variant B — any physical-hardware gate failed
+
+- **SHOW:** Readiness, mapped-network summary, and generated package; keep simulator or fallback
+  labels visible.
+- **SAY:** “The toolkit validates this feed-forward network for Akida and generates the deployment
+  package for the remote SDK. I have not verified this exact trained artifact end to end on the
+  physical chip, so the power and latency figures shown here are estimates, not measurements.”
+
+Never combine the wording from both variants.
+
+### 2:40–3:00 — Close
+
+- **SHOW:** MNIST result, Braille result, and the final Akida status or package card side by side.
+- **SAY:** “The result is one workflow for a measured feed-forward baseline, a genuinely difficult
+  recurrent experiment, and an honest hardware handoff. The point is not that every network maps
+  perfectly everywhere; it is that the toolkit makes the differences visible before deployment.”
+
+## Editing notes
+
+- Record each section as a separate take and keep all numeric evidence legible at 1080p or higher.
+- Put **snnTorch test**, **Akida post-quantization**, **device measured**, or **estimated** directly
+  beside every number so viewers never have to infer its source.
+- Remove the Poisson million-neuron cold open and mobile segment from the main cut; they distract
+  from the measured result and can be separate product clips.
+- Do not show the KWS benchmark table, claim comparable KWS accuracy, or claim that activation
+  sparsity proves measured energy.
+- Do not say “same predictions” across simulator and Akida unless the recorded comparison actually
+  establishes it.
+
+## Final dry run
+
+1. MNIST result is freshly reproduced and the best checkpoint visibly loads.
+2. Every spoken number matches the visible result and is labelled with its execution target.
+3. Braille is described as recurrent research evidence, not as Akida-deployable.
+4. Exactly one Akida narration variant is selected.
+5. A physical-hardware claim is used only when all seven hardware gates pass.
+6. The finished cut is at or below three minutes and contains no KWS claim.

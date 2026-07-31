@@ -21,7 +21,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
-from .runtime_shared import _build_password_askpass_env, _runtime_request_error_kind
+from .runtime_shared import _build_password_askpass_env, _neurochip_module_root, _runtime_request_error_kind
+from .provisioning_helpers import build_pynq_agent_bundle, build_pynq_user_space_agent_launch_command
 from .server import (
     DEFAULT_PYNQ_AUTH_MODE,
     PREFLIGHT_DEGRADED,
@@ -37,7 +38,6 @@ from .server import (
     _inspect_staged_pynq_overlay_package,
     _is_benign_ssh_warning_line,
     _load_neurochip_launcher_runtime_contract,
-    _neurochip_module_root,
     _pynq_user_space_upgrade_message,
     _resolve_pynq_agent_health_timeout,
     _resolve_pynq_preflight_timeout,
@@ -45,8 +45,6 @@ from .server import (
     _resolved_pynq_runtime_api_url,
     _serialize_pynq_board,
     _ssh_failure_message,
-    build_pynq_agent_bundle,
-    build_pynq_user_space_agent_launch_command,
 )
 
 
@@ -939,5 +937,3 @@ class PynqServiceMixin:
     def proxy_pynq_runtime_status(self, board_id: str) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
         return self._runtime_json_request(board, "GET", "/hardware/pynq/status")
-
-

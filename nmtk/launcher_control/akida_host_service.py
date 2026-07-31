@@ -47,8 +47,8 @@ from .server import (
     _resolved_akida_control_api_url,
     _serialize_akida_host,
     _ssh_failure_message,
-    build_akida_host_bundle,
 )
+from .provisioning_helpers import build_akida_host_bundle
 
 
 class AkidaServiceMixin:

@@ -11,7 +11,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from suite_api.middleware import attach_middleware
 from suite_api.routers import health
-from suite_api.domains.neurohub.lifespan import neurohub_startup, neurohub_shutdown
 from suite_api.domains.neurocnl.lifespan import neurocnl_startup, neurocnl_shutdown
 
 from fastapi.staticfiles import StaticFiles

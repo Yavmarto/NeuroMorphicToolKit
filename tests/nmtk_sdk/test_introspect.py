@@ -103,3 +103,13 @@ def test_declared_identity_and_base_metadata_are_preserved():
     assert cb.id == "custom_stable_a1b2c3d4"
     assert cb.base_component_id == "lif_population"
     assert cb.base_nir_type == "nir.LIF"
+
+
+def test_pipeline_base_metadata_is_preserved():
+    class PipelineNode(_SampleNode):
+        node_id = "custom_adam_a1b2c3d4"
+        base_pipeline_type = "adamOptimiser"
+
+    cb = introspect_node(PipelineNode)
+
+    assert cb.base_pipeline_type == "adamOptimiser"

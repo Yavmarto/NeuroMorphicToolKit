@@ -743,4 +743,3 @@ return Positioned(
 | `test/widgets/mobile_canvas_chrome_test.dart` | Fit-to-view button present; Add button opens bottom sheet; tiles are ≥ 48 px |
 | `test/widgets/network_canvas_touch_test.dart` | Port hit target is 48 px on mobile; long-press on node opens action sheet; edge long-press hits with 20 px tolerance; two-finger gesture enters multi-select mode |
 | `test/widgets/port_add_node_popup_test.dart` | Popup items are ≥ 48 px tall on mobile; bottom sheet shown on mobile instead of overlay |
-

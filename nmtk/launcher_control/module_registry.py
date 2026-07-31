@@ -20,7 +20,7 @@ from packaging.version import InvalidVersion
 from packaging.version import Version
 from packaging.version import parse as parse_version
 
-from .server import _effective_port
+from .module_environment import _effective_port
 
 GITHUB_API_PAGE_SIZE = 100
 GITHUB_API_TIMEOUT_SECONDS = 3.0

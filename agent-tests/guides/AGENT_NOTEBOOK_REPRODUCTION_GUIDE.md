@@ -1,7 +1,7 @@
 # Computer Use Agent: Notebook Reproduction Guide
 
 ## Goal
-Your task is to sequentially recreate each of the fully reproducible notebooks listed in `reproducible_notebooks.md` within the CNLStudio UI using your computer use capabilities. 
+Your task is to sequentially recreate each of the fully reproducible notebooks listed in `reproducible_notebooks.md` within the CNLStudio UI using your computer use capabilities.
 
 ## Pre-requisites
 - Ensure CNLStudio is open and focused on the desktop.

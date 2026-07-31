@@ -96,4 +96,5 @@ def introspect_node(cls: type[CustomNode], source_path: str | None = None) -> ob
         source_available=source_path is not None,
         base_component_id=getattr(cls, "base_component_id", None),
         base_nir_type=getattr(cls, "base_nir_type", None),
+        base_pipeline_type=getattr(cls, "base_pipeline_type", None),
     )

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
@@ -13,7 +12,7 @@ import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
 import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
-import 'package:neuro_toolkit/src/features/launcher_bootstrap/presentation/launcher_bootstrap_notifier.dart';
+
 
 class MockLauncherBootstrapNotifier extends LauncherBootstrapNotifier {
   @override
@@ -29,7 +28,7 @@ class MockLauncherBootstrapNotifier extends LauncherBootstrapNotifier {
 
 class _FakeModuleNotifier extends ModuleNotifier {
   @override
-  Future<ModuleState> build() async => ModuleState(modules: []);
+  Future<ModuleState> build() async => const ModuleState(modules: []);
 }
 class _FakeWorkspaceNotifier extends WorkspaceNotifier {
   @override

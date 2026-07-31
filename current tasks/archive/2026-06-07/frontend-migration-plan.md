@@ -32,7 +32,7 @@ Verified against actual code (pubspec.yaml versions, grep for `@riverpod`/`State
 
 ---
 
-This plan outlines the end-to-end migration of all Flutter applications within the NeuroMorphicToolKit monorepo to the new architectural standards: Feature-First Domain-Driven Design (Clean Architecture), **Riverpod 3.0** Code Generation, and strict state immutability via Freezed. 
+This plan outlines the end-to-end migration of all Flutter applications within the NeuroMorphicToolKit monorepo to the new architectural standards: Feature-First Domain-Driven Design (Clean Architecture), **Riverpod 3.0** Code Generation, and strict state immutability via Freezed.
 
 This migration will inherently fix the "Single Source of Truth" dual-write and massive redraw bugs (specifically in `neurocnl`), ensure infinite scalability of the codebase, and remove legacy `ChangeNotifier` boilerplate.
 
@@ -115,7 +115,7 @@ Applies to all `pubspec.yaml` files for the frontend applications (`nmtk`, `Neur
 
 #### [NEW] `lib/src/features/settings/` & `lib/src/features/workspace/`
 - **Domain Layer (`domain/`)**: Convert settings preferences and workspace targets into `freezed` data classes.
-- **Presentation Layer (`presentation/`)**: 
+- **Presentation Layer (`presentation/`)**:
   - Migrate `settingsStateProvider`, `appStateProvider`, `moduleStateProvider`, and `workspaceStateProvider` away from `ChangeNotifierProvider`.
   - Implement `@riverpod` `AsyncNotifier`s to handle application launch, module checking, and backend deployments natively (replacing the manual `try/catch` loading states currently used).
 - **Routing**: Ensure GoRouter inside `lib/src/routing/router.dart` points to the new presentation screens and relies on strongly-typed arguments where possible.

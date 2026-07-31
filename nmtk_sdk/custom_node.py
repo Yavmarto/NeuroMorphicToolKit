@@ -9,9 +9,7 @@ _REQUIRED_ATTRS: tuple[str, ...] = ("name", "category", "canvases", "frameworks"
 class _CustomNodeMeta(ABCMeta):
     """Validates required class attributes at subclass definition time."""
 
-    def __new__(
-        mcs, cls_name: str, bases: tuple, namespace: dict, **kwargs: Any
-    ) -> type:
+    def __new__(mcs, cls_name: str, bases: tuple, namespace: dict, **kwargs: Any) -> type:
         cls = super().__new__(mcs, cls_name, bases, namespace, **kwargs)
         if cls_name == "CustomNode":
             return cls
@@ -54,6 +52,9 @@ class CustomNode(metaclass=_CustomNodeMeta):
     # until the author supplies an explicit framework implementation.
     base_component_id: ClassVar[str | None] = None
     base_nir_type: ClassVar[str | None] = None
+    # Training/evaluation DAG nodes retain their built-in pipeline role while
+    # allowing ``to_pipeline`` to replace the emitted notebook snippet.
+    base_pipeline_type: ClassVar[str | None] = None
 
     def to_nengo(self, params: dict[str, Any]) -> Any:
         raise NotImplementedError(f"{type(self).__name__} does not support nengo")
@@ -62,12 +63,14 @@ class CustomNode(metaclass=_CustomNodeMeta):
         raise NotImplementedError(f"{type(self).__name__} does not support norse")
 
     def to_spikingjelley(self, params: dict[str, Any]) -> Any:
-        raise NotImplementedError(
-            f"{type(self).__name__} does not support spikingjelley"
-        )
+        raise NotImplementedError(f"{type(self).__name__} does not support spikingjelley")
 
     def to_brian2(self, params: dict[str, Any]) -> Any:
         raise NotImplementedError(f"{type(self).__name__} does not support brian2")
 
     def to_nir(self, params: dict[str, Any]) -> Any:
         raise NotImplementedError(f"{type(self).__name__} does not support NIR export")
+
+    def to_pipeline(self, params: dict[str, Any]) -> str:
+        """Return Python emitted for a custom training/evaluation DAG node."""
+        raise NotImplementedError(f"{type(self).__name__} does not provide custom pipeline source")

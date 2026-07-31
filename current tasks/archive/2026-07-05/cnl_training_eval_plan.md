@@ -4,7 +4,7 @@
 Currently, the Architecture tab uses the Cognitive Neural Language (CNL) to define the network structure, while the Pipeline tab uses a simple JSON payload (`PipelineConfig`) for the training and evaluation canvas. To unify the tool's expressive power, this plan outlines how to bring full CNL support to the training and evaluation pipeline, including visual UI updates to allow drawing the pipeline rather than just configuring it in a form.
 
 ## 2. CNL Language Extensions
-We will extend the CNL grammar to support a `pipeline` block, replacing the existing JSON payload. 
+We will extend the CNL grammar to support a `pipeline` block, replacing the existing JSON payload.
 
 **Example Syntax:**
 ```cnl

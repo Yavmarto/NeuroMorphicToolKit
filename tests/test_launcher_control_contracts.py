@@ -104,4 +104,3 @@ class LauncherControlContractTest(unittest.TestCase):
         unknown = _RouteHandler("/api/launcher/not-real/", state)
         server.LauncherControlHandler._dispatch(unknown, "GET")
         self.assertEqual(unknown.responses[0][0], HTTPStatus.NOT_FOUND)
-

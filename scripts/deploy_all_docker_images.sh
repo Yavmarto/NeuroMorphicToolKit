@@ -42,12 +42,12 @@ images=(
 
 for entry in "${images[@]}"; do
   IFS=":" read -r image file build_arg <<< "$entry"
-  
+
   tag="ghcr.io/${GITHUB_USER}/${REPO_NAME}/${image}:latest"
   echo "--------------------------------------------------------"
   echo "Building and pushing: $tag"
   echo "Dockerfile: $file"
-  
+
   if [ -n "$build_arg" ]; then
     docker buildx build --platform linux/amd64 --build-arg "$build_arg" -t "$tag" -f "$file" --push .
   else

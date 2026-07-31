@@ -2,8 +2,7 @@
 or OmniParser to be running. Run with: conda run -n omni pytest agent-tests/test_local_host_agent.py -v
 """
 import base64
-import subprocess
-from pathlib import Path
+from PIL import Image
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -22,8 +21,6 @@ def test_load_guide_missing_file_raises_filenotfounderror():
     with pytest.raises(FileNotFoundError, match="Guide file not found"):
         agent.load_guide("/nonexistent/path/does_not_exist.md")
 
-
-from PIL import Image
 
 
 def _make_fake_img():

@@ -4,12 +4,12 @@
 Superseded (reverted same-day; see Status Update below)
 
 ## Context
-Currently, the `neurocnl` training and evaluation workflows utilize a static "Adapter" pattern (e.g., `snntorch_adapter.py`). While the frontend `NeuroStudio` canvas allows users to wire arbitrary training and evaluation nodes in a Directed Acyclic Graph (DAG), the backend ignores this topological wiring. Instead, the backend treats the DAG as a flat configuration dictionary and executes a hardcoded PyTorch BPTT (Backpropagation Through Time) loop. 
+Currently, the `neurocnl` training and evaluation workflows utilize a static "Adapter" pattern (e.g., `snntorch_adapter.py`). While the frontend `NeuroStudio` canvas allows users to wire arbitrary training and evaluation nodes in a Directed Acyclic Graph (DAG), the backend ignores this topological wiring. Instead, the backend treats the DAG as a flat configuration dictionary and executes a hardcoded PyTorch BPTT (Backpropagation Through Time) loop.
 
 This hardcoding restricts the toolkit's scientific flexibility. It prevents the adoption of custom mathematical learning rules (e.g., Linearized Bregman Iterations), spike-domain DSP algorithms, and rigorous mathematical evaluation metrics (like the Alexiewicz norm) which require custom sequences of operations that diverge from standard deep learning loops.
 
 ## Decision
-We will deprecate the static Training Adapter pattern and implement a **Dynamic Graph Executor**. 
+We will deprecate the static Training Adapter pattern and implement a **Dynamic Graph Executor**.
 
 1. **Graph Compilation**: The backend will compile both the `train` and `eval` `PipelinePhasesPayload` DAGs into strict `ExecutionSequence` plans using topological sorting (mirroring how the Model architecture is currently compiled).
 2. **Abstract Executor**: We will introduce an `AbstractDynamicExecutor` to map dynamic execution nodes to specific NIR-supported framework tensor operations (e.g., SNNTorch, Lava, Norse).

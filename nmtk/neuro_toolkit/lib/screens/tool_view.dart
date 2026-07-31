@@ -21,6 +21,9 @@ import 'package:neuro_toolkit/widgets/module_icon.dart';
 import 'package:neuro_toolkit/widgets/module_loading_view.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 
 class ToolViewScreen extends ConsumerStatefulWidget {
   const ToolViewScreen({super.key, this.initialModuleId});
@@ -529,6 +532,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         useShouldOverrideUrlLoading: true,
         transparentBackground: false,
         isInspectable: kDebugMode,
+        useOnDownloadStart: true,
       ),
       onWebViewCreated: (controller) {
         _controllers[module.id] = controller;
@@ -540,6 +544,71 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         setState(() {
           _moduleLoadFailures.remove(module.id);
         });
+      },
+      onDownloadStartRequest: (controller, downloadRequest) async {
+        final uri = downloadRequest.url;
+        final urlString = uri.toString();
+
+        if (urlString.startsWith('blob:')) {
+          final base64data = await controller.evaluateJavascript(source: """
+            new Promise((resolve, reject) => {
+              var xhr = new XMLHttpRequest();
+              xhr.open('GET', '$urlString', true);
+              xhr.responseType = 'blob';
+              xhr.onload = function(e) {
+                if (this.status == 200) {
+                  var blob = this.response;
+                  var reader = new FileReader();
+                  reader.readAsDataURL(blob);
+                  reader.onloadend = function() {
+                    resolve(reader.result);
+                  }
+                } else {
+                  reject('Failed to fetch blob');
+                }
+              };
+              xhr.send();
+            });
+          """);
+
+          if (base64data != null && base64data is String) {
+            final commaIndex = base64data.indexOf(',');
+            if (commaIndex != -1) {
+              final b64 = base64data.substring(commaIndex + 1);
+              final bytes = base64Decode(b64);
+              final savePath = await FilePicker.saveFile(
+                dialogTitle: 'Save File',
+                fileName: downloadRequest.suggestedFilename ?? 'download',
+              );
+              if (savePath != null) {
+                await File(savePath).writeAsBytes(bytes);
+              }
+            }
+          }
+        } else if (urlString.startsWith('data:')) {
+          final commaIndex = urlString.indexOf(',');
+          if (commaIndex != -1) {
+            final b64 = urlString.substring(commaIndex + 1);
+            final isBase64 = urlString.substring(0, commaIndex).contains(';base64');
+            final savePath = await FilePicker.saveFile(
+              dialogTitle: 'Save File',
+              fileName: downloadRequest.suggestedFilename ?? 'download',
+            );
+            if (savePath != null) {
+              if (isBase64) {
+                await File(savePath).writeAsBytes(base64Decode(b64));
+              } else {
+                await File(savePath).writeAsString(Uri.decodeComponent(b64));
+              }
+            }
+          }
+        } else {
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            debugPrint('Could not launch download URL: $urlString');
+          }
+        }
       },
       shouldOverrideUrlLoading: (controller, navigationAction) async {
         final requestUrl = navigationAction.request.url;

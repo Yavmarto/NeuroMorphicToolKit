@@ -19,6 +19,7 @@ def test_component_block_has_custom_fields():
     assert cb.author == ""
     assert cb.version == "1.0.0"
     assert cb.source_path is None
+    assert cb.base_pipeline_type is None
 
 
 def test_custom_fields_round_trip():
@@ -37,8 +38,10 @@ def test_custom_fields_round_trip():
         author="user",
         version="1.0.0",
         source_path="/home/user/.nmtk/custom_nodes/my_node.py",
+        base_pipeline_type="forwardPass",
     )
     assert cb.is_custom is True
     assert cb.canvas_contexts == ["model", "training"]
     assert cb.supported_frameworks == ["nengo"]
     assert cb.source_path == "/home/user/.nmtk/custom_nodes/my_node.py"
+    assert cb.base_pipeline_type == "forwardPass"
