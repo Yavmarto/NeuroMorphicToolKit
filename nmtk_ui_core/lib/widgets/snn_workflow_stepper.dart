@@ -6,7 +6,6 @@ enum SnnWorkflowPhase {
   defineModel,
   defineTrain,
   defineEval,
-  trainingSandbox,
   run,
   deploy,
 }
@@ -20,25 +19,20 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
   SnnWorkflowPhase.defineModel: 'Model',
   SnnWorkflowPhase.defineTrain: 'Training',
   SnnWorkflowPhase.defineEval: 'Eval',
-  SnnWorkflowPhase.trainingSandbox: 'Notebook',
   SnnWorkflowPhase.run: 'Run',
   SnnWorkflowPhase.deploy: 'Deploy',
 };
 
 /// A specialized pipeline stepper for the NeuroMorphicToolKit SNN workflow.
 ///
-/// Models the 7-step workflow for training and deploying an SNN:
+/// Models the 6-step workflow for training and deploying an SNN:
 /// 1. Setup        (selectData)
 /// 2. Model        (defineModel)
 /// 3. Training     (defineTrain)
 /// 4. Eval         (defineEval)
-/// 5. Notebook     (trainingSandbox / Jupyter/Python)
-/// 6. Run          (run / GPU)
-/// 7. Deploy       (deploy)
-///
-/// When [onOpenSandbox] is provided, tapping step 5 opens the training notebook
-/// (e.g. via url_launcher in the consumer) in addition to navigating to that phase.
-/// A "↗" affordance is appended to the step label to signal the action.
+/// 5. Run          (run / GPU — also hosts the training notebook, opened
+///                  on demand from the consumer's Run screen)
+/// 6. Deploy       (deploy)
 class SnnWorkflowStepper extends StatelessWidget {
   /// The currently active workflow phase.
   final SnnWorkflowPhase currentPhase;
@@ -57,10 +51,6 @@ class SnnWorkflowStepper extends StatelessWidget {
 
   /// Optional callback when a step is tapped.
   final ValueChanged<SnnWorkflowPhase>? onPhaseSelected;
-
-  /// Optional callback invoked when the user taps the Training Sandbox step.
-  /// Intended for the consumer to launch Jupyter Lab (e.g. via url_launcher).
-  final VoidCallback? onOpenSandbox;
 
   /// When set, this phase is also highlighted in the stepper (dual-pane view).
   final SnnWorkflowPhase? secondaryPhase;
@@ -100,7 +90,6 @@ class SnnWorkflowStepper extends StatelessWidget {
     this.epochPulseTick = 0,
     this.runningPhase,
     this.onPhaseSelected,
-    this.onOpenSandbox,
     this.secondaryPhase,
     this.bare = false,
     this.lockedPhases = const <SnnWorkflowPhase>{},
@@ -151,7 +140,6 @@ class SnnWorkflowStepper extends StatelessWidget {
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (fact check / evaluation)
           Icons.fact_check_outlined,
         ),
-        _buildSandboxStepData(),
         _buildStepData(
           SnnWorkflowPhase.run,
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (play circle / run job)
@@ -169,22 +157,6 @@ class SnnWorkflowStepper extends StatelessWidget {
 
   String _numberedLabel(SnnWorkflowPhase phase) =>
       '${phase.index + 1}. ${stepLabels[phase] ?? phase.name}';
-
-  NmtkPipelineStepData _buildSandboxStepData() {
-    final status = _getStatusForPhase(SnnWorkflowPhase.trainingSandbox);
-    VoidCallback? onTap;
-    if (onPhaseSelected != null) {
-      onTap = () => onPhaseSelected!(SnnWorkflowPhase.trainingSandbox);
-    }
-    return NmtkPipelineStepData(
-      id: SnnWorkflowPhase.trainingSandbox.name,
-      label: _numberedLabel(SnnWorkflowPhase.trainingSandbox),
-      status: status,
-      // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (flask / experiment sandbox)
-      icon: Icons.science_outlined,
-      onTap: onTap,
-    );
-  }
 
   NmtkPipelineStepData _buildStepData(
     SnnWorkflowPhase phase,
