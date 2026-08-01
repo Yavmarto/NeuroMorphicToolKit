@@ -47,6 +47,8 @@ _TYPE_EXTENSION = {
     "hardware_profile": ".json",
     "encoding_preset": ".json",
     "benchmark_baseline": ".json",
+    "custom_node": ".py",
+    "benchmark_result": ".json",
 }
 
 

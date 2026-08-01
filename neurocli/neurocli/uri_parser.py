@@ -33,7 +33,7 @@ _SEMVER_RE = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)\Z")
 
 
 class ArtefactType(str, Enum):
-    """The seven canonical artefact type keys for the registry."""
+    """The nine canonical artefact type keys for the registry."""
 
     cnl_template = "cnl_template"
     cnlspace = "cnlspace"
@@ -42,6 +42,8 @@ class ArtefactType(str, Enum):
     hardware_profile = "hardware_profile"
     encoding_preset = "encoding_preset"
     benchmark_baseline = "benchmark_baseline"
+    custom_node = "custom_node"
+    benchmark_result = "benchmark_result"
 
 
 class URIParseError(ValueError):
@@ -54,7 +56,7 @@ class NeurohubURI:
 
     Attributes:
         scheme: Always ``"neurohub"``.
-        type: One of the seven canonical artefact types.
+        type: One of the nine canonical artefact types.
         owner: ``"{username}"`` or ``"{org}/{username}"``.
         slug: The artefact slug.
         version: A ``MAJOR.MINOR.PATCH`` string, or ``None`` when absent.

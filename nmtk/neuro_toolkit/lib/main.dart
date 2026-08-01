@@ -64,6 +64,7 @@ class NeuroToolkitApp extends ConsumerWidget {
     final settings = settingsState.value;
     if (settings == null) {
       return const MaterialApp(
+        debugShowCheckedModeBanner: false,
         home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
@@ -71,6 +72,7 @@ class NeuroToolkitApp extends ConsumerWidget {
 
     return NmtkZetaTheme.wrap(
       builder: (context, light, dark, mode) => MaterialApp.router(
+        debugShowCheckedModeBanner: false,
         title: 'NeuroToolkit',
         theme:
             settings.isHighContrast ? AppTheme.highContrastLightTheme : light,

@@ -70,3 +70,46 @@ so a narrow host degrades to scrollable instead of asserting.
   a desktop Flutter app in this session) — recommend the user do a quick
   Setup → Architecture → Train → Eval → Run → Results walkthrough to eyeball
   the new action bar and Network Playback panel.
+
+## Correction pass (same day)
+
+The first pass shipped three real problems the user caught after actually
+running the app — none of which showed up in `flutter analyze`/tests, since
+they were either a visual duplication, a wrong-but-compiling substitute
+widget, or a stale string:
+
+1. **Two floating bars stacked on Run.** `MobileCanvasChrome` (undo/redo/
+   clear-canvas, `widgets/canvas/mobile_canvas_chrome.dart`) turned out to
+   render unconditionally inside `CanvasScreen` for every embed — including
+   the read-only backgrounds behind Run, Results, and Results' compare view
+   — despite its name implying it was mobile-only. It was never gated for
+   read-only use, so it sat underneath the new `_RunActionBar`. Added a
+   `disableEditingChrome` param to `CanvasScreen` (`screens/canvas/
+   canvas_screen.dart`) and passed `true` from all three read-only embeds:
+   `run_step.dart`, `results_step.dart`, and `results_comparison.dart` (found
+   the same latent bug there too while fixing the other two).
+2. **Wrong visualization reused.** The first pass deleted the fake
+   `/viz-demo` screen (correct) but replaced its visual with a *different*
+   widget (`AnimatedSnnPlayback`, a spike-raster chart) instead of the actual
+   chip-die tile-grid renderer the demo used (`TileGridNeuronRenderer`, in
+   `nmtk_ui_core/lib/visualization/tile_grid_renderer.dart` — untouched, only
+   its fake data source had been deleted). Replaced the Results "Network
+   Playback" panel's rendering with a new `_TileGridPlayback` widget that
+   bins the same real per-run spike raster into a near-square tile grid (one
+   neuron per tile) and drives `TileGridNeuronRenderer.pushFrame()` with a
+   small play/pause + scrub control — same renderer as the old demo, real
+   data instead of Poisson noise.
+3. **Stale "Complete Step 6 (Train) first." on Results.** Just a hardcoded
+   string never updated when the step count dropped 7→6 — fixed to
+   "Complete Step 5 (Run) first." Swept for and fixed five more stale
+   step-number doc-comments in the same pass (`run_step.dart`,
+   `running_notebook_tasks_provider.dart`, `training_history_provider.dart`,
+   `training_provider.dart`, `notebook_meta_provider.dart` — this last one
+   also reworded, since it still described Notebook as its own step,
+   `api_client.dart`) so the same complaint doesn't resurface from a
+   different file.
+
+Verification: `flutter analyze` clean (zero errors, only pre-existing dead-
+code warnings) across the whole frontend; re-ran the split-view regression
+test from the first pass to confirm the `CanvasScreen` param change doesn't
+reintroduce the earlier overflow.
