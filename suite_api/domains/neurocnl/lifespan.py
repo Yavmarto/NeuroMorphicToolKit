@@ -1,8 +1,8 @@
 """neurocnl lifespan management for suite_api.
 
-Initialises the job store (SQLite schema + stale-job recovery), wires the
-slowapi rate limiter onto the app, starts the periodic job-cleanup task, and
-configures structlog — all the startup work that the standalone
+Initialises the job and workspace stores, wires the slowapi rate limiter onto
+the app, starts the periodic job-cleanup task, and configures structlog — all
+the startup work that the standalone
 ``neurocnl/backend/app/main.py`` does but that suite_api must do itself.
 
 Called from ``suite_api/main.py``'s asynccontextmanager lifespan.
@@ -26,6 +26,7 @@ async def neurocnl_startup(app) -> None:  # type: ignore[type-arg]
 
     * Configures structlog so request-level logs appear in the terminal.
     * Initialises the SQLite job store schema.
+    * Initialises the SQLite workspace store schema.
     * Recovers any orphaned 'running' jobs from a previous crash.
     * Starts the hourly job-cleanup background task.
     * Wires the slowapi rate limiter onto ``app.state`` so the
@@ -38,6 +39,7 @@ async def neurocnl_startup(app) -> None:  # type: ignore[type-arg]
     # must do it here so neurocnl's structlog processors are active.
     try:
         from neurocnl.logging_config import setup_logging
+
         setup_logging()
     except Exception as exc:
         logger.warning("neurocnl setup_logging failed (non-fatal): %s", exc)
@@ -49,6 +51,7 @@ async def neurocnl_startup(app) -> None:  # type: ignore[type-arg]
         from slowapi import _rate_limit_exceeded_handler
         from slowapi.errors import RateLimitExceeded
         from backend.app.middleware.rate_limit import limiter
+
         app.state.limiter = limiter
         app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
         logger.info("neurocnl rate limiter wired onto suite_api")
@@ -60,6 +63,7 @@ async def neurocnl_startup(app) -> None:  # type: ignore[type-arg]
     # call to /simulate fails with "no such table: jobs".
     try:
         from backend.app.services.job_store import job_store
+
         await job_store.initialize()
         recovered = await job_store.recover_stale_running_jobs()
         if recovered:
@@ -67,9 +71,19 @@ async def neurocnl_startup(app) -> None:  # type: ignore[type-arg]
     except Exception as exc:
         logger.error("neurocnl job_store initialisation failed: %s", exc)
 
+    # Suite API mounts the workspace router in-process, so it must initialize
+    # the same SQLite schema as the standalone NeuroCNL application.
+    try:
+        from backend.app.services.workspace_store import workspace_store
+
+        await workspace_store.initialize()
+    except Exception as exc:
+        logger.error("neurocnl workspace_store initialisation failed: %s", exc)
+
     # ── Cleanup task ─────────────────────────────────────────────────────────
     async def _cleanup_loop() -> None:
         from backend.app.services.job_store import job_store as _js
+
         while True:
             try:
                 await _js.cleanup_expired_jobs(86400)
@@ -87,6 +101,7 @@ async def neurocnl_shutdown() -> None:
 
     try:
         from backend.app.services.job_store import job_store
+
         cancelled = await job_store.drain(timeout=10.0)
         if cancelled:
             logger.warning("neurocnl: shutdown cancelled %d active jobs", cancelled)

@@ -146,6 +146,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   Widget _buildServerConnectionButton(BuildContext context) {
     final controlApi = ref.watch(controlApiServiceProvider);
     final connection = ref.watch(serverConnectionProvider);
+    final backendVersionAsync = ref.watch(backendVersionProvider);
+    final backendVersion = backendVersionAsync.value;
     final effectiveConnection = connection.baseUri == controlApi.baseUri
         ? connection
         : ServerConnectionState(
@@ -153,6 +155,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             baseUri: controlApi.baseUri,
           );
     final tokens = NmtkShellTokens.of(context);
+
+    final labelText = backendVersion != null
+        ? '${controlApi.baseUri.host} · v$backendVersion'
+        : controlApi.baseUri.host;
+
     return FloatingActionButton.extended(
       onPressed: () => _showServerConnectionPopup(context),
       tooltip: 'Server Connection',
@@ -161,7 +168,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         color: _serverConnectionColor(effectiveConnection.phase, tokens),
         size: 14,
       ),
-      label: Text(controlApi.baseUri.host),
+      label: Text(labelText),
     );
   }
 

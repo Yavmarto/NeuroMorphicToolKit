@@ -106,7 +106,11 @@ _install_python_deps() {
   case "$method" in
     pip)
       [ -f "$dir/pyproject.toml" ] && python -m pip install -e "./$dir" --quiet 2>&1 | tail -1 || true
-      python -m pip install pytest httpx ruff mypy --quiet 2>&1 | tail -1 || true
+      # trio: anyio's pytest plugin parametrizes every async test over both the
+      # asyncio and trio backends by default; without trio installed, every
+      # [trio] parametrization fails with `ModuleNotFoundError: No module
+      # named 'trio'` (neurocnl/backend/tests has ~25 such tests).
+      python -m pip install pytest httpx ruff mypy trio --quiet 2>&1 | tail -1 || true
       if [ "$mod" = "neurocnl" ] && [ -f "neurocnl/backend/requirements.txt" ]; then
         (cd neurocnl/backend && python -m pip install -r requirements.txt --quiet 2>&1 | tail -1) || true
       fi
@@ -162,7 +166,15 @@ run_python_module() {
   if [ "$mod" = "neurocnl" ]; then
     _stage "pytest-core" "cd neurocnl && python -m pytest neurocnl/ -v --tb=short --hypothesis-show-statistics"
     if [ -f "neurocnl/backend/requirements.txt" ]; then
-      _stage "pytest-backend" "cd neurocnl/backend && PYTHONPATH=. python -m pytest tests --tb=short"
+      # PYTHONPATH must be the repo ROOT, not `.` after `cd neurocnl/backend` —
+      # backend/app/main.py imports neurosim, which imports nmtk_sdk (a
+      # repo-root-level package, sibling of neurocnl/) directly. `PYTHONPATH=.`
+      # relative to neurocnl/backend can never see it, so every test module
+      # failed collection with `ModuleNotFoundError: No module named
+      # 'nmtk_sdk'` — which made this stage always fail, which made
+      # dev_update.sh's pre-sync test gate always die before ever syncing or
+      # restarting anything.
+      _stage "pytest-backend" "cd neurocnl/backend && PYTHONPATH='${ROOT_DIR}' python -m pytest tests --tb=short"
     fi
   else
     _stage "pytest" "cd '$dir' && $run_cmd pytest --tb=short --hypothesis-show-statistics"

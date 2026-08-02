@@ -43,6 +43,7 @@ help:
 	@echo "  make docker-ex-all-i REMOTE_HOST=user@ip - Same as docker-ex-i (alias)"
 	@echo "  make docker-ex-down REMOTE_HOST=user@ip - Stop and remove remote Docker containers"
 	@echo "  make dev-update               - Daily: test, sync to the dev backend, rebuild only what needs it"
+	@echo "  make restart-server           - Just restart suite_api on the dev backend (no sync/tests)"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release-publish VERSION=x.y.z - Cut, push, watch CI and verify a full release"
 	@echo "  make release VERSION=x.y.z    - Tag a release locally only (release-publish calls this)"
@@ -269,7 +270,9 @@ DEV_BACKEND_HOST ?= moosebuntu@192.168.2.51
 
 ## Daily driver. Runs the changed-module tests, syncs source to the dev host,
 ## then does the *minimum* to make it live: only suite_api is bind-mounted, so a
-## worker edit needs a rebuild while a suite_api edit needs nothing. Supersedes
+## worker edit needs a rebuild while a suite_api/neurocnl-backend edit just gets
+## suite_api restarted (uvicorn --reload alone has proven unreliable at actually
+## picking up bind-mounted changes on this host — see dev_update.sh). Supersedes
 ## the old `backend-update` (which always did a plain rsync) and docker-ex-deploy
 ## (which always rebuilt all 14 images).
 ## Auto-detects whether the host serves Akida from the native neurochip.service
@@ -280,6 +283,17 @@ DEV_BACKEND_HOST ?= moosebuntu@192.168.2.51
 dev-update:
 	@REMOTE_HOST=$(if $(REMOTE_HOST),$(REMOTE_HOST),$(DEV_BACKEND_HOST)) \
 		bash scripts/dev_update.sh $(ARGS)
+
+## Restart just the suite_api container on the dev host — no tests, no sync, no
+## rebuild. Use when a change was already synced (dev-update said "no container
+## work") but isn't showing up: uvicorn --reload doesn't always pick up
+## bind-mounted edits, so this forces a clean process restart in a few seconds.
+## dev-update itself now does this automatically for suite_api/neurocnl-backend
+## changes; reach for this target on its own when you just want to be sure.
+.PHONY: restart-server
+restart-server:
+	@REMOTE_HOST=$(if $(REMOTE_HOST),$(REMOTE_HOST),$(DEV_BACKEND_HOST)) \
+		bash scripts/dev_update.sh --restart-suite-api-only $(ARGS)
 
 ## Cut a release end to end: pre-flight gates, bump/changelog/tag via
 ## scripts/release.sh, confirm once, push submodules then root, watch both CI

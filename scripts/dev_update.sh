@@ -7,6 +7,10 @@
 #   --skip-jupyter-check   don't gate success on jupyter-server answering on :8008
 #   --no-rebuild           sync only; warn instead of rebuilding
 #   --force-rebuild SVC    rebuild SVC regardless of what changed (repeatable)
+#   --restart-suite-api-only  skip tests/sync entirely, just restart the suite_api
+#                          container on REMOTE_HOST and verify health. This is
+#                          what `make restart-server` runs — use it when a plain
+#                          reload seems stuck, or on its own via --explain below.
 #   --dry-run              decide and print; change nothing, locally or remotely
 #   --explain PATH...      print what each path would trigger, and exit. Needs no
 #                          host — use it to check the table or ask "why did it
@@ -43,6 +47,7 @@ COMPOSE_ARGS="-f docker-compose.yml -f docker-compose.dev.yml"
 SKIP_TESTS=false
 SKIP_JUPYTER_CHECK=false
 NO_REBUILD=false
+RESTART_SUITE_API_ONLY=false
 DRY_RUN=false
 EVICT_PORTS=false
 REMOVE_ORPHANS=false
@@ -64,6 +69,7 @@ while [ $# -gt 0 ]; do
     --skip-tests)      SKIP_TESTS=true ;;
     --skip-jupyter-check) SKIP_JUPYTER_CHECK=true ;;
     --no-rebuild)      NO_REBUILD=true ;;
+    --restart-suite-api-only) RESTART_SUITE_API_ONLY=true ;;
     --akida-native)    AKIDA_NATIVE=1 ;;
     --no-akida-native) AKIDA_NATIVE=0 ;;
     --evict-ports)     EVICT_PORTS=true ;;
@@ -73,7 +79,7 @@ while [ $# -gt 0 ]; do
     --dry-run)       DRY_RUN=true ;;
     --explain)       shift; [ $# -gt 0 ] || die "--explain needs at least one path"
                      EXPLAIN_PATHS=("$@"); break ;;
-    -h|--help)       sed -n '2,21p' "$0"; exit 0 ;;
+    -h|--help)       sed -n '2,25p' "$0"; exit 0 ;;
     *)               die "unknown option: $1 (see --help)" ;;
   esac
   shift
@@ -360,7 +366,7 @@ explain() {
       case "$verdict" in
         REBUILD:*)   printf 'rebuild %s (not bind-mounted)\n' "${verdict#REBUILD:}" ;;
         RESTART:*)   printf 'restart %s (bind-mounted)\n' "${verdict#RESTART:}" ;;
-        RELOAD:*)    printf 'nothing — live via suite_api bind mount + --reload\n' ;;
+        RELOAD:*)    printf 'restart suite_api (bind-mounted; --reload alone is unreliable)\n' ;;
         RECREATE:*)  printf 'recreate the stack\n' ;;
         ASSETSYNC:*) printf 'also: resync the Flutter asset bundle\n' ;;
         NOOP:*)      printf 'nothing — not a backend runtime path\n' ;;
@@ -382,6 +388,15 @@ main() {
 
   # Decide the compose file set before anything else uses compose_remote().
   apply_akida_overlay
+
+  if $RESTART_SUITE_API_ONLY; then
+    log "Restarting suite_api only (--restart-suite-api-only) — no sync, no tests."
+    $DRY_RUN || compose_remote "restart suite_api"
+    $DRY_RUN || verify_health
+    log "suite_api restarted."
+    return 0
+  fi
+
   report_orphans
 
   # 1. Tests BEFORE the sync, so a failing change never reaches the dev host.
@@ -478,10 +493,6 @@ main() {
   fi
 
   # 5. Report the decision and why, then act.
-  if $reload && [ ${#uniq_rebuild[@]} -eq 0 ] && [ ${#uniq_restart[@]} -eq 0 ] && ! $recreate; then
-    log "Decision: no container work — those paths are bind-mounted into suite_api"
-    log "          and uvicorn --reload picks them up."
-  fi
   $assetsync && warn "compose files changed — rerun the asset sync and commit the bundle."
 
   # On an Akida-native host the containerized worker is profiled off entirely, so
@@ -524,6 +535,22 @@ main() {
   if [ ${#uniq_restart[@]} -gt 0 ]; then
     log "Decision: restart ${uniq_restart[*]} (bind-mounted, applied on restart)."
     $DRY_RUN || compose_remote "restart ${uniq_restart[*]}"
+  fi
+
+  # suite_api is bind-mounted with --reload, which *should* make RELOAD-classified
+  # paths (suite_api/*, neurocnl/backend/*) live with no container work at all —
+  # but in practice uvicorn's reloader has been observed to miss changes on this
+  # host (confirmed 2026-08-01: a synced fix sat live-but-unpicked-up for hours,
+  # verified stale by fetching a freshly generated notebook from the running
+  # server). $recreate and a suite_api rebuild above already restart it; only add
+  # the extra restart when neither already covers it.
+  local suite_api_covered=false
+  $recreate && suite_api_covered=true
+  case " ${uniq_rebuild[*]-} " in *" suite_api "*) suite_api_covered=true ;; esac
+  if $reload && ! $suite_api_covered; then
+    log "Decision: restart suite_api (belt-and-braces — --reload is not reliably"
+    log "          picking up neurocnl/backend changes on this host)."
+    $DRY_RUN || compose_remote "restart suite_api"
   fi
 
   if $DRY_RUN; then

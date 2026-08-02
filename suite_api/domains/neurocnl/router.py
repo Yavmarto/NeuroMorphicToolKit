@@ -41,6 +41,7 @@ from backend.app.routers import (
     templates,
     training,
     nir_inspect,
+    workspaces,
 )
 from backend.app.routers.prosthetic import (
     analysis as prosthetic_analysis,
@@ -101,6 +102,7 @@ for _r in [
     templates.router,
     training.router,
     nir_inspect.router,
+    workspaces.router,
 ]:
     router.include_router(_r)
 

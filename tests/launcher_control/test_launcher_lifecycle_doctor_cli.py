@@ -237,6 +237,12 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module["status"] = launcher_server.STATUS_INDEX["starting"]
         self.state._manage_suite_api = False
 
+        # Stop background health thread to prevent race conditions during synchronous test
+        self.state._shutdown.set()
+        if hasattr(self.state, "_health_thread") and self.state._health_thread.is_alive():
+            self.state._health_thread.join(timeout=2.0)
+        self.state._shutdown.clear()
+
         with (
             mock.patch.object(
                 launcher_module_lifecycle,
@@ -477,6 +483,12 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module["uvicornTarget"] = ""
         module["startStrategy"] = "none"
         module["status"] = launcher_server.STATUS_INDEX["error"]
+
+        # Stop background health thread to prevent race conditions during synchronous test
+        self.state._shutdown.set()
+        if hasattr(self.state, "_health_thread") and self.state._health_thread.is_alive():
+            self.state._health_thread.join(timeout=2.0)
+        self.state._shutdown.clear()
 
         call_count = 0
 
