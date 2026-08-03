@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
@@ -24,6 +25,20 @@ class TileActivityFrame {
   });
 
   int get tileCount => tileRows * tileCols;
+
+  /// How many tiles actually have a value behind them.
+  ///
+  /// [tileCount] is the grid's *geometry*, which callers routinely pad past
+  /// the data: binning N neurons into a near-square grid gives
+  /// `ceil(sqrt(N)) * ceil(N / ceil(sqrt(N))) >= N` tiles (1000 neurons ->
+  /// a 32x32 grid -> 24 trailing tiles with no neuron). Reading
+  /// [tileActivity]/[tileConcentration] past this bound is what threw a
+  /// `RangeError` on every paint, so index against this — never against
+  /// [tileCount].
+  int get filledTileCount => math.min(
+    tileCount,
+    math.min(tileActivity.length, tileConcentration.length),
+  );
 
   /// Neurons mapped to tile [index] — an even split; the toolkit's chip
   /// targets don't expose per-core neuron counts finer than this average.
@@ -76,7 +91,7 @@ class TileGridNeuronRenderer {
       return null;
     }
     final index = row * frame.tileCols + col;
-    return index < frame.tileCount ? index : null;
+    return index < frame.filledTileCount ? index : null;
   }
 
   Widget buildSurface(BuildContext context) {
@@ -132,7 +147,11 @@ class TileGridNeuronRenderer {
                           hotspotColor: hotspotColor,
                         ),
                       ),
-                      if (hovered != null)
+                      // Re-check the bound here rather than trusting the
+                      // notifier: a hover index captured on a larger frame
+                      // outlives the frame itself when the selected layer
+                      // changes to a smaller population.
+                      if (hovered != null && hovered < frame.filledTileCount)
                         _buildTilePopup(context, frame, hovered),
                     ],
                   ),
@@ -241,7 +260,9 @@ class _TileGridPainter extends CustomPainter {
     for (var row = 0; row < frame.tileRows; row++) {
       for (var col = 0; col < frame.tileCols; col++) {
         final index = row * frame.tileCols + col;
-        if (index >= frame.tileCount) continue;
+        // Bound against the data, not the geometry — padded trailing tiles
+        // have no value and are simply left unpainted.
+        if (index >= frame.filledTileCount) continue;
 
         final activity = frame.tileActivity[index].clamp(0.0, 1.0);
         final concentration = frame.tileConcentration[index].clamp(0.0, 1.0);
