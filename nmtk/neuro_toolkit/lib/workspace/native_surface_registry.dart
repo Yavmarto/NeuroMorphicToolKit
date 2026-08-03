@@ -10,23 +10,37 @@ import 'package:neurosense_shell_adapter/neurosense_shell_adapter.dart';
 typedef NativeSurfaceBuilder = Widget Function(
   WorkspaceSession session, {
   String? initialServerUrl,
+  Widget? workspaceHeaderAction,
 });
 
 class NativeSurfaceRegistry {
   static final Map<String, NativeSurfaceBuilder> _builders =
       <String, NativeSurfaceBuilder>{
-    'neurocnl': (WorkspaceSession session, {String? initialServerUrl}) {
+    'neurocnl': (
+      WorkspaceSession session, {
+      String? initialServerUrl,
+      Widget? workspaceHeaderAction,
+    }) {
       return NeurocnlShellAdapter(
         initialLocation: session.deepLink ?? '/',
         initialServerUrl: initialServerUrl,
+        workspaceHeaderAction: workspaceHeaderAction,
       );
     },
-    'Neurohub': (WorkspaceSession session, {String? initialServerUrl}) {
+    'Neurohub': (
+      WorkspaceSession session, {
+      String? initialServerUrl,
+      Widget? workspaceHeaderAction,
+    }) {
       return NeurohubShellAdapter(
         initialLocation: session.deepLink ?? '/',
       );
     },
-    'Neurochip': (WorkspaceSession session, {String? initialServerUrl}) {
+    'Neurochip': (
+      WorkspaceSession session, {
+      String? initialServerUrl,
+      Widget? workspaceHeaderAction,
+    }) {
       return NeurocnlShellAdapter(
         initialLocation: session.deepLink ?? '/?panel=deploy',
         initialRestoreState: session.restoreState.isEmpty
@@ -35,12 +49,20 @@ class NativeSurfaceRegistry {
         initialServerUrl: initialServerUrl,
       );
     },
-    'Neurobench': (WorkspaceSession session, {String? initialServerUrl}) {
+    'Neurobench': (
+      WorkspaceSession session, {
+      String? initialServerUrl,
+      Widget? workspaceHeaderAction,
+    }) {
       return NeurobenchShellAdapter(
         initialLocation: session.deepLink ?? '/',
       );
     },
-    'Neurosense': (WorkspaceSession session, {String? initialServerUrl}) {
+    'Neurosense': (
+      WorkspaceSession session, {
+      String? initialServerUrl,
+      Widget? workspaceHeaderAction,
+    }) {
       return NeurosenseShellAdapter(
         initialLocation: session.deepLink ?? '/',
       );
@@ -54,11 +76,16 @@ class NativeSurfaceRegistry {
     String moduleId,
     WorkspaceSession session, {
     String? initialServerUrl,
+    Widget? workspaceHeaderAction,
   }) {
     final builder = _builders[moduleId];
     if (builder == null) {
       throw ArgumentError('No native surface registered for $moduleId');
     }
-    return builder(session, initialServerUrl: initialServerUrl);
+    return builder(
+      session,
+      initialServerUrl: initialServerUrl,
+      workspaceHeaderAction: workspaceHeaderAction,
+    );
   }
 }

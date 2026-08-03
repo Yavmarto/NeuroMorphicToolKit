@@ -62,9 +62,17 @@ final launcherBootstrapStateProvider = Provider<LauncherBootstrapState>((ref) {
   return result?.bootstrapState ?? LauncherBootstrapState.noServerSelected();
 });
 
+/// The currently resolved launcher service, when bootstrap has reached one.
+///
+/// Presentation code uses this nullable provider so the normal app shell can
+/// remain mounted before a server is selected. Operations that require a
+/// launcher should continue to use [controlApiServiceProvider].
+final selectedControlApiServiceProvider = Provider<ControlApiService?>((ref) {
+  return ref.watch(launcherBootstrapProvider).value?.controlApiService;
+});
+
 final controlApiServiceProvider = Provider<ControlApiService>((ref) {
-  final result = ref.watch(launcherBootstrapProvider).value;
-  final controlApiService = result?.controlApiService;
+  final controlApiService = ref.watch(selectedControlApiServiceProvider);
   if (controlApiService == null) {
     throw StateError('No launcher server has been selected.');
   }

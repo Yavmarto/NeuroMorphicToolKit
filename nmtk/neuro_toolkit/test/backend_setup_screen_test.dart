@@ -142,7 +142,8 @@ void main() {
 
     expect(find.text('Set up your backend'), findsOneWidget);
     expect(find.byType(BackendSetupForm), findsOneWidget);
-    expect(find.text('Connect to server'), findsNothing);
+    expect(find.text('Connect to server'), findsOneWidget);
+    expect(find.text('Set up new server'), findsOneWidget);
     expect(find.text('Server address'), findsNothing);
     expect(find.text('Save & Retry'), findsNothing);
     expect(find.text('Step 1 — Python'), findsNothing);
@@ -156,26 +157,15 @@ void main() {
     expect(find.byKey(const Key('backend-update-available')), findsNothing);
   });
 
-  testWidgets('shows the connected backend release version', (tester) async {
+  testWidgets('keeps backend version out of the setup form', (tester) async {
     await tester.pumpWidget(_harness(
       localDeploymentAvailable: true,
       backendVersion: '1.2.0',
     ));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('backend-version')), findsOneWidget);
-    expect(find.text('Backend version: 1.2.0'), findsOneWidget);
-  });
-
-  testWidgets('labels an unstamped backend as a development build',
-      (tester) async {
-    await tester.pumpWidget(_harness(
-      localDeploymentAvailable: true,
-      backendVersion: 'dev',
-    ));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Backend version: Development build'), findsOneWidget);
+    expect(find.byKey(const Key('backend-version')), findsNothing);
+    expect(find.text('Backend version: 1.2.0'), findsNothing);
   });
 
   testWidgets('an available backend release offers a one-tap update',
@@ -728,7 +718,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Already have a server running?'), findsOneWidget);
+    expect(find.text('Connect to server'), findsOneWidget);
 
     await tester.enterText(
       find.byType(TextField).first,

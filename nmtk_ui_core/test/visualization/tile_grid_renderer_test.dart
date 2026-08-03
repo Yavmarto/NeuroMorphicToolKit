@@ -1,4 +1,6 @@
 import 'dart:typed_data';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/visualization/tile_grid_renderer.dart';
@@ -127,5 +129,55 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.byType(CustomPaint), findsWidgets);
+  });
+
+  group('enableZoom', () {
+    Future<void> pumpWithFrame(WidgetTester tester, bool enableZoom) async {
+      final renderer = TileGridNeuronRenderer(enableZoom: enableZoom);
+      addTearDown(renderer.dispose);
+      renderer.attach(const Size(200, 200));
+
+      await tester.pumpWidget(
+        MaterialApp(home: Builder(builder: renderer.buildSurface)),
+      );
+      renderer.pushFrame(
+        TileActivityFrame(
+          totalNeuronCount: 4,
+          tileActivity: Float32List.fromList([0.5, 0.8, 0.1, 0.9]),
+          tileConcentration: Float32List.fromList([0.2, 0.7, 0.0, 1.0]),
+          tileRows: 2,
+          tileCols: 2,
+          simulationTimeMs: 0,
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('zooms by default', (tester) async {
+      await pumpWithFrame(tester, true);
+      expect(find.byType(InteractiveViewer), findsOneWidget);
+    });
+
+    testWidgets('drops the InteractiveViewer when disabled, keeping hover', (
+      tester,
+    ) async {
+      // An InteractiveViewer treats a trackpad two-finger scroll as a zoom, so
+      // a grid embedded as a passive readout scaled whenever the pointer merely
+      // crossed it. Inspection has to survive that removal.
+      await pumpWithFrame(tester, false);
+
+      expect(find.byType(InteractiveViewer), findsNothing);
+      expect(find.byType(MouseRegion), findsWidgets);
+
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
+      // Inside the 200x200 the renderer was attached with — hit testing maps
+      // against that size, not the surrounding box.
+      await gesture.moveTo(const Offset(50, 50));
+      await tester.pump();
+
+      expect(find.textContaining('Core '), findsOneWidget);
+    });
   });
 }

@@ -98,7 +98,10 @@ class _InitiallyReadyBootstrapNotifier extends LauncherBootstrapNotifier {
 class _StaticConnectionNotifier extends ServerConnectionNotifier {
   @override
   ServerConnectionState build() {
-    final baseUri = ref.watch(controlApiServiceProvider).baseUri;
+    final baseUri = ref.watch(selectedControlApiServiceProvider)?.baseUri;
+    if (baseUri == null) {
+      return const ServerConnectionState.disconnected();
+    }
     return ServerConnectionState(
       phase: ServerConnectionPhase.connected,
       baseUri: baseUri,
@@ -195,6 +198,9 @@ void main() {
                 client: client,
                 analyticsService: AnalyticsService(),
               ),
+            ),
+            serverConnectionProvider.overrideWith(
+              _StaticConnectionNotifier.new,
             ),
           ],
           child: const NeuroToolkitApp(),
@@ -293,6 +299,9 @@ void main() {
                 client: client,
                 analyticsService: AnalyticsService(),
               ),
+            ),
+            serverConnectionProvider.overrideWith(
+              _StaticConnectionNotifier.new,
             ),
           ],
           child: const NeuroToolkitApp(),
@@ -417,6 +426,7 @@ void main() {
       expect(oldServerModuleRequests, 2);
 
       await tester.tap(find.byTooltip('Server Connection'));
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
       await tester.enterText(find.byType(TextField).first, '192.168.2.34');
@@ -547,6 +557,9 @@ void main() {
             ),
             launcherSelectionSaverProvider.overrideWithValue(
               (_, __) async => throw StateError('preferences unavailable'),
+            ),
+            serverConnectionProvider.overrideWith(
+              _StaticConnectionNotifier.new,
             ),
           ],
           child: const NeuroToolkitApp(),

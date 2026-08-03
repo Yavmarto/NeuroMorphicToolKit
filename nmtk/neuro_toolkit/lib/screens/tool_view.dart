@@ -12,7 +12,6 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
@@ -20,15 +19,21 @@ import 'package:neuro_toolkit/widgets/module_error_view.dart';
 import 'package:neuro_toolkit/widgets/module_icon.dart';
 import 'package:neuro_toolkit/widgets/module_loading_view.dart';
 import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
+import 'package:neuro_toolkit/widgets/server_setup_popup.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 
 class ToolViewScreen extends ConsumerStatefulWidget {
-  const ToolViewScreen({super.key, this.initialModuleId});
+  const ToolViewScreen({
+    super.key,
+    this.initialModuleId,
+    this.openServerSetupOnStart = false,
+  });
 
   final String? initialModuleId;
+  final bool openServerSetupOnStart;
 
   @override
   ConsumerState<ToolViewScreen> createState() => _ToolViewScreenState();
@@ -62,103 +67,40 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   bool _workspaceInitializing = false;
   int _workspaceServerGeneration = 0;
 
-  Uri _launcherBaseUri() => ref.read(controlApiServiceProvider).baseUri;
+  Uri? _launcherBaseUri() =>
+      ref.read(selectedControlApiServiceProvider)?.baseUri;
 
-  void _showServerConnectionPopup(BuildContext context) {
-    final controlApi = ref.read(controlApiServiceProvider);
-    final connection = ref.read(serverConnectionProvider);
-    final navigator = Navigator.of(context, rootNavigator: true);
-    final effectiveConnection = connection.baseUri == controlApi.baseUri
-        ? connection
-        : ServerConnectionState(
-            phase: ServerConnectionPhase.checking,
-            baseUri: controlApi.baseUri,
-          );
-    var isOpen = true;
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        void dismissDialog() {
-          if (!isOpen) return;
-          isOpen = false;
-          if (navigator.canPop()) {
-            navigator.pop();
-          }
-        }
-
-        final tokens = NmtkShellTokens.of(dialogContext);
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: NmtkDesignTokens.dialogShape,
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 900, maxHeight: 700),
-            child: SizedBox(
-              width: 900,
-              height: 700,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.circle,
-                          color: _serverConnectionColor(
-                            effectiveConnection.phase,
-                            tokens,
-                          ),
-                          size: 14,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${controlApi.baseUri.host} · '
-                          '${effectiveConnection.label}',
-                          style: Zeta.of(dialogContext).textStyles.titleMedium,
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(ZetaIcons.close),
-                          tooltip: 'Close',
-                          onPressed: dismissDialog,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: InAppBackendSetupScreen(onComplete: dismissDialog),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+  Future<void> _showServerConnectionPopup(BuildContext context) {
+    return showAdaptiveServerSetupPopup(
+      context,
+      initialHost: _launcherBaseUri()?.toString(),
     );
   }
 
   Widget _buildServerConnectionButton(BuildContext context) {
-    final controlApi = ref.watch(controlApiServiceProvider);
+    final controlApi = ref.watch(selectedControlApiServiceProvider);
     final connection = ref.watch(serverConnectionProvider);
     final backendVersionAsync = ref.watch(backendVersionProvider);
     final backendVersion = backendVersionAsync.value;
-    final effectiveConnection = connection.baseUri == controlApi.baseUri
-        ? connection
-        : ServerConnectionState(
-            phase: ServerConnectionPhase.checking,
-            baseUri: controlApi.baseUri,
-          );
+    final effectiveConnection = controlApi == null
+        ? const ServerConnectionState.disconnected()
+        : connection.baseUri == controlApi.baseUri
+            ? connection
+            : ServerConnectionState(
+                phase: ServerConnectionPhase.checking,
+                baseUri: controlApi.baseUri,
+              );
     final tokens = NmtkShellTokens.of(context);
 
-    final labelText = backendVersion != null
-        ? '${controlApi.baseUri.host} · v$backendVersion'
-        : controlApi.baseUri.host;
+    final versionLabel = switch (backendVersion) {
+      'dev' => 'Development build',
+      final String value => 'v$value',
+      null => null,
+    };
+    final labelText = [
+      controlApi?.baseUri.host ?? 'Connect server',
+      if (versionLabel != null) versionLabel,
+    ].join(' · ');
 
     return FloatingActionButton.extended(
       onPressed: () => _showServerConnectionPopup(context),
@@ -169,6 +111,15 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         size: 14,
       ),
       label: Text(labelText),
+    );
+  }
+
+  /// A compact, host-owned server control for the embedded NeuroCNL toolbar.
+  /// Keeping its state and callback here means the Studio package never owns
+  /// server selection or creates a parallel connection workflow.
+  Widget _buildInlineServerConnectionControl(BuildContext context) {
+    return _InlineServerConnectionControl(
+      onPressed: () => _showServerConnectionPopup(context),
     );
   }
 
@@ -188,7 +139,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     if (kIsWeb) {
       return false;
     }
-    return !ControlApiService.isLoopbackHost(_launcherBaseUri().host);
+    final baseUri = _launcherBaseUri();
+    return baseUri != null && !ControlApiService.isLoopbackHost(baseUri.host);
   }
 
   static String get _configuredServicesHost =>
@@ -201,7 +153,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         return override;
       }
       final baseUri = _launcherBaseUri();
-      if (_usesRemoteHostedServices()) {
+      if (baseUri != null && _usesRemoteHostedServices()) {
         return baseUri.host;
       }
       return 'localhost';
@@ -216,7 +168,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   String _serviceScheme() {
     if (!kIsWeb) {
       final baseUri = _launcherBaseUri();
-      if (_usesRemoteHostedServices()) {
+      if (baseUri != null && _usesRemoteHostedServices()) {
         return baseUri.scheme.isEmpty ? 'http' : baseUri.scheme;
       }
       return 'http';
@@ -288,6 +240,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     super.initState();
     _activeModuleId = widget.initialModuleId ?? '';
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted && widget.openServerSetupOnStart) {
+        await _showServerConnectionPopup(context);
+        if (mounted && GoRouterState.of(context).uri.path == '/setup') {
+          context.go('/workspace');
+        }
+        return;
+      }
       await _initializeWorkspace();
     });
   }
@@ -309,7 +268,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
     _workspaceInitializing = true;
     final serverGeneration = _workspaceServerGeneration;
-    final serverKey = _launcherBaseUri().toString();
+    final baseUri = _launcherBaseUri();
+    if (baseUri == null) {
+      _workspaceInitializing = false;
+      return;
+    }
+    final serverKey = baseUri.toString();
     try {
       final moduleStateAsync = ref.read(moduleProvider);
       final moduleState = moduleStateAsync.value;
@@ -321,7 +285,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           workspaceState == null) {
         if (mounted &&
             serverGeneration == _workspaceServerGeneration &&
-            serverKey == _launcherBaseUri().toString()) {
+            serverKey == _launcherBaseUri()?.toString()) {
           _workspaceInitializing = false;
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             await _initializeWorkspace(forceFocus: forceFocus);
@@ -330,7 +294,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         return;
       }
       if (serverGeneration != _workspaceServerGeneration ||
-          serverKey != _launcherBaseUri().toString()) {
+          serverKey != _launcherBaseUri()?.toString()) {
         return;
       }
 
@@ -362,7 +326,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           eligibleModules.first.id;
 
       if (serverGeneration != _workspaceServerGeneration ||
-          serverKey != _launcherBaseUri().toString()) {
+          serverKey != _launcherBaseUri()?.toString()) {
         return;
       }
       await ref.read(workspaceProvider.notifier).ensureDefaultSessionsOnce(
@@ -371,7 +335,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           );
       if (!mounted ||
           serverGeneration != _workspaceServerGeneration ||
-          serverKey != _launcherBaseUri().toString()) {
+          serverKey != _launcherBaseUri()?.toString()) {
         return;
       }
 
@@ -531,7 +495,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         _pendingModuleRequests.remove(module.id) ?? _moduleUri(module);
     return InAppWebView(
       key: ValueKey<String>(
-        'webview-${_launcherBaseUri().authority}-${module.id}',
+        'webview-${_launcherBaseUri()?.authority ?? 'disconnected'}-${module.id}',
       ),
       initialUrlRequest: URLRequest(url: WebUri.uri(initialUri)),
       initialSettings: InAppWebViewSettings(
@@ -596,7 +560,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           final commaIndex = urlString.indexOf(',');
           if (commaIndex != -1) {
             final b64 = urlString.substring(commaIndex + 1);
-            final isBase64 = urlString.substring(0, commaIndex).contains(';base64');
+            final isBase64 =
+                urlString.substring(0, commaIndex).contains(';base64');
             final savePath = await FilePicker.saveFile(
               dialogTitle: 'Save File',
               fileName: downloadRequest.suggestedFilename ?? 'download',
@@ -807,9 +772,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   /// trees and WebViews must be disposed when a user switches away instead of
   /// accumulating hidden frontends in memory.
   Widget _buildModuleChild(
-    Module module,
-    Map<String, WorkspaceSession> sessionsByModuleId,
-  ) {
+      Module module, Map<String, WorkspaceSession> sessionsByModuleId,
+      {Widget? workspaceHeaderAction}) {
     // Auto-clear stale WebView failures when a module *recovers* — i.e.
     // transitions from a non-ready state back to running/degraded.  We
     // deliberately do NOT clear failures that were recorded while the
@@ -896,6 +860,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                               module.id,
                               session,
                               initialServerUrl: _nativeSurfaceServerUrl(module),
+                              workspaceHeaderAction: workspaceHeaderAction,
                             ),
                           )
                         : supported
@@ -919,7 +884,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final workspaceState = workspaceStateAsync.value;
     final tokens = NmtkShellTokens.of(context);
     final currentServerKey =
-        ref.watch(controlApiServiceProvider).baseUri.toString();
+        ref.watch(selectedControlApiServiceProvider)?.baseUri.toString() ??
+            'disconnected';
 
     // Compute eligibleModules early so ref.listen can close over it.
     final eligibleModules = moduleState == null
@@ -949,8 +915,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       if (newId != _activeModuleId) setState(() => _activeModuleId = newId);
     });
 
-    ref.listen(controlApiServiceProvider, (previous, next) {
-      if (previous?.baseUri == next.baseUri) return;
+    ref.listen(selectedControlApiServiceProvider, (previous, next) {
+      if (previous?.baseUri == next?.baseUri) return;
       _workspaceServerGeneration++;
       _workspaceInitializing = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1146,10 +1112,18 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
 
     final activeModule = eligibleModules[clampedIndex];
+    final activeSession = sessionsByModuleId[activeModule.id];
+    final activeModuleIsReady = activeModule.status == ModuleStatus.running ||
+        activeModule.status == ModuleStatus.degraded;
+    final showInlineServerControl = activeModule.id == 'neurocnl' &&
+        activeModuleIsReady &&
+        activeSession?.surfaceMode == 'native';
 
     return Scaffold(
       backgroundColor: tokens.shellBackground,
-      floatingActionButton: _buildServerConnectionButton(context),
+      floatingActionButton: showInlineServerControl
+          ? null
+          : _buildServerConnectionButton(context),
       body: SafeArea(
         top: false,
         bottom: false,
@@ -1166,7 +1140,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                 ),
                 child: KeyedSubtree(
                   key: ValueKey<String>('$currentServerKey:$desiredModuleId'),
-                  child: _buildModuleChild(activeModule, sessionsByModuleId),
+                  child: _buildModuleChild(
+                    activeModule,
+                    sessionsByModuleId,
+                    workspaceHeaderAction: showInlineServerControl
+                        ? _buildInlineServerConnectionControl(context)
+                        : null,
+                  ),
                 ),
               ),
             ),
@@ -1174,5 +1154,88 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         ),
       ),
     );
+  }
+}
+
+class _InlineServerConnectionControl extends ConsumerWidget {
+  const _InlineServerConnectionControl({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final controlApi = ref.watch(selectedControlApiServiceProvider);
+    final connection = ref.watch(serverConnectionProvider);
+    final backendVersion = ref.watch(backendVersionProvider).value;
+    final effectiveConnection = controlApi == null
+        ? const ServerConnectionState.disconnected()
+        : connection.baseUri == controlApi.baseUri
+            ? connection
+            : ServerConnectionState(
+                phase: ServerConnectionPhase.checking,
+                baseUri: controlApi.baseUri,
+              );
+    final tokens = NmtkShellTokens.of(context);
+    final statusColor = _colorForPhase(effectiveConnection.phase, tokens);
+    final hostLabel = controlApi?.baseUri.host ?? 'Connect server';
+    final serverLabel =
+        backendVersion != null ? '$hostLabel · v$backendVersion' : hostLabel;
+
+    return Tooltip(
+      message: 'Server connection · ${effectiveConnection.label}',
+      child: Semantics(
+        button: true,
+        label: 'Server connection: $serverLabel, ${effectiveConnection.label}',
+        child: Material(
+          color: Zeta.of(context).colors.surfaceDefault.withValues(alpha: 0),
+          child: InkWell(
+            key: const ValueKey<String>('inline-server-connection'),
+            borderRadius: BorderRadius.circular(tokens.radiusChip),
+            onTap: onPressed,
+            child: Ink(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(tokens.radiusChip),
+                border: Border.all(color: statusColor.withValues(alpha: 0.55)),
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 240),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.circle, color: statusColor, size: 8),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        serverLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Zeta.of(context).textStyles.labelMedium.copyWith(
+                              color: Zeta.of(context).colors.mainDefault,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _colorForPhase(
+    ServerConnectionPhase phase,
+    NmtkShellTokens tokens,
+  ) {
+    return switch (phase) {
+      ServerConnectionPhase.checking => tokens.runningColor,
+      ServerConnectionPhase.connected => tokens.healthyColor,
+      ServerConnectionPhase.unstable => tokens.warningColor,
+      ServerConnectionPhase.disconnected => tokens.errorColor,
+    };
   }
 }

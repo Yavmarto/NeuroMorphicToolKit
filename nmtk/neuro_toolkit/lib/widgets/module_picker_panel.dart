@@ -23,6 +23,8 @@ class ModulePickerPanel extends ConsumerWidget {
     final moduleStateAsync = ref.watch(moduleProvider);
     final moduleState = moduleStateAsync.value;
     final controller = ref.read(moduleProvider.notifier);
+    final hasSelectedServer =
+        ref.watch(selectedControlApiServiceProvider) != null;
     final theme = Theme.of(context);
 
     if (moduleStateAsync.isLoading || moduleState == null) {
@@ -62,11 +64,24 @@ class ModulePickerPanel extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
         if (modules.isEmpty)
-          const NmtkEmptyState(
-            title: 'No Modules Available',
-            message: 'The launcher did not load any modules.',
-            icon: Icons
-                .inventory_2_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+          NmtkEmptyState(
+            title: hasSelectedServer
+                ? 'No Modules Available'
+                : 'Connect to a server',
+            message: hasSelectedServer
+                ? 'The launcher did not load any modules.'
+                : 'Choose an existing server or set up a new one to load '
+                    'your modules.',
+            icon: hasSelectedServer
+                ? Icons
+                    .inventory_2_outlined // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                : ZetaIcons.cloud_off,
+            action: hasSelectedServer
+                ? null
+                : ZetaButton(
+                    onPressed: () => context.go('/setup'),
+                    label: 'Connect to server',
+                  ),
           )
         else
           LayoutBuilder(

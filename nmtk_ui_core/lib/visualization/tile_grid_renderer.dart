@@ -62,11 +62,20 @@ class TileGridNeuronRenderer {
   final String Function(double activity)? activityLabelBuilder;
   final String Function(double concentration)? concentrationLabelBuilder;
 
+  /// Whether scroll/pinch zoom and pan are available on the grid.
+  ///
+  /// Pass `false` where the grid is a passive readout inside a larger screen: an
+  /// [InteractiveViewer] treats a trackpad two-finger scroll as a zoom, so the
+  /// grid scales under the cursor whenever the pointer merely passes over it.
+  /// Hover and tap inspection are unaffected either way.
+  final bool enableZoom;
+
   TileGridNeuronRenderer({
     this.coreLabelBuilder,
     this.neuronsLabelBuilder,
     this.activityLabelBuilder,
     this.concentrationLabelBuilder,
+    this.enableZoom = true,
   });
 
   final ValueNotifier<TileActivityFrame?> _frameNotifier = ValueNotifier(null);
@@ -116,52 +125,67 @@ class TileGridNeuronRenderer {
     ];
     final hotspotColor = zetaColors.mainInverse; // concentration hotspot glow
 
-    return ValueListenableBuilder<TileActivityFrame?>(
-      valueListenable: _frameNotifier,
-      builder: (context, frame, _) {
-        if (frame == null) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        return ValueListenableBuilder<int?>(
-          valueListenable: _hoveredTile,
-          builder: (context, hovered, _) {
-            return InteractiveViewer(
-              minScale: 1.0,
-              maxScale: 8.0,
-              child: MouseRegion(
-                onHover: (event) => _hoveredTile.value = _tileAtLocalPosition(
-                  event.localPosition,
-                  frame,
-                ),
-                onExit: (_) => _hoveredTile.value = null,
-                child: GestureDetector(
-                  onTapUp: (details) => _hoveredTile.value =
-                      _tileAtLocalPosition(details.localPosition, frame),
-                  child: Stack(
-                    children: [
-                      CustomPaint(
-                        size: _size,
-                        painter: _TileGridPainter(
-                          frame: frame,
-                          activityScale: activityScale,
-                          hotspotColor: hotspotColor,
-                        ),
-                      ),
-                      // Re-check the bound here rather than trusting the
-                      // notifier: a hover index captured on a larger frame
-                      // outlives the frame itself when the selected layer
-                      // changes to a smaller population.
-                      if (hovered != null && hovered < frame.filledTileCount)
-                        _buildTilePopup(context, frame, hovered),
-                    ],
-                  ),
-                ),
+    // Pointer handling sits *outside* both notifiers, and each notifier drives
+    // only the subtree that depends on it. Frames are pushed at the playback
+    // clock's rate, so the previous frame-outer/hover-inner nesting rebuilt
+    // InteractiveViewer + MouseRegion + GestureDetector on every pushed frame;
+    // the callbacks read the current frame from the notifier instead of
+    // capturing it, which is what allows them to live above it.
+    final surface = MouseRegion(
+      onHover: (event) => _hoveredTile.value = _hitTest(event.localPosition),
+      onExit: (_) => _hoveredTile.value = null,
+      child: GestureDetector(
+        onTapUp: (details) => _hoveredTile.value = _hitTest(
+          details.localPosition,
+        ),
+        child: Stack(
+          children: [
+            RepaintBoundary(
+              child: ValueListenableBuilder<TileActivityFrame?>(
+                valueListenable: _frameNotifier,
+                builder: (context, frame, _) {
+                  if (frame == null) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  return CustomPaint(
+                    size: _size,
+                    painter: _TileGridPainter(
+                      frame: frame,
+                      activityScale: activityScale,
+                      hotspotColor: hotspotColor,
+                    ),
+                  );
+                },
               ),
-            );
-          },
-        );
-      },
+            ),
+            ValueListenableBuilder<int?>(
+              valueListenable: _hoveredTile,
+              builder: (context, hovered, _) {
+                final frame = _frameNotifier.value;
+                // Re-check the bound here rather than trusting the notifier: a
+                // hover index captured on a larger frame outlives the frame
+                // itself when the selected layer changes to a smaller
+                // population.
+                if (frame == null ||
+                    hovered == null ||
+                    hovered >= frame.filledTileCount) {
+                  return const SizedBox.shrink();
+                }
+                return _buildTilePopup(context, frame, hovered);
+              },
+            ),
+          ],
+        ),
+      ),
     );
+
+    if (!enableZoom) return surface;
+    return InteractiveViewer(minScale: 1.0, maxScale: 8.0, child: surface);
+  }
+
+  int? _hitTest(Offset local) {
+    final frame = _frameNotifier.value;
+    return frame == null ? null : _tileAtLocalPosition(local, frame);
   }
 
   Widget _buildTilePopup(

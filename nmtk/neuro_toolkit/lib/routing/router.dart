@@ -1,16 +1,13 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/screens/environment_editor.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
+import 'package:neuro_toolkit/widgets/server_setup_popup.dart';
 
 GoRouter createGoRouter({String initialLocation = '/workspace'}) {
   return GoRouter(
@@ -58,7 +55,9 @@ GoRouter createGoRouter({String initialLocation = '/workspace'}) {
           GoRoute(
             path: '/setup',
             name: 'setup',
-            builder: (context, state) => const InAppBackendSetupScreen(),
+            builder: (context, state) => const ToolViewScreen(
+              openServerSetupOnStart: true,
+            ),
           ),
           GoRoute(
             path: '/environments',
@@ -139,46 +138,68 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   /// we don't stack duplicate dialogs on every rebuild triggered by the 3s
   /// refresh timer.
   bool _updateDialogQueued = false;
+  bool _startupSetupPromptQueued = false;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual(
+      launcherBootstrapProvider,
+      _handleBootstrapChange,
+      fireImmediately: true,
+    );
+  }
+
+  void _handleBootstrapChange(
+    AsyncValue<LauncherBootstrapData>? previous,
+    AsyncValue<LauncherBootstrapData> next,
+  ) {
+    if (next.isLoading && next.value == null) return;
+    if (ref.read(startupServerSetupPromptProvider) ||
+        _startupSetupPromptQueued) {
+      return;
+    }
+    if (next.value?.isReady == true) {
+      ref.read(startupServerSetupPromptProvider.notifier).markHandled();
+      return;
+    }
+
+    _startupSetupPromptQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) {
+        _startupSetupPromptQueued = false;
+        return;
+      }
+      final isExplicitSetupRoute =
+          GoRouterState.of(context).uri.path == '/setup';
+      ref.read(startupServerSetupPromptProvider.notifier).markHandled();
+      if (isExplicitSetupRoute) {
+        _startupSetupPromptQueued = false;
+        return;
+      }
+
+      final latestData = ref.read(launcherBootstrapProvider).value;
+      if (latestData?.isReady == true) {
+        _startupSetupPromptQueued = false;
+        return;
+      }
+      final savedHost =
+          ref.read(settingsProvider).value?.launcherControlApiBaseUrl;
+      await showAdaptiveServerSetupPopup(
+        context,
+        initialHost: latestData?.suggestedInstallHost ?? savedHost,
+        message: latestData?.setupMessage ??
+            'Preflight failed while checking the launcher host. Confirm the '
+                'address and try again.',
+      );
+      _startupSetupPromptQueued = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bootstrapAsync = ref.watch(launcherBootstrapProvider);
-    final bootstrapData = bootstrapAsync.value;
-    if (bootstrapAsync.isLoading && bootstrapData == null) {
-      final targetHost =
-          ref.watch(settingsProvider).value?.launcherControlApiBaseUrl;
-      return Scaffold(
-        body: Center(
-          child: _LauncherBootstrapLoadingView(targetHost: targetHost),
-        ),
-      );
-    }
-    if (bootstrapAsync.hasError || bootstrapData == null) {
-      return _buildSetupScreen(
-        context,
-        message: 'Preflight failed while checking the launcher host. '
-            'Confirm the address and try again.',
-      );
-    }
-    if (!bootstrapData.isReady) {
-      return _buildSetupScreen(
-        context,
-        message: bootstrapData.setupMessage,
-        initialHost: bootstrapData.suggestedInstallHost,
-      );
-    }
-
     final moduleStateAsync = ref.watch(moduleProvider);
     final moduleState = moduleStateAsync.value;
-    final bootstrapState = ref.watch(launcherBootstrapStateProvider);
-
-    // If still loading and we have no value, show a loader
-    if (moduleState == null && moduleStateAsync.isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('NeuroToolkit')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
 
     if (moduleState != null) {
       // Queue the launcher-update dialog exactly once per available update.
@@ -195,59 +216,9 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       }
     }
 
-    // Gate: launcher control API could not start — show error Scaffold.
-    if (bootstrapState.status == LauncherBootstrapStatus.preflightFailed) {
-      return _buildSetupScreen(
-        context,
-        message: bootstrapState.message ??
-            'Preflight failed: launcher control API could not start.',
-      );
-    }
-
-    // Normal operation: the child route provides its own chrome via
-    // NmtkDesktopScaffold (ToolViewScreen). No extra Scaffold wrapper here.
+    // The workspace is always the base surface. Bootstrap readiness controls
+    // the one-time adaptive setup popup, never whether the shell can mount.
     return widget.child;
-  }
-
-  Widget _buildSetupScreen(
-    BuildContext context, {
-    String? message,
-    String? initialHost,
-  }) {
-    final notifier = ref.read(launcherBootstrapProvider.notifier);
-    return BackendSetupScreen(
-      message: message,
-      initialHost: initialHost,
-      onQuickConnect: (input) async {
-        final error = await notifier.connectToLauncher(input);
-        if (error == null) {
-          await _refreshServerBackedProviders();
-        }
-        return error;
-      },
-      onQuickConnectSuccess: () {
-        try {
-          context.go('/workspace');
-        } on Object catch (error) {
-          unawaited(notifier.recordRouteHandoffFailure(error));
-        }
-      },
-      onDeploymentReady: (target) async {
-        await notifier.connectToDeploymentTarget(target);
-        await _refreshServerBackedProviders();
-      },
-    );
-  }
-
-  Future<void> _refreshServerBackedProviders() async {
-    ref.invalidate(controlApiServiceProvider);
-    await Future.wait([
-      ref.refresh(moduleProvider.future),
-      ref.refresh(workspaceProvider.future),
-    ]);
-    ref.invalidate(serverConnectionProvider);
-    ref.invalidate(backendVersionProvider);
-    ref.invalidate(backendUpdateProvider);
   }
 
   void _showLauncherUpdateDialog(BuildContext context, WidgetRef ref) {
@@ -298,56 +269,6 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Keeps long first-time probes legible without replacing the setup form
-/// during user-initiated Quick Connect attempts.
-class _LauncherBootstrapLoadingView extends StatefulWidget {
-  const _LauncherBootstrapLoadingView({this.targetHost});
-
-  final String? targetHost;
-
-  @override
-  State<_LauncherBootstrapLoadingView> createState() =>
-      _LauncherBootstrapLoadingViewState();
-}
-
-class _LauncherBootstrapLoadingViewState
-    extends State<_LauncherBootstrapLoadingView> {
-  late final Timer _timer;
-  int _elapsedSeconds = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) {
-        setState(() => _elapsedSeconds++);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final target = widget.targetHost?.trim();
-    final base = target != null && target.isNotEmpty
-        ? 'Connecting to $target…'
-        : 'Connecting to the launcher control API…';
-    final message = _elapsedSeconds < 15
-        ? '$base ($_elapsedSeconds s)'
-        : '$base ($_elapsedSeconds s)\n\nFirst-time connections can take up '
-            'to a minute while the server checks itself and starts up.';
-    return NmtkShellReadinessStateView.fromState(
-      NmtkShellReadinessState.warmingUp,
-      message: message,
     );
   }
 }

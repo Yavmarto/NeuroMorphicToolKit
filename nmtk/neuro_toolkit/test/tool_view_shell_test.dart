@@ -106,7 +106,7 @@ void main() {
       ProviderScope(
         overrides: [
           analyticsServiceProvider.overrideWithValue(AnalyticsService()),
-          controlApiServiceProvider.overrideWithValue(
+          selectedControlApiServiceProvider.overrideWithValue(
             ControlApiService(
               baseUri: Uri.parse('http://localhost:9000'),
               analyticsService: AnalyticsService(),
@@ -139,7 +139,7 @@ void main() {
       ProviderScope(
         overrides: [
           analyticsServiceProvider.overrideWithValue(AnalyticsService()),
-          controlApiServiceProvider.overrideWithValue(
+          selectedControlApiServiceProvider.overrideWithValue(
             ControlApiService(
               baseUri: Uri.parse('http://localhost:9000'),
               analyticsService: AnalyticsService(),
@@ -165,6 +165,10 @@ void main() {
   testWidgets('Server Connection button shows IP and opens dismissable popup', (
     tester,
   ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
     final router = GoRouter(
       initialLocation: '/workspace',
       routes: [
@@ -186,7 +190,7 @@ void main() {
       ProviderScope(
         overrides: [
           analyticsServiceProvider.overrideWithValue(AnalyticsService()),
-          controlApiServiceProvider.overrideWithValue(
+          selectedControlApiServiceProvider.overrideWithValue(
             ControlApiService(
               baseUri: Uri.parse('http://192.168.2.51:8090'),
               analyticsService: AnalyticsService(),

@@ -13,7 +13,6 @@ import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.d
 import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
 
-
 class MockLauncherBootstrapNotifier extends LauncherBootstrapNotifier {
   @override
   Future<LauncherBootstrapData> build() async {
@@ -30,9 +29,11 @@ class _FakeModuleNotifier extends ModuleNotifier {
   @override
   Future<ModuleState> build() async => const ModuleState(modules: []);
 }
+
 class _FakeWorkspaceNotifier extends WorkspaceNotifier {
   @override
-  Future<WorkspaceState> build() async => const WorkspaceState(sessions: [], focusedModuleId: null);
+  Future<WorkspaceState> build() async =>
+      const WorkspaceState(sessions: [], focusedModuleId: null);
 }
 
 void main() {
@@ -52,15 +53,17 @@ void main() {
       ProviderScope(
         overrides: [
           analyticsServiceProvider.overrideWithValue(AnalyticsService()),
-          controlApiServiceProvider.overrideWithValue(
+          selectedControlApiServiceProvider.overrideWithValue(
             ControlApiService(
               baseUri: Uri.parse('http://192.168.2.51:8090'),
               analyticsService: AnalyticsService(),
             ),
           ),
-          launcherBootstrapProvider.overrideWith(() => MockLauncherBootstrapNotifier()),
+          launcherBootstrapProvider
+              .overrideWith(() => MockLauncherBootstrapNotifier()),
           moduleProvider.overrideWith(() => _FakeModuleNotifier()),
           workspaceProvider.overrideWith(() => _FakeWorkspaceNotifier()),
+          backendVersionProvider.overrideWith((_) async => 'dev'),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
@@ -74,6 +77,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.byType(BackendSetupScreen), findsOneWidget);
+    expect(
+      find.text('192.168.2.51 · Development build · Checking'),
+      findsOneWidget,
+    );
 
     // Type in the quick connect field
     await tester.enterText(find.byType(TextField).first, '192.168.1.10');

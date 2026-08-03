@@ -79,9 +79,16 @@ class BackendSetupScreen extends StatelessWidget {
 }
 
 class InAppBackendSetupScreen extends ConsumerWidget {
-  const InAppBackendSetupScreen({super.key, this.onComplete});
+  const InAppBackendSetupScreen({
+    super.key,
+    this.onComplete,
+    this.initialHost,
+    this.message,
+  });
 
   final VoidCallback? onComplete;
+  final String? initialHost;
+  final String? message;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -100,6 +107,8 @@ class InAppBackendSetupScreen extends ConsumerWidget {
 
     final notifier = ref.read(launcherBootstrapProvider.notifier);
     return BackendSetupScreen(
+      initialHost: initialHost,
+      message: message,
       onQuickConnect: (input) async {
         final error = await notifier.connectToLauncher(input);
         if (error != null) {
@@ -377,37 +386,14 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       key: const ValueKey<String>('backend-setup-form'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildBackendVersion(tokens),
         _buildUpdateBanner(tokens),
         _buildQuickConnectSection(tokens),
         SizedBox(height: tokens.sectionGap),
-        _buildTargetSection(tokens),
-        SizedBox(height: tokens.sectionGap),
-        _buildModeSection(tokens),
-        SizedBox(height: tokens.sectionGap),
-        _buildDetailsSection(tokens),
+        _buildNewServerSection(tokens),
         _buildStatusSection(deploymentState, tokens),
         SizedBox(height: tokens.sectionGap * 1.5),
         _buildActions(activeJob, deploymentState?.connectionLostReason),
       ],
-    );
-  }
-
-  Widget _buildBackendVersion(NmtkShellTokens tokens) {
-    final version = ref.watch(backendVersionProvider).value;
-    if (version == null) return const SizedBox.shrink();
-    final label = version == 'dev'
-        ? 'Backend version: Development build'
-        : 'Backend version: $version';
-    return Padding(
-      padding: EdgeInsets.only(bottom: tokens.sectionGap),
-      child: NmtkSurfaceCard(
-        key: const Key('backend-version'),
-        child: Padding(
-          padding: EdgeInsets.all(tokens.sectionGap),
-          child: Text(label),
-        ),
-      ),
     );
   }
 
@@ -530,36 +516,48 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   }
 
   Widget _buildQuickConnectSection(NmtkShellTokens tokens) {
-    return NmtkSurfaceCard(
-      child: Padding(
-        padding: EdgeInsets.all(tokens.sectionGap),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Already have a server running?'),
-            SizedBox(height: tokens.compactGap),
-            _field(_quickConnectHost, 'Server IP'),
-            SizedBox(height: tokens.compactGap),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ZetaButton(
-                key: const Key('backend-setup-quick-connect'),
-                onPressed: _isQuickConnecting ? null : _handleQuickConnect,
-                label: _isQuickConnecting ? 'Connecting…' : 'Connect',
-              ),
-            ),
-            if (_quickConnectError != null) ...[
-              SizedBox(height: tokens.compactGap),
-              NmtkStatusBanner(
-                key: const Key('backend-setup-quick-connect-error'),
-                title: 'Could not connect',
-                content: Text(_quickConnectError!),
-                tone: NmtkTone.danger,
-              ),
-            ],
-          ],
+    final connectButton = ZetaButton(
+      key: const Key('backend-setup-quick-connect'),
+      onPressed: _isQuickConnecting ? null : _handleQuickConnect,
+      label: _isQuickConnecting ? 'Connecting…' : 'Connect',
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Connect to server'),
+        SizedBox(height: tokens.compactGap),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= 560) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(child: _field(_quickConnectHost, 'Server IP')),
+                  SizedBox(width: tokens.compactGap),
+                  connectButton,
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _field(_quickConnectHost, 'Server IP'),
+                SizedBox(height: tokens.compactGap),
+                connectButton,
+              ],
+            );
+          },
         ),
-      ),
+        if (_quickConnectError != null) ...[
+          SizedBox(height: tokens.compactGap),
+          NmtkStatusBanner(
+            key: const Key('backend-setup-quick-connect-error'),
+            title: 'Could not connect',
+            content: Text(_quickConnectError!),
+            tone: NmtkTone.danger,
+          ),
+        ],
+      ],
     );
   }
 
@@ -612,27 +610,42 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     }
   }
 
-  Widget _buildTargetSection(NmtkShellTokens tokens) {
+  Widget _buildNewServerSection(NmtkShellTokens tokens) {
     return NmtkSurfaceCard(
       child: Padding(
         padding: EdgeInsets.all(tokens.sectionGap),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('1. Choose where to run the backend'),
-            SizedBox(height: tokens.compactGap),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                if (_canRunLocally) _choice('This machine', 'local'),
-                _choice('Remote server', 'remote_host'),
-                _choice('Existing Kubernetes cluster', 'kubernetes_cluster'),
-              ],
-            ),
+            const Text('Set up new server'),
+            SizedBox(height: tokens.sectionGap),
+            _buildTargetSection(tokens),
+            SizedBox(height: tokens.sectionGap),
+            _buildModeSection(tokens),
+            SizedBox(height: tokens.sectionGap),
+            _buildDetailsSection(tokens),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildTargetSection(NmtkShellTokens tokens) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Run the backend on'),
+        SizedBox(height: tokens.compactGap),
+        Wrap(
+          spacing: tokens.compactGap,
+          runSpacing: tokens.compactGap,
+          children: [
+            if (_canRunLocally) _choice('This machine', 'local'),
+            _choice('Remote server', 'remote_host'),
+            _choice('Existing Kubernetes cluster', 'kubernetes_cluster'),
+          ],
+        ),
+      ],
     );
   }
 
@@ -642,142 +655,131 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         : _targetType == 'remote_host'
             ? const <String>['docker', 'podman']
             : const <String>['standalone', 'docker', 'podman'];
-    return NmtkSurfaceCard(
-      child: Padding(
-        padding: EdgeInsets.all(tokens.sectionGap),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Deployment mode'),
+        SizedBox(height: tokens.compactGap),
+        Wrap(
+          spacing: tokens.compactGap,
+          runSpacing: tokens.compactGap,
           children: [
-            const Text('2. Choose deployment mode'),
-            SizedBox(height: tokens.compactGap),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final mode in modes)
-                  _choice(_modeLabel(mode), mode, isMode: true),
-              ],
-            ),
-            SizedBox(height: tokens.compactGap),
-            Text(_modeDescription(_mode)),
+            for (final mode in modes)
+              _choice(_modeLabel(mode), mode, isMode: true),
           ],
         ),
-      ),
+        SizedBox(height: tokens.compactGap),
+        Text(_modeDescription(_mode)),
+      ],
     );
   }
 
   Widget _buildDetailsSection(NmtkShellTokens tokens) {
-    return NmtkSurfaceCard(
-      child: Padding(
-        padding: EdgeInsets.all(tokens.sectionGap),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('3. Enter only the required details'),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Required details'),
+        SizedBox(height: tokens.compactGap),
+        if (_targetType != 'remote_host') _field(_displayName, 'Display name'),
+        if (_targetType == 'remote_host') ...[
+          SizedBox(height: tokens.compactGap),
+          _field(_host, 'Server IP', errorText: _hostError),
+          SizedBox(height: tokens.compactGap),
+          _field(_rootUsername, 'Admin user'),
+          SizedBox(height: tokens.sectionGap),
+          const Text('Administrator authentication'),
+          SizedBox(height: tokens.compactGap),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _adminAuthChoice('Password', 'ssh_password'),
+              _adminAuthChoice('SSH key', 'ssh_key'),
+            ],
+          ),
+          SizedBox(height: tokens.compactGap),
+          if (_rootAuthMethod == 'ssh_password')
+            _field(
+              _rootPassword,
+              'Admin password',
+              focusNode: _rootPasswordFocus,
+              obscureText: _obscureRootPassword,
+              suffix: IconButton(
+                icon: Icon(
+                  _obscureRootPassword
+                      ? ZetaIcons.visibility_off
+                      : ZetaIcons.visibility,
+                ),
+                onPressed: () => setState(
+                  () => _obscureRootPassword = !_obscureRootPassword,
+                ),
+              ),
+            )
+          else
+            _multilineField(
+              _rootPrivateKey,
+              'Admin SSH key',
+              focusNode: _rootPrivateKeyFocus,
+            ),
+          SizedBox(height: tokens.sectionGap),
+          Material(
+            type: MaterialType.transparency,
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Factory reset server data'),
+              subtitle: const Text(
+                'Optional and destructive. Normal setup removes old NMTK '
+                'containers across Docker and Podman while preserving '
+                'notebooks, databases, and workspace data.',
+              ),
+              value: _factoryReset,
+              onChanged: (value) => setState(() => _factoryReset = value),
+            ),
+          ),
+          if (_setupError != null) ...[
             SizedBox(height: tokens.compactGap),
-            if (_targetType != 'remote_host')
-              _field(_displayName, 'Display name'),
-            if (_targetType == 'remote_host') ...[
-              SizedBox(height: tokens.compactGap),
-              _field(_host, 'Server IP', errorText: _hostError),
-              SizedBox(height: tokens.compactGap),
-              _field(_rootUsername, 'Admin user'),
-              SizedBox(height: tokens.sectionGap),
-              const Text('Administrator authentication'),
-              SizedBox(height: tokens.compactGap),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _adminAuthChoice('Password', 'ssh_password'),
-                  _adminAuthChoice('SSH key', 'ssh_key'),
-                ],
-              ),
-              SizedBox(height: tokens.compactGap),
-              if (_rootAuthMethod == 'ssh_password')
-                _field(
-                  _rootPassword,
-                  'Admin password',
-                  focusNode: _rootPasswordFocus,
-                  obscureText: _obscureRootPassword,
-                  suffix: IconButton(
-                    icon: Icon(
-                      _obscureRootPassword
-                          ? ZetaIcons.visibility_off
-                          : ZetaIcons.visibility,
-                    ),
-                    onPressed: () => setState(
-                      () => _obscureRootPassword = !_obscureRootPassword,
-                    ),
-                  ),
-                )
-              else
-                _multilineField(
-                  _rootPrivateKey,
-                  'Admin SSH key',
-                  focusNode: _rootPrivateKeyFocus,
-                ),
-              SizedBox(height: tokens.sectionGap),
-              Material(
-                type: MaterialType.transparency,
-                child: SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Factory reset server data'),
-                  subtitle: const Text(
-                    'Optional and destructive. Normal setup removes old NMTK '
-                    'containers across Docker and Podman while preserving '
-                    'notebooks, databases, and workspace data.',
-                  ),
-                  value: _factoryReset,
-                  onChanged: (value) => setState(() => _factoryReset = value),
-                ),
-              ),
-              if (_setupError != null) ...[
-                SizedBox(height: tokens.compactGap),
-                NmtkStatusBanner(
-                  title: 'Could not start server setup',
-                  content: Text(_setupError!),
-                  tone: NmtkTone.danger,
-                  canClose: true,
-                  onClose: () => setState(() => _setupError = null),
-                ),
-              ],
-            ],
-            if (_targetType == 'kubernetes_cluster') ...[
-              SizedBox(height: tokens.compactGap),
-              ZetaButton.outline(
-                onPressed: _pickKubeconfig,
-                leadingIcon: ZetaIcons.upload,
-                label: _kubeconfigName == null
-                    ? 'Import kubeconfig'
-                    : 'Kubeconfig: $_kubeconfigName',
-              ),
-              SizedBox(height: tokens.compactGap),
-              _field(_context, 'Kube context'),
-              SizedBox(height: tokens.compactGap),
-              _field(_namespace, 'Namespace'),
-              SizedBox(height: tokens.compactGap),
-              _field(_apiServer, 'API server override'),
-            ],
-            if (_targetType == 'local') ...[
-              SizedBox(height: tokens.sectionGap),
-              Material(
-                type: MaterialType.transparency,
-                child: SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Factory reset local data'),
-                  subtitle: const Text(
-                    'Wipes existing backend data volumes before deploying. '
-                    'This erases all database contents.',
-                  ),
-                  value: _factoryReset,
-                  onChanged: (value) => setState(() => _factoryReset = value),
-                ),
-              ),
-            ],
+            NmtkStatusBanner(
+              title: 'Could not start server setup',
+              content: Text(_setupError!),
+              tone: NmtkTone.danger,
+              canClose: true,
+              onClose: () => setState(() => _setupError = null),
+            ),
           ],
-        ),
-      ),
+        ],
+        if (_targetType == 'kubernetes_cluster') ...[
+          SizedBox(height: tokens.compactGap),
+          ZetaButton.outline(
+            onPressed: _pickKubeconfig,
+            leadingIcon: ZetaIcons.upload,
+            label: _kubeconfigName == null
+                ? 'Import kubeconfig'
+                : 'Kubeconfig: $_kubeconfigName',
+          ),
+          SizedBox(height: tokens.compactGap),
+          _field(_context, 'Kube context'),
+          SizedBox(height: tokens.compactGap),
+          _field(_namespace, 'Namespace'),
+          SizedBox(height: tokens.compactGap),
+          _field(_apiServer, 'API server override'),
+        ],
+        if (_targetType == 'local') ...[
+          SizedBox(height: tokens.sectionGap),
+          Material(
+            type: MaterialType.transparency,
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Factory reset local data'),
+              subtitle: const Text(
+                'Wipes existing backend data volumes before deploying. '
+                'This erases all database contents.',
+              ),
+              value: _factoryReset,
+              onChanged: (value) => setState(() => _factoryReset = value),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
