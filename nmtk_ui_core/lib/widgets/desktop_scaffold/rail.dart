@@ -307,12 +307,14 @@ class _RailProfileChipState extends State<_RailProfileChip> {
           onClose: () => _menuController.close(),
         ),
       ],
-      child: Semantics(
-        label: 'User profile: ${profile.displayName}',
-        button: true,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
+      child: Tooltip(
+        message: '',
+        child: Semantics(
+          label: profile.displayName,
+          button: true,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
             onTap: () {
               if (_menuController.isOpen) {
                 _menuController.close();
@@ -334,6 +336,7 @@ class _RailProfileChipState extends State<_RailProfileChip> {
               ),
             ),
           ),
+        ),
         ),
       ),
     );

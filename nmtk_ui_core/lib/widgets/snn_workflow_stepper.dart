@@ -20,7 +20,7 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
   SnnWorkflowPhase.defineTrain: 'Training',
   SnnWorkflowPhase.defineEval: 'Eval',
   SnnWorkflowPhase.run: 'Run',
-  SnnWorkflowPhase.deploy: 'Deploy',
+  SnnWorkflowPhase.deploy: 'Results',
 };
 
 /// A specialized pipeline stepper for the NeuroMorphicToolKit SNN workflow.
@@ -32,7 +32,7 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
 /// 4. Eval         (defineEval)
 /// 5. Run          (run / GPU — also hosts the training notebook, opened
 ///                  on demand from the consumer's Run screen)
-/// 6. Deploy       (deploy)
+/// 6. Results      (deploy)
 class SnnWorkflowStepper extends StatelessWidget {
   /// The currently active workflow phase.
   final SnnWorkflowPhase currentPhase;
@@ -148,8 +148,8 @@ class SnnWorkflowStepper extends StatelessWidget {
         ),
         _buildStepData(
           SnnWorkflowPhase.deploy,
-          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (rocket launch / deploy)
-          Icons.rocket_launch_outlined,
+          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (results analysis)
+          Icons.analytics_outlined,
         ),
       ],
     );
