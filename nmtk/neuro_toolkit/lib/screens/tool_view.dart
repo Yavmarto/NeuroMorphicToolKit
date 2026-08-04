@@ -861,6 +861,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                               session,
                               initialServerUrl: _nativeSurfaceServerUrl(module),
                               workspaceHeaderAction: workspaceHeaderAction,
+                              onEditServer: () =>
+                                  _showServerConnectionPopup(context),
                             ),
                           )
                         : supported
@@ -1074,6 +1076,19 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       );
       final mobileClampedIndex =
           mobileSelectedIndex < 0 ? 0 : mobileSelectedIndex;
+      final mobileActiveModule =
+          mobileModules.isNotEmpty ? mobileModules[mobileClampedIndex] : null;
+      final mobileActiveSession = mobileActiveModule != null
+          ? sessionsByModuleId[mobileActiveModule.id]
+          : null;
+      final mobileActiveModuleIsReady = mobileActiveModule != null &&
+          (mobileActiveModule.status == ModuleStatus.running ||
+              mobileActiveModule.status == ModuleStatus.degraded);
+      final showMobileInlineServerControl =
+          mobileActiveModule?.id == 'neurocnl' &&
+              mobileActiveModuleIsReady &&
+              mobileActiveSession?.surfaceMode == 'native';
+
       return NmtkMobileScaffold(
         navItems: mobileNavItems,
         selectedIndex: mobileClampedIndex,
@@ -1083,7 +1098,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           }
         },
         showBottomNavigation: false,
-        floatingActionButton: _buildServerConnectionButton(context),
+        floatingActionButton: showMobileInlineServerControl
+            ? null
+            : _buildServerConnectionButton(context),
         // Only the active module's content is built here — unlike an
         // IndexedStack (which would build and keep every eligible module's
         // full subtree alive simultaneously, including full nested apps for
@@ -1100,11 +1117,18 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                 ),
                 child: KeyedSubtree(
                   key: ValueKey<String>(
-                    '$currentServerKey:${mobileModules[mobileClampedIndex].id}',
+                    '$currentServerKey:${mobileActiveModule!.id}',
                   ),
                   child: _buildModuleChild(
-                    mobileModules[mobileClampedIndex],
+                    mobileActiveModule,
                     sessionsByModuleId,
+                    workspaceHeaderAction: showMobileInlineServerControl
+                        ? _InlineServerConnectionControl(
+                            onPressed: () =>
+                                _showServerConnectionPopup(context),
+                            iconOnly: true,
+                          )
+                        : null,
                   ),
                 ),
               ),
@@ -1158,9 +1182,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 }
 
 class _InlineServerConnectionControl extends ConsumerWidget {
-  const _InlineServerConnectionControl({required this.onPressed});
+  const _InlineServerConnectionControl({
+    required this.onPressed,
+    this.iconOnly = false,
+  });
 
   final VoidCallback onPressed;
+  final bool iconOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1180,6 +1208,29 @@ class _InlineServerConnectionControl extends ConsumerWidget {
     final hostLabel = controlApi?.baseUri.host ?? 'Connect server';
     final serverLabel =
         backendVersion != null ? '$hostLabel · v$backendVersion' : hostLabel;
+
+    if (iconOnly) {
+      return Tooltip(
+        message: 'Server connection · ${effectiveConnection.label}',
+        child: Semantics(
+          button: true,
+          label:
+              'Server connection: $serverLabel, ${effectiveConnection.label}',
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              key: const ValueKey<String>('inline-server-connection-icon'),
+              borderRadius: BorderRadius.circular(20),
+              onTap: onPressed,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Icon(Icons.circle, color: statusColor, size: 14),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Tooltip(
       message: 'Server connection · ${effectiveConnection.label}',

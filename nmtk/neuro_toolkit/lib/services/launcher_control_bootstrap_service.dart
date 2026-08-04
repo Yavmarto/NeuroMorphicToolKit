@@ -382,7 +382,10 @@ class LauncherControlBootstrapService {
       return _HealthProbeResult.notReady(
         hostReachableNoServer: _isConnectionRefused(error),
       );
-    } catch (_) {
+    } catch (error) {
+      // ponytail: temporary diagnostic for the Android quick-connect bug —
+      // remove once the real failure mode is confirmed.
+      debugPrint('_probeHealth($baseUri) failed: ${error.runtimeType}: $error');
       // Genuine transport-level failure — the control API never answered.
       return const _HealthProbeResult.notReady();
     }

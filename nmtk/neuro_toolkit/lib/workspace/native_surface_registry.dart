@@ -11,6 +11,7 @@ typedef NativeSurfaceBuilder = Widget Function(
   WorkspaceSession session, {
   String? initialServerUrl,
   Widget? workspaceHeaderAction,
+  Future<void> Function()? onEditServer,
 });
 
 class NativeSurfaceRegistry {
@@ -20,17 +21,20 @@ class NativeSurfaceRegistry {
       WorkspaceSession session, {
       String? initialServerUrl,
       Widget? workspaceHeaderAction,
+      Future<void> Function()? onEditServer,
     }) {
       return NeurocnlShellAdapter(
         initialLocation: session.deepLink ?? '/',
         initialServerUrl: initialServerUrl,
         workspaceHeaderAction: workspaceHeaderAction,
+        onEditServer: onEditServer,
       );
     },
     'Neurohub': (
       WorkspaceSession session, {
       String? initialServerUrl,
       Widget? workspaceHeaderAction,
+      Future<void> Function()? onEditServer,
     }) {
       return NeurohubShellAdapter(
         initialLocation: session.deepLink ?? '/',
@@ -40,6 +44,7 @@ class NativeSurfaceRegistry {
       WorkspaceSession session, {
       String? initialServerUrl,
       Widget? workspaceHeaderAction,
+      Future<void> Function()? onEditServer,
     }) {
       return NeurocnlShellAdapter(
         initialLocation: session.deepLink ?? '/?panel=deploy',
@@ -47,12 +52,14 @@ class NativeSurfaceRegistry {
             ? const <String, Object?>{}
             : session.restoreState,
         initialServerUrl: initialServerUrl,
+        onEditServer: onEditServer,
       );
     },
     'Neurobench': (
       WorkspaceSession session, {
       String? initialServerUrl,
       Widget? workspaceHeaderAction,
+      Future<void> Function()? onEditServer,
     }) {
       return NeurobenchShellAdapter(
         initialLocation: session.deepLink ?? '/',
@@ -62,6 +69,7 @@ class NativeSurfaceRegistry {
       WorkspaceSession session, {
       String? initialServerUrl,
       Widget? workspaceHeaderAction,
+      Future<void> Function()? onEditServer,
     }) {
       return NeurosenseShellAdapter(
         initialLocation: session.deepLink ?? '/',
@@ -77,6 +85,7 @@ class NativeSurfaceRegistry {
     WorkspaceSession session, {
     String? initialServerUrl,
     Widget? workspaceHeaderAction,
+    Future<void> Function()? onEditServer,
   }) {
     final builder = _builders[moduleId];
     if (builder == null) {
@@ -86,6 +95,7 @@ class NativeSurfaceRegistry {
       session,
       initialServerUrl: initialServerUrl,
       workspaceHeaderAction: workspaceHeaderAction,
+      onEditServer: onEditServer,
     );
   }
 }

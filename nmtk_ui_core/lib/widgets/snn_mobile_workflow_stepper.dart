@@ -33,6 +33,9 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
   /// both steppers cannot drift out of sync with each other.
   final Map<SnnWorkflowPhase, String> stepLabels;
 
+  /// Optional trailing widget to display at the right end of the stepper.
+  final Widget? trailing;
+
   const SnnMobileWorkflowStepper({
     super.key,
     required this.currentPhase,
@@ -40,6 +43,7 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
     this.onPhaseSelected,
     this.lockedPhases = const <SnnWorkflowPhase>{},
     this.stepLabels = kSnnStepLabels,
+    this.trailing,
   });
 
   @override
@@ -93,6 +97,10 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
             ],
           ),
         ),
+        if (trailing != null) ...[
+          const SizedBox(width: 8),
+          trailing!,
+        ],
       ],
     );
   }
