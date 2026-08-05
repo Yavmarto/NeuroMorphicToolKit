@@ -47,7 +47,11 @@ Set NEUROCHIP_URL to override the default http://localhost:9000.
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import os
+import time
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
@@ -58,10 +62,17 @@ import pytest
 # Configuration
 # ---------------------------------------------------------------------------
 
-_AKIDA_HW_REQUIRED: bool = os.getenv("AKIDA_HARDWARE_TEST", "").lower() in {"1", "true", "yes"}
+_AKIDA_HW_REQUIRED: bool = os.getenv("AKIDA_HARDWARE_TEST", "").lower() in {
+    "1",
+    "true",
+    "yes",
+}
 
 NEUROCHIP_URL: str = os.getenv("NEUROCHIP_URL", "http://localhost:9000")
 _AKIDA_BASE: str = f"{NEUROCHIP_URL}/api/neurochip/akida"
+_API_KEY: str = os.getenv("NEUROCHIP_API_KEY", "").strip()
+_AUTH_HEADERS: dict[str, str] = {"X-API-Key": _API_KEY} if _API_KEY else {}
+_MODEL_BUNDLE_PATH: str = os.getenv("AKIDA_MODEL_BUNDLE", "").strip()
 
 # Minimal two-population network for hardware validation.
 # sensory (size=4) → motor (size=2) with a FullyConnected layer.
@@ -69,15 +80,34 @@ _MAPPED_NETWORK: dict[str, Any] = {
     "akida_version": "akida1",
     "input_population": "sensory",
     "populations": [
-        {"id": "sensory", "size": 4, "role": "sensory", "population_type": "lif",
-         "provenance": [], "attributes": {}},
-        {"id": "motor", "size": 2, "role": "motor", "population_type": "lif",
-         "provenance": [], "attributes": {}},
+        {
+            "id": "sensory",
+            "size": 4,
+            "role": "sensory",
+            "population_type": "lif",
+            "provenance": [],
+            "attributes": {},
+        },
+        {
+            "id": "motor",
+            "size": 2,
+            "role": "motor",
+            "population_type": "lif",
+            "provenance": [],
+            "attributes": {},
+        },
     ],
     "connections": [
-        {"source": "sensory", "target": "motor", "units": 2,
-         "weight": 0.5, "block_type": None, "provenance": [], "property_provenance": [],
-         "attributes": {}},
+        {
+            "source": "sensory",
+            "target": "motor",
+            "units": 2,
+            "weight": 0.5,
+            "block_type": None,
+            "provenance": [],
+            "property_provenance": [],
+            "attributes": {},
+        },
     ],
     "topology_verdict": "faithful",
     "warnings": [],
@@ -167,8 +197,7 @@ def _assert_hardware_target(data: dict, *, step: str) -> None:
         + (
             "  The AKD1000 SOFTWARE SIMULATOR is active. This is NOT real hardware.\n"
             if target == "akd1000_simulator"
-            else
-            "  Pure-Python software fallback is active (SDK not installed).\n"
+            else "  Pure-Python software fallback is active (SDK not installed).\n"
             if target == "software_fallback"
             else ""
         )
@@ -177,7 +206,7 @@ def _assert_hardware_target(data: dict, *, step: str) -> None:
         f"    □ Is the AKida USB device plugged in?\n"
         f"    □ Is akida==2.19.1 installed in the Neurochip Python environment?\n"
         f"    □ Is the device visible to the OS? (lsusb / Device Manager)\n"
-        f"    □ Does `python -c \"import akida; print(akida.devices())\"` list the chip?\n"
+        f'    □ Does `python -c "import akida; print(akida.devices())"` list the chip?\n'
         f"\n"
         f"  Full response: {data}\n"
         f"══════════════════════════════════════════════════════════════"
@@ -195,7 +224,7 @@ def test_akida_status_confirms_real_hardware() -> None:
     A runtime_target of 'hardware' is only possible when akida.devices()
     enumerates at least one physical USB AKida chip.
     """
-    with httpx.Client(timeout=30.0) as client:
+    with httpx.Client(timeout=30.0, headers=_AUTH_HEADERS) as client:
         resp = _get_or_fail(client, f"{_AKIDA_BASE}/status")
         assert resp.status_code == 200, (
             f"[AKIDA HW] Status endpoint returned {resp.status_code}: {resp.text}"
@@ -217,9 +246,9 @@ def test_akida_status_confirms_real_hardware() -> None:
         # Physical hardware must be detected
         _assert_hardware_target(data, step="status")
 
-        print(f"\n{'═'*60}")
+        print(f"\n{'═' * 60}")
         print("  [AKIDA HW] STATUS — REAL HARDWARE CONFIRMED")
-        print(f"{'═'*60}")
+        print(f"{'═' * 60}")
         print(f"  sdk_available    : {data.get('sdk_available')}")
         print(f"  sdk_status       : {data.get('sdk_status')}")
         print(f"  runtime_target   : {data.get('runtime_target')}")
@@ -229,7 +258,7 @@ def test_akida_status_confirms_real_hardware() -> None:
         print(f"  host_supported   : {env.get('host_supported')}")
         print(f"  python_supported : {env.get('python_supported')}")
         print(f"  tensorflow_avail : {env.get('tensorflow_available')}")
-        print(f"{'═'*60}")
+        print(f"{'═' * 60}")
 
 
 # ---------------------------------------------------------------------------
@@ -245,7 +274,7 @@ def test_akida_map_to_physical_device() -> None:
     akida.devices()[0].  If the device is the AKD1000 simulator, the target
     is 'akd1000_simulator' — explicitly not accepted here.
     """
-    with httpx.Client(timeout=60.0) as client:
+    with httpx.Client(timeout=60.0, headers=_AUTH_HEADERS) as client:
         resp = _post_or_fail(
             client,
             f"{_AKIDA_BASE}/map",
@@ -281,9 +310,9 @@ def test_akida_map_to_physical_device() -> None:
             f"sdk_issue_detail: {data.get('sdk_issue_detail')}"
         )
 
-        print(f"\n{'═'*60}")
+        print(f"\n{'═' * 60}")
         print("  [AKIDA HW] MAP — MODEL LOADED ONTO PHYSICAL CHIP")
-        print(f"{'═'*60}")
+        print(f"{'═' * 60}")
         print(f"  runtime_target   : {data.get('runtime_target')}")
         print(f"  device_info      : {data.get('device_info')}")
         print(f"  sdk_status       : {data.get('sdk_status')}")
@@ -292,7 +321,7 @@ def test_akida_map_to_physical_device() -> None:
             ms = data["model_summary"]
             print(f"  n_neurons        : {ms.get('n_neurons')}")
             print(f"  n_synapses       : {ms.get('n_synapses')}")
-        print(f"{'═'*60}")
+        print(f"{'═' * 60}")
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +336,7 @@ def test_akida_inference_on_real_hardware() -> None:
     are hardware power metrics captured from the chip, impossible to
     obtain from a software simulator.
     """
-    with httpx.Client(timeout=60.0) as client:
+    with httpx.Client(timeout=60.0, headers=_AUTH_HEADERS) as client:
         # Map first (make this test self-contained)
         map_resp = _post_or_fail(
             client,
@@ -318,7 +347,9 @@ def test_akida_inference_on_real_hardware() -> None:
         if map_resp.status_code == 503:
             pytest.fail("[AKIDA HW] Cannot run inference — SDK unavailable.")
         if map_resp.status_code == 502:
-            pytest.fail(f"[AKIDA HW] Cannot run inference — map failed: {map_resp.text}")
+            pytest.fail(
+                f"[AKIDA HW] Cannot run inference — map failed: {map_resp.text}"
+            )
         assert map_resp.status_code == 200, f"Pre-map failed: {map_resp.text}"
         _assert_hardware_target(map_resp.json(), step="map (before inference)")
 
@@ -340,9 +371,9 @@ def test_akida_inference_on_real_hardware() -> None:
             f"[AKIDA HW] outputs must be a list, got: {type(infer_data['outputs'])}"
         )
 
-        print(f"\n{'═'*60}")
+        print(f"\n{'═' * 60}")
         print("  [AKIDA HW] INFERENCE — REAL CHIP OUTPUT")
-        print(f"{'═'*60}")
+        print(f"{'═' * 60}")
         print(f"  inputs           : {_INFERENCE_INPUTS}")
         print(f"  outputs          : {infer_data['outputs']}")
 
@@ -358,7 +389,7 @@ def test_akida_inference_on_real_hardware() -> None:
         exec_us = infer_data.get("execution_time_us")
         if exec_us is not None:
             print(f"  execution_time_us: {exec_us:.1f} µs")
-        print(f"{'═'*60}")
+        print(f"{'═' * 60}")
 
 
 # ---------------------------------------------------------------------------
@@ -375,7 +406,7 @@ def test_akida_on_device_deploy_on_real_hardware() -> None:
       2. It was mapped to the physical chip (not the AKD1000 simulator)
       3. A deployment package was generated with correct checksums
     """
-    with httpx.Client(timeout=60.0) as client:
+    with httpx.Client(timeout=60.0, headers=_AUTH_HEADERS) as client:
         resp = _post_or_fail(
             client,
             f"{_AKIDA_BASE}/deploy/mapped",
@@ -418,10 +449,79 @@ def test_akida_on_device_deploy_on_real_hardware() -> None:
         zip_size = len(resp.content)
         assert zip_size > 0, "[AKIDA HW] Empty ZIP response from on_device deploy."
 
-        print(f"\n{'═'*60}")
+        print(f"\n{'═' * 60}")
         print("  [AKIDA HW] ON_DEVICE DEPLOY — REAL HARDWARE PACKAGE")
-        print(f"{'═'*60}")
+        print(f"{'═' * 60}")
         print(f"  deployment_mode  : {deployment_mode_header}")
         print(f"  runtime_target   : {runtime_target_header}")
         print(f"  package_size     : {zip_size:,} bytes")
-        print(f"{'═'*60}")
+        print(f"{'═' * 60}")
+
+
+# ---------------------------------------------------------------------------
+# Step 5 — full MNIST bundle conversion, evaluation, and sample inference
+# ---------------------------------------------------------------------------
+
+
+def test_akida_mnist_bundle_on_real_hardware() -> None:
+    """Convert and evaluate a Studio bundle, then infer one stored sample."""
+    if not _MODEL_BUNDLE_PATH:
+        pytest.skip("AKIDA_MODEL_BUNDLE does not point to a generated Studio bundle.")
+
+    bundle_path = Path(_MODEL_BUNDLE_PATH).expanduser().resolve()
+    assert bundle_path.is_file(), f"AKIDA_MODEL_BUNDLE is not a file: {bundle_path}"
+    bundle = bundle_path.read_bytes()
+    digest = hashlib.sha256(bundle).hexdigest()
+    request = {
+        "filename": bundle_path.name,
+        "bundleBase64": base64.b64encode(bundle).decode("ascii"),
+        "sha256": digest,
+        "requirePhysicalHardware": True,
+    }
+
+    with httpx.Client(timeout=120.0, headers=_AUTH_HEADERS) as client:
+        submitted = _post_or_fail(
+            client,
+            f"{_AKIDA_BASE}/model-jobs",
+            json=request,
+        )
+        assert submitted.status_code == 202, (
+            f"[AKIDA HW] Bundle submission failed: {submitted.status_code}\n"
+            f"{submitted.text}"
+        )
+        job = submitted.json()
+        job_id = job["jobId"]
+
+        deadline = time.monotonic() + 20 * 60
+        while job.get("stage") not in {"completed", "failed"}:
+            assert time.monotonic() < deadline, (
+                f"[AKIDA HW] Model job {job_id} did not finish within 20 minutes."
+            )
+            time.sleep(2)
+            response = _get_or_fail(client, f"{_AKIDA_BASE}/model-jobs/{job_id}")
+            assert response.status_code == 200, response.text
+            job = response.json()
+
+        assert job["stage"] == "completed", (
+            f"[AKIDA HW] Model job failed with {job.get('errorCode')}: "
+            f"{job.get('message')}"
+        )
+        assert job["runtimeTarget"] == "hardware", job
+        assert job["hardwareVerified"] is True, job
+        assert job["metrics"]["akida_accuracy"] >= 0.96, job["metrics"]
+        assert (
+            abs(job["metrics"]["pytorch_accuracy"] - job["metrics"]["onnx_accuracy"])
+            <= 0.001
+        ), job["metrics"]
+
+        inference = _post_or_fail(
+            client,
+            f"{_AKIDA_BASE}/models/{job['modelId']}/inference",
+            json={"sampleIndex": 0},
+        )
+        assert inference.status_code == 200, inference.text
+        result = inference.json()
+        assert result["runtimeTarget"] == "hardware", result
+        assert result["hardwareVerified"] is True, result
+        assert result["prediction"] in range(10), result
+        assert result["label"] in range(10), result

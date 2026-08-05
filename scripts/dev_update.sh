@@ -297,6 +297,9 @@ classify_path() {
     workers/neurocnl_physics/Dockerfile)     echo "REBUILD:neurocnl-physics-worker"; return ;;
     workers/snn_mlir_compiler/Dockerfile)    echo "REBUILD:snn-mlir-compiler"; return ;;
     workers/jupyter_server/Dockerfile)       echo "REBUILD:jupyter-server"; return ;;
+    # This file is both runtime code and the release-artifact manifest writer
+    # copied into Dockerfile.control's builder stage.
+    nmtk/launcher_control/runtime_artifact.py) echo "REBUILD:launcher-control"; return ;;
 
     # Only these three are loaded by the dev stack, so only these justify a
     # recreate. prod/remote are bundled into the Flutter app by hash, so they
@@ -317,6 +320,9 @@ classify_path() {
 
     # pip-installed into the image; rsync moves the source but Python won't see it.
     neurocnl/neurocnl/*|neurocnl/pyproject.toml) echo "REBUILD:suite_api"; return ;;
+    # launcher-control now builds and carries the release-matched Neurochip
+    # wheel used to update the selected native Akida host.
+    Neurochip/*)                             echo "REBUILD:launcher-control"; return ;;
     Neurohub/*|Neurosense/*)                 echo "REBUILD:suite_api"; return ;;
     Neurobench/neurobench/*)                 echo "REBUILD:suite_api"; return ;;
 
@@ -595,6 +601,65 @@ PY
   log "  Suite API ok (version: $version)"
   wait_for_control_api "http://${host_ip}:8090"
   check_jupyter_health "$host_ip"
+  update_selected_akida_runtime "$host_ip"
+}
+
+update_selected_akida_runtime() {
+  local host_ip="$1"
+  [ "$AKIDA_NATIVE" = "1" ] || return 0
+  log "Updating the selected Akida runtime through launcher control..."
+  if "$PYTHON3" - "http://${host_ip}:8090" <<'PY'
+import json
+import sys
+import time
+import urllib.error
+import urllib.request
+
+base = sys.argv[1].rstrip("/")
+
+def request(path, method="GET"):
+    req = urllib.request.Request(base + path, method=method)
+    with urllib.request.urlopen(req, timeout=15) as response:
+        return json.loads(response.read() or b"{}")
+
+try:
+    settings = request("/api/launcher/settings")
+    host_id = str(settings.get("selectedAkidaHostId") or "").strip()
+    if not host_id:
+        print("  no Akida host is selected; skipped")
+        raise SystemExit(0)
+    job = request(
+        f"/api/launcher/akida/hosts/{host_id}/runtime-update-jobs",
+        method="POST",
+    )
+    for _ in range(600):
+        status = str(job.get("status") or "")
+        if status == "completed":
+            print(
+                "  selected Akida runtime ready"
+                + (f" (version {job.get('installedVersion')})" if job.get("installedVersion") else "")
+            )
+            raise SystemExit(0)
+        if status == "failed":
+            print(f"  degraded optional capability: {job.get('message') or 'Akida update failed'}")
+            if job.get("recovery"):
+                print(f"  recovery: {job['recovery']}")
+            raise SystemExit(2)
+        time.sleep(1)
+        job = request(
+            f"/api/launcher/akida/hosts/{host_id}/runtime-update-jobs/{job['jobId']}"
+        )
+    print("  degraded optional capability: Akida runtime update timed out")
+    raise SystemExit(2)
+except (KeyError, ValueError, urllib.error.URLError) as exc:
+    print("  degraded optional capability: launcher control could not update the selected Akida runtime")
+    raise SystemExit(2) from exc
+PY
+  then
+    return 0
+  fi
+  warn "Akida runtime update did not complete; the core backend update succeeded."
+  warn "Retry from Backend Setup without redeploying the backend."
 }
 
 check_jupyter_health() {

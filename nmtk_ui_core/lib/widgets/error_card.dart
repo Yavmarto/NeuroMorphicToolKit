@@ -33,7 +33,7 @@ class NmtkErrorCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (prefix != null) ...[prefix!, const SizedBox(height: 8)],
-          Text(
+          SelectableText(
             message,
             style: Zeta.of(
               context,

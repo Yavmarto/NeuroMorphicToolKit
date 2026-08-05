@@ -213,18 +213,25 @@ void main() {
       await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
-      await tester.pump(const Duration(seconds: 1));
-      await tester.pump(const Duration(seconds: 1));
 
+      // After navigation to /workspace, workspaceProvider still has sessions=[]
+      // from the initial fetch — _initializeWorkspace has not yet run. In mobile
+      // layout (width < 840 px), the FAB is visible with the IP text at this
+      // point (no native session yet, so showMobileInlineServerControl is false).
       expect(find.byType(BackendSetupScreen), findsNothing);
       expect(find.text('192.168.2.51'), findsOneWidget);
-      expect(requestedPaths, contains('/api/launcher/modules'));
-      expect(requestedPaths, contains('/api/launcher/workspace'));
 
+      // Tapping the server-connection FAB reopens the setup screen.
       await tester.tap(find.text('192.168.2.51'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byType(BackendSetupScreen), findsOneWidget);
+
+      // Dismiss the setup and verify that workspace initialization (which runs
+      // in the background) made the expected API calls.
+      await tester.pump(const Duration(seconds: 2));
+      expect(requestedPaths, contains('/api/launcher/modules'));
+      expect(requestedPaths, contains('/api/launcher/workspace'));
     },
   );
 
@@ -255,7 +262,7 @@ void main() {
                     'sshPort': 22,
                     'controlPort': 8091,
                     'runtimeApiUrl': 'http://192.168.2.51:8002',
-                    'controlApiUrl': 'http://192.168.2.51:8090',
+                    'controlApiUrl': 'http://192.168.2.51:8091',
                     'authMode': 'ssh_key',
                     'runtimeMode': 'unknown',
                     'state': 'simulator_only',

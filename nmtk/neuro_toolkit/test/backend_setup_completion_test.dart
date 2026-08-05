@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+
 import 'package:neuro_toolkit/models/backend_deployment.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/src/features/deployment/domain/deployment_state.dart';
 import 'package:neuro_toolkit/src/features/deployment/presentation/deployment_notifier.dart';
@@ -310,5 +313,141 @@ void main() {
     expect(notifier.retryJupyterCalled, isTrue);
     expect(notifier.state.value?.activeJob?.targetId, 'saved-remote-target');
     expect(notifier.state.value?.activeJob?.error, isEmpty);
+  });
+
+  testWidgets('degraded Akida update keeps backend ready and offers retry',
+      (tester) async {
+    tester.view.physicalSize = const Size(1440, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    const target = DeploymentTarget(
+      id: 'saved-remote-target',
+      displayName: 'Saved remote target',
+      targetType: 'remote_host',
+      mode: 'docker',
+      authMode: 'ssh_key',
+      host: '192.168.2.34',
+      backendPort: 9000,
+    );
+    final notifier = _FakeDeploymentNotifier(
+      const DeploymentState(
+        targets: [target],
+        isReady: true,
+        activeJob: DeploymentJob(
+          id: 'akida-degraded',
+          targetId: 'saved-remote-target',
+          mode: 'docker',
+          stage: 'completed',
+          percent: 100,
+          stageLabel: 'Backend and launcher control are ready',
+          error: 'degraded optional capability: the selected Akida host is '
+              'offline; core services are available.',
+          logs: [],
+        ),
+      ),
+    );
+
+    await tester.pumpWidget(
+      _buildHarness(
+        notifier: notifier,
+        onDeploymentReady: (_) async {},
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Akida runtime needs recovery'), findsOneWidget);
+    expect(find.text('Retry Akida update'), findsOneWidget);
+    expect(notifier.state.value?.isReady, isTrue);
+  });
+
+  testWidgets(
+      'a degraded Akida host raises the update banner without a failed job',
+      (tester) async {
+    tester.view.physicalSize = const Size(1440, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    // A host that installed cleanly, is on the current version, and has no
+    // failed job — but landed on the simulator. "Retry Akida update" used to be
+    // gated on a pending version or a deploy job whose error text matched
+    // 'degraded optional capability:' + 'akida', so in this state there was no
+    // way to reach it from the app at all.
+    const simulatorOnlyHost = AkidaPairedHost(
+      id: 'akida-1',
+      displayName: 'Bench Akida',
+      host: '192.168.2.51',
+      sshPort: 22,
+      username: 'moosebuntu',
+      runtimeApiUrl: 'http://192.168.2.51:8002',
+      controlApiUrl: 'http://192.168.2.51:8091',
+      authMode: AkidaHostAuthMode.password,
+      credentialRef: '',
+      password: '',
+      hasPassword: true,
+      sshKeyPath: '',
+      remoteInstallRoot: '/opt/neurochip-akida-host',
+      serviceUser: 'neurochip',
+      hostOs: 'Ubuntu 24.04',
+      pythonVersion: '3.11.9',
+      runtimeMode: AkidaRuntimeMode.remoteSdk,
+      state: AkidaPairedHostState.simulatorOnly,
+      lastReadinessMessage:
+          'No physical Akida device was enumerated on the host.',
+      lastVerifiedAt: '2026-08-05T09:00:00Z',
+      installedRuntimeVersion: '0.4.2',
+      availableRuntimeVersion: '0.4.2',
+    );
+
+    final notifier = _FakeDeploymentNotifier(
+      const DeploymentState(isReady: true),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          backendDeploymentProvider.overrideWith(() => notifier),
+          backendUpdateProvider.overrideWith((ref) async => null),
+          selectedAkidaRuntimeStatusProvider.overrideWith(
+            (ref) async => simulatorOnlyHost,
+          ),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: BackendSetupForm(
+                localDeploymentAvailable: true,
+                onDeploymentReady: (_) async {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+
+    expect(find.byKey(const Key('backend-update-available')), findsOneWidget);
+    expect(
+      find.text(
+        'Selected Akida runtime needs attention — Simulator Only',
+      ),
+      findsOneWidget,
+      reason: 'A degraded host does not need "an update"; the title must say '
+          'what is actually wrong.',
+    );
+    expect(
+      find.textContaining(
+        'No physical Akida device was enumerated on the host.',
+      ),
+      findsOneWidget,
+      reason: 'lastReadinessMessage is the reason and must be shown, not just '
+          'a generic "will be updated" line.',
+    );
+    expect(
+      find.byKey(const Key('backend-update-retry-akida')),
+      findsOneWidget,
+    );
   });
 }

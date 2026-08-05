@@ -281,7 +281,9 @@ def _validate_pynq_overlay_manifest(payload: Any) -> None:
             "supported_neuron_models must match the fixed overlay-v1 contract"
         )
 
-    supported_weight_bit_widths = tuple(payload.get("supported_weight_bit_widths") or ())
+    supported_weight_bit_widths = tuple(
+        payload.get("supported_weight_bit_widths") or ()
+    )
     if supported_weight_bit_widths != expected["supported_weight_bit_widths"]:
         raise ValueError(
             "supported_weight_bit_widths must match the fixed overlay-v1 contract"
@@ -292,9 +294,10 @@ def _validate_pynq_overlay_manifest(payload: Any) -> None:
         raise ValueError("register_map must be an object")
     if register_map.get("dma_channel") != payload.get("dma_ip_name"):
         raise ValueError("register_map.dma_channel must match dma_ip_name")
-    if int(register_map.get("weight_base_offset", -1)) != expected["register_map"][
-        "weight_base_offset"
-    ]:
+    if (
+        int(register_map.get("weight_base_offset", -1))
+        != expected["register_map"]["weight_base_offset"]
+    ):
         raise ValueError(
             "register_map.weight_base_offset must match the fixed overlay-v1 contract"
         )
@@ -308,15 +311,17 @@ def _validate_pynq_overlay_manifest(payload: Any) -> None:
         raise ValueError(
             "weight_layout.base_offset must match register_map.weight_base_offset"
         )
-    if int(weight_layout.get("stride_bytes", -1)) != expected["weight_layout"][
-        "stride_bytes"
-    ]:
+    if (
+        int(weight_layout.get("stride_bytes", -1))
+        != expected["weight_layout"]["stride_bytes"]
+    ):
         raise ValueError(
             "weight_layout.stride_bytes must match overlay-v1 word-MMIO stride"
         )
-    if int(weight_layout.get("max_entries", -1)) != expected["weight_layout"][
-        "max_entries"
-    ]:
+    if (
+        int(weight_layout.get("max_entries", -1))
+        != expected["weight_layout"]["max_entries"]
+    ):
         raise ValueError("weight_layout.max_entries must match max_synapses")
     if (
         int(weight_layout["base_offset"])
@@ -372,7 +377,6 @@ def _inspect_staged_pynq_overlay_package(staging_dir: Path) -> dict[str, Any]:
         "ready": not issues,
         "issues": issues,
     }
-
 
 
 def _status_name(index: int) -> str:
@@ -557,10 +561,7 @@ def _normalize_pynq_board(raw: dict[str, Any]) -> dict[str, Any]:
         or contract.default_username
     )
     remote_install_root = str(raw.get("remoteInstallRoot") or "").strip()
-    if (
-        not remote_install_root
-        or remote_install_root == contract.legacy_install_root
-    ):
+    if not remote_install_root or remote_install_root == contract.legacy_install_root:
         remote_install_root = contract.install_root_for(username)
 
     remote_venv_path = str(raw.get("remoteVenvPath") or "").strip()
@@ -724,11 +725,7 @@ def _describe_akida_preflight(verification: dict[str, Any]) -> str:
     raw_sdk_issues = verification.get("sdk_issues", [])
     if not isinstance(raw_sdk_issues, list):
         raw_sdk_issues = []
-    sdk_issues = [
-        str(issue).strip()
-        for issue in raw_sdk_issues
-        if str(issue).strip()
-    ]
+    sdk_issues = [str(issue).strip() for issue in raw_sdk_issues if str(issue).strip()]
     if _akida_hardware_runtime_ready(verification):
         return "Akida runtime mapping is ready."
     if sdk_issue_detail:
@@ -824,6 +821,21 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
     control_port = raw.get("controlPort", contract.control_port)
     if not isinstance(control_port, int):
         control_port = contract.control_port
+    parsed_control_url = urlparse(control_api_url) if control_api_url else None
+    try:
+        parsed_control_port = (
+            parsed_control_url.port if parsed_control_url is not None else None
+        )
+    except ValueError:
+        parsed_control_port = None
+    if parsed_control_url is not None and parsed_control_port == 8090:
+        # Studio briefly stored the suite launcher port as the paired host's
+        # Akida control endpoint. 8090 is owned by launcher-control; paired
+        # Akida hosts use the manifest-backed control port (currently 8091).
+        control_api_url = _default_akida_control_url(
+            parsed_control_url.hostname or host,
+            control_port,
+        )
     if not base_url and runtime_api_url:
         base_url = runtime_api_url
     if not runtime_api_url and base_url:
@@ -848,8 +860,7 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         raw.get("capabilitySnapshot", raw.get("capability_snapshot"))
     )
     runtime_mode = _normalize_akida_runtime_mode(
-        raw.get("runtimeMode")
-        or (capability_snapshot or {}).get("recommendedRuntime")
+        raw.get("runtimeMode") or (capability_snapshot or {}).get("recommendedRuntime")
     )
     password = str(raw.get("password") or "")
     auth_mode = _normalize_akida_host_auth_mode(
@@ -912,6 +923,22 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         "lastVerifiedAt": str(raw.get("lastVerifiedAt") or "").strip(),
         "lastInstallStatus": raw.get("lastInstallStatus")
         if isinstance(raw.get("lastInstallStatus"), dict)
+        else None,
+        "installedRuntimeVersion": str(
+            raw.get("installedRuntimeVersion")
+            or (
+                raw.get("lastInstallStatus", {}).get("packageVersion")
+                if isinstance(raw.get("lastInstallStatus"), dict)
+                else ""
+            )
+        ).strip(),
+        "availableRuntimeVersion": str(
+            raw.get("availableRuntimeVersion") or ""
+        ).strip(),
+        "runtimeArtifactSha256": str(raw.get("runtimeArtifactSha256") or "").strip(),
+        "runtimeUpdateState": str(raw.get("runtimeUpdateState") or "").strip(),
+        "lastRuntimeUpdateJob": raw.get("lastRuntimeUpdateJob")
+        if isinstance(raw.get("lastRuntimeUpdateJob"), dict)
         else None,
         "capabilitySnapshot": capability_snapshot,
         "isDefault": bool(raw.get("isDefault")),
@@ -979,7 +1006,6 @@ def _describe_pynq_preflight(preflight: dict[str, Any]) -> str:
     return f"preflight failed: {message}" if message else "preflight failed"
 
 
-
 def _running_in_bundled_mode() -> bool:
     return str(os.environ.get("NMTK_BUNDLED_MODE") or "").strip().lower() in {
         "1",
@@ -1044,13 +1070,11 @@ def _resolved_lava_worker_url() -> str | None:
     return None
 
 
-
 def _is_benign_ssh_warning_line(line: str) -> bool:
     stripped = line.strip()
     if not stripped:
         return True
     return any(stripped.startswith(prefix) for prefix in BENIGN_SSH_WARNING_PREFIXES)
-
 
 
 from .suite_api_service import (
@@ -1109,12 +1133,14 @@ from .module_install import ModuleInstallMixin
 from .module_lifecycle import ModuleLifecycleMixin
 from .module_registry import ModuleRegistryMixin, _resolve_remote_module_version
 from .akida_host_service import AkidaServiceMixin
+from .akida_runtime_update_jobs import AkidaRuntimeUpdateJobsMixin
 from .pynq_service import PynqServiceMixin
 from .settings_service import SettingsServiceMixin
 from .preflight_types import PreflightResult
 
 
 class LauncherControlState(
+    AkidaRuntimeUpdateJobsMixin,
     AkidaServiceMixin,
     ModuleInstallMixin,
     ModuleLifecycleMixin,
@@ -1142,9 +1168,7 @@ class LauncherControlState(
         self._manage_suite_api = manage_suite_api
         self._external_probe_host = external_probe_host or "127.0.0.1"
         self._suite_api_status = (
-            SUITE_API_STATUS_STARTING
-            if manage_suite_api
-            else SUITE_API_STATUS_DISABLED
+            SUITE_API_STATUS_STARTING if manage_suite_api else SUITE_API_STATUS_DISABLED
         )
         self._suite_api_message: str | None = None
         self._suite_api_process: subprocess.Popen[str] | None = None
@@ -1197,7 +1221,10 @@ class LauncherControlState(
             module_ids = list(self._processes.keys())
         for module_id in module_ids:
             self.stop_module(module_id)
-        if self._suite_api_process is not None and self._suite_api_process.poll() is None:
+        if (
+            self._suite_api_process is not None
+            and self._suite_api_process.poll() is None
+        ):
             self._suite_api_process.terminate()
             try:
                 self._suite_api_process.wait(timeout=5)
@@ -1217,6 +1244,15 @@ class LauncherControlState(
 
     def get_settings(self) -> dict[str, Any]:
         with self._lock:
+            artifact = None
+            if str(os.getenv("NMTK_NEUROCHIP_ARTIFACT_DIR") or "").strip():
+                try:
+                    artifact = self._neurochip_runtime_artifact()
+                except (FileNotFoundError, RuntimeError, ValueError):
+                    artifact = None
+            if artifact is not None:
+                for host in self._settings["akidaHosts"]:
+                    host["availableRuntimeVersion"] = artifact.version
             return {
                 "logLevel": self._settings["logLevel"],
                 "mujocoAvailable": self._settings["mujocoAvailable"],
@@ -1230,8 +1266,7 @@ class LauncherControlState(
                     for board in self._settings["pynqBoards"]
                 ],
                 "akidaHosts": [
-                    _serialize_akida_host(host)
-                    for host in self._settings["akidaHosts"]
+                    _serialize_akida_host(host) for host in self._settings["akidaHosts"]
                 ],
                 "selectedAkidaHostId": self._settings["selectedAkidaHostId"],
             }
@@ -1398,8 +1433,8 @@ class LauncherControlState(
         """Auto-register a local Akida host entry.
 
         Uses the runtime service URL directly so that preflight checks hit the
-        same service that was probed.  Sets controlApiUrl to empty so the
-        launcher's own port 8091 is never mistaken for the Akida control service.
+        same service that was probed. The Akida host control service remains on
+        its manifest-backed port, independently of launcher-control's host port.
 
         *require_hardware* — when True (local-dev default) only registers if
         the runtime reports physical hardware.  Set to False in Docker mode so
@@ -1422,7 +1457,7 @@ class LauncherControlState(
                     "id": auto_id,
                     "displayName": f"Local Akida — {device_info}",
                     "runtimeApiUrl": runtime_base_url,
-                    "controlApiUrl": "",  # skip control check; launcher occupies 8091
+                    "controlApiUrl": "",
                     "autoDiscovered": True,
                     "isDefault": is_first,
                 }
@@ -1552,15 +1587,21 @@ class LauncherControlState(
     def deployment_job_events(self, job_id: str) -> list[str]:
         return self._deployment.job_events(job_id)
 
+
 class LauncherControlServer(ThreadingHTTPServer):
     """HTTP server bound to a shared launcher state."""
 
     daemon_threads = True
 
     def __init__(
-        self, server_address: tuple[str, int], manage_suite_api: bool = True, external_probe_host: str | None = None
+        self,
+        server_address: tuple[str, int],
+        manage_suite_api: bool = True,
+        external_probe_host: str | None = None,
     ) -> None:
-        self.state = LauncherControlState(manage_suite_api=manage_suite_api, external_probe_host=external_probe_host)
+        self.state = LauncherControlState(
+            manage_suite_api=manage_suite_api, external_probe_host=external_probe_host
+        )
         super().__init__(server_address, LauncherControlHandler)
 
     def server_close(self) -> None:
@@ -1569,9 +1610,16 @@ class LauncherControlServer(ThreadingHTTPServer):
 
 
 def create_server(
-    host: str, port: int, manage_suite_api: bool = True, external_probe_host: str | None = None
+    host: str,
+    port: int,
+    manage_suite_api: bool = True,
+    external_probe_host: str | None = None,
 ) -> LauncherControlServer:
-    return LauncherControlServer((host, port), manage_suite_api=manage_suite_api, external_probe_host=external_probe_host)
+    return LauncherControlServer(
+        (host, port),
+        manage_suite_api=manage_suite_api,
+        external_probe_host=external_probe_host,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -1620,7 +1668,12 @@ def main(argv: list[str] | None = None) -> int:
             print(_render_doctor_report(report))
         return 1 if report["fatalCount"] else 0
 
-    server = create_server(args.host, args.port, manage_suite_api=args.manage_suite_api, external_probe_host=args.external_probe_host)
+    server = create_server(
+        args.host,
+        args.port,
+        manage_suite_api=args.manage_suite_api,
+        external_probe_host=args.external_probe_host,
+    )
     print(f"Launcher control service listening on http://{args.host}:{args.port}")
     try:
         server.serve_forever()

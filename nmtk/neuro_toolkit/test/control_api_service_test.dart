@@ -51,7 +51,7 @@ void main() {
           'sshPort': 22,
           'controlPort': 8091,
           'runtimeApiUrl': 'http://192.168.2.51:8002',
-          'controlApiUrl': 'http://192.168.2.51:8090',
+          'controlApiUrl': 'http://192.168.2.51:8091',
           'authMode': 'ssh_key',
           'runtimeMode': 'unknown',
           'state': 'simulator_only',
@@ -76,7 +76,7 @@ void main() {
     expect(settings.akidaHosts.single.host, '192.168.2.51');
     expect(
       settings.akidaHosts.single.controlApiUrl,
-      'http://192.168.2.51:8090',
+      'http://192.168.2.51:8091',
     );
   });
 
@@ -113,7 +113,8 @@ void main() {
     Future<String?> versionFrom(http.Response Function(Uri) respond) {
       return ControlApiService(
         baseUri: Uri.parse('http://192.168.2.51:8090'),
-        client: MockClient((http.Request request) async => respond(request.url)),
+        client:
+            MockClient((http.Request request) async => respond(request.url)),
       ).fetchBackendVersion();
     }
 
@@ -168,5 +169,48 @@ void main() {
         isNull,
       );
     });
+  });
+
+  test('Akida runtime update operations use the selected host contract',
+      () async {
+    final requests = <http.Request>[];
+    final service = ControlApiService(
+      baseUri: Uri.parse('http://192.168.2.51:8090'),
+      client: MockClient((request) async {
+        requests.add(request);
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'jobId': 'job-1',
+            'hostId': 'host-1',
+            'artifactVersion': '0.6.0',
+            'artifactSha256': 'abc',
+            'stage': request.method == 'POST' ? 'queued' : 'completed',
+            'progress': request.method == 'POST' ? 0 : 100,
+            'message': 'Ready',
+            'status': request.method == 'POST' ? 'queued' : 'completed',
+            'installedVersion': '0.6.0',
+          }),
+          request.method == 'POST' ? 202 : 200,
+        );
+      }),
+    );
+
+    final created = await service.startAkidaRuntimeUpdate('host-1');
+    final completed = await service.fetchAkidaRuntimeUpdate(
+      'host-1',
+      created.jobId,
+    );
+
+    expect(created.isTerminal, isFalse);
+    expect(completed.isCompleted, isTrue);
+    expect(completed.installedVersion, '0.6.0');
+    expect(requests.map((request) => request.url.port), everyElement(8090));
+    expect(
+      requests.map((request) => request.url.path),
+      <String>[
+        '/api/launcher/akida/hosts/host-1/runtime-update-jobs',
+        '/api/launcher/akida/hosts/host-1/runtime-update-jobs/job-1',
+      ],
+    );
   });
 }

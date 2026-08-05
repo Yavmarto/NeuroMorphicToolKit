@@ -16,6 +16,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from .runtime_artifact import inspect_neurochip_runtime_artifact
+
 # These module-level constants are secondary fallbacks for callers that invoke
 # build_pynq_agent_bundle() or build_akida_host_bundle() directly without passing
 # manifest-owned values.  Within the normal launcher server flow, server.py always
@@ -104,8 +106,7 @@ def build_pynq_user_space_agent_launch_command(
     executable = _shell_value(agent_executable, shell_safe_values=shell_safe_values)
     runtime_log = _shell_value(runtime_log_path, shell_safe_values=shell_safe_values)
     launch_payload = (
-        f"exec env {env_assignments} {executable} "
-        f">{runtime_log} 2>&1 </dev/null"
+        f"exec env {env_assignments} {executable} >{runtime_log} 2>&1 </dev/null"
     )
     quoted_payload = shlex.quote(launch_payload)
     return (
@@ -207,8 +208,12 @@ def _pynq_install_script_text(
             'AGENT_PACKAGE_VERSION=""',
             'AGENT_WHEEL_NAME="$WHEEL_NAME"',
             "",
-            'write_install_status() {',
-            '  python3 - "$INSTALL_STATUS_PATH" "$1" "$2" "$SERVICE_NAME" "$AGENT_VENV_PATH" "$PYNQ_VENV_PATH" "$RUNTIME_LOG_PATH" "$EFFECTIVE_PYNQ_PYTHON" "$PYNQ_RUNTIME_SOURCE" "$AGENT_PACKAGE_VERSION" "$AGENT_WHEEL_NAME" <<'"'"'PY'"'"'',
+            "write_install_status() {",
+            '  python3 - "$INSTALL_STATUS_PATH" "$1" "$2" "$SERVICE_NAME" "$AGENT_VENV_PATH" "$PYNQ_VENV_PATH" "$RUNTIME_LOG_PATH" "$EFFECTIVE_PYNQ_PYTHON" "$PYNQ_RUNTIME_SOURCE" "$AGENT_PACKAGE_VERSION" "$AGENT_WHEEL_NAME" <<'
+            "'"
+            "PY"
+            "'"
+            "",
             "import json",
             "import sys",
             "from pathlib import Path",
@@ -230,18 +235,18 @@ def _pynq_install_script_text(
             "PY",
             "}",
             "",
-            'detect_pynq_runtime() {',
+            "detect_pynq_runtime() {",
             '  if [ -x "$CANONICAL_PYNQ_PYTHON" ] && \\',
             '     "$CANONICAL_PYNQ_PYTHON" -c "import pynq; import pyxrt" >/dev/null 2>&1; then',
             '    EFFECTIVE_PYNQ_PYTHON="$CANONICAL_PYNQ_PYTHON"',
             '    PYNQ_RUNTIME_SOURCE="canonical"',
-            '    return 0',
-            '  fi',
-            '  return 1',
-            '}',
+            "    return 0",
+            "  fi",
+            "  return 1",
+            "}",
             "",
-            'wait_for_health() {',
-            '  python3 - "$AGENT_HOST" "$AGENT_PORT" <<'"'"'PY'"'"'',
+            "wait_for_health() {",
+            '  python3 - "$AGENT_HOST" "$AGENT_PORT" <<\'PY\'',
             "import sys",
             "import time",
             "import urllib.error",
@@ -269,7 +274,7 @@ def _pynq_install_script_text(
             'log_step "Upgrading pip in agent virtual environment"',
             '"$AGENT_VENV_PATH/bin/pip" install --upgrade pip',
             'log_step "Locating PYNQ runtime interpreter"',
-            'if detect_pynq_runtime; then',
+            "if detect_pynq_runtime; then",
             '  log_step "Detected canonical PYNQ runtime at $EFFECTIVE_PYNQ_PYTHON; skipping isolated venv"',
             "else",
             '  log_step "Canonical PYNQ runtime unavailable at $CANONICAL_PYNQ_PYTHON"',
@@ -285,7 +290,7 @@ def _pynq_install_script_text(
             'log_step "Force-reinstalling Neurochip PYNQ agent wheel $WHEEL_NAME"',
             '"$AGENT_VENV_PATH/bin/pip" install --force-reinstall --no-deps "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
             'AGENT_PACKAGE_VERSION="$(',
-            '  "$AGENT_VENV_PATH/bin/python" - <<'"'"'PY'"'"'',
+            "  \"$AGENT_VENV_PATH/bin/python\" - <<'PY'",
             "from importlib import metadata",
             "try:",
             '    print(metadata.version("neurochip"))',
@@ -294,7 +299,7 @@ def _pynq_install_script_text(
             "PY",
             ')"',
             'log_step "Checking passwordless sudo access for system service install"',
-            'if sudo -n true >/dev/null 2>&1; then',
+            "if sudo -n true >/dev/null 2>&1; then",
             '  log_step "Passwordless sudo available; installing systemd service"',
             '  write_install_status "systemd" "Runtime installed with systemd auto-start."',
             '  log_step "Staging systemd unit for $SERVICE_NAME.service with PYNQ runtime $EFFECTIVE_PYNQ_PYTHON"',
@@ -317,11 +322,11 @@ def _pynq_install_script_text(
             "fi",
             'log_step "Waiting for runtime health endpoint"',
             "wait_for_health",
-            'if sudo -n true >/dev/null 2>&1; then',
+            "if sudo -n true >/dev/null 2>&1; then",
             '  printf "INSTALL_STATUS_JSON=%s\\n" "$(sudo -n cat "$INSTALL_STATUS_PATH")"',
-            'else',
+            "else",
             '  printf "INSTALL_STATUS_JSON=%s\\n" "$(cat "$INSTALL_STATUS_PATH")"',
-            'fi',
+            "fi",
             'log_step "Install script completed successfully"',
             "",
         ]
@@ -365,7 +370,9 @@ def build_pynq_agent_bundle(
     root = repo_root or _repo_root()
     bundle_dir = output_dir.resolve()
     wheel = (wheel_path or ensure_agent_wheel(root)).resolve()
-    resolved_install_status_path = install_status_path or f"{install_root}/install-status.json"
+    resolved_install_status_path = (
+        install_status_path or f"{install_root}/install-status.json"
+    )
     resolved_runtime_log_path = runtime_log_path or f"{install_root}/runtime.log"
 
     wheels_dir = bundle_dir / "wheels"
@@ -535,7 +542,7 @@ def _akida_control_unit_text(
 
 
 def _remote_control_script_text() -> str:
-    return r'''#!/usr/bin/env python3
+    return r"""#!/usr/bin/env python3
 from __future__ import annotations
 
 import json
@@ -727,7 +734,7 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-'''
+"""
 
 
 def _akida_install_script_text(
@@ -742,9 +749,11 @@ def _akida_install_script_text(
     token_path: str,
     install_status_path: str,
     wheel_name: str,
+    artifact_version: str,
+    artifact_sha256: str,
     required_packages: list[str],
 ) -> str:
-    package_install = " ".join(required_packages)
+    package_install = " ".join(shlex.quote(package) for package in required_packages)
     return "\n".join(
         [
             "#!/usr/bin/env bash",
@@ -795,8 +804,16 @@ def _akida_install_script_text(
             'BIN_DIR="${INSTALL_ROOT}/bin"',
             'CREDENTIAL_DIR="$(dirname "$TOKEN_PATH")"',
             f'WHEEL_NAME="${{WHEEL_NAME:-{wheel_name}}}"',
+            f'ARTIFACT_VERSION="${{ARTIFACT_VERSION:-{artifact_version}}}"',
+            f'ARTIFACT_SHA256="${{ARTIFACT_SHA256:-{artifact_sha256}}}"',
             'RUNTIME_LOG_PATH="${INSTALL_ROOT}/runtime.log"',
             'CONTROL_LOG_PATH="${INSTALL_ROOT}/control.log"',
+            'RELEASE_ID="${ARTIFACT_VERSION}-${ARTIFACT_SHA256:0:12}"',
+            'RELEASES_DIR="${INSTALL_ROOT}/releases"',
+            'NEXT_VENV_PATH="${RELEASES_DIR}/${RELEASE_ID}-staged-$$"',
+            'CURRENT_VENV_PATH="${INSTALL_ROOT}/current"',
+            'PREVIOUS_VENV_TARGET=""',
+            'ACTIVATION_PENDING="0"',
             "",
             'ORIGINAL_INSTALL_ROOT="$INSTALL_ROOT"',
             'ORIGINAL_VENV_BASENAME="$(basename "$VENV_PATH")"',
@@ -809,15 +826,81 @@ def _akida_install_script_text(
             '  INSTALL_STATUS_PATH_SUFFIX="${INSTALL_STATUS_PATH#"$ORIGINAL_INSTALL_ROOT"/}"',
             "fi",
             "",
+            "prepare_release_paths() {",
+            '  RELEASES_DIR="${INSTALL_ROOT}/releases"',
+            '  NEXT_VENV_PATH="${RELEASES_DIR}/${RELEASE_ID}-staged-$$"',
+            '  CURRENT_VENV_PATH="${INSTALL_ROOT}/current"',
+            '  if [ -L "$CURRENT_VENV_PATH" ]; then',
+            '    PREVIOUS_VENV_TARGET="$(readlink -f "$CURRENT_VENV_PATH" || true)"',
+            '  elif [ -x "$VENV_PATH/bin/python" ]; then',
+            '    PREVIOUS_VENV_TARGET="$VENV_PATH"',
+            "  fi",
+            "}",
+            "",
+            "activate_release() {",
+            '  link_path="${INSTALL_ROOT}/.current-${ARTIFACT_SHA256:0:12}"',
+            '  if [ "$INSTALL_MODE" = "systemd" ]; then',
+            '    sudo_cmd ln -sfn "$NEXT_VENV_PATH" "$link_path"',
+            '    sudo_cmd mv -Tf "$link_path" "$CURRENT_VENV_PATH"',
+            "  else",
+            '    ln -sfn "$NEXT_VENV_PATH" "$link_path"',
+            '    mv -Tf "$link_path" "$CURRENT_VENV_PATH"',
+            "  fi",
+            '  VENV_PATH="$CURRENT_VENV_PATH"',
+            "}",
+            "",
+            "rollback_release() {",
+            '  if [ -z "$PREVIOUS_VENV_TARGET" ]; then',
+            '    printf "%s\\n" "AKIDA_RUNTIME_ROLLED_BACK=0" >&2',
+            "    return",
+            "  fi",
+            '  rollback_link="${INSTALL_ROOT}/.rollback-${ARTIFACT_SHA256:0:12}"',
+            '  if [ "$INSTALL_MODE" = "systemd" ]; then',
+            '    sudo_cmd ln -sfn "$PREVIOUS_VENV_TARGET" "$rollback_link"',
+            '    sudo_cmd mv -Tf "$rollback_link" "$CURRENT_VENV_PATH"',
+            '    sudo_cmd systemctl restart "$RUNTIME_SERVICE_NAME.service" "$CONTROL_SERVICE_NAME.service" || true',
+            "  else",
+            '    ln -sfn "$PREVIOUS_VENV_TARGET" "$rollback_link"',
+            '    mv -Tf "$rollback_link" "$CURRENT_VENV_PATH"',
+            '    VENV_PATH="$CURRENT_VENV_PATH"',
+            '    "$BIN_DIR/launch-runtime.sh" || true',
+            '    "$BIN_DIR/launch-control.sh" || true',
+            "  fi",
+            '  printf "%s\\n" "AKIDA_RUNTIME_ROLLED_BACK=1" >&2',
+            "}",
+            "",
+            "rollback_on_error() {",
+            '  exit_status="$?"',
+            "  trap - EXIT",
+            '  if [ "$exit_status" -ne 0 ] && [ "$ACTIVATION_PENDING" = "1" ]; then',
+            '    log_step "Neurochip activation failed; restoring the previous release"',
+            "    rollback_release || true",
+            "  fi",
+            '  exit "$exit_status"',
+            "}",
+            "",
+            "cleanup_old_releases() {",
+            '  while IFS= read -r -d "" release_path; do',
+            '    if [ "$release_path" = "$NEXT_VENV_PATH" ] || [ "$release_path" = "$PREVIOUS_VENV_TARGET" ]; then',
+            "      continue",
+            "    fi",
+            '    if [ "$INSTALL_MODE" = "systemd" ]; then',
+            '      sudo_cmd rm -rf "$release_path"',
+            "    else",
+            '      rm -rf "$release_path"',
+            "    fi",
+            '  done < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -print0)',
+            "}",
+            "",
             "write_install_status() {",
             '  INSTALL_MODE="$1"',
             '  INSTALL_MESSAGE="$2"',
             '  INSTALL_AUTO_START_SUPPORTED="$3"',
-            '  export INSTALL_MODE INSTALL_MESSAGE INSTALL_AUTO_START_SUPPORTED',
-            '  export INSTALL_ROOT TOKEN_PATH INSTALL_STATUS_PATH SERVICE_USER VENV_PATH',
-            '  export RUNTIME_API_URL CONTROL_API_URL HOST_OS PYTHON_VERSION',
-            '  export RUNTIME_LOG_PATH CONTROL_LOG_PATH',
-            '  STATUS_JSON="$(python3 - <<'"'"'PY'"'"'',
+            "  export INSTALL_MODE INSTALL_MESSAGE INSTALL_AUTO_START_SUPPORTED",
+            "  export INSTALL_ROOT TOKEN_PATH INSTALL_STATUS_PATH SERVICE_USER VENV_PATH",
+            "  export RUNTIME_API_URL CONTROL_API_URL HOST_OS PYTHON_VERSION",
+            "  export RUNTIME_LOG_PATH CONTROL_LOG_PATH ARTIFACT_VERSION ARTIFACT_SHA256",
+            "  STATUS_JSON=\"$(python3 - <<'PY'",
             "import json",
             "import os",
             "import sys",
@@ -837,17 +920,20 @@ def _akida_install_script_text(
             '  "installStatusPath": os.environ["INSTALL_STATUS_PATH"],',
             '  "runtimeLogPath": os.environ.get("RUNTIME_LOG_PATH", ""),',
             '  "controlLogPath": os.environ.get("CONTROL_LOG_PATH", ""),',
+            '  "packageVersion": os.environ["ARTIFACT_VERSION"],',
+            '  "artifactSha256": os.environ["ARTIFACT_SHA256"],',
+            '  "rolledBack": False,',
             '  "autoStartSupported": os.environ["INSTALL_AUTO_START_SUPPORTED"].lower() == "true",',
             "}",
-            'print(json.dumps(payload, indent=2, sort_keys=True))',
+            "print(json.dumps(payload, indent=2, sort_keys=True))",
             "PY",
             ')"',
             '  if [ "$INSTALL_MODE" = "systemd" ]; then',
             '    printf "%s\\n" "$STATUS_JSON" | write_sudo_file "$INSTALL_STATUS_PATH" 0644 "$SERVICE_USER:$SERVICE_USER"',
-            '  else',
+            "  else",
             '    mkdir -p "$(dirname "$INSTALL_STATUS_PATH")"',
             '    printf "%s\\n" "$STATUS_JSON" > "$INSTALL_STATUS_PATH"',
-            '  fi',
+            "  fi",
             "}",
             "",
             "write_user_space_launchers() {",
@@ -870,7 +956,7 @@ def _akida_install_script_text(
             "}",
             "",
             "wait_for_http() {",
-            '  python3 - "$1" "$2" <<'"'"'PY'"'"'',
+            '  python3 - "$1" "$2" <<\'PY\'',
             "import sys",
             "import time",
             "import urllib.error",
@@ -902,21 +988,35 @@ def _akida_install_script_text(
             '    sudo_cmd useradd --system --create-home --shell /usr/sbin/nologin "$SERVICE_USER"',
             "  fi",
             '  log_step "Preparing install directories"',
-            '  sudo_cmd mkdir -p "$INSTALL_ROOT" "$ENV_DIR" "$BIN_DIR" "$CREDENTIAL_DIR"',
+            '  sudo_cmd mkdir -p "$INSTALL_ROOT" "$ENV_DIR" "$BIN_DIR" "$CREDENTIAL_DIR" "$RELEASES_DIR"',
             '  sudo_cmd chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_ROOT"',
-            '  log_step "Creating Python virtual environment"',
-            '  sudo_cmd -u "$SERVICE_USER" python3 -m venv "$VENV_PATH"',
+            "  prepare_release_paths",
+            '  log_step "Creating versioned Python virtual environment"',
+            '  sudo_cmd rm -rf "$NEXT_VENV_PATH"',
+            '  sudo_cmd -u "$SERVICE_USER" python3 -m venv "$NEXT_VENV_PATH"',
             '  log_step "Upgrading pip"',
-            '  sudo_cmd -u "$SERVICE_USER" "$VENV_PATH/bin/pip" install --upgrade pip setuptools wheel',
+            '  sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/pip" install --upgrade pip setuptools wheel',
             '  log_step "Installing Neurochip wheel"',
-            '  sudo_cmd -u "$SERVICE_USER" "$VENV_PATH/bin/pip" install --force-reinstall --no-deps "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
-            '  log_step "Installing Akida runtime dependencies"',
-            f'  sudo_cmd -u "$SERVICE_USER" "$VENV_PATH/bin/pip" install {package_install}',
+            '  sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/pip" install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            *(
+                [
+                    '  log_step "Installing Akida runtime dependencies"',
+                    f'  sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/pip" install {package_install}',
+                ]
+                if package_install
+                else []
+            ),
+            '  log_step "Validating the staged Neurochip runtime"',
+            '  sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/python" -c "from importlib import metadata; import neurochip.app.main; assert metadata.version(\'neurochip\') == \'$ARTIFACT_VERSION\'"',
             '  log_step "Installing remote control service script"',
             '  sudo_cmd install -m 0755 "$BUNDLE_DIR/bin/akida_remote_control_service.py" "$BIN_DIR/akida_remote_control_service.py"',
             '  log_step "Generating shared API token"',
             '  if [ ! -s "$TOKEN_PATH" ]; then',
-            '    TOKEN_VALUE="$(python3 - <<'"'"'PY'"'"'\nimport secrets\nprint(secrets.token_urlsafe(32))\nPY\n)"',
+            '    TOKEN_VALUE="$(python3 - <<'
+            "'"
+            "PY"
+            "'"
+            '\nimport secrets\nprint(secrets.token_urlsafe(32))\nPY\n)"',
             '    token_tmp="$(mktemp)"',
             '    printf "%s\n" "$TOKEN_VALUE" > "$token_tmp"',
             '    sudo_cmd install -D -m 0600 -o "$SERVICE_USER" -g "$SERVICE_USER" "$token_tmp" "$TOKEN_PATH"',
@@ -945,24 +1045,43 @@ def _akida_install_script_text(
             '  SERVICE_USER="$CURRENT_USER"',
             '  log_step "Passwordless sudo unavailable; falling back to user-space install at $INSTALL_ROOT"',
             '  mkdir -p "$INSTALL_ROOT" "$ENV_DIR" "$BIN_DIR" "$CREDENTIAL_DIR"',
-            '  log_step "Creating Python virtual environment"',
-            '  python3 -m venv "$VENV_PATH"',
+            "  prepare_release_paths",
+            '  mkdir -p "$RELEASES_DIR"',
+            '  log_step "Creating versioned Python virtual environment"',
+            '  rm -rf "$NEXT_VENV_PATH"',
+            '  python3 -m venv "$NEXT_VENV_PATH"',
             '  log_step "Upgrading pip"',
-            '  "$VENV_PATH/bin/pip" install --upgrade pip setuptools wheel',
+            '  "$NEXT_VENV_PATH/bin/pip" install --upgrade pip setuptools wheel',
             '  log_step "Installing Neurochip wheel"',
-            '  "$VENV_PATH/bin/pip" install --force-reinstall --no-deps "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
-            '  log_step "Installing Akida runtime dependencies"',
-            f'  "$VENV_PATH/bin/pip" install {package_install}',
+            '  "$NEXT_VENV_PATH/bin/pip" install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            *(
+                [
+                    '  log_step "Installing Akida runtime dependencies"',
+                    f'  "$NEXT_VENV_PATH/bin/pip" install {package_install}',
+                ]
+                if package_install
+                else []
+            ),
+            '  log_step "Validating the staged Neurochip runtime"',
+            "  \"$NEXT_VENV_PATH/bin/python\" -c \"from importlib import metadata; import neurochip.app.main; assert metadata.version('neurochip') == '$ARTIFACT_VERSION'\"",
             '  log_step "Installing remote control service script"',
             '  install -m 0755 "$BUNDLE_DIR/bin/akida_remote_control_service.py" "$BIN_DIR/akida_remote_control_service.py"',
             '  log_step "Generating shared API token"',
             '  if [ ! -s "$TOKEN_PATH" ]; then',
-            '    TOKEN_VALUE="$(python3 - <<'"'"'PY'"'"'\nimport secrets\nprint(secrets.token_urlsafe(32))\nPY\n)"',
+            '    TOKEN_VALUE="$(python3 - <<'
+            "'"
+            "PY"
+            "'"
+            '\nimport secrets\nprint(secrets.token_urlsafe(32))\nPY\n)"',
             '    printf "%s\n" "$TOKEN_VALUE" > "$TOKEN_PATH"',
             '    chmod 0600 "$TOKEN_PATH"',
             "  fi",
             '  TOKEN_VALUE="$(cat "$TOKEN_PATH")"',
             "fi",
+            'log_step "Activating staged Neurochip runtime"',
+            'ACTIVATION_PENDING="1"',
+            "trap rollback_on_error EXIT",
+            "activate_release",
             'HOST_ADDR="${HOST_ADDR:-$(hostname -f 2>/dev/null || hostname)}"',
             'RUNTIME_API_URL="http://${HOST_ADDR}:${RUNTIME_PORT}"',
             'CONTROL_API_URL="http://${HOST_ADDR}:${CONTROL_PORT}"',
@@ -972,14 +1091,15 @@ def _akida_install_script_text(
             'if [ "$INSTALL_MODE" = "systemd" ]; then',
             '  cat <<EOF | write_sudo_file "$ENV_DIR/$RUNTIME_SERVICE_NAME.env" 0640 "$SERVICE_USER:$SERVICE_USER"',
             "NEUROCHIP_AUTH_ENABLED=true",
-            'NEUROCHIP_API_KEY=${TOKEN_VALUE}',
+            "NEUROCHIP_API_KEY=${TOKEN_VALUE}",
+            "NEUROCHIP_AKIDA_MODEL_DIR=${INSTALL_ROOT}/data/akida-models",
             "EOF",
             '  cat <<EOF | write_sudo_file "$ENV_DIR/$CONTROL_SERVICE_NAME.env" 0640 "$SERVICE_USER:$SERVICE_USER"',
             "NEUROCHIP_REMOTE_CONTROL_HOST=0.0.0.0",
-            'NEUROCHIP_REMOTE_CONTROL_PORT=${CONTROL_PORT}',
-            'NEUROCHIP_REMOTE_CONTROL_API_KEY=${TOKEN_VALUE}',
-            'LOCAL_NEUROCHIP_BASE_URL=http://127.0.0.1:${RUNTIME_PORT}',
-            'NEUROCHIP_INSTALL_STATUS_PATH=${INSTALL_STATUS_PATH}',
+            "NEUROCHIP_REMOTE_CONTROL_PORT=${CONTROL_PORT}",
+            "NEUROCHIP_REMOTE_CONTROL_API_KEY=${TOKEN_VALUE}",
+            "LOCAL_NEUROCHIP_BASE_URL=http://127.0.0.1:${RUNTIME_PORT}",
+            "NEUROCHIP_INSTALL_STATUS_PATH=${INSTALL_STATUS_PATH}",
             "EOF",
             '  log_step "Installing systemd units"',
             '  sudo_cmd install -m 0644 "$BUNDLE_DIR/systemd/$RUNTIME_SERVICE_NAME.service" "/etc/systemd/system/$RUNTIME_SERVICE_NAME.service"',
@@ -990,14 +1110,15 @@ def _akida_install_script_text(
             "else",
             '  cat <<EOF > "$ENV_DIR/$RUNTIME_SERVICE_NAME.env"',
             "NEUROCHIP_AUTH_ENABLED=true",
-            'NEUROCHIP_API_KEY=${TOKEN_VALUE}',
+            "NEUROCHIP_API_KEY=${TOKEN_VALUE}",
+            "NEUROCHIP_AKIDA_MODEL_DIR=${INSTALL_ROOT}/data/akida-models",
             "EOF",
             '  cat <<EOF > "$ENV_DIR/$CONTROL_SERVICE_NAME.env"',
             "NEUROCHIP_REMOTE_CONTROL_HOST=0.0.0.0",
-            'NEUROCHIP_REMOTE_CONTROL_PORT=${CONTROL_PORT}',
-            'NEUROCHIP_REMOTE_CONTROL_API_KEY=${TOKEN_VALUE}',
-            'LOCAL_NEUROCHIP_BASE_URL=http://127.0.0.1:${RUNTIME_PORT}',
-            'NEUROCHIP_INSTALL_STATUS_PATH=${INSTALL_STATUS_PATH}',
+            "NEUROCHIP_REMOTE_CONTROL_PORT=${CONTROL_PORT}",
+            "NEUROCHIP_REMOTE_CONTROL_API_KEY=${TOKEN_VALUE}",
+            "LOCAL_NEUROCHIP_BASE_URL=http://127.0.0.1:${RUNTIME_PORT}",
+            "NEUROCHIP_INSTALL_STATUS_PATH=${INSTALL_STATUS_PATH}",
             "EOF",
             '  chmod 0600 "$ENV_DIR/$RUNTIME_SERVICE_NAME.env" "$ENV_DIR/$CONTROL_SERVICE_NAME.env"',
             '  log_step "Writing user-space launchers"',
@@ -1007,9 +1128,15 @@ def _akida_install_script_text(
             '  "$BIN_DIR/launch-control.sh"',
             "fi",
             'log_step "Waiting for Neurochip runtime health"',
-            'wait_for_http "http://127.0.0.1:${RUNTIME_PORT}/health" "$TOKEN_VALUE"',
+            'if ! wait_for_http "http://127.0.0.1:${RUNTIME_PORT}/health" "$TOKEN_VALUE"; then',
+            '  log_step "New Neurochip runtime failed health verification"',
+            "  exit 1",
+            "fi",
             'log_step "Waiting for remote control health"',
-            'wait_for_http "http://127.0.0.1:${CONTROL_PORT}/health" ""',
+            'if ! wait_for_http "http://127.0.0.1:${CONTROL_PORT}/health" ""; then',
+            '  log_step "New Akida control service failed health verification"',
+            "  exit 1",
+            "fi",
             'if [ "$INSTALL_MODE" = "systemd" ]; then',
             '  write_install_status "systemd" "Akida host installation completed." "true"',
             '  INSTALL_STATUS_PAYLOAD="$(sudo_cmd cat "$INSTALL_STATUS_PATH")"',
@@ -1021,6 +1148,9 @@ def _akida_install_script_text(
             '  printf "%s\\n" "[install-akida-host] Install status file was empty after write" >&2',
             "  exit 1",
             "fi",
+            "cleanup_old_releases",
+            'ACTIVATION_PENDING="0"',
+            "trap - EXIT",
             'printf "INSTALL_STATUS_JSON=%s\\n" "$INSTALL_STATUS_PAYLOAD"',
             'log_step "Install script completed successfully"',
             "",
@@ -1033,6 +1163,7 @@ def build_akida_host_bundle(
     *,
     repo_root: Path,
     required_packages: list[str],
+    wheel_path: Path | None = None,
     install_root: str = DEFAULT_AKIDA_INSTALL_ROOT,
     service_user: str = DEFAULT_AKIDA_SERVICE_USER,
     venv_path: str = DEFAULT_AKIDA_VENV_PATH,
@@ -1051,15 +1182,17 @@ def build_akida_host_bundle(
     systemd_dir.mkdir(parents=True, exist_ok=True)
     bin_dir.mkdir(parents=True, exist_ok=True)
 
-    wheel_path = ensure_agent_wheel(repo_root)
-    copied_wheel = wheels_dir / wheel_path.name
-    shutil.copy2(wheel_path, copied_wheel)
+    resolved_wheel_path = wheel_path or ensure_agent_wheel(repo_root)
+    artifact = inspect_neurochip_runtime_artifact(resolved_wheel_path)
+    copied_wheel = wheels_dir / artifact.wheel_path.name
+    shutil.copy2(artifact.wheel_path, copied_wheel)
 
+    active_venv_path = f"{install_root.rstrip('/')}/current"
     runtime_unit = systemd_dir / f"{runtime_service_name}.service"
     runtime_unit.write_text(
         _akida_runtime_unit_text(
             install_root=install_root,
-            venv_path=venv_path,
+            venv_path=active_venv_path,
             service_user=service_user,
             runtime_service_name=runtime_service_name,
             runtime_port=runtime_port,
@@ -1071,7 +1204,7 @@ def build_akida_host_bundle(
     control_unit.write_text(
         _akida_control_unit_text(
             install_root=install_root,
-            venv_path=venv_path,
+            venv_path=active_venv_path,
             service_user=service_user,
             control_service_name=control_service_name,
         ),
@@ -1095,6 +1228,8 @@ def build_akida_host_bundle(
             token_path=token_path,
             install_status_path=install_status_path,
             wheel_name=copied_wheel.name,
+            artifact_version=artifact.version,
+            artifact_sha256=artifact.sha256,
             required_packages=required_packages,
         ),
         encoding="utf-8",
@@ -1104,12 +1239,14 @@ def build_akida_host_bundle(
     manifest = {
         "installRoot": install_root,
         "serviceUser": service_user,
-        "venvPath": venv_path,
+        "venvPath": active_venv_path,
         "runtimeServiceName": runtime_service_name,
         "controlServiceName": control_service_name,
         "runtimePort": runtime_port,
         "controlPort": control_port,
         "requiredPackages": required_packages,
+        "artifactVersion": artifact.version,
+        "artifactSha256": artifact.sha256,
         "tokenPath": token_path,
         "installStatusPath": install_status_path,
         "bundleContents": [

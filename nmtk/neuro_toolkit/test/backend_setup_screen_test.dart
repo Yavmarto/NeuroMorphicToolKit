@@ -116,6 +116,7 @@ Widget _harness({
   _FakeDeploymentService? deploymentService,
   String? backendVersion,
   LauncherUpdate? backendUpdate,
+  AkidaPairedHost? selectedAkidaHost,
 }) {
   return ProviderScope(
     overrides: [
@@ -124,6 +125,9 @@ Widget _harness({
       ),
       backendVersionProvider.overrideWith((_) async => backendVersion),
       backendUpdateProvider.overrideWith((_) async => backendUpdate),
+      selectedAkidaRuntimeStatusProvider.overrideWith(
+        (_) async => selectedAkidaHost,
+      ),
     ],
     child: MaterialApp(
       home: BackendSetupScreen(
@@ -155,6 +159,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('backend-update-available')), findsNothing);
+  });
+
+  testWidgets('stale selected Akida runtime keeps retry banner visible',
+      (tester) async {
+    await tester.pumpWidget(
+      _harness(
+        localDeploymentAvailable: true,
+        selectedAkidaHost: const AkidaPairedHost(
+          id: 'host-1',
+          displayName: 'Lab Akida',
+          host: '192.168.2.51',
+          sshPort: 22,
+          username: 'moosebuntu',
+          runtimeApiUrl: 'http://192.168.2.51:8002',
+          controlApiUrl: 'http://192.168.2.51:8091',
+          authMode: AkidaHostAuthMode.sshKey,
+          credentialRef: '',
+          password: '',
+          hasPassword: false,
+          sshKeyPath: '',
+          remoteInstallRoot: '/opt/neurochip-akida-host',
+          serviceUser: 'neurochip',
+          hostOs: 'linux',
+          pythonVersion: '3.11',
+          runtimeMode: AkidaRuntimeMode.remoteSdk,
+          state: AkidaPairedHostState.ready,
+          lastReadinessMessage: 'Ready',
+          lastVerifiedAt: '',
+          installedRuntimeVersion: '0.5.0',
+          availableRuntimeVersion: '0.6.0',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('backend-update-available')), findsOneWidget);
+    expect(find.text('Selected Akida runtime needs an update'), findsOneWidget);
+    expect(find.byKey(const Key('backend-update-retry-akida')), findsOneWidget);
   });
 
   testWidgets('keeps backend version out of the setup form', (tester) async {

@@ -1,6 +1,5 @@
 """Shared fixture base for the launcher control service test subpackage."""
 
-
 import json
 import tempfile
 import unittest
@@ -107,6 +106,8 @@ class LauncherControlServiceTestBase(unittest.TestCase):
                                 "tensorflow==2.19.*",
                                 "akida==2.19.1",
                                 "cnn2snn==2.19.1",
+                                "quantizeml==1.2.4",
+                                "onnx>=1.17,<2",
                                 "akida-models==1.13.1",
                             ],
                             "docsUrl": "https://doc.brainchipinc.com/installation.html",
@@ -195,13 +196,7 @@ class LauncherControlServiceTestBase(unittest.TestCase):
         return python_path
 
     def _create_fake_poetry_python(self) -> Path:
-        python_path = (
-            self.repo_root
-            / ".poetry-envs"
-            / "dummy"
-            / "bin"
-            / "python"
-        )
+        python_path = self.repo_root / ".poetry-envs" / "dummy" / "bin" / "python"
         python_path.parent.mkdir(parents=True, exist_ok=True)
         python_path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
         python_path.chmod(0o755)
@@ -240,7 +235,9 @@ class LauncherControlServiceTestBase(unittest.TestCase):
         return self._resolved_versions.get(module_id)
 
     def _reload_state_with_modules(self, modules: list[dict[str, Any]]) -> None:
-        manifest_path = self.repo_root / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+        manifest_path = (
+            self.repo_root / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+        )
         manifest_path.write_text(json.dumps(modules), encoding="utf-8")
         self.state.shutdown()
         self.state = launcher_server.LauncherControlState(

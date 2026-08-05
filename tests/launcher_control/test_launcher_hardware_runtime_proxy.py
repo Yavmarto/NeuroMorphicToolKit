@@ -12,7 +12,65 @@ from base import LauncherControlServiceTestBase
 
 
 class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
-    def test_prepare_akida_runtime_marks_unsupported_host_without_installing(self) -> None:
+    def test_akida_runtime_update_job_http_endpoints(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+        job = {
+            "jobId": "runtime-job",
+            "hostId": "host-1",
+            "artifactVersion": "0.6.0",
+            "artifactSha256": "abc",
+            "stage": "completed",
+            "progress": 100,
+            "message": "Ready",
+            "status": "completed",
+            "errorCode": "",
+            "recovery": "",
+            "installedVersion": "0.6.0",
+            "installMode": "systemd",
+            "rolledBack": False,
+        }
+
+        with (
+            mock.patch.object(
+                server.state,
+                "create_akida_runtime_update_job",
+                return_value=job,
+            ) as create_job,
+            mock.patch.object(
+                server.state,
+                "get_akida_runtime_update_job",
+                return_value=job,
+            ) as get_job,
+        ):
+            base = f"http://127.0.0.1:{server.server_address[1]}"
+            create_request = urllib.request.Request(
+                f"{base}/api/launcher/akida/hosts/host-1/runtime-update-jobs",
+                data=b"{}",
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(create_request, timeout=5) as response:
+                created = json.loads(response.read())
+                self.assertEqual(response.status, 202)
+            with urllib.request.urlopen(
+                f"{base}/api/launcher/akida/hosts/host-1/runtime-update-jobs/runtime-job",
+                timeout=5,
+            ) as response:
+                fetched = json.loads(response.read())
+
+        self.assertEqual(created["installedVersion"], "0.6.0")
+        self.assertEqual(fetched["status"], "completed")
+        create_job.assert_called_once_with("host-1")
+        get_job.assert_called_once_with("host-1", "runtime-job")
+
+    def test_prepare_akida_runtime_marks_unsupported_host_without_installing(
+        self,
+    ) -> None:
         with (
             mock.patch.object(
                 self.state,
@@ -22,16 +80,22 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
                     message="ok",
                 ),
             ),
-            mock.patch.object(launcher_module_install, "_current_platform_key", return_value="macos"),
+            mock.patch.object(
+                launcher_module_install, "_current_platform_key", return_value="macos"
+            ),
             mock.patch.object(self.state, "_run_command") as run_command,
         ):
             updated = self.state.prepare_akida_runtime("dummy")
 
         self.assertEqual(updated["akidaRuntimeState"]["status"], "unsupported_host")
-        self.assertIn("Linux or Windows Neurochip host", updated["akidaRuntimeState"]["message"])
+        self.assertIn(
+            "Linux or Windows Neurochip host", updated["akidaRuntimeState"]["message"]
+        )
         run_command.assert_not_called()
 
-    def test_prepare_akida_runtime_installs_required_packages_on_supported_host(self) -> None:
+    def test_prepare_akida_runtime_installs_required_packages_on_supported_host(
+        self,
+    ) -> None:
         commands: list[list[str]] = []
 
         def fake_run_command(
@@ -54,7 +118,9 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
                     message="ok",
                 ),
             ),
-            mock.patch.object(launcher_module_install, "_current_platform_key", return_value="linux"),
+            mock.patch.object(
+                launcher_module_install, "_current_platform_key", return_value="linux"
+            ),
             mock.patch.object(self.state, "_run_command", side_effect=fake_run_command),
         ):
             updated = self.state.prepare_akida_runtime("dummy")
@@ -64,6 +130,8 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
         self.assertEqual(commands[1][1:4], ["-m", "pip", "install"])
         self.assertTrue(commands[1][0].endswith("/dummy_module/venv/bin/python"))
         self.assertIn("akida==2.19.1", commands[1])
+        self.assertIn("quantizeml==1.2.4", commands[1])
+        self.assertIn("onnx>=1.17,<2", commands[1])
 
     def test_modules_endpoint_restores_saved_akida_runtime_state(self) -> None:
         state_file = self.repo_root / "nmtk" / "neuro_toolkit" / "module_states.json"
@@ -100,7 +168,9 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
             payload["akidaRuntimeState"]["message"],
         )
 
-    def test_prepare_akida_runtime_http_endpoint_returns_remote_host_guidance(self) -> None:
+    def test_prepare_akida_runtime_http_endpoint_returns_remote_host_guidance(
+        self,
+    ) -> None:
         server = launcher_server.create_server("127.0.0.1", 0)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
@@ -117,7 +187,9 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
                     message="ok",
                 ),
             ),
-            mock.patch.object(launcher_module_install, "_current_platform_key", return_value="macos"),
+            mock.patch.object(
+                launcher_module_install, "_current_platform_key", return_value="macos"
+            ),
         ):
             request = urllib.request.Request(
                 (
@@ -273,7 +345,9 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
                     f"http://127.0.0.1:{server.server_address[1]}"
                     f"/api/launcher/pynq/boards/{board['id']}/run"
                 ),
-                data=json.dumps({"input_spikes": [0, 1], "timesteps": 2}).encode("utf-8"),
+                data=json.dumps({"input_spikes": [0, 1], "timesteps": 2}).encode(
+                    "utf-8"
+                ),
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
@@ -283,7 +357,9 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
         self.assertEqual(payload["status"], "success")
         self.assertEqual(payload["output_spikes"], [0, 2])
         runtime_request.assert_called_once()
-        called_board, called_method, called_path, called_payload = runtime_request.call_args.args
+        called_board, called_method, called_path, called_payload = (
+            runtime_request.call_args.args
+        )
         self.assertEqual(called_board["id"], board["id"])
         self.assertEqual(called_method, "POST")
         self.assertEqual(called_path, "/hardware/pynq/run")
@@ -331,7 +407,9 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
 
         self.assertEqual(payload["runtime_target"], "hardware")
         runtime_request.assert_called_once()
-        called_host, called_method, called_path, called_payload = runtime_request.call_args.args
+        called_host, called_method, called_path, called_payload = (
+            runtime_request.call_args.args
+        )
         self.assertEqual(called_host["id"], host["id"])
         self.assertEqual(called_method, "POST")
         self.assertEqual(called_path, "/api/neurochip/akida/map?bit_width=2")
@@ -430,11 +508,150 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
         self.assertEqual(payload["runtime_target"], "hardware")
         self.assertEqual(payload["outputs"], [0.0, 1.0])
         runtime_request.assert_called_once()
-        called_host, called_method, called_path, called_payload = runtime_request.call_args.args
+        called_host, called_method, called_path, called_payload = (
+            runtime_request.call_args.args
+        )
         self.assertEqual(called_host["id"], host["id"])
         self.assertEqual(called_method, "POST")
         self.assertEqual(called_path, "/api/neurochip/akida/inference")
         self.assertEqual(called_payload, {"inputs": [1.0, 0.0, 1.0]})
+
+    def test_proxy_akida_model_job_uses_selected_host(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "host": "192.168.2.51",
+                "runtimeApiUrl": "http://192.168.2.51:8002",
+                "credentialRef": "stored-token",
+            }
+        )
+        payload = {
+            "bundleBase64": "UEsDBAoAAAAAAA==",
+            "sha256": "0" * 64,
+            "requirePhysicalHardware": True,
+        }
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={"jobId": "job-1", "stage": "validation"},
+        ) as runtime_request:
+            result = self.state.proxy_akida_model_job(host["id"], payload)
+
+        self.assertEqual(result["jobId"], "job-1")
+        runtime_request.assert_called_once_with(
+            mock.ANY,
+            "POST",
+            "/api/neurochip/akida/model-jobs",
+            payload,
+        )
+        self.assertEqual(
+            runtime_request.call_args.args[0]["credentialRef"], "stored-token"
+        )
+
+    def test_proxy_akida_model_status_and_inference_paths(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            side_effect=[
+                {"jobId": "job-1", "stage": "completed"},
+                {"modelId": "model-1", "prediction": 7},
+            ],
+        ) as runtime_request:
+            status = self.state.proxy_akida_model_job_status(host["id"], "job-1")
+            prediction = self.state.proxy_akida_model_inference(
+                host["id"], "model-1", {"sampleIndex": 12}
+            )
+
+        self.assertEqual(status["stage"], "completed")
+        self.assertEqual(prediction["prediction"], 7)
+        self.assertEqual(
+            runtime_request.call_args_list[0].args[2],
+            "/api/neurochip/akida/model-jobs/job-1",
+        )
+        self.assertEqual(
+            runtime_request.call_args_list[1].args[2],
+            "/api/neurochip/akida/models/model-1/inference",
+        )
+
+    def test_proxy_akida_model_job_rejects_oversized_encoding(self) -> None:
+        host = self.state.create_akida_host(
+            {"displayName": "Lab Akida", "baseUrl": "http://akida-box.local:8002"}
+        )
+
+        with self.assertRaisesRegex(ValueError, "45 MB"):
+            self.state.proxy_akida_model_job(
+                host["id"],
+                {"bundleBase64": "A" * (45 * 1024 * 1024 + 1), "sha256": "0" * 64},
+            )
+
+    def test_akida_model_job_http_endpoints_proxy_all_operations(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+        host = server.state.create_akida_host(
+            {"displayName": "Lab Akida", "baseUrl": "http://akida-box.local:8002"}
+        )
+
+        with (
+            mock.patch.object(
+                server.state,
+                "proxy_akida_model_job",
+                return_value={"jobId": "job-1", "stage": "validation"},
+            ) as submit,
+            mock.patch.object(
+                server.state,
+                "proxy_akida_model_job_status",
+                return_value={"jobId": "job-1", "stage": "completed"},
+            ) as status,
+            mock.patch.object(
+                server.state,
+                "proxy_akida_model_inference",
+                return_value={"modelId": "model-1", "prediction": 7},
+            ) as inference,
+        ):
+            root = f"http://127.0.0.1:{server.server_address[1]}"
+            submit_request = urllib.request.Request(
+                f"{root}/api/launcher/akida/hosts/{host['id']}/model-jobs",
+                data=json.dumps(
+                    {
+                        "filename": "mnist.akida-bundle.zip",
+                        "bundleBase64": "UEs=",
+                        "sha256": "a" * 64,
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(submit_request, timeout=5) as response:
+                self.assertEqual(response.status, 202)
+            with urllib.request.urlopen(
+                f"{root}/api/launcher/akida/hosts/{host['id']}/model-jobs/job-1",
+                timeout=5,
+            ) as response:
+                self.assertEqual(json.loads(response.read())["stage"], "completed")
+            inference_request = urllib.request.Request(
+                f"{root}/api/launcher/akida/hosts/{host['id']}/models/model-1/inference",
+                data=json.dumps({"sampleIndex": 42}).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(inference_request, timeout=5) as response:
+                self.assertEqual(json.loads(response.read())["prediction"], 7)
+
+        submit.assert_called_once()
+        status.assert_called_once_with(host["id"], "job-1")
+        inference.assert_called_once_with(host["id"], "model-1", {"sampleIndex": 42})
 
     def test_akida_run_http_endpoint_proxies_runtime_payload(self) -> None:
         server = launcher_server.create_server("127.0.0.1", 0)

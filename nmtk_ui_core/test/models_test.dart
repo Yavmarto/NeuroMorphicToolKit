@@ -513,7 +513,7 @@ void main() {
         sshPort: 22,
         username: 'operator',
         runtimeApiUrl: 'http://192.168.1.60:8002',
-        controlApiUrl: 'http://192.168.1.60:8090',
+        controlApiUrl: 'http://192.168.1.60:8091',
         authMode: AkidaHostAuthMode.none,
         credentialRef: '',
         password: '',

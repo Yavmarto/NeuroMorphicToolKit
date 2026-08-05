@@ -9,8 +9,14 @@ from http.server import BaseHTTPRequestHandler
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from .http_transport import read_json_body, send_json, stream_deployment_sse
+from .http_transport import (
+    RequestBodyTooLarge,
+    read_json_body,
+    send_json,
+    stream_deployment_sse,
+)
 from .runtime_errors import RuntimeRequestError
+
 
 class LauncherControlHandler(BaseHTTPRequestHandler):
     """HTTP adapter exposing launcher control state over a JSON API."""
@@ -39,8 +45,8 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         query = parse_qs(parsed.query)
-        body = self._read_body()
         try:
+            body = self._read_body()
             if method == "GET" and path == "/health":
                 self._send_json(
                     HTTPStatus.OK,
@@ -155,7 +161,10 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 )
                 return
 
-            if method == "POST" and path == "/api/launcher/deployment/bootstrap-remote-user":
+            if (
+                method == "POST"
+                and path == "/api/launcher/deployment/bootstrap-remote-user"
+            ):
                 self._send_json(
                     HTTPStatus.OK,
                     self.server.state.bootstrap_remote_deploy_user(body or {}),
@@ -251,7 +260,11 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                         self.server.state.test_akida_host_connection(host_id),
                     )
                     return
-                if len(segments) == 6 and segments[5] == "provision" and method == "POST":
+                if (
+                    len(segments) == 6
+                    and segments[5] == "provision"
+                    and method == "POST"
+                ):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.provision_akida_host(host_id),
@@ -289,6 +302,29 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                         self.server.state.fetch_akida_host_status(host_id),
                     )
                     return
+                if (
+                    len(segments) == 6
+                    and segments[5] == "runtime-update-jobs"
+                    and method == "POST"
+                ):
+                    self._send_json(
+                        HTTPStatus.ACCEPTED,
+                        self.server.state.create_akida_runtime_update_job(host_id),
+                    )
+                    return
+                if (
+                    len(segments) == 7
+                    and segments[5] == "runtime-update-jobs"
+                    and method == "GET"
+                ):
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.get_akida_runtime_update_job(
+                            host_id,
+                            segments[6],
+                        ),
+                    )
+                    return
                 if len(segments) == 6 and segments[5] == "map" and method == "POST":
                     bit_width_raw = query.get("bit_width", ["4"])[0]
                     try:
@@ -308,6 +344,41 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     self._send_json(
                         HTTPStatus.OK,
                         self.server.state.proxy_akida_run(host_id, body or {}),
+                    )
+                    return
+                if (
+                    len(segments) == 6
+                    and segments[5] == "model-jobs"
+                    and method == "POST"
+                ):
+                    self._send_json(
+                        HTTPStatus.ACCEPTED,
+                        self.server.state.proxy_akida_model_job(host_id, body or {}),
+                    )
+                    return
+                if (
+                    len(segments) == 7
+                    and segments[5] == "model-jobs"
+                    and method == "GET"
+                ):
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.proxy_akida_model_job_status(
+                            host_id, segments[6]
+                        ),
+                    )
+                    return
+                if (
+                    len(segments) == 8
+                    and segments[5] == "models"
+                    and segments[7] == "inference"
+                    and method == "POST"
+                ):
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.proxy_akida_model_inference(
+                            host_id, segments[6], body or {}
+                        ),
                     )
                     return
 
@@ -535,8 +606,12 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     return
 
             self._send_json(HTTPStatus.NOT_FOUND, {"error": f"Unknown route: {path}"})
+        except RequestBodyTooLarge as exc:
+            self._send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": str(exc)})
         except KeyError as exc:
             self._send_json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
+        except ValueError as exc:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
         except RuntimeRequestError as exc:
             status = (
                 HTTPStatus.GATEWAY_TIMEOUT

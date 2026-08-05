@@ -7,6 +7,12 @@ import time
 from http import HTTPStatus
 from typing import Any, Protocol
 
+MAX_JSON_BODY_BYTES = 48 * 1024 * 1024
+
+
+class RequestBodyTooLarge(ValueError):
+    """Raised before buffering an oversized launcher request body."""
+
 
 class JsonHandler(Protocol):
     headers: Any
@@ -26,6 +32,8 @@ def read_json_body(handler: JsonHandler) -> dict[str, Any] | None:
     length = int(handler.headers.get("Content-Length", "0"))
     if length <= 0:
         return None
+    if length > MAX_JSON_BODY_BYTES:
+        raise RequestBodyTooLarge("Request body exceeds the 48 MB launcher limit")
     raw = handler.rfile.read(length)
     if not raw:
         return None

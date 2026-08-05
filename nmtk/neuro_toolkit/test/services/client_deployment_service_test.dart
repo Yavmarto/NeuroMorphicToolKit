@@ -2113,4 +2113,99 @@ void main() {
     expect(snapshot.isReady, isTrue);
     expect(snapshot.activeJob?.stage, 'completed');
   });
+
+  test('completed backend verification updates only the selected Akida host',
+      () async {
+    final requestedPaths = <String>[];
+    final service = ClientDeploymentService(
+      persistenceFactory: _completedRemotePersistence,
+      httpClient: MockClient((request) async {
+        requestedPaths.add('${request.method} ${request.url.path}');
+        if (request.method == 'POST' &&
+            request.url.path == '/api/launcher/modules/neurocnl/start') {
+          return http.Response('{}', 202);
+        }
+        if (request.url.path == '/api/launcher/modules') {
+          return http.Response('[{"id":"neurocnl"}]', 200);
+        }
+        if (request.url.path == '/api/launcher/modules/neurocnl') {
+          return http.Response('{"status":4}', 200);
+        }
+        if (request.url.path == '/api/launcher/settings') {
+          return http.Response(
+            '{"selectedAkidaHostId":"selected-host"}',
+            200,
+          );
+        }
+        if (request.url.path.endsWith('/runtime-update-jobs')) {
+          return http.Response(
+            '{"jobId":"runtime-job","status":"completed",'
+            '"installedVersion":"0.6.0"}',
+            202,
+          );
+        }
+        return http.Response('{"status":"ok"}', 200);
+      }),
+    );
+
+    final snapshot = await service.load();
+
+    expect(snapshot.isReady, isTrue);
+    expect(snapshot.activeJob?.error, isEmpty);
+    expect(
+      requestedPaths,
+      contains(
+        'POST /api/launcher/akida/hosts/selected-host/runtime-update-jobs',
+      ),
+    );
+    expect(
+      requestedPaths.where((path) => path.contains('other-host')),
+      isEmpty,
+    );
+  });
+
+  test('Akida update failure is degraded and preserves core readiness',
+      () async {
+    final service = ClientDeploymentService(
+      persistenceFactory: _completedRemotePersistence,
+      httpClient: MockClient((request) async {
+        if (request.method == 'POST' &&
+            request.url.path == '/api/launcher/modules/neurocnl/start') {
+          return http.Response('{}', 202);
+        }
+        if (request.url.path == '/api/launcher/modules') {
+          return http.Response('[{"id":"neurocnl"}]', 200);
+        }
+        if (request.url.path == '/api/launcher/modules/neurocnl') {
+          return http.Response('{"status":4}', 200);
+        }
+        if (request.url.path == '/api/launcher/settings') {
+          return http.Response(
+            '{"selectedAkidaHostId":"selected-host"}',
+            200,
+          );
+        }
+        if (request.url.path.endsWith('/runtime-update-jobs')) {
+          return http.Response(
+            '{"jobId":"runtime-job","status":"failed",'
+            '"message":"The selected Akida host is offline.",'
+            '"recovery":"Power it on, then retry."}',
+            202,
+          );
+        }
+        return http.Response('{"status":"ok"}', 200);
+      }),
+    );
+
+    final snapshot = await service.load();
+
+    expect(snapshot.isReady, isTrue);
+    expect(snapshot.activeJob?.stage, 'completed');
+    expect(
+      snapshot.activeJob?.error,
+      startsWith('degraded optional capability:'),
+    );
+    expect(snapshot.activeJob?.error, contains('Akida'));
+    expect(snapshot.activeJob?.error, contains('Power it on, then retry.'));
+  });
 }

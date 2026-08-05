@@ -14,7 +14,12 @@ from typing import Any
 
 from .config import SETTINGS_FILE
 from .runtime_shared import _read_json_file, _write_json_file
-from .server import DEFAULT_CONTROL_LOG_LEVEL, _mujoco_available, _normalize_akida_host, _normalize_pynq_board
+from .server import (
+    DEFAULT_CONTROL_LOG_LEVEL,
+    _mujoco_available,
+    _normalize_akida_host,
+    _normalize_pynq_board,
+)
 
 
 class SettingsServiceMixin:
@@ -24,6 +29,7 @@ class SettingsServiceMixin:
             "mujocoAvailable": _mujoco_available(),
             "pythonAvailable": True,
             "akidaHosts": [],
+            "akidaRuntimeUpdateJobs": [],
             "pynqBoards": [],
             "selectedAkidaHostId": None,
         }
@@ -42,16 +48,40 @@ class SettingsServiceMixin:
             selected_akida_host_id = akida_hosts[0]["id"]
         if not akida_hosts:
             selected_akida_host_id = ""
+        persisted_update_jobs = [
+            dict(job)
+            for job in stored.get("akidaRuntimeUpdateJobs", [])
+            if isinstance(job, dict)
+        ]
+        for job in persisted_update_jobs:
+            if str(job.get("status") or "") in {"queued", "running"}:
+                job.update(
+                    {
+                        "stage": "failed",
+                        "progress": 100,
+                        "status": "failed",
+                        "message": "The Akida runtime update was interrupted when launcher control restarted.",
+                        "errorCode": "install_failed",
+                        "recovery": "Retry the Akida update from Backend Setup.",
+                    }
+                )
+        latest_update_by_host = {
+            str(job.get("hostId") or ""): job
+            for job in persisted_update_jobs
+            if str(job.get("hostId") or "")
+        }
+        for host in akida_hosts:
+            update = latest_update_by_host.get(str(host.get("id") or ""))
+            if update is not None:
+                host["lastRuntimeUpdateJob"] = update
+                host["runtimeUpdateState"] = str(update.get("status") or "")
         defaults.update(
             {
                 "logLevel": stored.get("logLevel", DEFAULT_CONTROL_LOG_LEVEL),
                 "mujocoAvailable": _mujoco_available(),
                 "pythonAvailable": True,
-                "akidaHosts": [
-                    _normalize_akida_host(host)
-                    for host in stored.get("akidaHosts", [])
-                    if isinstance(host, dict)
-                ],
+                "akidaHosts": akida_hosts,
+                "akidaRuntimeUpdateJobs": persisted_update_jobs,
                 "pynqBoards": [
                     _normalize_pynq_board(board)
                     for board in stored.get("pynqBoards", [])

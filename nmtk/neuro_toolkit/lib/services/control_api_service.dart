@@ -221,6 +221,20 @@ class ControlApiService {
     return _baseUri.replace(path: normalizedPath);
   }
 
+  /// Unwraps an Akida host from a response that may or may not nest it.
+  ///
+  /// The routes disagree by design: `/preflight`, `/status`, `/provision`,
+  /// `/repair`, and `/restart-services` answer `{"host": {...}, ...}`, while
+  /// `/connectivity-test` answers the serialized host directly — and a
+  /// serialized host has its own `host` key holding the *address string*. A
+  /// blind `payload['host'] as Map?` therefore threw "type 'String' is not a
+  /// subtype of type 'Map' in type cast" on exactly the routes that do not nest.
+  /// Treat it as the wrapper only when it is one.
+  Map<String, dynamic> _akidaHostPayload(Map<String, dynamic> payload) {
+    final nested = payload['host'];
+    return nested is Map<String, dynamic> ? nested : payload;
+  }
+
   Future<Map<String, dynamic>> _readJsonResponse(http.Response response) async {
     if (response.body.isEmpty) {
       return const <String, dynamic>{};
@@ -522,7 +536,9 @@ class ControlApiService {
       _uri('/api/launcher/akida/hosts/$hostId/connectivity-test'),
     );
     await _ensureSuccess(response);
-    return AkidaPairedHost.fromJson(await _readJsonResponse(response));
+    return AkidaPairedHost.fromJson(
+      _akidaHostPayload(await _readJsonResponse(response)),
+    );
   }
 
   Future<AkidaPairedHost> provisionAkidaHost(String hostId) async {
@@ -531,8 +547,28 @@ class ControlApiService {
     );
     await _ensureSuccess(response);
     final payload = await _readJsonResponse(response);
-    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
-    return AkidaPairedHost.fromJson(hostJson);
+    return AkidaPairedHost.fromJson(_akidaHostPayload(payload));
+  }
+
+  Future<AkidaRuntimeUpdateJob> startAkidaRuntimeUpdate(String hostId) async {
+    final response = await _client.post(
+      _uri('/api/launcher/akida/hosts/$hostId/runtime-update-jobs'),
+    );
+    await _ensureSuccess(response);
+    return AkidaRuntimeUpdateJob.fromJson(await _readJsonResponse(response));
+  }
+
+  Future<AkidaRuntimeUpdateJob> fetchAkidaRuntimeUpdate(
+    String hostId,
+    String jobId,
+  ) async {
+    final response = await _client.get(
+      _uri(
+        '/api/launcher/akida/hosts/$hostId/runtime-update-jobs/$jobId',
+      ),
+    );
+    await _ensureSuccess(response);
+    return AkidaRuntimeUpdateJob.fromJson(await _readJsonResponse(response));
   }
 
   Future<AkidaPairedHost> repairAkidaHost(String hostId) async {
@@ -541,8 +577,7 @@ class ControlApiService {
     );
     await _ensureSuccess(response);
     final payload = await _readJsonResponse(response);
-    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
-    return AkidaPairedHost.fromJson(hostJson);
+    return AkidaPairedHost.fromJson(_akidaHostPayload(payload));
   }
 
   Future<AkidaPairedHost> restartAkidaHostServices(String hostId) async {
@@ -551,8 +586,7 @@ class ControlApiService {
     );
     await _ensureSuccess(response);
     final payload = await _readJsonResponse(response);
-    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
-    return AkidaPairedHost.fromJson(hostJson);
+    return AkidaPairedHost.fromJson(_akidaHostPayload(payload));
   }
 
   Future<AkidaPairedHost> fetchAkidaHostPreflight(String hostId) async {
@@ -561,8 +595,7 @@ class ControlApiService {
     );
     await _ensureSuccess(response);
     final payload = await _readJsonResponse(response);
-    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
-    return AkidaPairedHost.fromJson(hostJson);
+    return AkidaPairedHost.fromJson(_akidaHostPayload(payload));
   }
 
   Future<AkidaPairedHost> fetchAkidaHostStatus(String hostId) async {
@@ -571,8 +604,7 @@ class ControlApiService {
     );
     await _ensureSuccess(response);
     final payload = await _readJsonResponse(response);
-    final hostJson = payload['host'] as Map<String, dynamic>? ?? payload;
-    return AkidaPairedHost.fromJson(hostJson);
+    return AkidaPairedHost.fromJson(_akidaHostPayload(payload));
   }
 
   Future<Module> installModule(String moduleId) async {

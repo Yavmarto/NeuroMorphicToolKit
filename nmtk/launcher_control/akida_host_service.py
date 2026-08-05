@@ -10,6 +10,7 @@ already be bound in ``server.py`` above that import line. Mirrors the
 from __future__ import annotations
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
@@ -49,6 +50,7 @@ from .server import (
     _ssh_failure_message,
 )
 from .provisioning_helpers import build_akida_host_bundle
+from .runtime_artifact import discover_neurochip_runtime_artifact
 
 
 class AkidaServiceMixin:
@@ -64,7 +66,10 @@ class AkidaServiceMixin:
 
     def create_akida_host(self, payload: dict[str, Any]) -> dict[str, Any]:
         host = _normalize_akida_host(payload)
-        if not _resolved_akida_base_url(host) and not str(host.get("host") or "").strip():
+        if (
+            not _resolved_akida_base_url(host)
+            and not str(host.get("host") or "").strip()
+        ):
             raise ValueError("Akida host runtimeApiUrl or host is required")
         with self._lock:
             hosts = self._settings["akidaHosts"]
@@ -84,7 +89,9 @@ class AkidaServiceMixin:
     ) -> dict[str, Any]:
         with self._lock:
             host = self._get_akida_host(host_id)
-            normalized = self._normalize_updated_akida_host(host, {"id": host_id, **payload})
+            normalized = self._normalize_updated_akida_host(
+                host, {"id": host_id, **payload}
+            )
             if normalized.get("isDefault"):
                 for existing in self._settings.get("akidaHosts", []):
                     if existing["id"] != host_id:
@@ -131,8 +138,11 @@ class AkidaServiceMixin:
     ) -> dict[str, Any]:
         merged = dict(host)
         merged.update(updates)
-        if "password" in updates and not str(updates.get("password") or ""):
-            merged["password"] = str(host.get("password") or "")
+        # An *absent* password key already keeps the stored one, because `merged`
+        # starts from `host`. An explicitly empty one therefore means "clear it":
+        # treating the two the same made a saved password impossible to remove,
+        # and every internal caller of _update_akida_host_fields omits the key
+        # rather than sending "".
         if str(merged.get("password") or "") and "authMode" not in updates:
             merged["authMode"] = "password"
         if "baseUrl" in updates and "runtimeApiUrl" not in updates:
@@ -190,6 +200,48 @@ class AkidaServiceMixin:
         )
         return result
 
+    def proxy_akida_model_job(
+        self, host_id: str, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Submit a checksummed model bundle to the selected Akida host."""
+        encoded = payload.get("bundleBase64")
+        if not isinstance(encoded, str) or not encoded:
+            raise ValueError("bundleBase64 is required")
+        if len(encoded) > 45 * 1024 * 1024:
+            raise ValueError("Encoded model bundle exceeds the 45 MB proxy limit")
+        host = self._get_akida_host(host_id)
+        self._emit_akida_terminal_log(host, "submitting Akida model conversion job")
+        return self._akida_json_request(
+            host,
+            "POST",
+            "/api/neurochip/akida/model-jobs",
+            payload,
+        )
+
+    def proxy_akida_model_job_status(self, host_id: str, job_id: str) -> dict[str, Any]:
+        """Poll one model conversion job using stored host credentials."""
+        host = self._get_akida_host(host_id)
+        return self._akida_json_request(
+            host,
+            "GET",
+            f"/api/neurochip/akida/model-jobs/{job_id}",
+        )
+
+    def proxy_akida_model_inference(
+        self,
+        host_id: str,
+        model_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Run sample inference for a converted bundle model."""
+        host = self._get_akida_host(host_id)
+        return self._akida_json_request(
+            host,
+            "POST",
+            f"/api/neurochip/akida/models/{model_id}/inference",
+            payload,
+        )
+
     def _emit_akida_terminal_log(
         self, host: dict[str, Any], message: str, *, stderr: bool = False
     ) -> None:
@@ -216,9 +268,7 @@ class AkidaServiceMixin:
         if auth_mode == "password":
             password = str(host.get("password") or "")
             if not password:
-                raise RuntimeError(
-                    "No SSH password is configured for this Akida host"
-                )
+                raise RuntimeError("No SSH password is configured for this Akida host")
             sshpass = shutil.which("sshpass")
             if sshpass is not None:
                 prefix.extend([sshpass, "-p", password])
@@ -287,7 +337,9 @@ class AkidaServiceMixin:
         target = f"{username}@{host['host']}"
         command, env, cleanup = self._prepare_akida_ssh_invocation(host)
         command.extend([target, remote_command])
-        logged_command = display_command if display_command is not None else remote_command
+        logged_command = (
+            display_command if display_command is not None else remote_command
+        )
         self._emit_akida_terminal_log(host, f"ssh -> {target}: {logged_command}")
         try:
             process = subprocess.Popen(
@@ -375,6 +427,67 @@ class AkidaServiceMixin:
             )
         self._emit_akida_terminal_log(host, "scp step completed")
 
+    def _recover_akida_credential(self, host: dict[str, Any]) -> str:
+        """Re-read the host's API token over SSH after a 401.
+
+        Provisioning turns API-key auth on at the host itself — it writes
+        ``NEUROCHIP_AUTH_ENABLED=true`` plus a generated token into the service
+        env files — and records that token in ``credentialRef``. Anything that
+        separates the two leaves the host enforcing a key this app does not
+        hold: a runtime installed outside the app, a recreated settings file, or
+        a provision that started the services but failed its token read-back.
+        Because every request only sets ``X-API-Key`` when ``credentialRef`` is
+        non-empty, the result is a permanent 401 with no way out from the UI.
+
+        The token is readable with the SSH credentials already saved, so recover
+        it rather than asking for a key the user was never given.
+
+        Returns the recovered token, or ``''`` when recovery is not possible.
+        """
+        host_id = str(host.get("id") or "").strip()
+        if not host_id or not str(host.get("username") or "").strip():
+            return ""
+        try:
+            token = self._read_remote_akida_token(host).strip()
+        except Exception as exc:  # noqa: BLE001
+            self._emit_akida_terminal_log(
+                host,
+                f"could not re-read the Akida API token from the host: {exc}",
+                stderr=True,
+            )
+            return ""
+        if not token or token == str(host.get("credentialRef") or "").strip():
+            return ""
+        self._update_akida_host_fields(host_id, credentialRef=token)
+        self._emit_akida_terminal_log(
+            host, "recovered the Akida API token from the host; retrying"
+        )
+        return token
+
+    def _akida_unauthorized_message(self, host: dict[str, Any], url: str) -> str:
+        """Actionable replacement for the host's bare 401 body.
+
+        The host answers "Invalid or missing API Key", which reads as though the
+        user forgot to enter a credential. They have none to enter: the token is
+        generated and carried by this app. Say what is actually wrong and which
+        in-app action fixes it.
+        """
+        if not str(host.get("username") or "").strip():
+            return (
+                f"{url} requires an API token, and no SSH login is saved for this "
+                "host, so the token could not be read back. Add the host's SSH "
+                "login under Setup -> Manage Targets, then choose Install in the "
+                "Akida Runtime panel."
+            )
+        token_path = str(host.get("tokenPath") or "").strip() or "its install directory"
+        return (
+            f"{url} rejected this app's API token. No key needs to be entered — the "
+            f"token is managed for you — but it could not be read from {token_path} "
+            "on the host, which usually means the Neurochip runtime there was "
+            "installed outside this app. Choose Install in the Akida Runtime panel "
+            "to reinstall the runtime and regenerate the token."
+        )
+
     def _akida_control_json_request(
         self,
         host: dict[str, Any],
@@ -383,6 +496,7 @@ class AkidaServiceMixin:
         payload: dict[str, Any] | None = None,
         *,
         emit_terminal_errors: bool = True,
+        allow_recovery: bool = True,
     ) -> dict[str, Any]:
         base_url = _resolved_akida_control_api_url(host).rstrip("/")
         if not base_url:
@@ -408,6 +522,19 @@ class AkidaServiceMixin:
                 return decoded
         except urllib.error.HTTPError as exc:
             error_body = exc.read().decode("utf-8", errors="replace")
+            # `allow_recovery=False` on the retry: a plain recursive call would
+            # loop forever against a host whose token genuinely does not match.
+            if exc.code == 401 and allow_recovery:
+                recovered = self._recover_akida_credential(host)
+                if recovered:
+                    return self._akida_control_json_request(
+                        {**host, "credentialRef": recovered},
+                        method,
+                        path,
+                        payload,
+                        emit_terminal_errors=emit_terminal_errors,
+                        allow_recovery=False,
+                    )
             if emit_terminal_errors:
                 self._emit_akida_terminal_log(
                     host,
@@ -417,6 +544,14 @@ class AkidaServiceMixin:
                     ),
                     stderr=True,
                 )
+            if exc.code == 401:
+                raise RuntimeRequestError(
+                    self._akida_unauthorized_message(host, url),
+                    kind="http",
+                    url=url,
+                    status_code=exc.code,
+                    response_body=error_body,
+                ) from exc
             raise RuntimeRequestError(
                 f"Control request failed for {method} {url}: HTTP {exc.code}"
                 + (f" — {error_body}" if error_body else ""),
@@ -428,9 +563,7 @@ class AkidaServiceMixin:
         except urllib.error.URLError as exc:
             kind = _runtime_request_error_kind(exc)
             detail = (
-                "timed out"
-                if kind == "timeout"
-                else f"could not be reached: {exc}"
+                "timed out" if kind == "timeout" else f"could not be reached: {exc}"
             )
             if emit_terminal_errors:
                 self._emit_akida_terminal_log(
@@ -450,6 +583,8 @@ class AkidaServiceMixin:
         method: str,
         path: str,
         payload: dict[str, Any] | None = None,
+        *,
+        allow_recovery: bool = True,
     ) -> dict[str, Any]:
         base_url = _resolved_akida_base_url(host).rstrip("/")
         if not base_url:
@@ -475,6 +610,19 @@ class AkidaServiceMixin:
                 return decoded
         except urllib.error.HTTPError as exc:
             error_body = exc.read().decode("utf-8", errors="replace")
+            # See _akida_control_json_request: recover the app's own token once,
+            # then stop. The retry passes allow_recovery=False so a host whose
+            # token really does not match cannot loop.
+            if exc.code == 401 and allow_recovery:
+                recovered = self._recover_akida_credential(host)
+                if recovered:
+                    return self._akida_json_request(
+                        {**host, "credentialRef": recovered},
+                        method,
+                        path,
+                        payload,
+                        allow_recovery=False,
+                    )
             self._emit_akida_terminal_log(
                 host,
                 (
@@ -483,6 +631,14 @@ class AkidaServiceMixin:
                 ),
                 stderr=True,
             )
+            if exc.code == 401:
+                raise RuntimeRequestError(
+                    self._akida_unauthorized_message(host, url),
+                    kind="http",
+                    url=url,
+                    status_code=exc.code,
+                    response_body=error_body,
+                ) from exc
             raise RuntimeRequestError(
                 f"Runtime request failed for {method} {url}: HTTP {exc.code}"
                 + (f" — {error_body}" if error_body else ""),
@@ -494,9 +650,7 @@ class AkidaServiceMixin:
         except urllib.error.URLError as exc:
             kind = _runtime_request_error_kind(exc)
             detail = (
-                "timed out"
-                if kind == "timeout"
-                else f"could not be reached: {exc}"
+                "timed out" if kind == "timeout" else f"could not be reached: {exc}"
             )
             self._emit_akida_terminal_log(
                 host,
@@ -527,6 +681,11 @@ class AkidaServiceMixin:
                 host_id,
                 state="reachable",
                 lastPreflightMessage=message,
+                # Also recorded as the readiness message: that is the field the
+                # Dart model parses and the Akida Runtime panel renders, so
+                # without it the verdict ("SSH reachable") was dropped at the
+                # client boundary and the UI could only show the state label.
+                lastReadinessMessage=message,
             )
         )
 
@@ -542,10 +701,17 @@ class AkidaServiceMixin:
         ):
             raise RuntimeError("Neurochip Akida runtime manifest is invalid")
         akida_contract = _load_neurochip_launcher_runtime_contract().akida
+        artifact_directory = str(os.getenv("NMTK_NEUROCHIP_ARTIFACT_DIR") or "").strip()
+        wheel_path = None
+        if artifact_directory:
+            wheel_path = discover_neurochip_runtime_artifact(
+                Path(artifact_directory)
+            ).wheel_path
         return build_akida_host_bundle(
             bundle_dir,
             repo_root=neurochip_root,
             required_packages=required_packages,
+            wheel_path=wheel_path,
             install_root=str(host["remoteInstallRoot"]),
             service_user=str(host["serviceUser"]),
             venv_path=str(host["remoteVenvPath"]),
@@ -566,7 +732,9 @@ class AkidaServiceMixin:
         )
 
     def _read_remote_akida_install_status(self, host: dict[str, Any]) -> dict[str, Any]:
-        raw = self._run_akida_ssh(host, f"cat {self._remote_akida_install_status_path(host)}")
+        raw = self._run_akida_ssh(
+            host, f"cat {self._remote_akida_install_status_path(host)}"
+        )
         raw = raw.strip()
         if not raw:
             raise RuntimeError("Remote Akida install status file is empty")
@@ -601,14 +769,12 @@ class AkidaServiceMixin:
         command = f"cat {shlex.quote(token_path)}"
         display_command = command
         if install_mode != "user-space" and service_user and service_user != username:
-            if (
-                str(host.get("authMode") or "").strip() == "password"
-                and str(host.get("password") or "")
+            if str(host.get("authMode") or "").strip() == "password" and str(
+                host.get("password") or ""
             ):
                 password = str(host.get("password") or "")
                 command = (
-                    f"printf '%s\\n' {shlex.quote(password)} "
-                    f"| sudo -S -p '' {command}"
+                    f"printf '%s\\n' {shlex.quote(password)} | sudo -S -p '' {command}"
                 )
                 display_command = (
                     "printf '%s\\n' <redacted> "
@@ -643,7 +809,11 @@ class AkidaServiceMixin:
                 sdk_status = str(runtime_status.get("sdk_status") or "").strip()
         state = "preflight_failed"
         if status == PREFLIGHT_OK:
-            state = "ready" if runtime_target == "hardware" else "degraded_optional_capability"
+            state = (
+                "ready"
+                if runtime_target == "hardware"
+                else "degraded_optional_capability"
+            )
         elif status == PREFLIGHT_DEGRADED:
             state = (
                 "simulator_only"
@@ -677,7 +847,16 @@ class AkidaServiceMixin:
             lastVerifiedAt=datetime.now(timezone.utc).isoformat(),
         )
 
-    def provision_akida_host(self, host_id: str) -> dict[str, Any]:
+    def _provision_akida_host_unlocked(
+        self,
+        host_id: str,
+        *,
+        progress: Callable[[str, int, str], None] | None = None,
+    ) -> dict[str, Any]:
+        def report(stage: str, percent: int, message: str) -> None:
+            if progress is not None:
+                progress(stage, percent, message)
+
         host = self._update_akida_host_fields(
             host_id,
             state="bootstrapping",
@@ -685,9 +864,17 @@ class AkidaServiceMixin:
         )
         install_status: dict[str, Any] = {}
         try:
+            report("validating_host", 10, "Validating Akida host access")
+            # The asynchronous release updater owns an explicit connectivity
+            # stage. Keep the legacy synchronous Provision/Repair endpoints'
+            # SSH command sequence stable for compatibility; their first
+            # bundle operation still fails safely when the host is unreachable.
+            if progress is not None:
+                self.test_akida_host_connection(host_id)
             with tempfile.TemporaryDirectory(prefix="akida-host-bundle-") as tmp_dir:
                 bundle_dir = Path(tmp_dir) / "bundle"
                 bundle_dir.mkdir(parents=True, exist_ok=True)
+                report("packaging", 25, "Packaging the Neurochip runtime")
                 self._emit_akida_terminal_log(host, "building local Akida host bundle")
                 self._build_local_akida_bundle(host, bundle_dir)
                 remote_bundle_parent = "/tmp"
@@ -696,13 +883,17 @@ class AkidaServiceMixin:
                     host,
                     f"rm -rf {remote_bundle_dir}",
                 )
+                report("uploading", 40, "Uploading the Neurochip runtime")
                 self._emit_akida_terminal_log(host, "uploading provisioning bundle")
-                self._run_akida_scp(host, bundle_dir, remote_bundle_parent, recursive=True)
+                self._run_akida_scp(
+                    host, bundle_dir, remote_bundle_parent, recursive=True
+                )
                 host = self._update_akida_host_fields(
                     host_id,
                     state="installing_runtime",
                     lastReadinessMessage="Running remote install script.",
                 )
+                report("installing", 55, "Installing the staged Neurochip runtime")
                 self._emit_akida_terminal_log(host, "running remote install script")
                 install_command = " ".join(
                     [
@@ -728,7 +919,9 @@ class AkidaServiceMixin:
                     install_command,
                     display_command=display_install_command,
                 )
-                install_status = _extract_install_status_from_output(install_output) or {}
+                install_status = (
+                    _extract_install_status_from_output(install_output) or {}
+                )
                 if not install_status:
                     install_status = self._read_remote_akida_install_status(host)
                 host = self._update_akida_host_fields(
@@ -756,7 +949,9 @@ class AkidaServiceMixin:
                     install_status=install_status,
                 )
                 if not token_value:
-                    raise RuntimeError("Remote Akida API token read returned an empty value")
+                    raise RuntimeError(
+                        "Remote Akida API token read returned an empty value"
+                    )
                 host = self._update_akida_host_fields(
                     host_id,
                     credentialRef=token_value,
@@ -767,11 +962,14 @@ class AkidaServiceMixin:
                         str(host["host"]), int(host["controlPort"])
                     ),
                     hostOs=str(install_status.get("hostOs") or "").strip(),
-                    pythonVersion=str(install_status.get("pythonVersion") or "").strip(),
+                    pythonVersion=str(
+                        install_status.get("pythonVersion") or ""
+                    ).strip(),
                     state="verifying_sdk",
                     lastInstallStatus=install_status,
                     lastReadinessMessage="Remote install completed; verifying SDK and hardware.",
                 )
+            report("verifying", 90, "Verifying the installed Neurochip runtime")
             result = self.fetch_akida_host_preflight(host_id)
             result["installStatus"] = install_status
             return result
@@ -791,6 +989,34 @@ class AkidaServiceMixin:
                 "error": str(exc),
                 "installStatus": install_status if install_status else None,
             }
+
+    def _provision_akida_host(
+        self,
+        host_id: str,
+        *,
+        progress: Callable[[str, int, str], None] | None = None,
+    ) -> dict[str, Any]:
+        """Run one locked installer shared by update, Provision, and Repair."""
+        with self._lock:
+            locks = getattr(self, "_akida_host_update_locks", None)
+            if not isinstance(locks, dict):
+                locks = {}
+                self._akida_host_update_locks = locks
+            host_lock = locks.setdefault(host_id, threading.Lock())
+        if not host_lock.acquire(blocking=False):
+            host = self._get_akida_host(host_id)
+            return {
+                "host": _serialize_akida_host(host),
+                "error": "An Akida runtime update is already running for this host.",
+                "installStatus": host.get("lastInstallStatus"),
+            }
+        try:
+            return self._provision_akida_host_unlocked(host_id, progress=progress)
+        finally:
+            host_lock.release()
+
+    def provision_akida_host(self, host_id: str) -> dict[str, Any]:
+        return self._provision_akida_host(host_id)
 
     def repair_akida_host(self, host_id: str) -> dict[str, Any]:
         return self.provision_akida_host(host_id)
@@ -909,7 +1135,9 @@ class AkidaServiceMixin:
                 "sdk_issues": verification.get("sdk_issues")
                 if isinstance(verification.get("sdk_issues"), list)
                 else [],
-                "sdk_issue_detail": str(verification.get("sdk_issue_detail") or "").strip(),
+                "sdk_issue_detail": str(
+                    verification.get("sdk_issue_detail") or ""
+                ).strip(),
                 "environment_checks": verification.get("environment_checks")
                 if isinstance(verification.get("environment_checks"), dict)
                 else None,
@@ -967,7 +1195,10 @@ class AkidaServiceMixin:
                     if isinstance(doctor.get("installStatus"), dict)
                     else None,
                 )
-                return {"host": _serialize_akida_host(updated), "status": runtime_status}
+                return {
+                    "host": _serialize_akida_host(updated),
+                    "status": runtime_status,
+                }
             except Exception as control_exc:  # noqa: BLE001
                 self._emit_akida_terminal_log(
                     host,

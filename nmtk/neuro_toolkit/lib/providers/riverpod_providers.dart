@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/routing/router.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
@@ -112,6 +113,20 @@ final backendUpdateProvider = FutureProvider<LauncherUpdate?>((ref) async {
     return null;
   }
   return ref.watch(updateServiceProvider).checkForBackendUpdate(running);
+});
+
+/// Selected Akida host release status, kept independent from core backend
+/// update availability so a failed optional runtime remains recoverable after
+/// the suite itself is current.
+final selectedAkidaRuntimeStatusProvider =
+    FutureProvider<AkidaPairedHost?>((ref) async {
+  final controlApi = ref.watch(selectedControlApiServiceProvider);
+  if (controlApi == null) return null;
+  try {
+    return (await controlApi.fetchSettings()).selectedAkidaHost;
+  } on Object {
+    return null;
+  }
 });
 
 // The Teensy / PYNQ / Akida deploy providers were relocated to the Neurochip

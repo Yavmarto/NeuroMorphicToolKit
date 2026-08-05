@@ -1,3 +1,15 @@
+# Build the version-matched Neurochip wheel once at image-build time. Remote
+# Akida updates must never depend on Poetry or a source checkout at runtime.
+FROM python:3.12-slim AS neurochip-artifact-builder
+
+RUN pip install --no-cache-dir build poetry-core
+
+WORKDIR /build
+COPY Neurochip/ /build/Neurochip/
+COPY nmtk/launcher_control/runtime_artifact.py /build/runtime_artifact.py
+RUN python -m build --wheel --no-isolation --outdir /artifacts /build/Neurochip \
+ && python /build/runtime_artifact.py /artifacts
+
 # Launcher control service — orchestrates module state, workspace, and
 # hardware provisioning (PYNQ/Akida SSH). Suite_api is managed by Docker
 # Compose, not by this process (--no-manage-suite-api).
@@ -20,11 +32,13 @@ COPY scripts/launcher_control_service.py scripts/launcher_control_service.py
 # modules.json is read at startup to load module definitions.
 # assets/ also contains overlay staging files for PYNQ provisioning.
 COPY nmtk/neuro_toolkit/assets/ nmtk/neuro_toolkit/assets/
+COPY --from=neurochip-artifact-builder /artifacts/ /app/artifacts/neurochip/
 
 # State and secrets are redirected to Docker volumes via these env vars.
 # Matches the volume mount points declared in docker-compose.yml.
 ENV NMTK_STATE_DIR=/app/state
 ENV NMTK_DATA_DIR=/app/data
+ENV NMTK_NEUROCHIP_ARTIFACT_DIR=/app/artifacts/neurochip
 ENV PYTHONUNBUFFERED=1
 
 # Create a non-root user. State/data directories are created here so Docker

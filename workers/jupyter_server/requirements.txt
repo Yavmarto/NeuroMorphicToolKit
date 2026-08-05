@@ -33,6 +33,9 @@ tqdm
 # as already-satisfied. In standalone mode torch installs the build that matches
 # the user's platform (GPU where available), which is the desired behaviour.
 torch
+torchvision
+onnx>=1.17,<2
+onnxruntime>=1.20,<2
 pytorch-lightning
 jax
 

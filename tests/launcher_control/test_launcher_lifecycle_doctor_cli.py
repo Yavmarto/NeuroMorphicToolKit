@@ -251,7 +251,17 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             ),
             mock.patch.object(self.state, "_shutdown") as mock_shutdown,
         ):
-            mock_shutdown.wait.side_effect = [False, True]
+            # A callable avoids a fragile finite iterator when another
+            # lifecycle worker observes the mocked shutdown event during
+            # test teardown.
+            poll_count = 0
+
+            def stop_after_first_poll(_: float) -> bool:
+                nonlocal poll_count
+                poll_count += 1
+                return poll_count > 1
+
+            mock_shutdown.wait.side_effect = stop_after_first_poll
             self.state._health_poll_loop()
 
         payload = self.state.serialize_module("dummy")

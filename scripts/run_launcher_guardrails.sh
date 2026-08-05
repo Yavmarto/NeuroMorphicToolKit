@@ -87,25 +87,36 @@ require_cmd() {
   fi
 }
 
-# Resolve a Python 3 interpreter: tries python3, python, then the active conda
-# prefix.  Prints the resolved command name/path on success.
+# Resolve a Python 3 interpreter that contains the guardrails' own runtime
+# dependencies. Prefer an active/repository environment before system Python;
+# a bare Python executable is not sufficient when it lacks packaging or pytest.
+# Prints the resolved command name/path on success.
 find_python3() {
   local cmd
-  for cmd in python3 python; do
-    if command -v "$cmd" >/dev/null 2>&1; then
-      if "$cmd" -c "import sys; exit(0 if sys.version_info.major == 3 else 1)" 2>/dev/null; then
-        printf '%s\n' "$cmd"
-        return 0
-      fi
+  local candidates=()
+  if [ -n "${VIRTUAL_ENV:-}" ]; then
+    candidates+=("${VIRTUAL_ENV}/bin/python")
+  fi
+  candidates+=(
+    "$ROOT_DIR/.venv/bin/python"
+    "$ROOT_DIR/.test-venv/bin/python"
+    python3
+    python
+  )
+  if [ -n "${CONDA_PREFIX:-}" ]; then
+    candidates+=("${CONDA_PREFIX}/bin/python")
+  fi
+  for cmd in "${candidates[@]}"; do
+    if [[ "$cmd" == */* ]]; then
+      [ -x "$cmd" ] || continue
+    elif ! command -v "$cmd" >/dev/null 2>&1; then
+      continue
     fi
-  done
-  # Conda fallback: CONDA_PREFIX is set when a conda env is active.
-  if [ -n "${CONDA_PREFIX:-}" ] && [ -x "${CONDA_PREFIX}/bin/python" ]; then
-    if "${CONDA_PREFIX}/bin/python" -c "import sys; exit(0 if sys.version_info.major == 3 else 1)" 2>/dev/null; then
-      printf '%s\n' "${CONDA_PREFIX}/bin/python"
+    if "$cmd" -c "import packaging, pytest, sys; exit(0 if sys.version_info.major == 3 else 1)" 2>/dev/null; then
+      printf '%s\n' "$cmd"
       return 0
     fi
-  fi
+  done
   return 1
 }
 
@@ -159,7 +170,7 @@ print_header "Deployment Asset Bundle"
 capture_stage "deployment_asset_bundle" "$PYTHON3" scripts/sync_flutter_deployment_assets.py --check || STATUS=1
 
 print_header "Launcher Flutter Tests"
-capture_stage "launcher_flutter_tests" bash -lc "
+capture_stage "launcher_flutter_tests" bash -c "
 cd '$ROOT_DIR/nmtk/neuro_toolkit'
 flutter test
 " || STATUS=1

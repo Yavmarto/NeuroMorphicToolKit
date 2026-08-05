@@ -165,7 +165,7 @@ class ServerSetupPopupSurface extends ConsumerWidget {
             ),
             Expanded(
               child: InAppBackendSetupScreen(
-                initialHost: initialHost,
+                initialHost: _displayHost(initialHost),
                 message: message,
                 onComplete: onClose,
               ),

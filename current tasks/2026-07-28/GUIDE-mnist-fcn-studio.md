@@ -18,10 +18,8 @@ Three files are already generated and sit in `workspaces/`:
 | `mnist_val.pt` | (1000, 784) | validation / best-checkpoint selection |
 | `mnist_test.pt` | (2000, 784) | final score |
 
-To regenerate or scale to full MNIST:
-```bash
-uv run "current tasks/2026-07-28/prepare_mnist_pt.py"
-```
+For the full-MNIST companion, use **Akida Runtime → Create MNIST Demo** in Studio. The generated
+embedded notebook downloads MNIST, trains, verifies ONNX parity, and creates the deployment bundle.
 
 Each Data Loader node has a file picker — select the file there and the `Dataset Path` field fills
 itself with the uploaded path. Don't type the `workspaces/...` path by hand.
@@ -148,9 +146,11 @@ defaults it to on when the field is absent
 Go to Step 5 (Jupyter Lab) and generate. Check these in the notebook **before** you run anything:
 
 1. **Architecture cell** contains, twice:
-   `snn.Leaky(beta=0.950000, threshold=1.0000, reset_mechanism='zero', init_hidden=True, ...)`
+   `snn.Leaky(beta=0.950000, threshold=20.0000, reset_mechanism='zero', init_hidden=True, ...)`
    If beta is not `0.950000`, the tau→beta conversion didn't land as expected. Read the `dt` the
-   generator used and set `Tau = dt / 0.05` instead.
+   generator used and set `Tau = dt / 0.05` instead. The effective threshold is 20 because the NIR
+   resistance/input scale is `r × dt / tau = 0.05`; the snnTorch and Sinabs adapters both apply this
+   same correction.
 2. **Architecture cell** says `Net: 794000 parameters`.
 3. **Train cell** contains `torch.optim.Adam(net.parameters(), lr=0.0005, ...)` and
    `for epoch in range(5)`.
@@ -189,8 +189,9 @@ Measured by running the exact generated code against these exact `.pt` files, se
 
 Validation peaks at epoch 5 and dips at 6 — mild overfitting. Don't raise the epoch count.
 
-Once this matches, re-run `prepare_mnist_pt.py` with `N_TRAIN = 60000` / `N_TEST = 10000` for
-roughly 97%.
+Once this matches, use **Create MNIST Demo** in the Akida Runtime panel for the separate full-MNIST
+companion. That notebook uses all 60,000 training and 10,000 test examples without requiring a
+local preparation command.
 
 ---
 
@@ -234,3 +235,31 @@ Back to Braille, in this order:
    L1 0.001 / L2 1e-6, fast_sigmoid slope 5, **no Gradient Clip, no Reduce LR on Plateau** — neither
    exists in the reference notebook.
 3. Only then re-add the two stability nodes, one run at a time.
+
+---
+
+## 10. Multi-framework proof: trained NIR → Sinabs
+
+The Studio training loop is verified only for **snnTorch**. Sinabs, Nengo, Brian2, PyNN,
+Rockpool, Lava, SC-NeuroCore, and the CNL-mapped Akida target are shown as inference/code-generation
+targets; Studio will no longer place their generated models inside the generic snnTorch optimizer
+loop.
+
+To demonstrate a second framework without retraining a different model:
+
+1. Add **NIR Exporter** to the Train canvas and leave `Filename` as `model.nir`.
+2. Generate the snnTorch notebook and run it through evaluation. The exporter runs once after the
+   last epoch, reloads `best_model.pt`, and copies every trained Linear/Affine tensor into `model.nir`.
+3. Import `model.nir` in the Architecture step, select **Sinabs**, and generate a new notebook.
+4. Run evaluation. The Sinabs wrapper resets state per batch, presents each image for 25 timesteps,
+   and returns time-first spike counts compatible with Studio's Accuracy node.
+
+Sinabs remains labeled **approximate** because its discrete LIF/reset implementation is mapped from
+the effective snnTorch decay and threshold rather than being the original training runtime. The
+2,000-sample acceptance gate is snnTorch accuracy ≥92%, Sinabs accuracy ≥90%, and prediction
+agreement ≥90%; record the measured values in this guide after a verified run.
+
+For physical Akida inference, go to **Results → Deploy to Hardware → Akida → Akida Runtime** and
+continue with [the companion guide](../2026-08-04/GUIDE-akida-mnist-companion.md). The existing
+794,000-weight FCN does not fit the fixed PYNQ/SC-NeuroCore overlay (256 neurons, two populations,
+15,360 synapses).

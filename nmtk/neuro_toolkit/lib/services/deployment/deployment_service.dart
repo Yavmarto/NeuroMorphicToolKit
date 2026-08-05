@@ -13,6 +13,7 @@ enum DeploymentPhase {
   verifyingSuiteApi,
   verifyingLauncherControl,
   verifyingOptionalCapabilities,
+  updatingAkidaRuntime,
   completed,
   failed,
   cancelled,
@@ -35,6 +36,7 @@ extension DeploymentPhaseWireName on DeploymentPhase {
           'verifying_launcher_control',
         DeploymentPhase.verifyingOptionalCapabilities =>
           'verifying_optional_capabilities',
+        DeploymentPhase.updatingAkidaRuntime => 'updating_akida_runtime',
         DeploymentPhase.completed => 'completed',
         DeploymentPhase.failed => 'failed',
         DeploymentPhase.cancelled => 'cancelled',

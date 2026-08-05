@@ -5,11 +5,22 @@ import json
 import nmtk.launcher_control.server as launcher_server
 from unittest import mock
 import os
+import subprocess
+import zipfile
 import nmtk.launcher_control.provisioning_helpers as provisioning_helpers
 from base import LauncherControlServiceTestBase
 
 
 class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
+    @staticmethod
+    def _write_test_neurochip_wheel(path: Path, version: str = "1.2.3") -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(path, "w") as wheel:
+            wheel.writestr(
+                f"neurochip-{version}.dist-info/METADATA",
+                f"Metadata-Version: 2.1\nName: neurochip\nVersion: {version}\n",
+            )
+
     def test_build_remote_pynq_user_space_launch_command_is_launcher_owned(
         self,
     ) -> None:
@@ -62,8 +73,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         bundle_dir = self.repo_root / "tmp-pynq-bundle"
         bundle_dir.mkdir(parents=True, exist_ok=True)
         wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-test.whl"
-        wheel_path.parent.mkdir(parents=True, exist_ok=True)
-        wheel_path.write_text("wheel", encoding="utf-8")
+        self._write_test_neurochip_wheel(wheel_path)
 
         with mock.patch.object(
             provisioning_helpers,
@@ -93,8 +103,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         bundle_dir = self.repo_root / "tmp-pynq-bundle"
         bundle_dir.mkdir(parents=True, exist_ok=True)
         wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-test.whl"
-        wheel_path.parent.mkdir(parents=True, exist_ok=True)
-        wheel_path.write_text("wheel", encoding="utf-8")
+        self._write_test_neurochip_wheel(wheel_path)
         original_exists = Path.exists
 
         def fake_exists(path: Path) -> bool:
@@ -126,8 +135,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         bundle_dir = self.repo_root / "tmp-akida-bundle"
         bundle_dir.mkdir(parents=True, exist_ok=True)
         wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-test.whl"
-        wheel_path.parent.mkdir(parents=True, exist_ok=True)
-        wheel_path.write_text("wheel", encoding="utf-8")
+        self._write_test_neurochip_wheel(wheel_path)
 
         with (
             mock.patch.object(
@@ -144,6 +152,8 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
                             "tensorflow==2.19.*",
                             "akida==2.19.1",
                             "cnn2snn==2.19.1",
+                            "quantizeml==1.2.4",
+                            "onnx>=1.17,<2",
                             "akida-models==1.13.1",
                         ]
                     }
@@ -158,6 +168,8 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
                 "tensorflow==2.19.*",
                 "akida==2.19.1",
                 "cnn2snn==2.19.1",
+                "quantizeml==1.2.4",
+                "onnx>=1.17,<2",
                 "akida-models==1.13.1",
             ],
         )
@@ -179,12 +191,38 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         self.assertIn("sudo_cmd apt-get update", install_script)
         self.assertIn('if [ ! -s "$TOKEN_PATH" ]; then', install_script)
         self.assertIn('token_tmp="$(mktemp)"', install_script)
-        self.assertIn('sudo_cmd install -D -m 0600 -o "$SERVICE_USER" -g "$SERVICE_USER" "$token_tmp" "$TOKEN_PATH"', install_script)
+        self.assertIn(
+            'sudo_cmd install -D -m 0600 -o "$SERVICE_USER" -g "$SERVICE_USER" "$token_tmp" "$TOKEN_PATH"',
+            install_script,
+        )
         self.assertIn('if [ -z "$TOKEN_VALUE" ]; then', install_script)
-        self.assertIn('INSTALL_STATUS_PAYLOAD="$(sudo_cmd cat "$INSTALL_STATUS_PATH")"', install_script)
+        self.assertIn(
+            'INSTALL_STATUS_PAYLOAD="$(sudo_cmd cat "$INSTALL_STATUS_PATH")"',
+            install_script,
+        )
         self.assertIn('if [ -z "$INSTALL_STATUS_PAYLOAD" ]; then', install_script)
+        self.assertIn(
+            'pip" install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            install_script,
+        )
+        self.assertNotIn(
+            'pip" install --force-reinstall --no-deps "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            install_script,
+        )
+        self.assertIn("trap rollback_on_error EXIT", install_script)
+        self.assertIn('ACTIVATION_PENDING="1"', install_script)
+        self.assertIn("rollback_release || true", install_script)
+        self.assertIn('ACTIVATION_PENDING="0"', install_script)
         self.assertNotIn("| sudo_cmd tee", install_script)
         self.assertNotIn("sudo -n apt-get update", install_script)
+        syntax = subprocess.run(
+            ["bash", "-n"],
+            input=install_script,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
         self.assertTrue((bundle_dir / "wheels" / "neurochip-test.whl").exists())
 
     def test_build_local_akida_bundle_does_not_depend_on_neurochip_provisioning_tree(
@@ -199,8 +237,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         bundle_dir = self.repo_root / "tmp-akida-bundle"
         bundle_dir.mkdir(parents=True, exist_ok=True)
         wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-test.whl"
-        wheel_path.parent.mkdir(parents=True, exist_ok=True)
-        wheel_path.write_text("wheel", encoding="utf-8")
+        self._write_test_neurochip_wheel(wheel_path)
         original_exists = Path.exists
 
         def fake_exists(path: Path) -> bool:
@@ -223,6 +260,8 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
                             "tensorflow==2.19.*",
                             "akida==2.19.1",
                             "cnn2snn==2.19.1",
+                            "quantizeml==1.2.4",
+                            "onnx>=1.17,<2",
                             "akida-models==1.13.1",
                         ]
                     }
@@ -299,7 +338,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
             RuntimeError,
             "No SSH password is configured for this Akida host",
         ):
-            self.state._prepare_akida_ssh_invocation(self.state._get_akida_host(host["id"]))
+            self.state._prepare_akida_ssh_invocation(
+                self.state._get_akida_host(host["id"])
+            )
 
     def test_akida_ssh_requires_supported_credential_mode(self) -> None:
         host = self.state.create_akida_host(
@@ -315,7 +356,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
             RuntimeError,
             "Akida host SSH operations require password or SSH-key authentication",
         ):
-            self.state._prepare_akida_ssh_invocation(self.state._get_akida_host(host["id"]))
+            self.state._prepare_akida_ssh_invocation(
+                self.state._get_akida_host(host["id"])
+            )
 
     def test_akida_ssh_password_auth_uses_askpass_without_sshpass(self) -> None:
         host = self.state.create_akida_host(
@@ -376,9 +419,10 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         }
         bundle_dir = self.repo_root / "tmp-contract-akida-bundle"
         bundle_dir.mkdir(parents=True, exist_ok=True)
-        wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-contract-test.whl"
-        wheel_path.parent.mkdir(parents=True, exist_ok=True)
-        wheel_path.write_text("wheel", encoding="utf-8")
+        wheel_path = (
+            self.repo_root / "Neurochip" / "dist" / "neurochip-contract-test.whl"
+        )
+        self._write_test_neurochip_wheel(wheel_path)
 
         with (
             mock.patch.object(
@@ -401,7 +445,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         self.assertEqual(result["runtimePort"], 9200)
         self.assertEqual(result["controlPort"], 9290)
 
-    def test_apply_preflight_to_akida_host_marks_user_space_install_degraded(self) -> None:
+    def test_apply_preflight_to_akida_host_marks_user_space_install_degraded(
+        self,
+    ) -> None:
         host = self.state.create_akida_host(
             {
                 "displayName": "Lab Akida",
@@ -422,8 +468,12 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         )
 
         self.assertEqual(updated["state"], "degraded_optional_capability")
-        self.assertIn("Runtime is installed in user space.", updated["lastPreflightMessage"])
-        self.assertIn("Enable passwordless sudo for 'operator'", updated["lastPreflightMessage"])
+        self.assertIn(
+            "Runtime is installed in user space.", updated["lastPreflightMessage"]
+        )
+        self.assertIn(
+            "Enable passwordless sudo for 'operator'", updated["lastPreflightMessage"]
+        )
 
     def test_restart_akida_host_services_returns_warning_for_user_space_install(
         self,
@@ -448,7 +498,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         self.assertIn("Enable passwordless sudo for 'operator'", result["warning"])
         self.assertIn("re-run Provision Runtime", result["warning"])
 
-    def test_provision_akida_host_updates_paths_from_user_space_install_status(self) -> None:
+    def test_provision_akida_host_updates_paths_from_user_space_install_status(
+        self,
+    ) -> None:
         host = self.state.create_akida_host(
             {
                 "displayName": "Lab Akida",
@@ -485,7 +537,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
                 side_effect=["", install_output],
             ),
             mock.patch.object(self.state, "_run_akida_scp"),
-            mock.patch.object(self.state, "_read_remote_akida_token", return_value="token-123"),
+            mock.patch.object(
+                self.state, "_read_remote_akida_token", return_value="token-123"
+            ),
             mock.patch.object(
                 self.state,
                 "fetch_akida_host_preflight",
@@ -554,7 +608,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
                 "_read_remote_akida_install_status",
                 return_value=install_status,
             ) as read_status,
-            mock.patch.object(self.state, "_read_remote_akida_token", return_value="token-123"),
+            mock.patch.object(
+                self.state, "_read_remote_akida_token", return_value="token-123"
+            ),
             mock.patch.object(
                 self.state,
                 "fetch_akida_host_preflight",
@@ -566,7 +622,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         self.assertEqual(result["installStatus"]["installMode"], "systemd")
         read_status.assert_called_once()
 
-    def test_provision_akida_host_parses_multiline_install_status_sentinel(self) -> None:
+    def test_provision_akida_host_parses_multiline_install_status_sentinel(
+        self,
+    ) -> None:
         host = self.state.create_akida_host(
             {
                 "displayName": "Lab Akida",
@@ -618,7 +676,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
                 side_effect=["", install_output],
             ),
             mock.patch.object(self.state, "_run_akida_scp"),
-            mock.patch.object(self.state, "_read_remote_akida_token", return_value="token-123"),
+            mock.patch.object(
+                self.state, "_read_remote_akida_token", return_value="token-123"
+            ),
             mock.patch.object(
                 self.state,
                 "fetch_akida_host_preflight",
@@ -669,7 +729,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
                 side_effect=["", install_output],
             ) as run_ssh,
             mock.patch.object(self.state, "_run_akida_scp"),
-            mock.patch.object(self.state, "_read_remote_akida_token", return_value="token-123"),
+            mock.patch.object(
+                self.state, "_read_remote_akida_token", return_value="token-123"
+            ),
             mock.patch.object(
                 self.state,
                 "fetch_akida_host_preflight",
@@ -685,7 +747,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         self.assertIn("NMTK_AKIDA_SUDO_PASSWORD=<redacted>", display_command)
         self.assertNotIn("secret", display_command)
 
-    def test_read_remote_akida_token_uses_sudo_password_without_logging_it(self) -> None:
+    def test_read_remote_akida_token_uses_sudo_password_without_logging_it(
+        self,
+    ) -> None:
         host = self.state.create_akida_host(
             {
                 "displayName": "Lab Akida",
@@ -729,7 +793,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
             "installMode": "systemd",
             "message": "Akida host installation completed.",
             "runtimeApiUrl": "http://unresolvable-hostname:8002",
-            "controlApiUrl": "http://unresolvable-hostname:8090",
+            "controlApiUrl": "http://unresolvable-hostname:8091",
             "hostOs": "linux",
             "pythonVersion": "3.11.8",
             "serviceUser": "neurochip",
@@ -875,7 +939,9 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         self.assertEqual(wait_for_health.call_count, 2)
         self.assertEqual(fetch_preflight.call_count, 2)
 
-    def test_fetch_pynq_board_preflight_marks_overlay_missing_when_assets_are_missing(self) -> None:
+    def test_fetch_pynq_board_preflight_marks_overlay_missing_when_assets_are_missing(
+        self,
+    ) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",

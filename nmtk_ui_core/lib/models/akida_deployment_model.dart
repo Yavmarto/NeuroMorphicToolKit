@@ -499,6 +499,11 @@ class AkidaPairedHost {
   final String lastVerifiedAt;
   final bool isDefault;
   final AkidaEnvironmentChecks? capabilitySnapshot;
+  final String installedRuntimeVersion;
+  final String availableRuntimeVersion;
+  final String runtimeArtifactSha256;
+  final String runtimeUpdateState;
+  final AkidaRuntimeUpdateJob? lastRuntimeUpdateJob;
 
   const AkidaPairedHost({
     required this.id,
@@ -523,9 +528,18 @@ class AkidaPairedHost {
     required this.lastVerifiedAt,
     this.isDefault = false,
     this.capabilitySnapshot,
+    this.installedRuntimeVersion = '',
+    this.availableRuntimeVersion = '',
+    this.runtimeArtifactSha256 = '',
+    this.runtimeUpdateState = '',
+    this.lastRuntimeUpdateJob,
   });
 
   bool get isReady => state == AkidaPairedHostState.ready;
+
+  bool get hasRuntimeUpdate =>
+      availableRuntimeVersion.isNotEmpty &&
+      installedRuntimeVersion != availableRuntimeVersion;
 
   factory AkidaPairedHost.fromJson(Map<String, dynamic> json) {
     return AkidaPairedHost(
@@ -595,6 +609,15 @@ class AkidaPairedHost {
               json['capability_snapshot'] as Map<String, dynamic>,
             )
           : null,
+      installedRuntimeVersion: json['installedRuntimeVersion'] as String? ?? '',
+      availableRuntimeVersion: json['availableRuntimeVersion'] as String? ?? '',
+      runtimeArtifactSha256: json['runtimeArtifactSha256'] as String? ?? '',
+      runtimeUpdateState: json['runtimeUpdateState'] as String? ?? '',
+      lastRuntimeUpdateJob: json['lastRuntimeUpdateJob'] is Map<String, dynamic>
+          ? AkidaRuntimeUpdateJob.fromJson(
+              json['lastRuntimeUpdateJob'] as Map<String, dynamic>,
+            )
+          : null,
     );
   }
 
@@ -623,6 +646,12 @@ class AkidaPairedHost {
       'isDefault': isDefault,
       if (capabilitySnapshot != null)
         'capabilitySnapshot': capabilitySnapshot!.toJson(),
+      'installedRuntimeVersion': installedRuntimeVersion,
+      'availableRuntimeVersion': availableRuntimeVersion,
+      'runtimeArtifactSha256': runtimeArtifactSha256,
+      'runtimeUpdateState': runtimeUpdateState,
+      if (lastRuntimeUpdateJob != null)
+        'lastRuntimeUpdateJob': lastRuntimeUpdateJob!.toJson(),
     };
   }
 
@@ -649,6 +678,11 @@ class AkidaPairedHost {
     String? lastVerifiedAt,
     bool? isDefault,
     AkidaEnvironmentChecks? capabilitySnapshot,
+    String? installedRuntimeVersion,
+    String? availableRuntimeVersion,
+    String? runtimeArtifactSha256,
+    String? runtimeUpdateState,
+    AkidaRuntimeUpdateJob? lastRuntimeUpdateJob,
   }) {
     return AkidaPairedHost(
       id: id ?? this.id,
@@ -673,8 +707,87 @@ class AkidaPairedHost {
       lastVerifiedAt: lastVerifiedAt ?? this.lastVerifiedAt,
       isDefault: isDefault ?? this.isDefault,
       capabilitySnapshot: capabilitySnapshot ?? this.capabilitySnapshot,
+      installedRuntimeVersion:
+          installedRuntimeVersion ?? this.installedRuntimeVersion,
+      availableRuntimeVersion:
+          availableRuntimeVersion ?? this.availableRuntimeVersion,
+      runtimeArtifactSha256:
+          runtimeArtifactSha256 ?? this.runtimeArtifactSha256,
+      runtimeUpdateState: runtimeUpdateState ?? this.runtimeUpdateState,
+      lastRuntimeUpdateJob: lastRuntimeUpdateJob ?? this.lastRuntimeUpdateJob,
     );
   }
+}
+
+/// Persisted launcher job for installing the release-matched Neurochip wheel.
+class AkidaRuntimeUpdateJob {
+  const AkidaRuntimeUpdateJob({
+    required this.jobId,
+    required this.hostId,
+    required this.artifactVersion,
+    required this.artifactSha256,
+    required this.stage,
+    required this.progress,
+    required this.message,
+    required this.status,
+    this.errorCode = '',
+    this.recovery = '',
+    this.installedVersion = '',
+    this.installMode = '',
+    this.rolledBack = false,
+  });
+
+  final String jobId;
+  final String hostId;
+  final String artifactVersion;
+  final String artifactSha256;
+  final String stage;
+  final int progress;
+  final String message;
+  final String status;
+  final String errorCode;
+  final String recovery;
+  final String installedVersion;
+  final String installMode;
+  final bool rolledBack;
+
+  bool get isTerminal => status == 'completed' || status == 'failed';
+  bool get isCompleted => status == 'completed';
+  bool get isFailed => status == 'failed';
+
+  factory AkidaRuntimeUpdateJob.fromJson(Map<String, dynamic> json) {
+    return AkidaRuntimeUpdateJob(
+      jobId: json['jobId'] as String? ?? '',
+      hostId: json['hostId'] as String? ?? '',
+      artifactVersion: json['artifactVersion'] as String? ?? '',
+      artifactSha256: json['artifactSha256'] as String? ?? '',
+      stage: json['stage'] as String? ?? 'queued',
+      progress: (json['progress'] as num?)?.round() ?? 0,
+      message: json['message'] as String? ?? '',
+      status: json['status'] as String? ?? 'queued',
+      errorCode: json['errorCode'] as String? ?? '',
+      recovery: json['recovery'] as String? ?? '',
+      installedVersion: json['installedVersion'] as String? ?? '',
+      installMode: json['installMode'] as String? ?? '',
+      rolledBack: json['rolledBack'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'jobId': jobId,
+    'hostId': hostId,
+    'artifactVersion': artifactVersion,
+    'artifactSha256': artifactSha256,
+    'stage': stage,
+    'progress': progress,
+    'message': message,
+    'status': status,
+    'errorCode': errorCode,
+    'recovery': recovery,
+    'installedVersion': installedVersion,
+    'installMode': installMode,
+    'rolledBack': rolledBack,
+  };
 }
 
 // ---------------------------------------------------------------------------

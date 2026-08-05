@@ -188,9 +188,14 @@ run_python_module() {
 run_flutter_module() {
   local mod="$1" dir="$2"
 
+  # Some modules (e.g. Neurochip/frontend) intentionally have no pubspec.yaml —
+  # they are IDE stubs, not real Flutter apps (see that module's AGENTS.md).
+  # The GitHub Actions workflow already treats a missing pubspec.yaml as a
+  # no-op success for these; mirror that here instead of hard-failing, so
+  # local CI matches the server pipeline.
   if [ ! -d "$dir" ] || [ ! -f "$dir/pubspec.yaml" ]; then
-    echo -e "${YELLOW}$mod: directory or pubspec.yaml not found, skipping${RESET}"
-    exit 1
+    echo -e "${YELLOW}$mod: directory or pubspec.yaml not found, skipping (not a real Flutter module)${RESET}"
+    return 0
   fi
 
   echo ""

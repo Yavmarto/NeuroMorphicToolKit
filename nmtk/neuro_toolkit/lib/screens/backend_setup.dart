@@ -234,6 +234,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   DeploymentPreflightResult? _preflight;
   Map<String, String>? _preflightSnapshot;
   bool _isWorking = false;
+  AkidaRuntimeUpdateJob? _akidaRetryJob;
   bool _factoryReset = false;
   String? _hostError;
   String? _submittedDeploymentJobId;
@@ -884,9 +885,13 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final isTerminal = job.isTerminal;
     final isStalled = stalledReason != null;
     final isSuccess = job.stage == 'completed';
-    final isJupyterDegraded = job.error.startsWith(
-      'degraded optional capability: Jupyter',
-    );
+    final isJupyterDegraded =
+        job.error.contains('degraded optional capability:') &&
+            job.error.contains('Jupyter');
+    final isAkidaDegraded =
+        job.error.contains('degraded optional capability:') &&
+            job.error.toLowerCase().contains('akida');
+    final isDegraded = isJupyterDegraded || isAkidaDegraded;
     // Phase updates (_emit server-side) copy their message into stageLabel,
     // so the last log entry duplicates the headline — but raw streamed
     // output lines (_emit_log) do not. Drop the last entry only when it
@@ -914,11 +919,13 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         ? 'Server setup stopped responding at ${job.percent.round()}%'
         : !isTerminal
             ? '${job.percent.round()}% — ${job.stageLabel}'
-            : isSuccess
-                ? 'Deployed'
-                : isJupyterDegraded
-                    ? 'Notebook capability needs recovery'
-                    : job.failureDetails?.summary ?? 'Server setup failed';
+            : isSuccess && isAkidaDegraded
+                ? 'Akida runtime needs recovery'
+                : isSuccess
+                    ? 'Deployed'
+                    : isJupyterDegraded
+                        ? 'Notebook capability needs recovery'
+                        : job.failureDetails?.summary ?? 'Server setup failed';
     final failure = job.failureDetails;
 
     return NmtkSurfaceCard(
@@ -932,14 +939,18 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                 Icon(
                   !isTerminal && !isStalled
                       ? ZetaIcons.sync
-                      : isSuccess
-                          ? ZetaIcons.check_circle
-                          : ZetaIcons.error,
+                      : isSuccess && isDegraded
+                          ? ZetaIcons.warning_outline
+                          : isSuccess
+                              ? ZetaIcons.check_circle
+                              : ZetaIcons.error,
                   color: isStalled
                       ? tokens.errorColor
                       : isTerminal
                           ? (isSuccess
-                              ? tokens.healthyColor
+                              ? (isDegraded
+                                  ? tokens.warningColor
+                                  : tokens.healthyColor)
                               : tokens.errorColor)
                           : null,
                 ),
@@ -1014,6 +1025,14 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               const Text(
                 'The backend is reachable, but Jupyter is not ready yet. '
                 'Recovering keeps existing notebook data.',
+              ),
+            ],
+            if (isAkidaDegraded) ...[
+              SizedBox(height: tokens.compactGap),
+              const Text(
+                'The core backend is current and usable. Retry updates only '
+                'the selected Akida host and does not recreate backend '
+                'containers, workspaces, or notebooks.',
               ),
             ],
             SizedBox(height: tokens.compactGap),
@@ -1146,10 +1165,21 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             ),
           if (job != null &&
               job.isTerminal &&
-              job.error.startsWith('degraded optional capability: Jupyter'))
+              job.error.contains('degraded optional capability:') &&
+              job.error.contains('Jupyter'))
             ZetaButton(
               onPressed: _isWorking ? null : _recoverJupyter,
               label: 'Recover Jupyter',
+              type: ZetaButtonType.subtle,
+            ),
+          if (job != null &&
+              job.isTerminal &&
+              job.error.contains('degraded optional capability:') &&
+              job.error.toLowerCase().contains('akida'))
+            ZetaButton(
+              key: const Key('backend-setup-retry-akida-update'),
+              onPressed: _isWorking ? null : _retryAkidaRuntime,
+              label: _isWorking ? 'Updating Akida…' : 'Retry Akida update',
               type: ZetaButtonType.subtle,
             ),
         ],
@@ -1187,10 +1217,21 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           ),
         if (job != null &&
             job.isTerminal &&
-            job.error.startsWith('degraded optional capability: Jupyter'))
+            job.error.contains('degraded optional capability:') &&
+            job.error.contains('Jupyter'))
           ZetaButton(
             onPressed: _isWorking ? null : _recoverJupyter,
             label: 'Recover Jupyter',
+            type: ZetaButtonType.subtle,
+          ),
+        if (job != null &&
+            job.isTerminal &&
+            job.error.contains('degraded optional capability:') &&
+            job.error.toLowerCase().contains('akida'))
+          ZetaButton(
+            key: const Key('backend-setup-retry-akida-update'),
+            onPressed: _isWorking ? null : _retryAkidaRuntime,
+            label: _isWorking ? 'Updating Akida…' : 'Retry Akida update',
             type: ZetaButtonType.subtle,
           ),
       ],
@@ -1378,11 +1419,60 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     await _deploy();
   }
 
+  /// Whether a paired Akida host is in a state the user can act on from here.
+  ///
+  /// A host that installed but landed on the simulator, or whose preflight
+  /// failed, is exactly as much in need of "Retry Akida update" as one with a
+  /// pending version — but only the latter used to raise this banner, so the
+  /// retry button was reachable only after a *deploy job* had failed with a
+  /// matching error string. Named helper rather than an inline state list
+  /// because the same question is asked again below to pick the copy.
+  static bool _akidaRuntimeDegraded(AkidaPairedHost? host) {
+    if (host == null) return false;
+    return switch (host.state) {
+      AkidaPairedHostState.degraded ||
+      AkidaPairedHostState.degradedOptionalCapability ||
+      AkidaPairedHostState.simulatorOnly ||
+      AkidaPairedHostState.preflightFailed ||
+      AkidaPairedHostState.provisionFailed ||
+      AkidaPairedHostState.blocked ||
+      AkidaPairedHostState.error =>
+        true,
+      _ => false,
+    };
+  }
+
   Widget _buildUpdateBanner(NmtkShellTokens tokens) {
     final update = ref.watch(backendUpdateProvider).value;
-    // Null covers every "nothing to offer" case — unreachable backend, source
-    // build, GitHub down, already current. Never guess at an update.
-    if (update == null) return const SizedBox.shrink();
+    final akidaHost = ref.watch(selectedAkidaRuntimeStatusProvider).value;
+    final akidaJob = _akidaRetryJob ?? akidaHost?.lastRuntimeUpdateJob;
+    final akidaDegraded = _akidaRuntimeDegraded(akidaHost);
+    final akidaNeedsAttention = akidaHost != null &&
+        (akidaHost.hasRuntimeUpdate ||
+            akidaJob?.isFailed == true ||
+            akidaDegraded);
+    // Keep optional runtime recovery visible even when the suite release is
+    // already current. Null still means "do not guess" for each independent
+    // update source.
+    if (update == null &&
+        !akidaNeedsAttention &&
+        akidaJob?.isTerminal != false) {
+      return const SizedBox.shrink();
+    }
+    final isAkidaRunning = akidaJob != null && !akidaJob.isTerminal;
+    // A degraded host whose version is current does not need "an update" — it
+    // needs attention, and the reason is the only useful thing to say.
+    final akidaDegradedOnly =
+        akidaDegraded && akidaHost?.hasRuntimeUpdate != true;
+    final title = update != null
+        ? 'Backend update available — ${update.version}'
+        : isAkidaRunning
+            ? 'Updating selected Akida runtime'
+            : akidaDegradedOnly
+                ? 'Selected Akida runtime needs attention — '
+                    '${akidaHost!.state.label}'
+                : 'Selected Akida runtime needs an update';
+    final akidaReason = akidaHost?.lastReadinessMessage.trim() ?? '';
     return Padding(
       padding: EdgeInsets.only(bottom: tokens.sectionGap),
       child: NmtkSurfaceCard(
@@ -1393,20 +1483,52 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               NmtkStatusBanner(
-                title: 'Backend update available — ${update.version}',
-                content: const Text(
-                  'Your workspaces and notebooks are kept. The backend '
-                  'restarts while it updates, so finish any running training '
-                  'first.',
+                title: title,
+                content: Text(
+                  update != null
+                      ? 'Your workspaces and notebooks are kept. The backend '
+                          'restarts, then the selected Akida runtime is updated '
+                          'automatically when one is paired.'
+                      : akidaDegradedOnly
+                          ? '${akidaReason.isEmpty ? 'The host reported no '
+                                  'usable Akida runtime.' : akidaReason} '
+                              'Reinstalling the runtime on '
+                              '${akidaHost!.displayName} is the first thing to '
+                              'try. Backend containers, workspaces, and '
+                              'notebooks are not recreated.'
+                          : 'Only ${akidaHost?.displayName ?? 'the selected Akida host'} '
+                              'will be updated. Backend containers, workspaces, and '
+                              'notebooks are not recreated.',
                 ),
-                tone: NmtkTone.info,
+                tone: akidaJob?.isFailed == true || akidaDegradedOnly
+                    ? NmtkTone.warning
+                    : NmtkTone.info,
               ),
+              if (akidaJob != null) ...[
+                SizedBox(height: tokens.compactGap),
+                Text(akidaJob.message),
+                if (!akidaJob.isTerminal) ...[
+                  SizedBox(height: tokens.compactGap),
+                  LinearProgressIndicator(value: akidaJob.progress / 100),
+                ],
+                if (akidaJob.isFailed && akidaJob.recovery.isNotEmpty) ...[
+                  SizedBox(height: tokens.compactGap),
+                  Text(akidaJob.recovery),
+                ],
+              ],
               SizedBox(height: tokens.compactGap),
-              ZetaButton(
-                key: const Key('backend-update-action'),
-                onPressed: _isWorking ? null : _updateBackend,
-                label: _isWorking ? 'Updating…' : 'Update backend',
-              ),
+              if (update != null)
+                ZetaButton(
+                  key: const Key('backend-update-action'),
+                  onPressed: _isWorking ? null : _updateBackend,
+                  label: _isWorking ? 'Updating…' : 'Update backend',
+                )
+              else
+                ZetaButton(
+                  key: const Key('backend-update-retry-akida'),
+                  onPressed: _isWorking ? null : _retryAkidaRuntime,
+                  label: _isWorking ? 'Updating Akida…' : 'Retry Akida update',
+                ),
             ],
           ),
         ),
@@ -1421,6 +1543,42 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     // nudge one already-degraded optional service.
     await ref.read(backendDeploymentProvider.notifier).retryJupyter();
     if (mounted) setState(() => _isWorking = false);
+  }
+
+  Future<void> _retryAkidaRuntime() async {
+    setState(() => _isWorking = true);
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final settings = await controlApi.fetchSettings();
+      final selectedHost = settings.selectedAkidaHost;
+      if (selectedHost == null) {
+        throw StateError(
+          'Select an Akida target in CNL Studio Setup before retrying.',
+        );
+      }
+      var update = await controlApi.startAkidaRuntimeUpdate(selectedHost.id);
+      if (mounted) setState(() => _akidaRetryJob = update);
+      while (!update.isTerminal) {
+        await Future<void>.delayed(const Duration(seconds: 1));
+        update = await controlApi.fetchAkidaRuntimeUpdate(
+          selectedHost.id,
+          update.jobId,
+        );
+        if (mounted) setState(() => _akidaRetryJob = update);
+      }
+      ref.invalidate(selectedAkidaRuntimeStatusProvider);
+      if (update.isCompleted) {
+        await ref.read(backendDeploymentProvider.notifier).refresh();
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        setState(() {
+          _setupError = _displaySetupError(error);
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isWorking = false);
+    }
   }
 
   bool _validateRemoteHost() {

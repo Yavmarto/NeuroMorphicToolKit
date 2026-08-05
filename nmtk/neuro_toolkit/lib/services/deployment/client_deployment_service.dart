@@ -105,6 +105,11 @@ class DeploymentAssetBundle {
 }
 
 class ClientDeploymentService implements DeploymentService {
+  static const int _launcherControlPort = int.fromEnvironment(
+    'NMTK_CONTROL_API_PORT',
+    defaultValue: 8090,
+  );
+
   ClientDeploymentService({
     AssetBundle? assets,
     http.Client? httpClient,
@@ -352,7 +357,7 @@ fi
       }
       final occupiedPorts = <int>[
         request.backendPort,
-        8090,
+        _launcherControlPort,
         8008,
       ].where((port) => _portIsListed(fields['ports'], port)).toList();
       final degraded = <String>[
@@ -2554,12 +2559,12 @@ exit 1
       );
     }
     final launcherReady = await _waitForHealth(
-      Uri.parse('http://$host:8090/health'),
+      Uri.parse('http://$host:$_launcherControlPort/health'),
       attempts: attempts,
     );
     if (!launcherReady) {
       throw StateError(
-        'Launcher control did not become ready at $host:8090.',
+        'Launcher control did not become ready at $host:$_launcherControlPort.',
       );
     }
     final neuroStudioReady = await _waitForHealth(
@@ -2571,7 +2576,9 @@ exit 1
           'NeuroStudio did not become ready on the deployed server.');
     }
     final modulesResponse = await _waitForResponse(
-      Uri.parse('http://$host:8090/api/launcher/modules'),
+      Uri.parse(
+        'http://$host:$_launcherControlPort/api/launcher/modules',
+      ),
       attempts: attempts,
     );
     if (modulesResponse == null) {
@@ -2590,18 +2597,36 @@ exit 1
       Uri.parse('http://$host:8008/api/status'),
       attempts: 2,
     );
-    final logs = [...job.logs];
+    var currentJob = job;
+    final logs = [...currentJob.logs];
     if (!jupyterReady) {
       logs.add(
         'degraded optional capability: Jupyter is not ready; core services '
         'are available.',
       );
     }
-    final optionalCapabilityError = jupyterReady
+    final optionalFailures = <String>[
+      if (!jupyterReady) 'Jupyter is not ready',
+    ];
+    final akidaResult = await _updateSelectedAkidaRuntime(
+      currentJob,
+      Uri.parse('http://$host:$_launcherControlPort'),
+    );
+    currentJob = akidaResult.job;
+    logs
+      ..clear()
+      ..addAll(currentJob.logs);
+    if (akidaResult.failureMessage != null) {
+      optionalFailures.add(akidaResult.failureMessage!);
+      logs.add(
+        'degraded optional capability: ${akidaResult.failureMessage}',
+      );
+    }
+    final optionalCapabilityError = optionalFailures.isEmpty
         ? ''
-        : 'degraded optional capability: Jupyter is not ready; core services '
-            'are available.';
-    return job.copyWith(
+        : 'degraded optional capability: ${optionalFailures.join('; ')}; '
+            'core services are available.';
+    return currentJob.copyWith(
       stage: DeploymentPhase.completed.wireName,
       percent: 100,
       stageLabel: 'Backend and launcher control are ready',
@@ -2611,10 +2636,152 @@ exit 1
     );
   }
 
+  Future<({DeploymentJob job, String? failureMessage})>
+      _updateSelectedAkidaRuntime(
+    DeploymentJob job,
+    Uri launcherBase,
+  ) async {
+    Map<String, dynamic> settings;
+    try {
+      final response = await _httpClient
+          .get(launcherBase.resolve('/api/launcher/settings'))
+          .timeout(const Duration(seconds: 4));
+      if (response.statusCode != 200) {
+        return (
+          job: job,
+          failureMessage:
+              'Akida target selection could not be read; retry the Akida update',
+        );
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        return (
+          job: job,
+          failureMessage:
+              'Akida target selection could not be read; retry the Akida update',
+        );
+      }
+      settings = decoded;
+    } catch (_) {
+      return (
+        job: job,
+        failureMessage:
+            'Akida target selection could not be read; retry the Akida update',
+      );
+    }
+    final selectedHostId = settings['selectedAkidaHostId'];
+    if (selectedHostId is! String || selectedHostId.trim().isEmpty) {
+      return (job: job, failureMessage: null);
+    }
+
+    final hostId = selectedHostId.trim();
+    Map<String, dynamic> update;
+    try {
+      final response = await _httpClient
+          .post(
+            launcherBase.resolve(
+              '/api/launcher/akida/hosts/$hostId/runtime-update-jobs',
+            ),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return (
+          job: job,
+          failureMessage:
+              'the selected Akida runtime update could not be started; retry it in Backend Setup',
+        );
+      }
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map<String, dynamic>) {
+        return (
+          job: job,
+          failureMessage:
+              'the selected Akida runtime returned an invalid update status; retry it in Backend Setup',
+        );
+      }
+      update = decoded;
+    } catch (_) {
+      return (
+        job: job,
+        failureMessage:
+            'the selected Akida host is offline or unreachable; retry the Akida update',
+      );
+    }
+
+    for (var poll = 0; poll < 600; poll++) {
+      final status = update['status']?.toString() ?? '';
+      final message = update['message']?.toString().trim() ?? '';
+      final progress = (update['progress'] as num?)?.toDouble() ?? 0;
+      if (status == 'completed') {
+        final version = update['installedVersion']?.toString().trim() ?? '';
+        return (
+          job: job.copyWith(
+            logs: [
+              ...job.logs,
+              version.isEmpty
+                  ? 'Selected Akida runtime is up to date.'
+                  : 'Selected Akida runtime $version is up to date.',
+            ],
+          ),
+          failureMessage: null,
+        );
+      }
+      if (status == 'failed') {
+        final recovery = update['recovery']?.toString().trim() ?? '';
+        final safeMessage = message.isEmpty
+            ? 'the selected Akida runtime update failed'
+            : message;
+        return (
+          job: job,
+          failureMessage:
+              recovery.isEmpty ? safeMessage : '$safeMessage $recovery',
+        );
+      }
+
+      final label =
+          message.isEmpty ? 'Updating selected Akida runtime' : message;
+      job = job.copyWith(
+        stage: DeploymentPhase.updatingAkidaRuntime.wireName,
+        percent: 94 + (progress.clamp(0, 100) * 0.05),
+        stageLabel: label,
+        logs: job.logs.isNotEmpty && job.logs.last == label
+            ? job.logs
+            : [...job.logs, label],
+        updatedAt: DateTime.now(),
+        lastProgressAt: DateTime.now(),
+      );
+      await _updateJob(job);
+      await Future<void>.delayed(const Duration(seconds: 1));
+      try {
+        final response = await _httpClient
+            .get(
+              launcherBase.resolve(
+                '/api/launcher/akida/hosts/$hostId/runtime-update-jobs/${update['jobId']}',
+              ),
+            )
+            .timeout(const Duration(seconds: 8));
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          continue;
+        }
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) update = decoded;
+      } catch (_) {
+        // A service restart can briefly close the launcher connection. Keep
+        // polling the persisted job instead of turning that into a core
+        // backend deployment failure.
+      }
+    }
+    return (
+      job: job,
+      failureMessage:
+          'the selected Akida runtime update timed out; retry it in Backend Setup',
+    );
+  }
+
   Future<bool> _isApiReady(DeploymentTarget target) async {
     final host = target.host.isEmpty ? '127.0.0.1' : target.host;
     return _waitForHealth(
-      Uri.parse('http://$host:8090/health'),
+      Uri.parse('http://$host:$_launcherControlPort/health'),
       attempts: 1,
     );
   }
@@ -2647,7 +2814,7 @@ exit 1
     int backendPort, {
     required int attempts,
   }) async {
-    final launcherBase = Uri.parse('http://$host:8090');
+    final launcherBase = Uri.parse('http://$host:$_launcherControlPort');
     final startResponse = await _httpClient
         .post(launcherBase.resolve('/api/launcher/modules/neurocnl/start'))
         .timeout(const Duration(seconds: 4));
@@ -2975,7 +3142,7 @@ exit 1
       environment: {
         ...Platform.environment,
         'SUITE_API_PORT': '9000',
-        'LAUNCHER_CONTROL_PORT': '8090',
+        'LAUNCHER_CONTROL_PORT': '$_launcherControlPort',
         'NMTK_IMAGE_TAG': 'latest',
       },
     );

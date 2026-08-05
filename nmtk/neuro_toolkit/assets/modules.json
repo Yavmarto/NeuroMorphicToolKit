@@ -76,6 +76,8 @@
         "tensorflow==2.19.*",
         "akida==2.19.1",
         "cnn2snn==2.19.1",
+        "quantizeml==1.2.4",
+        "onnx>=1.17,<2",
         "akida-models==1.13.1"
       ],
       "docsUrl": "https://doc.brainchipinc.com/installation.html",

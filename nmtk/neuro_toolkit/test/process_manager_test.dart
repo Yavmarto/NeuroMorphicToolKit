@@ -486,6 +486,8 @@ void main() {
             'tensorflow==2.19.*',
             'akida==2.19.1',
             'cnn2snn==2.19.1',
+            'quantizeml==1.2.4',
+            'onnx>=1.17,<2',
             'akida-models==1.13.1',
           ],
           docsUrl: 'https://doc.brainchipinc.com/installation.html',
@@ -500,6 +502,8 @@ void main() {
           (call) =>
               call.arguments.contains('install') &&
               call.arguments.contains('akida==2.19.1') &&
+              call.arguments.contains('quantizeml==1.2.4') &&
+              call.arguments.contains('onnx>=1.17,<2') &&
               call.arguments.contains('akida-models==1.13.1'),
         ),
         isTrue,
@@ -543,6 +547,8 @@ void main() {
             'tensorflow==2.19.*',
             'akida==2.19.1',
             'cnn2snn==2.19.1',
+            'quantizeml==1.2.4',
+            'onnx>=1.17,<2',
             'akida-models==1.13.1',
           ],
           docsUrl: 'https://doc.brainchipinc.com/installation.html',
