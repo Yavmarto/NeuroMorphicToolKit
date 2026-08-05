@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -51,6 +52,12 @@ from .server import (
 )
 from .provisioning_helpers import build_akida_host_bundle
 from .runtime_artifact import discover_neurochip_runtime_artifact
+
+# Signatures of raw driver/SDK output: a bare errno wrapper as the Akida SDK
+# writes it ("err(110)", "errno(110)"), or a hex register address. Matching the
+# shape rather than a specific errno keeps this from being a list of numbers
+# that has to grow every time the SDK gains a new failure.
+_RAW_DEVICE_ERROR_PATTERN = re.compile(r"\berr(?:no)?\(\d+\)|\b0x[0-9a-fA-F]{4,}\b")
 
 
 class AkidaServiceMixin:
@@ -789,6 +796,27 @@ class AkidaServiceMixin:
             display_command=display_command,
         ).strip()
 
+    def _readiness_message(self, message: str) -> str:
+        """Keep raw SDK and driver output out of the user-facing field.
+
+        The transport-level failure path already rewrites errno text for the
+        launcher-to-host hop, but an SDK-internal failure arrives inside a 200
+        JSON body and never passes through it -- which is how
+        "Error reading at 0xf0000010 len 4: err(110)" reached a user.
+
+        The paired host classifies board faults itself and sends a plain
+        sentence, so anything still carrying a raw errno or register address
+        here means the host could not name the cause. Say that, rather than
+        forwarding a register address nobody can act on. The raw text stays on
+        lastPreflightMessage, which no Akida client model reads.
+        """
+        if not _RAW_DEVICE_ERROR_PATTERN.search(message):
+            return message
+        return (
+            "The Akida board could not be reached. Switch the host fully off "
+            "and on again, then re-check."
+        )
+
     def _apply_preflight_to_akida_host(
         self,
         host_id: str,
@@ -820,17 +848,18 @@ class AkidaServiceMixin:
                 if runtime_target in {"software_fallback", "akd1000_simulator"}
                 else "degraded_optional_capability"
             )
+        # Sanitised before the user-space note is appended, so the advice
+        # survives onto the readiness message instead of being discarded with
+        # the raw text it was joined to.
+        readiness_message = self._readiness_message(message)
         install_mode = str((install_status or {}).get("installMode") or "").strip()
         if install_mode == "user-space":
-            message = " ".join(
-                part
-                for part in (
-                    message,
-                    _akida_user_space_upgrade_message(
-                        str(self._get_akida_host(host_id).get("username") or "")
-                    ),
-                )
-                if part
+            upgrade_note = _akida_user_space_upgrade_message(
+                str(self._get_akida_host(host_id).get("username") or "")
+            )
+            message = " ".join(part for part in (message, upgrade_note) if part)
+            readiness_message = " ".join(
+                part for part in (readiness_message, upgrade_note) if part
             )
             if state == "ready":
                 state = "degraded_optional_capability"
@@ -838,12 +867,14 @@ class AkidaServiceMixin:
             host_id,
             state=state,
             lastPreflightStatus=status,
+            # Raw here, sanitised on the readiness field: this one is the
+            # developer's copy and no Akida client model reads it.
             lastPreflightMessage=message,
             lastSdkStatus=sdk_status,
             lastRuntimeTarget=runtime_target,
             lastStatus=runtime_status,
             lastInstallStatus=install_status,
-            lastReadinessMessage=message,
+            lastReadinessMessage=readiness_message,
             lastVerifiedAt=datetime.now(timezone.utc).isoformat(),
         )
 

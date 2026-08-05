@@ -10,7 +10,16 @@ permissions:
   packages: write
 
 jobs:
+  # A backend release carries the Akida package manifest that every paired
+  # host installs from. If that set cannot resolve, the Akida update breaks
+  # for every user and no in-app action recovers it — the only fix is another
+  # release. Cheaper to block the tag than to ship it.
+  verify-akida-manifest:
+    uses: ./.github/workflows/verify-akida-manifest.yml
+    secrets: inherit
+
   push-docker:
+    needs: verify-akida-manifest
     runs-on: self-hosted
     strategy:
       matrix:

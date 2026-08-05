@@ -593,6 +593,86 @@ def _run_probe(command: list[str]) -> str:
     return result.stdout.strip()
 
 
+AKIDA_PCI_VENDOR = "0x1e7c"
+AKIDA_PCI_DEVICE = "0xbca1"
+PCI_DEVICES_ROOT = Path("/sys/bus/pci/devices")
+
+
+def _sysfs_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+# Reports whether the AKD1000 is fitted, bound, and answering.
+#
+# Everything here is an unprivileged sysfs read. The PCI COMMAND register
+# lives at byte offset 4, inside the first 64 bytes of config space, which
+# are world-readable - so no sudo and no extra packages. lspci was already
+# being captured next to this and never parsed, which is why a missing board,
+# a missing driver, and a wedged board all reported the same thing.
+#
+# A wedged board is the case worth naming: the driver stays bound and the
+# kernel still reports enable=1/D0, but COMMAND goes to 0, clearing Memory
+# Space Enable. Every register read then times out inside the SDK and
+# surfaces as an errno the user cannot act on.
+def _probe_akida_device() -> dict[str, object]:
+    probe: dict[str, object] = {
+        "present": False,
+        "bdf": "",
+        "driver": "",
+        "memorySpaceEnabled": None,
+    }
+    try:
+        entries = sorted(PCI_DEVICES_ROOT.iterdir())
+    except OSError:
+        return probe
+    for entry in entries:
+        if _sysfs_text(entry / "vendor").lower() != AKIDA_PCI_VENDOR:
+            continue
+        if _sysfs_text(entry / "device").lower() != AKIDA_PCI_DEVICE:
+            continue
+        probe["present"] = True
+        probe["bdf"] = entry.name
+        driver_link = entry / "driver"
+        if driver_link.is_symlink() or driver_link.exists():
+            probe["driver"] = os.path.basename(os.path.realpath(driver_link))
+        try:
+            with open(entry / "config", "rb") as config:
+                header = config.read(6)
+            if len(header) >= 6:
+                command = int.from_bytes(header[4:6], "little")
+                probe["memorySpaceEnabled"] = bool(command & 0x2)
+        except OSError:
+            pass
+        break
+    return probe
+
+
+# Plain-English remedy for a hardware fault, or "" when the board looks fine.
+# Returning "" deliberately means "not a board problem" so the caller keeps
+# whatever the SDK said - this must not mask genuine SDK faults.
+#
+# usb_text is the already-collected lsusb output. The probe only knows about
+# PCI, and BrainChip also ships USB Akida devices, so "absent from PCI" is not
+# proof of "no board" - claiming it would be a confident lie to a USB user.
+def _akida_device_message(probe: dict[str, object], usb_text: str = "") -> str:
+    if not probe.get("present"):
+        haystack = usb_text.lower()
+        if "brainchip" in haystack or "akida" in haystack:
+            return ""
+        return "No Akida board was found in this host."
+    if not probe.get("driver"):
+        return "An Akida board is fitted but its PCIe driver is not loaded."
+    if probe.get("memorySpaceEnabled") is False:
+        return (
+            "The Akida board has stopped responding. Switch the host fully off "
+            "and on again - a restart is not enough."
+        )
+    return ""
+
+
 def _local_json(path: str) -> tuple[int | None, dict[str, object]]:
     request = urllib.request.Request(
         f"{LOCAL_NEUROCHIP_BASE_URL}{path}",
@@ -622,6 +702,10 @@ def _doctor_payload() -> dict[str, object]:
     install_status = _load_install_status()
     runtime_health_status, runtime_health = _local_json("/health")
     runtime_status_status, runtime_status = _local_json("/api/neurochip/akida/status")
+    akida_device = _probe_akida_device()
+    lspci_text = _run_probe(["lspci"])
+    lsusb_text = _run_probe(["lsusb"])
+    device_message = _akida_device_message(akida_device, lsusb_text)
 
     sdk_status = str(runtime_status.get("sdk_status") or "").strip().lower()
     runtime_target = str(runtime_status.get("runtime_target") or "").strip().lower()
@@ -639,7 +723,11 @@ def _doctor_payload() -> dict[str, object]:
         preflight_message = "Akida hardware runtime is ready."
     elif runtime_status_status == 200:
         preflight_status = "degraded"
-        preflight_message = str(
+        # A hardware verdict wins over sdk_issue_detail: when the board is
+        # absent, unbound, or wedged, the SDK only knows it got an errno back
+        # and reports a register address the user cannot act on. The raw text
+        # is still carried in the payload's own sdk_issue_detail key.
+        preflight_message = device_message or str(
             runtime_status.get("sdk_issue_detail")
             or runtime_status.get("error")
             or "Optional Akida capability is degraded."
@@ -657,8 +745,9 @@ def _doctor_payload() -> dict[str, object]:
             "machine": platform.machine(),
         },
         "hardwareProbe": {
-            "lspci": _run_probe(["lspci"]),
-            "lsusb": _run_probe(["lsusb"]),
+            "lspci": lspci_text,
+            "lsusb": lsusb_text,
+            "akidaDevice": akida_device,
         },
         "services": {
             "runtimeHealthStatus": runtime_health_status,

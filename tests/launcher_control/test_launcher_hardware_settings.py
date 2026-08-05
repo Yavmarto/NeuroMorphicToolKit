@@ -791,6 +791,103 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
         )
         self.assertEqual(result["host"]["lastSdkStatus"], "sdk_unavailable")
 
+    def _akida_probe_verdict(self, probe: dict[str, Any], usb: str = "") -> str:
+        """Run the generated remote doctor's classifier on one probe result.
+
+        The classifier ships inside the remote script text, so exec'ing the
+        generated source is what actually proves the shipped copy behaves —
+        importing a parallel implementation would not.
+        """
+        namespace: dict[str, Any] = {}
+        exec(  # noqa: S102
+            provisioning_helpers._remote_control_script_text().split(
+                "def _local_json"
+            )[0],
+            namespace,
+        )
+        return str(namespace["_akida_device_message"](probe, usb))
+
+    def test_remote_doctor_names_the_hardware_fault_it_finds(self) -> None:
+        absent = self._akida_probe_verdict({"present": False})
+        unbound = self._akida_probe_verdict({"present": True, "driver": ""})
+        wedged = self._akida_probe_verdict(
+            {"present": True, "driver": "akida-pcie", "memorySpaceEnabled": False}
+        )
+        healthy = self._akida_probe_verdict(
+            {"present": True, "driver": "akida-pcie", "memorySpaceEnabled": True}
+        )
+
+        self.assertIn("No Akida board", absent)
+        self.assertIn("PCIe driver is not loaded", unbound)
+        # The probe is PCI-only, so a USB Akida is absent from it. Claiming
+        # "no board" there would be a confident lie; keep the SDK's own words.
+        self.assertEqual(
+            self._akida_probe_verdict(
+                {"present": False},
+                "Bus 002 Device 004: ID 1e7c:1000 BrainChip Akida USB",
+            ),
+            "",
+        )
+        self.assertIn("stopped responding", wedged)
+        self.assertIn("off and on again", wedged)
+        # Empty means "not a hardware fault", so a genuine SDK problem keeps
+        # its own detail instead of being masked by a board verdict.
+        self.assertEqual(healthy, "")
+
+    def test_raw_device_errno_never_reaches_the_readiness_message(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+        raw = "Error reading at 0xf0000010 len 4: err(110) Connection timed out"
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={
+                "sdk_available": True,
+                "sdk_status": "unknown",
+                "sdk_issues": ["device_mapping_failure"],
+                "sdk_issue_detail": raw,
+                "runtime_target": "unknown",
+            },
+        ):
+            result = self.state.fetch_akida_host_preflight(host["id"])
+
+        readiness = result["host"]["lastReadinessMessage"]
+        self.assertNotIn("0xf0000010", readiness)
+        self.assertNotIn("err(110)", readiness)
+        self.assertIn("off and on again", readiness)
+        # The raw text is the developer's copy and must survive untouched; no
+        # Akida client model reads lastPreflightMessage.
+        self.assertEqual(result["host"]["lastPreflightMessage"], raw)
+
+    def test_plain_language_preflight_messages_are_left_alone(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+        message = "An Akida board is fitted but its PCIe driver is not loaded."
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={
+                "sdk_available": True,
+                "sdk_status": "unknown",
+                "sdk_issues": ["device_mapping_failure"],
+                "sdk_issue_detail": message,
+                "runtime_target": "unknown",
+            },
+        ):
+            result = self.state.fetch_akida_host_preflight(host["id"])
+
+        self.assertEqual(result["host"]["lastReadinessMessage"], message)
+
     def test_akida_host_preflight_reports_failed_when_runtime_request_errors(
         self,
     ) -> None:
