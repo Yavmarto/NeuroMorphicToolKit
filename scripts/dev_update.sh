@@ -319,7 +319,15 @@ classify_path() {
     */frontend/*)                            echo "NOOP:$path"; return ;;
 
     # pip-installed into the image; rsync moves the source but Python won't see it.
-    neurocnl/neurocnl/*|neurocnl/pyproject.toml) echo "REBUILD:suite_api"; return ;;
+    # Two images install it from source, not one: suite_api/Dockerfile:34 AND
+    # workers/jupyter_server/Dockerfile:135-138 both `COPY neurocnl/` + pip install
+    # it. A notebook cell that imports something new from neurocnl (e.g. the
+    # Akida Exporter's `from neurocnl.converter.akida_adapter import
+    # AkidaConversionError, ...`) runs inside jupyter-server, not suite_api, so
+    # missing this rebuild leaves the exact symbol the cell needs stale on the
+    # host while suite_api looks perfectly up to date.
+    neurocnl/neurocnl/*|neurocnl/pyproject.toml) \
+      echo "REBUILD:suite_api"; echo "REBUILD:jupyter-server"; return ;;
     # launcher-control now builds and carries the release-matched Neurochip
     # wheel used to update the selected native Akida host.
     Neurochip/*)                             echo "REBUILD:launcher-control"; return ;;

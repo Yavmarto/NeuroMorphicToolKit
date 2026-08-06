@@ -1,5 +1,18 @@
 # Guide: full-MNIST PyTorch → ONNX → Akida 2.0 in CNL Studio
 
+> **This is not the CNL Studio canvas walkthrough.** It runs a prebuilt companion notebook that
+> trains its own CNN and bundles it for the card; it never touches the Model, Training or Eval
+> canvases, the CNL spec, or Studio's training history. Read it as a hardware-bundle demo.
+>
+> If you want to build and train a network on the canvases yourself, that is
+> [GUIDE-mnist-fcn-studio.md](../2026-07-28/GUIDE-mnist-fcn-studio.md).
+>
+> **The two paths now meet.** As of 2026-08-06 an **Akida Exporter** node converts a canvas-trained
+> model to a real `akida.Model` and writes the same kind of `*.akida-bundle.zip` this demo produces,
+> so **Use Latest Bundle** in §4 below deploys either one to the same card. What differs is only
+> what is inside the bundle: this demo ships ONNX for the host to quantize, the canvas path ships an
+> already-converted model. See §10 of the canvas guide.
+
 Last verified against the app on **5 August 2026**. Every button name below is a label that
 exists on screen; every claim about what gates a control was read out of the code.
 
@@ -211,6 +224,14 @@ calibration samples, raw uint8 evaluation inputs, int32 labels, preprocessing me
 labels, dependency versions, source/ONNX measurements, and per-file SHA-256 checksums. Identical
 submissions reuse the same active or completed job by bundle checksum; a failed job can be
 resubmitted after recovery.
+
+`AkidaModelBundleV2` (`schemaVersion: 2`) is the canvas Akida Exporter's shape: `model.fbz` instead
+of `model.onnx`, no calibration set, and `sourceMetrics` reporting the accuracies measured before
+submission. The host skips quantization and conversion for it and goes straight to mapping. Its
+accuracy rules differ deliberately — a converted spiking model is reported at whatever it scores
+and only refused below 20%, where the V1 gates above (98% source, 96% Akida) would have rejected a
+legitimate result. Both kinds share the same archive-safety, checksum, and hardware-verification
+rules; **Hardware verified** means `runtime_target=hardware` either way.
 
 ## In-app recovery
 

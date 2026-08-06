@@ -80,6 +80,18 @@ async def neurocnl_startup(app) -> None:  # type: ignore[type-arg]
     except Exception as exc:
         logger.error("neurocnl workspace_store initialisation failed: %s", exc)
 
+    # Same rule as above, and it was missed: dataset_cache.initialize() is the
+    # only place the `source` column migration runs. Under Docker it never ran,
+    # so GET /api/neurocnl/datasets died with "no such column: source" and
+    # Setup could not list a single dataset — which left every Studio step
+    # after Setup locked, because unlocking them requires a chosen dataset.
+    try:
+        from backend.app.services.dataset_cache import dataset_cache
+
+        await dataset_cache.initialize()
+    except Exception as exc:
+        logger.error("neurocnl dataset_cache initialisation failed: %s", exc)
+
     # ── Cleanup task ─────────────────────────────────────────────────────────
     async def _cleanup_loop() -> None:
         from backend.app.services.job_store import job_store as _js

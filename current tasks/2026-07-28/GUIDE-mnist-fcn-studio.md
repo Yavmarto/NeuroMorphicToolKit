@@ -1,16 +1,26 @@
 # Guide: MNIST FCN in CNLStudio — step by step
 
+**This is the canvas guide.** It builds the network and the training pipeline by hand on Studio's
+Model, Training and Eval canvases and trains what you built — steps 1 through 6 of the stepper, no
+prebuilt demo. It now continues all the way onto the **physical Akida card**; see §10.
+
 Target: snnTorch Tutorial 5 feedforward SNN.
 `784 → Linear(1000) → LIF → Linear(10) → LIF → 10`, 25 timesteps, static image repeated each step.
+
+**If you intend to reach the Akida card, build `784 → 256 → 10` instead** — Akida maps 256 neurons
+per neural processor. Everything else is identical; §1 flags the two fields to change. Your accuracy
+will land somewhat below the §7 figure, which was measured at 1000.
 
 Every label below is the exact text in the Studio UI. Fields not listed are left at their defaults.
 Expected result: **~92.5% test accuracy** (measured — see §7).
 
+Last verified against the code on **6 August 2026**.
+
 ---
 
-## 0. Before you start
+## 0. Before you start — read this, it is the one real gap
 
-Three files are already generated and sit in `workspaces/`:
+You need three files:
 
 | File | Shape | Use |
 |---|---|---|
@@ -18,11 +28,69 @@ Three files are already generated and sit in `workspaces/`:
 | `mnist_val.pt` | (1000, 784) | validation / best-checkpoint selection |
 | `mnist_test.pt` | (2000, 784) | final score |
 
-For the full-MNIST companion, use **Akida Runtime → Create MNIST Demo** in Studio. The generated
-embedded notebook downloads MNIST, trains, verifies ONNX parity, and creates the deployment bundle.
+**There is currently no in-app way to produce them, and this is a known gap.** Studio's dataset
+catalog is Firebase-backed and today contains one folder of DVS recordings ("Davis 24") — no MNIST
+and no `.pt` files. The Data Loader's file picker only *uploads* a file you already have; it does
+not create one.
+
+The files in this repo's `workspaces/` were made by
+[`prepare_mnist_pt.py`](prepare_mnist_pt.py), a developer script run from a terminal. That is a
+developer path, not a user path — an end user should never be asked to run it, so if you are
+following this as a user, ask for the files or for the in-app importer to be built.
+
+What the files must contain, if you are supplying your own: a `torch.utils.data.TensorDataset` of
+`x` float32 `(N, 784)` and `y` int64 `(N,)`, saved with `torch.save`. It has to load under
+`weights_only=True` inside `safe_globals([TensorDataset])`, which is what the generated
+`_pt_loading_code` does. The shape is `(N, 784)` and **not** `(N, 1, 28, 28)` on purpose: the
+generated `forward()` takes its `x.dim() == 2` branch and expands the same image across all 25
+timesteps, which is Tutorial 5's input scheme.
 
 Each Data Loader node has a file picker — select the file there and the `Dataset Path` field fills
 itself with the uploaded path. Don't type the `workspaces/...` path by hand.
+
+### Going to the Akida card? Select it in Setup as well
+
+In **Setup → Target platform**, tick **both** `snnTorch` and **Akida**.
+
+Akida is not needed for the canvas work — the Akida Exporter node is deliberately not gated on the
+selected platform, and the Deploy panel's target dropdown lists every target regardless. It is
+needed for exactly one thing: **pairing the host.** The reachability dot and the **Manage Targets**
+button only render on the tile of a *selected* platform, and Manage Targets is the only place that
+hands a paired host to the deploy panel. Without it, the Akida Runtime panel says "Select or create
+an Akida host first." and every button stays disabled.
+
+The cost of ticking it is bigger than a second tab to look at: the **Run** step has exactly **one**
+Play button for every selected platform, not one per tab. `_startTraining()`
+([run_step.dart:154](../../neurocnl/frontend/lib/screens/studio/steps/run_step.dart:154)) loops over
+`workspace.selectedPlatforms` and calls `api.runNotebook(...)` for each one, unawaited, the moment
+you press Play — so ticking **Akida** here means every future Play **also** generates and
+**executes** the Akida tab's notebook automatically, whether or not you ever open that tab.
+
+That notebook's architecture cell **used to crash every time**: `_generate_akida_code`
+([notebook.py:1302](../../neurocnl/backend/app/routers/notebook.py:1302)) carried its own copy of
+the layer-construction logic and still built `akl.InputLayer(...)`, an SDK symbol that does not
+exist, so the cell raised `AttributeError: module 'akida.layers' has no attribute 'InputLayer'`.
+Fixed 6 August 2026 — it now calls `nir_to_akida` from `neurocnl/converter/akida_adapter.py`, the
+same module the Akida Exporter uses, so there is only one converter to keep correct. Update the
+backend if you still see the old error.
+
+**It is still not the path to a trained model on the card.** `akida` has no training adapter, so
+that notebook converts whatever weights the CNL spec carries — an untrained network. The route that
+puts *your trained model* on the card is the snnTorch notebook's **Akida Exporter** node (§2 node 11
+and §10). The two are separate code paths that happen to share the word "Akida".
+
+**You can still untick Akida in Setup → Target platform before you press Play** if you don't want
+the extra notebook generated and run at all, once you've paired the host with Manage Targets.
+Pairing is stored server-side
+(`studioTargetRegistryServiceProvider`, resolved by `akidaHostReadinessProvider`) and does **not**
+depend on the tickbox staying checked, and the Deploy panel's target dropdown lists Akida
+regardless of `selectedPlatforms` — so unticking it before Run costs you nothing. Re-tick it only if
+you need **Manage Targets** again (e.g. to add or re-test a host).
+
+**If Setup shows no datasets at all** and steps 2-6 stay locked, that is a separate backend fault,
+not something you did: the catalog endpoint fails and Setup cannot mark a dataset chosen. Fixed
+5 August 2026 (`dataset_cache` was never initialised under Docker, so its registry table was
+missing the `source` column); update the backend if you still see it.
 
 ---
 
@@ -39,6 +107,11 @@ Place six nodes and set these fields.
 | 5 | **LIF** | `Neurons` = **10**, `Tau` = **0.002**, `Threshold` = **1.0**, `Resistance` = **1.0**, `Leak` = **0.0**, `Time Step` = **0.0001**, `Beta (mem decay)` = **0.95** |
 | 6 | **Output** | `Size` = **10** |
 
+> **Going to the Akida card?** Change three numbers: node 2 `Rows` = **256**, node 3 `Neurons` =
+> **256**, node 4 `Cols` = **256**. Akida maps at most 256 neurons per neural processor, so a
+> 1000-unit hidden layer converts and runs in simulation but will not map onto silicon. Nothing
+> else in this guide changes.
+
 Wire, `out` → `in` each time:
 
 ```
@@ -50,15 +123,15 @@ Input → Linear → LIF → Linear → LIF → Output
 - `Rows` is the output width, `Cols` the input width — so 784→1000 is `Rows=1000, Cols=784`.
   (Same convention as Braille's 40×12.)
 - **`Tau = 0.002` is the one that actually matters.** The generator computes
-  `beta = 1 - dt/tau` = `1 - 0.0001/0.002` = **0.95**. The `Beta` field is a documented override
-  ("leave blank to derive from tau/dt") but it is stored in the node's *parameters*, while the
-  generator reads it from the node's *metadata*
-  ([nir_graph_serializer.py:588](neurocnl/backend/app/services/nir_graph_serializer.py:588)) — so it
-  may not take effect. Set both; they agree, so it can't matter which one wins. Step 5 verifies the
-  result either way.
-- **Do not use `cnl.Leaky`** even though it takes beta directly. It is classified as a recurrent
-  node ([notebook.py:954](neurocnl/backend/app/routers/notebook.py:954)) and would generate a
-  time-series forward that crashes on `(batch, 784)` input.
+  `beta = 1 - dt/tau` = `1 - 0.0001/0.002` = **0.95**. Set `Beta` to 0.95 as well; the two agree, so
+  it cannot matter which one wins, and §5 verifies the result either way.
+  *(Corrected 2026-08-05: an earlier revision warned that `Beta` was read from node metadata rather
+  than parameters and might be ignored. `_deserialize_node` now reads every field from `params`, so
+  the override does take effect.)*
+- **Do not use `cnl.Leaky`** even though it takes beta directly. `CnlLeaky` emits kind
+  `leaky_explicit`, which is in `_recurrent_kinds`
+  ([notebook.py:970](neurocnl/backend/app/routers/notebook.py:970)), so the generated `forward()`
+  switches to the per-timestep `xt` loop variable and crashes on `(batch, 784)` static input.
 - `Fill` is irrelevant — weights are dropped in the CNL-text round trip, so every Linear gets
   PyTorch's default init regardless of what you put there.
 
@@ -66,7 +139,8 @@ Input → Linear → LIF → Linear → LIF → Output
 
 ## 2. Canvas: Train
 
-Place nine nodes.
+Place nine nodes — or eleven if you are going to the Akida card. (This canvas is labelled
+**Training** in the stepper; "Train" and "Training" mean the same canvas throughout this guide.)
 
 | # | Node | Fields to set |
 |---|---|---|
@@ -79,9 +153,48 @@ Place nine nodes.
 | 7 | **Adam Optimiser** | `Lr` = **0.0005** ← *the only change*; leave `Weight Decay` 0.0, `Beta1` 0.9, `Beta2` 0.999 |
 | 8 | **Data Loader** (val) | file picker → `mnist_val.pt`; `Format` = **pt**; `Batch Size` = **128**; `Shuffle` = **off** |
 | 9 | **Validation Loop** | all four defaults are already correct — `Every N Epochs` 1, `Save Best Checkpoint` **on**, `Checkpoint Metric` `val_accuracy`, `Checkpoint Mode` `max` |
+| 10 | **Test Loader** | file picker → `mnist_test.pt`; `Format` = **pt**; `Batch Size` = **128**. Add this **only if** you are adding node 11 — see the note below. |
+| 11 | **Akida Exporter** | all four defaults are correct — `Filename` `model.fbz`, `Weight bits` **4**, `Deploy bundle` **on**, `Eval samples` **2000**. Skip nodes 10 and 11 if you do not care about Akida; nothing else depends on them. |
+
+**Why node 10 exists.** The Akida Exporter scores the converted model against `test_loader`, and a
+`.pt` Data Loader binds `test_loader` to *its own* file as a fallback. Without an explicit Test
+Loader on this canvas, the exporter would score against `mnist_train.pt` and ship 2000 **training**
+images to the card as its evaluation set — an inflated number with nothing to signal it. Node 10 is
+what makes the printed accuracies, and the on-card accuracy, real. Leave it unwired: it has `data`
+and `labels` outputs, but nothing on this canvas should consume them.
 
 **Do NOT add**: Gradient Clip, Reduce LR on Plateau, L1 Spike Regularization, L2 Spike
 Regularization. None are in the tutorial. This is a baseline — it should have nothing to blame.
+
+### Placing the Test Loader and the Akida Exporter
+
+These are the two nodes this guide adds that are not part of the tutorial, and both are easy to
+miss in the palette.
+
+**Test Loader** has no edges, so place it with the **Add** button (the `+` in the floating toolbar
+at the bottom of the canvas). It opens an **Add Node** dialog: type `test` and pick **Test Loader**.
+Then double-tap the placed node to open the Inspector and set its file and fields.
+
+**Akida Exporter** does need an edge, so place it from the port instead — **do it this way and the
+node arrives already wired**:
+
+1. On the Train canvas, **tap the `model` output dot on the Adam Optimiser node.** It highlights —
+   that is "armed", not connected.
+2. **Tap the same dot again.** A dialog titled **Connect to new node** opens. (The port dot doubles
+   as the `+`; its tooltip says "Tap to connect, tap again to add a node".)
+3. Type `akida` in the search box. One card is left: **Akida Exporter**.
+4. Tap that card's **`model`** port row. The node is created next to Adam Optimiser with the edge
+   already drawn.
+
+The alternative is the **Add** button (a `+`) in the floating toolbar at the bottom of the canvas,
+which opens an **Add Node** dialog. That grid is a flat list with no category headings and around
+36 entries, so type `akida` there too rather than hunting — the node sits near the end, between
+**NIR Exporter** and **Python Exporter**. Placing it this way leaves it unwired; you then have to
+draw the Adam Optimiser edge yourself.
+
+To change its fields, **double-tap the node**; the Inspector opens on the right. (The pipeline
+Inspector is desktop-only — there is no toggle button for it on this canvas, so double-tap is the
+only way in.)
 
 ### Wiring (source port → target port)
 
@@ -95,10 +208,16 @@ Regularization. None are in the tutorial. This is a baseline — it should have 
 | CE Count Loss | `loss` | Surrogate Backward | `loss` |
 | Surrogate Backward | `gradients` | Adam Optimiser | `gradients` |
 | Adam Optimiser | `model` | Validation Loop | `model` |
+| Adam Optimiser | `model` | Akida Exporter | `model` |
 | Data Loader (val) | `data` | Validation Loop | `val_data` |
 
-Nine edges. State Reset's own `model` **input** stays unconnected — only its output matters.
-Forward Pass's `membrane` output stays unconnected.
+Nine edges without Akida, ten with it. **Adam Optimiser's `model` output feeds two nodes** —
+Validation Loop and Akida Exporter. Every other output in this table is used once, so this is the
+one place a second edge from the same dot is correct rather than a mistake.
+
+State Reset's own `model` **input** stays unconnected — only its output matters. Forward Pass's
+`membrane` output stays unconnected. Test Loader stays entirely unconnected. Akida Exporter has no
+outputs; it is a terminal node.
 
 ---
 
@@ -136,8 +255,9 @@ workspace hard to read.
 | Forward Pass | `spikes` | Accuracy | `spikes` |
 
 If the `Load Best Checkpoint` toggle isn't visible on this node, don't worry — the generator
-defaults it to on when the field is absent
-([notebook.py:2602](neurocnl/backend/app/routers/notebook.py:2602)).
+defaults it to on when the field is absent:
+`bool(n.parameters.get("load_best_checkpoint", True))`
+([notebook.py:2832](neurocnl/backend/app/routers/notebook.py:2832)).
 
 ---
 
@@ -189,9 +309,10 @@ Measured by running the exact generated code against these exact `.pt` files, se
 
 Validation peaks at epoch 5 and dips at 6 — mild overfitting. Don't raise the epoch count.
 
-Once this matches, use **Create MNIST Demo** in the Akida Runtime panel for the separate full-MNIST
-companion. That notebook uses all 60,000 training and 10,000 test examples without requiring a
-local preparation command.
+Once this matches, you have completed the canvas journey end to end. **Create MNIST Demo** in the
+Akida Runtime panel is a *separate* full-MNIST demo — it trains its own model in a prebuilt
+notebook and shares nothing with what you built here. See §10 before assuming it continues from
+this point.
 
 ---
 
@@ -259,7 +380,98 @@ the effective snnTorch decay and threshold rather than being the original traini
 2,000-sample acceptance gate is snnTorch accuracy ≥92%, Sinabs accuracy ≥90%, and prediction
 agreement ≥90%; record the measured values in this guide after a verified run.
 
-For physical Akida inference, go to **Results → Deploy to Hardware → Akida → Akida Runtime** and
-continue with [the companion guide](../2026-08-04/GUIDE-akida-mnist-companion.md). The existing
-794,000-weight FCN does not fit the fixed PYNQ/SC-NeuroCore overlay (256 neurons, two populations,
-15,360 synapses).
+### Converting your trained model to Akida
+
+The **Akida Exporter** node you placed in §2 runs once after the last epoch and prints:
+
+```
+snnTorch accuracy : ...
+Akida accuracy    : ...
+Conversion delta  : ... pp
+Deploy bundle     : model.akida-bundle.zip (2000 samples, sha256 ...)
+```
+
+It reloads `best_model.pt`, copies the trained weights into the NIR graph, quantizes them, builds a
+real `akida.Model`, and evaluates it on your test loader. That evaluation runs on the Akida
+**software simulator**, so those first three lines need no card.
+
+The fourth line is the one that matters for hardware. Alongside `model.fbz` the node writes
+`model.akida-bundle.zip`, containing the converted model, the quantized evaluation set, and a
+checksummed manifest. That is the only artifact any deploy control in Studio looks for.
+
+Parameters: `Filename` (default `model.fbz`), `Weight bits` (1, 2, 4 or 8 — Akida accepts nothing
+else), `Deploy bundle` (on), and `Eval samples` (2000 — the cap on what travels in the bundle; the
+host refuses anything over 32 MB).
+
+**Constraints for a model that can reach real hardware** — a straight chain, LIF neurons, **≤256
+neurons per layer**, no branching or recurrence. The `784 → 1000 → 10` network breaks only the 256
+rule, so build **`784 → 256 → 10`** if you care about the card. The exporter still converts a wider
+model and prints a warning.
+
+Expect a delta, and treat a large one as information rather than failure: an Akida
+`FullyConnected` is a single-pass quantized unit, while what you trained is a temporal LIF network
+run over 25 timesteps. If Akida accuracy lands near 10% the exporter says so explicitly — that is
+a scaling problem in the conversion, not a problem with your trained model.
+
+*(Record your measured pair here after a run.)*
+
+### Running it on the physical card
+
+Wired up 2026-08-06. After the notebook run finishes:
+
+1. Go to the **Results** step and choose **Deploy to Hardware**.
+2. In the **Deploy target** dropdown pick **Akida**. The **Akida Runtime** panel appears.
+3. Select your paired host. If the panel says "Select or create an Akida host first", you skipped
+   the Setup step — go back to **Setup → Target platform**, tick **Akida**, then use **Manage
+   Targets** on its tile to pair and pick a host. That is the only route; see §0. The status dot on
+   the tile must not be red.
+4. Choose **Use Latest Bundle**. Studio finds the newest `*.akida-bundle.zip` in your workspace —
+   which is now the one your pipeline just wrote — and submits it.
+5. Progress runs through validation → loading → mapping → evaluation. The host loads the converted
+   model, maps it onto the device, and measures accuracy **on the card**.
+6. Enter a **Sample index** and choose **Run Model Sample** to run one image on the silicon.
+
+Which gates apply:
+
+- The 98% source / 96% Akida thresholds are **V1 bundle** rules, written for the MNIST CNN demo.
+  They do **not** apply to a canvas bundle. Your model is reported at whatever it scores; only a
+  near-chance result (below 20%) fails the job, and that means the conversion scaling is wrong
+  rather than your training.
+- **Hardware verified** still requires a real device. Studio always asks for physical hardware, so
+  with no card present the job fails with `PHYSICAL_HARDWARE_REQUIRED` — that is correct behaviour,
+  not a bug. **Run Model Sample** stays disabled until the job is hardware verified.
+- Re-running the notebook with identical data and weights produces a byte-identical bundle, and the
+  host deduplicates by checksum — you get the *previous* job back rather than a fresh one. Change
+  something, or use the previous result.
+
+If the **snnTorch** notebook's Akida Exporter cell itself fails with:
+
+```
+ImportError: cannot import name 'AkidaConversionError' from 'neurocnl.converter.akida_adapter'
+```
+
+that is a stale `jupyter-server` image, not a code bug — `workers/jupyter_server/Dockerfile` also
+`pip install`s `neurocnl` from source (separately from `suite_api`'s copy), so a dev-server update
+has to rebuild **both** images. `scripts/dev_update.sh`'s path table only rebuilt `suite_api` for a
+`neurocnl/neurocnl/*` change until this was noticed (fixed here); if you are still on an older
+`dev_update.sh`, force it: `make dev-update ARGS='--force-rebuild jupyter-server'`.
+
+*(Record the on-card accuracy here after a run.)*
+
+Still true and still not this path: the other Akida route (**Map Runtime** / **Generate Package** /
+**Run Inference**) consumes the CNL **spec text** only. `AkidaBackend.construct_model` never calls
+`set_weights`, so it maps your topology onto the card with SDK-default weights — an untrained
+network. Ignore that group.
+
+Also still true: only `snntorch_sim` has a training adapter
+(`_TRAINABLE_NOTEBOOK_TARGETS`, [notebook.py:360](../../neurocnl/backend/app/routers/notebook.py:360)).
+Selecting `akida` as the *platform* generates a notebook with no training cell at all. Train on
+`snntorch_sim` and let the Akida Exporter do the conversion — that is the supported route.
+
+[The Akida companion guide](../2026-08-04/GUIDE-akida-mnist-companion.md) remains a **separate,
+self-contained** demo: it trains its own CNN in a prebuilt notebook and ships ONNX for the host to
+quantize. Both paths now end at the same panel and the same card, but it teaches you nothing about
+the canvases.
+
+Separately: the 794,000-weight FCN above does not fit the fixed PYNQ/SC-NeuroCore overlay
+(256 neurons, two populations, 15,360 synapses).

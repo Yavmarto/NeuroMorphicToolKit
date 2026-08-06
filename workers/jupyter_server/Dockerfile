@@ -10,14 +10,21 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends build-essential git \
  && rm -rf /var/lib/apt/lists/*
 
-# Install CPU-only torch FIRST, from PyTorch's CPU wheel index, so every
-# torch-dependent package in requirements.txt below binds to this CPU build
-# instead of pulling the default (CUDA) wheel from PyPI. Unpinned so a rebuild
-# tracks the latest CPU release; this layer only rebuilds when the base image
-# changes, keeping the heavy download cached.
+# Install CPU-only torch AND torchvision FIRST, from PyTorch's CPU wheel index,
+# so every torch-dependent package in requirements.txt below binds to this CPU
+# build instead of pulling the default (CUDA) wheel from PyPI. Unpinned so a
+# rebuild tracks the latest CPU release; this layer only rebuilds when the base
+# image changes, keeping the heavy download cached.
+#
+# torchvision belongs here, not just torch: it ships a compiled _C.so linked
+# against libtorch, so a CUDA torchvision on top of a CPU torch fails to
+# register its operators and every `import torchvision` dies with
+# "RuntimeError: operator torchvision::nms does not exist". That is an ABI
+# mismatch, not a metadata one, so `pip check` below cannot see it — hence the
+# explicit assertion after the install.
 RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
-    torch
+    torch torchvision
 
 # NIR + sc-neurocore before neurocnl source copy — cache-stable, matches suite_api.
 RUN pip install --no-cache-dir "nir>=1.0.5" "sc-neurocore>=3.13.0,<4"
@@ -54,13 +61,17 @@ COPY workers/jupyter_server/requirements.txt /app/requirements.txt
 #   (their setup.py calls `platform.linux_distribution`, removed from the
 #   stdlib in Python 3.8+). Resolving once, up front, avoids this class of
 #   bug entirely — by the time Phase 2 runs, every version is already fixed.
-#   Only `torch` is excluded from this joint resolve: it's already installed
-#   above (line 18-20) from PyTorch's CPU-only wheel index, and `pip wheel`
-#   — unlike `pip install` — does not skip already-satisfied requirements, so
-#   leaving it in would re-fetch torch's full CUDA build from PyPI's default
-#   index, undoing the point of installing it from the CPU-only index first.
-#   Phase 2 still installs torch from its unfiltered requirements.txt line,
-#   where it resolves as already-satisfied against the environment. nir and
+#   Only `torch` and `torchvision` are excluded from this joint resolve:
+#   they're already installed above from PyTorch's CPU-only wheel index, and
+#   `pip wheel` — unlike `pip install` — does not skip already-satisfied
+#   requirements, so leaving them in would re-fetch their full CUDA builds from
+#   PyPI's default index, undoing the point of installing from the CPU-only
+#   index first. `torchvision` was originally missed by this filter (the
+#   pattern matched only the bare `torch` line), which pinned a CUDA
+#   torchvision into resolved.txt against a CPU torch and broke every kernel's
+#   `import torchvision` with "operator torchvision::nms does not exist".
+#   Phase 2 still installs both from their unfiltered requirements.txt lines,
+#   where they resolve as already-satisfied against the environment. nir and
 #   sc-neurocore (also pre-installed at line 23) are deliberately NOT
 #   excluded here, even though they're already installed: nir has no
 #   equivalent "wrong index" problem, and this file's own nir>=1.0.5 line is
@@ -100,7 +111,7 @@ COPY workers/jupyter_server/requirements.txt /app/requirements.txt
 # /wheels and the /tmp/reqs-*.txt group files are deleted at the end of this
 # SAME RUN (not a later one) so they never get committed to their own image
 # layer.
-RUN grep -vE '^torch($|[<>=; ])' /app/requirements.txt > /tmp/reqs-joint.txt \
+RUN grep -vE '^torch(vision)?($|[<>=; ])' /app/requirements.txt > /tmp/reqs-joint.txt \
  && pip install --no-cache-dir --dry-run --report /tmp/report.json -r /tmp/reqs-joint.txt \
  && python -c "import json; data=json.load(open('/tmp/report.json')); print('\n'.join(f\"{p['metadata']['name']}=={p['metadata']['version']}\" for p in data.get('install', [])))" > /tmp/resolved.txt \
  && grep -E '^(jupyterlab|jupyter_server|ipykernel)' /app/requirements.txt > /tmp/reqs-01-jupyter.txt \
@@ -116,6 +127,7 @@ RUN grep -vE '^torch($|[<>=; ])' /app/requirements.txt > /tmp/reqs-joint.txt \
  && grep -E '^(brian2|PyNN|akida|cnn2snn|lava-nc)' /app/requirements.txt > /tmp/reqs-06-frameworks.txt \
  && pip install --no-cache-dir -c /tmp/resolved.txt -r /tmp/reqs-06-frameworks.txt \
  && pip check \
+ && python -c "import torch, torchvision; torch.ops.torchvision.nms; print('torchvision ABI ok:', torch.__version__, torchvision.__version__)" \
  && rm -rf /tmp/report.json /tmp/resolved.txt /tmp/reqs-*.txt
 
 # Install neurocnl with all extras (brings nir and framework bindings).

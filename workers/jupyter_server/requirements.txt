@@ -28,10 +28,14 @@ seaborn
 tqdm
 
 # ── Deep learning ─────────────────────────────────────────────────────────────
-# NOTE: in the Docker image, torch is installed FIRST from the CPU-only wheel
-# index (see Dockerfile) so the container stays CPU-only; this line then resolves
-# as already-satisfied. In standalone mode torch installs the build that matches
-# the user's platform (GPU where available), which is the desired behaviour.
+# NOTE: in the Docker image, torch AND torchvision are installed FIRST from the
+# CPU-only wheel index (see Dockerfile) so the container stays CPU-only; these
+# lines then resolve as already-satisfied. In standalone mode they install the
+# build that matches the user's platform (GPU where available), which is the
+# desired behaviour — there both come from the same index, so they always agree.
+# Keep them installed from the SAME index as each other: torchvision links its
+# compiled _C.so against libtorch, and a CUDA/CPU split breaks every
+# `import torchvision` with "operator torchvision::nms does not exist".
 torch
 torchvision
 onnx>=1.17,<2
