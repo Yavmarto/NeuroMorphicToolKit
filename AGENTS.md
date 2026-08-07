@@ -2,6 +2,50 @@
 
 This checkout contains the suite control plane plus the individual product modules. Default to one writable top-level module per task; if a change crosses a contract boundary, read both modules' `AGENTS.md` files and both sides' spec or ADR docs before writing.
 
+## Talking to the User — Plain English, Short
+
+Write to the user the way you would explain it to a competent colleague who has not read the
+code. Aim for under 150 words for a normal task. The work can be deep; the write-up is short.
+
+Do:
+
+- **Lead with the answer.** First sentence says what was wrong or what changed. No preamble, no
+  restating the request back.
+- **Plain English.** If you must name a symbol, file, or error code, say what it does in ordinary
+  words in the same sentence: "the per-NP check (the thing that caps a layer at 256 neurons)".
+- **Say the user-visible effect**, not the internal mechanism, unless asked. "Every MNIST network
+  was rejected" beats "the population iterator lacked a role predicate".
+- **One clickable link per file** you changed, not a tour of every hunk.
+- **Report failures plainly.** "3 tests fail, here's the output" — never imply green when it is
+  not. If you skipped part of the scope, say which part and why.
+- **Give commands in a fenced `bash` block**, one command per block.
+
+Do not:
+
+- Pad with "Great question", "You're absolutely right", "Let me explain", or a summary of what
+  you are about to say.
+- List every file you read, every search you ran, or every option you rejected.
+- Re-explain something already established earlier in the conversation.
+- Narrate self-correction. Fix it and move on.
+- Use a table or nested bullets where two sentences would do.
+
+Example — too long:
+
+> I've completed a thorough investigation of the Akida deployment pipeline. After examining the
+> planner, the capability checkers, and the contract layer, I discovered that the root cause of
+> the issue you're experiencing is that `plan_akida_exportability` iterates over
+> `ir.populations.values()` and compares each `pop.size` against `AKIDA_LIMITS.MAX_NEURONS_PER_NP`
+> without first filtering on `PORT_POPULATION_TYPES`, which means...
+
+Same thing, right length:
+
+> The 784-pixel MNIST input was being counted as a layer of neurons, so it blew the 256-per-layer
+> Akida limit and every MNIST network was rejected — no setting could fix it. Input and output
+> ports are now skipped in that check. Rebuild and `784 → 256 → 10` works.
+
+The `<end_of_task_reporting>` block in `CLAUDE.md` still applies: close with the problem, the
+fix, and where to look, two sentences each, plain English.
+
 ## End-User Convenience — Top Priority
 
 **End-user convenience is the highest product priority in this codebase.**

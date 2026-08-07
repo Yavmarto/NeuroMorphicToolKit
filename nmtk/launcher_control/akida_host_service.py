@@ -253,6 +253,24 @@ class AkidaServiceMixin:
             payload,
         )
 
+    def proxy_akida_model_benchmark(
+        self, host_id: str, model_id: str
+    ) -> dict[str, Any]:
+        """Start a whole-dataset benchmark run for a converted bundle model.
+
+        The default timeout is fine here even though the run itself is long:
+        the host returns a job immediately and progress is polled through
+        ``proxy_akida_model_job_status``.
+        """
+        host = self._get_akida_host(host_id)
+        self._emit_akida_terminal_log(host, "starting Akida benchmark run")
+        return self._akida_json_request(
+            host,
+            "POST",
+            f"/api/neurochip/akida/models/{model_id}/benchmark",
+            {},
+        )
+
     def _emit_akida_terminal_log(
         self, host: dict[str, Any], message: str, *, stderr: bool = False
     ) -> None:

@@ -544,6 +544,10 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
             "POST",
             "/api/neurochip/akida/model-jobs",
             payload,
+            # A base64 bundle may be up to 45 MB, so this call overrides the
+            # default 15s control-call timeout. Asserted so the override cannot
+            # be dropped silently on a slow link.
+            timeout=300.0,
         )
         self.assertEqual(
             runtime_request.call_args.args[0]["credentialRef"], "stored-token"
@@ -579,6 +583,34 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
         self.assertEqual(
             runtime_request.call_args_list[1].args[2],
             "/api/neurochip/akida/models/model-1/inference",
+        )
+
+    def test_proxy_akida_model_benchmark_starts_a_job(self) -> None:
+        """Benchmarking must not carry the upload timeout override.
+
+        The host returns a job immediately and the long run is observed by
+        polling, so this stays a normal short control call.
+        """
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+            }
+        )
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value={"jobId": "bench-1", "stage": "evaluation"},
+        ) as runtime_request:
+            job = self.state.proxy_akida_model_benchmark(host["id"], "model-1")
+
+        self.assertEqual(job["jobId"], "bench-1")
+        runtime_request.assert_called_once_with(
+            mock.ANY,
+            "POST",
+            "/api/neurochip/akida/models/model-1/benchmark",
+            {},
         )
 
     def test_proxy_akida_model_job_rejects_oversized_encoding(self) -> None:

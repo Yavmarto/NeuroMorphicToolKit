@@ -381,6 +381,19 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                         ),
                     )
                     return
+                if (
+                    len(segments) == 8
+                    and segments[5] == "models"
+                    and segments[7] == "benchmark"
+                    and method == "POST"
+                ):
+                    self._send_json(
+                        HTTPStatus.ACCEPTED,
+                        self.server.state.proxy_akida_model_benchmark(
+                            host_id, segments[6]
+                        ),
+                    )
+                    return
 
             if len(segments) >= 5 and segments[:4] == [
                 "api",
