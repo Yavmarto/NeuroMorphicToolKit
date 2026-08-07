@@ -43,6 +43,15 @@ from nmtk.launcher_control.module_environment import (  # noqa: E402
 )
 
 MODULES_JSON = REPO_ROOT / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+JUPYTER_REQUIREMENTS = REPO_ROOT / "workers" / "jupyter_server" / "requirements.txt"
+
+# Packages that must name the SAME version in modules.json (what the paired
+# Akida host installs) and in the jupyter-server image (what writes the bundle).
+# A `.fbz` is a version-gated flatbuffer, so a skew between writer and reader
+# makes `akida.Model(path)` refuse a bundle that validated cleanly, and the
+# resulting error names no version. Drift here is silent until a user's card
+# rejects their model, which is exactly the failure mode this file exists for.
+WRITER_READER_LOCKSTEP = ("akida", "cnn2snn")
 
 # Every CPython minor a paired host could plausibly run. Filtered against each
 # manifest's own pythonRange, so widening this list only adds coverage once a
@@ -74,6 +83,50 @@ def _akida_manifests(module_filter: str) -> list[tuple[str, dict[str, Any]]]:
             continue
         found.append((module_id, runtime))
     return found
+
+
+def _pinned_versions(requirement_lines: list[str]) -> dict[str, str]:
+    """Map package name to its `==` pin, ignoring comments and non-pins."""
+    pins: dict[str, str] = {}
+    for raw in requirement_lines:
+        line = raw.split("#", 1)[0].strip()
+        if "==" not in line:
+            continue
+        # Drop environment markers/extras: "akida==2.19.2; python_version<'3.13'"
+        name, _, rest = line.partition("==")
+        pins[name.strip().lower()] = rest.split(";", 1)[0].strip()
+    return pins
+
+
+def _lockstep_failures(runtime: dict[str, Any]) -> list[str]:
+    """Report any WRITER_READER_LOCKSTEP package whose two pins disagree."""
+    if not JUPYTER_REQUIREMENTS.is_file():
+        return [f"{JUPYTER_REQUIREMENTS} is missing, so the writer pin is unknown"]
+    host_pins = _pinned_versions([str(p) for p in runtime["requiredPackages"]])
+    writer_pins = _pinned_versions(
+        JUPYTER_REQUIREMENTS.read_text(encoding="utf-8").splitlines()
+    )
+    failures: list[str] = []
+    for package in WRITER_READER_LOCKSTEP:
+        host = host_pins.get(package)
+        writer = writer_pins.get(package)
+        if host is None:
+            failures.append(f"{package}: modules.json does not pin it with '=='")
+            continue
+        if writer is None:
+            failures.append(
+                f"{package}: {JUPYTER_REQUIREMENTS.name} does not pin it with '==' "
+                f"(modules.json pins {host}). An unpinned writer floats forward "
+                "and will eventually stop matching the host."
+            )
+            continue
+        if host != writer:
+            failures.append(
+                f"{package}: host installs {host} but the jupyter-server image "
+                f"installs {writer}. A .fbz written by one cannot be reopened by "
+                "the other — pin both to the same version."
+            )
+    return failures
 
 
 def _supported_pythons(python_range: str) -> list[str]:
@@ -129,7 +182,34 @@ def main() -> int:
         default="",
         help="Only check this Python minor, e.g. 3.12 (default: every supported minor)",
     )
+    parser.add_argument(
+        "--pins-only",
+        action="store_true",
+        help=(
+            "Only check that the host and jupyter-server pins agree. Needs no "
+            "docker and no network, so it is cheap enough for every commit."
+        ),
+    )
     arguments = parser.parse_args()
+
+    # Writer/reader pin agreement first: it needs neither docker nor network, so
+    # it should still run (and still fail) on a machine where resolution can't.
+    pin_failures: list[str] = []
+    for module_id, runtime in _akida_manifests(arguments.module):
+        pin_failures.extend(
+            f"{module_id}: {failure}" for failure in _lockstep_failures(runtime)
+        )
+    print("\n== Writer/reader pin agreement ==")
+    if pin_failures:
+        for failure in pin_failures:
+            print(f"   FAIL  {failure}")
+    else:
+        names = ", ".join(WRITER_READER_LOCKSTEP)
+        print(f"   OK  {names} pinned identically in modules.json and")
+        print(f"       {JUPYTER_REQUIREMENTS.relative_to(REPO_ROOT)}")
+
+    if arguments.pins_only:
+        return 1 if pin_failures else 0
 
     # Both of these exit 2, never 1. An unusable docker is an inconclusive run,
     # not evidence against the manifest — reporting it as a resolve failure
@@ -162,7 +242,7 @@ def main() -> int:
         print(f"error: no akidaRuntime manifest found for {target}", file=sys.stderr)
         return 2
 
-    failures: list[str] = []
+    failures: list[str] = list(pin_failures)
     for module_id, runtime in manifests:
         packages = [str(item) for item in runtime["requiredPackages"]]
         python_range = str(runtime.get("pythonRange") or ">=3.10,<3.13")

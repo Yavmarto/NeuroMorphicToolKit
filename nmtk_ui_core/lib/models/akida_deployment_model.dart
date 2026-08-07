@@ -374,6 +374,13 @@ class AkidaEnvironmentChecks {
   final bool akidaModelsAvailable;
   final String recommendedRuntime;
 
+  /// Installed Akida SDK version on the host, or '' when it can't be read.
+  ///
+  /// Every other field here is a boolean, so a version skew between this host
+  /// and whatever wrote a bundle's `.fbz` used to be invisible — and that skew
+  /// is what makes the runtime refuse a bundle it otherwise validated.
+  final String akidaVersion;
+
   const AkidaEnvironmentChecks({
     required this.hostSupported,
     required this.pythonSupported,
@@ -381,6 +388,7 @@ class AkidaEnvironmentChecks {
     required this.cnn2snnAvailable,
     required this.akidaModelsAvailable,
     required this.recommendedRuntime,
+    this.akidaVersion = '',
   });
 
   factory AkidaEnvironmentChecks.fromJson(Map<String, dynamic> json) {
@@ -409,6 +417,10 @@ class AkidaEnvironmentChecks {
           json['recommendedRuntime'] as String? ??
           json['recommended_runtime'] as String? ??
           'local_sdk',
+      akidaVersion:
+          json['akidaVersion'] as String? ??
+          json['akida_version'] as String? ??
+          '',
     );
   }
 

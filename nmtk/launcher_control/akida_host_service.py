@@ -223,6 +223,10 @@ class AkidaServiceMixin:
             "POST",
             "/api/neurochip/akida/model-jobs",
             payload,
+            # The default 15s is for small control calls. This body is base64 and
+            # allowed up to 45 MB just above, so on a slow link the upload itself
+            # outran the timeout and the submission failed for no stated reason.
+            timeout=300.0,
         )
 
     def proxy_akida_model_job_status(self, host_id: str, job_id: str) -> dict[str, Any]:
@@ -592,6 +596,7 @@ class AkidaServiceMixin:
         payload: dict[str, Any] | None = None,
         *,
         allow_recovery: bool = True,
+        timeout: float = 15.0,
     ) -> dict[str, Any]:
         base_url = _resolved_akida_base_url(host).rstrip("/")
         if not base_url:
@@ -609,7 +614,7 @@ class AkidaServiceMixin:
             method=method,
         )
         try:
-            with urllib.request.urlopen(request, timeout=15.0) as response:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
                 body = response.read().decode("utf-8")
                 decoded = json.loads(body) if body else {}
                 if not isinstance(decoded, dict):

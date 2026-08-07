@@ -63,6 +63,12 @@ sc-neurocore>=3.13.0,<4
 brian2>=2.10.1; python_version >= "3.12"
 brian2; python_version < "3.12"
 PyNN>=0.12.0
-akida>=2.0.0
-cnn2snn
+# Pinned, not floating, and pinned to the SAME version as
+# nmtk/neuro_toolkit/assets/modules.json's akidaRuntime.requiredPackages.
+# A .fbz is a version-gated flatbuffer: this image WRITES the bundle's model
+# and the paired Akida host REOPENS it, so a float here against a pin there
+# meant `akida.Model(path)` refused the bundle on the user's card with no
+# usable error. scripts/verify_akida_package_manifest.py asserts the two match.
+akida==2.19.2
+cnn2snn==2.19.2
 lava-nc>=0.9.0; python_version < "3.11"

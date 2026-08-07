@@ -48,44 +48,45 @@ timesteps, which is Tutorial 5's input scheme.
 Each Data Loader node has a file picker — select the file there and the `Dataset Path` field fills
 itself with the uploaded path. Don't type the `workspaces/...` path by hand.
 
-### Going to the Akida card? Select it in Setup as well
+### Going to the Akida card? Tick it in Setup — yes, always
 
-In **Setup → Target platform**, tick **both** `snnTorch` and **Akida**.
+In **Setup → Target platform**, tick **both** `snnTorch` and **Akida**. Leave both ticked for the
+whole journey. This used to be a genuine dilemma; since 6 August 2026 it is not.
 
-Akida is not needed for the canvas work — the Akida Exporter node is deliberately not gated on the
-selected platform, and the Deploy panel's target dropdown lists every target regardless. It is
-needed for exactly one thing: **pairing the host.** The reachability dot and the **Manage Targets**
-button only render on the tile of a *selected* platform, and Manage Targets is the only place that
-hands a paired host to the deploy panel. Without it, the Akida Runtime panel says "Select or create
-an Akida host first." and every button stays disabled.
+Each tile now carries a badge saying what Play does with it:
 
-The cost of ticking it is bigger than a second tab to look at: the **Run** step has exactly **one**
-Play button for every selected platform, not one per tab. `_startTraining()`
-([run_step.dart:154](../../neurocnl/frontend/lib/screens/studio/steps/run_step.dart:154)) loops over
-`workspace.selectedPlatforms` and calls `api.runNotebook(...)` for each one, unawaited, the moment
-you press Play — so ticking **Akida** here means every future Play **also** generates and
-**executes** the Akida tab's notebook automatically, whether or not you ever open that tab.
+| Badge | Meaning |
+|---|---|
+| **Training** | Play trains on this target. Only `snnTorch` has this. |
+| **Deploy only** | Play generates a readable notebook and enables hardware pairing, but does **not** run it. |
 
-That notebook's architecture cell **used to crash every time**: `_generate_akida_code`
-([notebook.py:1302](../../neurocnl/backend/app/routers/notebook.py:1302)) carried its own copy of
-the layer-construction logic and still built `akl.InputLayer(...)`, an SDK symbol that does not
-exist, so the cell raised `AttributeError: module 'akida.layers' has no attribute 'InputLayer'`.
-Fixed 6 August 2026 — it now calls `nir_to_akida` from `neurocnl/converter/akida_adapter.py`, the
-same module the Akida Exporter uses, so there is only one converter to keep correct. Update the
-backend if you still see the old error.
+So ticking **Akida** costs you nothing at Run time. Its tab shows a **grey** dot with a tooltip
+explaining that it was not trained, the snnTorch tab trains as normal, and no error banner appears.
+Earlier builds executed every selected platform's notebook — which meant ticking Akida ran a
+notebook with no training loop and failed, looking like your mistake. The Run step now asks the
+backend whether a notebook is trainable (`GenerateV2Response.trainable`, derived from
+`_TRAINABLE_NOTEBOOK_TARGETS`) and skips execution when it isn't.
 
-**It is still not the path to a trained model on the card.** `akida` has no training adapter, so
-that notebook converts whatever weights the CNL spec carries — an untrained network. The route that
-puts *your trained model* on the card is the snnTorch notebook's **Akida Exporter** node (§2 node 11
-and §10). The two are separate code paths that happen to share the word "Akida".
+Ticking Akida is what you *want*, because it is now the thing that puts Akida in the Deploy step:
 
-**You can still untick Akida in Setup → Target platform before you press Play** if you don't want
-the extra notebook generated and run at all, once you've paired the host with Manage Targets.
-Pairing is stored server-side
-(`studioTargetRegistryServiceProvider`, resolved by `akidaHostReadinessProvider`) and does **not**
-depend on the tickbox staying checked, and the Deploy panel's target dropdown lists Akida
-regardless of `selectedPlatforms` — so unticking it before Run costs you nothing. Re-tick it only if
-you need **Manage Targets** again (e.g. to add or re-test a host).
+- **Setup owns the platform.** The Deploy step's **Deploy to** dropdown lists only the platforms you
+  ticked here. With one platform ticked it collapses to a label. Deploy no longer offers targets you
+  never selected.
+- **Deploy owns the host.** Picking the machine with the card in it happens in the Akida Runtime
+  panel, not in Setup — and you can now **pair a host from that panel directly** ("Pair or select a
+  host"). Setup's **Manage Targets** button still works and does the same thing.
+
+**The Akida-platform notebook is still not the path to a trained model on the card.** `akida` has no
+training adapter, so it converts whatever weights the CNL spec carries — an untrained network. The
+route that puts *your trained model* on the card is the snnTorch notebook's **Akida Exporter** node
+(§2 node 11 and §10). Two separate code paths that share the word "Akida".
+
+Its architecture cell **used to crash every time**: `_generate_akida_code`
+([notebook.py:1302](../../neurocnl/backend/app/routers/notebook.py:1302)) carried its own copy of the
+layer-construction logic and built `akl.InputLayer(...)`, an SDK symbol that does not exist, so the
+cell raised `AttributeError: module 'akida.layers' has no attribute 'InputLayer'`. Fixed 6 August
+2026 — it now calls `nir_to_akida` from `neurocnl/converter/akida_adapter.py`, the same module the
+Akida Exporter uses. Update the backend if you still see the old error.
 
 **If Setup shows no datasets at all** and steps 2-6 stay locked, that is a separate backend fault,
 not something you did: the catalog endpoint fails and Setup cannot mark a dataset chosen. Fixed
@@ -291,6 +292,11 @@ Step 6 (Results), or run the cells in Jupyter. The eval cell must print
 `best_model.pt not found — evaluating with current in-memory weights`, the number you get is the
 last-epoch model rather than the best one — that is a real problem, not a cosmetic warning.
 
+With both platforms ticked you get two tabs. Expect **snnTorch green** and **Akida grey**: grey means
+its notebook was generated but deliberately not run (hover the tab for the reason). Only red is a
+failure, and a red banner now has a **Dismiss** button — dismissing acknowledges the error without
+re-running every platform, which is what **Retry** does.
+
 ---
 
 ## 7. What you should see
@@ -420,13 +426,16 @@ a scaling problem in the conversion, not a problem with your trained model.
 Wired up 2026-08-06. After the notebook run finishes:
 
 1. Go to the **Results** step and choose **Deploy to Hardware**.
-2. In the **Deploy target** dropdown pick **Akida**. The **Akida Runtime** panel appears.
-3. Select your paired host. If the panel says "Select or create an Akida host first", you skipped
-   the Setup step — go back to **Setup → Target platform**, tick **Akida**, then use **Manage
-   Targets** on its tile to pair and pick a host. That is the only route; see §0. The status dot on
-   the tile must not be red.
-4. Choose **Use Latest Bundle**. Studio finds the newest `*.akida-bundle.zip` in your workspace —
-   which is now the one your pipeline just wrote — and submits it.
+2. In **Deploy to** pick **Akida**. (It is listed because you ticked it in Setup — see §0. If you
+   ticked only Akida, there is no dropdown at all, just the label.) The **Akida Runtime** panel
+   appears.
+3. Select your paired host. If none is paired the panel now says so in its body and offers **Pair or
+   select a host** right there — you no longer have to go back to Setup, though **Manage Targets** on
+   the Setup tile still does the same job. The status dot on the Setup tile must not be red.
+4. Choose **Use Latest Bundle**. It reports the folder it is searching, then finds the newest
+   `*.akida-bundle.zip` there — the one your pipeline just wrote — and submits it. The panel names
+   the bundle and its schema version (`v2` for a canvas bundle, `v1` for the MNIST companion), which
+   matters because discovery picks by timestamp and a workspace can hold both.
 5. Progress runs through validation → loading → mapping → evaluation. The host loads the converted
    model, maps it onto the device, and measures accuracy **on the card**.
 6. Enter a **Sample index** and choose **Run Model Sample** to run one image on the silicon.
@@ -443,6 +452,33 @@ Which gates apply:
 - Re-running the notebook with identical data and weights produces a byte-identical bundle, and the
   host deduplicates by checksum — you get the *previous* job back rather than a fresh one. Change
   something, or use the previous result.
+
+### If the host refuses the bundle
+
+```
+The converted model in this bundle could not be loaded by the Akida runtime.
+```
+
+A `.fbz` is a version-gated flatbuffer: only the Akida SDK version that wrote it can reopen it. The
+notebook writes it (in the `jupyter-server` image) and the paired host reads it, and those two used
+to be pinned differently — `akida>=2.0.0` floating in the image against `akida==2.19.1` fixed on the
+host — so the host refused a bundle that had validated cleanly, and the message named no version
+because the SDK's own error was thrown away.
+
+Fixed 6 August 2026, three ways:
+
+- Both sides now pin **`akida==2.19.2`** (`workers/jupyter_server/requirements.txt` and
+  `akidaRuntime.requiredPackages` in `modules.json`), and
+  `scripts/verify_akida_package_manifest.py --pins-only` fails if they ever drift apart again.
+- The bundle's manifest has always recorded the producer's SDK version and nothing read it. The host
+  now compares it against its own and fails with `MODEL_SDK_VERSION_MISMATCH`, **naming both
+  versions** and what to do.
+- If the load fails for any other reason, the message now carries the SDK's actual exception instead
+  of swallowing it, and the host logs it.
+
+The panel's **Akida SDK version** row shows what the host has installed. After the pin change the
+host needs its packages reinstalled — do that from the app's install flow on the Akida tile, not a
+terminal.
 
 If the **snnTorch** notebook's Akida Exporter cell itself fails with:
 
@@ -465,8 +501,9 @@ network. Ignore that group.
 
 Also still true: only `snntorch_sim` has a training adapter
 (`_TRAINABLE_NOTEBOOK_TARGETS`, [notebook.py:360](../../neurocnl/backend/app/routers/notebook.py:360)).
-Selecting `akida` as the *platform* generates a notebook with no training cell at all. Train on
-`snntorch_sim` and let the Akida Exporter do the conversion — that is the supported route.
+Selecting `akida` as the *platform* generates a notebook with no training cell at all — which is why
+Play no longer runs it and its Run tab is badged **Deploy only**. Train on `snntorch_sim` and let the
+Akida Exporter do the conversion; that is the supported route.
 
 [The Akida companion guide](../2026-08-04/GUIDE-akida-mnist-companion.md) remains a **separate,
 self-contained** demo: it trains its own CNN in a prebuilt notebook and ships ONNX for the host to
