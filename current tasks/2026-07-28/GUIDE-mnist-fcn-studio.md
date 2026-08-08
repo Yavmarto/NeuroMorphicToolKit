@@ -512,3 +512,19 @@ the canvases.
 
 Separately: the 794,000-weight FCN above does not fit the fixed PYNQ/SC-NeuroCore overlay
 (256 neurons, two populations, 15,360 synapses).
+
+---
+
+## 11. Benchmarking with Neurobench
+
+To evaluate the MNIST FCN network through the standardized Neurobench pipeline:
+
+1. Build the network architecture in the **Model** canvas as instructed in §1.
+2. Open the **Neurobench** panel in CNL Studio.
+3. In the **Benchmark** dropdown, select **MNIST FCN**.
+4. In the **Target** dropdown, select **Akida**.
+5. Click **Run Benchmark**.
+
+The pipeline sends the CNL specification directly to the Akida hardware endpoint, which maps the architecture to the physical device. Neurobench will measure latency, power (energy_uj), and spike fidelity.
+
+> **Note:** Because the Neurobench panel currently evaluates the raw CNL specification, it measures the network with *untrained* weights. This is useful for evaluating hardware mapping efficiency and power profiles. To evaluate *trained* accuracy, deploy the `model.akida-bundle.zip` through the Akida Runtime panel as described in §10.

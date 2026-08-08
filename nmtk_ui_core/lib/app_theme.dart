@@ -164,6 +164,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundLight,
+      iconTheme: IconThemeData(color: colorScheme.onSurface),
       textTheme: _buildTextTheme(ThemeData.light().textTheme),
       extensions: [_mergedSuiteTokens(colorScheme, Brightness.light, variant)],
     );
@@ -187,6 +188,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundDark,
+      iconTheme: IconThemeData(color: colorScheme.onSurface),
       textTheme: _buildTextTheme(ThemeData.dark().textTheme),
       extensions: [_mergedSuiteTokens(colorScheme, Brightness.dark, variant)],
     );
@@ -263,6 +265,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkNeurocnlTokens.background,
+      iconTheme: IconThemeData(color: colorScheme.onSurface),
       textTheme: _buildTextTheme(ThemeData.dark().textTheme),
       extensions: [_mergedNeurocnlTokens(Brightness.dark, colorScheme)],
     );
@@ -290,6 +293,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: background,
+      iconTheme: IconThemeData(color: colorScheme.onSurface),
       textTheme: _buildTextTheme(ThemeData.light().textTheme),
       extensions: [_mergedNeurocnlTokens(Brightness.light, colorScheme)],
     );
