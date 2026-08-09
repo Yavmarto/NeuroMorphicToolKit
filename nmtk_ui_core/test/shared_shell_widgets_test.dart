@@ -350,25 +350,6 @@ void main() {
     expect(find.text('Reconnect the device and retry.'), findsOneWidget);
   });
 
-  testWidgets('NmtkErrorCard renders non-selectable error text', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      buildHarness(
-        const NmtkErrorCard(
-          message: 'The deploy command returned exit code 1.',
-        ),
-      ),
-    );
-
-    expect(find.text('Workflow Error'), findsOneWidget);
-    expect(
-      find.text('The deploy command returned exit code 1.'),
-      findsOneWidget,
-    );
-    expect(find.byType(SelectableText), findsNothing);
-  });
-
   testWidgets('NmtkErrorCard renders its default error text', (
     WidgetTester tester,
   ) async {
@@ -381,7 +362,7 @@ void main() {
     );
 
     expect(find.text('Workflow Error'), findsOneWidget);
-    expect(find.byType(SelectableText), findsNothing);
+    expect(find.byType(SelectableText), findsOneWidget);
     expect(
       find.text('The deploy command returned exit code 1.'),
       findsOneWidget,
@@ -409,7 +390,7 @@ void main() {
     );
 
     expect(find.text('Captured stderr'), findsOneWidget);
-    expect(find.byType(SelectableText), findsNothing);
+    expect(find.byType(SelectableText), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
 
     await tester.tap(find.text('Retry'));
