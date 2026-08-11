@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/widgets/pipeline_stepper.dart';
 
-enum SnnWorkflowPhase {
-  selectData,
-  defineModel,
-  defineTrain,
-  defineEval,
-  run,
-  deployHardware,
-}
+enum SnnWorkflowPhase { selectData, defineModel, defineTrain, defineEval, run, deployHardware }
 
 /// Base step-name labels, shared between [SnnWorkflowStepper] (which
 /// prefixes each with its 1-based step number) and `SnnMobileWorkflowStepper`
@@ -19,7 +12,7 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
   SnnWorkflowPhase.defineModel: 'Model',
   SnnWorkflowPhase.defineTrain: 'Training',
   SnnWorkflowPhase.defineEval: 'Eval',
-  SnnWorkflowPhase.run: 'Run & Results',
+  SnnWorkflowPhase.run: 'Run',
   SnnWorkflowPhase.deployHardware: 'Deploy',
 };
 
@@ -30,7 +23,7 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
 /// 2. Model        (defineModel)
 /// 3. Training     (defineTrain)
 /// 4. Eval         (defineEval)
-/// 5. Run & Results (run / GPU — training monitor transitions into results)
+/// 5. Run (run / GPU — training monitor transitions into results)
 /// 6. Deploy       (deployHardware — hardware target, on-device
 ///                  inference/benchmark, and Hub sharing)
 class SnnWorkflowStepper extends StatelessWidget {
@@ -113,9 +106,7 @@ class SnnWorkflowStepper extends StatelessWidget {
       onCollapseStep: onCollapseStep,
       onSelected: onPhaseSelected != null
           ? (id) {
-              final phase = SnnWorkflowPhase.values.firstWhere(
-                (p) => p.name == id,
-              );
+              final phase = SnnWorkflowPhase.values.firstWhere((p) => p.name == id);
               onPhaseSelected!(phase);
             }
           : null,
@@ -155,14 +146,9 @@ class SnnWorkflowStepper extends StatelessWidget {
     );
   }
 
-  String _numberedLabel(SnnWorkflowPhase phase) =>
-      '${phase.index + 1}. ${stepLabels[phase] ?? phase.name}';
+  String _numberedLabel(SnnWorkflowPhase phase) => '${phase.index + 1}. ${stepLabels[phase] ?? phase.name}';
 
-  NmtkPipelineStepData _buildStepData(
-    SnnWorkflowPhase phase,
-    IconData icon, {
-    int pulseTick = 0,
-  }) {
+  NmtkPipelineStepData _buildStepData(SnnWorkflowPhase phase, IconData icon, {int pulseTick = 0}) {
     final status = _getStatusForPhase(phase);
     return NmtkPipelineStepData(
       id: phase.name,
