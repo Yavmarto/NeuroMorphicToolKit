@@ -319,6 +319,24 @@ class AkidaServiceMixin:
             {},
         )
 
+    def proxy_akida_model_visualization(
+        self,
+        host_id: str,
+        model_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Replay a deployed model layer through the selected Akida host."""
+        host = self._get_akida_host(host_id)
+        return self._akida_json_request(
+            host,
+            "POST",
+            f"/api/neurochip/akida/models/{model_id}/visualization",
+            payload,
+            # Benchmark visualization replays the complete evaluation set in
+            # software before returning its compressed matrix.
+            timeout=300.0,
+        )
+
     def _emit_akida_terminal_log(
         self, host: dict[str, Any], message: str, *, stderr: bool = False
     ) -> None:

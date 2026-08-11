@@ -613,6 +613,42 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
             {},
         )
 
+    def test_proxy_akida_model_visualization_forwards_typed_payload(self) -> None:
+        host = self.state.create_akida_host(
+            {
+                "displayName": "Lab Akida",
+                "baseUrl": "http://akida-box.local:8002",
+                "credentialRef": "stored-token",
+            }
+        )
+        payload = {"mode": "benchmark", "layerIndex": 2}
+        response = {
+            "modelId": "model-1",
+            "mode": "benchmark",
+            "provenance": "akida_software_replay",
+        }
+
+        with mock.patch.object(
+            self.state,
+            "_akida_json_request",
+            return_value=response,
+        ) as runtime_request:
+            result = self.state.proxy_akida_model_visualization(
+                host["id"], "model-1", payload
+            )
+
+        self.assertEqual(result, response)
+        runtime_request.assert_called_once_with(
+            mock.ANY,
+            "POST",
+            "/api/neurochip/akida/models/model-1/visualization",
+            payload,
+            timeout=300.0,
+        )
+        self.assertEqual(
+            runtime_request.call_args.args[0]["credentialRef"], "stored-token"
+        )
+
     def test_proxy_akida_model_job_rejects_oversized_encoding(self) -> None:
         host = self.state.create_akida_host(
             {"displayName": "Lab Akida", "baseUrl": "http://akida-box.local:8002"}
@@ -651,6 +687,15 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
                 "proxy_akida_model_inference",
                 return_value={"modelId": "model-1", "prediction": 7},
             ) as inference,
+            mock.patch.object(
+                server.state,
+                "proxy_akida_model_visualization",
+                return_value={
+                    "modelId": "model-1",
+                    "mode": "sample",
+                    "provenance": "akida_software_replay",
+                },
+            ) as visualization,
         ):
             root = f"http://127.0.0.1:{server.server_address[1]}"
             submit_request = urllib.request.Request(
@@ -680,10 +725,28 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
             )
             with urllib.request.urlopen(inference_request, timeout=5) as response:
                 self.assertEqual(json.loads(response.read())["prediction"], 7)
+            visualization_request = urllib.request.Request(
+                f"{root}/api/launcher/akida/hosts/{host['id']}/models/model-1/visualization",
+                data=json.dumps(
+                    {"mode": "sample", "layerIndex": 1, "sampleIndex": 42}
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(visualization_request, timeout=5) as response:
+                self.assertEqual(
+                    json.loads(response.read())["provenance"],
+                    "akida_software_replay",
+                )
 
         submit.assert_called_once()
         status.assert_called_once_with(host["id"], "job-1")
         inference.assert_called_once_with(host["id"], "model-1", {"sampleIndex": 42})
+        visualization.assert_called_once_with(
+            host["id"],
+            "model-1",
+            {"mode": "sample", "layerIndex": 1, "sampleIndex": 42},
+        )
 
     def test_akida_run_http_endpoint_proxies_runtime_payload(self) -> None:
         server = launcher_server.create_server("127.0.0.1", 0)

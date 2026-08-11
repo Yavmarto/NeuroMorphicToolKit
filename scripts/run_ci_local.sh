@@ -17,6 +17,8 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 source "$ROOT_DIR/scripts/ci/lib.sh"
+# shellcheck source=scripts/dev/changed_paths.sh
+source "$ROOT_DIR/scripts/dev/changed_paths.sh"
 
 # ── Module registry ───────────────────────────────────────────────────
 PY_NAMES=(Neurochip Neurosense Neurohub Neuro-Dream-Hand neurocnl Neurobench)
@@ -148,11 +150,14 @@ detect_changed_modules() {
     MODE="all"; return
   fi
 
-  local changed_files uncommitted staged
+  local changed_files uncommitted staged nested_uncommitted
   changed_files=$(git diff --name-only "$base_ref" HEAD 2>/dev/null || echo "")
   uncommitted=$(git diff --name-only 2>/dev/null || echo "")
   staged=$(git diff --name-only --cached 2>/dev/null || echo "")
-  changed_files=$(printf '%s\n%s\n%s' "$changed_files" "$uncommitted" "$staged" | sort -u | grep -v '^$' || true)
+  nested_uncommitted=$(nmtk_local_uncommitted_paths "$ROOT_DIR")
+  changed_files=$(printf '%s\n%s\n%s\n%s' \
+    "$changed_files" "$uncommitted" "$staged" "$nested_uncommitted" \
+    | sort -u | grep -v '^$' || true)
 
   if [ -z "$changed_files" ]; then
     echo -e "${YELLOW}No changes detected. Use --all to test everything.${RESET}"

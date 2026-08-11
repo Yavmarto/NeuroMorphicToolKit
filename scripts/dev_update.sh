@@ -17,7 +17,7 @@
 #                          rebuild that?"
 #   --akida-native         force the akida-native overlay on
 #   --no-akida-native      force it off (default is auto-detect)
-#   --evict-ports          kill whatever else holds a stack port, then retry
+#   --evict-ports          kill non-NMTK port holders on legacy dev stacks
 #   --remove-orphans       also remove containers no compose file defines
 #   -h | --help
 #
@@ -36,12 +36,17 @@
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/dev/lib.sh
 source "$REPO_ROOT/scripts/dev/lib.sh"   # also sets -euo pipefail
+# shellcheck source=scripts/dev/changed_paths.sh
+source "$REPO_ROOT/scripts/dev/changed_paths.sh"
 
 REMOTE_HOST="${REMOTE_HOST:-moosebun2@192.168.68.53}"
 DEPLOY_DIR="${DEPLOY_DIR:-~/nmtk-deploy}"
 CONTAINER_ENGINE="${CONTAINER_ENGINE:-docker}"
 SSH_OPTS="${SSH_OPTS:--o ControlMaster=auto -o ControlPath=/tmp/nmtk-ssh-%h-%p-%r -o ControlPersist=60s}"
 EXCLUDE_FILE="$REPO_ROOT/scripts/rsync-excludes.txt"
+APP_UPDATE_HELPER="$REPO_ROOT/scripts/dev/app_managed_update.sh"
+APP_UPDATE_INSTALLED_HELPER="/usr/local/libexec/nmtk-app-managed-update"
+APP_UPDATE_HELPER_VERSION="nmtk-app-managed-update 2"
 COMPOSE_ARGS="-f docker-compose.yml -f docker-compose.dev.yml"
 
 SKIP_TESTS=false
@@ -57,6 +62,8 @@ EXPLAIN_PATHS=()
 AKIDA_NATIVE="${AKIDA_NATIVE:-}"
 AKIDA_DETECTED_VIA=""
 NEUROCHIP_PORT=8002
+APP_MANAGED_STACK=false
+APP_UPDATE_TMP_DIR=""
 
 PYTHON3="$(find_python3)" || { echo "error: no python3 found" >&2; exit 1; }
 
@@ -102,6 +109,163 @@ remote() {
 remote_probe() {
   # shellcheck disable=SC2086,SC2029
   ssh $SSH_OPTS "$REMOTE_HOST" "$@" 2>/dev/null || true
+}
+
+cleanup_app_update_tmp() {
+  [ -n "$APP_UPDATE_TMP_DIR" ] || return 0
+  case "$APP_UPDATE_TMP_DIR" in
+    /tmp/nmtk-dev-update.*)
+      remote_probe "rm -rf -- '$APP_UPDATE_TMP_DIR'" >/dev/null
+      ;;
+  esac
+  APP_UPDATE_TMP_DIR=""
+}
+trap cleanup_app_update_tmp EXIT
+
+# Backend Setup deliberately runs the released stack as the isolated
+# nmtk-deploy account. Its rootless Podman containers are invisible to Docker
+# under the normal developer SSH account, even though they own the same public
+# ports. Detect that topology before treating those ports as foreign.
+detect_app_managed_stack() {
+  local owner
+  owner="$(remote_probe "ps -eo user:64=,args= | awk '\$1 == \"nmtk-deploy\" && index(\$0, \" -n nmtk-launcher-control-1 \") {print \$1; exit}'" | tr -d '\r')"
+  if [ "$owner" = "nmtk-deploy" ]; then
+    APP_MANAGED_STACK=true
+    log "App-managed backend detected (rootless Podman owned by nmtk-deploy)."
+    log "  Development images will replace only affected services; data volumes stay intact."
+    if $EVICT_PORTS; then
+      warn "--evict-ports is ignored for the app-managed NMTK stack."
+    fi
+  fi
+}
+
+pending_paths() {
+  remote_probe "cd $DEPLOY_DIR && test ! -f .dev-update-pending || sed -n '1,500p' .dev-update-pending"
+}
+
+write_pending_paths() {
+  local paths="$1"
+  $DRY_RUN && return 0
+  # Paths come from git/rsync, one per line. Keep them as data rather than
+  # interpolating them into a remote command.
+  printf '%s\n' "$paths" | ssh $SSH_OPTS "$REMOTE_HOST" \
+    "cd $DEPLOY_DIR && umask 077 && tee .dev-update-pending >/dev/null"
+}
+
+clear_pending_paths() {
+  $DRY_RUN && return 0
+  remote "cd $DEPLOY_DIR && rm -f -- .dev-update-pending"
+}
+
+app_recovery_initialized() {
+  [ "$(remote_probe "cd $DEPLOY_DIR && test -f .dev-update-app-managed && printf yes")" = "yes" ]
+}
+
+mark_app_recovery_initialized() {
+  $DRY_RUN && return 0
+  remote "cd $DEPLOY_DIR && umask 077 && touch .dev-update-app-managed"
+}
+
+resolve_built_image_id() {
+  local service="$1" compose_config image_ref quoted_image_ref image_id
+  compose_config="$(compose_probe "config --format json")"
+  [ -n "$compose_config" ] ||
+    die "could not read the Compose configuration after building $service"
+  if ! image_ref="$(
+    printf '%s' "$compose_config" |
+      nmtk_compose_image_reference "$PYTHON3" "$service" 2>/dev/null
+  )"; then
+    die "could not resolve the built image name for Compose service $service"
+  fi
+
+  # `docker compose images` lists images attached to Compose containers. The
+  # developer project deliberately has no container when the app-owned Podman
+  # stack is running, so inspect the image produced by `compose build` itself.
+  printf -v quoted_image_ref '%q' "$image_ref"
+  image_id="$(
+    remote_probe "$CONTAINER_ENGINE image inspect $quoted_image_ref --format '{{.Id}}'" |
+      awk 'NF {print; exit}' | tr -d '\r'
+  )"
+  [ -n "$image_id" ] ||
+    die "built $service image $image_ref is missing after Compose reported success"
+  printf '%s\n' "$image_id"
+}
+
+# A dirty submodule appears to the root repository as just `Neurochip` or
+# `neurocnl`, which is not enough for path classification. Expand its internal
+# working-tree changes so a previously-synced-but-not-applied update can still
+# recover on the next invocation.
+app_managed_update_services() {
+  local services=("$@") service image_id source_tag archive remote_helper
+  local installed_version remote_user
+  [ ${#services[@]} -gt 0 ] || return 0
+  [ -x "$APP_UPDATE_HELPER" ] || die "missing app-managed update helper: $APP_UPDATE_HELPER"
+
+  APP_UPDATE_TMP_DIR="$(remote "mktemp -d /tmp/nmtk-dev-update.XXXXXX")"
+  case "$APP_UPDATE_TMP_DIR" in
+    /tmp/nmtk-dev-update.*) ;;
+    *) die "the remote host returned an unsafe temporary directory" ;;
+  esac
+  remote "chmod 0755 '$APP_UPDATE_TMP_DIR'"
+  remote_helper="$APP_UPDATE_TMP_DIR/app_managed_update.sh"
+  installed_version="$(
+    remote_probe "sudo -n -- '$APP_UPDATE_INSTALLED_HELPER' --version" |
+      awk 'NF {print; exit}' | tr -d '\r'
+  )"
+  if [ "$installed_version" != "$APP_UPDATE_HELPER_VERSION" ]; then
+    # SSH options are simple `-o value` pairs and are accepted by both ssh/scp.
+    # shellcheck disable=SC2086
+    scp $SSH_OPTS "$APP_UPDATE_HELPER" "$REMOTE_HOST:$remote_helper" >/dev/null
+    remote "chmod 0755 '$remote_helper'"
+  fi
+
+  local helper_args=()
+  for service in "${services[@]}"; do
+    log "Building development image for app-managed service: $service"
+    compose_remote "build $service"
+    image_id="$(resolve_built_image_id "$service")"
+    source_tag="localhost/nmtk-dev-$service:$(date +%s)-$$"
+    archive="$APP_UPDATE_TMP_DIR/$service.tar"
+    remote "$CONTAINER_ENGINE tag '$image_id' '$source_tag' && \
+      $CONTAINER_ENGINE save -o '$archive' '$source_tag' && chmod 0644 '$archive'"
+    helper_args+=("$service" "$archive" "$source_tag")
+    # A prior failed legacy handoff may have left a Created-only Docker
+    # container. It is not the running Podman service and is safe to remove.
+    $DRY_RUN || compose_remote "rm -sf $service" >/dev/null 2>&1 || true
+  done
+
+  local quoted
+  if [ "$installed_version" = "$APP_UPDATE_HELPER_VERSION" ]; then
+    local command=(sudo -n -- "$APP_UPDATE_INSTALLED_HELPER" "${helper_args[@]}")
+    printf -v quoted '%q ' "${command[@]}"
+    log "Updating the app-managed backend..."
+    remote "$quoted"
+  else
+    remote_user="$(remote "id -un" | tr -d '\r')"
+    local command=(
+      sudo -- "$remote_helper" --install-for "$remote_user" "${helper_args[@]}"
+    )
+    printf -v quoted '%q ' "${command[@]}"
+    log "One-time setup: installing the app-managed developer update helper."
+    log "  If prompted, enter the sudo password for $remote_user on $REMOTE_HOST."
+    log "  Later make dev-update runs will not ask again."
+    if remote "sudo -n true" >/dev/null 2>&1; then
+      remote "$quoted"
+    else
+      [ -t 0 ] && [ -t 1 ] || die "one-time setup needs the sudo password for $remote_user on $REMOTE_HOST.
+  Run make dev-update from a normal terminal; later updates will not ask again."
+      # Force a TTY only for sudo; all builds and transfers remain noninteractive.
+      # shellcheck disable=SC2086
+      ssh $SSH_OPTS -tt "$REMOTE_HOST" "$quoted"
+    fi
+  fi
+
+  for source_tag in "${helper_args[@]}"; do
+    case "$source_tag" in
+      localhost/nmtk-dev-*:*) remote_probe "$CONTAINER_ENGINE image rm '$source_tag'" >/dev/null ;;
+    esac
+  done
+  cleanup_app_update_tmp
 }
 
 require_reachable_host() {
@@ -309,6 +473,9 @@ classify_path() {
     docker-compose.prod.yml|docker-compose.remote.yml) \
                                              echo "ASSETSYNC:-"; return ;;
 
+    # Generated runtime logs are not backend source and are rsync-excluded.
+    */logs/*)                                echo "NOOP:$path"; return ;;
+
     # Live via the suite_api bind mount — no container work at all.
     suite_api/*|neurocnl/backend/*)          echo "RELOAD:suite_api"; return ;;
 
@@ -402,12 +569,18 @@ main() {
 
   # Decide the compose file set before anything else uses compose_remote().
   apply_akida_overlay
+  detect_app_managed_stack
 
   if $RESTART_SUITE_API_ONLY; then
-    log "Restarting suite_api only (--restart-suite-api-only) — no sync, no tests."
-    $DRY_RUN || compose_remote "restart suite_api"
+    if $APP_MANAGED_STACK; then
+      log "Replacing suite_api only (--restart-suite-api-only) — no sync, no tests."
+      $DRY_RUN || app_managed_update_services suite_api
+    else
+      log "Restarting suite_api only (--restart-suite-api-only) — no sync, no tests."
+      $DRY_RUN || compose_remote "restart suite_api"
+    fi
     $DRY_RUN || verify_health
-    log "suite_api restarted."
+    log "suite_api updated."
     return 0
   fi
 
@@ -433,8 +606,9 @@ main() {
     warn "  run: python3 scripts/sync_flutter_deployment_assets.py   (then commit)"
   fi
 
-  # 3. Sync, recording exactly what moved. --itemize-changes is what removes the
-  #    need for any state tracking.
+  # 3. Sync, recording exactly what moved. A small pending-path file bridges
+  #    the only gap rsync cannot represent: files can have arrived successfully
+  #    even when the subsequent image replacement failed.
   local itemized
   if $DRY_RUN; then
     log "Computing what would sync..."
@@ -452,9 +626,25 @@ main() {
   # Keep only transferred/changed *files*. rsync itemize codes: field 2 is the
   # entry type, so ">f" / "cf" are files sent; "*deleting" and directory-only
   # attribute lines are not source changes we need to act on.
-  local changed_paths
+  local changed_paths pending local_dirty
   changed_paths="$(printf '%s\n' "$itemized" \
     | awk '$1 ~ /^[>c<][f]/ { $1=""; sub(/^ /,""); print }' || true)"
+  pending="$(pending_paths)"
+  if [ -n "$pending" ]; then
+    log "Recovering a previously synced update that was not applied."
+  fi
+  changed_paths="$(printf '%s\n%s\n' "$changed_paths" "$pending" \
+    | awk 'NF' | sort -u)"
+
+  # Bootstrap recovery for hosts affected before pending-path tracking existed.
+  # The app-owned stack may still be stale even though its staging directory is
+  # byte-for-byte current, so expand current working-tree changes once.
+  if [ -z "$changed_paths" ] && $APP_MANAGED_STACK && ! app_recovery_initialized; then
+    local_dirty="$(nmtk_local_uncommitted_paths "$REPO_ROOT")"
+    changed_paths="$(printf '%s\n' "$local_dirty" | awk 'NF' | sort -u)"
+    [ -z "$changed_paths" ] ||
+      log "Source is staged already; recovering unapplied local changes."
+  fi
 
   # `--force-rebuild` promises "regardless of what changed", so it has to survive the
   # nothing-changed shortcut — otherwise the one case you reach for it in (the source is
@@ -506,6 +696,13 @@ main() {
       < <(printf '%s\n' "${restart[@]}" | sort -u)
   fi
 
+  local has_runtime_work=false
+  $recreate && has_runtime_work=true
+  $reload && has_runtime_work=true
+  [ ${#uniq_rebuild[@]} -gt 0 ] && has_runtime_work=true
+  [ ${#uniq_restart[@]} -gt 0 ] && has_runtime_work=true
+  $has_runtime_work && write_pending_paths "$changed_paths"
+
   # 5. Report the decision and why, then act.
   $assetsync && warn "compose files changed — rerun the asset sync and commit the bundle."
 
@@ -524,31 +721,56 @@ main() {
     uniq_rebuild=("${kept[@]+"${kept[@]}"}")
   fi
 
-  # Anything below starts containers, so establish now that their ports are free
-  # rather than discovering it half way through a recreate.
-  if $recreate || [ ${#uniq_rebuild[@]} -gt 0 ]; then
-    check_port_conflicts
-  fi
-
-  if $recreate; then
-    log "Decision: recreate the stack (compose files changed)."
-    $DRY_RUN || compose_remote "up -d"
-  fi
-
-  if [ ${#uniq_rebuild[@]} -gt 0 ]; then
-    if $NO_REBUILD; then
-      warn "rebuild needed for: ${uniq_rebuild[*]} — skipped (--no-rebuild)."
-      warn "  those changes are NOT live on the host."
-    else
-      log "Decision: rebuild ${uniq_rebuild[*]}"
-      log "          (not bind-mounted — the running image holds the old code)."
-      $DRY_RUN || compose_remote "up -d --build ${uniq_rebuild[*]}"
+  if $APP_MANAGED_STACK; then
+    $recreate && die "app-managed Compose-file changes need Backend Setup; no ports were evicted."
+    local app_services=("${uniq_rebuild[@]+"${uniq_rebuild[@]}"}" "${uniq_restart[@]+"${uniq_restart[@]}"}")
+    $reload && app_services+=(suite_api)
+    local uniq_app_services=()
+    if [ ${#app_services[@]} -gt 0 ]; then
+      while IFS= read -r path; do uniq_app_services+=("$path"); done \
+        < <(printf '%s\n' "${app_services[@]}" | awk 'NF' | sort -u)
     fi
-  fi
+    if [ ${#uniq_app_services[@]} -gt 0 ]; then
+      if $NO_REBUILD; then
+        warn "app-managed rebuild needed for: ${uniq_app_services[*]} — skipped (--no-rebuild)."
+        warn "  those changes are NOT live on the host."
+      else
+        log "Decision: replace app-managed service image(s): ${uniq_app_services[*]}"
+        $DRY_RUN || app_managed_update_services "${uniq_app_services[@]}"
+      fi
+    fi
+    # The app-owned production stack has no source bind mounts. Restart and
+    # reload decisions were converted into image replacements above.
+    uniq_rebuild=()
+    uniq_restart=()
+    reload=false
+  else
+    # Anything below starts containers, so establish now that their ports are
+    # free rather than discovering it half way through a recreate.
+    if $recreate || [ ${#uniq_rebuild[@]} -gt 0 ]; then
+      check_port_conflicts
+    fi
 
-  if [ ${#uniq_restart[@]} -gt 0 ]; then
-    log "Decision: restart ${uniq_restart[*]} (bind-mounted, applied on restart)."
-    $DRY_RUN || compose_remote "restart ${uniq_restart[*]}"
+    if $recreate; then
+      log "Decision: recreate the stack (compose files changed)."
+      $DRY_RUN || compose_remote "up -d"
+    fi
+
+    if [ ${#uniq_rebuild[@]} -gt 0 ]; then
+      if $NO_REBUILD; then
+        warn "rebuild needed for: ${uniq_rebuild[*]} — skipped (--no-rebuild)."
+        warn "  those changes are NOT live on the host."
+      else
+        log "Decision: rebuild ${uniq_rebuild[*]}"
+        log "          (not bind-mounted — the running image holds the old code)."
+        $DRY_RUN || compose_remote "up -d --build ${uniq_rebuild[*]}"
+      fi
+    fi
+
+    if [ ${#uniq_restart[@]} -gt 0 ]; then
+      log "Decision: restart ${uniq_restart[*]} (bind-mounted, applied on restart)."
+      $DRY_RUN || compose_remote "restart ${uniq_restart[*]}"
+    fi
   fi
 
   # suite_api is bind-mounted with --reload, which *should* make RELOAD-classified
@@ -573,6 +795,9 @@ main() {
   fi
 
   verify_health
+  $has_runtime_work && ! $NO_REBUILD && clear_pending_paths
+  $APP_MANAGED_STACK && $has_runtime_work && ! $NO_REBUILD && \
+    mark_app_recovery_initialized
   log "Dev backend updated."
 }
 
@@ -745,4 +970,6 @@ report_jupyter_failure() {
   Bypass this gate with --skip-jupyter-check."
 }
 
-main "$@"
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
+fi

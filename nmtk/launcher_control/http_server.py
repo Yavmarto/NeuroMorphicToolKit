@@ -394,6 +394,19 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                         ),
                     )
                     return
+                if (
+                    len(segments) == 8
+                    and segments[5] == "models"
+                    and segments[7] == "visualization"
+                    and method == "POST"
+                ):
+                    self._send_json(
+                        HTTPStatus.OK,
+                        self.server.state.proxy_akida_model_visualization(
+                            host_id, segments[6], body or {}
+                        ),
+                    )
+                    return
 
             if len(segments) >= 5 and segments[:4] == [
                 "api",
