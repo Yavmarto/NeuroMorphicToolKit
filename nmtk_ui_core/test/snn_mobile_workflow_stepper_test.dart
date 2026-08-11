@@ -27,16 +27,16 @@ void main() {
       expect(find.text('Model'), findsOneWidget);
     });
 
-    testWidgets('calls the deploy phase Results without changing its id', (
-      tester,
-    ) async {
+    testWidgets('labels the final phase Deploy', (tester) async {
       await tester.pumpWidget(
         _wrap(
-          const SnnMobileWorkflowStepper(currentPhase: SnnWorkflowPhase.deploy),
+          const SnnMobileWorkflowStepper(
+            currentPhase: SnnWorkflowPhase.deployHardware,
+          ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Results'), findsOneWidget);
+      expect(find.text('Deploy'), findsOneWidget);
     });
 
     testWidgets('locked chip has 0.3 opacity', (tester) async {
@@ -44,7 +44,7 @@ void main() {
         _wrap(
           const SnnMobileWorkflowStepper(
             currentPhase: SnnWorkflowPhase.selectData,
-            lockedPhases: {SnnWorkflowPhase.deploy},
+            lockedPhases: {SnnWorkflowPhase.deployHardware},
           ),
         ),
       );

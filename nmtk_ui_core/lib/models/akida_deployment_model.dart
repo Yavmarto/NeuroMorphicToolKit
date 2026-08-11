@@ -510,6 +510,12 @@ class AkidaPairedHost {
   final String lastReadinessMessage;
   final String lastVerifiedAt;
   final bool isDefault;
+
+  /// The Akida card is on the same physical machine as the backend server
+  /// itself. SSH/SCP to this host must route through the container's
+  /// docker/podman gateway alias instead of the LAN address in [host], which
+  /// a container in bridge-network mode can't dial back out to (hairpin NAT).
+  final bool sameHostAsBackend;
   final AkidaEnvironmentChecks? capabilitySnapshot;
   final String installedRuntimeVersion;
   final String availableRuntimeVersion;
@@ -539,6 +545,7 @@ class AkidaPairedHost {
     required this.lastReadinessMessage,
     required this.lastVerifiedAt,
     this.isDefault = false,
+    this.sameHostAsBackend = false,
     this.capabilitySnapshot,
     this.installedRuntimeVersion = '',
     this.availableRuntimeVersion = '',
@@ -612,6 +619,7 @@ class AkidaPairedHost {
           json['last_verified_at'] as String? ??
           '',
       isDefault: json['isDefault'] as bool? ?? false,
+      sameHostAsBackend: json['sameHostAsBackend'] as bool? ?? false,
       capabilitySnapshot: json['capabilitySnapshot'] is Map<String, dynamic>
           ? AkidaEnvironmentChecks.fromJson(
               json['capabilitySnapshot'] as Map<String, dynamic>,
@@ -656,6 +664,7 @@ class AkidaPairedHost {
       'lastReadinessMessage': lastReadinessMessage,
       'lastVerifiedAt': lastVerifiedAt,
       'isDefault': isDefault,
+      'sameHostAsBackend': sameHostAsBackend,
       if (capabilitySnapshot != null)
         'capabilitySnapshot': capabilitySnapshot!.toJson(),
       'installedRuntimeVersion': installedRuntimeVersion,
@@ -689,6 +698,7 @@ class AkidaPairedHost {
     String? lastReadinessMessage,
     String? lastVerifiedAt,
     bool? isDefault,
+    bool? sameHostAsBackend,
     AkidaEnvironmentChecks? capabilitySnapshot,
     String? installedRuntimeVersion,
     String? availableRuntimeVersion,
@@ -718,6 +728,7 @@ class AkidaPairedHost {
       lastReadinessMessage: lastReadinessMessage ?? this.lastReadinessMessage,
       lastVerifiedAt: lastVerifiedAt ?? this.lastVerifiedAt,
       isDefault: isDefault ?? this.isDefault,
+      sameHostAsBackend: sameHostAsBackend ?? this.sameHostAsBackend,
       capabilitySnapshot: capabilitySnapshot ?? this.capabilitySnapshot,
       installedRuntimeVersion:
           installedRuntimeVersion ?? this.installedRuntimeVersion,

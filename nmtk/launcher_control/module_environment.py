@@ -190,6 +190,30 @@ def _current_platform_key() -> str:
     return sys.platform
 
 
+def _normalize_standalone_cpython(raw: Any) -> dict[str, Any] | None:
+    """Validate the pinned interpreter the Akida install script may download.
+
+    All four fields are required: without the checksum the download could not
+    be verified, and without the URL there is nothing to fetch. A partial entry
+    returns None so provisioning reports "no automatic download is configured"
+    — an actionable message — rather than failing mid-install.
+    """
+    if not isinstance(raw, dict):
+        return None
+    version = str(raw.get("version") or "").strip()
+    url = str(raw.get("url") or "").strip()
+    sha256 = str(raw.get("sha256") or "").strip()
+    architecture = str(raw.get("architecture") or "x86_64").strip()
+    if not version or not url or not sha256 or not architecture:
+        return None
+    return {
+        "version": version,
+        "architecture": architecture,
+        "url": url,
+        "sha256": sha256,
+    }
+
+
 def _normalize_akida_runtime_config(raw: Any) -> dict[str, Any] | None:
     if not isinstance(raw, dict):
         return None
@@ -200,6 +224,11 @@ def _normalize_akida_runtime_config(raw: Any) -> dict[str, Any] | None:
             if str(value).strip()
         ],
         "pythonRange": str(raw.get("pythonRange") or ">=3.10,<3.13").strip(),
+        # This rebuild is a whitelist, so any manifest key not named here is
+        # dropped before it ever reaches provisioning.
+        "standaloneCPython": _normalize_standalone_cpython(
+            raw.get("standaloneCPython")
+        ),
         "requiredPackages": [
             str(value).strip()
             for value in raw.get("requiredPackages", [])

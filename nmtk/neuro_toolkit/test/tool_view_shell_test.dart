@@ -192,7 +192,7 @@ void main() {
           analyticsServiceProvider.overrideWithValue(AnalyticsService()),
           selectedControlApiServiceProvider.overrideWithValue(
             ControlApiService(
-              baseUri: Uri.parse('http://192.168.2.51:8090'),
+              baseUri: Uri.parse('http://192.168.68.53:8090'),
               analyticsService: AnalyticsService(),
             ),
           ),
@@ -210,7 +210,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // Verify button identifies the connected server.
-    expect(find.text('192.168.2.51'), findsOneWidget);
+    expect(find.text('192.168.68.53'), findsOneWidget);
 
     // Tap button to open dismissable popup containing the full setup screen
     await tester.tap(find.byTooltip('Server Connection'));

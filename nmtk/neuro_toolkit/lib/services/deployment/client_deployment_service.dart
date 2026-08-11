@@ -726,11 +726,20 @@ fi
     final code = marker?.group(1) ?? _legacyBootstrapCode(stderr);
     final phase = marker?.group(2) ?? _phaseForFailureCode(code);
     final details = _failureCopyForCode(code);
+    // When the server names the account it stumbled on, that sentence is the
+    // only place the name appears — the code's stock copy cannot know it, and
+    // the ✓/✗ lines that used to carry it never reach the transcript. The
+    // generic "… failed or timed out." wording adds nothing, so skip it.
+    final serverMessage = marker?.group(4)?.trim() ?? '';
+    final recovery = serverMessage.contains(' user ') &&
+            !serverMessage.endsWith('failed or timed out.')
+        ? '$serverMessage ${details.$2}'
+        : details.$2;
     return DeploymentFailureDetails(
       code: code,
       phase: phase,
       summary: details.$1,
-      recovery: details.$2,
+      recovery: recovery,
       technicalDetails: sanitized,
       exitCode: int.tryParse(marker?.group(3) ?? '') ?? exitCode,
     );
@@ -805,10 +814,10 @@ fi
         ),
       'podman_inspection_failed' => (
           'Podman installations could not be inspected',
-          'Administrator access succeeded, but Podman storage for another '
-              'server account could not be inspected. Review the named user '
-              'in the terminal output, repair that account’s container '
-              'storage or runtime-directory ownership, then retry.',
+          'Administrator access succeeded, but the server’s own Podman '
+              'installation did not answer. Restart the server, then retry. '
+              'Podman belonging to other accounts on the server is skipped '
+              'automatically and never blocks setup.',
         ),
       'container_cleanup_failed' => (
           'Existing NMTK containers could not be removed safely',
@@ -906,6 +915,13 @@ fi
     final resetFlag = factoryReset ? 'true' : 'false';
     return r'''
 set -euo pipefail
+# Every privilege drop below (runuser/env, and any added later) inherits this
+# shell's working directory, and runuser does not change it. The SSH login lands
+# in the administrator's home, which other accounts cannot traverse on modern
+# distributions, so a dropped-privilege child fails before it can even start.
+# "/" is traversable by every account. Nothing in this script uses a relative
+# path, so moving here is safe.
+cd /
 ENGINE="__ENGINE__"
 FACTORY_RESET="__FACTORY_RESET__"
 DEPLOY_USER="nmtk-deploy"
@@ -1021,6 +1037,10 @@ cleanup_temporary_setup_files() {
 trap cleanup_temporary_setup_files EXIT
 STEP_OUTPUT=""
 STEP_ERROR=""
+STEP_EXIT=0
+# Set to 1 only while inspecting a third-party account's rootless Podman.
+RUNTIME_SWEEP_OPTIONAL=0
+SKIPPED_PODMAN_ACCOUNTS=""
 terminate_residual_command_group() {
   local group_pid="$1"
   kill -TERM -- "-$group_pid" 2>/dev/null || return 0
@@ -1064,13 +1084,14 @@ drain_capture_streams() {
   [ "$stderr_forced" -eq 0 ] || stderr_tee_exit=0
 }
 
-capture_step() {
+# Runs one step and records its exit code in STEP_EXIT without judging it. The
+# two wrappers below decide whether a non-zero exit ends the whole setup
+# (capture_step) or only the account currently being swept
+# (capture_optional_step).
+run_capture_step() {
   seconds="$1"
-  code="$2"
-  failure_exit="$3"
-  display="$4"
-  success="$5"
-  shift 5
+  display="$2"
+  shift 2
   automatic_recovery="${NMTK_SETUP_AUTOMATIC_RECOVERY:-false}"
   step_marker start "$seconds" "$automatic_recovery" "$display"
   printf -v rendered_command '%q ' "$@"
@@ -1103,16 +1124,33 @@ capture_step() {
     fail "unexpected_setup_failure" 28 \
       "The server output stream could not be captured."
   fi
+  STEP_EXIT="$command_exit"
+  step_marker finish "$seconds" "$automatic_recovery" "$display"
   if [ "$command_exit" -ne 0 ]; then
-    step_marker finish "$seconds" "$automatic_recovery" "$display"
     if [ "$command_exit" -eq 124 ]; then
       command_exit_marker timeout "$seconds"
     else
       command_exit_marker exit "$command_exit"
     fi
-    fail "$code" "$failure_exit" "$display failed or timed out."
   fi
-  step_marker finish "$seconds" "$automatic_recovery" "$display"
+}
+
+capture_step() {
+  code="$2"
+  failure_exit="$3"
+  step_display="$4"
+  run_capture_step "$1" "$4" "${@:6}"
+  if [ "$STEP_EXIT" -ne 0 ]; then
+    fail "$code" "$failure_exit" "$step_display failed or timed out."
+  fi
+}
+
+# Same capture, but a non-zero exit is reported to the caller instead of ending
+# setup. Used only while sweeping other accounts' rootless Podman storage, where
+# one unreadable account must not block the whole server.
+capture_optional_step() {
+  run_capture_step "$1" "$2" "${@:3}"
+  [ "$STEP_EXIT" -eq 0 ]
 }
 
 validated_container_ids() {
@@ -1125,9 +1163,11 @@ validated_container_ids() {
   malformed="$(printf '%s\n' "$input" |
     awk 'NF && ($0 !~ /^[0-9a-fA-F]+$/ ||
       length($0) < 12 || length($0) > 64) {print; exit}')"
-  [ -z "$malformed" ] ||
+  if [ -n "$malformed" ]; then
+    [ "$RUNTIME_SWEEP_OPTIONAL" -eq 0 ] || return 1
     fail "podman_inspection_failed" 29 \
       "$context returned an invalid container identifier."
+  fi
   printf '%s' "$valid"
 }
 
@@ -1139,9 +1179,11 @@ validated_volume_names() {
     awk 'NF && $0 ~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/ {print}' | sort -u)"
   malformed="$(printf '%s\n' "$input" |
     awk 'NF && $0 !~ /^[A-Za-z0-9][A-Za-z0-9_.-]*$/ {print; exit}')"
-  [ -z "$malformed" ] ||
+  if [ -n "$malformed" ]; then
+    [ "$RUNTIME_SWEEP_OPTIONAL" -eq 0 ] || return 1
     fail "volume_cleanup_failed" 31 \
       "$context returned an invalid volume name."
+  fi
   printf '%s' "$valid"
 }
 
@@ -1167,25 +1209,39 @@ AVAILABLE_KB="$(printf '%s\n' "$STEP_OUTPUT" | awk 'NR==2 {print $4}')"
   fail "insufficient_disk" 21 "At least 5 GB of free disk space is required."
 }
 
+# Read-only inspection step. Takes the same arguments as capture_step, but while
+# RUNTIME_SWEEP_OPTIONAL is set it reports failure to the caller instead of
+# ending setup, so an unreadable third-party account is skipped rather than
+# treated as a broken server. Destructive steps never go through here.
+inspect_step() {
+  if [ "$RUNTIME_SWEEP_OPTIONAL" -eq 1 ]; then
+    capture_optional_step "$1" "$4" "${@:6}"
+  else
+    capture_step "$@"
+  fi
+}
+
 remove_runtime_objects() {
   local runtime="$1"
   local context="$2"
   shift 2
   command -v "$runtime" >/dev/null 2>&1 || return 0
   if [ "$runtime" = "docker" ]; then
-    capture_step 20 "${runtime}_inspection_failed" 29 \
+    inspect_step 20 "${runtime}_inspection_failed" 29 \
       "Checking $context access" "$context is accessible" \
       "$@" "$runtime" info --format \
-      'version={{.ServerVersion}} rootless=false storage={{.DockerRootDir}}'
+      'version={{.ServerVersion}} rootless=false storage={{.DockerRootDir}}' ||
+      return 1
   else
-    capture_step 20 "${runtime}_inspection_failed" 29 \
+    inspect_step 20 "${runtime}_inspection_failed" 29 \
       "Checking $context access" "$context is accessible" \
       "$@" "$runtime" info --format \
-      'version={{.Version.Version}} rootless={{.Host.Security.Rootless}} storage={{.Store.GraphRoot}}'
+      'version={{.Version.Version}} rootless={{.Host.Security.Rootless}} storage={{.Store.GraphRoot}}' ||
+      return 1
   fi
-  capture_step 60 "${runtime}_inspection_failed" 29 \
+  inspect_step 60 "${runtime}_inspection_failed" 29 \
     "Inspecting $context containers" "$context containers inspected" \
-    "$@" "$runtime" ps -a --format '{{.ID}} {{.Names}}'
+    "$@" "$runtime" ps -a --format '{{.ID}} {{.Names}}' || return 1
   known_ids="$(printf '%s\n' "$STEP_OUTPUT" |
     awk '$1 ~ /^[0-9a-fA-F]+$/ &&
       length($1) >= 12 && length($1) <= 64 &&
@@ -1201,20 +1257,26 @@ remove_runtime_objects() {
       "$@" "$runtime" rm -f "${known_id_list[@]}"
   fi
   for project in $PROJECTS; do
-    capture_step 60 "${runtime}_inspection_failed" 29 \
+    inspect_step 60 "${runtime}_inspection_failed" 29 \
       "Inspecting NMTK $runtime project $project" \
       "$context project $project inspected" \
       "$@" "$runtime" ps -aq \
-      --filter "label=com.docker.compose.project=$project"
+      --filter "label=com.docker.compose.project=$project" || return 1
     ids="$STEP_OUTPUT"
-    capture_step 60 "${runtime}_inspection_failed" 29 \
+    inspect_step 60 "${runtime}_inspection_failed" 29 \
       "Inspecting legacy NMTK $runtime project $project" \
       "$context legacy project $project inspected" \
       "$@" "$runtime" ps -aq \
-      --filter "label=io.podman.compose.project=$project"
+      --filter "label=io.podman.compose.project=$project" || return 1
     ids="$ids
 $STEP_OUTPUT"
-    ids="$(validated_container_ids "$ids" "$context project $project inspection")"
+    ids="$(validated_container_ids "$ids" \
+      "$context project $project inspection")" || {
+      # The validator runs in a subshell, so its own exit cannot end the script.
+      validation_exit="$?"
+      [ "$RUNTIME_SWEEP_OPTIONAL" -eq 1 ] && return 1
+      exit "$validation_exit"
+    }
     if [ -n "$ids" ]; then
       id_list=()
       while IFS= read -r object_id; do
@@ -1226,21 +1288,25 @@ $STEP_OUTPUT"
         "$@" "$runtime" rm -f "${id_list[@]}"
     fi
     if [ "$FACTORY_RESET" = "true" ]; then
-      capture_step 60 "${runtime}_inspection_failed" 29 \
+      inspect_step 60 "${runtime}_inspection_failed" 29 \
         "Inspecting NMTK $runtime data for project $project" \
         "$context project $project volumes inspected" \
         "$@" "$runtime" volume ls -q \
-        --filter "label=com.docker.compose.project=$project"
+        --filter "label=com.docker.compose.project=$project" || return 1
       volumes="$STEP_OUTPUT"
-      capture_step 60 "${runtime}_inspection_failed" 29 \
+      inspect_step 60 "${runtime}_inspection_failed" 29 \
         "Inspecting legacy NMTK $runtime data for project $project" \
         "$context legacy project $project volumes inspected" \
         "$@" "$runtime" volume ls -q \
-        --filter "label=io.podman.compose.project=$project"
+        --filter "label=io.podman.compose.project=$project" || return 1
       volumes="$volumes
 $STEP_OUTPUT"
       volumes="$(validated_volume_names "$volumes" \
-        "$context project $project volume inspection")"
+        "$context project $project volume inspection")" || {
+        validation_exit="$?"
+        [ "$RUNTIME_SWEEP_OPTIONAL" -eq 1 ] && return 1
+        exit "$validation_exit"
+      }
       if [ -n "$volumes" ]; then
         volume_list=()
         while IFS= read -r volume_name; do
@@ -1278,32 +1344,46 @@ if command -v podman >/dev/null 2>&1; then
       continue
     fi
 
+    # Everything below concerns somebody else's rootless Podman. A problem here
+    # says nothing about whether this server can host NMTK, so the account is
+    # skipped and named instead of failing the whole setup.
+    RUNTIME_SWEEP_OPTIONAL=1
+    skip_candidate=0
     runtime_dir="$active_runtime"
     if [ -d "$runtime_dir" ]; then
       runtime_owner="$(stat -c '%u' "$runtime_dir" 2>/dev/null || true)"
       if [ "$runtime_owner" != "$uid" ]; then
-        terminal "✗ Podman runtime directory for user $candidate has unsafe ownership"
-        fail "podman_inspection_failed" 29 \
-          "The Podman runtime directory for user $candidate is not owned by that user."
+        skip_candidate=1
       fi
-    else
-      capture_step 30 "podman_inspection_failed" 29 \
+    elif capture_optional_step 30 \
         "Preparing Podman access for user $candidate" \
-        "Temporary Podman runtime prepared for user $candidate" \
-        mktemp -d "/tmp/nmtk-podman-runtime.${uid}.XXXXXX"
+        mktemp -d "/tmp/nmtk-podman-runtime.${uid}.XXXXXX"; then
       runtime_dir="$STEP_OUTPUT"
       TEMP_RUNTIME_DIRS+=("$candidate:$runtime_dir")
-      capture_step 30 "podman_inspection_failed" 29 \
+      capture_optional_step 30 \
         "Securing Podman access for user $candidate" \
-        "Temporary Podman runtime secured for user $candidate" \
         bash -c 'chown "$1:$2" "$3" && chmod 700 "$3"' \
-        _ "$uid" "$gid" "$runtime_dir"
+        _ "$uid" "$gid" "$runtime_dir" || skip_candidate=1
+    else
+      skip_candidate=1
     fi
 
-    remove_runtime_objects podman "podman (user $candidate)" \
-      runuser -u "$candidate" -- \
-      env "HOME=$home" "XDG_RUNTIME_DIR=$runtime_dir"
+    if [ "$skip_candidate" -eq 0 ]; then
+      remove_runtime_objects podman "podman (user $candidate)" \
+        runuser -u "$candidate" -- \
+        env "HOME=$home" "XDG_RUNTIME_DIR=$runtime_dir" || skip_candidate=1
+    fi
+    RUNTIME_SWEEP_OPTIONAL=0
+
+    if [ "$skip_candidate" -eq 1 ]; then
+      SKIPPED_PODMAN_ACCOUNTS="$SKIPPED_PODMAN_ACCOUNTS $candidate"
+      printf 'Could not read the Podman setup of account %s; its containers were left in place.\n' \
+        "$candidate"
+    fi
   done </etc/passwd
+  if [ -n "$SKIPPED_PODMAN_ACCOUNTS" ]; then
+    printf 'Skipped Podman accounts:%s\n' "$SKIPPED_PODMAN_ACCOUNTS"
+  fi
 fi
 
 phase "installing_prerequisites" 13 "Preparing $ENGINE"

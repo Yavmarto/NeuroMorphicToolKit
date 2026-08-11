@@ -72,6 +72,12 @@
         "windows"
       ],
       "pythonRange": ">=3.10,<3.13",
+      "standaloneCPython": {
+        "version": "3.12.13",
+        "architecture": "x86_64",
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.12.13%2B20260807-x86_64-unknown-linux-gnu-install_only.tar.gz",
+        "sha256": "5bd6f36fd7ef02b909234c94dca9994ef0da06ace3bc3cece4fe27870e9cdbbe"
+      },
       "requiredPackages": [
         "tensorflow==2.19.*",
         "akida==2.19.2",

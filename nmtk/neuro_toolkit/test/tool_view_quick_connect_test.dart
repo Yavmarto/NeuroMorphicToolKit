@@ -55,7 +55,7 @@ void main() {
           analyticsServiceProvider.overrideWithValue(AnalyticsService()),
           selectedControlApiServiceProvider.overrideWithValue(
             ControlApiService(
-              baseUri: Uri.parse('http://192.168.2.51:8090'),
+              baseUri: Uri.parse('http://192.168.68.53:8090'),
               analyticsService: AnalyticsService(),
             ),
           ),
@@ -78,7 +78,7 @@ void main() {
 
     expect(find.byType(BackendSetupScreen), findsOneWidget);
     expect(
-      find.text('192.168.2.51 · Development build · Checking'),
+      find.text('192.168.68.53 · Development build · Checking'),
       findsOneWidget,
     );
 

@@ -1,7 +1,7 @@
 # Setup screen never advances after backend ready + add quick-connect field
 
 Ask: user ran the standard remote deploy (`make docker-ex-m
-REMOTE_HOST=moosebuntu@192.168.2.51`); the pasted log tail ended with
+REMOTE_HOST=moosebun2@192.168.68.53`); the pasted log tail ended with
 `[nmtk-deploy] Backend and launcher control are ready`, but the app stayed
 on the setup screen instead of continuing into NeuroStudio. Separately,
 requested a way to connect directly to an already-running server by IP
@@ -63,7 +63,7 @@ test/backend_setup_screen_test.dart test/services/client_deployment_service_test
 — all green (7 tests total, including the new quick-connect test and both
 mobile-viewport variants). Manual verification against a live remote
 deploy (the SSH/status-file polling path) was not re-run in this session —
-flagged for the user to confirm against `moosebuntu@192.168.2.51` on next
+flagged for the user to confirm against `moosebun2@192.168.68.53` on next
 deploy.
 
 **Correction:** the user's standard run/test command changed the same day
@@ -71,5 +71,5 @@ deploy.
 `nmtk/neuro_toolkit` — `make docker-ex-m` is deprecated. See
 [[reference_deploy_command]]. To exercise the quick-connect field: run
 `flutter run -d macos`, land on `/setup` (no backend found by default),
-then use "Already have a server running?" to connect to `192.168.2.51`
+then use "Already have a server running?" to connect to `192.168.68.53`
 directly.

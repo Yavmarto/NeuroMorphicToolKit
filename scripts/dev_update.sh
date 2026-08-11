@@ -21,7 +21,7 @@
 #   --remove-orphans       also remove containers no compose file defines
 #   -h | --help
 #
-# Env: REMOTE_HOST (default moosebuntu@192.168.2.51), DEPLOY_DIR,
+# Env: REMOTE_HOST (default moosebun2@192.168.68.53), DEPLOY_DIR,
 #      CONTAINER_ENGINE, AKIDA_NATIVE (1/0 to skip detection)
 #
 # Why this exists: `docker-ex-deploy` rebuilds all 14 images for a one-line
@@ -37,7 +37,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/dev/lib.sh
 source "$REPO_ROOT/scripts/dev/lib.sh"   # also sets -euo pipefail
 
-REMOTE_HOST="${REMOTE_HOST:-moosebuntu@192.168.2.51}"
+REMOTE_HOST="${REMOTE_HOST:-moosebun2@192.168.68.53}"
 DEPLOY_DIR="${DEPLOY_DIR:-~/nmtk-deploy}"
 CONTAINER_ENGINE="${CONTAINER_ENGINE:-docker}"
 SSH_OPTS="${SSH_OPTS:--o ControlMaster=auto -o ControlPath=/tmp/nmtk-ssh-%h-%p-%r -o ControlPersist=60s}"

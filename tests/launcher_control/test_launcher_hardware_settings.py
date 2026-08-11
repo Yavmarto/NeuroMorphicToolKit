@@ -17,14 +17,14 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
         created = self.state.create_akida_host(
             {
                 "displayName": "Legacy Akida",
-                "host": "192.168.2.51",
-                "runtimeApiUrl": "http://192.168.2.51:8002",
-                "controlApiUrl": "http://192.168.2.51:8090",
+                "host": "192.168.68.53",
+                "runtimeApiUrl": "http://192.168.68.53:8002",
+                "controlApiUrl": "http://192.168.68.53:8090",
             }
         )
 
-        self.assertEqual(created["runtimeApiUrl"], "http://192.168.2.51:8002")
-        self.assertEqual(created["controlApiUrl"], "http://192.168.2.51:8091")
+        self.assertEqual(created["runtimeApiUrl"], "http://192.168.68.53:8002")
+        self.assertEqual(created["controlApiUrl"], "http://192.168.68.53:8091")
 
     def test_akida_host_round_trip_updates_settings_file(self) -> None:
         created = self.state.create_akida_host(
@@ -976,8 +976,8 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
             required_packages=[],
         )
 
-        self.assertIn('pip" install --force-reinstall', script)
-        self.assertNotIn('pip" install --force-reinstall --no-deps', script)
+        self.assertIn("akida_pip install --force-reinstall", script)
+        self.assertNotIn("akida_pip install --force-reinstall --no-deps", script)
 
     def test_akida_preflight_promotes_stale_remote_doctor_when_hardware_is_ready(
         self,

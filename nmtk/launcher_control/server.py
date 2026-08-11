@@ -943,6 +943,11 @@ def _normalize_akida_host(raw: dict[str, Any]) -> dict[str, Any]:
         "capabilitySnapshot": capability_snapshot,
         "isDefault": bool(raw.get("isDefault")),
         "autoDiscovered": bool(raw.get("autoDiscovered", False)),
+        # The card is on the same physical machine as launcher-control itself. SSH
+        # from inside the container to the host's own LAN IP is refused (hairpin
+        # NAT), so connections must instead go through the docker/podman gateway
+        # alias — see `_akida_ssh_connect_host` in akida_host_service.py.
+        "sameHostAsBackend": bool(raw.get("sameHostAsBackend")),
     }
 
 

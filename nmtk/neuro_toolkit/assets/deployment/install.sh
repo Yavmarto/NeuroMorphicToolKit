@@ -16,6 +16,10 @@ CURRENT_STAGE=""
 # sitting on the same percentage forever with nothing to report.
 DOWN_TIMEOUT="${NMTK_DEPLOY_DOWN_TIMEOUT:-300}"
 PULL_TIMEOUT="${NMTK_DEPLOY_PULL_TIMEOUT:-1200}"
+# A download of this size can be damaged in transit by a flaky link. Retrying is
+# the whole remedy, and the end user has no terminal to do it by hand.
+PULL_ATTEMPTS="${NMTK_DEPLOY_PULL_ATTEMPTS:-3}"
+PULL_RETRY_DELAY="${NMTK_DEPLOY_PULL_RETRY_DELAY:-5}"
 UP_TIMEOUT="${NMTK_DEPLOY_UP_TIMEOUT:-600}"
 DIAGNOSTICS_TIMEOUT="${NMTK_DEPLOY_DIAGNOSTICS_TIMEOUT:-60}"
 
@@ -167,27 +171,43 @@ fi
 
 write_status pulling_images 45 "Pulling backend images"
 pull_started="$SECONDS"
-compose_with_timeout "$PULL_TIMEOUT" pull >>"$LOG_FILE" 2>&1 &
-pull_pid="$!"
-# Republish the stage every few seconds while the pull runs. The images are large
-# and this is by far the longest step, so the app has to be able to tell "slow
-# but alive" from "dead".
-while kill -0 "$pull_pid" 2>/dev/null; do
-  sleep 5
-  if kill -0 "$pull_pid" 2>/dev/null; then
-    write_status pulling_images 45 \
-      "Pulling backend images ($((SECONDS - pull_started))s elapsed)"
+pull_attempt=1
+while :; do
+  compose_with_timeout "$PULL_TIMEOUT" pull >>"$LOG_FILE" 2>&1 &
+  pull_pid="$!"
+  # Republish the stage every few seconds while the pull runs. The images are
+  # large and this is by far the longest step, so the app has to be able to tell
+  # "slow but alive" from "dead".
+  while kill -0 "$pull_pid" 2>/dev/null; do
+    sleep 5
+    if kill -0 "$pull_pid" 2>/dev/null; then
+      write_status pulling_images 45 \
+        "Pulling backend images ($((SECONDS - pull_started))s elapsed)"
+    fi
+  done
+  set +e
+  wait "$pull_pid"
+  pull_exit="$?"
+  set -e
+  [ "$pull_exit" -eq 0 ] && break
+  if [ "$pull_exit" -eq 124 ]; then
+    # Repeating a pull that already spent the whole budget would only spend it
+    # again, so a timeout is reported rather than retried.
+    fail_stage "Downloading the backend images timed out after ${PULL_TIMEOUT}s. Check that the server can reach ghcr.io, then retry setup."
   fi
+  if [ "$pull_attempt" -ge "$PULL_ATTEMPTS" ]; then
+    fail_stage "The backend images could not be downloaded after ${PULL_ATTEMPTS} attempts; diagnostics were captured in the deployment log."
+  fi
+  # Image layers occasionally arrive damaged over a long download ("crc32
+  # mismatch"). Nothing bad is kept on disk, and layers that already arrived are
+  # reused, so fetching again costs only the damaged image.
+  printf '[nmtk-deploy] Image download attempt %s of %s failed; retrying.\n' \
+    "$pull_attempt" "$PULL_ATTEMPTS" >>"$LOG_FILE"
+  pull_attempt=$((pull_attempt + 1))
+  write_status pulling_images 45 \
+    "Retrying the backend image download (attempt $pull_attempt of $PULL_ATTEMPTS)"
+  sleep "$PULL_RETRY_DELAY"
 done
-set +e
-wait "$pull_pid"
-pull_exit="$?"
-set -e
-if [ "$pull_exit" -eq 124 ]; then
-  fail_stage "Downloading the backend images timed out after ${PULL_TIMEOUT}s. Check that the server can reach ghcr.io, then retry setup."
-elif [ "$pull_exit" -ne 0 ]; then
-  fail_stage "The backend images could not be downloaded; diagnostics were captured in the deployment log."
-fi
 
 write_status starting_containers 70 "Preparing launcher workspace storage"
 # Older remote deployments ran launcher-control as root and could leave this

@@ -9,8 +9,8 @@ void main() {
   group('launcher base URL normalization', () {
     test('host-only input uses the launcher default port', () {
       expect(
-        ControlApiService.normalizeBaseUrl('192.168.2.51'),
-        'http://192.168.2.51:8090',
+        ControlApiService.normalizeBaseUrl('192.168.68.53'),
+        'http://192.168.68.53:8090',
       );
     });
 
@@ -47,11 +47,11 @@ void main() {
         <String, dynamic>{
           'id': 'cc422a68-1377-45c3-9947-2f2756ef164a',
           'displayName': 'Hp prodesk',
-          'host': '192.168.2.51',
+          'host': '192.168.68.53',
           'sshPort': 22,
           'controlPort': 8091,
-          'runtimeApiUrl': 'http://192.168.2.51:8002',
-          'controlApiUrl': 'http://192.168.2.51:8091',
+          'runtimeApiUrl': 'http://192.168.68.53:8002',
+          'controlApiUrl': 'http://192.168.68.53:8091',
           'authMode': 'ssh_key',
           'runtimeMode': 'unknown',
           'state': 'simulator_only',
@@ -73,10 +73,10 @@ void main() {
 
     expect(settings.backendDeploymentReady, isTrue);
     expect(settings.akidaHosts, hasLength(1));
-    expect(settings.akidaHosts.single.host, '192.168.2.51');
+    expect(settings.akidaHosts.single.host, '192.168.68.53');
     expect(
       settings.akidaHosts.single.controlApiUrl,
-      'http://192.168.2.51:8091',
+      'http://192.168.68.53:8091',
     );
   });
 
@@ -89,8 +89,8 @@ void main() {
 
     test('a remote launcher host implies a remote backend', () {
       expect(
-        serviceAt('http://192.168.2.51:8090').suiteApiBaseUri.toString(),
-        'http://192.168.2.51:9000',
+        serviceAt('http://192.168.68.53:8090').suiteApiBaseUri.toString(),
+        'http://192.168.68.53:9000',
       );
     });
 
@@ -112,7 +112,7 @@ void main() {
   group('ControlApiService.fetchBackendVersion', () {
     Future<String?> versionFrom(http.Response Function(Uri) respond) {
       return ControlApiService(
-        baseUri: Uri.parse('http://192.168.2.51:8090'),
+        baseUri: Uri.parse('http://192.168.68.53:8090'),
         client:
             MockClient((http.Request request) async => respond(request.url)),
       ).fetchBackendVersion();
@@ -122,7 +122,7 @@ void main() {
       expect(
         await versionFrom(
           (uri) {
-            expect(uri.toString(), 'http://192.168.2.51:9000/api/suite/health');
+            expect(uri.toString(), 'http://192.168.68.53:9000/api/suite/health');
             return http.Response(
               jsonEncode(<String, String>{
                 'status': 'ok',
@@ -156,7 +156,7 @@ void main() {
       expect(await versionFrom((_) => http.Response('nope', 502)), isNull);
       expect(
         await ControlApiService(
-          baseUri: Uri.parse('http://192.168.2.51:8090'),
+          baseUri: Uri.parse('http://192.168.68.53:8090'),
           client: MockClient((_) async => throw http.ClientException('down')),
         ).fetchBackendVersion(),
         isNull,
@@ -175,7 +175,7 @@ void main() {
       () async {
     final requests = <http.Request>[];
     final service = ControlApiService(
-      baseUri: Uri.parse('http://192.168.2.51:8090'),
+      baseUri: Uri.parse('http://192.168.68.53:8090'),
       client: MockClient((request) async {
         requests.add(request);
         return http.Response(

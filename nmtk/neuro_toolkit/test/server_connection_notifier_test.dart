@@ -55,7 +55,7 @@ void main() {
       overrides: [
         launcherBootstrapProvider.overrideWith(
           () => _SwitchableBootstrapNotifier(
-            _readyAt('http://192.168.2.51:8090'),
+            _readyAt('http://192.168.68.53:8090'),
           ),
         ),
         serverHealthProbeProvider.overrideWithValue(
@@ -98,13 +98,13 @@ void main() {
   test('late health response from the previous server is ignored', () async {
     final oldServerProbe = Completer<bool>();
     final bootstrap = _SwitchableBootstrapNotifier(
-      _readyAt('http://192.168.2.51:8090'),
+      _readyAt('http://192.168.68.53:8090'),
     );
     final container = ProviderContainer(
       overrides: [
         launcherBootstrapProvider.overrideWith(() => bootstrap),
         serverHealthProbeProvider.overrideWithValue((controlApi) {
-          if (controlApi.baseUri.host == '192.168.2.51') {
+          if (controlApi.baseUri.host == '192.168.68.53') {
             return oldServerProbe.future;
           }
           return Future<bool>.value(true);

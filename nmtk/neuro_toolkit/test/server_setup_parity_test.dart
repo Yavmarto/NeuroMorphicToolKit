@@ -80,7 +80,7 @@ void main() {
               () => _StaticBootstrapNotifier(
                 LauncherBootstrapData.needsSetup(
                   message: 'The saved server could not be reached.',
-                  suggestedInstallHost: '192.168.2.51',
+                  suggestedInstallHost: '192.168.68.53',
                 ),
               ),
             ),
@@ -106,7 +106,7 @@ void main() {
           find.text('The saved server could not be reached.'), findsOneWidget);
       expect(
         tester.widget<TextField>(find.byType(TextField).first).controller?.text,
-        '192.168.2.51',
+        '192.168.68.53',
       );
 
       await tester.tap(find.byTooltip('Close'));
@@ -131,7 +131,7 @@ void main() {
   testWidgets('a successful saved-server bootstrap opens no setup popup', (
     tester,
   ) async {
-    final baseUri = Uri.parse('http://192.168.2.51:8090');
+    final baseUri = Uri.parse('http://192.168.68.53:8090');
     late _StaticBootstrapNotifier bootstrapNotifier;
     final router = createGoRouter();
     addTearDown(router.dispose);
@@ -165,7 +165,7 @@ void main() {
 
     expect(find.byType(ToolViewScreen), findsOneWidget);
     expect(find.byType(BackendSetupScreen), findsNothing);
-    expect(find.text('192.168.2.51 · v1.2.0'), findsOneWidget);
+    expect(find.text('192.168.68.53 · v1.2.0'), findsOneWidget);
 
     bootstrapNotifier.select(
       LauncherBootstrapData.needsSetup(message: 'Connection lost.'),

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import shutil
 import stat
@@ -44,6 +45,12 @@ DEFAULT_AKIDA_RUNTIME_PORT = 8002
 DEFAULT_AKIDA_CONTROL_PORT = 8091
 DEFAULT_AKIDA_TOKEN_PATH = f"{DEFAULT_AKIDA_INSTALL_ROOT}/credentials/api-token"
 DEFAULT_AKIDA_INSTALL_STATUS_PATH = f"{DEFAULT_AKIDA_INSTALL_ROOT}/install-status.json"
+# The BrainChip SDK publishes wheels for CPython 3.10-3.12 only, and TensorFlow
+# ships none at all for 3.13+. Mirrors `akidaRuntime.pythonRange` in
+# nmtk/neuro_toolkit/assets/modules.json, which stays the source of truth.
+DEFAULT_AKIDA_PYTHON_MIN = (3, 10)
+DEFAULT_AKIDA_PYTHON_MAX = (3, 13)
+DEFAULT_AKIDA_PYTHON_RANGE = ">=3.10,<3.13"
 
 
 def _repo_root() -> Path:
@@ -650,6 +657,80 @@ def _probe_akida_device() -> dict[str, object]:
     return probe
 
 
+DMA_TIMEOUT_MARKER = "DMA wait completion timed out"
+ASPM_UNCONTROLLED_MARKER = "can't disable ASPM"
+
+
+# The kernel log, or "" when this account may not read it. Provisioning puts
+# the service user in systemd-journal so it usually can, but an install that
+# predates that, or a host without systemd, must degrade rather than lie.
+def _kernel_log_text() -> str:
+    for command in (
+        ["journalctl", "--dmesg", "--boot", "--no-pager"],
+        ["dmesg"],
+    ):
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=15,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+        if result.returncode == 0 and result.stdout:
+            return result.stdout
+    return ""
+
+
+# Correctable PCIe errors counted by the kernel for this device. A healthy
+# link sits at zero; a rising count means the board and the slot are not
+# talking cleanly. Unprivileged sysfs read, absent on kernels without AER.
+def _correctable_link_errors(probe: dict[str, object]) -> int | None:
+    bdf = str(probe.get("bdf") or "")
+    if not bdf:
+        return None
+    text = _sysfs_text(PCI_DEVICES_ROOT / bdf / "aer_dev_correctable")
+    for line in text.splitlines():
+        name, _, value = line.partition(" ")
+        if name.strip() == "TOTAL_ERR_COR":
+            try:
+                return int(value.strip())
+            except ValueError:
+                return None
+    return None
+
+
+# Said when the board is fitted, bound, and its registers are enabled, yet the
+# SDK still fell back to the simulator. Nothing above catches that: every cheap
+# check passes and the fault only shows up once data moves.
+def _akida_unresponsive_message(probe: dict[str, object]) -> str:
+    opening = (
+        "The Akida board is fitted and its driver is loaded, but it stops "
+        "responding as soon as data is sent to it, so the software simulator "
+        "is being used instead. Switch the host fully off and on again - a "
+        "restart is not enough."
+    )
+    kernel_log = _kernel_log_text()
+    if kernel_log and ASPM_UNCONTROLLED_MARKER in kernel_log:
+        return (
+            f"{opening} If that does not help: this machine does not let the "
+            "driver turn PCIe power saving off, which is the usual cause. Turn "
+            "PCIe power management (ASPM) off for the board's slot in the "
+            "machine's BIOS."
+        )
+    if kernel_log and DMA_TIMEOUT_MARKER in kernel_log:
+        return f"{opening} The driver reports that transfers to the board time out."
+    errors = _correctable_link_errors(probe)
+    if errors:
+        return (
+            f"{opening} The connection to the board has logged {errors} errors, "
+            "so it may also be worth reseating the card in its slot."
+        )
+    return opening
+
+
 # Plain-English remedy for a hardware fault, or "" when the board looks fine.
 # Returning "" deliberately means "not a board problem" so the caller keeps
 # whatever the SDK said - this must not mask genuine SDK faults.
@@ -657,7 +738,11 @@ def _probe_akida_device() -> dict[str, object]:
 # usb_text is the already-collected lsusb output. The probe only knows about
 # PCI, and BrainChip also ships USB Akida devices, so "absent from PCI" is not
 # proof of "no board" - claiming it would be a confident lie to a USB user.
-def _akida_device_message(probe: dict[str, object], usb_text: str = "") -> str:
+def _akida_device_message(
+    probe: dict[str, object],
+    usb_text: str = "",
+    runtime_target: str = "",
+) -> str:
     if not probe.get("present"):
         haystack = usb_text.lower()
         if "brainchip" in haystack or "akida" in haystack:
@@ -670,6 +755,8 @@ def _akida_device_message(probe: dict[str, object], usb_text: str = "") -> str:
             "The Akida board has stopped responding. Switch the host fully off "
             "and on again - a restart is not enough."
         )
+    if runtime_target in {"akd1000_simulator", "software_fallback"}:
+        return _akida_unresponsive_message(probe)
     return ""
 
 
@@ -705,7 +792,6 @@ def _doctor_payload() -> dict[str, object]:
     akida_device = _probe_akida_device()
     lspci_text = _run_probe(["lspci"])
     lsusb_text = _run_probe(["lsusb"])
-    device_message = _akida_device_message(akida_device, lsusb_text)
 
     sdk_status = str(runtime_status.get("sdk_status") or "").strip().lower()
     runtime_target = str(runtime_status.get("runtime_target") or "").strip().lower()
@@ -713,6 +799,9 @@ def _doctor_payload() -> dict[str, object]:
     sdk_issues = runtime_status.get("sdk_issues")
     if not isinstance(sdk_issues, list):
         sdk_issues = []
+    # Needs runtime_target: a board that passes every static check and still
+    # ends up on the simulator is only visible by comparing the two.
+    device_message = _akida_device_message(akida_device, lsusb_text, runtime_target)
     if runtime_health_status != 200:
         preflight_status = "failed"
         preflight_message = "Neurochip runtime health check failed"
@@ -748,6 +837,7 @@ def _doctor_payload() -> dict[str, object]:
             "lspci": lspci_text,
             "lsusb": lsusb_text,
             "akidaDevice": akida_device,
+            "correctableLinkErrors": _correctable_link_errors(akida_device),
         },
         "services": {
             "runtimeHealthStatus": runtime_health_status,
@@ -826,6 +916,29 @@ if __name__ == "__main__":
 """
 
 
+def _parse_python_range(python_range: str) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Turn a manifest `pythonRange` like ``>=3.10,<3.13`` into inclusive/exclusive bounds.
+
+    Parsed here rather than in bash so the generated script only ever asks a
+    candidate interpreter about itself, which is exact. Anything unparseable
+    falls back to the documented Akida range instead of failing the build — a
+    malformed manifest must not make provisioning impossible.
+    """
+    minimum = DEFAULT_AKIDA_PYTHON_MIN
+    maximum = DEFAULT_AKIDA_PYTHON_MAX
+    for clause in str(python_range or "").split(","):
+        clause = clause.strip()
+        match = re.match(r"^(>=|<)\s*(\d+)\.(\d+)", clause)
+        if not match:
+            continue
+        operator, major, minor = match.group(1), int(match.group(2)), int(match.group(3))
+        if operator == ">=":
+            minimum = (major, minor)
+        else:
+            maximum = (major, minor)
+    return minimum, maximum
+
+
 def _akida_install_script_text(
     *,
     install_root: str,
@@ -841,8 +954,22 @@ def _akida_install_script_text(
     artifact_version: str,
     artifact_sha256: str,
     required_packages: list[str],
+    python_range: str = DEFAULT_AKIDA_PYTHON_RANGE,
+    standalone_python: dict[str, Any] | None = None,
 ) -> str:
     package_install = " ".join(shlex.quote(package) for package in required_packages)
+    python_min, python_max = _parse_python_range(python_range)
+    range_label = f">={python_min[0]}.{python_min[1]},<{python_max[0]}.{python_max[1]}"
+    standalone = standalone_python or {}
+    standalone_version = str(standalone.get("version") or "").strip()
+    standalone_url = str(standalone.get("url") or "").strip()
+    standalone_sha256 = str(standalone.get("sha256") or "").strip()
+    standalone_arch = str(standalone.get("architecture") or "x86_64").strip()
+    # Asked of the interpreter itself — no version parsing in shell.
+    version_probe = (
+        f"import sys; sys.exit(0 if {python_min} <= sys.version_info[:2] < "
+        f"{python_max} else 1)"
+    )
     return "\n".join(
         [
             "#!/usr/bin/env bash",
@@ -880,6 +1007,11 @@ def _akida_install_script_text(
             "}",
             "",
             'BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
+            "# The steps below drop privileges with sudo -u, which keeps the",
+            "# current directory. Python refuses to start when it cannot read",
+            "# that directory, so move somewhere every account can reach. This",
+            "# must come after BUNDLE_DIR is resolved to an absolute path.",
+            "cd /",
             f'INSTALL_ROOT="${{INSTALL_ROOT:-{install_root}}}"',
             f'SERVICE_USER="${{SERVICE_USER:-{service_user}}}"',
             f'VENV_PATH="${{VENV_PATH:-{venv_path}}}"',
@@ -895,6 +1027,23 @@ def _akida_install_script_text(
             f'WHEEL_NAME="${{WHEEL_NAME:-{wheel_name}}}"',
             f'ARTIFACT_VERSION="${{ARTIFACT_VERSION:-{artifact_version}}}"',
             f'ARTIFACT_SHA256="${{ARTIFACT_SHA256:-{artifact_sha256}}}"',
+            f'PYTHON_RANGE_LABEL="{range_label}"',
+            f'STANDALONE_PYTHON_VERSION="{standalone_version}"',
+            f'STANDALONE_PYTHON_URL="{standalone_url}"',
+            f'STANDALONE_PYTHON_SHA256="{standalone_sha256}"',
+            f'STANDALONE_PYTHON_ARCH="{standalone_arch}"',
+            'MANAGED_PYTHON_ROOT="${INSTALL_ROOT}/python"',
+            'MANAGED_PYTHON_BIN="${MANAGED_PYTHON_ROOT}/bin/python3"',
+            # Owned by the service user. `sudo -u` does not hand over that
+            # account's HOME, so without this pip caches wherever the invoking
+            # login happens to point -- a directory the service user may not
+            # own, and one this installer can never clean up when it goes bad.
+            'PIP_CACHE_DIR="${INSTALL_ROOT}/cache/pip"',
+            # Set by each install branch before select_python, because the
+            # systemd branch writes into root-owned /opt while the user-space
+            # fallback writes into the invoking user's own home.
+            'USE_SUDO=""',
+            'AKIDA_PYTHON=""',
             'RUNTIME_LOG_PATH="${INSTALL_ROOT}/runtime.log"',
             'CONTROL_LOG_PATH="${INSTALL_ROOT}/control.log"',
             'RELEASE_ID="${ARTIFACT_VERSION}-${ARTIFACT_SHA256:0:12}"',
@@ -981,6 +1130,116 @@ def _akida_install_script_text(
             '  done < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -print0)',
             "}",
             "",
+            'fail_install() { printf "[install-akida-host] %s\\n" "$1" >&2; exit 1; }',
+            "run_priv() {",
+            '  if [ -n "$USE_SUDO" ]; then',
+            '    sudo_cmd "$@"',
+            "  else",
+            '    "$@"',
+            "  fi",
+            "}",
+            "# True when $1 is an interpreter inside the SDK's supported range.",
+            "# The interpreter answers about itself, so there is no version",
+            "# parsing here to get wrong.",
+            "python_in_range() {",
+            '  command -v "$1" >/dev/null 2>&1 || return 1',
+            f'  "$1" -c {shlex.quote(version_probe)} >/dev/null 2>&1',
+            "}",
+            "# Downloads the pinned CPython build. Only ever reached when no",
+            "# suitable interpreter already exists, so a host that works today",
+            "# never touches the network here.",
+            "install_managed_python() {",
+            '  host_python="$(python3 -V 2>&1 || echo "none")"',
+            '  if [ -z "$STANDALONE_PYTHON_URL" ]; then',
+            '    fail_install "This host runs $host_python, but the Akida SDK needs Python $PYTHON_RANGE_LABEL, and no automatic download is configured. Install a Python $PYTHON_RANGE_LABEL on this machine and run setup again."',
+            "  fi",
+            '  host_arch="$(uname -m)"',
+            '  if [ "$host_arch" != "$STANDALONE_PYTHON_ARCH" ]; then',
+            '    fail_install "This host runs $host_python on $host_arch. The Akida SDK needs Python $PYTHON_RANGE_LABEL, and an automatic download is only available for $STANDALONE_PYTHON_ARCH. Install a Python $PYTHON_RANGE_LABEL on this machine and run setup again."',
+            "  fi",
+            '  log_step "Host Python ($host_python) is outside $PYTHON_RANGE_LABEL; installing a private Python $STANDALONE_PYTHON_VERSION for the Akida runtime"',
+            '  py_tmp="$(mktemp -d)"',
+            '  if ! curl -fsSL --max-time 600 "$STANDALONE_PYTHON_URL" -o "$py_tmp/python.tar.gz"; then',
+            '    rm -rf "$py_tmp"',
+            '    fail_install "Could not download Python $STANDALONE_PYTHON_VERSION. Check that this server can reach github.com, then run setup again."',
+            "  fi",
+            '  py_sha="$(sha256sum "$py_tmp/python.tar.gz" | cut -d" " -f1)"',
+            '  if [ "$py_sha" != "$STANDALONE_PYTHON_SHA256" ]; then',
+            '    rm -rf "$py_tmp"',
+            '    fail_install "The downloaded Python archive did not match its expected checksum, so it was discarded. Run setup again; if this repeats, the download is being altered in transit."',
+            "  fi",
+            # The archive already contains a top-level `python/` directory, so
+            # extracting into INSTALL_ROOT lands exactly on MANAGED_PYTHON_ROOT.
+            '  run_priv rm -rf "$MANAGED_PYTHON_ROOT"',
+            '  run_priv tar -xzf "$py_tmp/python.tar.gz" -C "$INSTALL_ROOT"',
+            '  rm -rf "$py_tmp"',
+            '  if [ -n "$USE_SUDO" ]; then',
+            '    sudo_cmd chown -R "$SERVICE_USER:$SERVICE_USER" "$MANAGED_PYTHON_ROOT"',
+            "  fi",
+            '  if ! python_in_range "$MANAGED_PYTHON_BIN"; then',
+            '    fail_install "The downloaded Python $STANDALONE_PYTHON_VERSION could not run on this server. Install a Python $PYTHON_RANGE_LABEL on this machine and run setup again."',
+            "  fi",
+            "}",
+            "# Order matters: anything already installed wins over a download, so",
+            "# hosts that provision correctly today keep behaving exactly as before.",
+            "select_python() {",
+            "  if python_in_range python3; then",
+            '    AKIDA_PYTHON="$(command -v python3)"',
+            '    log_step "Using system python3 ($("$AKIDA_PYTHON" -V 2>&1))"',
+            "    return",
+            "  fi",
+            "  for candidate in python3.12 python3.11 python3.10; do",
+            '    if python_in_range "$candidate"; then',
+            '      AKIDA_PYTHON="$(command -v "$candidate")"',
+            '      log_step "Using $candidate ($("$AKIDA_PYTHON" -V 2>&1))"',
+            "      return",
+            "    fi",
+            "  done",
+            '  if python_in_range "$MANAGED_PYTHON_BIN"; then',
+            '    AKIDA_PYTHON="$MANAGED_PYTHON_BIN"',
+            '    log_step "Reusing the private Python at $MANAGED_PYTHON_BIN"',
+            "    return",
+            "  fi",
+            "  install_managed_python",
+            '  AKIDA_PYTHON="$MANAGED_PYTHON_BIN"',
+            "}",
+            "# pip always runs as the account that owns the virtualenv, and",
+            "# always against the cache this installer controls.",
+            "akida_pip() {",
+            # --cache-dir goes directly after the subcommand, never at the end:
+            # pip applies these in command-line order, so a trailing one would
+            # switch the cache back on and undo the --no-cache-dir retry.
+            '  local pip_subcommand="$1"',
+            "  shift",
+            '  if [ -n "$USE_SUDO" ]; then',
+            '    sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/pip" "$pip_subcommand" --cache-dir "$PIP_CACHE_DIR" "$@"',
+            "  else",
+            '    "$NEXT_VENV_PATH/bin/pip" "$pip_subcommand" --cache-dir "$PIP_CACHE_DIR" "$@"',
+            "  fi",
+            "}",
+            *(
+                [
+                    # pip checks every download against the checksum the package
+                    # index publishes, so one damaged file in the cache fails
+                    # identically on every retry and the install can never
+                    # recover on its own. Take the cached path first -- it is
+                    # what a healthy host uses and it is much faster -- and only
+                    # throw the cache away once that has failed.
+                    "install_akida_packages() {",
+                    f"  if akida_pip install {package_install}; then",
+                    "    return",
+                    "  fi",
+                    '  log_step "Package install failed; discarding the download cache and fetching again"',
+                    "  akida_pip cache purge || true",
+                    f"  if akida_pip install --no-cache-dir {package_install}; then",
+                    "    return",
+                    "  fi",
+                    "  fail_install \"The Akida SDK could not be downloaded onto this server. The files kept arriving damaged or incomplete, even after a clean retry. Check this server's internet connection, then run setup again.\"",
+                    "}",
+                ]
+                if package_install
+                else []
+            ),
             "write_install_status() {",
             '  INSTALL_MODE="$1"',
             '  INSTALL_MESSAGE="$2"',
@@ -1076,21 +1335,30 @@ def _akida_install_script_text(
             '  if ! id -u "$SERVICE_USER" >/dev/null 2>&1; then',
             '    sudo_cmd useradd --system --create-home --shell /usr/sbin/nologin "$SERVICE_USER"',
             "  fi",
+            # Read-only access to the kernel log, so the diagnostics can name a
+            # board that is fitted but not answering instead of shrugging. Not
+            # every host has this group, and none of this is worth failing an
+            # install over.
+            '  if getent group systemd-journal >/dev/null 2>&1; then',
+            '    sudo_cmd usermod -aG systemd-journal "$SERVICE_USER" || true',
+            "  fi",
             '  log_step "Preparing install directories"',
-            '  sudo_cmd mkdir -p "$INSTALL_ROOT" "$ENV_DIR" "$BIN_DIR" "$CREDENTIAL_DIR" "$RELEASES_DIR"',
+            '  sudo_cmd mkdir -p "$INSTALL_ROOT" "$ENV_DIR" "$BIN_DIR" "$CREDENTIAL_DIR" "$RELEASES_DIR" "$PIP_CACHE_DIR"',
             '  sudo_cmd chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_ROOT"',
             "  prepare_release_paths",
+            '  USE_SUDO="1"',
+            "  select_python",
             '  log_step "Creating versioned Python virtual environment"',
             '  sudo_cmd rm -rf "$NEXT_VENV_PATH"',
-            '  sudo_cmd -u "$SERVICE_USER" python3 -m venv "$NEXT_VENV_PATH"',
+            '  sudo_cmd -u "$SERVICE_USER" "$AKIDA_PYTHON" -m venv "$NEXT_VENV_PATH"',
             '  log_step "Upgrading pip"',
-            '  sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/pip" install --upgrade pip setuptools wheel',
+            '  akida_pip install --upgrade pip setuptools wheel',
             '  log_step "Installing Neurochip wheel"',
-            '  sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/pip" install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            '  akida_pip install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
             *(
                 [
                     '  log_step "Installing Akida runtime dependencies"',
-                    f'  sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/pip" install {package_install}',
+                    "  install_akida_packages",
                 ]
                 if package_install
                 else []
@@ -1128,25 +1396,33 @@ def _akida_install_script_text(
             '  INSTALL_STATUS_PATH="$INSTALL_ROOT/$INSTALL_STATUS_PATH_SUFFIX"',
             '  ENV_DIR="$INSTALL_ROOT/env"',
             '  BIN_DIR="$INSTALL_ROOT/bin"',
+            # Must be re-derived with every other INSTALL_ROOT-relative path:
+            # this branch runs precisely because the original root is not
+            # writable, so a stale value would try to unpack into it and fail.
+            '  MANAGED_PYTHON_ROOT="$INSTALL_ROOT/python"',
+            '  MANAGED_PYTHON_BIN="$MANAGED_PYTHON_ROOT/bin/python3"',
+            '  PIP_CACHE_DIR="$INSTALL_ROOT/cache/pip"',
             '  CREDENTIAL_DIR="$(dirname "$TOKEN_PATH")"',
             '  RUNTIME_LOG_PATH="$INSTALL_ROOT/runtime.log"',
             '  CONTROL_LOG_PATH="$INSTALL_ROOT/control.log"',
             '  SERVICE_USER="$CURRENT_USER"',
             '  log_step "Passwordless sudo unavailable; falling back to user-space install at $INSTALL_ROOT"',
-            '  mkdir -p "$INSTALL_ROOT" "$ENV_DIR" "$BIN_DIR" "$CREDENTIAL_DIR"',
+            '  mkdir -p "$INSTALL_ROOT" "$ENV_DIR" "$BIN_DIR" "$CREDENTIAL_DIR" "$PIP_CACHE_DIR"',
             "  prepare_release_paths",
             '  mkdir -p "$RELEASES_DIR"',
+            '  USE_SUDO=""',
+            "  select_python",
             '  log_step "Creating versioned Python virtual environment"',
             '  rm -rf "$NEXT_VENV_PATH"',
-            '  python3 -m venv "$NEXT_VENV_PATH"',
+            '  "$AKIDA_PYTHON" -m venv "$NEXT_VENV_PATH"',
             '  log_step "Upgrading pip"',
-            '  "$NEXT_VENV_PATH/bin/pip" install --upgrade pip setuptools wheel',
+            '  akida_pip install --upgrade pip setuptools wheel',
             '  log_step "Installing Neurochip wheel"',
-            '  "$NEXT_VENV_PATH/bin/pip" install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            '  akida_pip install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
             *(
                 [
                     '  log_step "Installing Akida runtime dependencies"',
-                    f'  "$NEXT_VENV_PATH/bin/pip" install {package_install}',
+                    "  install_akida_packages",
                 ]
                 if package_install
                 else []
@@ -1262,6 +1538,8 @@ def build_akida_host_bundle(
     control_port: int = DEFAULT_AKIDA_CONTROL_PORT,
     token_path: str = DEFAULT_AKIDA_TOKEN_PATH,
     install_status_path: str = DEFAULT_AKIDA_INSTALL_STATUS_PATH,
+    python_range: str = DEFAULT_AKIDA_PYTHON_RANGE,
+    standalone_python: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     bundle_dir.mkdir(parents=True, exist_ok=True)
     wheels_dir = bundle_dir / "wheels"
@@ -1320,6 +1598,8 @@ def build_akida_host_bundle(
             artifact_version=artifact.version,
             artifact_sha256=artifact.sha256,
             required_packages=required_packages,
+            python_range=python_range,
+            standalone_python=standalone_python,
         ),
         encoding="utf-8",
     )

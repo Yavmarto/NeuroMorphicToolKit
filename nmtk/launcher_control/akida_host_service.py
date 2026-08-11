@@ -23,6 +23,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
 
 from .runtime_shared import (
     _build_password_askpass_env,
@@ -50,7 +51,7 @@ from .server import (
     _serialize_akida_host,
     _ssh_failure_message,
 )
-from .provisioning_helpers import build_akida_host_bundle
+from .provisioning_helpers import DEFAULT_AKIDA_PYTHON_RANGE, build_akida_host_bundle
 from .runtime_artifact import discover_neurochip_runtime_artifact
 
 # Signatures of raw driver/SDK output: a bare errno wrapper as the Akida SDK
@@ -58,6 +59,53 @@ from .runtime_artifact import discover_neurochip_runtime_artifact
 # shape rather than a specific errno keeps this from being a list of numbers
 # that has to grow every time the SDK gains a new failure.
 _RAW_DEVICE_ERROR_PATTERN = re.compile(r"\berr(?:no)?\(\d+\)|\b0x[0-9a-fA-F]{4,}\b")
+
+# The docker/podman compose files map this alias to the container's default
+# gateway (`extra_hosts: host.docker.internal:host-gateway`) specifically so
+# launcher-control can dial back out to services on its own host machine.
+#
+# Measured on the dev box (rootless Podman): from inside this container the
+# host's LAN address reaches its *published container ports* fine, but reaches
+# no host-level service at all — `192.168.68.53:22` behaves exactly like a
+# closed port, while `host.docker.internal:22` returns the real sshd banner.
+# Both sshd and a natively installed Neurochip runtime are host-level services,
+# so both have to be dialed through this alias.
+_AKIDA_SELF_HOST_TARGET = "host.docker.internal"
+
+
+def _akida_ssh_connect_host(host: dict[str, Any]) -> str:
+    """Resolve the address SSH/SCP should actually dial for *host*.
+
+    When the Akida card is on the same physical machine as launcher-control
+    itself, dialing the LAN address the user entered is refused (see the
+    constant above). Everything else about the host record — `runtimeApiUrl`,
+    `controlApiUrl`, the displayed `host` value — keeps the real LAN address,
+    because the app and other machines reach those directly rather than from
+    inside this container.
+    """
+    if bool(host.get("sameHostAsBackend")):
+        return _AKIDA_SELF_HOST_TARGET
+    return str(host.get("host") or "")
+
+
+def _akida_request_base_url(base_url: str, host: dict[str, Any]) -> str:
+    """Rewrite *base_url*'s host for HTTP calls made from inside this container.
+
+    Same reason as `_akida_ssh_connect_host`: once provisioned, the Neurochip
+    runtime is a native systemd service on the host, so it is only reachable
+    through the gateway alias. Only the request target is rewritten — the
+    stored and serialized URLs keep the address the user entered, so the UI
+    never shows this alias and other clients are unaffected.
+    """
+    if not base_url or not bool(host.get("sameHostAsBackend")):
+        return base_url
+    parsed = urlparse(base_url)
+    if not parsed.hostname:
+        return base_url
+    netloc = _AKIDA_SELF_HOST_TARGET
+    if parsed.port:
+        netloc = f"{netloc}:{parsed.port}"
+    return parsed._replace(netloc=netloc).geturl()
 
 
 class AkidaServiceMixin:
@@ -363,7 +411,7 @@ class AkidaServiceMixin:
         username = str(host.get("username") or "").strip()
         if not username:
             raise RuntimeError("Akida host username is required for SSH operations")
-        target = f"{username}@{host['host']}"
+        target = f"{username}@{_akida_ssh_connect_host(host)}"
         command, env, cleanup = self._prepare_akida_ssh_invocation(host)
         command.extend([target, remote_command])
         logged_command = (
@@ -430,7 +478,7 @@ class AkidaServiceMixin:
         command, env, cleanup = self._prepare_akida_ssh_invocation(host, copy_mode=True)
         if recursive:
             command.append("-r")
-        target = f"{username}@{host['host']}:{remote_path}"
+        target = f"{username}@{_akida_ssh_connect_host(host)}:{remote_path}"
         command.extend([str(local_path), target])
         self._emit_akida_terminal_log(host, f"scp -> {target} from {local_path}")
         try:
@@ -530,7 +578,7 @@ class AkidaServiceMixin:
         base_url = _resolved_akida_control_api_url(host).rstrip("/")
         if not base_url:
             raise RuntimeError("Akida host controlApiUrl is not configured")
-        url = f"{base_url}{path}"
+        url = f"{_akida_request_base_url(base_url, host)}{path}"
         headers = {"Content-Type": "application/json"}
         credential_ref = str(host.get("credentialRef") or "").strip()
         if credential_ref:
@@ -619,7 +667,7 @@ class AkidaServiceMixin:
         base_url = _resolved_akida_base_url(host).rstrip("/")
         if not base_url:
             raise RuntimeError("Akida host baseUrl is not configured")
-        url = f"{base_url}{path}"
+        url = f"{_akida_request_base_url(base_url, host)}{path}"
         headers = {"Content-Type": "application/json"}
         credential_ref = str(host.get("credentialRef") or "").strip()
         if credential_ref:
@@ -730,6 +778,16 @@ class AkidaServiceMixin:
             isinstance(item, str) for item in required_packages
         ):
             raise RuntimeError("Neurochip Akida runtime manifest is invalid")
+        # The SDK only publishes wheels for a narrow CPython range, so the
+        # install script has to pick a matching interpreter rather than assume
+        # the host's `python3` is usable. Both values are optional: an older
+        # manifest simply keeps the built-in defaults.
+        python_range = str(
+            akida_runtime.get("pythonRange") or DEFAULT_AKIDA_PYTHON_RANGE
+        ).strip()
+        standalone_python = akida_runtime.get("standaloneCPython")
+        if not isinstance(standalone_python, dict):
+            standalone_python = None
         akida_contract = _load_neurochip_launcher_runtime_contract().akida
         artifact_directory = str(os.getenv("NMTK_NEUROCHIP_ARTIFACT_DIR") or "").strip()
         wheel_path = None
@@ -751,6 +809,8 @@ class AkidaServiceMixin:
             control_port=int(host.get("controlPort") or akida_contract.control_port),
             token_path=str(host["tokenPath"]),
             install_status_path=str(host["installStatusPath"]),
+            python_range=python_range,
+            standalone_python=standalone_python,
         )
 
     def _remote_akida_install_status_path(self, host: dict[str, Any]) -> str:

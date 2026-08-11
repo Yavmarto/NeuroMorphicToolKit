@@ -169,11 +169,11 @@ void main() {
         selectedAkidaHost: const AkidaPairedHost(
           id: 'host-1',
           displayName: 'Lab Akida',
-          host: '192.168.2.51',
+          host: '192.168.68.53',
           sshPort: 22,
-          username: 'moosebuntu',
-          runtimeApiUrl: 'http://192.168.2.51:8002',
-          controlApiUrl: 'http://192.168.2.51:8091',
+          username: 'moosebun2',
+          runtimeApiUrl: 'http://192.168.68.53:8002',
+          controlApiUrl: 'http://192.168.68.53:8091',
           authMode: AkidaHostAuthMode.sshKey,
           credentialRef: '',
           password: '',
@@ -764,13 +764,13 @@ void main() {
 
     await tester.enterText(
       find.byType(TextField).first,
-      '192.168.2.51',
+      '192.168.68.53',
     );
     await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
     await tester.pumpAndSettle();
 
     expect(connected, isNotNull);
-    expect(connected!.host, '192.168.2.51');
+    expect(connected!.host, '192.168.68.53');
     expect(connected!.targetType, 'remote_host');
   });
 
@@ -794,7 +794,7 @@ void main() {
     await tester.pump();
 
     final input = find.byType(TextField).first;
-    await tester.enterText(input, '192.168.2.51');
+    await tester.enterText(input, '192.168.68.53');
     await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
     await tester.pumpAndSettle();
 
@@ -805,7 +805,7 @@ void main() {
     expect(find.textContaining('could not be reached'), findsOneWidget);
     expect(
       tester.widget<TextField>(input).controller!.text,
-      '192.168.2.51',
+      '192.168.68.53',
     );
   });
 
@@ -833,7 +833,7 @@ void main() {
 
     await tester.enterText(
       find.byType(TextField).first,
-      'http://192.168.2.51:8090',
+      'http://192.168.68.53:8090',
     );
     await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
     await tester.pumpAndSettle();

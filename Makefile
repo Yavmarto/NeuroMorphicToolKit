@@ -266,7 +266,7 @@ dev-sync:
 	@REMOTE_HOST=$(REMOTE_HOST) bash scripts/dev_update.sh --skip-tests $(ARGS)
 
 # The default dev backend (AGENTS.md, "Updating the backend").
-DEV_BACKEND_HOST ?= moosebuntu@192.168.2.51
+DEV_BACKEND_HOST ?= moosebun2@192.168.68.53
 
 ## Daily driver. Runs the changed-module tests, syncs source to the dev host,
 ## then does the *minimum* to make it live: only suite_api is bind-mounted, so a

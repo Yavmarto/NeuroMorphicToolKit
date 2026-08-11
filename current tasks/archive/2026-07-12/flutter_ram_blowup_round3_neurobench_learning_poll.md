@@ -4,7 +4,7 @@
 User reported the same RAM-blowup bug as `current tasks/2026-07-11/flutter_ram_blowup_bufferedFrames.md`
 still occurring after rounds 1 and 2 were merged: app idle on the canvas (model
 screen step 2), no user interaction, RAM climbs past 160GB, app stops responding.
-Backend runs remote at 192.168.2.51.
+Backend runs remote at 192.168.68.53.
 
 ## Root cause
 Same bug class as round 2 (`module_notifier.dart`), but in two `neurocnl` submodule
@@ -35,5 +35,5 @@ Mirrored the pattern already used in `training_provider.dart`/`prosthetic_sim_pr
 
 ## Restart / where to notice the difference
 Restart the Flutter app; leave it idle on the canvas/model screen with the remote
-backend (192.168.2.51) reachable but slow — RSS should stay flat instead of growing.
+backend (192.168.68.53) reachable but slow — RSS should stay flat instead of growing.
 No backend restart needed, frontend-only change.

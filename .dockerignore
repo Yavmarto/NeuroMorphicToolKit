@@ -86,3 +86,21 @@ nmtk_ui_core/build/
 nmtk_ui_core/.dart_tool/
 neurocnl/frontend/rust/**/target/
 neurocnl/frontend/rust/target/
+
+# Tool caches, at every depth. Docker matches each pattern against the whole
+# relative path, so a bare `.mypy_cache` covers only the repo root -- the ones
+# inside modules (neurocnl, Neurochip, Neurobench, Neurohub, neurocli ...) were
+# still being uploaded, ~850 MB into every image's context, which is enough on
+# its own to fill the Docker VM disk and fail the build with "no space left on
+# device". These come last so they also win over the `!module/frontend/`
+# re-includes above.
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/__pycache__/
+**/.hypothesis/
+**/*.pyc
+**/*.egg-info
+**/.venv/
+**/venv/
+**/*.log

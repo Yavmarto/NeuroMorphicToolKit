@@ -7,7 +7,6 @@ enum SnnWorkflowPhase {
   defineTrain,
   defineEval,
   run,
-  deploy,
   deployHardware,
 }
 
@@ -20,22 +19,19 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
   SnnWorkflowPhase.defineModel: 'Model',
   SnnWorkflowPhase.defineTrain: 'Training',
   SnnWorkflowPhase.defineEval: 'Eval',
-  SnnWorkflowPhase.run: 'Run',
-  SnnWorkflowPhase.deploy: 'Results',
+  SnnWorkflowPhase.run: 'Run & Results',
   SnnWorkflowPhase.deployHardware: 'Deploy',
 };
 
 /// A specialized pipeline stepper for the NeuroMorphicToolKit SNN workflow.
 ///
-/// Models the 7-step workflow for training and deploying an SNN:
+/// Models the 6-step workflow for training and deploying an SNN:
 /// 1. Setup        (selectData)
 /// 2. Model        (defineModel)
 /// 3. Training     (defineTrain)
 /// 4. Eval         (defineEval)
-/// 5. Run          (run / GPU — also hosts the training notebook, opened
-///                  on demand from the consumer's Run screen)
-/// 6. Results      (deploy)
-/// 7. Deploy       (deployHardware — hardware target, on-device
+/// 5. Run & Results (run / GPU — training monitor transitions into results)
+/// 6. Deploy       (deployHardware — hardware target, on-device
 ///                  inference/benchmark, and Hub sharing)
 class SnnWorkflowStepper extends StatelessWidget {
   /// The currently active workflow phase.
@@ -149,11 +145,6 @@ class SnnWorkflowStepper extends StatelessWidget {
           // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (play circle / run job)
           Icons.play_circle_outline,
           pulseTick: epochPulseTick,
-        ),
-        _buildStepData(
-          SnnWorkflowPhase.deploy,
-          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (results analysis)
-          Icons.analytics_outlined,
         ),
         _buildStepData(
           SnnWorkflowPhase.deployHardware,

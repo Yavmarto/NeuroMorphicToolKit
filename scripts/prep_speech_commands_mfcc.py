@@ -19,7 +19,7 @@ The default output path is:
 
 After running, copy or mount that file into the path that the backend
 container can reach (e.g. inside the suite_api_data Docker volume, or on
-the remote machine at moosebuntu@192.168.2.51).
+the remote machine at moosebun2@192.168.68.53).
 
 This script must be run ONCE, outside the app, before the Train canvas demo.
 There is no in-app shortcut for this step — say so on camera.

@@ -44,8 +44,8 @@ class TestLauncherAkidaRuntimeUpdates(LauncherControlServiceTestBase):
         return self.state.create_akida_host(
             {
                 "displayName": "Lab Akida",
-                "host": "192.168.2.51",
-                "username": "moosebuntu",
+                "host": "192.168.68.53",
+                "username": "moosebun2",
                 "authMode": "ssh_key",
                 "sshKeyPath": "/tmp/test-key",
             }

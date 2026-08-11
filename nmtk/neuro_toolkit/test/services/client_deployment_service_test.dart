@@ -129,6 +129,9 @@ void _writeExecutable(Directory bin, String name, String contents) {
   bool unsafeActiveRuntime = false,
   bool failRuntimeCleanup = false,
   bool factoryReset = false,
+  bool requireRootWorkingDirectory = false,
+  int candidateInfoExit = 0,
+  int rootInfoExit = 0,
   String discoveredContainerOutput = '',
   String discoveredVolumeOutput = '',
 }) {
@@ -185,6 +188,12 @@ void _writeExecutable(Directory bin, String name, String contents) {
         '    printf \'time="2026-07-29T00:00:00Z" level=warning msg="fixture warning"\\n\' >&2\n'
         '    ;;\n'
         'esac\n'
+        'if [[ "\$*" == info* ]]; then\n'
+        '  if [[ -n "\${NMTK_FAKE_VIA_RUNUSER:-}" ]]; then\n'
+        '    exit $candidateInfoExit\n'
+        '  fi\n'
+        '  exit $rootInfoExit\n'
+        'fi\n'
         'if [[ "\$*" == "ps -aq --filter label=com.docker.compose.project=nmtk" ]]; then\n'
         "  printf '%s\\n' ${jsonEncode(discoveredContainerOutput)}\n"
         'fi\n'
@@ -197,8 +206,15 @@ void _writeExecutable(Directory bin, String name, String contents) {
     'runuser',
     '#!/bin/bash\n'
         'printf "runuser %s\\n" "\$*" >>"\$NMTK_FAKE_LOG"\n'
+        // Real runuser refuses before it execs anything when the inherited
+        // directory is one the target account may not enter.
+        'if [[ -n "\${NMTK_FAKE_REQUIRE_ROOT_CWD:-}" && "\$PWD" != "/" ]]; then\n'
+        '  printf "cannot chdir to %s: Permission denied\\n" "\$PWD" >&2\n'
+        '  exit 1\n'
+        'fi\n'
         'while [[ "\$1" != "--" ]]; do shift; done\n'
         'shift\n'
+        'export NMTK_FAKE_VIA_RUNUSER=1\n'
         'exec "\$@"\n',
   );
   _writeExecutable(
@@ -252,7 +268,11 @@ void _writeExecutable(Directory bin, String name, String contents) {
       'PATH': '${bin.path}:/usr/bin:/bin',
       'NMTK_FAKE_LOG': commandLog.path,
       'NMTK_SETUP_RUNTIME_BASE': runtimeBase.path,
+      if (requireRootWorkingDirectory) 'NMTK_FAKE_REQUIRE_ROOT_CWD': '1',
     },
+    // Deliberately not "/": the real setup session starts in the
+    // administrator's home directory, which is what broke privilege drops.
+    workingDirectory: fixture.path,
   );
   final log = commandLog.existsSync() ? commandLog.readAsStringSync() : '';
   if (failRuntimeCleanup) {
@@ -1327,27 +1347,80 @@ void main() {
     expect(details.recovery, contains('Set up and connect'));
   });
 
-  test('unsafe active Podman runtime ownership blocks that account clearly',
-      () {
-    final fixture = _runRootlessReconciliationFixture(
-      unsafeActiveRuntime: true,
+  test('privilege drops do not inherit the administrator home directory', () {
+    final script = ClientDeploymentService.buildRemoteBootstrapScript(
+      containerEngine: 'podman',
+      factoryReset: false,
     );
+    expect(
+      script.indexOf('\ncd /\n'),
+      lessThan(script.indexOf('runuser -u')),
+      reason: 'the working directory must be safe before the first runuser',
+    );
+
+    final fixture = _runRootlessReconciliationFixture(
+      requireRootWorkingDirectory: true,
+    );
+    final combinedOutput = '${fixture.result.stdout}\n${fixture.result.stderr}';
+
+    expect(fixture.result.exitCode, 0, reason: combinedOutput);
+    expect(combinedOutput, isNot(contains('cannot chdir to')));
+    expect(fixture.commandLog, contains('runuser -u ${fixture.dormantUser}'));
+    expect(combinedOutput, isNot(contains('Skipped Podman accounts:')));
+  });
+
+  test('an unreadable account is skipped instead of failing setup', () {
+    final fixture = _runRootlessReconciliationFixture(candidateInfoExit: 1);
+    final combinedOutput = '${fixture.result.stdout}\n${fixture.result.stderr}';
+
+    expect(fixture.result.exitCode, 0, reason: combinedOutput);
+    expect(
+      combinedOutput,
+      contains(
+        'Could not read the Podman setup of account ${fixture.dormantUser}',
+      ),
+    );
+    expect(
+      combinedOutput,
+      contains('Skipped Podman accounts: ${fixture.dormantUser}'),
+    );
+    expect(combinedOutput, contains('✓ Reconciliation fixture completed'));
+  });
+
+  test("the server's own unreadable Podman still stops setup", () {
+    final fixture = _runRootlessReconciliationFixture(rootInfoExit: 1);
     final combinedOutput = '${fixture.result.stdout}\n${fixture.result.stderr}';
 
     expect(fixture.result.exitCode, 29, reason: combinedOutput);
     expect(
       combinedOutput,
+      contains('NMTK_SETUP_ERROR|podman_inspection_failed|'),
+    );
+    expect(
+      combinedOutput,
+      isNot(contains('✓ Reconciliation fixture completed')),
+    );
+  });
+
+  test('unsafe active Podman runtime ownership skips only that account', () {
+    final fixture = _runRootlessReconciliationFixture(
+      unsafeActiveRuntime: true,
+    );
+    final combinedOutput = '${fixture.result.stdout}\n${fixture.result.stderr}';
+
+    // Somebody else's misowned runtime directory says nothing about whether
+    // this server can host NMTK, so setup finishes and names the account it
+    // left alone.
+    expect(fixture.result.exitCode, 0, reason: combinedOutput);
+    expect(
+      combinedOutput,
       contains(
-        'Podman runtime directory for user ${fixture.dormantUser} '
-        'has unsafe ownership',
+        'Could not read the Podman setup of account ${fixture.dormantUser}',
       ),
     );
     expect(
       combinedOutput,
-      contains(
-        'The Podman runtime directory for user ${fixture.dormantUser} '
-        'is not owned by that user.',
-      ),
+      contains('Skipped Podman accounts: ${fixture.dormantUser}'),
     );
     expect(
       fixture.commandLog,

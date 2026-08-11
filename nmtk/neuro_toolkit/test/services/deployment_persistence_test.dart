@@ -39,14 +39,14 @@ void main() {
       targetType: 'remote_host',
       mode: 'docker',
       authMode: 'ssh_password',
-      host: '192.168.2.51',
+      host: '192.168.68.53',
       backendPort: 9000,
     );
     const request = DeploymentRequest(
       targetType: 'remote_host',
       mode: 'docker',
       displayName: 'Remote',
-      host: '192.168.2.51',
+      host: '192.168.68.53',
       username: 'nmtk',
       authMethod: 'ssh_password',
       sshPassword: password,
