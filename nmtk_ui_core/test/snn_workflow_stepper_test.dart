@@ -104,8 +104,8 @@ void main() {
             currentPhase: SnnWorkflowPhase.selectData,
             lockedPhases: const {
               SnnWorkflowPhase.run,
-              SnnWorkflowPhase.review,
               SnnWorkflowPhase.deployHardware,
+              SnnWorkflowPhase.deployReview,
             },
             onPhaseSelected: (next) => selected = next,
           ),
@@ -226,6 +226,7 @@ void main() {
         expect(find.text('Training').hitTestable(), findsNothing);
         expect(find.text('Run').hitTestable(), findsOneWidget);
         expect(find.text('Deploy').hitTestable(), findsOneWidget);
+        expect(find.text('Review').hitTestable(), findsOneWidget);
       },
     );
 

@@ -5,7 +5,7 @@ import 'package:nmtk_ui_core/zeta_theme.dart';
 
 enum SnnWorkflowStage { setup, design, execute }
 
-enum SnnWorkflowPhase { selectData, defineModel, defineTrain, defineEval, run, review, deployHardware }
+enum SnnWorkflowPhase { selectData, defineModel, defineTrain, defineEval, run, deployHardware, deployReview }
 
 const Map<SnnWorkflowStage, String> kSnnStageLabels = {
   SnnWorkflowStage.setup: 'Setup',
@@ -16,7 +16,11 @@ const Map<SnnWorkflowStage, String> kSnnStageLabels = {
 const Map<SnnWorkflowStage, List<SnnWorkflowPhase>> kSnnPhasesByStage = {
   SnnWorkflowStage.setup: [SnnWorkflowPhase.selectData],
   SnnWorkflowStage.design: [SnnWorkflowPhase.defineModel, SnnWorkflowPhase.defineTrain, SnnWorkflowPhase.defineEval],
-  SnnWorkflowStage.execute: [SnnWorkflowPhase.run, SnnWorkflowPhase.review, SnnWorkflowPhase.deployHardware],
+  SnnWorkflowStage.execute: [
+    SnnWorkflowPhase.run,
+    SnnWorkflowPhase.deployHardware,
+    SnnWorkflowPhase.deployReview,
+  ],
 };
 
 SnnWorkflowStage snnStageForPhase(SnnWorkflowPhase phase) => switch (phase) {
@@ -24,7 +28,9 @@ SnnWorkflowStage snnStageForPhase(SnnWorkflowPhase phase) => switch (phase) {
   SnnWorkflowPhase.defineModel ||
   SnnWorkflowPhase.defineTrain ||
   SnnWorkflowPhase.defineEval => SnnWorkflowStage.design,
-  SnnWorkflowPhase.run || SnnWorkflowPhase.review || SnnWorkflowPhase.deployHardware => SnnWorkflowStage.execute,
+  SnnWorkflowPhase.run ||
+  SnnWorkflowPhase.deployHardware ||
+  SnnWorkflowPhase.deployReview => SnnWorkflowStage.execute,
 };
 
 const double _kStageGap = 8;
@@ -52,8 +58,8 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
   SnnWorkflowPhase.defineTrain: 'Training',
   SnnWorkflowPhase.defineEval: 'Evaluation',
   SnnWorkflowPhase.run: 'Run',
-  SnnWorkflowPhase.review: 'Review',
   SnnWorkflowPhase.deployHardware: 'Deploy',
+  SnnWorkflowPhase.deployReview: 'Review',
 };
 
 /// A floating Studio workflow header.

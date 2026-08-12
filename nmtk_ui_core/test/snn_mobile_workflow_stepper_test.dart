@@ -27,16 +27,16 @@ void main() {
       expect(find.text('Design · Model'), findsOneWidget);
     });
 
-    testWidgets('labels the final phase Deploy', (tester) async {
+    testWidgets('labels the final phase Review', (tester) async {
       await tester.pumpWidget(
         _wrap(
           const SnnMobileWorkflowStepper(
-            currentPhase: SnnWorkflowPhase.deployHardware,
+            currentPhase: SnnWorkflowPhase.deployReview,
           ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Execute · Deploy'), findsOneWidget);
+      expect(find.text('Execute · Review'), findsOneWidget);
     });
 
     testWidgets('locked chip has 0.3 opacity', (tester) async {
@@ -46,8 +46,8 @@ void main() {
             currentPhase: SnnWorkflowPhase.selectData,
             lockedPhases: {
               SnnWorkflowPhase.run,
-              SnnWorkflowPhase.review,
               SnnWorkflowPhase.deployHardware,
+              SnnWorkflowPhase.deployReview,
             },
           ),
         ),
@@ -90,7 +90,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Setup · Data & Targets'), findsOneWidget);
+      expect(find.text('Setup · Prepare'), findsOneWidget);
 
       notifier.value = SnnWorkflowPhase.defineModel;
       await tester.pumpAndSettle();
