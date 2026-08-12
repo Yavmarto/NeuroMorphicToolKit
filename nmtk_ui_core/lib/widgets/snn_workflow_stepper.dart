@@ -5,15 +5,7 @@ import 'package:nmtk_ui_core/zeta_theme.dart';
 
 enum SnnWorkflowStage { setup, design, execute }
 
-enum SnnWorkflowPhase {
-  selectData,
-  defineModel,
-  defineTrain,
-  defineEval,
-  run,
-  review,
-  deployHardware,
-}
+enum SnnWorkflowPhase { selectData, defineModel, defineTrain, defineEval, run, review, deployHardware }
 
 const Map<SnnWorkflowStage, String> kSnnStageLabels = {
   SnnWorkflowStage.setup: 'Setup',
@@ -23,16 +15,8 @@ const Map<SnnWorkflowStage, String> kSnnStageLabels = {
 
 const Map<SnnWorkflowStage, List<SnnWorkflowPhase>> kSnnPhasesByStage = {
   SnnWorkflowStage.setup: [SnnWorkflowPhase.selectData],
-  SnnWorkflowStage.design: [
-    SnnWorkflowPhase.defineModel,
-    SnnWorkflowPhase.defineTrain,
-    SnnWorkflowPhase.defineEval,
-  ],
-  SnnWorkflowStage.execute: [
-    SnnWorkflowPhase.run,
-    SnnWorkflowPhase.review,
-    SnnWorkflowPhase.deployHardware,
-  ],
+  SnnWorkflowStage.design: [SnnWorkflowPhase.defineModel, SnnWorkflowPhase.defineTrain, SnnWorkflowPhase.defineEval],
+  SnnWorkflowStage.execute: [SnnWorkflowPhase.run, SnnWorkflowPhase.review, SnnWorkflowPhase.deployHardware],
 };
 
 SnnWorkflowStage snnStageForPhase(SnnWorkflowPhase phase) => switch (phase) {
@@ -40,10 +24,26 @@ SnnWorkflowStage snnStageForPhase(SnnWorkflowPhase phase) => switch (phase) {
   SnnWorkflowPhase.defineModel ||
   SnnWorkflowPhase.defineTrain ||
   SnnWorkflowPhase.defineEval => SnnWorkflowStage.design,
-  SnnWorkflowPhase.run ||
-  SnnWorkflowPhase.review ||
-  SnnWorkflowPhase.deployHardware => SnnWorkflowStage.execute,
+  SnnWorkflowPhase.run || SnnWorkflowPhase.review || SnnWorkflowPhase.deployHardware => SnnWorkflowStage.execute,
 };
+
+const double _kStageGap = 8;
+const double _kPhasePillWidth = 110;
+
+/// Horizontal inset shared by the stage row and the phase rail so both rows
+/// start on the same x.
+const double _kRowInset = 12;
+
+/// Fixed width of a connector slot in [NmtkPipelineStepper] (arrow or +/−).
+const double _kConnectorSlotWidth = 30;
+
+/// Width reserved for the phase rail: the widest stage's rail. Reserving it for
+/// every stage keeps the panel from resizing — and the single-phase Setup rail
+/// from drifting to the centre — when the active stage changes.
+final double _kPhaseRailWidth = (() {
+  final maxPhases = kSnnPhasesByStage.values.map((phases) => phases.length).reduce((a, b) => a > b ? a : b);
+  return maxPhases * _kPhasePillWidth + (maxPhases - 1) * _kConnectorSlotWidth;
+})();
 
 /// Base step-name labels shared by the desktop, compact, and drawer steppers.
 const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
@@ -56,11 +56,11 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
   SnnWorkflowPhase.deployHardware: 'Deploy',
 };
 
-/// A floating Studio workflow accordion.
+/// A floating Studio workflow header.
 ///
-/// The three durable stages remain vertically visible. Only the active stage
-/// reveals its local phases, keeping navigation available without occupying a
-/// full canvas edge.
+/// The three stages sit in a single row up top; the active stage's local
+/// phases render in a shared row beneath it, keeping navigation available
+/// without occupying a full canvas edge.
 class SnnWorkflowStepper extends StatefulWidget {
   final SnnWorkflowPhase currentPhase;
   final int epochPulseTick;
@@ -111,8 +111,7 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
   void didUpdateWidget(covariant SnnWorkflowStepper oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentPhase != widget.currentPhase) {
-      _lastVisitedByStage[snnStageForPhase(widget.currentPhase)] =
-          widget.currentPhase;
+      _lastVisitedByStage[snnStageForPhase(widget.currentPhase)] = widget.currentPhase;
     }
   }
 
@@ -133,39 +132,45 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
     final tokens = NmtkShellTokens.of(context);
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
 
-    final inner = LayoutBuilder(
-      builder: (context, constraints) {
-        final availableWidth = constraints.maxWidth.isFinite
-            ? constraints.maxWidth
-            : 720.0;
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final stage in SnnWorkflowStage.values) ...[
-              _StageAccordionRow(
-                stage: stage,
-                active: stage == activeStage,
-                maxWidth: availableWidth,
-                duration: reducedMotion ? Duration.zero : tokens.standardMotion,
-                stageDestination: _StageDestination(
-                  number: stage.index + 1,
-                  label: widget.stageLabels[stage] ?? stage.name,
-                  selected: stage == activeStage,
-                  completed: _stageIsCompleted(stage),
-                  running: _stageIsRunning(stage),
-                  disabled: _stageIsLocked(stage),
-                  disabledTooltip: widget.disabledTooltip,
-                  onTap: () => _selectStage(stage),
+    final inner = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: _kRowInset),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final stage in SnnWorkflowStage.values) ...[
+                if (stage != SnnWorkflowStage.values.first) const SizedBox(width: _kStageGap),
+                SizedBox(
+                  width: _kPhasePillWidth,
+                  child: _StageDestination(
+                    number: stage.index + 1,
+                    label: widget.stageLabels[stage] ?? stage.name,
+                    selected: stage == activeStage,
+                    completed: _stageIsCompleted(stage),
+                    running: _stageIsRunning(stage),
+                    disabled: _stageIsLocked(stage),
+                    disabledTooltip: widget.disabledTooltip,
+                    onTap: () => _selectStage(stage),
+                  ),
                 ),
-                child: _buildChildRail(context, stage),
-              ),
-              if (stage != SnnWorkflowStage.values.last)
-                const SizedBox(height: 4),
+              ],
             ],
-          ],
-        );
-      },
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: _kPhaseRailWidth + _kRowInset * 2,
+          child: _SubstepRailSwitcher(
+            stage: activeStage,
+            perPhaseDuration: tokens.standardMotion,
+            reducedMotion: reducedMotion,
+            railBuilder: _buildChildRail,
+          ),
+        ),
+      ],
     );
 
     if (widget.bare) {
@@ -186,10 +191,7 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
   Widget _buildChildRail(BuildContext context, SnnWorkflowStage stage) {
     final stagePhases = kSnnPhasesByStage[stage]!;
     final secondary = widget.secondaryPhase;
-    final localSecondary =
-        secondary != null && snnStageForPhase(secondary) == stage
-        ? secondary
-        : null;
+    final localSecondary = secondary != null && snnStageForPhase(secondary) == stage ? secondary : null;
     final localSplitStep = localSecondary == null ? null : widget.splitStep;
     final colors = Zeta.of(context).colors;
 
@@ -198,12 +200,11 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       bare: true,
       shrinkWrap: true,
       wrapOnCompact: false,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: _kRowInset),
       stepAccentColor: colors.mainPrimary,
       stepStyle: NmtkPipelineStepStyle.destination,
-      stepWidth: _StageAccordionRow.stageWidth,
-      statusBarSemanticsLabel:
-          '${widget.stageLabels[stage] ?? stage.name} steps',
+      stepWidth: _kPhasePillWidth,
+      statusBarSemanticsLabel: '${widget.stageLabels[stage] ?? stage.name} steps',
       selectedStepId: widget.currentPhase.name,
       secondarySelectedStepId: localSecondary?.name,
       disabledStepIds: widget.lockedPhases.map((p) => p.name).toSet(),
@@ -212,12 +213,8 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       onSplitBetween: widget.onSplitBetween == null
           ? null
           : (leftId, rightId) {
-              final left = SnnWorkflowPhase.values.firstWhere(
-                (phase) => phase.name == leftId,
-              );
-              final right = SnnWorkflowPhase.values.firstWhere(
-                (phase) => phase.name == rightId,
-              );
+              final left = SnnWorkflowPhase.values.firstWhere((phase) => phase.name == leftId);
+              final right = SnnWorkflowPhase.values.firstWhere((phase) => phase.name == rightId);
               if (snnStageForPhase(left) == snnStageForPhase(right)) {
                 widget.onSplitBetween!(leftId, rightId);
               }
@@ -225,22 +222,17 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       onCollapseStep: widget.onCollapseStep,
       onSelected: widget.onPhaseSelected == null
           ? null
-          : (id) => widget.onPhaseSelected!(
-              SnnWorkflowPhase.values.firstWhere((p) => p.name == id),
-            ),
+          : (id) => widget.onPhaseSelected!(SnnWorkflowPhase.values.firstWhere((p) => p.name == id)),
       steps: [for (final phase in stagePhases) _buildStepData(phase)],
     );
   }
 
-  bool _stageIsLocked(SnnWorkflowStage stage) =>
-      kSnnPhasesByStage[stage]!.every(widget.lockedPhases.contains);
+  bool _stageIsLocked(SnnWorkflowStage stage) => kSnnPhasesByStage[stage]!.every(widget.lockedPhases.contains);
 
-  bool _stageIsCompleted(SnnWorkflowStage stage) =>
-      kSnnPhasesByStage[stage]!.last.index < widget.currentPhase.index;
+  bool _stageIsCompleted(SnnWorkflowStage stage) => kSnnPhasesByStage[stage]!.last.index < widget.currentPhase.index;
 
   bool _stageIsRunning(SnnWorkflowStage stage) =>
-      widget.runningPhase != null &&
-      snnStageForPhase(widget.runningPhase!) == stage;
+      widget.runningPhase != null && snnStageForPhase(widget.runningPhase!) == stage;
 
   void _selectStage(SnnWorkflowStage stage) {
     if (widget.onPhaseSelected == null || _stageIsLocked(stage)) return;
@@ -249,11 +241,7 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
         .toList(growable: false);
     if (unlocked.isEmpty) return;
     final remembered = _lastVisitedByStage[stage];
-    widget.onPhaseSelected!(
-      remembered != null && unlocked.contains(remembered)
-          ? remembered
-          : unlocked.first,
-    );
+    widget.onPhaseSelected!(remembered != null && unlocked.contains(remembered) ? remembered : unlocked.first);
   }
 
   NmtkPipelineStepData _buildStepData(SnnWorkflowPhase phase) {
@@ -328,9 +316,7 @@ class _StageDestination extends StatelessWidget {
         color: selected ? colors.surfacePrimarySubtle : Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(tokens.radiusSm),
-          side: BorderSide(
-            color: selected ? colors.borderPrimary : Colors.transparent,
-          ),
+          side: BorderSide(color: selected ? colors.borderPrimary : Colors.transparent),
         ),
         child: InkWell(
           onTap: disabled ? null : onTap,
@@ -363,69 +349,125 @@ class _StageDestination extends StatelessWidget {
   }
 }
 
-class _StageAccordionRow extends StatelessWidget {
-  const _StageAccordionRow({
+/// Shows the active stage's phase rail in a single slot below the stage row.
+///
+/// On a stage switch, the outgoing rail slides/fades upward as if pulled into
+/// the stage row above, then the incoming rail slides/fades down out of it —
+/// a sequential two-phase transition, not a crossfade.
+class _SubstepRailSwitcher extends StatefulWidget {
+  const _SubstepRailSwitcher({
     required this.stage,
-    required this.active,
-    required this.maxWidth,
-    required this.duration,
-    required this.stageDestination,
-    required this.child,
+    required this.perPhaseDuration,
+    required this.reducedMotion,
+    required this.railBuilder,
   });
 
-  static const double stageWidth = 110;
-  static const double childGap = 8;
-
   final SnnWorkflowStage stage;
-  final bool active;
-  final double maxWidth;
-  final Duration duration;
-  final Widget stageDestination;
-  final Widget child;
+  final Duration perPhaseDuration;
+  final bool reducedMotion;
+  final Widget Function(BuildContext, SnnWorkflowStage) railBuilder;
+
+  @override
+  State<_SubstepRailSwitcher> createState() => _SubstepRailSwitcherState();
+}
+
+class _SubstepRailSwitcherState extends State<_SubstepRailSwitcher> with SingleTickerProviderStateMixin {
+  static const double _travel = 36;
+
+  late AnimationController _controller;
+  late CurvedAnimation _outCurve;
+  late CurvedAnimation _inCurve;
+  SnnWorkflowStage? _outgoingStage;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.perPhaseDuration * 2, value: 1);
+    _buildCurves();
+  }
+
+  void _buildCurves() {
+    _outCurve = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic),
+    );
+    _inCurve = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant _SubstepRailSwitcher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.perPhaseDuration != widget.perPhaseDuration) {
+      _controller.duration = widget.perPhaseDuration * 2;
+    }
+    if (widget.reducedMotion) {
+      _controller.value = 1;
+      _outgoingStage = null;
+      return;
+    }
+    if (oldWidget.stage != widget.stage) {
+      _outgoingStage = oldWidget.stage;
+      _controller.forward(from: 0).whenCompleteOrCancel(() {
+        if (mounted && _controller.isCompleted) {
+          setState(() => _outgoingStage = null);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final childWidth = (maxWidth - stageWidth - childGap).clamp(
-      0.0,
-      double.infinity,
-    );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(width: stageWidth, child: stageDestination),
-        if (childWidth > 0) ...[
-          const SizedBox(width: childGap),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: childWidth),
-            child: ClipRect(
-              child: TweenAnimationBuilder<double>(
-                key: ValueKey<String>('${stage.name}-children'),
-                duration: duration,
-                curve: Curves.easeOutCubic,
-                tween: Tween<double>(
-                  begin: active ? 1 : 0,
-                  end: active ? 1 : 0,
+    if (widget.reducedMotion || _outgoingStage == null) {
+      return ClipRect(child: widget.railBuilder(context, widget.stage));
+    }
+
+    final outgoing = widget.railBuilder(context, _outgoingStage!);
+    final incoming = widget.railBuilder(context, widget.stage);
+
+    return ClipRect(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedBuilder(
+            animation: _outCurve,
+            builder: (context, child) => IgnorePointer(
+              child: ExcludeSemantics(
+                child: Opacity(
+                  opacity: 1 - _outCurve.value,
+                  child: Transform.translate(offset: Offset(0, -_outCurve.value * _travel), child: child),
                 ),
-                builder: (context, progress, animatedChild) => IgnorePointer(
-                  ignoring: !active,
-                  child: ExcludeSemantics(
-                    excluding: !active,
-                    child: Opacity(
-                      opacity: progress,
-                      child: FractionalTranslation(
-                        translation: Offset(progress - 1, 0),
-                        child: animatedChild,
-                      ),
-                    ),
-                  ),
-                ),
-                child: child,
               ),
             ),
+            child: outgoing,
+          ),
+          AnimatedBuilder(
+            animation: _inCurve,
+            builder: (context, child) {
+              final settled = _inCurve.value >= 1;
+              return IgnorePointer(
+                ignoring: !settled,
+                child: ExcludeSemantics(
+                  excluding: !settled,
+                  child: Opacity(
+                    opacity: _inCurve.value,
+                    child: Transform.translate(offset: Offset(0, -(1 - _inCurve.value) * _travel), child: child),
+                  ),
+                ),
+              );
+            },
+            child: incoming,
           ),
         ],
-      ],
+      ),
     );
   }
 }

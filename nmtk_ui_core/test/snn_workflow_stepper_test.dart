@@ -38,7 +38,9 @@ void main() {
       expect(find.text('Run').hitTestable(), findsNothing);
     });
 
-    testWidgets('uses text-only, equal-size destination pills', (tester) async {
+    testWidgets('uses text-only stage pills and equal-size phase pills', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           const SnnWorkflowStepper(currentPhase: SnnWorkflowPhase.defineTrain),
@@ -50,8 +52,6 @@ void main() {
       final training = find.byKey(const ValueKey('pipeline-step-defineTrain'));
       final evaluation = find.byKey(const ValueKey('pipeline-step-defineEval'));
 
-      expect(tester.getSize(model).height, tester.getSize(stage).height);
-      expect(tester.getSize(model).width, tester.getSize(stage).width);
       expect(tester.getSize(model).width, tester.getSize(training).width);
       expect(tester.getSize(training).width, tester.getSize(evaluation).width);
       expect(
@@ -68,15 +68,6 @@ void main() {
           matching: find.byType(CircularProgressIndicator),
         ),
         findsNothing,
-      );
-
-      final stageMaterial = tester.widget<Material>(stage);
-      final trainingContainer = tester.widget<Container>(training);
-      final trainingDecoration = trainingContainer.decoration! as BoxDecoration;
-      expect(trainingDecoration.color, stageMaterial.color);
-      expect(
-        trainingDecoration.border!.top.color,
-        (stageMaterial.shape! as RoundedRectangleBorder).side.color,
       );
     });
 
@@ -196,103 +187,118 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('accordion uses 180 ms full-distance horizontal motion', (
-      tester,
-    ) async {
-      final phase = ValueNotifier<SnnWorkflowPhase>(
-        SnnWorkflowPhase.defineTrain,
-      );
-      await tester.pumpWidget(
-        _wrap(
-          ValueListenableBuilder<SnnWorkflowPhase>(
-            valueListenable: phase,
-            builder: (context, value, child) => SizedBox(
-              width: 640,
-              child: SnnWorkflowStepper(currentPhase: value),
+    testWidgets(
+      'stage switch plays a sequential out-then-in substep transition',
+      (tester) async {
+        final phase = ValueNotifier<SnnWorkflowPhase>(
+          SnnWorkflowPhase.defineTrain,
+        );
+        await tester.pumpWidget(
+          _wrap(
+            ValueListenableBuilder<SnnWorkflowPhase>(
+              valueListenable: phase,
+              builder: (context, value, child) => SizedBox(
+                width: 640,
+                child: SnnWorkflowStepper(currentPhase: value),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is TweenAnimationBuilder<double> &&
-              widget.duration == const Duration(milliseconds: 180),
-        ),
-        findsNWidgets(3),
-      );
-      expect(find.byKey(const ValueKey('design-children')), findsOneWidget);
+        expect(find.text('Training').hitTestable(), findsOneWidget);
 
-      phase.value = SnnWorkflowPhase.run;
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 90));
+        phase.value = SnnWorkflowPhase.run;
+        await tester.pump();
+        // Mid phase A (outgoing "Design" rail sliding/fading up): neither
+        // rail is settled yet, so neither is hit-testable.
+        await tester.pump(const Duration(milliseconds: 90));
+        expect(find.text('Training').hitTestable(), findsNothing);
+        expect(find.text('Run').hitTestable(), findsNothing);
 
-      final outgoing = tester.widget<FractionalTranslation>(
-        find
-            .descendant(
-              of: find.byKey(const ValueKey('design-children')),
-              matching: find.byType(FractionalTranslation),
-            )
-            .first,
-      );
-      final incoming = tester.widget<FractionalTranslation>(
-        find
-            .descendant(
-              of: find.byKey(const ValueKey('execute-children')),
-              matching: find.byType(FractionalTranslation),
-            )
-            .first,
-      );
-      expect(outgoing.translation.dx, inExclusiveRange(-1, 0));
-      expect(incoming.translation.dx, inExclusiveRange(-1, 0));
+        // Mid phase B (incoming "Execute" rail sliding/fading down): the
+        // outgoing rail is gone, the incoming one is still settling in.
+        await tester.pump(const Duration(milliseconds: 180));
+        expect(find.text('Training').hitTestable(), findsNothing);
+        expect(find.text('Run').hitTestable(), findsNothing);
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const ValueKey('execute-children')), findsOneWidget);
-      expect(find.text('Deploy').hitTestable(), findsOneWidget);
-    });
+        expect(find.text('Training').hitTestable(), findsNothing);
+        expect(find.text('Run').hitTestable(), findsOneWidget);
+        expect(find.text('Deploy').hitTestable(), findsOneWidget);
+      },
+    );
 
-    testWidgets('panel keeps the widest natural stage width', (tester) async {
+    testWidgets('panel size is consistent across phase changes', (tester) async {
       final phase = ValueNotifier<SnnWorkflowPhase>(
         SnnWorkflowPhase.selectData,
       );
       await tester.pumpWidget(
         _wrap(
-          Align(
-            alignment: Alignment.topLeft,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1000),
-              child: ValueListenableBuilder<SnnWorkflowPhase>(
-                valueListenable: phase,
-                builder: (context, value, child) =>
-                    SnnWorkflowStepper(currentPhase: value),
-              ),
-            ),
+          ValueListenableBuilder<SnnWorkflowPhase>(
+            valueListenable: phase,
+            builder: (context, value, child) =>
+                SnnWorkflowStepper(currentPhase: value),
           ),
         ),
       );
 
       final panel = find.byKey(const ValueKey('snn-workflow-panel'));
-      final setupWidth = tester.getSize(panel).width;
-      expect(setupWidth, lessThan(1000));
+      final initialWidth = tester.getSize(panel).width;
+      final initialHeight = tester.getSize(panel).height;
 
       phase.value = SnnWorkflowPhase.defineTrain;
       await tester.pumpAndSettle();
-      expect(tester.getSize(panel).width, setupWidth);
+      expect(tester.getSize(panel).width, initialWidth);
+      expect(tester.getSize(panel).height, initialHeight);
 
       phase.value = SnnWorkflowPhase.run;
       await tester.pumpAndSettle();
-      expect(tester.getSize(panel).width, setupWidth);
+      expect(tester.getSize(panel).width, initialWidth);
+      expect(tester.getSize(panel).height, initialHeight);
     });
 
-    testWidgets('child phases stay horizontally scrollable in narrow space', (
+    testWidgets('first phase pill starts at the same x as the stage row', (
+      tester,
+    ) async {
+      final phase = ValueNotifier<SnnWorkflowPhase>(
+        SnnWorkflowPhase.defineModel,
+      );
+      addTearDown(phase.dispose);
+      await tester.pumpWidget(
+        _wrap(
+          ValueListenableBuilder<SnnWorkflowPhase>(
+            valueListenable: phase,
+            builder: (context, value, child) =>
+                SnnWorkflowStepper(currentPhase: value),
+          ),
+        ),
+      );
+
+      final stageLeft = tester
+          .getTopLeft(find.byKey(const ValueKey('workflow-stage-1')))
+          .dx;
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('pipeline-step-defineModel'))).dx,
+        stageLeft,
+      );
+
+      // A single-phase stage must stay left-aligned, not drift to the centre.
+      phase.value = SnnWorkflowPhase.selectData;
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('pipeline-step-selectData'))).dx,
+        stageLeft,
+      );
+    });
+
+    testWidgets('active stage phases stay horizontally scrollable in narrow space', (
       tester,
     ) async {
       await tester.pumpWidget(
         _wrap(
           const SizedBox(
-            width: 360,
+            width: 500,
             child: SnnWorkflowStepper(
               currentPhase: SnnWorkflowPhase.defineTrain,
             ),
@@ -307,7 +313,7 @@ void main() {
               widget is SingleChildScrollView &&
               widget.scrollDirection == Axis.horizontal,
         ),
-        findsNWidgets(3),
+        findsOneWidget,
       );
     });
 
@@ -334,7 +340,7 @@ void main() {
       );
 
       phase.value = SnnWorkflowPhase.selectData;
-      width.value = 300;
+      width.value = 400;
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 90));
 
@@ -384,24 +390,30 @@ void main() {
       expect(selected, SnnWorkflowPhase.run);
     });
 
-    testWidgets('reduced motion removes accordion transition duration', (
+    testWidgets('reduced motion swaps substep rails instantly', (
       tester,
     ) async {
+      final phase = ValueNotifier<SnnWorkflowPhase>(
+        SnnWorkflowPhase.defineModel,
+      );
       await tester.pumpWidget(
         _wrap(
-          const SnnWorkflowStepper(currentPhase: SnnWorkflowPhase.defineModel),
+          ValueListenableBuilder<SnnWorkflowPhase>(
+            valueListenable: phase,
+            builder: (context, value, child) =>
+                SnnWorkflowStepper(currentPhase: value),
+          ),
           disableAnimations: true,
         ),
       );
 
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is TweenAnimationBuilder<double> &&
-              widget.duration == Duration.zero,
-        ),
-        findsNWidgets(3),
-      );
+      expect(find.text('Model').hitTestable(), findsOneWidget);
+
+      phase.value = SnnWorkflowPhase.run;
+      await tester.pump();
+
+      expect(find.text('Model').hitTestable(), findsNothing);
+      expect(find.text('Run').hitTestable(), findsOneWidget);
     });
   });
 }

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neurocnl_studio/screens/hub_popup.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
@@ -81,14 +82,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           onPressed: () => _showServerConnectionPopup(context),
         ),
         const SizedBox(width: 8),
-        IconButton(
-          icon: Icon(
-            Icons.person_outline,
-            color: Zeta.of(context).colors.mainDefault,
-          ),
-          onPressed: () {},
-          tooltip: 'Profile',
-        ),
+        const LauncherProfileButton(),
       ],
     );
   }
@@ -1153,6 +1147,25 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       ),
     );
   }
+}
+
+class LauncherProfileButton extends StatelessWidget {
+  const LauncherProfileButton({super.key, this.iconColor});
+
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+        icon: Icon(
+          Icons.person_outline,
+          color: iconColor ?? Zeta.of(context).colors.mainDefault,
+        ),
+        onPressed: () => showHubPopup(
+          context,
+          intent: HubPopupIntent.profile,
+        ),
+        tooltip: 'Profile',
+      );
 }
 
 class _InlineServerConnectionControl extends ConsumerWidget {

@@ -16,6 +16,16 @@ import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart
 import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
 import 'package:neuro_toolkit/widgets/module_loading_view.dart';
 
+class _RecordingNavigatorObserver extends NavigatorObserver {
+  final List<Route<dynamic>> pushedRoutes = <Route<dynamic>>[];
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    pushedRoutes.add(route);
+    super.didPush(route, previousRoute);
+  }
+}
+
 class _FakeModuleNotifier extends ModuleNotifier {
   @override
   Future<ModuleState> build() async {
@@ -120,6 +130,29 @@ void main() {
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byType(NmtkTopAppBar), findsNothing);
     expect(find.byTooltip('Settings'), findsNothing);
+  });
+
+  testWidgets('Profile button opens the profile dialog', (tester) async {
+    final observer = _RecordingNavigatorObserver();
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(1200, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorObservers: <NavigatorObserver>[observer],
+        home: const Scaffold(
+          body: LauncherProfileButton(iconColor: Colors.black),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.tap(find.byTooltip('Profile'));
+
+    expect(observer.pushedRoutes, hasLength(2));
+    expect(observer.pushedRoutes.last, isA<DialogRoute<void>>());
   });
 
   testWidgets('narrow launcher mounts only the active module surface', (
