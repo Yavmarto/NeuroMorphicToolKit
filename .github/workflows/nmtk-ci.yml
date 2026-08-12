@@ -123,3 +123,30 @@ jobs:
         with:
           name: nmtk-launcher-macos
           path: nmtk/neuro_toolkit/build/macos/Build/Products/Release/
+
+  integration-test-apple:
+    needs: build-macos
+    runs-on: [self-hosted, macOS, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+      - name: Run Integration Tests (macOS)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test integration_test -d macos
+      - name: Start iOS Simulator
+        run: |
+          xcrun simctl boot "iPhone 15" || true
+      - name: Run Integration Tests (iOS)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test integration_test -d "iPhone 15"

@@ -1,19 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/motion_tokens.dart';
 import 'package:nmtk_ui_core/widgets/snn_workflow_stepper.dart'
-    show SnnWorkflowPhase, kSnnStepLabels;
+    show
+        SnnWorkflowPhase,
+        SnnWorkflowStage,
+        kSnnPhasesByStage,
+        kSnnStageLabels,
+        kSnnStepLabels,
+        snnStageForPhase;
+import 'package:zeta_flutter/zeta_flutter.dart';
 
-/// Mobile-optimized workflow stepper for the SNN 7-step pipeline.
-///
-/// Shows the current step name as a bold title on the left, with the other
-/// 6 steps as compact tappable number chips on the right.
-///
-/// Step chip visual states:
-/// - Current step: shown only as the title text (no chip).
-/// - Completed steps (index < current): [mainPrimary] color, tappable.
-/// - Locked steps: dim (opacity 0.3), no tap handler.
-/// - Unlocked future steps: [mainSubtle] color, tappable.
+/// Mobile-optimized stage-first stepper for the SNN workflow.
 class SnnMobileWorkflowStepper extends StatelessWidget {
   /// The currently active workflow phase.
   final SnnWorkflowPhase currentPhase;
@@ -33,6 +30,9 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
   /// both steppers cannot drift out of sync with each other.
   final Map<SnnWorkflowPhase, String> stepLabels;
 
+  /// Override for the three main workflow stage labels.
+  final Map<SnnWorkflowStage, String> stageLabels;
+
   /// Optional trailing widget to display at the right end of the stepper.
   final Widget? trailing;
 
@@ -43,13 +43,14 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
     this.onPhaseSelected,
     this.lockedPhases = const <SnnWorkflowPhase>{},
     this.stepLabels = kSnnStepLabels,
+    this.stageLabels = kSnnStageLabels,
     this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = Zeta.of(context).colors;
-    final allPhases = SnnWorkflowPhase.values;
+    final currentStage = snnStageForPhase(currentPhase);
 
     return Row(
       children: [
@@ -62,7 +63,8 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
             transitionBuilder: (child, animation) =>
                 FadeTransition(opacity: animation, child: child),
             child: Text(
-              stepLabels[currentPhase] ?? currentPhase.name,
+              '${stageLabels[currentStage] ?? currentStage.name} · '
+              '${stepLabels[currentPhase] ?? currentPhase.name}',
               key: ValueKey(currentPhase),
               // P1-6 fix: Zeta text styles instead of Theme.of(context).textTheme
               style: Zeta.of(context).textStyles.titleSmall.copyWith(
@@ -74,7 +76,7 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        // Number chips for every phase except the current one.
+        // Three stage destinations keep the hierarchy legible at narrow widths.
         AnimatedSwitcher(
           duration: NmtkMotionTokens.durationBase,
           switchInCurve: NmtkMotionTokens.easeEnter,
@@ -93,27 +95,29 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
             key: ValueKey(currentPhase),
             mainAxisSize: MainAxisSize.min,
             children: [
-              for (final phase in allPhases) _buildChip(context, phase, colors),
+              for (final stage in SnnWorkflowStage.values)
+                _buildChip(context, stage, currentStage, colors),
             ],
           ),
         ),
-        if (trailing != null) ...[
-          const SizedBox(width: 8),
-          trailing!,
-        ],
+        if (trailing != null) ...[const SizedBox(width: 8), trailing!],
       ],
     );
   }
 
   Widget _buildChip(
     BuildContext context,
-    SnnWorkflowPhase phase,
+    SnnWorkflowStage stage,
+    SnnWorkflowStage currentStage,
     ZetaColors colors,
   ) {
-    final stepNumber = phase.index + 1;
-    final isCurrent = phase == currentPhase;
-    final isCompleted = phase.index < currentPhase.index;
-    final isLocked = lockedPhases.contains(phase);
+    final stepNumber = stage.index + 1;
+    final isCurrent = stage == currentStage;
+    final isCompleted = stage.index < currentStage.index;
+    final unlocked = kSnnPhasesByStage[stage]!
+        .where((phase) => !lockedPhases.contains(phase))
+        .toList(growable: false);
+    final isLocked = unlocked.isEmpty;
 
     final Color chipColor;
     final Color bgColor;
@@ -131,11 +135,15 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
     } else if (isCompleted) {
       chipColor = colors.mainPrimary;
       bgColor = Colors.transparent;
-      onTap = onPhaseSelected != null ? () => onPhaseSelected!(phase) : null;
+      onTap = onPhaseSelected != null
+          ? () => onPhaseSelected!(unlocked.last)
+          : null;
     } else {
       chipColor = colors.mainSubtle;
       bgColor = Colors.transparent;
-      onTap = onPhaseSelected != null ? () => onPhaseSelected!(phase) : null;
+      onTap = onPhaseSelected != null
+          ? () => onPhaseSelected!(unlocked.first)
+          : null;
     }
 
     Widget chip = Padding(

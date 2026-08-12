@@ -161,6 +161,66 @@ void main() {
       expect(find.byType(Wrap), findsOneWidget);
     });
 
+    testWidgets('shrinkWrap uses natural width and keeps overflow scrollable', (
+      WidgetTester tester,
+    ) async {
+      const steps = [
+        NmtkPipelineStepData(
+          id: 'model',
+          label: 'Model',
+          status: NmtkStepStatus.idle,
+        ),
+        NmtkPipelineStepData(
+          id: 'training',
+          label: 'Training',
+          status: NmtkStepStatus.idle,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: const NmtkPipelineStepper(
+                  steps: steps,
+                  bare: true,
+                  shrinkWrap: true,
+                  wrapOnCompact: false,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(
+        tester.getSize(find.byType(NmtkPipelineStepper)).width,
+        lessThan(600),
+      );
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 180,
+              child: NmtkPipelineStepper(
+                steps: steps,
+                bare: true,
+                shrinkWrap: true,
+                wrapOnCompact: false,
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(NmtkPipelineStepper)).width, 180);
+    });
+
     testWidgets('pulseTick increment on a running step does not throw', (
       WidgetTester tester,
     ) async {

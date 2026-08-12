@@ -24,7 +24,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Model'), findsOneWidget);
+      expect(find.text('Design · Model'), findsOneWidget);
     });
 
     testWidgets('labels the final phase Deploy', (tester) async {
@@ -36,7 +36,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Deploy'), findsOneWidget);
+      expect(find.text('Execute · Deploy'), findsOneWidget);
     });
 
     testWidgets('locked chip has 0.3 opacity', (tester) async {
@@ -44,7 +44,11 @@ void main() {
         _wrap(
           const SnnMobileWorkflowStepper(
             currentPhase: SnnWorkflowPhase.selectData,
-            lockedPhases: {SnnWorkflowPhase.deployHardware},
+            lockedPhases: {
+              SnnWorkflowPhase.run,
+              SnnWorkflowPhase.review,
+              SnnWorkflowPhase.deployHardware,
+            },
           ),
         ),
       );
@@ -53,7 +57,7 @@ void main() {
       expect(
         opacityWidgets.any((o) => o.opacity == 0.3),
         isTrue,
-        reason: 'A locked phase chip should render at 0.3 opacity',
+        reason: 'A fully locked stage chip should render at 0.3 opacity',
       );
     });
 
@@ -86,11 +90,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Setup'), findsOneWidget);
+      expect(find.text('Setup · Data & Targets'), findsOneWidget);
 
       notifier.value = SnnWorkflowPhase.defineModel;
       await tester.pumpAndSettle();
-      expect(find.text('Model'), findsOneWidget);
+      expect(find.text('Design · Model'), findsOneWidget);
     });
   });
 }

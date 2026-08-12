@@ -1,81 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/widgets/pipeline_stepper.dart';
+import 'package:nmtk_ui_core/zeta_theme.dart';
 
-enum SnnWorkflowPhase { selectData, defineModel, defineTrain, defineEval, run, deployHardware }
+enum SnnWorkflowStage { setup, design, execute }
 
-/// Base step-name labels, shared between [SnnWorkflowStepper] (which
-/// prefixes each with its 1-based step number) and `SnnMobileWorkflowStepper`
-/// (which uses these bare). Single source of truth so the two steppers
-/// cannot drift out of sync with each other.
+enum SnnWorkflowPhase {
+  selectData,
+  defineModel,
+  defineTrain,
+  defineEval,
+  run,
+  review,
+  deployHardware,
+}
+
+const Map<SnnWorkflowStage, String> kSnnStageLabels = {
+  SnnWorkflowStage.setup: 'Setup',
+  SnnWorkflowStage.design: 'Design',
+  SnnWorkflowStage.execute: 'Execute',
+};
+
+const Map<SnnWorkflowStage, List<SnnWorkflowPhase>> kSnnPhasesByStage = {
+  SnnWorkflowStage.setup: [SnnWorkflowPhase.selectData],
+  SnnWorkflowStage.design: [
+    SnnWorkflowPhase.defineModel,
+    SnnWorkflowPhase.defineTrain,
+    SnnWorkflowPhase.defineEval,
+  ],
+  SnnWorkflowStage.execute: [
+    SnnWorkflowPhase.run,
+    SnnWorkflowPhase.review,
+    SnnWorkflowPhase.deployHardware,
+  ],
+};
+
+SnnWorkflowStage snnStageForPhase(SnnWorkflowPhase phase) => switch (phase) {
+  SnnWorkflowPhase.selectData => SnnWorkflowStage.setup,
+  SnnWorkflowPhase.defineModel ||
+  SnnWorkflowPhase.defineTrain ||
+  SnnWorkflowPhase.defineEval => SnnWorkflowStage.design,
+  SnnWorkflowPhase.run ||
+  SnnWorkflowPhase.review ||
+  SnnWorkflowPhase.deployHardware => SnnWorkflowStage.execute,
+};
+
+/// Base step-name labels shared by the desktop, compact, and drawer steppers.
 const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
-  SnnWorkflowPhase.selectData: 'Setup',
+  SnnWorkflowPhase.selectData: 'Data & Targets',
   SnnWorkflowPhase.defineModel: 'Model',
   SnnWorkflowPhase.defineTrain: 'Training',
-  SnnWorkflowPhase.defineEval: 'Eval',
+  SnnWorkflowPhase.defineEval: 'Evaluation',
   SnnWorkflowPhase.run: 'Run',
+  SnnWorkflowPhase.review: 'Review',
   SnnWorkflowPhase.deployHardware: 'Deploy',
 };
 
-/// A specialized pipeline stepper for the NeuroMorphicToolKit SNN workflow.
+/// A floating Studio workflow accordion.
 ///
-/// Models the 6-step workflow for training and deploying an SNN:
-/// 1. Setup        (selectData)
-/// 2. Model        (defineModel)
-/// 3. Training     (defineTrain)
-/// 4. Eval         (defineEval)
-/// 5. Run (run / GPU — training monitor transitions into results)
-/// 6. Deploy       (deployHardware — hardware target, on-device
-///                  inference/benchmark, and Hub sharing)
-class SnnWorkflowStepper extends StatelessWidget {
-  /// The currently active workflow phase.
+/// The three durable stages remain vertically visible. Only the active stage
+/// reveals its local phases, keeping navigation available without occupying a
+/// full canvas edge.
+class SnnWorkflowStepper extends StatefulWidget {
   final SnnWorkflowPhase currentPhase;
-
-  /// Monotonically increasing tick to pulse the "Run" step.
-  ///
-  /// Only fires an animation when [runningPhase] is [SnnWorkflowPhase.run].
   final int epochPulseTick;
-
-  /// The phase that is ACTIVELY executing (shows spinner + pulse).
-  /// Null = no step is running right now.
-  ///
-  /// Distinct from [currentPhase] (the selected/viewed panel). Use
-  /// [SnnWorkflowPhase.run] while a training job is in progress.
   final SnnWorkflowPhase? runningPhase;
-
-  /// Optional callback when a step is tapped.
   final ValueChanged<SnnWorkflowPhase>? onPhaseSelected;
-
-  /// When set, this phase is also highlighted in the stepper (dual-pane view).
   final SnnWorkflowPhase? secondaryPhase;
-
-  /// When true, renders only the inner scrollable row with no container border.
-  /// Pass to embed inside a parent toolbar (mirrors [NmtkPipelineStepper.bare]).
   final bool bare;
-
-  /// The set of phases that are locked (not yet accessible to the user).
-  /// Locked phases are rendered with reduced opacity, no tap handler, and a
-  /// tooltip explaining that the previous step must be completed first.
   final Set<SnnWorkflowPhase> lockedPhases;
-
-  /// Custom tooltip shown when the user hovers over a locked phase.
-  ///
-  /// Defaults to `'Complete the previous step first'`. Override this to
-  /// surface domain-appropriate messaging (e.g. "Upload a dataset first").
   final String disabledTooltip;
-
-  /// The phase id of the second panel in split-pane mode. Null = single pane.
   final String? splitStep;
-
-  /// Called when the user taps a + connector to open a split view.
   final void Function(String leftId, String rightId)? onSplitBetween;
-
-  /// Called when the user taps a − connector to collapse a pane.
-  /// [keepId] is the step that should remain as sole active.
   final void Function(String keepId)? onCollapseStep;
-
-  /// Override for the step-name labels, keyed by phase. Defaults to
-  /// [kSnnStepLabels]; each is prefixed with its 1-based step number.
   final Map<SnnWorkflowPhase, String> stepLabels;
+  final Map<SnnWorkflowStage, String> stageLabels;
 
   const SnnWorkflowStepper({
     super.key,
@@ -91,80 +90,342 @@ class SnnWorkflowStepper extends StatelessWidget {
     this.onSplitBetween,
     this.onCollapseStep,
     this.stepLabels = kSnnStepLabels,
+    this.stageLabels = kSnnStageLabels,
   });
 
   @override
+  State<SnnWorkflowStepper> createState() => _SnnWorkflowStepperState();
+}
+
+class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
+  late final Map<SnnWorkflowStage, SnnWorkflowPhase> _lastVisitedByStage;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastVisitedByStage = <SnnWorkflowStage, SnnWorkflowPhase>{};
+    _seedVisitedStages(widget.currentPhase);
+  }
+
+  @override
+  void didUpdateWidget(covariant SnnWorkflowStepper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentPhase != widget.currentPhase) {
+      _lastVisitedByStage[snnStageForPhase(widget.currentPhase)] =
+          widget.currentPhase;
+    }
+  }
+
+  void _seedVisitedStages(SnnWorkflowPhase current) {
+    final currentStage = snnStageForPhase(current);
+    for (final stage in SnnWorkflowStage.values) {
+      if (stage.index < currentStage.index) {
+        _lastVisitedByStage[stage] = kSnnPhasesByStage[stage]!.last;
+      }
+    }
+    _lastVisitedByStage[currentStage] = current;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return NmtkPipelineStepper(
-      bare: bare,
-      selectedStepId: currentPhase.name,
-      secondarySelectedStepId: secondaryPhase?.name,
-      disabledStepIds: lockedPhases.map((p) => p.name).toSet(),
-      disabledTooltip: disabledTooltip,
-      splitStepId: splitStep,
-      onSplitBetween: onSplitBetween,
-      onCollapseStep: onCollapseStep,
-      onSelected: onPhaseSelected != null
-          ? (id) {
-              final phase = SnnWorkflowPhase.values.firstWhere((p) => p.name == id);
-              onPhaseSelected!(phase);
-            }
-          : null,
-      steps: [
-        _buildStepData(
-          SnnWorkflowPhase.selectData,
-          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (dataset / tabular data)
-          Icons.dataset_outlined,
-        ),
-        _buildStepData(
-          SnnWorkflowPhase.defineModel,
-          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (architecture diagram)
-          Icons.architecture_outlined,
-        ),
-        _buildStepData(
-          SnnWorkflowPhase.defineTrain,
-          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (ML model training)
-          Icons.model_training_outlined,
-        ),
-        _buildStepData(
-          SnnWorkflowPhase.defineEval,
-          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (fact check / evaluation)
-          Icons.fact_check_outlined,
-        ),
-        _buildStepData(
-          SnnWorkflowPhase.run,
-          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (play circle / run job)
-          Icons.play_circle_outline,
-          pulseTick: epochPulseTick,
-        ),
-        _buildStepData(
-          SnnWorkflowPhase.deployHardware,
-          // ZETA-MIGRATION-EXEMPT: no Zeta equivalent (hardware deploy target)
-          Icons.memory_outlined,
-        ),
-      ],
+    final activeStage = snnStageForPhase(widget.currentPhase);
+    final theme = Theme.of(context);
+    final tokens = NmtkShellTokens.of(context);
+    final reducedMotion = MediaQuery.disableAnimationsOf(context);
+
+    final inner = LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : 720.0;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final stage in SnnWorkflowStage.values) ...[
+              _StageAccordionRow(
+                stage: stage,
+                active: stage == activeStage,
+                maxWidth: availableWidth,
+                duration: reducedMotion ? Duration.zero : tokens.standardMotion,
+                stageDestination: _StageDestination(
+                  number: stage.index + 1,
+                  label: widget.stageLabels[stage] ?? stage.name,
+                  selected: stage == activeStage,
+                  completed: _stageIsCompleted(stage),
+                  running: _stageIsRunning(stage),
+                  disabled: _stageIsLocked(stage),
+                  disabledTooltip: widget.disabledTooltip,
+                  onTap: () => _selectStage(stage),
+                ),
+                child: _buildChildRail(context, stage),
+              ),
+              if (stage != SnnWorkflowStage.values.last)
+                const SizedBox(height: 4),
+            ],
+          ],
+        );
+      },
+    );
+
+    if (widget.bare) {
+      return Semantics(label: 'Workflow stages', child: inner);
+    }
+    return Container(
+      key: const ValueKey<String>('snn-workflow-panel'),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(tokens.radiusLg),
+        border: Border.all(color: tokens.subtleBorder),
+      ),
+      child: Semantics(label: 'Workflow stages', child: inner),
     );
   }
 
-  String _numberedLabel(SnnWorkflowPhase phase) => '${phase.index + 1}. ${stepLabels[phase] ?? phase.name}';
+  Widget _buildChildRail(BuildContext context, SnnWorkflowStage stage) {
+    final stagePhases = kSnnPhasesByStage[stage]!;
+    final secondary = widget.secondaryPhase;
+    final localSecondary =
+        secondary != null && snnStageForPhase(secondary) == stage
+        ? secondary
+        : null;
+    final localSplitStep = localSecondary == null ? null : widget.splitStep;
+    final colors = Zeta.of(context).colors;
 
-  NmtkPipelineStepData _buildStepData(SnnWorkflowPhase phase, IconData icon, {int pulseTick = 0}) {
-    final status = _getStatusForPhase(phase);
+    return NmtkPipelineStepper(
+      key: ValueKey<SnnWorkflowStage>(stage),
+      bare: true,
+      shrinkWrap: true,
+      wrapOnCompact: false,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      stepAccentColor: colors.mainPrimary,
+      stepStyle: NmtkPipelineStepStyle.destination,
+      stepWidth: _StageAccordionRow.stageWidth,
+      statusBarSemanticsLabel:
+          '${widget.stageLabels[stage] ?? stage.name} steps',
+      selectedStepId: widget.currentPhase.name,
+      secondarySelectedStepId: localSecondary?.name,
+      disabledStepIds: widget.lockedPhases.map((p) => p.name).toSet(),
+      disabledTooltip: widget.disabledTooltip,
+      splitStepId: localSplitStep,
+      onSplitBetween: widget.onSplitBetween == null
+          ? null
+          : (leftId, rightId) {
+              final left = SnnWorkflowPhase.values.firstWhere(
+                (phase) => phase.name == leftId,
+              );
+              final right = SnnWorkflowPhase.values.firstWhere(
+                (phase) => phase.name == rightId,
+              );
+              if (snnStageForPhase(left) == snnStageForPhase(right)) {
+                widget.onSplitBetween!(leftId, rightId);
+              }
+            },
+      onCollapseStep: widget.onCollapseStep,
+      onSelected: widget.onPhaseSelected == null
+          ? null
+          : (id) => widget.onPhaseSelected!(
+              SnnWorkflowPhase.values.firstWhere((p) => p.name == id),
+            ),
+      steps: [for (final phase in stagePhases) _buildStepData(phase)],
+    );
+  }
+
+  bool _stageIsLocked(SnnWorkflowStage stage) =>
+      kSnnPhasesByStage[stage]!.every(widget.lockedPhases.contains);
+
+  bool _stageIsCompleted(SnnWorkflowStage stage) =>
+      kSnnPhasesByStage[stage]!.last.index < widget.currentPhase.index;
+
+  bool _stageIsRunning(SnnWorkflowStage stage) =>
+      widget.runningPhase != null &&
+      snnStageForPhase(widget.runningPhase!) == stage;
+
+  void _selectStage(SnnWorkflowStage stage) {
+    if (widget.onPhaseSelected == null || _stageIsLocked(stage)) return;
+    final unlocked = kSnnPhasesByStage[stage]!
+        .where((phase) => !widget.lockedPhases.contains(phase))
+        .toList(growable: false);
+    if (unlocked.isEmpty) return;
+    final remembered = _lastVisitedByStage[stage];
+    widget.onPhaseSelected!(
+      remembered != null && unlocked.contains(remembered)
+          ? remembered
+          : unlocked.first,
+    );
+  }
+
+  NmtkPipelineStepData _buildStepData(SnnWorkflowPhase phase) {
     return NmtkPipelineStepData(
       id: phase.name,
-      label: _numberedLabel(phase),
-      status: status,
-      icon: icon,
-      pulseTick: pulseTick,
+      label: widget.stepLabels[phase] ?? phase.name,
+      status: _getStatusForPhase(phase),
+      pulseTick: phase == SnnWorkflowPhase.run ? widget.epochPulseTick : 0,
     );
   }
 
   NmtkStepStatus _getStatusForPhase(SnnWorkflowPhase phase) {
-    if (phase == runningPhase) return NmtkStepStatus.running;
-    if (phase.index < currentPhase.index) {
+    if (phase == widget.runningPhase) return NmtkStepStatus.running;
+    if (widget.lockedPhases.contains(phase)) return NmtkStepStatus.idle;
+    if (phase.index < widget.currentPhase.index) {
       return NmtkStepStatus.success;
-    } else {
-      return NmtkStepStatus.idle;
     }
+    return NmtkStepStatus.idle;
+  }
+}
+
+class _StageDestination extends StatelessWidget {
+  const _StageDestination({
+    required this.number,
+    required this.label,
+    required this.selected,
+    required this.completed,
+    required this.running,
+    required this.disabled,
+    required this.disabledTooltip,
+    required this.onTap,
+  });
+
+  final int number;
+  final String label;
+  final bool selected;
+  final bool completed;
+  final bool running;
+  final bool disabled;
+  final String disabledTooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Zeta.of(context).colors;
+    final tokens = NmtkShellTokens.of(context);
+    final foreground = running
+        ? tokens.runningColor
+        : selected
+        ? colors.mainPrimary
+        : completed
+        ? tokens.healthyColor
+        : colors.mainSubtle;
+    final status = disabled
+        ? 'Locked'
+        : running
+        ? 'Running'
+        : completed
+        ? 'Completed'
+        : selected
+        ? 'Current'
+        : 'Available';
+    final destination = Semantics(
+      button: true,
+      selected: selected,
+      enabled: !disabled,
+      label: 'Stage $number, $label',
+      value: status,
+      excludeSemantics: true,
+      child: Material(
+        key: ValueKey<String>('workflow-stage-$number'),
+        color: selected ? colors.surfacePrimarySubtle : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(tokens.radiusSm),
+          side: BorderSide(
+            color: selected ? colors.borderPrimary : Colors.transparent,
+          ),
+        ),
+        child: InkWell(
+          onTap: disabled ? null : onTap,
+          borderRadius: BorderRadius.circular(tokens.radiusSm),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    '$number. $label',
+                    overflow: TextOverflow.ellipsis,
+                    style: Zeta.of(context).textStyles.bodySmall.copyWith(
+                      color: foreground,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!disabled) return destination;
+    return Tooltip(
+      message: disabledTooltip,
+      child: Opacity(opacity: 0.38, child: destination),
+    );
+  }
+}
+
+class _StageAccordionRow extends StatelessWidget {
+  const _StageAccordionRow({
+    required this.stage,
+    required this.active,
+    required this.maxWidth,
+    required this.duration,
+    required this.stageDestination,
+    required this.child,
+  });
+
+  static const double stageWidth = 136;
+  static const double childGap = 8;
+
+  final SnnWorkflowStage stage;
+  final bool active;
+  final double maxWidth;
+  final Duration duration;
+  final Widget stageDestination;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final childWidth = (maxWidth - stageWidth - childGap).clamp(
+      0.0,
+      double.infinity,
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(width: stageWidth, child: stageDestination),
+        if (childWidth > 0) ...[
+          const SizedBox(width: childGap),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: childWidth),
+            child: ClipRect(
+              child: TweenAnimationBuilder<double>(
+                key: ValueKey<String>('${stage.name}-children'),
+                duration: duration,
+                curve: Curves.easeOutCubic,
+                tween: Tween<double>(
+                  begin: active ? 1 : 0,
+                  end: active ? 1 : 0,
+                ),
+                builder: (context, progress, animatedChild) => IgnorePointer(
+                  ignoring: !active,
+                  child: ExcludeSemantics(
+                    excluding: !active,
+                    child: Opacity(
+                      opacity: progress,
+                      child: FractionalTranslation(
+                        translation: Offset(progress - 1, 0),
+                        child: animatedChild,
+                      ),
+                    ),
+                  ),
+                ),
+                child: child,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 }

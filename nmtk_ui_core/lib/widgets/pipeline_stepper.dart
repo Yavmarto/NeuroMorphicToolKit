@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 import 'package:nmtk_ui_core/zeta_theme.dart';
@@ -6,6 +7,15 @@ import 'package:nmtk_ui_core/zeta_theme.dart';
 part 'pipeline_stepper_parts.dart';
 
 enum NmtkStepStatus { idle, running, success, error }
+
+/// Visual treatment for an individual pipeline step.
+enum NmtkPipelineStepStyle {
+  /// Status-forward chip with an icon and status-tinted surfaces.
+  status,
+
+  /// Text-only destination matching the primary selection treatment.
+  destination,
+}
 
 class NmtkPipelineStepData {
   final String id;
@@ -50,6 +60,12 @@ class NmtkPipelineStepper extends StatefulWidget {
   final bool bare;
   final Color stepAccentColor;
 
+  /// Visual treatment applied to every step.
+  final NmtkPipelineStepStyle stepStyle;
+
+  /// Optional fixed width shared by every step.
+  final double? stepWidth;
+
   final String? secondarySelectedStepId;
   final Set<String> disabledStepIds;
   final String disabledTooltip;
@@ -77,6 +93,26 @@ class NmtkPipelineStepper extends StatefulWidget {
   /// Semantics label announced for the whole stepper.
   final String statusBarSemanticsLabel;
 
+  /// Whether steps wrap onto multiple lines below the compact breakpoint.
+  ///
+  /// Disable this when the stepper is embedded in a narrow horizontal
+  /// accordion so its children stay on one scrollable line.
+  final bool wrapOnCompact;
+
+  /// Whether the stepper should use its natural horizontal content width.
+  ///
+  /// The width remains capped by the incoming constraints, so overflowing
+  /// steps still scroll horizontally. The default keeps the existing
+  /// full-width toolbar behavior.
+  final bool shrinkWrap;
+
+  /// Padding around the step row.
+  ///
+  /// Embedded controls may remove vertical padding so the row does not make
+  /// its parent destination taller. Standalone steppers keep the existing
+  /// toolbar padding by default.
+  final EdgeInsetsGeometry contentPadding;
+
   const NmtkPipelineStepper({
     super.key,
     required this.steps,
@@ -85,6 +121,8 @@ class NmtkPipelineStepper extends StatefulWidget {
     this.onSelected,
     this.bare = false,
     this.stepAccentColor = NmtkZetaTheme.primary,
+    this.stepStyle = NmtkPipelineStepStyle.status,
+    this.stepWidth,
     this.disabledStepIds = const <String>{},
     this.disabledTooltip = 'Complete the previous step first',
     this.splitStepId,
@@ -94,6 +132,12 @@ class NmtkPipelineStepper extends StatefulWidget {
     this.closeRightPaneTooltip = 'Close right pane',
     this.openSplitViewTooltip = 'Open split view',
     this.statusBarSemanticsLabel = 'Pipeline status bar',
+    this.wrapOnCompact = true,
+    this.shrinkWrap = false,
+    this.contentPadding = const EdgeInsets.symmetric(
+      horizontal: 12,
+      vertical: 8,
+    ),
   });
 
   @override
@@ -189,11 +233,11 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
       builder: (context, constraints) {
         final steps = _buildSteps(context);
 
-        final inner = Semantics(
+        Widget inner = Semantics(
           label: widget.statusBarSemanticsLabel,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: constraints.maxWidth >= 840
+            padding: widget.contentPadding,
+            child: !widget.wrapOnCompact || constraints.maxWidth >= 840
                 ? SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     controller: _scrollController,
@@ -213,6 +257,14 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
                   ),
           ),
         );
+
+        if (widget.shrinkWrap) {
+          inner = Align(
+            alignment: Alignment.centerLeft,
+            widthFactor: 1,
+            child: inner,
+          );
+        }
 
         if (widget.bare) return inner;
 
@@ -267,6 +319,8 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
                 data: step,
                 selected: false,
                 accentColor: widget.stepAccentColor,
+                style: widget.stepStyle,
+                width: widget.stepWidth,
                 onTap: null,
               ),
             ),
@@ -281,6 +335,8 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
                 widget.selectedStepId == step.id ||
                 widget.secondarySelectedStepId == step.id,
             accentColor: widget.stepAccentColor,
+            style: widget.stepStyle,
+            width: widget.stepWidth,
             onTap:
                 step.onTap ??
                 (widget.onSelected != null

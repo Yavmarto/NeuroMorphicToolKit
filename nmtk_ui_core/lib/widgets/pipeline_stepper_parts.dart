@@ -5,6 +5,8 @@ class _PipelineStep extends StatefulWidget {
   final bool selected;
   final VoidCallback? onTap;
   final Color accentColor;
+  final NmtkPipelineStepStyle style;
+  final double? width;
 
   const _PipelineStep({
     super.key,
@@ -12,6 +14,8 @@ class _PipelineStep extends StatefulWidget {
     this.selected = false,
     this.onTap,
     required this.accentColor,
+    required this.style,
+    this.width,
   });
 
   @override
@@ -71,33 +75,89 @@ class _PipelineStepState extends State<_PipelineStep>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
+    final colors = Zeta.of(context).colors;
     final enabled =
         widget.data.status != NmtkStepStatus.idle || widget.onTap != null;
+    final destinationStyle = widget.style == NmtkPipelineStepStyle.destination;
 
-    Widget chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: _getBgColor(context, theme, tokens),
-        borderRadius: BorderRadius.circular(tokens.radiusSm),
-        border: Border.all(
-          color: _getBorderColor(context, theme, tokens),
-          width: widget.selected ? 1.6 : 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildIcon(context, theme, tokens),
-          const SizedBox(width: 4),
-          Text(
-            widget.data.label,
-            style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-              color: theme.colorScheme.onSurface,
-              fontSize: 11,
+    final labelStyle =
+        (destinationStyle
+                ? Zeta.of(context).textStyles.bodySmall
+                : Zeta.of(context).textStyles.bodyMedium)
+            .copyWith(
+              color: destinationStyle
+                  ? _getDestinationForeground(colors, tokens)
+                  : theme.colorScheme.onSurface,
+              fontSize: destinationStyle ? null : 11,
               fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w600,
-            ),
+            );
+    final unselectedLabelStyle = labelStyle.copyWith(
+      fontWeight: FontWeight.w600,
+    );
+    final selectedLabelStyle = labelStyle.copyWith(fontWeight: FontWeight.w700);
+    double measureLabel(TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(text: widget.data.label, style: style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout();
+      return painter.width;
+    }
+
+    final labelWidth = math.max(
+      measureLabel(unselectedLabelStyle),
+      measureLabel(selectedLabelStyle),
+    );
+    final borderWidth = destinationStyle ? 1.0 : (widget.selected ? 1.6 : 1.0);
+    Widget chip = Padding(
+      padding: EdgeInsets.all(destinationStyle ? 0 : 1.6 - borderWidth),
+      child: Container(
+        key: ValueKey<String>('pipeline-step-${widget.data.id}'),
+        width: widget.width,
+        padding: EdgeInsets.symmetric(
+          horizontal: destinationStyle ? 12 : 8,
+          vertical: destinationStyle ? 7 : 6,
+        ),
+        decoration: BoxDecoration(
+          color: destinationStyle
+              ? (widget.selected
+                    ? colors.surfacePrimarySubtle
+                    : Colors.transparent)
+              : _getBgColor(context, theme, tokens),
+          borderRadius: BorderRadius.circular(tokens.radiusSm),
+          border: Border.all(
+            color: destinationStyle
+                ? (widget.selected ? colors.borderPrimary : Colors.transparent)
+                : _getBorderColor(context, theme, tokens),
+            width: borderWidth,
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: widget.width == null
+              ? MainAxisSize.min
+              : MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (!destinationStyle) ...[
+              _buildIcon(context, theme, tokens),
+              const SizedBox(width: 4),
+            ],
+            if (widget.width == null)
+              SizedBox(
+                width: labelWidth,
+                child: Text(widget.data.label, style: labelStyle),
+              )
+            else
+              Flexible(
+                child: Text(
+                  widget.data.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: labelStyle,
+                ),
+              ),
+          ],
+        ),
       ),
     );
 
@@ -129,6 +189,17 @@ class _PipelineStepState extends State<_PipelineStep>
               ),
       ),
     );
+  }
+
+  Color _getDestinationForeground(ZetaColors colors, NmtkShellTokens tokens) {
+    if (widget.data.status == NmtkStepStatus.running) {
+      return tokens.runningColor;
+    }
+    if (widget.selected) return colors.mainPrimary;
+    if (widget.data.status == NmtkStepStatus.success) {
+      return tokens.healthyColor;
+    }
+    return colors.mainSubtle;
   }
 
   Widget _buildIcon(
