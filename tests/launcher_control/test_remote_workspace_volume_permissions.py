@@ -61,3 +61,14 @@ def test_production_suite_api_has_a_writable_ephemeral_notebook_mirror() -> None
     prod_override = (ROOT / "docker-compose.prod.yml").read_text()
 
     assert "- /home/app/notebooks:mode=1777" in prod_override
+
+
+def test_production_suite_api_persists_writable_application_data() -> None:
+    """Uploads and SQLite stores must use the app-owned persistent volume."""
+    prod_override = (ROOT / "docker-compose.prod.yml").read_text()
+    suite_api_override = prod_override.split("\n  neurosense-hw-worker:", 1)[0]
+
+    assert "- suite_api_data:/home/app/data" in suite_api_override
+    assert "\n      - /home/app/data\n" not in suite_api_override
+    assert "os.access(data_dir, os.W_OK)" in suite_api_override
+    assert "/api/suite/health" in suite_api_override

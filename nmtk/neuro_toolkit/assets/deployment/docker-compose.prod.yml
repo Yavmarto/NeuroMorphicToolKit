@@ -6,11 +6,20 @@ services:
     tmpfs:
       - /tmp
       - /run
-      - /home/app/data
       # The canonical notebook lives in Jupyter's volume. Suite API keeps an
       # execution mirror here so kernel requests do not need a Contents API
       # round-trip; the image user must be able to create workspace folders.
       - /home/app/notebooks:mode=1777
+    volumes:
+      # Jobs, workspaces, dataset metadata, and uploaded pipeline files must
+      # survive container recreation. The image owns this directory as `app`,
+      # so a fresh named volume inherits the correct ownership.
+      - suite_api_data:/home/app/data
+    healthcheck:
+      # The shallow Suite endpoint can answer while NeuroCNL's SQLite stores
+      # are unusable. Refuse the healthy state unless the service user can
+      # write its configured data directory as well.
+      test: ["CMD", "python", "-c", "import os, urllib.request; data_dir = os.environ['NEUROCNL_DATA_DIR']; assert os.path.isdir(data_dir) and os.access(data_dir, os.W_OK); urllib.request.urlopen('http://127.0.0.1:9000/api/suite/health')"]
     environment:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1

@@ -1,7 +1,7 @@
 {
   "bundleVersion": 8,
   "files": {
-    "docker-compose.prod.yml": "f582e7a6fdde70283e0440caabdac774940663c304e2c0c4943dec946a0f438d",
+    "docker-compose.prod.yml": "d9ed2a409a4ba407432d16e8b05c43784bcb76563b438c214d06e6c5aa9036bc",
     "docker-compose.remote.yml": "23b34d4599ff850d4ba909d57e35c84b604cd030c4b44e575dd03d2c9109c489",
     "docker-compose.yml": "9a394db24b7f55b1dee339f87d89a8d709d435baf6e8e1e9d115b6113c5ad9eb",
     "install.sh": "de6371f30c4b4abdfe33530bec711123d2077f8292eb93ea91944da2e0c12ff6",
