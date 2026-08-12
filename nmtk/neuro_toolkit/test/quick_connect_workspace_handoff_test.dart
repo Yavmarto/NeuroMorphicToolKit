@@ -9,7 +9,6 @@ import 'package:http/testing.dart';
 import 'package:neuro_toolkit/main.dart';
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/routing/router.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
@@ -113,12 +112,10 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-    'quick connect from setup navigates to the workspace and shows the selected launcher',
+    'quick connect dismisses setup and shows the selected launcher workspace',
     (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final requestedPaths = <String>[];
-      final router = createGoRouter(initialLocation: '/setup');
-      addTearDown(router.dispose);
       final client = MockClient((request) async {
         requestedPaths.add(request.url.path);
         switch (request.url.path) {
@@ -183,7 +180,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            goRouterProvider.overrideWithValue(router),
             analyticsServiceProvider.overrideWithValue(AnalyticsService()),
             deploymentServiceProvider.overrideWithValue(
               _FakeDeploymentService(),
@@ -214,18 +210,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // After navigation to /workspace, workspaceProvider still has sessions=[]
-      // from the initial fetch — _initializeWorkspace has not yet run. In mobile
-      // layout (width < 840 px), the FAB is visible with the IP text at this
-      // point (no native session yet, so showMobileInlineServerControl is false).
+      // The launcher initializes the workspace directly after setup without
+      // an outer route transition.
       expect(find.byType(BackendSetupScreen), findsNothing);
-      expect(find.text('192.168.68.53'), findsOneWidget);
-
-      // Tapping the server-connection FAB reopens the setup screen.
-      await tester.tap(find.text('192.168.68.53'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(BackendSetupScreen), findsOneWidget);
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.byType(NeuroToolkitApp), findsOneWidget);
 
       // Dismiss the setup and verify that workspace initialization (which runs
       // in the background) made the expected API calls.
@@ -346,8 +335,6 @@ void main() {
       final requestedPaths = <String>[];
       final staleServerModules = Completer<http.Response>();
       var oldServerModuleRequests = 0;
-      final router = createGoRouter();
-      addTearDown(router.dispose);
       final client = MockClient((request) async {
         requestedAuthorities.add(request.url.authority);
         requestedPaths.add('${request.url.host}${request.url.path}');
@@ -376,12 +363,32 @@ void main() {
                 return staleServerModules.future;
               }
             }
-            return http.Response('[]', 200);
+            return http.Response(
+              jsonEncode(<Map<String, dynamic>>[
+                <String, dynamic>{
+                  'id': 'neurocnl',
+                  'name': 'NeuroStudio',
+                  'description': 'CNL compiler and visual SNN design suite',
+                  'installPath': 'neurocnl/',
+                  'port': 9000,
+                  'hasFrontend': true,
+                  'status': 4,
+                },
+              ]),
+              200,
+            );
           case '/api/launcher/workspace':
             return http.Response(
               jsonEncode(<String, dynamic>{
-                'sessions': <dynamic>[],
-                'focusedModuleId': null,
+                'sessions': <dynamic>[
+                  <String, dynamic>{
+                    'moduleId': 'neurocnl',
+                    'surfaceMode': 'native',
+                    'readinessState': 'ready',
+                    'restoreState': <String, dynamic>{},
+                  },
+                ],
+                'focusedModuleId': 'neurocnl',
               }),
               200,
             );
@@ -393,7 +400,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            goRouterProvider.overrideWithValue(router),
             analyticsServiceProvider.overrideWithValue(AnalyticsService()),
             deploymentServiceProvider.overrideWithValue(
               _FakeDeploymentService(),
@@ -426,13 +432,23 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
-      expect(find.text('192.168.68.53'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('inline-server-connection-icon')),
+        findsOneWidget,
+      );
       await tester.pump(const Duration(seconds: 3));
       await tester.pump();
       expect(oldServerModuleRequests, 2);
 
-      await tester.tap(find.byTooltip('Server Connection'));
+      tester
+          .widget<InkWell>(
+            find.byKey(
+              const ValueKey<String>('inline-server-connection-icon'),
+            ),
+          )
+          .onTap!();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -448,7 +464,6 @@ void main() {
       );
       expect(find.byType(Dialog), findsNothing);
       expect(find.byType(BackendSetupScreen), findsNothing);
-      expect(find.text('192.168.2.34'), findsOneWidget);
       expect(
         requestedAuthorities,
         containsAll(<String>['192.168.68.53:8090', '192.168.2.34:8090']),
@@ -500,8 +515,6 @@ void main() {
     (tester) async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       final requestedPaths = <String>[];
-      final router = createGoRouter(initialLocation: '/setup');
-      addTearDown(router.dispose);
       final client = MockClient((request) async {
         requestedPaths.add(request.url.path);
         switch (request.url.path) {
@@ -546,7 +559,6 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            goRouterProvider.overrideWithValue(router),
             analyticsServiceProvider.overrideWithValue(AnalyticsService()),
             deploymentServiceProvider.overrideWithValue(
               _FakeDeploymentService(),

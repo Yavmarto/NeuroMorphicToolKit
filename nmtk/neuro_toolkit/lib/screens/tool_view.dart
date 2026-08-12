@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:go_router/go_router.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
@@ -14,6 +13,7 @@ import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
+import 'package:neuro_toolkit/src/features/app/presentation/launcher_navigation_notifier.dart';
 import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
 import 'package:neuro_toolkit/widgets/module_error_view.dart';
 import 'package:neuro_toolkit/widgets/module_icon.dart';
@@ -26,14 +26,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 
 class ToolViewScreen extends ConsumerStatefulWidget {
-  const ToolViewScreen({
-    super.key,
-    this.initialModuleId,
-    this.openServerSetupOnStart = false,
-  });
-
-  final String? initialModuleId;
-  final bool openServerSetupOnStart;
+  const ToolViewScreen({super.key});
 
   @override
   ConsumerState<ToolViewScreen> createState() => _ToolViewScreenState();
@@ -77,62 +70,27 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 
-  Widget _buildServerConnectionButton(BuildContext context) {
-    final controlApi = ref.watch(selectedControlApiServiceProvider);
-    final connection = ref.watch(serverConnectionProvider);
-    final backendVersionAsync = ref.watch(backendVersionProvider);
-    final backendVersion = backendVersionAsync.value;
-    final effectiveConnection = controlApi == null
-        ? const ServerConnectionState.disconnected()
-        : connection.baseUri == controlApi.baseUri
-            ? connection
-            : ServerConnectionState(
-                phase: ServerConnectionPhase.checking,
-                baseUri: controlApi.baseUri,
-              );
-    final tokens = NmtkShellTokens.of(context);
-
-    final versionLabel = switch (backendVersion) {
-      'dev' => 'Development build',
-      final String value => 'v$value',
-      null => null,
-    };
-    final labelText = [
-      controlApi?.baseUri.host ?? 'Connect server',
-      if (versionLabel != null) versionLabel,
-    ].join(' · ');
-
-    return FloatingActionButton.extended(
-      onPressed: () => _showServerConnectionPopup(context),
-      tooltip: 'Server Connection',
-      icon: Icon(
-        Icons.circle,
-        color: _serverConnectionColor(effectiveConnection.phase, tokens),
-        size: 14,
-      ),
-      label: Text(labelText),
-    );
-  }
-
   /// A compact, host-owned server control for the embedded NeuroCNL toolbar.
   /// Keeping its state and callback here means the Studio package never owns
   /// server selection or creates a parallel connection workflow.
   Widget _buildInlineServerConnectionControl(BuildContext context) {
-    return _InlineServerConnectionControl(
-      onPressed: () => _showServerConnectionPopup(context),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _InlineServerConnectionControl(
+          onPressed: () => _showServerConnectionPopup(context),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: Icon(
+            Icons.person_outline,
+            color: Zeta.of(context).colors.mainDefault,
+          ),
+          onPressed: () {},
+          tooltip: 'Profile',
+        ),
+      ],
     );
-  }
-
-  Color _serverConnectionColor(
-    ServerConnectionPhase phase,
-    NmtkShellTokens tokens,
-  ) {
-    return switch (phase) {
-      ServerConnectionPhase.checking => tokens.runningColor,
-      ServerConnectionPhase.connected => tokens.healthyColor,
-      ServerConnectionPhase.unstable => tokens.warningColor,
-      ServerConnectionPhase.disconnected => tokens.errorColor,
-    };
   }
 
   bool _usesRemoteHostedServices() {
@@ -238,30 +196,62 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   @override
   void initState() {
     super.initState();
-    _activeModuleId = widget.initialModuleId ?? '';
+    ref.listenManual<LauncherNavigationRequest?>(
+      launcherNavigationProvider,
+      _handleLauncherNavigation,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (mounted && widget.openServerSetupOnStart) {
-        await _showServerConnectionPopup(context);
-        if (mounted && GoRouterState.of(context).uri.path == '/setup') {
-          context.go('/workspace');
-        }
-        return;
-      }
       await _initializeWorkspace();
     });
   }
 
-  @override
-  void didUpdateWidget(ToolViewScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialModuleId != oldWidget.initialModuleId) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _initializeWorkspace(forceFocus: true);
-      });
+  void _handleLauncherNavigation(
+    LauncherNavigationRequest? previous,
+    LauncherNavigationRequest? next,
+  ) {
+    if (next == null || previous?.sequence == next.sequence) return;
+
+    switch (next.action) {
+      case LauncherNavigationAction.openWorkspace:
+        unawaited(_initializeWorkspace());
+        return;
+      case LauncherNavigationAction.openModule:
+        final moduleId = next.moduleId;
+        final modules = ref.read(moduleProvider).value?.modules;
+        if (moduleId == null || modules == null) return;
+        final module = _findModule(modules, moduleId);
+        if (module == null || !_shouldOpenModule(module)) return;
+        unawaited(_activateModule(moduleId, requestFocus: true));
+        return;
+      case LauncherNavigationAction.reloadWorkspace:
+        unawaited(_reloadWorkspace());
+        return;
+      case LauncherNavigationAction.toggleSidebar:
+        Actions.maybeInvoke(context, const ToggleSidebarIntent());
+        return;
     }
   }
 
-  Future<void> _initializeWorkspace({bool forceFocus = false}) async {
+  Future<void> _reloadWorkspace() async {
+    _workspaceServerGeneration++;
+    _workspaceInitializing = false;
+    setState(() {
+      _workspaceInitialized = false;
+      _controllers.clear();
+      _pendingModuleRequests.clear();
+      _moduleLoadFailures.clear();
+      _prevModuleStatuses.clear();
+    });
+    await Future.wait([
+      ref.refresh(moduleProvider.future),
+      ref.refresh(workspaceProvider.future),
+    ]);
+    if (mounted) {
+      await _initializeWorkspace();
+    }
+  }
+
+  Future<void> _initializeWorkspace() async {
     if (!mounted) return;
     if (_workspaceInitializing) {
       return;
@@ -288,7 +278,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             serverKey == _launcherBaseUri()?.toString()) {
           _workspaceInitializing = false;
           WidgetsBinding.instance.addPostFrameCallback((_) async {
-            await _initializeWorkspace(forceFocus: forceFocus);
+            await _initializeWorkspace();
           });
         }
         return;
@@ -321,7 +311,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       final targetModuleId = _preferredModuleId(
             eligibleModules,
             workspaceState.focusedModuleId,
-            forceFocus,
           ) ??
           eligibleModules.first.id;
 
@@ -358,19 +347,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   String? _preferredModuleId(
     List<Module> eligibleModules,
     String? focusedModuleId,
-    bool forceFocus,
   ) {
     final eligibleIds = eligibleModules.map((module) => module.id).toSet();
-    final requestedModuleId = widget.initialModuleId;
-    if (requestedModuleId != null && eligibleIds.contains(requestedModuleId)) {
-      return requestedModuleId;
-    }
-    if (!forceFocus &&
-        focusedModuleId != null &&
-        eligibleIds.contains(focusedModuleId)) {
+    if (focusedModuleId != null && eligibleIds.contains(focusedModuleId)) {
       return focusedModuleId;
     }
-    if (!forceFocus && eligibleIds.contains(_activeModuleId)) {
+    if (eligibleIds.contains(_activeModuleId)) {
       return _activeModuleId;
     }
     return null;
@@ -652,7 +634,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       // Every module depends on the same one launcher server — "change
       // server" always means reconnecting the whole app, never a per-module
       // override, so it's offered regardless of local vs. remote.
-      onChangeServer: () => context.go('/setup'),
+      onChangeServer: () => _showServerConnectionPopup(context),
     );
   }
 
@@ -822,7 +804,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         module.status == ModuleStatus.degraded;
 
     // SelectionContainer.disabled: the module workspace (canvases, steppers,
-    // buttons) must not inherit the app-wide SelectionArea from router.dart —
+    // buttons) must not inherit the app-wide SelectionArea from LauncherAppHost —
     // Scrollable's text-selection-drag autoscroll trips Flutter's "Drag
     // target size is larger than scrollable size" assert on any short/thin
     // scrollable in that subtree, causing bounce/jank on first press or drag.
@@ -846,7 +828,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                   // Every module depends on the same one launcher server —
                   // "change server" always means reconnecting the whole app,
                   // never a per-module override.
-                  onChangeServer: () => context.go('/setup'),
+                  onChangeServer: () => _showServerConnectionPopup(context),
                 ),
               )
             : session == null || !isReady
@@ -953,7 +935,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                       ref.invalidate(moduleProvider);
                       ref.invalidate(workspaceProvider);
                     },
-                    onChangeServer: () => context.go('/setup'),
+                    onChangeServer: () => _showServerConnectionPopup(context),
                   ),
                 ),
               ),
@@ -992,17 +974,15 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     if (eligibleModules.isEmpty) {
       if (isMobile) {
-        return NmtkMobileScaffold(
-          navItems: const [],
+        return const NmtkMobileScaffold(
+          navItems: [],
           selectedIndex: 0,
           pageTitle: 'NeuroToolkit',
-          floatingActionButton: _buildServerConnectionButton(context),
-          child: const ModulePickerPanel(),
+          child: ModulePickerPanel(),
         );
       }
       return Scaffold(
         backgroundColor: tokens.shellBackground,
-        floatingActionButton: _buildServerConnectionButton(context),
         body: const SafeArea(
           top: false,
           bottom: false,
@@ -1098,9 +1078,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           }
         },
         showBottomNavigation: false,
-        floatingActionButton: showMobileInlineServerControl
-            ? null
-            : _buildServerConnectionButton(context),
         // Only the active module's content is built here — unlike an
         // IndexedStack (which would build and keep every eligible module's
         // full subtree alive simultaneously, including full nested apps for
@@ -1145,9 +1122,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     return Scaffold(
       backgroundColor: tokens.shellBackground,
-      floatingActionButton: showInlineServerControl
-          ? null
-          : _buildServerConnectionButton(context),
       body: SafeArea(
         top: false,
         bottom: false,
@@ -1206,8 +1180,7 @@ class _InlineServerConnectionControl extends ConsumerWidget {
     final tokens = NmtkShellTokens.of(context);
     final statusColor = _colorForPhase(effectiveConnection.phase, tokens);
     final hostLabel = controlApi?.baseUri.host ?? 'Connect server';
-    final serverLabel =
-        backendVersion != null ? '$hostLabel · v$backendVersion' : hostLabel;
+    final serverLabel = backendVersion != null ? 'v$backendVersion' : hostLabel;
 
     if (iconOnly) {
       return Tooltip(

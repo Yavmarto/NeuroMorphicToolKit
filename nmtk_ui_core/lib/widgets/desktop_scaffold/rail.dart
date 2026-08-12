@@ -115,7 +115,6 @@ class _NmtkRailColumn extends StatelessWidget {
               tooltip: 'Settings',
               onPressed: onSettingsPressed!,
             ),
-          if (userProfile != null) _RailProfileChip(profile: userProfile!),
           const SizedBox(height: 8),
         ],
       ),
@@ -315,28 +314,28 @@ class _RailProfileChipState extends State<_RailProfileChip> {
           child: Material(
             type: MaterialType.transparency,
             child: InkWell(
-            onTap: () {
-              if (_menuController.isOpen) {
-                _menuController.close();
-              } else {
-                _menuController.open();
-              }
-            },
-            mouseCursor: SystemMouseCursors.click,
-            child: SizedBox(
-              height: 40,
-              child: Center(
-                child: ZetaAvatar(
-                  initials: _initials(profile),
-                  image: profile.avatarUrl != null
-                      ? Image.network(profile.avatarUrl!)
-                      : null,
-                  size: ZetaAvatarSize.xs,
+              onTap: () {
+                if (_menuController.isOpen) {
+                  _menuController.close();
+                } else {
+                  _menuController.open();
+                }
+              },
+              mouseCursor: SystemMouseCursors.click,
+              child: SizedBox(
+                height: 40,
+                child: Center(
+                  child: ZetaAvatar(
+                    initials: _initials(profile),
+                    image: profile.avatarUrl != null
+                        ? Image.network(profile.avatarUrl!)
+                        : null,
+                    size: ZetaAvatarSize.xs,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         ),
       ),
     );

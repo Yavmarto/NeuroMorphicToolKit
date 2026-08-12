@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
@@ -9,12 +8,10 @@ import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
-import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/src/features/app/presentation/launcher_navigation_notifier.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
-import 'package:neuro_toolkit/src/features/deployment/domain/deployment_state.dart';
-import 'package:neuro_toolkit/src/features/deployment/presentation/deployment_notifier.dart';
 import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
 import 'package:neuro_toolkit/widgets/module_loading_view.dart';
@@ -81,7 +78,10 @@ class _FakeWorkspaceNotifier extends WorkspaceNotifier {
   }) async {}
 
   @override
-  Future<void> focusSession(String moduleId) async {}
+  Future<void> focusSession(String moduleId) async {
+    state =
+        state.whenData((value) => value.copyWith(focusedModuleId: moduleId));
+  }
 
   @override
   Future<void> updateSession(
@@ -93,11 +93,6 @@ class _FakeWorkspaceNotifier extends WorkspaceNotifier {
 
   @override
   Future<void> closeSession(String moduleId) async {}
-}
-
-class _ReadyDeploymentNotifier extends BackendDeploymentNotifier {
-  @override
-  Future<DeploymentState> build() async => const DeploymentState(isReady: true);
 }
 
 void main() {
@@ -112,15 +107,15 @@ void main() {
               analyticsService: AnalyticsService(),
             ),
           ),
-          moduleProvider.overrideWith(() => _FakeModuleNotifier()),
-          workspaceProvider.overrideWith(() => _FakeWorkspaceNotifier()),
+          moduleProvider.overrideWith(_FakeModuleNotifier.new),
+          workspaceProvider.overrideWith(_FakeWorkspaceNotifier.new),
         ],
         child: const MaterialApp(home: ToolViewScreen()),
       ),
     );
 
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(NavigationRail), findsNothing);
     expect(find.byType(NmtkTopAppBar), findsNothing);
@@ -162,65 +157,50 @@ void main() {
     expect(find.text('Waiting for Bench'), findsNothing);
   });
 
-  testWidgets('Server Connection button shows IP and opens dismissable popup', (
+  testWidgets('typed launcher navigation focuses an eligible module', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(1200, 800);
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
-    final router = GoRouter(
-      initialLocation: '/workspace',
-      routes: [
-        GoRoute(
-          path: '/workspace',
-          builder: (context, state) => const ToolViewScreen(),
-        ),
-        GoRoute(
-          path: '/setup',
-          builder: (context, state) => const Scaffold(
-            body: Text('Backend setup route'),
-          ),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           analyticsServiceProvider.overrideWithValue(AnalyticsService()),
           selectedControlApiServiceProvider.overrideWithValue(
             ControlApiService(
-              baseUri: Uri.parse('http://192.168.68.53:8090'),
+              baseUri: Uri.parse('http://localhost:9000'),
               analyticsService: AnalyticsService(),
             ),
           ),
-          moduleProvider.overrideWith(() => _FakeModuleNotifier()),
-          workspaceProvider.overrideWith(() => _FakeWorkspaceNotifier()),
-          backendDeploymentProvider.overrideWith(
-            () => _ReadyDeploymentNotifier(),
-          ),
+          moduleProvider.overrideWith(_FakeModuleNotifier.new),
+          workspaceProvider.overrideWith(_FakeWorkspaceNotifier.new),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: const MaterialApp(home: ToolViewScreen()),
       ),
     );
-
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(seconds: 1));
 
-    // Verify button identifies the connected server.
-    expect(find.text('192.168.68.53'), findsOneWidget);
-
-    // Tap button to open dismissable popup containing the full setup screen
-    await tester.tap(find.byTooltip('Server Connection'));
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ToolViewScreen)),
+    );
+    container
+        .read(launcherNavigationProvider.notifier)
+        .openModule('Neurobench');
+    expect(
+      container.read(launcherNavigationProvider)?.moduleId,
+      'Neurobench',
+    );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(seconds: 1));
+    expect(
+      container.read(workspaceProvider).value?.focusedModuleId,
+      'Neurobench',
+    );
 
-    // Verify popup dialog appears with BackendSetupScreen inside
-    expect(find.byType(Dialog), findsOneWidget);
-    expect(find.byType(BackendSetupScreen), findsOneWidget);
-    expect(find.text('Set up your backend'), findsOneWidget);
-    expect(find.byType(ToolViewScreen), findsOneWidget);
+    expect(find.text('Waiting for Bench'), findsOneWidget);
+    expect(find.text('Waiting for NeuroStudio'), findsNothing);
   });
 }

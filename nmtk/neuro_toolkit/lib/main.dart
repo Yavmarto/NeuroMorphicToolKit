@@ -6,6 +6,7 @@ import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neurocnl_studio/services/server_config_service.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
+import 'package:neuro_toolkit/src/features/app/presentation/launcher_app_host.dart';
 import 'package:neuro_toolkit/src/features/app/presentation/command_provider.dart';
 
 void main() async {
@@ -68,10 +69,8 @@ class NeuroToolkitApp extends ConsumerWidget {
         home: Scaffold(body: Center(child: CircularProgressIndicator())),
       );
     }
-    final router = ref.watch(goRouterProvider);
-
     return NmtkZetaTheme.wrap(
-      builder: (context, light, dark, mode) => MaterialApp.router(
+      builder: (context, light, dark, mode) => MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'NeuroToolkit',
         theme:
@@ -79,7 +78,7 @@ class NeuroToolkitApp extends ConsumerWidget {
         darkTheme:
             settings.isHighContrast ? AppTheme.highContrastDarkTheme : dark,
         themeMode: settings.isHighContrast ? settings.themeMode : mode,
-        routerConfig: router,
+        home: const LauncherAppHost(),
         builder: (BuildContext ctx, Widget? child) {
           final commands = ref.watch(commandStateProvider);
           return NmtkShortcutScope(
@@ -88,7 +87,7 @@ class NeuroToolkitApp extends ConsumerWidget {
               data: MediaQuery.of(ctx).copyWith(
                 textScaler: TextScaler.linear(settings.fontSizeFactor),
               ),
-              child: child!,
+              child: child ?? const SizedBox.shrink(),
             ),
           );
         },

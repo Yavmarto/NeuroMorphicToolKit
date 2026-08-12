@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
-import 'package:neuro_toolkit/routing/router.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/deployment/client_deployment_service.dart';
@@ -132,9 +130,3 @@ final selectedAkidaRuntimeStatusProvider =
 // The Teensy / PYNQ / Akida deploy providers were relocated to the Neurochip
 // module frontend in ADR-claude/0007. They now live in
 // `Neurochip/frontend/lib/providers/riverpod_providers.dart`.
-
-final goRouterProvider = Provider<GoRouter>((ref) {
-  final router = createGoRouter();
-  ref.onDispose(router.dispose);
-  return router;
-});

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
-import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/src/features/app/presentation/launcher_app_host.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
 import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
@@ -38,17 +37,6 @@ class _FakeWorkspaceNotifier extends WorkspaceNotifier {
 
 void main() {
   testWidgets('Quick connect dismisses popup', (tester) async {
-    final router = GoRouter(
-      initialLocation: '/workspace',
-      routes: [
-        GoRoute(
-          path: '/workspace',
-          builder: (context, state) => const ToolViewScreen(),
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -65,15 +53,13 @@ void main() {
           workspaceProvider.overrideWith(() => _FakeWorkspaceNotifier()),
           backendVersionProvider.overrideWith((_) async => 'dev'),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: const MaterialApp(home: LauncherAppHost()),
       ),
     );
 
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    await tester.tap(find.byTooltip('Server Connection'));
-    await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
 
     expect(find.byType(BackendSetupScreen), findsOneWidget);

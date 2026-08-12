@@ -1,11 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
-// Legacy shell adapter imports (kept for backward-compat with /workspace?moduleId= route)
+// Native module adapters hosted by the launcher's single workspace surface.
 import 'package:neurocnl_studio/shell_adapter.dart';
-import 'package:neurohub_shell_adapter/neurohub_shell_adapter.dart';
 // import 'package:neurochip/shell_adapter.dart';
 import 'package:neurobench_frontend/shell_adapter.dart';
-import 'package:neurosense_shell_adapter/neurosense_shell_adapter.dart';
 
 typedef NativeSurfaceBuilder = Widget Function(
   WorkspaceSession session, {
@@ -30,16 +28,6 @@ class NativeSurfaceRegistry {
         onEditServer: onEditServer,
       );
     },
-    'Neurohub': (
-      WorkspaceSession session, {
-      String? initialServerUrl,
-      Widget? workspaceHeaderAction,
-      Future<void> Function()? onEditServer,
-    }) {
-      return NeurohubShellAdapter(
-        initialLocation: session.deepLink ?? '/',
-      );
-    },
     'Neurochip': (
       WorkspaceSession session, {
       String? initialServerUrl,
@@ -62,16 +50,6 @@ class NativeSurfaceRegistry {
       Future<void> Function()? onEditServer,
     }) {
       return NeurobenchShellAdapter(
-        initialLocation: session.deepLink ?? '/',
-      );
-    },
-    'Neurosense': (
-      WorkspaceSession session, {
-      String? initialServerUrl,
-      Widget? workspaceHeaderAction,
-      Future<void> Function()? onEditServer,
-    }) {
-      return NeurosenseShellAdapter(
         initialLocation: session.deepLink ?? '/',
       );
     },

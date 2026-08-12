@@ -47,7 +47,7 @@ SnnWorkflowStage snnStageForPhase(SnnWorkflowPhase phase) => switch (phase) {
 
 /// Base step-name labels shared by the desktop, compact, and drawer steppers.
 const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
-  SnnWorkflowPhase.selectData: 'Data & Targets',
+  SnnWorkflowPhase.selectData: 'Prepare',
   SnnWorkflowPhase.defineModel: 'Model',
   SnnWorkflowPhase.defineTrain: 'Training',
   SnnWorkflowPhase.defineEval: 'Evaluation',
@@ -373,7 +373,7 @@ class _StageAccordionRow extends StatelessWidget {
     required this.child,
   });
 
-  static const double stageWidth = 136;
+  static const double stageWidth = 110;
   static const double childGap = 8;
 
   final SnnWorkflowStage stage;

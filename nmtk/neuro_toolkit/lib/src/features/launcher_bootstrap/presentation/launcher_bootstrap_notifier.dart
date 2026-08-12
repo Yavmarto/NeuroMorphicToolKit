@@ -63,17 +63,6 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
     await _connect(target.host, deployedTarget: target);
   }
 
-  /// Records a navigation failure after the launcher has already been
-  /// verified. This is deliberately non-fatal: the selected service remains
-  /// usable in memory and the user can retry the route handoff.
-  Future<void> recordRouteHandoffFailure(Object error) {
-    return _recordFailure(
-      'route_handoff',
-      error,
-      state.value?.bootstrapState?.baseUri,
-    );
-  }
-
   Future<String?> _connect(
     String rawInput, {
     DeploymentTarget? deployedTarget,

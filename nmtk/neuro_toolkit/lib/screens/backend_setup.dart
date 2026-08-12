@@ -11,7 +11,6 @@ import 'package:flutter/foundation.dart'
         visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:zeta_flutter/zeta_flutter.dart' show ZetaDialog;
 
@@ -81,30 +80,17 @@ class BackendSetupScreen extends StatelessWidget {
 class InAppBackendSetupScreen extends ConsumerWidget {
   const InAppBackendSetupScreen({
     super.key,
-    this.onComplete,
+    required this.onComplete,
     this.initialHost,
     this.message,
   });
 
-  final VoidCallback? onComplete;
+  final VoidCallback onComplete;
   final String? initialHost;
   final String? message;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen(backendDeploymentProvider, (previous, next) {
-      final prevReady = previous?.value?.isReady ?? false;
-      final nextReady = next.value?.isReady ?? false;
-      // A setup dialog can be opened while the current backend is already
-      // ready. Its initial provider load must not be treated as a successful
-      // form submission and dismiss the dialog immediately.
-      if (onComplete == null && !prevReady && nextReady) {
-        try {
-          context.go('/workspace');
-        } on Object catch (_) {}
-      }
-    });
-
     final notifier = ref.read(launcherBootstrapProvider.notifier);
     return BackendSetupScreen(
       initialHost: initialHost,
@@ -115,24 +101,13 @@ class InAppBackendSetupScreen extends ConsumerWidget {
           return error;
         }
         await _refreshServerBackedProviders(ref);
-        if (onComplete != null) {
-          onComplete!.call();
-          return null;
-        }
-        if (!context.mounted) {
-          return null;
-        }
-        try {
-          context.go('/workspace');
-        } on Object catch (error) {
-          unawaited(notifier.recordRouteHandoffFailure(error));
-        }
+        onComplete();
         return null;
       },
       onDeploymentReady: (target) async {
         await notifier.connectToDeploymentTarget(target);
         await _refreshServerBackedProviders(ref);
-        onComplete?.call();
+        onComplete();
       },
     );
   }

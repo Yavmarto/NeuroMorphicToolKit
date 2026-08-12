@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/src/features/app/presentation/launcher_navigation_notifier.dart';
 
 final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
-  final router = ref.watch(goRouterProvider);
-
   return [
     NmtkCommand(
       id: 'nav-workspace',
@@ -13,7 +12,8 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       description: 'Go to the main workspace',
       icon: ZetaIcons.dashboard,
       category: 'Navigation',
-      onExecute: () => router.go('/workspace'),
+      onExecute: () =>
+          ref.read(launcherNavigationProvider.notifier).openWorkspace(),
     ),
     NmtkCommand(
       id: 'nav-neurocnl',
@@ -21,7 +21,8 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       description: 'Open the neuromorphic compiler and network editor',
       icon: Icons.code_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       category: 'Navigation',
-      onExecute: () => router.go('/module/neurocnl'),
+      onExecute: () =>
+          ref.read(launcherNavigationProvider.notifier).openModule('neurocnl'),
     ),
     NmtkCommand(
       id: 'nav-neurochip',
@@ -29,16 +30,8 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       description: 'Analyze and deploy to hardware targets (Teensy, Akida)',
       icon: ZetaIcons.memory,
       category: 'Navigation',
-      onExecute: () => router.go('/module/neurochip'),
-    ),
-    NmtkCommand(
-      id: 'nav-neurohub',
-      label: 'Open Neurohub Dashboard',
-      description:
-          'Share CNL networks, canvas projects, and bench results with your team',
-      icon: ZetaIcons.analytics,
-      category: 'Navigation',
-      onExecute: () => router.go('/module/neurohub'),
+      onExecute: () =>
+          ref.read(launcherNavigationProvider.notifier).openModule('Neurochip'),
     ),
     NmtkCommand(
       id: 'nav-neurobench',
@@ -47,7 +40,9 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
           'Run SNN benchmarks and compare results across hardware targets',
       icon: ZetaIcons.analytics,
       category: 'Navigation',
-      onExecute: () => router.go('/module/neurobench'),
+      onExecute: () => ref
+          .read(launcherNavigationProvider.notifier)
+          .openModule('Neurobench'),
     ),
     NmtkCommand(
       id: 'action-toggle-sidebar',
@@ -56,12 +51,8 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       icon:
           Icons.menu_open_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
       category: 'Actions',
-      onExecute: () {
-        final context = router.configuration.navigatorKey.currentContext;
-        if (context != null) {
-          Actions.maybeInvoke(context, const ToggleSidebarIntent());
-        }
-      },
+      onExecute: () =>
+          ref.read(launcherNavigationProvider.notifier).toggleSidebar(),
     ),
     NmtkCommand(
       id: 'action-toggle-dev',
@@ -79,10 +70,8 @@ final commandStateProvider = Provider<List<NmtkCommand>>((ref) {
       description: 'Refresh the current module state',
       icon: ZetaIcons.refresh,
       category: 'Actions',
-      onExecute: () {
-        final current = router.state.uri.toString();
-        router.go(current);
-      },
+      onExecute: () =>
+          ref.read(launcherNavigationProvider.notifier).reloadWorkspace(),
     ),
   ];
 });

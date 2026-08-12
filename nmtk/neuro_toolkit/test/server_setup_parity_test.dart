@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/routing/router.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
@@ -10,6 +9,7 @@ import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
+import 'package:neuro_toolkit/src/features/app/presentation/launcher_app_host.dart';
 import 'package:neuro_toolkit/src/features/server_connection/presentation/server_connection_notifier.dart';
 import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
@@ -70,8 +70,6 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       addTearDown(tester.view.resetPhysicalSize);
 
-      final router = createGoRouter();
-      addTearDown(router.dispose);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -91,7 +89,7 @@ void main() {
             ),
             backendVersionProvider.overrideWith((ref) async => null),
           ],
-          child: MaterialApp.router(routerConfig: router),
+          child: const MaterialApp(home: LauncherAppHost()),
         ),
       );
       await tester.pump();
@@ -113,18 +111,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(BackendSetupScreen), findsNothing);
       expect(find.byType(ToolViewScreen), findsOneWidget);
-
-      await tester.tap(find.byTooltip('Server Connection'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(find.byType(BackendSetupScreen), findsOneWidget);
-      await tester.binding.handlePopRoute();
-      await tester.pumpAndSettle();
-      expect(find.byType(BackendSetupScreen), findsNothing);
-
-      router.go('/workspace?moduleId=neurocnl');
-      await tester.pumpAndSettle();
-      expect(find.byType(BackendSetupScreen), findsNothing);
     },
   );
 
@@ -133,8 +119,6 @@ void main() {
   ) async {
     final baseUri = Uri.parse('http://192.168.68.53:8090');
     late _StaticBootstrapNotifier bootstrapNotifier;
-    final router = createGoRouter();
-    addTearDown(router.dispose);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -158,14 +142,13 @@ void main() {
           ),
           backendVersionProvider.overrideWith((ref) async => '1.2.0'),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: const MaterialApp(home: LauncherAppHost()),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.byType(ToolViewScreen), findsOneWidget);
     expect(find.byType(BackendSetupScreen), findsNothing);
-    expect(find.text('192.168.68.53 · v1.2.0'), findsOneWidget);
 
     bootstrapNotifier.select(
       LauncherBootstrapData.needsSetup(message: 'Connection lost.'),
