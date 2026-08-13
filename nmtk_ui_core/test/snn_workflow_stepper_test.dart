@@ -28,9 +28,9 @@ void main() {
         ),
       );
 
-      expect(find.text('1. Setup'), findsOneWidget);
-      expect(find.text('2. Design'), findsOneWidget);
-      expect(find.text('3. Execute'), findsOneWidget);
+      expect(find.text('Setup'), findsOneWidget);
+      expect(find.text('Design'), findsOneWidget);
+      expect(find.text('Execute'), findsOneWidget);
       expect(find.text('Model').hitTestable(), findsOneWidget);
       expect(find.text('Training').hitTestable(), findsOneWidget);
       expect(find.text('Evaluation').hitTestable(), findsOneWidget);
@@ -92,7 +92,7 @@ void main() {
       phase.value = SnnWorkflowPhase.run;
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('2. Design'));
+      await tester.tap(find.text('Design'));
       expect(selected, SnnWorkflowPhase.defineTrain);
     });
 
@@ -112,7 +112,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('3. Execute'));
+      await tester.tap(find.text('Execute'));
       expect(selected, isNull);
     });
 

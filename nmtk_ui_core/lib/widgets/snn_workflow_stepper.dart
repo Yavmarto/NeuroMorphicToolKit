@@ -333,7 +333,7 @@ class _StageDestination extends StatelessWidget {
               children: [
                 Flexible(
                   child: Text(
-                    '$number. $label',
+                    label,
                     overflow: TextOverflow.ellipsis,
                     style: Zeta.of(context).textStyles.bodySmall.copyWith(
                       color: foreground,
