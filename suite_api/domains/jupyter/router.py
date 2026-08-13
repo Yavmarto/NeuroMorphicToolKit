@@ -5,7 +5,9 @@ health endpoint, plus a thin proxy for the ``nmtk_env_manager`` server
 extension (``/nmtk-envs/api/*``) so the Flutter app can manage Python
 environments through the single suite_api surface.
 """
+
 import logging
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, Request, Response
@@ -13,6 +15,7 @@ from fastapi.responses import JSONResponse
 
 from suite_api.config import settings
 from suite_api.proxy import proxy_to_worker
+from suite_api.schemas.doctor import DoctorRequest
 
 router = APIRouter(prefix="/api/jupyter", tags=["jupyter"])
 
@@ -22,7 +25,9 @@ _logger = logging.getLogger("suite_api.jupyter")
 def _env_manager_path(public_path: str) -> str:
     """Map suite API Jupyter routes to the worker extension mount path."""
     prefix = "/api/jupyter"
-    suffix = public_path[len(prefix) :] if public_path.startswith(prefix) else public_path
+    suffix = (
+        public_path[len(prefix) :] if public_path.startswith(prefix) else public_path
+    )
     return f"/nmtk-envs/api{suffix}"
 
 
@@ -72,18 +77,64 @@ async def jupyter_health() -> JSONResponse:
         if resp.status_code == 200:
             return JSONResponse({"status": "ok", "module": "jupyter"})
         return JSONResponse(
-            {"status": "degraded", "module": "jupyter", "detail": f"HTTP {resp.status_code}"},
+            {
+                "status": "degraded",
+                "module": "jupyter",
+                "detail": f"HTTP {resp.status_code}",
+            },
             status_code=200,
         )
     except httpx.ConnectError:
         return JSONResponse(
-            {"status": "unavailable", "module": "jupyter", "detail": "Jupyter Server not reachable"},
+            {
+                "status": "unavailable",
+                "module": "jupyter",
+                "detail": "Jupyter Server not reachable",
+            },
             status_code=503,
         )
     except Exception as exc:  # noqa: BLE001
         _logger.warning("Jupyter health check failed: %s", exc)
         return JSONResponse(
             {"status": "error", "module": "jupyter", "detail": str(exc)},
+            status_code=503,
+        )
+
+
+async def probe_jupyter_doctor(capabilities: list[str]) -> dict[str, Any]:
+    """Return the worker's storage, kernel, and framework diagnostics."""
+    target = f"{settings.jupyter_worker_url.rstrip('/')}/nmtk-envs/api/doctor"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        response = await client.post(target, json={"capabilities": capabilities})
+    response.raise_for_status()
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError("Jupyter doctor returned an invalid response.")
+    return payload
+
+
+@router.post("/doctor")
+async def jupyter_doctor(request: DoctorRequest) -> JSONResponse:
+    """Probe the real Jupyter storage and configured kernel environments."""
+    try:
+        return JSONResponse(await probe_jupyter_doctor(request.capabilities))
+    except Exception as exc:  # noqa: BLE001
+        _logger.warning("Jupyter doctor failed: %s", exc)
+        return JSONResponse(
+            {
+                "overall": "failed",
+                "checks": [
+                    {
+                        "id": "jupyter-service",
+                        "label": "Jupyter service",
+                        "status": "failed",
+                        "detail": "Jupyter did not answer its diagnostic request.",
+                        "recovery": "Restart Jupyter from System Health.",
+                        "repairable": True,
+                        "required": True,
+                    }
+                ],
+            },
             status_code=503,
         )
 

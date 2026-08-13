@@ -665,6 +665,18 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         )
         self.assertIn("not writable", str(flutter_check["preflightMessage"]))
 
+    def test_global_preflight_checks_skip_flutter_on_remote_backend(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {"NMTK_BACKEND_DEPLOYMENT_READY": "1"},
+            clear=True,
+        ):
+            checks = launcher_doctor_service._global_preflight_checks()
+
+        check_ids = {check["id"] for check in checks}
+        self.assertNotIn("flutter-sdk", check_ids)
+        self.assertIn("studio-framework-sdks", check_ids)
+
     def test_main_returns_nonzero_for_fatal_doctor_report(self) -> None:
         fake_state = mock.Mock()
         fake_state.doctor_report.return_value = {

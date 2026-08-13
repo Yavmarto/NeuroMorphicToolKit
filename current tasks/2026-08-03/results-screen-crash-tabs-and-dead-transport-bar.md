@@ -137,7 +137,7 @@ those tests now pass in 6s.
 
 No backend or server restart needed — Flutter-side only, plus the
 path-dependency package `nmtk_ui_core`. Run `flutter run -d macos` from
-`nmtk/neuro_toolkit`, connect to `192.168.68.53`, open a completed run's Results
+`nmtk/neuro_toolkit`, connect to `192.168.2.90`, open a completed run's Results
 step: one tab row (Architecture | Grid | Raster), a legible and draggable
 transport bar over the grid, "Epoch N / <train epochs>" with ticks, and a clean
 console including when hovering the grid's bottom-right corner.

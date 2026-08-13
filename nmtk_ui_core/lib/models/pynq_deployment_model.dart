@@ -351,6 +351,44 @@ class PynqDeployPayload {
   }
 }
 
+/// Where the deploy payload's weights came from.
+///
+/// The load-bearing field is [applied]. The CNL spec stores tensor *shape* only,
+/// so without a trained NIR graph the payload's weights are all zeros: the board
+/// loads the overlay, runs, and fires nothing. A UI that does not surface this
+/// presents a zero-weight deploy as a successful hardware result.
+class PynqTrainedWeightStatus {
+  final bool applied;
+  final String? sourceNode;
+  final List<int>? shape;
+  final int nonzero;
+  final String detail;
+
+  const PynqTrainedWeightStatus({
+    required this.applied,
+    required this.detail,
+    this.sourceNode,
+    this.shape,
+    this.nonzero = 0,
+  });
+
+  /// True when weights were applied but every one of them is zero — a model
+  /// exported before training ran. Deploys, computes nothing.
+  bool get isAllZero => applied && nonzero == 0;
+
+  factory PynqTrainedWeightStatus.fromJson(Map<String, dynamic> json) {
+    return PynqTrainedWeightStatus(
+      applied: json['applied'] as bool? ?? false,
+      sourceNode: json['source_node'] as String?,
+      shape: (json['shape'] as List<dynamic>?)
+          ?.map((value) => (value as num).toInt())
+          .toList(growable: false),
+      nonzero: (json['nonzero'] as num?)?.toInt() ?? 0,
+      detail: json['detail'] as String? ?? '',
+    );
+  }
+}
+
 /// Response from PYNQ exportability planning endpoint.
 class PynqNetworkResponse {
   final PynqSupportState supportState;
@@ -359,13 +397,22 @@ class PynqNetworkResponse {
   final Map<String, dynamic>? networkSummary;
   final PynqDeployPayload? deployPayload;
 
+  /// Provenance of [deployPayload]'s weights, or null when no trained NIR graph
+  /// was supplied — in which case the weights are the spec's zeros.
+  final PynqTrainedWeightStatus? trainedWeights;
+
   const PynqNetworkResponse({
     required this.supportState,
     required this.warnings,
     required this.rejectionReasons,
     this.networkSummary,
     this.deployPayload,
+    this.trainedWeights,
   });
+
+  /// True when the payload carries learned values that will actually fire.
+  bool get hasTrainedWeights => trainedWeights?.applied == true &&
+      trainedWeights!.nonzero > 0;
 
   factory PynqNetworkResponse.fromJson(Map<String, dynamic> json) {
     return PynqNetworkResponse(
@@ -377,6 +424,11 @@ class PynqNetworkResponse {
           .map((e) => e as String)
           .toList(),
       networkSummary: json['network_summary'] as Map<String, dynamic>?,
+      trainedWeights: json['trained_weights'] is Map<String, dynamic>
+          ? PynqTrainedWeightStatus.fromJson(
+              json['trained_weights'] as Map<String, dynamic>,
+            )
+          : null,
       deployPayload: json['deploy_payload'] is Map<String, dynamic>
           ? PynqDeployPayload.fromJson(
               json['deploy_payload'] as Map<String, dynamic>,
@@ -625,6 +677,143 @@ class PynqPairedBoard {
       isDefault: isDefault ?? this.isDefault,
       lastStatus: lastStatus ?? this.lastStatus,
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Launcher-control board operations
+// ---------------------------------------------------------------------------
+
+/// Acknowledgement from POST /hardware/pynq/deploy.
+///
+/// [runtimeMode] is the load-bearing field: the same 200 response comes back
+/// whether the overlay was loaded onto a real Zynq-7000 or satisfied by the
+/// board runtime's pure-Python simulator, and only this distinguishes them. Any
+/// UI that claims hardware must check it — see `isHardware`.
+class PynqDeployAck {
+  final String status;
+  final String message;
+  final PynqBackendRuntimeMode runtimeMode;
+  final String? preflightStatus;
+  final String? overlayVersion;
+
+  const PynqDeployAck({
+    required this.status,
+    required this.message,
+    required this.runtimeMode,
+    this.preflightStatus,
+    this.overlayVersion,
+  });
+
+  bool get isHardware => runtimeMode == PynqBackendRuntimeMode.hardware;
+
+  factory PynqDeployAck.fromJson(Map<String, dynamic> json) {
+    return PynqDeployAck(
+      status: json['status'] as String? ?? 'unknown',
+      message: json['message'] as String? ?? '',
+      runtimeMode: PynqBackendRuntimeMode.fromJson(json['runtime_mode']),
+      preflightStatus: json['preflight_status'] as String?,
+      overlayVersion: json['overlay_version'] as String?,
+    );
+  }
+}
+
+/// Readiness of the overlay package staged on the backend host.
+///
+/// Mirrors `StagedOverlayPackageStatus.to_dict()`. The launcher's Install
+/// Overlay action copies these three files to the board over SCP, so when
+/// [ready] is false the board can never leave `overlayMissing` — surface
+/// [issues] rather than a bare failure.
+class PynqStagedOverlayPackage {
+  final String stagingDir;
+  final bool bitstreamExists;
+  final bool hwhExists;
+  final bool manifestPresent;
+  final bool manifestValid;
+  final bool ready;
+  final List<String> issues;
+
+  const PynqStagedOverlayPackage({
+    required this.stagingDir,
+    required this.bitstreamExists,
+    required this.hwhExists,
+    required this.manifestPresent,
+    required this.manifestValid,
+    required this.ready,
+    this.issues = const <String>[],
+  });
+
+  factory PynqStagedOverlayPackage.fromJson(Map<String, dynamic> json) {
+    return PynqStagedOverlayPackage(
+      stagingDir: json['stagingDir'] as String? ?? '',
+      bitstreamExists: json['bitstreamExists'] as bool? ?? false,
+      hwhExists: json['hwhExists'] as bool? ?? false,
+      manifestPresent: json['manifestPresent'] as bool? ?? false,
+      manifestValid: json['manifestValid'] as bool? ?? false,
+      ready: json['ready'] as bool? ?? false,
+      issues: (json['issues'] as List<dynamic>? ?? const <dynamic>[])
+          .map((value) => value.toString())
+          .toList(growable: false),
+    );
+  }
+}
+
+/// Outcome of a launcher-control board operation.
+///
+/// Provision, install-overlay, restart-runtime and preflight all answer with the
+/// updated board plus operation-specific extras, and several of them report
+/// trouble *without* failing the HTTP call — a provision that could not finish
+/// returns `error`, a user-space install that could not restart returns
+/// `warning`. Reading only the board would silently drop both, so callers get
+/// them here alongside it.
+class PynqBoardOperationResult {
+  final PynqPairedBoard board;
+  final String? error;
+  final String? warning;
+  final PynqStagedOverlayPackage? localOverlayPackage;
+  final Map<String, dynamic>? preflight;
+
+  const PynqBoardOperationResult({
+    required this.board,
+    this.error,
+    this.warning,
+    this.localOverlayPackage,
+    this.preflight,
+  });
+
+  bool get succeeded => error == null;
+
+  factory PynqBoardOperationResult.fromJson(Map<String, dynamic> json) {
+    // `/connectivity-test` answers the serialized board directly, while the
+    // other routes nest it under `board` — and a serialized board has its own
+    // `host` key holding an address string, so sniff for the wrapper rather
+    // than assuming either shape (same trap as `_akidaHostPayload`).
+    final nested = json['board'];
+    final boardJson = nested is Map<String, dynamic> ? nested : json;
+    final overlay = json['localOverlayPackage'];
+    return PynqBoardOperationResult(
+      board: PynqPairedBoard.fromJson(boardJson),
+      error: (json['error'] as String?)?.trim().isEmpty ?? true
+          ? null
+          : (json['error'] as String).trim(),
+      warning: _firstNonEmpty(<dynamic>[
+        json['warning'],
+        json['overlayRestartWarning'],
+      ]),
+      localOverlayPackage: overlay is Map<String, dynamic>
+          ? PynqStagedOverlayPackage.fromJson(overlay)
+          : null,
+      preflight: json['preflight'] as Map<String, dynamic>?,
+    );
+  }
+
+  static String? _firstNonEmpty(List<dynamic> candidates) {
+    for (final candidate in candidates) {
+      if (candidate is String && candidate.trim().isNotEmpty) {
+        return candidate.trim();
+      }
+    }
+    return null;
   }
 }
 

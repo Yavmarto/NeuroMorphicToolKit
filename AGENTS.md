@@ -145,7 +145,7 @@ If `semble` is not on `$PATH`, use `uvx --from "semble[mcp]" semble` in its plac
 
 ## Remote Testing Configuration
 
-For dev, `REMOTE_HOST=moosebun2@192.168.68.53` can be used. The server address is `192.168.68.53`.
+For dev, `REMOTE_HOST=moosebun2@192.168.2.90` can be used. The server address is `192.168.2.90`.
 
 To run the app, use:
 ```
@@ -183,7 +183,7 @@ health-verify. Credentials and trusted host keys are already persisted per targe
 
 These exist to push *unreleased* source to a dev host. They are not end-user instructions.
 
-The dev backend runs on `192.168.68.53`, not locally — a local edit to any Python file under
+The dev backend runs on `192.168.2.90`, not locally — a local edit to any Python file under
 `neurocnl/backend/`, `suite_api/`, or `workers/` does nothing until it is synced there.
 
 ```bash
@@ -192,7 +192,7 @@ make dev-update
 
 One command for the daily loop. It runs the changed-module tests **first** (a failure aborts
 before anything reaches the host), syncs, then does the *minimum* to make the change live.
-Defaults to `moosebun2@192.168.68.53`; override with `REMOTE_HOST=`. Flags go through
+Defaults to `moosebun2@192.168.2.90`; override with `REMOTE_HOST=`. Flags go through
 `ARGS=`, e.g. `ARGS='--skip-tests'` or `ARGS='--dry-run'`.
 
 **The dev topology is not uniform, which is the whole reason this script exists:**
@@ -224,7 +224,7 @@ exactly those. To clear files a previous, wider filter left behind, list the hos
 dir and remove the stale entries by name:
 
 ```bash
-ssh moosebun2@192.168.68.53 'ls -A ~/nmtk-deploy'
+ssh moosebun2@192.168.2.90 'ls -A ~/nmtk-deploy'
 ```
 
 It needs no state file — `rsync --itemize-changes` reports exactly which paths differed from
@@ -243,7 +243,7 @@ assuming the patch is wrong — that distinguishes a stale reloader from a bad f
 
 #### Port 8002 on the dev host belongs to the native Akida service
 
-`192.168.68.53` runs a real BrainChip Akida card served by the native `neurochip.service`
+`192.168.2.90` runs a real BrainChip Akida card served by the native `neurochip.service`
 systemd unit, which owns **port 8002**. The containerized `neurochip-hw-worker` has no Akida
 SDK (`workers/neurochip_hw/Dockerfile`), so it can never serve hardware routes there — it only
 fights for the port. `docker-compose.akida-native.yml` exists to park it in a `donotstart`

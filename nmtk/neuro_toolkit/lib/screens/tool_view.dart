@@ -644,6 +644,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     Uri requestUri,
   ) async {
     if (!mounted) return false;
+    if (requestUri.scheme == 'nmtk' && requestUri.host == 'system-health') {
+      await showAdaptiveServerSetupPopup(
+        context,
+        message: 'System Health checks the backend, storage, Jupyter, '
+            'snnTorch, launcher control, and configured hardware.',
+      );
+      return true;
+    }
     final moduleState = ref.read(moduleProvider).value;
     if (moduleState == null) return false;
 

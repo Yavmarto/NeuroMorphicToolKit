@@ -12,8 +12,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from queue import Empty
+import subprocess
 import time
 from typing import Any, Callable
+import uuid
 
 from jupyter_server.base.handlers import APIHandler  # type: ignore[import-not-found]
 from jupyter_server.utils import url_path_join  # type: ignore[import-not-found]
@@ -21,6 +23,7 @@ from tornado import web  # type: ignore[import-not-found]
 
 from .jobs import JobRegistry
 from .manager import EnvironmentError_, EnvironmentManager
+from .framework_envs import TARGET_TO_KERNEL
 
 # Stall timeout, not a total-duration budget: reset every time the kernel
 # emits activity for this cell (see _drain_notebook_cell below). A single
@@ -62,6 +65,158 @@ class _NmtkHandler(APIHandler):
         ):
             message = exc_info[1].log_message
         self.finish(json.dumps({"error": message}))
+
+
+_CAPABILITY_IMPORTS: dict[str, tuple[str, ...]] = {
+    "snntorch": ("torch", "snntorch"),
+    "snntorch_sim": ("torch", "snntorch"),
+    "akida": ("akida",),
+    "nengo": ("nengo",),
+    "rockpool": ("rockpool",),
+    "sinabs": ("sinabs",),
+    "brian2": ("brian2",),
+    "pynn": ("pyNN",),
+    "lava": ("lava",),
+    "lava_sim": ("lava",),
+}
+
+
+def _kernel_name_for_capability(capability: str) -> str:
+    target = "snntorch_sim" if capability == "snntorch" else capability
+    return TARGET_TO_KERNEL.get(target, "neurocnl")
+
+
+def _probe_kernel(kernel_name: str, imports: tuple[str, ...]) -> None:
+    """Start the configured kernel and prove its imports execute there."""
+    import jupyter_client  # type: ignore[import-not-found]  # noqa: PLC0415
+
+    manager = jupyter_client.KernelManager(kernel_name=kernel_name)
+    manager.start_kernel()
+    client = manager.blocking_client()
+    try:
+        client.start_channels()
+        client.wait_for_ready(timeout=20)
+        source = "; ".join(f"import {module}" for module in imports) or "pass"
+        msg_id = client.execute(source)
+        reply = client.get_shell_msg(timeout=20)
+        if reply.get("parent_header", {}).get("msg_id") != msg_id:
+            raise RuntimeError("Kernel returned an unrelated execution reply.")
+        content = reply.get("content", {})
+        if content.get("status") != "ok":
+            raise RuntimeError(
+                f"{content.get('ename', 'ImportError')}: {content.get('evalue', '')}"
+            )
+    finally:
+        client.stop_channels()
+        manager.shutdown_kernel(now=True)
+
+
+def _doctor_report(
+    manager: EnvironmentManager,
+    notebook_root: Path,
+    capabilities: list[str],
+) -> dict[str, Any]:
+    """Exercise notebook storage and configured framework kernels."""
+    checks: list[dict[str, Any]] = []
+    probe_path = notebook_root / f".nmtk-doctor-{uuid.uuid4().hex}"
+    try:
+        notebook_root.mkdir(parents=True, exist_ok=True)
+        probe_path.write_bytes(b"nmtk-health")
+        probe_path.unlink()
+        checks.append(
+            {
+                "id": "jupyter-storage",
+                "label": "Jupyter notebook storage",
+                "status": "ok",
+                "detail": "Jupyter can create and remove notebook files.",
+                "recovery": "",
+                "repairable": False,
+                "required": True,
+            }
+        )
+    except OSError:
+        checks.append(
+            {
+                "id": "jupyter-storage",
+                "label": "Jupyter notebook storage",
+                "status": "failed",
+                "detail": "Jupyter's notebook directory is not writable.",
+                "recovery": "Restart Jupyter from System Health.",
+                "repairable": True,
+                "required": True,
+            }
+        )
+
+    normalized = list(
+        dict.fromkeys(item.strip().lower() for item in capabilities if item.strip())
+    )
+    if "snntorch" not in normalized and "snntorch_sim" not in normalized:
+        normalized.insert(0, "snntorch")
+    for capability in normalized:
+        imports = _CAPABILITY_IMPORTS.get(capability)
+        if imports is None:
+            checks.append(
+                {
+                    "id": f"framework-{capability}",
+                    "label": capability,
+                    "status": "notConfigured",
+                    "detail": "This optional framework is not configured on the server.",
+                    "recovery": "",
+                    "repairable": False,
+                    "required": False,
+                }
+            )
+            continue
+        kernel_name = _kernel_name_for_capability(capability)
+        python = manager._python_for(kernel_name)  # noqa: SLF001
+        import_source = "; ".join(f"import {module}" for module in imports)
+        process = subprocess.run(
+            [str(python), "-c", import_source],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        try:
+            if process.returncode != 0:
+                raise RuntimeError(process.stderr.strip() or "Framework import failed.")
+            _probe_kernel(kernel_name, imports)
+            checks.append(
+                {
+                    "id": f"framework-{capability}",
+                    "label": "snnTorch"
+                    if capability.startswith("snntorch")
+                    else capability,
+                    "status": "ok",
+                    "detail": f"Kernel '{kernel_name}' starts and imports its framework.",
+                    "recovery": "",
+                    "repairable": False,
+                    "required": capability.startswith("snntorch"),
+                }
+            )
+        except (OSError, RuntimeError, subprocess.SubprocessError) as exc:
+            checks.append(
+                {
+                    "id": f"framework-{capability}",
+                    "label": "snnTorch"
+                    if capability.startswith("snntorch")
+                    else capability,
+                    "status": "failed",
+                    "detail": f"Kernel '{kernel_name}' failed its import check: {exc}",
+                    "recovery": "Reinstall the backend while keeping data.",
+                    "repairable": True,
+                    "required": capability.startswith("snntorch"),
+                }
+            )
+
+    overall = (
+        "failed"
+        if any(check["status"] == "failed" and check["required"] for check in checks)
+        else "degraded"
+        if any(check["status"] == "failed" for check in checks)
+        else "ok"
+    )
+    return {"overall": overall, "checks": checks}
 
 
 def _resolve_execute_path(notebook_root: Path, notebook_path: str) -> Path:
@@ -287,6 +442,23 @@ class EnvironmentsHandler(_NmtkHandler):
         self.finish(json.dumps({"jobId": job_id}))
 
 
+class DoctorHandler(_NmtkHandler):
+    def post(self) -> None:
+        body = self._body()
+        raw_capabilities = body.get("capabilities", ["snntorch"])
+        capabilities = (
+            [str(item) for item in raw_capabilities]
+            if isinstance(raw_capabilities, list)
+            else ["snntorch"]
+        )
+        notebook_root = Path(
+            self.settings.get("server_root_dir") or self.contents_manager.root_dir
+        )
+        self.finish(
+            json.dumps(_doctor_report(self.manager, notebook_root, capabilities))
+        )
+
+
 class EnvironmentHandler(_NmtkHandler):
     def delete(self, slug: str) -> None:
         try:
@@ -387,6 +559,7 @@ def register_handlers(server_app) -> None:
         ".*$",
         [
             (route("environments"), EnvironmentsHandler, kw),
+            (route("doctor"), DoctorHandler, kw),
             (route("environments", slug), EnvironmentHandler, kw),
             (route("environments", slug, "packages"), PackagesHandler, kw),
             (route("environments", slug, "requirements"), RequirementsHandler, kw),

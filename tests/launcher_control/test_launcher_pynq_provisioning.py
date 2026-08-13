@@ -210,7 +210,13 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             result = self.state.install_pynq_overlay_assets(board["id"])
 
         self.assertEqual(result["board"]["state"], "overlay_missing")
-        self.assertIn("Local staged overlay package is incomplete", result["board"]["lastPreflightMessage"])
+        # The overlay ships with the backend, so a missing one is a broken
+        # install, not a step the user skipped — the message must not send them
+        # off to synthesise a bitstream.
+        self.assertIn(
+            "ships with the backend is missing",
+            result["board"]["lastPreflightMessage"],
+        )
         self.assertIn(
             str(self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"),
             result["board"]["lastPreflightMessage"],
@@ -218,6 +224,45 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         self.assertFalse(result["localOverlayPackage"]["ready"])
         run_ssh.assert_not_called()
         run_scp.assert_not_called()
+
+    def test_overlay_package_falls_back_to_shipped_artifact_dir(self) -> None:
+        """The shipped image has no Neurochip source tree, only artifacts.
+
+        `_neurochip_module_root()` resolves to a path the launcher-control image
+        never contains, so without this fallback Install Overlay reported
+        `overlay_missing` forever on every containerised backend — the overlay
+        the image does carry was simply never looked at.
+        """
+        artifact_root = self.repo_root / "artifacts" / "neurochip"
+        _stage_overlay_package(artifact_root / "overlay_staging" / "pynq_z2")
+
+        with mock.patch.dict(
+            "os.environ",
+            {"NMTK_NEUROCHIP_ARTIFACT_DIR": str(artifact_root)},
+        ):
+            package = self.state._inspect_local_pynq_overlay_package()
+
+        self.assertTrue(package["ready"])
+        self.assertEqual(
+            package["stagingDir"],
+            str((artifact_root / "overlay_staging" / "pynq_z2").resolve()),
+        )
+
+    def test_overlay_package_prefers_module_root_over_shipped_copy(self) -> None:
+        """A locally synthesised overlay must beat the one baked into the image."""
+        module_staging = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        artifact_root = self.repo_root / "artifacts" / "neurochip"
+        _stage_overlay_package(module_staging)
+        _stage_overlay_package(artifact_root / "overlay_staging" / "pynq_z2")
+
+        with mock.patch.dict(
+            "os.environ",
+            {"NMTK_NEUROCHIP_ARTIFACT_DIR": str(artifact_root)},
+        ):
+            package = self.state._inspect_local_pynq_overlay_package()
+
+        self.assertTrue(package["ready"])
+        self.assertEqual(package["stagingDir"], str(module_staging.resolve()))
 
     def test_install_pynq_overlay_assets_uploads_staged_package(self) -> None:
         board = self.state.create_pynq_board(

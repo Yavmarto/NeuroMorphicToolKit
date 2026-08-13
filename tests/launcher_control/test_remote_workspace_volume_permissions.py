@@ -41,7 +41,11 @@ def test_remote_install_bounds_every_registry_and_runtime_step() -> None:
     # Each long step runs under an explicit timeout instead of waiting forever.
     assert 'compose_with_timeout "$DOWN_TIMEOUT" "${DOWN_ARGS[@]}"' in install_script
     assert 'compose_with_timeout "$PULL_TIMEOUT" pull' in install_script
-    assert 'compose_with_timeout "$UP_TIMEOUT" up -d --remove-orphans' in install_script
+    assert (
+        'timeout --signal=TERM --kill-after=30s "${UP_TIMEOUT}s" \\\n'
+        '  bash ./nmtk-stack.sh start "$ENGINE"'
+        in install_script
+    )
     assert "timeout --signal=TERM --kill-after=30s" in install_script
 
     # A timeout is reported as an actionable failure, not left as progress.

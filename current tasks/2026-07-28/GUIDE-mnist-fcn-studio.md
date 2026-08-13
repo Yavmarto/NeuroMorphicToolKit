@@ -11,6 +11,11 @@ Target: snnTorch Tutorial 5 feedforward SNN.
 per neural processor. Everything else is identical; §1 flags the two fields to change. Your accuracy
 will land somewhat below the §7 figure, which was measured at 1000.
 
+**This network cannot reach the PYNQ-Z2 board.** Overlay-v1 caps at 256 neurons across two
+populations with a single weight matrix, and it receives weights from the CNL spec — which carries
+tensor *shape* only, so trained values arrive as zeros. PYNQ hardware bring-up is a separate
+document: [GUIDE-pynq-z2-hardware.md](../2026-08-13/GUIDE-pynq-z2-hardware.md).
+
 Every label below is the exact text in the Studio UI. Fields not listed are left at their defaults.
 Expected result: **~92.5% test accuracy** (measured — see §7).
 

@@ -279,4 +279,4 @@ When adding a new optional parameter to a public widget:
 
 ## Remote Testing Configuration
 
-For dev, `REMOTE_HOST=moosebun2@192.168.68.53` can be used. For example, when the agent wants to test run the app, you can use `192.168.68.53` as the server address.
+For dev, `REMOTE_HOST=moosebun2@192.168.2.90` can be used. For example, when the agent wants to test run the app, you can use `192.168.2.90` as the server address.

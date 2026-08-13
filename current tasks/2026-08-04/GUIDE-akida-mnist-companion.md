@@ -7,6 +7,12 @@
 > If you want to build and train a network on the canvases yourself, that is
 > [GUIDE-mnist-fcn-studio.md](../2026-07-28/GUIDE-mnist-fcn-studio.md).
 >
+> **For the PYNQ-Z2 FPGA, see [GUIDE-pynq-z2-hardware.md](../2026-08-13/GUIDE-pynq-z2-hardware.md).**
+> The device flow is deliberately the same shape as this one — pair a remote device over SSH, let the
+> app install its runtime, deploy, run — so that guide points here for the parts that are identical.
+> Two differences matter: PYNQ's fixed overlay caps a network at 256 neurons across two populations,
+> and it has no bundle, so trained weights do not reach the board yet (its §0).
+>
 > **The two paths now meet.** As of 2026-08-06 an **Akida Exporter** node converts a canvas-trained
 > model to a real `akida.Model` and writes the same kind of `*.akida-bundle.zip` this demo produces,
 > so **Use Latest Bundle** in §4 below deploys either one to the same card. What differs is only

@@ -66,7 +66,7 @@ _RAW_DEVICE_ERROR_PATTERN = re.compile(r"\berr(?:no)?\(\d+\)|\b0x[0-9a-fA-F]{4,}
 #
 # Measured on the dev box (rootless Podman): from inside this container the
 # host's LAN address reaches its *published container ports* fine, but reaches
-# no host-level service at all — `192.168.68.53:22` behaves exactly like a
+# no host-level service at all — `192.168.2.90:22` behaves exactly like a
 # closed port, while `host.docker.internal:22` returns the real sshd banner.
 # Both sshd and a natively installed Neurochip runtime are host-level services,
 # so both have to be dialed through this alias.

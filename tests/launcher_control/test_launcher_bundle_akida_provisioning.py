@@ -813,16 +813,16 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         """
         self.assertEqual(
             akida_host_service._akida_request_base_url(
-                "http://192.168.68.53:8002", {"sameHostAsBackend": True}
+                "http://192.168.2.90:8002", {"sameHostAsBackend": True}
             ),
             "http://host.docker.internal:8002",
         )
         # Untouched when the host is a genuinely separate machine.
         self.assertEqual(
             akida_host_service._akida_request_base_url(
-                "http://192.168.68.53:8002", {"sameHostAsBackend": False}
+                "http://192.168.2.90:8002", {"sameHostAsBackend": False}
             ),
-            "http://192.168.68.53:8002",
+            "http://192.168.2.90:8002",
         )
         self.assertEqual(
             akida_host_service._akida_request_base_url("", {"sameHostAsBackend": True}),
@@ -831,7 +831,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         # A URL without an explicit port keeps having none.
         self.assertEqual(
             akida_host_service._akida_request_base_url(
-                "http://192.168.68.53", {"sameHostAsBackend": True}
+                "http://192.168.2.90", {"sameHostAsBackend": True}
             ),
             "http://host.docker.internal",
         )
@@ -847,19 +847,19 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         """
         self.assertEqual(
             akida_host_service._akida_ssh_connect_host(
-                {"host": "192.168.68.53", "sameHostAsBackend": True}
+                {"host": "192.168.2.90", "sameHostAsBackend": True}
             ),
             "host.docker.internal",
         )
         self.assertEqual(
             akida_host_service._akida_ssh_connect_host(
-                {"host": "192.168.68.53", "sameHostAsBackend": False}
+                {"host": "192.168.2.90", "sameHostAsBackend": False}
             ),
-            "192.168.68.53",
+            "192.168.2.90",
         )
         self.assertEqual(
-            akida_host_service._akida_ssh_connect_host({"host": "192.168.68.53"}),
-            "192.168.68.53",
+            akida_host_service._akida_ssh_connect_host({"host": "192.168.2.90"}),
+            "192.168.2.90",
         )
 
     def test_run_akida_ssh_targets_docker_gateway_when_same_host_as_backend(
@@ -868,7 +868,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         host = self.state.create_akida_host(
             {
                 "displayName": "Self-paired Akida",
-                "host": "192.168.68.53",
+                "host": "192.168.2.90",
                 "username": "moosebun2",
                 "authMode": "ssh_key",
                 "sshKeyPath": "/tmp/fake-akida-key",
@@ -902,7 +902,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
 
         command = popen.call_args.args[0]
         self.assertIn("moosebun2@host.docker.internal", command)
-        self.assertNotIn("moosebun2@192.168.68.53", command)
+        self.assertNotIn("moosebun2@192.168.2.90", command)
 
     def test_akida_ssh_password_auth_requires_stored_password(self) -> None:
         host = self.state.create_akida_host(

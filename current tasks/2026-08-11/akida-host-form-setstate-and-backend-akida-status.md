@@ -63,7 +63,7 @@ Result: `flutter test test/screens/studio_screen_test.dart` → 42/42 pass.
 `flutter test test/screens/studio_responsive_audit_test.dart` → 19/19 pass.
 `flutter analyze` on both changed files → clean.
 
-## 2. Akida runtime is NOT running on the 192.168.68.53 backend
+## 2. Akida runtime is NOT running on the 192.168.2.90 backend
 
 Probed live:
 

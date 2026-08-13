@@ -34,6 +34,13 @@ COPY scripts/launcher_control_service.py scripts/launcher_control_service.py
 COPY nmtk/neuro_toolkit/assets/ nmtk/neuro_toolkit/assets/
 COPY --from=neurochip-artifact-builder /artifacts/ /app/artifacts/neurochip/
 
+# The PYNQ overlay-v1 package (~4.4 MB) ships inside the image so Install
+# Overlay works with no user action. Synthesis needs Linux + Vivado 2022.x, and
+# this stage has no Neurochip source tree for the launcher to read it from, so
+# the files live next to the wheel under NMTK_NEUROCHIP_ARTIFACT_DIR — which is
+# the second place `overlay_staging_candidates()` looks.
+COPY Neurochip/overlay_staging/pynq_z2/ /app/artifacts/neurochip/overlay_staging/pynq_z2/
+
 # State and secrets are redirected to Docker volumes via these env vars.
 # Matches the volume mount points declared in docker-compose.yml.
 ENV NMTK_STATE_DIR=/app/state

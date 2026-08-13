@@ -23,7 +23,7 @@ from nmtk.launcher_control.server import RuntimeRequestError
 
 def _unauthorized() -> urllib.error.HTTPError:
     return urllib.error.HTTPError(
-        url="http://192.168.68.53:8002/api/neurochip/akida/status",
+        url="http://192.168.2.90:8002/api/neurochip/akida/status",
         code=401,
         msg="Unauthorized",
         hdrs=None,  # type: ignore[arg-type]
@@ -47,7 +47,7 @@ class TestLauncherAkidaCredentialRecovery(LauncherControlServiceTestBase):
     def _host(self, **overrides: Any) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "displayName": "Lab Akida",
-            "host": "192.168.68.53",
+            "host": "192.168.2.90",
             "username": "moosebun2",
             "authMode": "password",
             "password": "hunter2",

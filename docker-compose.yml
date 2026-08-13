@@ -142,7 +142,7 @@ services:
     ports:
       # LAUNCHER_CONTROL_PORT changes the host-side port only; container always listens on 8091.
       # Default is 8090 to match the Flutter app's NMTK_CONTROL_API_PORT default so that
-      # entering a bare IP address (e.g. 192.168.68.53) connects without requiring a port suffix.
+      # entering a bare IP address (e.g. 192.168.2.90) connects without requiring a port suffix.
       - "${LAUNCHER_CONTROL_PORT:-8090}:8091"
     extra_hosts:
       # Allows the launcher to probe externally managed services (Jupyter, lava-backend)

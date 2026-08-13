@@ -1,7 +1,7 @@
 # Give Docker deployment real Akida hardware access
 
 ## Origin
-Started as a port-8002 bind-conflict investigation on `make docker-ex-m REMOTE_HOST=moosebun2@192.168.68.53`. Root cause turned out to be the native `neurochip.service` (real Akida SDK, real hardware access) fighting the Docker container `neurochip-hw-worker` (no Akida SDK installed, zero hardware routes) for the same port.
+Started as a port-8002 bind-conflict investigation on `make docker-ex-m REMOTE_HOST=moosebun2@192.168.2.90`. Root cause turned out to be the native `neurochip.service` (real Akida SDK, real hardware access) fighting the Docker container `neurochip-hw-worker` (no Akida SDK installed, zero hardware routes) for the same port.
 
 ## Decision
 Don't containerize Akida hardware access (no vendor device-node/driver info exists anywhere in this repo). Instead, redirect the app's existing `NEUROCHIP_HW_WORKER_URL` proxy mechanism at the native `neurochip.service` via `host.docker.internal`, opt-in via `AKIDA_NATIVE=1`.
@@ -17,7 +17,7 @@ Don't containerize Akida hardware access (no vendor device-node/driver info exis
 
 ## Usage
 ```
-make docker-ex-m REMOTE_HOST=moosebun2@192.168.68.53 AKIDA_NATIVE=1
+make docker-ex-m REMOTE_HOST=moosebun2@192.168.2.90 AKIDA_NATIVE=1
 ```
 Omitting `AKIDA_NATIVE` (or `=0`) is byte-for-byte the old behavior — safe for boxes without a card.
 
@@ -28,6 +28,6 @@ Omitting `AKIDA_NATIVE` (or `=0`) is byte-for-byte the old behavior — safe for
 - `bash -n scripts/remote_docker_compose_up.sh` — passes.
 
 ## Not yet verified (needs the actual remote box)
-- End-to-end deploy with `AKIDA_NATIVE=1` against moosebun2@192.168.68.53.
+- End-to-end deploy with `AKIDA_NATIVE=1` against moosebun2@192.168.2.90.
 - `suite_api`'s proxied `/api/neurochip/akida/status` returning real (non-401, non-503) status through the full stack.
 - Passwordless `sudo` availability on moosebun2 for `systemctl start neurochip.service` and `cat /opt/neurochip-akida-host/credentials/api-token` — assumed present per existing provisioning-script convention, not re-confirmed here.

@@ -136,6 +136,7 @@ class ClientDeploymentService implements DeploymentService {
     'docker-compose.prod.yml',
     'docker-compose.remote.yml',
     'install.sh',
+    'nmtk-stack.sh',
     'monitoring/alertmanager/alertmanager.yml',
     'monitoring/loki/loki-config.yml',
     'monitoring/prometheus/alert_rules.yml',
@@ -1494,6 +1495,10 @@ if [ "$ENGINE" = "podman" ]; then
     "Deployment account lingering enabled" \
     loginctl enable-linger "$DEPLOY_USER"
   capture_step 30 "deploy_account_failed" 27 \
+    "Starting the deployment account service manager" \
+    "Deployment account service manager started" \
+    systemctl start "user@$DEPLOY_UID.service"
+  capture_step 30 "deploy_account_failed" 27 \
     "Preparing rootless Podman runtime" \
     "Rootless Podman runtime directory prepared" \
     install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" \
@@ -2073,6 +2078,248 @@ step_marker finish 40 false "Finalizing secure deployment handoff"
         matchingJobs.first.error.startsWith('degraded optional capability')) {
       await _updateJob(matchingJobs.first.copyWith(error: ''));
     }
+  }
+
+  @override
+  Future<SystemHealthReport> diagnoseTarget(String targetId) async {
+    final targets = await (await _store).loadTargets();
+    final matches = targets.where((target) => target.id == targetId);
+    if (matches.isEmpty) throw StateError('Unknown deployment target.');
+    final target = matches.first;
+    final host = target.host.isEmpty ? '127.0.0.1' : target.host;
+    final checks = <SystemHealthCheck>[];
+
+    try {
+      final response = await _httpClient
+          .post(
+            Uri.parse(
+              'http://$host:${target.backendPort}/api/suite/doctor',
+            ),
+            headers: const {'Content-Type': 'application/json'},
+            body: jsonEncode(<String, dynamic>{
+              'capabilities': const <String>['snntorch'],
+            }),
+          )
+          .timeout(const Duration(seconds: 35));
+      if (response.statusCode != 200) {
+        throw StateError('Suite doctor returned HTTP ${response.statusCode}.');
+      }
+      final payload = jsonDecode(response.body);
+      if (payload is! Map<String, dynamic>) {
+        throw const FormatException('Suite doctor returned invalid JSON.');
+      }
+      checks.addAll(SystemHealthReport.fromJson(payload).checks);
+    } on Object {
+      checks.add(
+        const SystemHealthCheck(
+          id: 'suite-api',
+          label: 'NMTK backend',
+          status: SystemHealthStatus.failed,
+          detail: 'The NMTK backend is not serving requests.',
+          recovery: 'Repair the saved server from System Health.',
+          repairable: true,
+        ),
+      );
+    }
+
+    try {
+      final response = await _httpClient
+          .get(
+            Uri.parse(
+              'http://$host:$_launcherControlPort/api/launcher/doctor',
+            ),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) {
+        throw StateError(
+          'Launcher doctor returned HTTP ${response.statusCode}.',
+        );
+      }
+      final payload = jsonDecode(response.body);
+      if (payload is! Map<String, dynamic>) {
+        throw const FormatException('Launcher doctor returned invalid JSON.');
+      }
+      final fatalCount = payload['fatalCount'] as int? ?? 0;
+      final degradedCount = payload['degradedCount'] as int? ?? 0;
+      checks.add(
+        SystemHealthCheck(
+          id: 'launcher-control',
+          label: 'Launcher control',
+          status: fatalCount > 0
+              ? SystemHealthStatus.failed
+              : degradedCount > 0
+                  ? SystemHealthStatus.degraded
+                  : SystemHealthStatus.ok,
+          detail: fatalCount > 0
+              ? '$fatalCount required launcher check(s) failed.'
+              : degradedCount > 0
+                  ? '$degradedCount optional launcher capability check(s) are degraded.'
+                  : 'Launcher control and required modules are ready.',
+          recovery: fatalCount > 0
+              ? 'Repair the saved server from System Health.'
+              : '',
+          repairable: fatalCount > 0,
+        ),
+      );
+      final hosts = payload['akidaHosts'];
+      if (hosts is! List<dynamic> || hosts.isEmpty) {
+        checks.add(
+          const SystemHealthCheck(
+            id: 'akida-runtime',
+            label: 'Akida runtime',
+            status: SystemHealthStatus.notConfigured,
+            detail: 'No Akida runtime is configured for this backend.',
+            required: false,
+          ),
+        );
+      } else {
+        final hostMaps = hosts.whereType<Map<String, dynamic>>().toList();
+        final allReady = hostMaps.isNotEmpty &&
+            hostMaps.every((item) => item['state'] == 'ready');
+        checks.add(
+          SystemHealthCheck(
+            id: 'akida-runtime',
+            label: 'Akida runtime',
+            status:
+                allReady ? SystemHealthStatus.ok : SystemHealthStatus.degraded,
+            detail: allReady
+                ? 'The configured Akida runtime is ready.'
+                : 'A configured Akida runtime needs attention.',
+            recovery: allReady
+                ? ''
+                : 'Open Akida target management and run its preflight repair.',
+            repairable: !allReady,
+            required: false,
+          ),
+        );
+      }
+    } on Object {
+      checks.add(
+        const SystemHealthCheck(
+          id: 'launcher-control',
+          label: 'Launcher control',
+          status: SystemHealthStatus.failed,
+          detail: 'Launcher control is not serving requests.',
+          recovery: 'Repair the saved server from System Health.',
+          repairable: true,
+        ),
+      );
+    }
+
+    final overall = checks.any(
+      (check) => check.required && check.status == SystemHealthStatus.failed,
+    )
+        ? SystemHealthStatus.failed
+        : checks.any(
+            (check) =>
+                check.status == SystemHealthStatus.failed ||
+                check.status == SystemHealthStatus.degraded,
+          )
+            ? SystemHealthStatus.degraded
+            : SystemHealthStatus.ok;
+    return SystemHealthReport(
+      overall: overall,
+      checkedAt: DateTime.now(),
+      checks: checks,
+    );
+  }
+
+  @override
+  Future<SystemHealthReport> repairTarget(String targetId) async {
+    final targets = await (await _store).loadTargets();
+    final matches = targets.where((target) => target.id == targetId);
+    if (matches.isEmpty) throw StateError('Unknown deployment target.');
+    final target = matches.first;
+    final request = await (await _store).requestForTarget(target);
+    await _loadDeploymentBundle();
+
+    if (target.targetType == 'remote_host') {
+      final client = await _connect(request);
+      try {
+        final deployDir = await _remoteDeployDir(client);
+        await _uploadAssetsForRepair(client, deployDir);
+        await _runChecked(
+          client,
+          'cd ${_shellQuote(deployDir)} && '
+              'bash ./nmtk-stack.sh install ${_shellQuote(request.containerEngine)} && '
+              'bash ./nmtk-stack.sh start ${_shellQuote(request.containerEngine)}',
+          'The server could not restart the NMTK backend.',
+        );
+      } finally {
+        client.close();
+      }
+    } else {
+      final directory = await _materializeAssets();
+      await _runLocalChecked(
+        request.containerEngine,
+        [
+          'compose',
+          '--project-name',
+          'nmtk',
+          '-f',
+          'docker-compose.yml',
+          '-f',
+          'docker-compose.prod.yml',
+          'up',
+          '-d',
+          '--no-build',
+          '--remove-orphans',
+        ],
+        directory,
+      );
+    }
+    await _waitForHealth(
+      Uri.parse(
+        'http://${target.host.isEmpty ? '127.0.0.1' : target.host}:${target.backendPort}/api/suite/health',
+      ),
+      attempts: 30,
+    );
+    return diagnoseTarget(targetId);
+  }
+
+  Future<void> _uploadAssetsForRepair(
+    SSHClient client,
+    String deployDir,
+  ) async {
+    final sftp = await client.sftp();
+    for (final relative in _assetFiles) {
+      final parent = path.posix.dirname(relative);
+      if (parent != '.') {
+        final result = await client.runWithResult(
+          'mkdir -p ${_shellQuote(path.posix.join(deployDir, parent))}',
+        );
+        if (result.exitCode != 0) {
+          throw StateError('Could not prepare the backend repair directory.');
+        }
+      }
+      final data = await _assets.load('assets/deployment/$relative');
+      final remote = await sftp.open(
+        path.posix.join(deployDir, relative),
+        mode: SftpFileOpenMode.create |
+            SftpFileOpenMode.truncate |
+            SftpFileOpenMode.write,
+      );
+      try {
+        await remote.writeBytes(_exactAssetBytes(data));
+      } finally {
+        await remote.close();
+      }
+    }
+  }
+
+  @override
+  Future<DeploymentJob> reinstallTarget(
+    String targetId, {
+    bool factoryReset = false,
+  }) async {
+    final targets = await (await _store).loadTargets();
+    final matches = targets.where((target) => target.id == targetId);
+    if (matches.isEmpty) throw StateError('Unknown deployment target.');
+    final request = await (await _store).requestForTarget(
+      matches.first,
+      cleanInstall: factoryReset,
+    );
+    return deploy(request);
   }
 
   bool get _isDesktop =>

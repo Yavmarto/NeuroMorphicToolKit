@@ -118,7 +118,7 @@ worth using narrow paths next time.
 ## Restart / where to look
 
 Flutter-side only, no backend or server restart. `flutter run -d macos` from
-`nmtk/neuro_toolkit`, connect to `192.168.68.53`, open a completed run's Results
+`nmtk/neuro_toolkit`, connect to `192.168.2.90`, open a completed run's Results
 step:
 
 1. Grid and Raster show the same transport (play/pause, ½×/1×/2×/5×, ms readout,

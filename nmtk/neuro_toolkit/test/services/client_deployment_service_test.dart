@@ -44,6 +44,7 @@ class _ManifestAssetBundle extends CachingAssetBundle {
     'docker-compose.prod.yml',
     'docker-compose.remote.yml',
     'install.sh',
+    'nmtk-stack.sh',
     'monitoring/alertmanager/alertmanager.yml',
     'monitoring/loki/loki-config.yml',
     'monitoring/prometheus/alert_rules.yml',
@@ -1978,6 +1979,7 @@ void main() {
       'docker-compose.prod.yml',
       'docker-compose.remote.yml',
       'install.sh',
+      'nmtk-stack.sh',
       'monitoring/alertmanager/alertmanager.yml',
       'monitoring/loki/loki-config.yml',
       'monitoring/prometheus/alert_rules.yml',
@@ -2280,5 +2282,36 @@ void main() {
     );
     expect(snapshot.activeJob?.error, contains('Akida'));
     expect(snapshot.activeJob?.error, contains('Power it on, then retry.'));
+  });
+
+  test('Akida ready never hides a failed backend', () async {
+    final service = ClientDeploymentService(
+      persistenceFactory: _completedRemotePersistence,
+      httpClient: MockClient((request) async {
+        if (request.url.path == '/api/suite/doctor') {
+          throw http.ClientException('backend down');
+        }
+        if (request.url.path == '/api/launcher/doctor') {
+          return http.Response(
+            '{"fatalCount":0,"degradedCount":0,'
+            '"akidaHosts":[{"id":"akida-1","state":"ready"}]}',
+            200,
+          );
+        }
+        return http.Response('{}', 404);
+      }),
+    );
+
+    final report = await service.diagnoseTarget('remote');
+
+    expect(report.overall, SystemHealthStatus.failed);
+    expect(
+      report.checks.singleWhere((check) => check.id == 'suite-api').status,
+      SystemHealthStatus.failed,
+    );
+    expect(
+      report.checks.singleWhere((check) => check.id == 'akida-runtime').status,
+      SystemHealthStatus.ok,
+    );
   });
 }

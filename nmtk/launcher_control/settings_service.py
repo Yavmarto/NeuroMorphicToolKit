@@ -1,4 +1,4 @@
-"""Persisted launcher settings: log level, selected Akida host, hardware lists.
+"""Persisted launcher settings: log level, selected Akida host / PYNQ board, hardware lists.
 
 Imported by ``server.py`` right before ``LauncherControlState`` is defined, so
 the ``from .server import ...`` below resolves against the partially
@@ -32,6 +32,7 @@ class SettingsServiceMixin:
             "akidaRuntimeUpdateJobs": [],
             "pynqBoards": [],
             "selectedAkidaHostId": None,
+            "selectedPynqBoardId": None,
         }
         stored = _read_json_file(SETTINGS_FILE, {})
         if not isinstance(stored, dict):
@@ -48,6 +49,18 @@ class SettingsServiceMixin:
             selected_akida_host_id = akida_hosts[0]["id"]
         if not akida_hosts:
             selected_akida_host_id = ""
+        pynq_boards = [
+            _normalize_pynq_board(board)
+            for board in stored.get("pynqBoards", [])
+            if isinstance(board, dict)
+        ]
+        selected_pynq_board_id = str(stored.get("selectedPynqBoardId") or "").strip()
+        if pynq_boards and not any(
+            board["id"] == selected_pynq_board_id for board in pynq_boards
+        ):
+            selected_pynq_board_id = pynq_boards[0]["id"]
+        if not pynq_boards:
+            selected_pynq_board_id = ""
         persisted_update_jobs = [
             dict(job)
             for job in stored.get("akidaRuntimeUpdateJobs", [])
@@ -82,12 +95,9 @@ class SettingsServiceMixin:
                 "pythonAvailable": True,
                 "akidaHosts": akida_hosts,
                 "akidaRuntimeUpdateJobs": persisted_update_jobs,
-                "pynqBoards": [
-                    _normalize_pynq_board(board)
-                    for board in stored.get("pynqBoards", [])
-                    if isinstance(board, dict)
-                ],
+                "pynqBoards": pynq_boards,
                 "selectedAkidaHostId": selected_akida_host_id or None,
+                "selectedPynqBoardId": selected_pynq_board_id or None,
             }
         )
         return defaults
@@ -110,6 +120,19 @@ class SettingsServiceMixin:
                     self._settings["selectedAkidaHostId"] = selected_akida_host_id
                 else:
                     raise KeyError(f"Unknown Akida host '{selected_akida_host_id}'")
+            if "selectedPynqBoardId" in payload:
+                selected_pynq_board_id = str(
+                    payload.get("selectedPynqBoardId") or ""
+                ).strip()
+                if not selected_pynq_board_id:
+                    self._settings["selectedPynqBoardId"] = None
+                elif any(
+                    board["id"] == selected_pynq_board_id
+                    for board in self._settings.get("pynqBoards", [])
+                ):
+                    self._settings["selectedPynqBoardId"] = selected_pynq_board_id
+                else:
+                    raise KeyError(f"Unknown PYNQ board '{selected_pynq_board_id}'")
             self._persist_settings()
             return self.get_settings()
 

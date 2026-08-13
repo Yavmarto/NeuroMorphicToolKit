@@ -239,13 +239,7 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     }
   }
 
-  DeploymentTarget? _targetForRetry(DeploymentState current) {
-    final job = current.activeJob;
-    if (job != null) {
-      for (final candidate in current.targets) {
-        if (candidate.id == job.targetId) return candidate;
-      }
-    }
+  DeploymentTarget? _mostRecentTarget(DeploymentState current) {
     if (current.targets.isEmpty) return null;
     var mostRecent = current.targets.first;
     for (final candidate in current.targets.skip(1)) {
@@ -258,6 +252,51 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
       }
     }
     return mostRecent;
+  }
+
+  Future<SystemHealthReport?> diagnoseLatestTarget() async {
+    final current = state.value;
+    if (current == null) return null;
+    final target = _mostRecentTarget(current);
+    if (target == null) return null;
+    return _service.diagnoseTarget(target.id);
+  }
+
+  Future<SystemHealthReport?> repairLatestTarget() async {
+    final current = state.value;
+    if (current == null) return null;
+    final target = _mostRecentTarget(current);
+    if (target == null) return null;
+    final report = await _service.repairTarget(target.id);
+    await refresh();
+    return report;
+  }
+
+  Future<DeploymentJob?> reinstallLatestTarget(
+      {bool factoryReset = false}) async {
+    final current = state.value;
+    if (current == null) return null;
+    final target = _mostRecentTarget(current);
+    if (target == null) return null;
+    final job = await _service.reinstallTarget(
+      target.id,
+      factoryReset: factoryReset,
+    );
+    state = AsyncData(
+      current.copyWith(activeJob: job, connectionLostReason: null),
+    );
+    _startPolling();
+    return job;
+  }
+
+  DeploymentTarget? _targetForRetry(DeploymentState current) {
+    final job = current.activeJob;
+    if (job != null) {
+      for (final candidate in current.targets) {
+        if (candidate.id == job.targetId) return candidate;
+      }
+    }
+    return _mostRecentTarget(current);
   }
 
   DeploymentRequest _request({

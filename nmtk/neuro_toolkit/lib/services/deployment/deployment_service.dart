@@ -48,6 +48,78 @@ enum RemoteReinstallMode {
   factoryReset,
 }
 
+enum SystemHealthStatus {
+  ok,
+  degraded,
+  failed,
+  notConfigured;
+
+  static SystemHealthStatus fromWireName(String value) => switch (value) {
+        'ok' => SystemHealthStatus.ok,
+        'degraded' => SystemHealthStatus.degraded,
+        'notConfigured' => SystemHealthStatus.notConfigured,
+        _ => SystemHealthStatus.failed,
+      };
+}
+
+class SystemHealthCheck {
+  const SystemHealthCheck({
+    required this.id,
+    required this.label,
+    required this.status,
+    required this.detail,
+    this.recovery = '',
+    this.repairable = false,
+    this.required = true,
+  });
+
+  factory SystemHealthCheck.fromJson(Map<String, dynamic> json) =>
+      SystemHealthCheck(
+        id: json['id'] as String? ?? 'unknown',
+        label: json['label'] as String? ?? 'Unknown check',
+        status: SystemHealthStatus.fromWireName(
+          json['status'] as String? ?? 'failed',
+        ),
+        detail: json['detail'] as String? ?? 'No diagnostic detail returned.',
+        recovery: json['recovery'] as String? ?? '',
+        repairable: json['repairable'] as bool? ?? false,
+        required: json['required'] as bool? ?? true,
+      );
+
+  final String id;
+  final String label;
+  final SystemHealthStatus status;
+  final String detail;
+  final String recovery;
+  final bool repairable;
+  final bool required;
+}
+
+class SystemHealthReport {
+  const SystemHealthReport({
+    required this.overall,
+    required this.checkedAt,
+    required this.checks,
+  });
+
+  factory SystemHealthReport.fromJson(Map<String, dynamic> json) =>
+      SystemHealthReport(
+        overall: SystemHealthStatus.fromWireName(
+          json['overall'] as String? ?? 'failed',
+        ),
+        checkedAt: DateTime.tryParse(json['checkedAt'] as String? ?? '') ??
+            DateTime.now(),
+        checks: (json['checks'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<Map<String, dynamic>>()
+            .map(SystemHealthCheck.fromJson)
+            .toList(growable: false),
+      );
+
+  final SystemHealthStatus overall;
+  final DateTime checkedAt;
+  final List<SystemHealthCheck> checks;
+}
+
 /// Ephemeral administrator input for the one-action remote setup flow.
 ///
 /// This type deliberately has no JSON serializer. Administrator credentials
@@ -182,4 +254,19 @@ abstract class DeploymentService {
   /// install. Throws if the target is unknown or Jupyter still isn't
   /// healthy afterwards.
   Future<void> retryJupyter(String targetId);
+
+  Future<SystemHealthReport> diagnoseTarget(String targetId) {
+    throw UnsupportedError('Whole-system diagnostics are not supported.');
+  }
+
+  Future<SystemHealthReport> repairTarget(String targetId) {
+    throw UnsupportedError('Whole-system repair is not supported.');
+  }
+
+  Future<DeploymentJob> reinstallTarget(
+    String targetId, {
+    bool factoryReset = false,
+  }) {
+    throw UnsupportedError('Target reinstall is not supported.');
+  }
 }

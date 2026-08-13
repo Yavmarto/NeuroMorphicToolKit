@@ -54,5 +54,5 @@ entries for these four types.
   morning's baseline.
 - `ruff check`/`ruff format` clean on all touched files.
 - Not yet verified against the actual running remote deploy (no SSH access from this session) —
-  user should `make docker-ex-m REMOTE_HOST=moosebun2@192.168.68.53`, regenerate the notebook, and
+  user should `make docker-ex-m REMOTE_HOST=moosebun2@192.168.2.90`, regenerate the notebook, and
   confirm `loss_val.backward()` no longer raises.

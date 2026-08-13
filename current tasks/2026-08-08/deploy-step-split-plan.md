@@ -36,4 +36,4 @@ This is layout-only inside the existing widget; the underlying provider (`studio
 
 1. `flutter analyze` in `neurocnl/frontend` — no new warnings/errors.
 2. `flutter test` in `neurocnl/frontend` (targeted files above, then full suite) — all green.
-3. Manual run: `flutter run -d macos` from `nmtk/neuro_toolkit`, connect to the running dev backend via "Already have a server running?" on `/setup` pointed at `192.168.68.53`. Open a workspace, confirm the stepper now shows 7 steps ending in "Deploy", Results no longer has Deploy/Share buttons, the new Deploy step renders the (now full-page, grouped) Akida workspace correctly, and "Publish to Hub" from that step still works end-to-end.
+3. Manual run: `flutter run -d macos` from `nmtk/neuro_toolkit`, connect to the running dev backend via "Already have a server running?" on `/setup` pointed at `192.168.2.90`. Open a workspace, confirm the stepper now shows 7 steps ending in "Deploy", Results no longer has Deploy/Share buttons, the new Deploy step renders the (now full-page, grouped) Akida workspace correctly, and "Publish to Hub" from that step still works end-to-end.

@@ -226,8 +226,12 @@ if ! compose run --rm --no-deps --user 0:0 \
 fi
 
 write_status starting_containers 80 "Starting backend containers"
+if ! bash ./nmtk-stack.sh install "$ENGINE" >>"$LOG_FILE" 2>&1; then
+  fail_stage "The NMTK backend could not be registered to start automatically after a server reboot."
+fi
 set +e
-compose_with_timeout "$UP_TIMEOUT" up -d --remove-orphans >>"$LOG_FILE" 2>&1
+timeout --signal=TERM --kill-after=30s "${UP_TIMEOUT}s" \
+  bash ./nmtk-stack.sh start "$ENGINE" >>"$LOG_FILE" 2>&1
 up_exit="$?"
 set -e
 if [ "$up_exit" -eq 124 ]; then

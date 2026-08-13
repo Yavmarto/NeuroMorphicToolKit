@@ -9,6 +9,7 @@ already be bound in ``server.py`` above that import line.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -650,11 +651,24 @@ class PynqServiceMixin:
         )
 
     def _inspect_local_pynq_overlay_package(self) -> dict[str, Any]:
-        neurochip_root = _neurochip_module_root()
-        staging_dir = _load_neurochip_launcher_runtime_contract().pynq.overlay_staging_dir_for(
-            neurochip_root
+        artifact_root = str(os.getenv("NMTK_NEUROCHIP_ARTIFACT_DIR") or "").strip()
+        candidates = _load_neurochip_launcher_runtime_contract().pynq.overlay_staging_candidates(
+            _neurochip_module_root(),
+            Path(artifact_root) if artifact_root else None,
         )
-        return _inspect_staged_pynq_overlay_package(staging_dir)
+        # Report the first complete package. Falling back on `ready` rather than
+        # on directory existence matters in the container, where the module root
+        # resolves to a path that simply is not there — reporting *its* issues
+        # would tell the user to stage files into a directory the image never
+        # ships, instead of using the overlay it already carries.
+        inspected = [
+            _inspect_staged_pynq_overlay_package(candidate)
+            for candidate in candidates
+        ]
+        for result in inspected:
+            if bool(result.get("ready", False)):
+                return result
+        return inspected[0]
 
     def provision_pynq_board(self, board_id: str) -> dict[str, Any]:
         board = self._update_pynq_board_fields(board_id, state="provisioning")
@@ -772,11 +786,14 @@ class PynqServiceMixin:
                 if isinstance(issues, list) and issues
                 else "staged overlay package is incomplete"
             )
+            # The overlay ships with the backend, so this is a broken install
+            # rather than something the user forgot to do — telling them to go
+            # synthesise a bitstream would be wrong and unactionable.
             message = (
-                "Local staged overlay package is incomplete. "
-                f"Stage externally built snn_overlay.bit and snn_overlay.hwh under "
-                f"{overlay_package['stagingDir']}. "
-                f"Details: {issues_text}"
+                "The PYNQ overlay package that ships with the backend is missing "
+                "or incomplete, so there is nothing to install on the board. "
+                "Update the backend to restore it. "
+                f"Looked in {overlay_package['stagingDir']}. Details: {issues_text}"
             )
             self._emit_pynq_terminal_log(
                 board,

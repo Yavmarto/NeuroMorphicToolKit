@@ -60,6 +60,26 @@ class PynqLauncherRuntimeContract:
     def overlay_staging_dir_for(self, module_root: Path) -> Path:
         return (module_root / self.overlay_staging_subdir).resolve()
 
+    def overlay_staging_candidates(
+        self, module_root: Path, artifact_root: Path | None
+    ) -> tuple[Path, ...]:
+        """Where to look for the built overlay package, best source first.
+
+        Two locations, because the launcher runs in two very different places.
+        In a source checkout the overlay sits under the Neurochip module root
+        (tracked in git). In the shipped container there is no Neurochip source
+        tree at all — only the build artifacts — so the image carries the
+        overlay next to the wheel and points ``NMTK_NEUROCHIP_ARTIFACT_DIR``
+        here. Checking the module root first keeps a developer's freshly
+        synthesised overlay winning over the one baked into the image.
+        """
+        candidates = [self.overlay_staging_dir_for(module_root)]
+        if artifact_root is not None:
+            candidates.append(
+                (artifact_root / self.overlay_staging_subdir).resolve()
+            )
+        return tuple(candidates)
+
 
 @dataclass(frozen=True)
 class AkidaLauncherRuntimeContract:

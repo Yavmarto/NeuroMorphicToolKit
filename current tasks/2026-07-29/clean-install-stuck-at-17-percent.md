@@ -80,5 +80,5 @@ in place.
 
 ## Still to do
 
-End-to-end run against `192.168.68.53` with Podman has not been done — it needs
+End-to-end run against `192.168.2.90` with Podman has not been done — it needs
 the administrator credential, which only the user has.

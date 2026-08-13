@@ -114,7 +114,7 @@ app to judge.
 ## Restart / where to look
 
 Flutter-side only, no backend or server restart. `flutter run -d macos` from
-`nmtk/neuro_toolkit`, connect to `192.168.68.53`, open a completed run's Results
+`nmtk/neuro_toolkit`, connect to `192.168.2.90`, open a completed run's Results
 step, Grid tab:
 
 1. Press play and leave it — the thumb travels 0 → 25 ms **once** and stops.

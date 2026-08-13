@@ -19,15 +19,23 @@ class _FakeDeploymentService implements DeploymentService {
       suggestedRecovery: '',
     ),
     this.snapshot = const DeploymentSnapshot(),
+    this.doctorReport,
+    this.reinstallThrows = false,
   });
 
   final DeploymentPreflightResult preflightResult;
   final DeploymentSnapshot snapshot;
+  final SystemHealthReport? doctorReport;
+  final bool reinstallThrows;
   int deployCalls = 0;
   DeploymentRequest? lastDeployRequest;
   int setupCalls = 0;
   RemoteServerSetupRequest? lastSetupRequest;
   final List<String> cancelledJobIds = <String>[];
+  int diagnoseCalls = 0;
+  int repairCalls = 0;
+  int reinstallCalls = 0;
+  bool? lastFactoryReset;
 
   @override
   Future<DeploymentSnapshot> load() async => snapshot;
@@ -109,7 +117,62 @@ class _FakeDeploymentService implements DeploymentService {
   Future<void> retryJupyter(String targetId) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<SystemHealthReport> diagnoseTarget(String targetId) async {
+    diagnoseCalls++;
+    return doctorReport ??
+        SystemHealthReport(
+          overall: SystemHealthStatus.ok,
+          checkedAt: DateTime(2026, 8, 13, 12),
+          checks: const [
+            SystemHealthCheck(
+              id: 'suite-api',
+              label: 'Suite API',
+              status: SystemHealthStatus.ok,
+              detail: 'Ready',
+            ),
+          ],
+        );
+  }
+
+  @override
+  Future<SystemHealthReport> repairTarget(String targetId) async {
+    repairCalls++;
+    return diagnoseTarget(targetId);
+  }
+
+  @override
+  Future<DeploymentJob> reinstallTarget(
+    String targetId, {
+    bool factoryReset = false,
+  }) async {
+    reinstallCalls++;
+    lastFactoryReset = factoryReset;
+    if (reinstallThrows && !factoryReset) {
+      throw StateError('Data-preserving reinstall failed.');
+    }
+    return DeploymentJob(
+      id: 'reinstall-job-$reinstallCalls',
+      targetId: targetId,
+      mode: 'docker',
+      stage: 'queued',
+      percent: 0,
+      stageLabel: 'Queued',
+      logs: const [],
+    );
+  }
 }
+
+const _savedTarget = DeploymentTarget(
+  id: 'target',
+  displayName: 'Lab server',
+  targetType: 'remote_host',
+  mode: 'docker',
+  authMode: 'ssh_key',
+  backendPort: 9000,
+  host: '192.168.2.90',
+);
 
 Widget _harness({
   bool? localDeploymentAvailable,
@@ -139,6 +202,79 @@ Widget _harness({
 }
 
 void main() {
+  testWidgets('System Health checks all configured services automatically',
+      (tester) async {
+    final service = _FakeDeploymentService(
+      snapshot: const DeploymentSnapshot(targets: [_savedTarget]),
+      doctorReport: SystemHealthReport(
+        overall: SystemHealthStatus.ok,
+        checkedAt: DateTime(2026, 8, 13, 12),
+        checks: const [
+          SystemHealthCheck(
+            id: 'framework-snntorch',
+            label: 'snnTorch',
+            status: SystemHealthStatus.ok,
+            detail: 'Kernel starts and imports snnTorch.',
+          ),
+          SystemHealthCheck(
+            id: 'akida-runtime',
+            label: 'Akida runtime',
+            status: SystemHealthStatus.notConfigured,
+            detail: 'No Akida runtime is configured.',
+            required: false,
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(_harness(deploymentService: service));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('backend-system-health-card')), findsOneWidget);
+    expect(find.text('Everything configured is working'), findsOneWidget);
+    expect(find.text('snnTorch'), findsOneWidget);
+    expect(find.text('Akida runtime'), findsOneWidget);
+    expect(service.diagnoseCalls, 1);
+  });
+
+  testWidgets('failed health offers repair before reinstall', (tester) async {
+    final service = _FakeDeploymentService(
+      snapshot: const DeploymentSnapshot(targets: [_savedTarget]),
+      doctorReport: SystemHealthReport(
+        overall: SystemHealthStatus.failed,
+        checkedAt: DateTime(2026, 8, 13, 12),
+        checks: const [
+          SystemHealthCheck(
+            id: 'suite-api',
+            label: 'NMTK backend',
+            status: SystemHealthStatus.failed,
+            detail: 'Offline',
+            repairable: true,
+          ),
+        ],
+      ),
+    );
+    await tester.pumpWidget(_harness(deploymentService: service));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const Key('backend-system-health-repair')), findsOneWidget);
+    expect(
+      find.byKey(const Key('backend-system-health-reinstall')),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const Key('backend-system-health-repair')));
+    await tester.pumpAndSettle();
+
+    expect(service.repairCalls, 1);
+    expect(
+      find.byKey(const Key('backend-system-health-reinstall')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('backend-system-health-factory-reset')),
+      findsNothing,
+    );
+  });
   testWidgets('setup opens the deployment form without launcher connection UI',
       (tester) async {
     await tester.pumpWidget(_harness(localDeploymentAvailable: true));
@@ -169,11 +305,11 @@ void main() {
         selectedAkidaHost: const AkidaPairedHost(
           id: 'host-1',
           displayName: 'Lab Akida',
-          host: '192.168.68.53',
+          host: '192.168.2.90',
           sshPort: 22,
           username: 'moosebun2',
-          runtimeApiUrl: 'http://192.168.68.53:8002',
-          controlApiUrl: 'http://192.168.68.53:8091',
+          runtimeApiUrl: 'http://192.168.2.90:8002',
+          controlApiUrl: 'http://192.168.2.90:8091',
           authMode: AkidaHostAuthMode.sshKey,
           credentialRef: '',
           password: '',
@@ -435,31 +571,58 @@ void main() {
     );
   });
 
-  testWidgets('factory reset requires destructive confirmation',
+  testWidgets('factory reset appears only after safe recovery paths fail',
       (tester) async {
-    final service = _FakeDeploymentService();
+    final service = _FakeDeploymentService(
+      snapshot: const DeploymentSnapshot(targets: [_savedTarget]),
+      reinstallThrows: true,
+      doctorReport: SystemHealthReport(
+        overall: SystemHealthStatus.failed,
+        checkedAt: DateTime(2026, 8, 13, 12),
+        checks: const [
+          SystemHealthCheck(
+            id: 'suite-api',
+            label: 'NMTK backend',
+            status: SystemHealthStatus.failed,
+            detail: 'Offline',
+            repairable: true,
+          ),
+        ],
+      ),
+    );
     await tester.pumpWidget(
       _harness(localDeploymentAvailable: false, deploymentService: service),
     );
-    await tester.pump();
-
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(1), '192.168.2.34');
-    await tester.enterText(fields.at(3), 'temporary-admin-secret');
-    final factoryReset = find.text('Factory reset server data');
-    await tester.ensureVisible(factoryReset);
-    await tester.tap(factoryReset);
-    await tester.pump();
-    final setupButton =
-        find.byKey(const Key('backend-setup-set-up-and-connect'));
-    await tester.ensureVisible(setupButton);
-    await tester.tap(setupButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('Factory reset server data?'), findsOneWidget);
-    await tester.tap(find.text('Cancel'));
+    expect(
+      find.byKey(const Key('backend-system-health-factory-reset')),
+      findsNothing,
+    );
+    await tester.tap(find.byKey(const Key('backend-system-health-repair')));
     await tester.pumpAndSettle();
-    expect(service.setupCalls, 0);
+    await tester.tap(find.byKey(const Key('backend-system-health-reinstall')));
+    await tester.pumpAndSettle();
+
+    final resetButton =
+        find.byKey(const Key('backend-system-health-factory-reset'));
+    expect(resetButton, findsOneWidget);
+    expect(tester.widget<ZetaButton>(resetButton).onPressed, isNull);
+    await tester.enterText(
+      find.descendant(
+        of: find.byKey(
+          const Key('backend-system-health-reset-confirmation'),
+        ),
+        matching: find.byType(TextField),
+      ),
+      'RESET',
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<ZetaButton>(resetButton).onPressed, isNotNull);
+    await tester.tap(resetButton);
+    await tester.pump();
+
+    expect(service.lastFactoryReset, isTrue);
   });
 
   testWidgets(
@@ -708,7 +871,7 @@ void main() {
     );
   });
 
-  testWidgets('confirmed Factory Reset is disarmed before setup starts',
+  testWidgets('new remote setup never offers destructive reset',
       (tester) async {
     final service = _FakeDeploymentService();
     await tester.pumpWidget(
@@ -716,27 +879,9 @@ void main() {
     );
     await tester.pump();
 
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(1), '192.168.2.34');
-    await tester.enterText(fields.at(3), 'temporary-admin-secret');
-    final factoryReset = find.text('Factory reset server data');
-    await tester.ensureVisible(factoryReset);
-    await tester.tap(factoryReset);
-    await tester.pump();
-    final setupButton =
-        find.byKey(const Key('backend-setup-set-up-and-connect'));
-    await tester.ensureVisible(setupButton);
-    await tester.tap(setupButton);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Erase and reinstall'));
-    await tester.pumpAndSettle();
-
-    expect(service.setupCalls, 1);
-    expect(
-      service.lastSetupRequest?.reinstallMode,
-      RemoteReinstallMode.factoryReset,
-    );
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
+    expect(find.text('Factory reset server data'), findsNothing);
+    expect(find.text('Erase and reinstall'), findsNothing);
+    expect(service.setupCalls, 0);
   });
 
   testWidgets(
@@ -764,13 +909,13 @@ void main() {
 
     await tester.enterText(
       find.byType(TextField).first,
-      '192.168.68.53',
+      '192.168.2.90',
     );
     await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
     await tester.pumpAndSettle();
 
     expect(connected, isNotNull);
-    expect(connected!.host, '192.168.68.53');
+    expect(connected!.host, '192.168.2.90');
     expect(connected!.targetType, 'remote_host');
   });
 
@@ -794,7 +939,7 @@ void main() {
     await tester.pump();
 
     final input = find.byType(TextField).first;
-    await tester.enterText(input, '192.168.68.53');
+    await tester.enterText(input, '192.168.2.90');
     await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
     await tester.pumpAndSettle();
 
@@ -805,7 +950,7 @@ void main() {
     expect(find.textContaining('could not be reached'), findsOneWidget);
     expect(
       tester.widget<TextField>(input).controller!.text,
-      '192.168.68.53',
+      '192.168.2.90',
     );
   });
 
@@ -833,7 +978,7 @@ void main() {
 
     await tester.enterText(
       find.byType(TextField).first,
-      'http://192.168.68.53:8090',
+      'http://192.168.2.90:8090',
     );
     await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
     await tester.pumpAndSettle();

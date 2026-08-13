@@ -17,14 +17,14 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
         created = self.state.create_akida_host(
             {
                 "displayName": "Legacy Akida",
-                "host": "192.168.68.53",
-                "runtimeApiUrl": "http://192.168.68.53:8002",
-                "controlApiUrl": "http://192.168.68.53:8090",
+                "host": "192.168.2.90",
+                "runtimeApiUrl": "http://192.168.2.90:8002",
+                "controlApiUrl": "http://192.168.2.90:8090",
             }
         )
 
-        self.assertEqual(created["runtimeApiUrl"], "http://192.168.68.53:8002")
-        self.assertEqual(created["controlApiUrl"], "http://192.168.68.53:8091")
+        self.assertEqual(created["runtimeApiUrl"], "http://192.168.2.90:8002")
+        self.assertEqual(created["controlApiUrl"], "http://192.168.2.90:8091")
 
     def test_akida_host_round_trip_updates_settings_file(self) -> None:
         created = self.state.create_akida_host(

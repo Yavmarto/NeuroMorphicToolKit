@@ -278,7 +278,7 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
         board = server.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
-                "host": "192.168.68.53",
+                "host": "192.168.2.90",
                 "username": "xilinx",
                 "password": "xilinx",
             }
@@ -290,11 +290,11 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
             side_effect=launcher_server.RuntimeRequestError(
                 (
                     "Runtime request failed for POST "
-                    "http://192.168.68.53:8002/hardware/pynq/deploy: "
+                    "http://192.168.2.90:8002/hardware/pynq/deploy: "
                     "could not be reached: <urlopen error [Errno 61] Connection refused>"
                 ),
                 kind="unreachable",
-                url="http://192.168.68.53:8002/hardware/pynq/deploy",
+                url="http://192.168.2.90:8002/hardware/pynq/deploy",
             ),
         ):
             request = urllib.request.Request(
@@ -311,7 +311,7 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
 
         self.assertEqual(exc_info.exception.code, 502)
         payload = json.loads(exc_info.exception.read().decode("utf-8"))
-        self.assertIn("192.168.68.53:8002", payload["error"])
+        self.assertIn("192.168.2.90:8002", payload["error"])
         self.assertIn("Connection refused", payload["error"])
 
     def test_pynq_run_http_endpoint_proxies_runtime_payload(self) -> None:
@@ -520,8 +520,8 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
         host = self.state.create_akida_host(
             {
                 "displayName": "Lab Akida",
-                "host": "192.168.68.53",
-                "runtimeApiUrl": "http://192.168.68.53:8002",
+                "host": "192.168.2.90",
+                "runtimeApiUrl": "http://192.168.2.90:8002",
                 "credentialRef": "stored-token",
             }
         )

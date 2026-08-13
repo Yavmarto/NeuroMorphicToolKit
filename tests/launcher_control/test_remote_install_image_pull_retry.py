@@ -20,9 +20,10 @@ ROOT = Path(__file__).resolve().parents[2]
 INSTALL_SCRIPT = (
     ROOT / "nmtk" / "neuro_toolkit" / "assets" / "deployment" / "install.sh"
 )
+STACK_SCRIPT = INSTALL_SCRIPT.with_name("nmtk-stack.sh")
 
 CORRUPT_LAYER_ERROR = (
-    'unable to copy from source docker://ghcr.io/example/snn-mlir-compiler:latest: '
+    "unable to copy from source docker://ghcr.io/example/snn-mlir-compiler:latest: "
     'writing blob: adding layer with blob "sha256:24dba2149b7b": unpacking failed '
     "(error: pigz: skipping: <stdin>: corrupted -- crc32 mismatch: exit status 1)"
 )
@@ -56,9 +57,9 @@ exit 0
         _write_executable(bin_dir, name, body)
 
 
-def _run_install(tmp_path: Path, *, failing_pulls: int) -> tuple[
-    subprocess.CompletedProcess[str], str, str, str
-]:
+def _run_install(
+    tmp_path: Path, *, failing_pulls: int
+) -> tuple[subprocess.CompletedProcess[str], str, str, str]:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     state = tmp_path / "state"
@@ -66,11 +67,15 @@ def _run_install(tmp_path: Path, *, failing_pulls: int) -> tuple[
     workdir = tmp_path / "deploy"
     workdir.mkdir()
     shutil.copy(INSTALL_SCRIPT, workdir / "install.sh")
+    shutil.copy(STACK_SCRIPT, workdir / "nmtk-stack.sh")
+    home = tmp_path / "home"
+    home.mkdir()
 
     _fake_engine(bin_dir, failing_pulls=failing_pulls)
     # The health probes and the GNU timeout wrapper are not what these tests are
     # about, so they always succeed.
     _write_executable(bin_dir, "curl", "#!/usr/bin/env bash\nexit 0\n")
+    _write_executable(bin_dir, "systemctl", "#!/usr/bin/env bash\nexit 0\n")
     _write_executable(
         bin_dir,
         "timeout",
@@ -103,6 +108,7 @@ def _run_install(tmp_path: Path, *, failing_pulls: int) -> tuple[
             "NMTK_FAKE_LOG": str(state / "commands.log"),
             "NMTK_FAKE_STATE": str(state),
             "NMTK_DEPLOY_PULL_RETRY_DELAY": "0",
+            "HOME": str(home),
         },
         timeout=300,
     )
@@ -120,9 +126,7 @@ def _run_install(tmp_path: Path, *, failing_pulls: int) -> tuple[
 def test_a_damaged_image_download_is_retried_until_it_succeeds(
     tmp_path: Path, failing_pulls: int
 ) -> None:
-    result, status, log, commands = _run_install(
-        tmp_path, failing_pulls=failing_pulls
-    )
+    result, status, log, commands = _run_install(tmp_path, failing_pulls=failing_pulls)
 
     assert result.returncode == 0, f"{status}\n{log}\n{result.stderr}"
     assert status.startswith("completed|100|"), status

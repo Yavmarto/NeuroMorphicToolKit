@@ -211,6 +211,14 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   bool _isWorking = false;
   AkidaRuntimeUpdateJob? _akidaRetryJob;
   bool _factoryReset = false;
+  SystemHealthReport? _systemHealth;
+  bool _healthCheckRunning = false;
+  bool _healthRepairRunning = false;
+  bool _healthCheckedAutomatically = false;
+  int _healthRecoveryStage = 0;
+  bool _preserveDataReinstallRequested = false;
+  String? _systemHealthError;
+  final TextEditingController _resetConfirmation = TextEditingController();
   String? _hostError;
   String? _submittedDeploymentJobId;
   bool _completionQueued = false;
@@ -259,6 +267,29 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     ]) {
       controller.addListener(_onConfigurationFieldChanged);
     }
+    _resetConfirmation.addListener(_onResetConfirmationChanged);
+    ref.listenManual(backendDeploymentProvider, (previous, next) {
+      final state = next.value;
+      if (!_healthCheckedAutomatically && state?.targets.isNotEmpty == true) {
+        _healthCheckedAutomatically = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_checkSystemHealth());
+        });
+      }
+      if (_preserveDataReinstallRequested &&
+          state?.activeJob?.stage == DeploymentPhase.failed.wireName) {
+        _preserveDataReinstallRequested = false;
+        if (mounted) {
+          setState(() => _healthRecoveryStage = 2);
+        }
+      } else if (_preserveDataReinstallRequested &&
+          state?.activeJob?.stage == DeploymentPhase.completed.wireName) {
+        _preserveDataReinstallRequested = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) unawaited(_checkSystemHealth());
+        });
+      }
+    });
   }
 
   /// ZetaTextInput resyncs its controller's text (re-reading `controller.text`
@@ -277,6 +308,12 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       if (_preflight != null || _preflightSnapshot != null) {
         setState(_clearPreflight);
       }
+    });
+  }
+
+  void _onResetConfirmationChanged() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
     });
   }
 
@@ -321,6 +358,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     _rootPrivateKeyFocus.dispose();
     _rootPrivateKey.dispose();
     _quickConnectHost.dispose();
+    _resetConfirmation.removeListener(_onResetConfirmationChanged);
+    _resetConfirmation.dispose();
     super.dispose();
   }
 
@@ -364,6 +403,11 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       children: [
         _buildUpdateBanner(tokens),
         _buildQuickConnectSection(tokens),
+        if (deploymentState?.targets.isNotEmpty == true ||
+            _systemHealth != null) ...[
+          SizedBox(height: tokens.sectionGap),
+          _buildSystemHealthCard(tokens),
+        ],
         SizedBox(height: tokens.sectionGap),
         _buildNewServerSection(tokens),
         _buildStatusSection(deploymentState, tokens),
@@ -537,6 +581,250 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     );
   }
 
+  Widget _buildSystemHealthCard(NmtkShellTokens tokens) {
+    final report = _systemHealth;
+    final isFailed = report?.overall == SystemHealthStatus.failed;
+    final isDegraded = report?.overall == SystemHealthStatus.degraded;
+    final title = _healthCheckRunning
+        ? 'Checking the whole system…'
+        : report == null
+            ? 'System health has not been checked'
+            : isFailed
+                ? 'System repair is needed'
+                : isDegraded
+                    ? 'System is ready with limitations'
+                    : 'Everything configured is working';
+    final tone = isFailed
+        ? NmtkTone.danger
+        : isDegraded
+            ? NmtkTone.warning
+            : NmtkTone.success;
+    return NmtkSurfaceCard(
+      key: const Key('backend-system-health-card'),
+      child: Padding(
+        padding: EdgeInsets.all(tokens.sectionGap),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            NmtkStatusBanner(
+              title: title,
+              content: Text(
+                report == null
+                    ? 'Run one check for the backend, storage, Jupyter, '
+                        'snnTorch, launcher control, and configured hardware.'
+                    : 'Checked ${_healthTimestamp(report.checkedAt)}.',
+              ),
+              tone: tone,
+            ),
+            if (_systemHealthError != null) ...[
+              SizedBox(height: tokens.compactGap),
+              Text(_systemHealthError!),
+            ],
+            if (report != null) ...[
+              SizedBox(height: tokens.sectionGap),
+              for (final check in report.checks) ...[
+                _buildHealthCheckRow(check, tokens),
+                SizedBox(height: tokens.compactGap),
+              ],
+            ],
+            Wrap(
+              spacing: tokens.compactGap,
+              runSpacing: tokens.compactGap,
+              children: [
+                ZetaButton.outline(
+                  key: const Key('backend-system-health-recheck'),
+                  onPressed: _healthCheckRunning || _healthRepairRunning
+                      ? null
+                      : _checkSystemHealth,
+                  label: _healthCheckRunning ? 'Checking…' : 'Recheck',
+                ),
+                if (isFailed)
+                  ZetaButton(
+                    key: const Key('backend-system-health-repair'),
+                    onPressed: _healthCheckRunning || _healthRepairRunning
+                        ? null
+                        : _repairSystemHealth,
+                    label: _healthRepairRunning ? 'Repairing…' : 'Repair',
+                  ),
+                if (_healthRecoveryStage >= 1)
+                  ZetaButton.outline(
+                    key: const Key('backend-system-health-reinstall'),
+                    onPressed: _healthRepairRunning
+                        ? null
+                        : _reinstallSystemKeepingData,
+                    label: 'Reinstall and keep data',
+                  ),
+              ],
+            ),
+            if (_healthRecoveryStage >= 2) ...[
+              SizedBox(height: tokens.sectionGap),
+              const Text(
+                'The safe repair and data-preserving reinstall both failed. '
+                'Factory reset permanently erases NMTK notebooks, workspaces, '
+                'databases, and container volumes.',
+              ),
+              SizedBox(height: tokens.compactGap),
+              KeyedSubtree(
+                key: const Key('backend-system-health-reset-confirmation'),
+                child: _field(
+                  _resetConfirmation,
+                  'Type RESET to unlock factory reset',
+                ),
+              ),
+              SizedBox(height: tokens.compactGap),
+              ZetaButton(
+                key: const Key('backend-system-health-factory-reset'),
+                onPressed: _resetConfirmation.text.trim() == 'RESET' &&
+                        !_healthRepairRunning
+                    ? _factoryResetSystem
+                    : null,
+                label: 'Erase and reinstall',
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHealthCheckRow(
+    SystemHealthCheck check,
+    NmtkShellTokens tokens,
+  ) {
+    final icon = switch (check.status) {
+      SystemHealthStatus.ok => ZetaIcons.check_circle,
+      SystemHealthStatus.degraded => ZetaIcons.warning_outline,
+      SystemHealthStatus.failed => ZetaIcons.error,
+      SystemHealthStatus.notConfigured => ZetaIcons.info,
+    };
+    final color = switch (check.status) {
+      SystemHealthStatus.ok => tokens.healthyColor,
+      SystemHealthStatus.degraded => tokens.warningColor,
+      SystemHealthStatus.failed => tokens.errorColor,
+      SystemHealthStatus.notConfigured => tokens.metadataForeground,
+    };
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: color, semanticLabel: check.status.name),
+        SizedBox(width: tokens.compactGap),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(check.label),
+              Text(check.detail),
+              if (check.recovery.isNotEmpty) Text(check.recovery),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _healthTimestamp(DateTime timestamp) {
+    final local = timestamp.toLocal();
+    return '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}:'
+        '${local.second.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _checkSystemHealth() async {
+    if (_healthCheckRunning) return;
+    setState(() {
+      _healthCheckRunning = true;
+      _systemHealthError = null;
+    });
+    try {
+      final report = await ref
+          .read(backendDeploymentProvider.notifier)
+          .diagnoseLatestTarget();
+      if (!mounted) return;
+      setState(() {
+        _systemHealth = report;
+        if (report?.overall == SystemHealthStatus.ok) {
+          _healthRecoveryStage = 0;
+          _resetConfirmation.clear();
+        }
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _systemHealthError =
+            'The saved server could not be checked. Repair will use its saved '
+            'deployment credential and will preserve all data.';
+      });
+    } finally {
+      if (mounted) setState(() => _healthCheckRunning = false);
+    }
+  }
+
+  Future<void> _repairSystemHealth() async {
+    setState(() {
+      _healthRepairRunning = true;
+      _systemHealthError = null;
+    });
+    try {
+      final report = await ref
+          .read(backendDeploymentProvider.notifier)
+          .repairLatestTarget();
+      if (!mounted) return;
+      setState(() {
+        _systemHealth = report;
+        _healthRecoveryStage = report?.overall == SystemHealthStatus.ok ? 0 : 1;
+      });
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _healthRecoveryStage = 1;
+        _systemHealthError = _displaySetupError(error);
+      });
+    } finally {
+      if (mounted) setState(() => _healthRepairRunning = false);
+    }
+  }
+
+  Future<void> _reinstallSystemKeepingData() async {
+    setState(() {
+      _healthRepairRunning = true;
+      _systemHealthError = null;
+      _preserveDataReinstallRequested = true;
+    });
+    try {
+      await ref
+          .read(backendDeploymentProvider.notifier)
+          .reinstallLatestTarget();
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _preserveDataReinstallRequested = false;
+        _healthRecoveryStage = 2;
+        _systemHealthError = _displaySetupError(error);
+      });
+    } finally {
+      if (mounted) setState(() => _healthRepairRunning = false);
+    }
+  }
+
+  Future<void> _factoryResetSystem() async {
+    if (_resetConfirmation.text.trim() != 'RESET') return;
+    setState(() {
+      _healthRepairRunning = true;
+      _systemHealthError = null;
+    });
+    try {
+      await ref
+          .read(backendDeploymentProvider.notifier)
+          .reinstallLatestTarget(factoryReset: true);
+      if (mounted) _resetConfirmation.clear();
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _systemHealthError = _displaySetupError(error));
+    } finally {
+      if (mounted) setState(() => _healthRepairRunning = false);
+    }
+  }
+
   Future<void> _handleQuickConnect() async {
     final host = _canonicalIpv4(_quickConnectHost.text);
     if (host == null) {
@@ -697,21 +985,6 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               'Admin SSH key',
               focusNode: _rootPrivateKeyFocus,
             ),
-          SizedBox(height: tokens.sectionGap),
-          Material(
-            type: MaterialType.transparency,
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Factory reset server data'),
-              subtitle: const Text(
-                'Optional and destructive. Normal setup removes old NMTK '
-                'containers across Docker and Podman while preserving '
-                'notebooks, databases, and workspace data.',
-              ),
-              value: _factoryReset,
-              onChanged: (value) => setState(() => _factoryReset = value),
-            ),
-          ),
           if (_setupError != null) ...[
             SizedBox(height: tokens.compactGap),
             NmtkStatusBanner(

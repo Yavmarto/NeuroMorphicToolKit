@@ -69,5 +69,5 @@ Nothing left mid-edit; the working tree is a coherent, testable state for
 parts A/B/C/D.1/D.3. To pick this back up: read the "explicitly not done"
 section above, and to manually verify B.5 end-to-end, run
 `flutter run -d macos` from `nmtk/neuro_toolkit`, connect to
-`192.168.68.53`, and drag the Epoch scrubber on a completed run's Results
+`192.168.2.90`, and drag the Epoch scrubber on a completed run's Results
 step while on the Grid or Raster tab.

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:neuro_toolkit/providers/riverpod_providers.dart'
+    show deploymentServiceProvider;
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/src/features/launcher_bootstrap/presentation/launcher_bootstrap_notifier.dart';
 
@@ -66,6 +68,8 @@ class ServerConnectionNotifier extends Notifier<ServerConnectionState> {
   int _generation = 0;
   int? _probeInFlightGeneration;
   bool _disposeRegistered = false;
+  bool _repairAttemptedForOutage = false;
+  bool _repairInFlight = false;
 
   @override
   ServerConnectionState build() {
@@ -150,6 +154,7 @@ class ServerConnectionNotifier extends Notifier<ServerConnectionState> {
 
     final checkedAt = DateTime.now();
     if (connected) {
+      _repairAttemptedForOutage = false;
       state = ServerConnectionState(
         phase: ServerConnectionPhase.connected,
         baseUri: baseUri,
@@ -169,6 +174,38 @@ class ServerConnectionNotifier extends Notifier<ServerConnectionState> {
       consecutiveFailures: failures,
       lastCheckedAt: checkedAt,
     );
+    if (failures == failuresBeforeDisconnect &&
+        !_repairAttemptedForOutage &&
+        !_repairInFlight) {
+      _repairAttemptedForOutage = true;
+      unawaited(_repairAndRecheck(generation));
+    }
+  }
+
+  Future<void> _repairAndRecheck(int generation) async {
+    _repairInFlight = true;
+    try {
+      final service = ref.read(deploymentServiceProvider);
+      final snapshot = await service.load();
+      if (snapshot.targets.isNotEmpty) {
+        final targets = [...snapshot.targets]..sort((left, right) {
+            final leftAt =
+                left.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final rightAt =
+                right.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return rightAt.compareTo(leftAt);
+          });
+        await service.repairTarget(targets.first.id);
+      }
+    } on Object {
+      // The System Health card owns the actionable failure detail. Connection
+      // monitoring stays disconnected and never loops repair for this outage.
+    } finally {
+      _repairInFlight = false;
+    }
+    if (generation == _generation) {
+      await _probe(generation);
+    }
   }
 }
 

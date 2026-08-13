@@ -78,7 +78,7 @@ void main() {
               () => _StaticBootstrapNotifier(
                 LauncherBootstrapData.needsSetup(
                   message: 'The saved server could not be reached.',
-                  suggestedInstallHost: '192.168.68.53',
+                  suggestedInstallHost: '192.168.2.90',
                 ),
               ),
             ),
@@ -104,7 +104,7 @@ void main() {
           find.text('The saved server could not be reached.'), findsOneWidget);
       expect(
         tester.widget<TextField>(find.byType(TextField).first).controller?.text,
-        '192.168.68.53',
+        '192.168.2.90',
       );
 
       await tester.tap(find.byTooltip('Close'));
@@ -117,7 +117,7 @@ void main() {
   testWidgets('a successful saved-server bootstrap opens no setup popup', (
     tester,
   ) async {
-    final baseUri = Uri.parse('http://192.168.68.53:8090');
+    final baseUri = Uri.parse('http://192.168.2.90:8090');
     late _StaticBootstrapNotifier bootstrapNotifier;
     await tester.pumpWidget(
       ProviderScope(

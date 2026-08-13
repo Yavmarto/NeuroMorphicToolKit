@@ -81,7 +81,18 @@ def _flutter_sdk_check() -> dict[str, Any]:
 
 
 def _global_preflight_checks() -> list[dict[str, Any]]:
-    return [_flutter_sdk_check(), _studio_framework_sdk_check()]
+    checks = [_studio_framework_sdk_check()]
+    # The remote launcher-control container manages backend services only. The
+    # Flutter SDK belongs to the desktop app host and is neither installed nor
+    # needed in this runtime, so reporting its absence here would make every
+    # healthy deployed backend fail doctor.
+    if os.environ.get("NMTK_BACKEND_DEPLOYMENT_READY", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+    }:
+        checks.insert(0, _flutter_sdk_check())
+    return checks
 
 
 def _studio_framework_sdk_check() -> dict[str, Any]:

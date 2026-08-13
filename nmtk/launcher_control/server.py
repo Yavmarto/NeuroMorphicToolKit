@@ -1274,6 +1274,7 @@ class LauncherControlState(
                     _serialize_akida_host(host) for host in self._settings["akidaHosts"]
                 ],
                 "selectedAkidaHostId": self._settings["selectedAkidaHostId"],
+                "selectedPynqBoardId": self._settings["selectedPynqBoardId"],
             }
 
     # ------------------------------------------------------------------
@@ -1496,6 +1497,8 @@ class LauncherControlState(
                 for existing in boards:
                     existing["isDefault"] = False
             boards.append(board)
+            if not self._settings.get("selectedPynqBoardId"):
+                self._settings["selectedPynqBoardId"] = board["id"]
             self._persist_settings()
             return _serialize_pynq_board(board)
 
@@ -1523,6 +1526,10 @@ class LauncherControlState(
             if len(next_boards) == len(boards):
                 raise KeyError(f"Unknown PYNQ board '{board_id}'")
             self._settings["pynqBoards"] = next_boards
+            if self._settings.get("selectedPynqBoardId") == board_id:
+                self._settings["selectedPynqBoardId"] = (
+                    next_boards[0]["id"] if next_boards else None
+                )
             self._persist_settings()
 
     def _get_pynq_board(self, board_id: str) -> dict[str, Any]:

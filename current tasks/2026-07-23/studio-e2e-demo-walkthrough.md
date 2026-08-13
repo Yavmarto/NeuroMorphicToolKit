@@ -2,7 +2,7 @@
 
 A literal click-through checklist for demoing the full nmtk pipeline — author →
 validate → train → eval → deploy — using the real running backend and the real
-Flutter Studio app, against **moosebun2@192.168.68.53** (the dev box with the
+Flutter Studio app, against **moosebun2@192.168.2.90** (the dev box with the
 physical Akida AKD1000 and PYNQ-Z2 attached). No standalone scripts. Each step
 names what to click and what tells you it worked.
 
@@ -49,7 +49,7 @@ it can't be the network used there. Load whichever one the current step needs.
 
 From the repo root:
 ```bash
-make docker-ex-m REMOTE_HOST=moosebun2@192.168.68.53 AKIDA_NATIVE=1
+make docker-ex-m REMOTE_HOST=moosebun2@192.168.2.90 AKIDA_NATIVE=1
 ```
 This rsyncs any uncommitted changes, rebuilds `suite_api` on moosebun2,
 starts the native `neurochip.service` there (so the physical AKD1000 is in
@@ -59,7 +59,7 @@ Studio app already pointed at that host — no separate terminal or manual
 
 Confirm:
 ```bash
-curl http://192.168.68.53:9000/api/suite/health
+curl http://192.168.2.90:9000/api/suite/health
 ```
 expecting `{"suiteApiStatus": "ready"}`. Confirm the Studio window opens to
 the canvas/pipeline screen.
@@ -204,7 +204,7 @@ used for Deploy.
 5. The panel itself only renders the support-state card (verdict, warnings,
    rejections, network summary) — it does not yet display the deploy payload.
    To see the effect of this session's backend fix, call the API directly
-   instead: `curl -X POST http://192.168.68.53:9000/api/deploy/pynq/network
+   instead: `curl -X POST http://192.168.2.90:9000/api/deploy/pynq/network
    -H 'Content-Type: application/json' -d '{"spec": "<reflex_arc.cnl text>",
    "weight_bit_width": 8}'` and confirm `deploy_payload` is populated
    (weights, register map, overlay id) instead of `null`.
@@ -227,7 +227,7 @@ used for Deploy.
   Nengo-free path — `export_pynq_artifact_from_ir()` in
   `neurocnl/neurocnl/export/pynq_exporter.py` — reusing the existing,
   previously-orphaned `build_pynq_deploy_payload()` handoff builder.
-- This demo now runs against moosebun2 (192.168.68.53) instead of localhost —
+- This demo now runs against moosebun2 (192.168.2.90) instead of localhost —
   the standalone `neurocnl` compose path (port 8000) is a separate, smaller
   setup; the integrated stack used here runs on port **9000**.
 - `shd_digit_classifier.cnl` (new template — `neurocnl/backend/app/templates/`)
@@ -239,7 +239,7 @@ used for Deploy.
 
 Re-run the same command:
 ```bash
-make docker-ex-m REMOTE_HOST=moosebun2@192.168.68.53 AKIDA_NATIVE=1
+make docker-ex-m REMOTE_HOST=moosebun2@192.168.2.90 AKIDA_NATIVE=1
 ```
 It's idempotent (rsync + rebuild + relaunch). For Dart-only changes, hot-reload
 (`r`) in the running `flutter run` session instead of restarting the whole
