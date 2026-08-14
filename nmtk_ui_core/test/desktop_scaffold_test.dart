@@ -149,10 +149,8 @@ void main() {
       expect(settingsTapped, isTrue);
     });
 
-    // 5. Profile initials derived from displayName
-    testWidgets('profile initials are derived from displayName', (
-      tester,
-    ) async {
+    // 5. Profile chip is rendered in the desktop rail.
+    testWidgets('renders the profile chip for a user profile', (tester) async {
       tester.view.physicalSize = const Size(1280, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -160,17 +158,19 @@ void main() {
 
       await tester.pumpWidget(
         _buildHarness(
-          const NmtkDesktopScaffold(
-            navItems: _kNavItems,
-            selectedIndex: 0,
-            userProfile: NmtkUserProfile(displayName: 'Yoshi M.'),
-            child: Text('Content'),
+          const MediaQuery(
+            data: MediaQueryData(size: Size(1280, 900)),
+            child: NmtkDesktopScaffold(
+              navItems: _kNavItems,
+              selectedIndex: 0,
+              userProfile: NmtkUserProfile(displayName: 'Yoshi M.'),
+              child: Text('Content'),
+            ),
           ),
         ),
       );
 
-      // "YM" should be the derived initials from "Yoshi M."
-      expect(find.text('YM'), findsOneWidget);
+      expect(find.byType(MenuAnchor), findsOneWidget);
     });
 
     // 6. File action buttons render when file action callbacks provided

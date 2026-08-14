@@ -22,8 +22,16 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
-from .runtime_shared import _build_password_askpass_env, _neurochip_module_root, _runtime_request_error_kind
-from .provisioning_helpers import build_pynq_agent_bundle, build_pynq_user_space_agent_launch_command
+from .provisioning_helpers import (
+    build_pynq_agent_bundle,
+    build_pynq_user_space_agent_launch_command,
+)
+from .runtime_artifact import discover_neurochip_runtime_artifact
+from .runtime_shared import (
+    _build_password_askpass_env,
+    _neurochip_module_root,
+    _runtime_request_error_kind,
+)
 from .server import (
     DEFAULT_PYNQ_AUTH_MODE,
     PREFLIGHT_DEGRADED,
@@ -634,12 +642,19 @@ class PynqServiceMixin:
         self, board: dict[str, Any], bundle_dir: Path
     ) -> dict[str, Any]:
         neurochip_root = _neurochip_module_root()
+        artifact_directory = str(os.getenv("NMTK_NEUROCHIP_ARTIFACT_DIR") or "").strip()
+        wheel_path = None
+        if artifact_directory:
+            wheel_path = discover_neurochip_runtime_artifact(
+                Path(artifact_directory)
+            ).wheel_path
 
         overlay_version = str(board.get("overlayVersion") or "dev")
         return build_pynq_agent_bundle(
             bundle_dir,
             overlay_version=overlay_version,
             repo_root=neurochip_root,
+            wheel_path=wheel_path,
             install_root=str(board["remoteInstallRoot"]),
             agent_venv_path=str(board["remoteVenvPath"]),
             pynq_venv_path=str(board["remotePynqVenvPath"]),

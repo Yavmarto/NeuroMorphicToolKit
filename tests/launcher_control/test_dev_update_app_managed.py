@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -196,6 +197,138 @@ def test_dev_update_ignores_generated_backend_logs() -> None:
     )
 
     assert "nothing — not a backend runtime path" in result.stdout
+
+
+def test_dev_update_classifies_large_recovery_list_without_subshells() -> None:
+    paths = "\n".join(
+        path
+        for index in range(167)
+        for path in (
+            f"Neurobench/neurobench/app/service_{index}.py",
+            f"Neurochip/neurochip/runtime_{index}.py",
+        )
+    )
+    result = subprocess.run(
+        [
+            "bash",
+            "-c",
+            r'''
+dev_update="$1"
+paths="$2"
+shift 2
+set --
+source "$dev_update"
+collect_actions "$paths"
+printf 'rebuild=%s\n' "${COLLECTED_REBUILD[*]}"
+''',
+            "_",
+            str(DEV_UPDATE),
+            paths,
+        ],
+        cwd=ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+        timeout=5,
+    )
+
+    rebuilds = result.stdout.removeprefix("rebuild=").split()
+    assert rebuilds.count("suite_api") == 167
+    assert rebuilds.count("launcher-control") == 167
+
+
+def test_dev_update_rejects_a_second_local_run(tmp_path: Path) -> None:
+    lock_dir = tmp_path / "dev-update.lock"
+    env = {**os.environ, "NMTK_DEV_UPDATE_LOCK_DIR": str(lock_dir)}
+    holder = subprocess.Popen(
+        [
+            "bash",
+            "-c",
+            r'''
+dev_update="$1"
+shift
+set --
+source "$dev_update"
+acquire_update_lock
+sleep 30
+''',
+            "_",
+            str(DEV_UPDATE),
+        ],
+        cwd=ROOT,
+        env=env,
+        text=True,
+    )
+    try:
+        for _ in range(50):
+            if (lock_dir / "pid").is_file():
+                break
+            time.sleep(0.02)
+        else:
+            pytest.fail("lock holder did not create its PID file")
+
+        contender = subprocess.run(
+            [
+                "bash",
+                "-c",
+                r'''
+dev_update="$1"
+shift
+set --
+source "$dev_update"
+acquire_update_lock
+''',
+                "_",
+                str(DEV_UPDATE),
+            ],
+            cwd=ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert contender.returncode != 0
+        assert "another dev-update is already running" in contender.stderr
+    finally:
+        holder.terminate()
+        holder.wait(timeout=5)
+
+
+def test_dev_update_times_out_while_writing_recovery_state(tmp_path: Path) -> None:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    _write_executable(
+        fake_bin / "ssh",
+        "#!/usr/bin/env bash\nsleep 30\n",
+    )
+    result = subprocess.run(
+        [
+            "bash",
+            "-c",
+            r'''
+dev_update="$1"
+shift
+set --
+source "$dev_update"
+write_pending_paths "Neurochip/neurochip/runtime.py"
+''',
+            "_",
+            str(DEV_UPDATE),
+        ],
+        cwd=ROOT,
+        env={
+            **os.environ,
+            "PATH": f"{fake_bin}:{os.environ['PATH']}",
+            "NMTK_PENDING_WRITE_TIMEOUT_SECONDS": "1",
+        },
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=5,
+    )
+
+    assert result.returncode != 0
+    assert "timed out after 1 seconds while recording dev-update recovery state" in result.stderr
 
 
 def test_app_managed_handoff_reloads_and_recreates_only_selected_service(

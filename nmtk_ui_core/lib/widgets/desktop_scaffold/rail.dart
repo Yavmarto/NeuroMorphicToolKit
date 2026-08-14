@@ -115,6 +115,7 @@ class _NmtkRailColumn extends StatelessWidget {
               tooltip: 'Settings',
               onPressed: onSettingsPressed!,
             ),
+          if (userProfile != null) _RailProfileChip(profile: userProfile!),
           const SizedBox(height: 8),
         ],
       ),

@@ -19,9 +19,7 @@
     ],
     "startStrategy": "none",
     "uvicornTarget": "",
-    "localDeps": [
-      "Neuro-Dream-Hand/"
-    ],
+    "localDeps": [],
     "showInLauncherNav": true,
     "hasFrontend": true,
     "frontendStatus": "Yes",

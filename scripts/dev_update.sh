@@ -64,6 +64,15 @@ AKIDA_DETECTED_VIA=""
 NEUROCHIP_PORT=8002
 APP_MANAGED_STACK=false
 APP_UPDATE_TMP_DIR=""
+UPDATE_LOCK_DIR="${NMTK_DEV_UPDATE_LOCK_DIR:-${TMPDIR:-/tmp}/nmtk-dev-update.lock}"
+UPDATE_LOCK_HELD=false
+PENDING_WRITE_TIMEOUT_SECONDS="${NMTK_PENDING_WRITE_TIMEOUT_SECONDS:-10}"
+PATH_ACTIONS=()
+COLLECTED_REBUILD=()
+COLLECTED_RESTART=()
+COLLECTED_RELOAD=false
+COLLECTED_RECREATE=false
+COLLECTED_ASSETSYNC=false
 
 PYTHON3="$(find_python3)" || { echo "error: no python3 found" >&2; exit 1; }
 
@@ -120,7 +129,42 @@ cleanup_app_update_tmp() {
   esac
   APP_UPDATE_TMP_DIR=""
 }
-trap cleanup_app_update_tmp EXIT
+
+release_update_lock() {
+  $UPDATE_LOCK_HELD || return 0
+  rm -f -- "$UPDATE_LOCK_DIR/pid"
+  rmdir -- "$UPDATE_LOCK_DIR" 2>/dev/null || true
+  UPDATE_LOCK_HELD=false
+}
+
+cleanup() {
+  cleanup_app_update_tmp
+  release_update_lock
+}
+trap cleanup EXIT
+
+acquire_update_lock() {
+  if mkdir "$UPDATE_LOCK_DIR" 2>/dev/null; then
+    printf '%s\n' "$$" > "$UPDATE_LOCK_DIR/pid"
+    UPDATE_LOCK_HELD=true
+    return 0
+  fi
+
+  local holder=""
+  [ -f "$UPDATE_LOCK_DIR/pid" ] && holder="$(tr -d '[:space:]' < "$UPDATE_LOCK_DIR/pid")"
+  if [ -n "$holder" ] && kill -0 "$holder" 2>/dev/null; then
+    die "another dev-update is already running (PID $holder). Wait for it to finish or stop that process before retrying."
+  fi
+
+  # A previous crash can leave an empty lock directory. Only reclaim the exact,
+  # expected lock layout; otherwise leave it intact for the operator to inspect.
+  rm -f -- "$UPDATE_LOCK_DIR/pid"
+  if ! rmdir -- "$UPDATE_LOCK_DIR" 2>/dev/null || ! mkdir "$UPDATE_LOCK_DIR" 2>/dev/null; then
+    die "dev-update lock is stale at $UPDATE_LOCK_DIR. Remove that empty directory, then retry."
+  fi
+  printf '%s\n' "$$" > "$UPDATE_LOCK_DIR/pid"
+  UPDATE_LOCK_HELD=true
+}
 
 # Backend Setup deliberately runs the released stack as the isolated
 # nmtk-deploy account. Its rootless Podman containers are invisible to Docker
@@ -147,9 +191,44 @@ write_pending_paths() {
   local paths="$1"
   $DRY_RUN && return 0
   # Paths come from git/rsync, one per line. Keep them as data rather than
-  # interpolating them into a remote command.
-  printf '%s\n' "$paths" | ssh $SSH_OPTS "$REMOTE_HOST" \
-    "cd $DEPLOY_DIR && umask 077 && tee .dev-update-pending >/dev/null"
+  # interpolating them into a remote command. macOS has no portable `timeout`,
+  # so let Python supervise the otherwise silent SSH pipe.
+  if ! printf '%s\n' "$paths" | NMTK_DEPLOY_DIR="$DEPLOY_DIR" \
+    NMTK_REMOTE_HOST="$REMOTE_HOST" NMTK_SSH_OPTS="$SSH_OPTS" \
+    NMTK_PENDING_WRITE_TIMEOUT_SECONDS="$PENDING_WRITE_TIMEOUT_SECONDS" "$PYTHON3" -c '
+import os
+import shlex
+import signal
+import subprocess
+import sys
+
+command = "cd {} && umask 077 && tee .dev-update-pending >/dev/null".format(
+    os.environ["NMTK_DEPLOY_DIR"]
+)
+try:
+    process = subprocess.Popen(
+        ["ssh", *shlex.split(os.environ["NMTK_SSH_OPTS"]), os.environ["NMTK_REMOTE_HOST"], command],
+        stdin=sys.stdin,
+        start_new_session=True,
+    )
+    return_code = process.wait(timeout=int(os.environ["NMTK_PENDING_WRITE_TIMEOUT_SECONDS"]))
+    if return_code:
+        raise subprocess.CalledProcessError(return_code, process.args)
+except subprocess.TimeoutExpired:
+    os.killpg(process.pid, signal.SIGTERM)
+    process.wait()
+    print(
+        "error: timed out after {} seconds while recording dev-update recovery state".format(
+            os.environ["NMTK_PENDING_WRITE_TIMEOUT_SECONDS"]
+        ),
+        file=sys.stderr,
+    )
+    raise SystemExit(124)
+except subprocess.CalledProcessError as error:
+    raise SystemExit(error.returncode)
+'; then
+    die "could not record dev-update recovery state on $REMOTE_HOST. No image build was started; retry once SSH is responsive."
+  fi
 }
 
 clear_pending_paths() {
@@ -449,41 +528,42 @@ check_port_conflicts() {
 # ---------------------------------------------------------------------------
 classify_path() {
   local path="$1"
+  PATH_ACTIONS=()
 
   case "$path" in
     # Dockerfiles first: a Dockerfile change always outranks a source change.
-    suite_api/Dockerfile)                    echo "REBUILD:suite_api"; return ;;
-    Dockerfile.control)                      echo "REBUILD:launcher-control"; return ;;
-    Dockerfile.lava)                         echo "REBUILD:lava-backend"; return ;;
-    workers/neurosense_hw/Dockerfile)        echo "REBUILD:neurosense-hw-worker"; return ;;
-    workers/neurobench_runner/Dockerfile)    echo "REBUILD:neurobench-runner-worker"; return ;;
-    workers/neurochip_hw/Dockerfile)         echo "REBUILD:neurochip-hw-worker"; return ;;
-    workers/neurocnl_physics/Dockerfile)     echo "REBUILD:neurocnl-physics-worker"; return ;;
-    workers/snn_mlir_compiler/Dockerfile)    echo "REBUILD:snn-mlir-compiler"; return ;;
-    workers/jupyter_server/Dockerfile)       echo "REBUILD:jupyter-server"; return ;;
+    suite_api/Dockerfile)                    PATH_ACTIONS+=("REBUILD:suite_api") ;;
+    Dockerfile.control)                      PATH_ACTIONS+=("REBUILD:launcher-control") ;;
+    Dockerfile.lava)                         PATH_ACTIONS+=("REBUILD:lava-backend") ;;
+    workers/neurosense_hw/Dockerfile)        PATH_ACTIONS+=("REBUILD:neurosense-hw-worker") ;;
+    workers/neurobench_runner/Dockerfile)    PATH_ACTIONS+=("REBUILD:neurobench-runner-worker") ;;
+    workers/neurochip_hw/Dockerfile)         PATH_ACTIONS+=("REBUILD:neurochip-hw-worker") ;;
+    workers/neurocnl_physics/Dockerfile)     PATH_ACTIONS+=("REBUILD:neurocnl-physics-worker") ;;
+    workers/snn_mlir_compiler/Dockerfile)    PATH_ACTIONS+=("REBUILD:snn-mlir-compiler") ;;
+    workers/jupyter_server/Dockerfile)       PATH_ACTIONS+=("REBUILD:jupyter-server") ;;
     # This file is both runtime code and the release-artifact manifest writer
     # copied into Dockerfile.control's builder stage.
-    nmtk/launcher_control/runtime_artifact.py) echo "REBUILD:launcher-control"; return ;;
+    nmtk/launcher_control/runtime_artifact.py) PATH_ACTIONS+=("REBUILD:launcher-control") ;;
 
     # Only these three are loaded by the dev stack, so only these justify a
     # recreate. prod/remote are bundled into the Flutter app by hash, so they
     # need the asset re-sync — but no dev container ever reads them.
     docker-compose.yml|docker-compose.dev.yml|docker-compose.akida-native.yml) \
-                                             echo "RECREATE:all"; return ;;
+                                             PATH_ACTIONS+=("RECREATE:all") ;;
     docker-compose.prod.yml|docker-compose.remote.yml) \
-                                             echo "ASSETSYNC:-"; return ;;
+                                             PATH_ACTIONS+=("ASSETSYNC:-") ;;
 
     # Generated runtime logs are not backend source and are rsync-excluded.
-    */logs/*)                                echo "NOOP:$path"; return ;;
+    */logs/*)                                PATH_ACTIONS+=("NOOP:$path") ;;
 
     # Live via the suite_api bind mount — no container work at all.
-    suite_api/*|neurocnl/backend/*)          echo "RELOAD:suite_api"; return ;;
+    suite_api/*|neurocnl/backend/*)          PATH_ACTIONS+=("RELOAD:suite_api") ;;
 
     # Module frontends are Flutter packages compiled into the launcher app, not
     # backend code. Listed before the module-wide rebuild rules below so a Dart
     # edit can never trigger an image rebuild. (They are rsync-excluded too;
     # this is belt and braces.)
-    */frontend/*)                            echo "NOOP:$path"; return ;;
+    */frontend/*)                            PATH_ACTIONS+=("NOOP:$path") ;;
 
     # pip-installed into the image; rsync moves the source but Python won't see it.
     # Two images install it from source, not one: suite_api/Dockerfile:34 AND
@@ -494,28 +574,51 @@ classify_path() {
     # missing this rebuild leaves the exact symbol the cell needs stale on the
     # host while suite_api looks perfectly up to date.
     neurocnl/neurocnl/*|neurocnl/pyproject.toml) \
-      echo "REBUILD:suite_api"; echo "REBUILD:jupyter-server"; return ;;
+      PATH_ACTIONS+=("REBUILD:suite_api" "REBUILD:jupyter-server") ;;
     # launcher-control now builds and carries the release-matched Neurochip
     # wheel used to update the selected native Akida host.
-    Neurochip/*)                             echo "REBUILD:launcher-control"; return ;;
-    Neurohub/*|Neurosense/*)                 echo "REBUILD:suite_api"; return ;;
-    Neurobench/neurobench/*)                 echo "REBUILD:suite_api"; return ;;
+    Neurochip/*)                             PATH_ACTIONS+=("REBUILD:launcher-control") ;;
+    Neurohub/*|Neurosense/*)                 PATH_ACTIONS+=("REBUILD:suite_api") ;;
+    Neurobench/neurobench/*)                 PATH_ACTIONS+=("REBUILD:suite_api") ;;
 
     # Bind-mounted into launcher-control; needs a restart to be picked up.
     nmtk/launcher_control/*|scripts/launcher_control_service.py) \
-                                             echo "RESTART:launcher-control"; return ;;
-    nmtk/neuro_toolkit/assets/*)             echo "RESTART:launcher-control"; return ;;
+                                             PATH_ACTIONS+=("RESTART:launcher-control") ;;
+    nmtk/neuro_toolkit/assets/*)             PATH_ACTIONS+=("RESTART:launcher-control") ;;
 
     # Per-worker source.
-    workers/neurosense_hw/*)                 echo "REBUILD:neurosense-hw-worker"; return ;;
-    workers/neurobench_runner/*)             echo "REBUILD:neurobench-runner-worker"; return ;;
-    workers/neurochip_hw/*)                  echo "REBUILD:neurochip-hw-worker"; return ;;
-    workers/neurocnl_physics/*)              echo "REBUILD:neurocnl-physics-worker"; return ;;
-    workers/snn_mlir_compiler/*)             echo "REBUILD:snn-mlir-compiler"; return ;;
-    workers/jupyter_server/*)                echo "REBUILD:jupyter-server"; return ;;
+    workers/neurosense_hw/*)                 PATH_ACTIONS+=("REBUILD:neurosense-hw-worker") ;;
+    workers/neurobench_runner/*)             PATH_ACTIONS+=("REBUILD:neurobench-runner-worker") ;;
+    workers/neurochip_hw/*)                  PATH_ACTIONS+=("REBUILD:neurochip-hw-worker") ;;
+    workers/neurocnl_physics/*)              PATH_ACTIONS+=("REBUILD:neurocnl-physics-worker") ;;
+    workers/snn_mlir_compiler/*)             PATH_ACTIONS+=("REBUILD:snn-mlir-compiler") ;;
+    workers/jupyter_server/*)                PATH_ACTIONS+=("REBUILD:jupyter-server") ;;
 
-    *)                                       echo "NOOP:$path"; return ;;
+    *)                                       PATH_ACTIONS+=("NOOP:$path") ;;
   esac
+}
+
+collect_actions() {
+  local changed_paths="$1" path verdict
+  COLLECTED_REBUILD=()
+  COLLECTED_RESTART=()
+  COLLECTED_RELOAD=false
+  COLLECTED_RECREATE=false
+  COLLECTED_ASSETSYNC=false
+
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    classify_path "$path"
+    for verdict in "${PATH_ACTIONS[@]}"; do
+      case "$verdict" in
+        REBUILD:*)   COLLECTED_REBUILD+=("${verdict#REBUILD:}") ;;
+        RESTART:*)   COLLECTED_RESTART+=("${verdict#RESTART:}") ;;
+        RELOAD:*)    COLLECTED_RELOAD=true ;;
+        RECREATE:*)  COLLECTED_RECREATE=true ;;
+        ASSETSYNC:*) COLLECTED_ASSETSYNC=true ;;
+      esac
+    done
+  done <<< "$changed_paths"
 }
 
 # ---------------------------------------------------------------------------
@@ -541,7 +644,8 @@ explain() {
   for path in "$@"; do
     printf '%-52s' "$path"
     local first=true
-    while IFS= read -r verdict; do
+    classify_path "$path"
+    for verdict in "${PATH_ACTIONS[@]}"; do
       $first || printf '%-52s' ""
       first=false
       case "$verdict" in
@@ -552,7 +656,7 @@ explain() {
         ASSETSYNC:*) printf 'also: resync the Flutter asset bundle\n' ;;
         NOOP:*)      printf 'nothing — not a backend runtime path\n' ;;
       esac
-    done < <(classify_path "$path")
+    done
   done
 }
 
@@ -562,6 +666,7 @@ main() {
     return 0
   fi
 
+  acquire_update_lock
   log "Dev host: $REMOTE_HOST:$DEPLOY_DIR"
   $DRY_RUN && log "DRY RUN — nothing will be changed locally or on the host"
 
@@ -666,20 +771,14 @@ main() {
     [ "$file_count" -gt 20 ] && log "      … and $((file_count - 20)) more"
   fi
 
-  # 4. Decide the minimum work.
-  local rebuild=() restart=() reload=false recreate=false assetsync=false path verdict
-  while IFS= read -r path; do
-    [ -n "$path" ] || continue
-    while IFS= read -r verdict; do
-      case "$verdict" in
-        REBUILD:*)   rebuild+=("${verdict#REBUILD:}") ;;
-        RESTART:*)   restart+=("${verdict#RESTART:}") ;;
-        RELOAD:*)    reload=true ;;
-        RECREATE:*)  recreate=true ;;
-        ASSETSYNC:*) assetsync=true ;;
-      esac
-    done < <(classify_path "$path")
-  done <<< "$changed_paths"
+  # 4. Decide the minimum work. Keep this in the parent shell: spawning a
+  # process-substitution shell for every recovered path can spin indefinitely
+  # on macOS before any remote build begins.
+  log "Classifying $(printf '%s\n' "$changed_paths" | awk 'NF {count++} END {print count + 0}') changed file(s)..."
+  collect_actions "$changed_paths"
+  local rebuild=("${COLLECTED_REBUILD[@]+"${COLLECTED_REBUILD[@]}"}")
+  local restart=("${COLLECTED_RESTART[@]+"${COLLECTED_RESTART[@]}"}")
+  local reload=$COLLECTED_RELOAD recreate=$COLLECTED_RECREATE assetsync=$COLLECTED_ASSETSYNC path
 
   for path in "${FORCED_SERVICES[@]+"${FORCED_SERVICES[@]}"}"; do
     rebuild+=("$path")
@@ -701,7 +800,10 @@ main() {
   $reload && has_runtime_work=true
   [ ${#uniq_rebuild[@]} -gt 0 ] && has_runtime_work=true
   [ ${#uniq_restart[@]} -gt 0 ] && has_runtime_work=true
-  $has_runtime_work && write_pending_paths "$changed_paths"
+  if $has_runtime_work; then
+    log "Recording recovery state (${PENDING_WRITE_TIMEOUT_SECONDS}-second timeout)..."
+    write_pending_paths "$changed_paths"
+  fi
 
   # 5. Report the decision and why, then act.
   $assetsync && warn "compose files changed — rerun the asset sync and commit the bundle."

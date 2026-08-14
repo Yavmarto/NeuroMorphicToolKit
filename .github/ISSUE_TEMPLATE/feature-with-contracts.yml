@@ -9,7 +9,6 @@ body:
       label: Module
       options:
         - neurocnl
-        - Neuro-Dream-Hand
         - Neurosense
         - Neurochip
         - Neurobench

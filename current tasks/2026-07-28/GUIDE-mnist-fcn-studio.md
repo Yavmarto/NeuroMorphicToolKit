@@ -11,10 +11,13 @@ Target: snnTorch Tutorial 5 feedforward SNN.
 per neural processor. Everything else is identical; §1 flags the two fields to change. Your accuracy
 will land somewhat below the §7 figure, which was measured at 1000.
 
-**This network cannot reach the PYNQ-Z2 board.** Overlay-v1 caps at 256 neurons across two
-populations with a single weight matrix, and it receives weights from the CNL spec — which carries
-tensor *shape* only, so trained values arrive as zeros. PYNQ hardware bring-up is a separate
-document: [GUIDE-pynq-z2-hardware.md](../2026-08-13/GUIDE-pynq-z2-hardware.md).
+**The `784 → 1000 → 10` network still cannot reach the PYNQ-Z2 board** — its 794,000 weights are
+three times the overlay's on-chip cache. But the **`784 → 256 → 10`** variant recommended just below
+for Akida now fits PYNQ too, since overlay-v2 (2026-08-14) raised the ceiling to 1024 neurons per
+layer, 4 layers and 262,144 synapses. The PYNQ canvas needs one shape change and a **NIR Exporter**
+node; both are spelled out field-by-field in
+[GUIDE-pynq-z2-hardware.md](../2026-08-13/GUIDE-pynq-z2-hardware.md) §4b. Read its §9 first —
+deploying to a physical board is currently blocked pending a bitstream build.
 
 Every label below is the exact text in the Studio UI. Fields not listed are left at their defaults.
 Expected result: **~92.5% test accuracy** (measured — see §7).
@@ -515,8 +518,13 @@ self-contained** demo: it trains its own CNN in a prebuilt notebook and ships ON
 quantize. Both paths now end at the same panel and the same card, but it teaches you nothing about
 the canvases.
 
-Separately: the 794,000-weight FCN above does not fit the fixed PYNQ/SC-NeuroCore overlay
-(256 neurons, two populations, 15,360 synapses).
+Separately, on PYNQ-Z2: the 794,000-weight FCN above does not fit its fixed overlay — 262,144
+synapses is the cache, so 784×1000 is three times over. The `784 → 256 → 10` variant (203,264
+synapses, 1050 neurons) does fit, and the PYNQ path reads trained weights out of the same
+`model.nir` this section's NIR Exporter writes. Its canvas differs in one way — every Linear has to
+sit *between two LIF populations*, so the input port feeds a full-width LIF first. See
+[GUIDE-pynq-z2-hardware.md](../2026-08-13/GUIDE-pynq-z2-hardware.md) §4b for the node table, and §9
+for why on-board deploy is blocked today.
 
 ---
 

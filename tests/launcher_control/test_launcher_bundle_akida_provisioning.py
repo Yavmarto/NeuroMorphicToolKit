@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import nmtk.launcher_control.server as launcher_server
 import nmtk.launcher_control.akida_host_service as akida_host_service
+import nmtk.launcher_control.runtime_artifact as runtime_artifact
 from unittest import mock
 import os
 import subprocess
@@ -78,10 +79,16 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         wheel_path = self.repo_root / "Neurochip" / "dist" / "neurochip-test.whl"
         self._write_test_neurochip_wheel(wheel_path)
 
-        with mock.patch.object(
-            provisioning_helpers,
-            "ensure_agent_wheel",
-            return_value=wheel_path,
+        with (
+            mock.patch.dict(
+                os.environ,
+                {"NMTK_NEUROCHIP_ARTIFACT_DIR": ""},
+            ),
+            mock.patch.object(
+                provisioning_helpers,
+                "ensure_agent_wheel",
+                return_value=wheel_path,
+            ),
         ):
             result = self.state._build_local_pynq_bundle(board, bundle_dir)
 
@@ -90,6 +97,38 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         )
         self.assertEqual(manifest["overlay"]["overlayVersion"], "2026.04")
         self.assertEqual(result["wheelName"], "neurochip-test.whl")
+        self.assertTrue((bundle_dir / "install-pynq-agent.sh").exists())
+
+    def test_build_local_pynq_bundle_uses_bundled_runtime_artifact(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Packaged PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+                "overlayVersion": "2026.04",
+            }
+        )
+        bundle_dir = self.repo_root / "tmp-pynq-bundle"
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+        artifact_dir = self.repo_root / "artifacts" / "neurochip"
+        wheel_path = artifact_dir / "neurochip-packaged.whl"
+        self._write_test_neurochip_wheel(wheel_path)
+        runtime_artifact.write_neurochip_runtime_artifact_manifest(artifact_dir)
+
+        with (
+            mock.patch.dict(
+                os.environ,
+                {"NMTK_NEUROCHIP_ARTIFACT_DIR": str(artifact_dir)},
+            ),
+            mock.patch.object(
+                provisioning_helpers,
+                "ensure_agent_wheel",
+                side_effect=AssertionError("source build must not run"),
+            ),
+        ):
+            result = self.state._build_local_pynq_bundle(board, bundle_dir)
+
+        self.assertEqual(result["wheelName"], "neurochip-packaged.whl")
         self.assertTrue((bundle_dir / "install-pynq-agent.sh").exists())
 
     def test_build_local_pynq_bundle_does_not_depend_on_neurochip_provisioning_tree(
@@ -115,6 +154,10 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
             return original_exists(path)
 
         with (
+            mock.patch.dict(
+                os.environ,
+                {"NMTK_NEUROCHIP_ARTIFACT_DIR": ""},
+            ),
             mock.patch.object(
                 provisioning_helpers,
                 "ensure_agent_wheel",

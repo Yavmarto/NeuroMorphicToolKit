@@ -251,11 +251,69 @@ class PynqRegisterMap {
   }
 }
 
+/// One weight matrix in the overlay's layer chain, as the board runtime sees it.
+///
+/// Overlay-v2 walks these in order, handing each layer's spikes to the next, and
+/// they are the only source of truth for the network's shape on the board: the
+/// engine has no neuron-count registers. [inputSize] on the first layer is
+/// therefore what a run's input has to be sized against, and [outputSize] on the
+/// last is how wide each output frame comes back.
+class PynqLayerDescriptor {
+  final int inputSize;
+  final int outputSize;
+  final int weightOffset;
+  final int threshold;
+  final int leakShift;
+  final int refractory;
+  final String source;
+  final String target;
+
+  const PynqLayerDescriptor({
+    required this.inputSize,
+    required this.outputSize,
+    this.weightOffset = 0,
+    this.threshold = 0,
+    this.leakShift = 0,
+    this.refractory = 0,
+    this.source = '',
+    this.target = '',
+  });
+
+  factory PynqLayerDescriptor.fromJson(Map<String, dynamic> json) {
+    int intOr(String key, int fallback) =>
+        (json[key] as num?)?.toInt() ?? fallback;
+    return PynqLayerDescriptor(
+      inputSize: intOr('input_size', 0),
+      outputSize: intOr('output_size', 0),
+      weightOffset: intOr('weight_offset', 0),
+      threshold: intOr('threshold', 0),
+      leakShift: intOr('leak_shift', 0),
+      refractory: intOr('refractory', 0),
+      source: json['source'] as String? ?? '',
+      target: json['target'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'input_size': inputSize,
+      'output_size': outputSize,
+      'weight_offset': weightOffset,
+      'threshold': threshold,
+      'leak_shift': leakShift,
+      'refractory': refractory,
+      if (source.isNotEmpty) 'source': source,
+      if (target.isNotEmpty) 'target': target,
+    };
+  }
+}
+
 /// Validated deploy payload returned by NeuroCNL for Neurochip's PYNQ router.
 class PynqDeployPayload {
   static const Set<String> _knownJsonKeys = <String>{
     'weights',
     'config',
+    'layers',
     'bitstream_path',
     'overlay_id',
     'overlay_version',
@@ -270,6 +328,10 @@ class PynqDeployPayload {
 
   final List<double> weights;
   final PynqDeployConfig config;
+
+  /// The overlay's layer chain, in execution order. Empty only for a payload
+  /// built before the v2 handoff emitted them, which cannot run on the board.
+  final List<PynqLayerDescriptor> layers;
   final String bitstreamPath;
   final String? overlayId;
   final String? overlayVersion;
@@ -285,6 +347,7 @@ class PynqDeployPayload {
   const PynqDeployPayload({
     required this.weights,
     required this.config,
+    this.layers = const <PynqLayerDescriptor>[],
     required this.bitstreamPath,
     this.overlayId,
     this.overlayVersion,
@@ -310,6 +373,10 @@ class PynqDeployPayload {
       config: PynqDeployConfig.fromJson(
         json['config'] as Map<String, dynamic>? ?? const <String, dynamic>{},
       ),
+      layers: (json['layers'] as List? ?? const <Object>[])
+          .whereType<Map<String, dynamic>>()
+          .map(PynqLayerDescriptor.fromJson)
+          .toList(growable: false),
       bitstreamPath: json['bitstream_path'] as String? ?? 'snn_overlay.bit',
       overlayId: json['overlay_id'] as String?,
       overlayVersion: json['overlay_version'] as String?,
@@ -335,6 +402,14 @@ class PynqDeployPayload {
       'bitstream_path': bitstreamPath,
       'register_map': registerMap.toJson(),
     };
+    // Omitted rather than sent empty: the board runtime derives every size from
+    // this list, and an empty one has to fail as "no layers" instead of being
+    // read as a deliberate zero-layer network.
+    if (layers.isNotEmpty) {
+      payload['layers'] = layers
+          .map((layer) => layer.toJson())
+          .toList(growable: false);
+    }
     if (overlayId != null) payload['overlay_id'] = overlayId;
     if (overlayVersion != null) payload['overlay_version'] = overlayVersion;
     if (weightBitWidth != null) payload['weight_bit_width'] = weightBitWidth;
@@ -527,8 +602,13 @@ enum PynqBoardState {
 
   String get label {
     switch (this) {
+      // The stored state a board is created with, before anything has contacted
+      // it. "Unpaired" was the wrong word for it: a record only exists because
+      // the user paired the board, so the label contradicted the screen it was
+      // shown on. Nothing that has no board at all reaches this label — both
+      // the Setup dot and the PYNQ setup pane branch on a null board first.
       case PynqBoardState.unpaired:
-        return 'Unpaired';
+        return 'Not checked yet';
       case PynqBoardState.reachable:
         return 'Reachable';
       case PynqBoardState.provisioning:

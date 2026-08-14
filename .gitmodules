@@ -1,9 +1,7 @@
 [submodule "neurocnl"]
 	path = neurocnl
 	url = ../neurocnl.git
-[submodule "Neuro-Dream-Hand"]
-	path = Neuro-Dream-Hand
-	url = ../Neuro-Dream-Hand.git
+
 [submodule "Neurobench"]
 	path = Neurobench
 	url = ../Neurobench.git
