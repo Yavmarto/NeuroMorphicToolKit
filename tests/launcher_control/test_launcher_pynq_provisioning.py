@@ -282,45 +282,53 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         manifest.write_text(
             json.dumps(
                 {
-                    "overlay_id": "snn_overlay_v1",
-                    "overlay_version": "1.0.1",
+                    "overlay_id": "snn_overlay_v2",
+                    "overlay_version": "2.0.0",
                     "target_part": "xc7z020clg400-1",
                     "supported_neuron_models": ["LIF"],
                     "supported_weight_bit_widths": [8],
-                    "max_neurons": 256,
-                    "max_synapses": 15360,
-                    "max_populations": 2,
+                    "max_neurons": 4096,
+                    "max_neurons_per_layer": 1024,
+                    "max_synapses": 262144,
+                    "max_populations": 4,
+                    "max_layers": 4,
                     "dma_ip_name": "axi_dma_0",
                     "snn_ip_name": "snn_engine_0",
                     "register_map": {
+                        "resolved_from_hwh": True,
                         "base_address": 1073741824,
                         "control_reg_offset": 0,
-                        "status_reg_offset": 4,
-                        "population_count_offset": 8,
-                        "input_neuron_count_offset": 12,
-                        "output_neuron_count_offset": 16,
-                        "timestep_count_offset": 20,
-                        "threshold_base_offset": 256,
-                        "neuron_base_offset": 256,
-                        "weight_base_offset": 4096,
+                        "global_interrupt_enable_offset": 4,
+                        "interrupt_enable_offset": 8,
+                        "interrupt_status_offset": 12,
+                        "weights_ptr_offset": 16,
+                        "layer_config_ptr_offset": 28,
+                        "layer_count_offset": 40,
+                        "weight_count_offset": 48,
+                        "timestep_count_offset": 56,
                         "dma_channel": "axi_dma_0",
-                        "input_buffer_addr": 0,
-                        "output_buffer_addr": 0,
                         "timestep_us": 1000,
                     },
                     "weight_layout": {
-                        "format": "int8_dense_row_major_word_mmio",
-                        "storage": "mmio",
-                        "base_offset": 4096,
-                        "stride_bytes": 4,
-                        "max_entries": 15360,
+                        "format": "int8_dense_row_major_ddr",
+                        "storage": "dma_ddr",
+                        "element_bytes": 1,
+                        "max_entries": 262144,
+                        "matrix_order": "post_by_pre",
                     },
-                    "threshold_layout": {
-                        "format": "float32_per_population",
-                        "storage": "mmio",
-                        "base_offset": 256,
-                        "stride_bytes": 4,
-                        "max_entries": 2,
+                    "layer_config_layout": {
+                        "format": "uint32_words",
+                        "storage": "dma_ddr",
+                        "words_per_layer": 8,
+                        "max_layers": 4,
+                        "fields": {
+                            "input_size": 0,
+                            "output_size": 1,
+                            "weight_offset": 2,
+                            "threshold": 3,
+                            "leak_shift": 4,
+                            "refractory": 5,
+                        },
                     },
                 },
                 indent=2,
@@ -595,7 +603,7 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         _stage_overlay_package(staging_dir)
         manifest_path = staging_dir / "overlay_manifest.json"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        manifest["weight_layout"]["stride_bytes"] = 8
+        manifest["weight_layout"]["storage"] = "mmio"
         manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
         status = self.state._inspect_local_pynq_overlay_package()
@@ -603,6 +611,32 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         self.assertFalse(status["ready"])
         self.assertFalse(status["manifestValid"])
         self.assertIn(
-            "weight_layout.stride_bytes must match overlay-v1 word-MMIO stride",
+            "never connected to the engine",
             "\n".join(status["issues"]),
         )
+
+    def test_overlay_v1_is_refused_with_a_reason_a_user_can_act_on(self) -> None:
+        """v1 could not compute, so a board still carrying it must not be used.
+
+        Its weight port was never connected to anything in the block design, so
+        every weight the engine read was zero and the board returned silence
+        that the app displayed as a successful hardware run.
+        """
+        staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        _stage_overlay_package(staging_dir)
+        manifest_path = staging_dir / "overlay_manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["overlay_id"] = "snn_overlay_v1"
+        manifest["overlay_version"] = "1.0.1"
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+        status = self.state._inspect_local_pynq_overlay_package()
+
+        self.assertFalse(status["ready"])
+        self.assertFalse(status["manifestValid"])
+        issues = "\n".join(status["issues"])
+        self.assertIn("always returns empty output", issues)
+        self.assertIn("Install the overlay again", issues)
+        # No terminal instructions: the app owns overlay installation.
+        self.assertNotIn("ssh", issues.lower())
+        self.assertNotIn("vivado", issues.lower())

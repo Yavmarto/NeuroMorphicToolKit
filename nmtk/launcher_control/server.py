@@ -218,31 +218,47 @@ IMPORT_PROBE_SCRIPT = textwrap.dedent(
     """
 ).strip()
 
+#: The overlay the backend ships and the board is expected to run.
+#:
+#: Overlay-v1 is deliberately *not* accepted. It could not compute: its weight
+#: port was never connected to anything in the block design, so every weight
+#: the engine read was zero and the board returned silence that the app
+#: displayed as a successful hardware run. A board still carrying v1 is told to
+#: reinstall rather than allowed to produce meaningless results.
 EXPECTED_PYNQ_OVERLAY_MANIFEST: dict[str, Any] = {
-    "overlay_id": "snn_overlay_v1",
-    "overlay_version": "1.0.1",
+    "overlay_id": "snn_overlay_v2",
+    "overlay_version": "2.0.0",
     "target_part": "xc7z020clg400-1",
     "supported_neuron_models": ("LIF",),
     "supported_weight_bit_widths": (8,),
-    "max_neurons": 256,
-    "max_synapses": 15360,
-    "max_populations": 2,
+    "max_neurons": 4096,
+    "max_neurons_per_layer": 1024,
+    "max_synapses": 262144,
+    "max_populations": 4,
+    "max_layers": 4,
     "dma_ip_name": "axi_dma_0",
     "snn_ip_name": "snn_engine_0",
     "register_map": {
-        "weight_base_offset": 0x1000,
         "dma_channel": "axi_dma_0",
     },
     "weight_layout": {
-        "base_offset": 0x1000,
-        "stride_bytes": 4,
-        "max_entries": 15360,
+        "storage": "dma_ddr",
+        "max_entries": 262144,
     },
-    "threshold_layout": {
-        "base_offset": 0x100,
-        "stride_bytes": 4,
-        "max_entries": 2,
+    "layer_config_layout": {
+        "words_per_layer": 8,
+        "max_layers": 4,
     },
+}
+
+#: Overlay ids this launcher knows about but refuses, with the reason a user
+#: should see. Keyed by overlay_id.
+KNOWN_UNUSABLE_PYNQ_OVERLAYS: dict[str, str] = {
+    "snn_overlay_v1": (
+        "This board has overlay v1 installed, which cannot run a network: its "
+        "weight memory was never wired to the compute engine, so it always "
+        "returns empty output. Install the overlay again to replace it with v2."
+    ),
 }
 
 
@@ -262,13 +278,20 @@ def _validate_pynq_overlay_manifest(payload: Any) -> None:
         raise ValueError("manifest must be a JSON object")
 
     expected = EXPECTED_PYNQ_OVERLAY_MANIFEST
+
+    overlay_id = payload.get("overlay_id")
+    if isinstance(overlay_id, str) and overlay_id in KNOWN_UNUSABLE_PYNQ_OVERLAYS:
+        raise ValueError(KNOWN_UNUSABLE_PYNQ_OVERLAYS[overlay_id])
+
     for key in (
         "overlay_id",
         "overlay_version",
         "target_part",
         "max_neurons",
+        "max_neurons_per_layer",
         "max_synapses",
         "max_populations",
+        "max_layers",
         "dma_ip_name",
         "snn_ip_name",
     ):
@@ -277,65 +300,40 @@ def _validate_pynq_overlay_manifest(payload: Any) -> None:
 
     supported_models = tuple(payload.get("supported_neuron_models") or ())
     if supported_models != expected["supported_neuron_models"]:
-        raise ValueError(
-            "supported_neuron_models must match the fixed overlay-v1 contract"
-        )
+        raise ValueError("supported_neuron_models must match the overlay contract")
 
     supported_weight_bit_widths = tuple(
         payload.get("supported_weight_bit_widths") or ()
     )
     if supported_weight_bit_widths != expected["supported_weight_bit_widths"]:
-        raise ValueError(
-            "supported_weight_bit_widths must match the fixed overlay-v1 contract"
-        )
+        raise ValueError("supported_weight_bit_widths must match the overlay contract")
 
     register_map = payload.get("register_map")
     if not isinstance(register_map, dict):
         raise ValueError("register_map must be an object")
     if register_map.get("dma_channel") != payload.get("dma_ip_name"):
         raise ValueError("register_map.dma_channel must match dma_ip_name")
-    if (
-        int(register_map.get("weight_base_offset", -1))
-        != expected["register_map"]["weight_base_offset"]
-    ):
-        raise ValueError(
-            "register_map.weight_base_offset must match the fixed overlay-v1 contract"
-        )
 
     weight_layout = payload.get("weight_layout")
     if not isinstance(weight_layout, dict):
         raise ValueError("weight_layout must be an object")
-    if int(weight_layout.get("base_offset", -1)) != int(
-        register_map.get("weight_base_offset", -1)
-    ):
+    if weight_layout.get("storage") != expected["weight_layout"]["storage"]:
         raise ValueError(
-            "weight_layout.base_offset must match register_map.weight_base_offset"
-        )
-    if (
-        int(weight_layout.get("stride_bytes", -1))
-        != expected["weight_layout"]["stride_bytes"]
-    ):
-        raise ValueError(
-            "weight_layout.stride_bytes must match overlay-v1 word-MMIO stride"
+            "weight_layout.storage must be 'dma_ddr'; the overlay-v1 MMIO weight "
+            "window was never connected to the engine"
         )
     if (
         int(weight_layout.get("max_entries", -1))
         != expected["weight_layout"]["max_entries"]
     ):
         raise ValueError("weight_layout.max_entries must match max_synapses")
-    if (
-        int(weight_layout["base_offset"])
-        + int(weight_layout["stride_bytes"]) * int(weight_layout["max_entries"])
-        > 0x10000
-    ):
-        raise ValueError("weight_layout exceeds the SNN IP MMIO window")
 
-    threshold_layout = payload.get("threshold_layout")
-    if not isinstance(threshold_layout, dict):
-        raise ValueError("threshold_layout must be an object")
-    for key, expected_value in expected["threshold_layout"].items():
-        if int(threshold_layout.get(key, -1)) != expected_value:
-            raise ValueError(f"threshold_layout.{key} must be {expected_value}")
+    layer_config_layout = payload.get("layer_config_layout")
+    if not isinstance(layer_config_layout, dict):
+        raise ValueError("layer_config_layout must be an object")
+    for key, expected_value in expected["layer_config_layout"].items():
+        if int(layer_config_layout.get(key, -1)) != expected_value:
+            raise ValueError(f"layer_config_layout.{key} must be {expected_value}")
 
 
 def _inspect_staged_pynq_overlay_package(staging_dir: Path) -> dict[str, Any]:
