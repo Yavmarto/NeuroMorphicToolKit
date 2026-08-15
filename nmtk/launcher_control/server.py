@@ -485,12 +485,9 @@ def _effective_runtime_api_url(
 
 
 def _pynq_user_space_upgrade_message(username: str) -> str:
-    contract = _load_neurochip_launcher_runtime_contract().pynq
-    normalized_username = username.strip() or contract.default_username
     return (
-        "Runtime is installed in user space. "
-        f"Enable passwordless sudo for '{normalized_username}', then re-run Provision "
-        "Runtime to upgrade the board to systemd auto-start and launcher-managed restarts."
+        "Runtime is running in user space. Install the overlay now; after a board "
+        "reboot, choose Restart runtime here before deploying again."
     )
 
 

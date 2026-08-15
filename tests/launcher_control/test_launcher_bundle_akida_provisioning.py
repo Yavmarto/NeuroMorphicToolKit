@@ -95,9 +95,25 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         manifest = json.loads(
             (bundle_dir / "bundle-manifest.json").read_text(encoding="utf-8")
         )
+        install_script = (bundle_dir / "install-pynq-agent.sh").read_text(
+            encoding="utf-8"
+        )
         self.assertEqual(manifest["overlay"]["overlayVersion"], "2026.04")
         self.assertEqual(result["wheelName"], "neurochip-test.whl")
         self.assertTrue((bundle_dir / "install-pynq-agent.sh").exists())
+        self.assertIn(
+            '"$AGENT_VENV_PATH/bin/pip" install --force-reinstall '
+            '"$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            install_script,
+        )
+        self.assertNotIn(
+            '"$AGENT_VENV_PATH/bin/pip" install --force-reinstall --no-deps '
+            '"$BUNDLE_DIR/wheels/$WHEEL_NAME"',
+            install_script,
+        )
+        self.assertIn("started_at = time.monotonic()", install_script)
+        self.assertIn("deadline = started_at + 120.0", install_script)
+        self.assertIn("Still waiting for runtime health", install_script)
 
     def test_build_local_pynq_bundle_uses_bundled_runtime_artifact(self) -> None:
         board = self.state.create_pynq_board(

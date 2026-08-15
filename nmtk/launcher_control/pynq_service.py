@@ -518,17 +518,17 @@ class PynqServiceMixin:
         runtime_mode = str(preflight.get("runtime_mode") or "").strip()
         overlay_assets = preflight.get("overlay_assets")
         board_state = fallback_error_state
-        if status == PREFLIGHT_OK:
+        overlay_missing = isinstance(overlay_assets, dict) and not overlay_assets.get(
+            "ready_for_hardware", False
+        )
+        if overlay_missing:
+            board_state = "overlay_missing"
+        elif status == PREFLIGHT_OK:
             board_state = "ready"
         elif status == PREFLIGHT_DEGRADED:
             board_state = "degraded_optional_capability"
         elif status == PREFLIGHT_FAILED:
-            if isinstance(overlay_assets, dict) and not overlay_assets.get(
-                "ready_for_hardware", False
-            ):
-                board_state = "overlay_missing"
-            else:
-                board_state = "preflight_failed"
+            board_state = "preflight_failed"
         return self._update_pynq_board_fields(
             board_id,
             state=board_state,
@@ -755,23 +755,25 @@ class PynqServiceMixin:
                     board,
                     "runtime installed successfully; overlay assets are still missing, so the board is not hardware-ready yet",
                 )
-            if (
-                board_state == "degraded_optional_capability"
-                and install_mode == "user-space"
-            ):
+            if install_mode == "user-space":
                 guidance = _pynq_user_space_upgrade_message(
                     str(board.get("username") or "")
                 )
+                prior_message = str(
+                    result["board"].get("lastPreflightMessage") or ""
+                ).strip()
                 updated = self._update_pynq_board_fields(
                     board_id,
-                    state="degraded_optional_capability",
-                    lastPreflightStatus=PREFLIGHT_DEGRADED,
-                    lastPreflightMessage=guidance,
+                    lastPreflightMessage=(
+                        f"{prior_message} {guidance}".strip()
+                        if prior_message
+                        else guidance
+                    ),
                 )
                 result["board"] = _serialize_pynq_board(updated)
                 preflight = result.get("preflight")
                 if isinstance(preflight, dict):
-                    preflight["preflight_message"] = guidance
+                    preflight["preflight_message"] = updated["lastPreflightMessage"]
             result["installStatus"] = install_status
             return result
         except Exception as exc:  # noqa: BLE001
@@ -912,19 +914,28 @@ class PynqServiceMixin:
             str(install_status.get("installMode") or "unknown").strip() or "unknown"
         )
         if install_mode == "user-space":
-            message = _pynq_user_space_upgrade_message(str(board.get("username") or ""))
-            updated = self._update_pynq_board_fields(
-                board_id,
-                state="degraded_optional_capability",
-                lastPreflightStatus=PREFLIGHT_DEGRADED,
-                lastPreflightMessage=message,
-            )
-            self._emit_pynq_terminal_log(board, message)
-            return {
-                "board": _serialize_pynq_board(updated),
-                "warning": message,
-                "installStatus": install_status,
-            }
+            self._emit_pynq_terminal_log(board, "restarting user-space runtime")
+            try:
+                self._restart_user_space_agent(board, install_status)
+                result = self._refresh_pynq_board_preflight(
+                    board_id, stage="user-space runtime restart"
+                )
+            except RuntimeError as exc:
+                self._emit_runtime_log_tail(board, install_status)
+                message = f"Could not restart the user-space runtime: {exc}"
+                updated = self._update_pynq_board_fields(
+                    board_id,
+                    state="degraded_optional_capability",
+                    lastPreflightStatus=PREFLIGHT_DEGRADED,
+                    lastPreflightMessage=message,
+                )
+                return {
+                    "board": _serialize_pynq_board(updated),
+                    "warning": message,
+                    "installStatus": install_status,
+                }
+            result["installStatus"] = install_status
+            return result
         self._emit_pynq_terminal_log(
             board, f"restarting systemd service {board['remoteServiceName']}.service"
         )

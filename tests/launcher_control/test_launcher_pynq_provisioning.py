@@ -26,7 +26,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
 
         self.assertEqual(status["installMode"], "user-space")
 
-    def test_restart_pynq_runtime_returns_warning_for_user_space_install(self) -> None:
+    def test_restart_pynq_runtime_restarts_user_space_agent_and_refreshes_preflight(
+        self,
+    ) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
@@ -35,17 +37,53 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             }
         )
 
-        with mock.patch.object(
-            self.state,
-            "_read_remote_pynq_install_status",
-            return_value={"installMode": "user-space"},
+        refreshed = {
+            "board": {
+                "state": "overlay_missing",
+                "lastPreflightMessage": "Install overlay next.",
+            }
+        }
+        with (
+            mock.patch.object(
+                self.state,
+                "_read_remote_pynq_install_status",
+                return_value={"installMode": "user-space"},
+            ),
+            mock.patch.object(self.state, "_restart_user_space_agent") as restart,
+            mock.patch.object(
+                self.state,
+                "_refresh_pynq_board_preflight",
+                return_value=refreshed,
+            ) as refresh,
         ):
             result = self.state.restart_pynq_runtime(board["id"])
 
-        self.assertEqual(result["board"]["state"], "degraded_optional_capability")
-        self.assertIn("user space", result["warning"])
-        self.assertIn("Enable passwordless sudo for 'xilinx'", result["warning"])
-        self.assertIn("re-run Provision Runtime", result["warning"])
+        restart.assert_called_once()
+        refresh.assert_called_once_with(
+            board["id"], stage="user-space runtime restart"
+        )
+        self.assertEqual(result["board"]["state"], "overlay_missing")
+        self.assertEqual(result["installStatus"]["installMode"], "user-space")
+
+    def test_preflight_with_missing_overlay_stays_actionable_when_degraded(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        updated = self.state._apply_preflight_to_board(
+            board["id"],
+            {
+                "preflight_status": "degraded",
+                "preflight_message": "Simulator fallback active.",
+                "overlay_assets": {"ready_for_hardware": False},
+            },
+        )
+
+        self.assertEqual(updated["state"], "overlay_missing")
 
     def test_restart_pynq_runtime_waits_for_health_before_preflight_when_systemd_managed(
         self,
@@ -136,6 +174,17 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             }
         )
 
+        def apply_overlay_missing_preflight(
+            *_args: Any, **_kwargs: Any
+        ) -> dict[str, Any]:
+            updated = self.state._update_pynq_board_fields(
+                board["id"],
+                state="overlay_missing",
+                lastPreflightStatus="failed",
+                lastPreflightMessage="Install overlay next.",
+            )
+            return {"board": launcher_server._serialize_pynq_board(updated)}
+
         with (
             mock.patch.object(self.state, "_build_local_pynq_bundle"),
             mock.patch.object(self.state, "_run_ssh"),
@@ -148,19 +197,19 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             mock.patch.object(
                 self.state,
                 "fetch_pynq_board_preflight",
-                return_value={"board": {"state": "degraded_optional_capability"}},
+                side_effect=apply_overlay_missing_preflight,
             ),
         ):
             result = self.state.provision_pynq_board(board["id"])
 
         self.assertEqual(result["installStatus"]["installMode"], "user-space")
-        self.assertEqual(result["board"]["state"], "degraded_optional_capability")
+        self.assertEqual(result["board"]["state"], "overlay_missing")
         self.assertIn(
-            "Enable passwordless sudo for 'xilinx'",
+            "Install the overlay now",
             result["board"]["lastPreflightMessage"],
         )
         self.assertIn(
-            "re-run Provision Runtime",
+            "after a board reboot",
             result["board"]["lastPreflightMessage"],
         )
 
