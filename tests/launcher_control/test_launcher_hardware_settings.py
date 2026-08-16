@@ -4,6 +4,7 @@ from typing import Any
 from pathlib import Path
 import io
 import json
+import re
 import nmtk.launcher_control.server as launcher_server
 from unittest import mock
 import nmtk.launcher_control.provisioning_helpers as provisioning_helpers
@@ -715,6 +716,9 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
         }
 
         with (
+            mock.patch.object(
+                self.state, "_run_ssh", return_value="running"
+            ) as run_ssh,
             mock.patch.object(self.state, "_run_ssh_detached") as run_ssh_detached,
             mock.patch.object(self.state, "_wait_for_board_agent_health"),
         ):
@@ -728,6 +732,265 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
         self.assertIn("setsid sh -c", remote_command)
         self.assertIn("nohup sh -c", remote_command)
         self.assertNotIn("nohup env", remote_command)
+        # Stop and start must not ride in one command: `pkill -f` matches whole
+        # command lines, so a combined string kills the shell that was about to
+        # run the start half and the agent never comes back.
+        self.assertNotIn("pkill", remote_command)
+        stop_command = run_ssh.call_args_list[0].args[1]
+        self.assertIn("pkill -f", stop_command)
+        self.assertNotIn("setsid", stop_command)
+
+    def test_restart_user_space_agent_stop_pattern_cannot_match_its_own_shell(
+        self,
+    ) -> None:
+        """The bug, stated directly: the pattern must not match the text carrying it."""
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with (
+            mock.patch.object(
+                self.state, "_run_ssh", return_value="running"
+            ) as run_ssh,
+            mock.patch.object(self.state, "_run_ssh_detached"),
+            mock.patch.object(self.state, "_wait_for_board_agent_health"),
+        ):
+            self.state._restart_user_space_agent(
+                self.state._get_pynq_board(board["id"]),
+                {"agentVenvPath": "/opt/agent"},
+            )
+
+        stop_command = run_ssh.call_args_list[0].args[1]
+        pattern = re.search(r"pkill -f '([^']+)'", stop_command)
+        self.assertIsNotNone(pattern)
+        self.assertIsNone(re.search(pattern.group(1), stop_command))
+        # …while still matching a real agent command line.
+        self.assertIsNotNone(
+            re.search(pattern.group(1), "/opt/agent/bin/neurochip-pynq-agent")
+        )
+
+    def test_restart_user_space_agent_uses_the_interpreter_the_install_chose(
+        self,
+    ) -> None:
+        """The isolated pynq-venv only exists when the canonical one is missing.
+
+        Restarting with it regardless points a working board at a python that is
+        not there, and the agent comes back reporting simulator instead of
+        hardware.
+        """
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with (
+            mock.patch.object(self.state, "_run_ssh", return_value="running"),
+            mock.patch.object(self.state, "_run_ssh_detached") as run_ssh_detached,
+            mock.patch.object(self.state, "_wait_for_board_agent_health"),
+        ):
+            self.state._restart_user_space_agent(
+                self.state._get_pynq_board(board["id"]),
+                {"effectivePynqPython": "/usr/local/share/pynq-venv/bin/python"},
+            )
+
+        launch_command = run_ssh_detached.call_args.args[1]
+        self.assertIn(
+            "NEUROCHIP_PYNQ_PYTHON=/usr/local/share/pynq-venv/bin/python",
+            launch_command,
+        )
+        self.assertNotIn(
+            str(self.state._get_pynq_board(board["id"])["remotePynqVenvPath"]),
+            launch_command,
+        )
+
+    def test_user_space_launch_carries_the_xrt_environment(self) -> None:
+        """The stock image sets XRT in /etc/profile.d, which `setsid sh -c` skips.
+
+        Without it pynq warns "No devices found, is the XRT environment sourced?"
+        and enumerates nothing, so a user-space agent can never see its own board.
+        The systemd unit has always injected these; the user-space launch did not.
+        """
+        command = provisioning_helpers.build_pynq_user_space_agent_launch_command(
+            agent_executable="/opt/agent/bin/neurochip-pynq-agent",
+            pynq_python_path="/usr/local/share/pynq-venv/bin/python",
+            install_status_path="/tmp/install-status.json",
+            overlay_dir="/srv/overlay",
+            runtime_log_path="/tmp/runtime.log",
+        )
+
+        self.assertIn("XILINX_XRT=/usr", command)
+        self.assertIn("LD_LIBRARY_PATH=/usr/lib:", command)
+        self.assertIn("BOARD=Pynq-Z2", command)
+
+    def test_restart_grants_device_group_access_before_launching(self) -> None:
+        """`/dev/dri/*` is root:video / root:render 0660; the agent user needs both."""
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+                "password": "board-secret",
+            }
+        )
+        order: list[str] = []
+
+        def fake_run_ssh(board_record: dict[str, Any], command: str) -> str:
+            if command == "id -nG":
+                return "xilinx adm sudo"
+            return "running"
+
+        def fake_sudo(board_record: dict[str, Any], command: str) -> str:
+            order.append(f"sudo:{command}")
+            return ""
+
+        def fake_detached(board_record: dict[str, Any], command: str) -> None:
+            order.append("launch")
+
+        with (
+            mock.patch.object(self.state, "_run_ssh", side_effect=fake_run_ssh),
+            mock.patch.object(self.state, "_run_ssh_sudo", side_effect=fake_sudo),
+            mock.patch.object(
+                self.state, "_run_ssh_detached", side_effect=fake_detached
+            ),
+            mock.patch.object(self.state, "_wait_for_board_agent_health"),
+        ):
+            self.state._restart_user_space_agent(
+                self.state._get_pynq_board(board["id"]),
+                {},
+            )
+
+        # Membership only reaches new login sessions, so the grant must precede
+        # the launch that opens one.
+        self.assertEqual(
+            order, ["sudo:usermod -aG video,render xilinx", "launch"]
+        )
+
+    def test_restart_skips_the_grant_when_the_user_is_already_in_both_groups(
+        self,
+    ) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+                "password": "board-secret",
+            }
+        )
+
+        def fake_run_ssh(board_record: dict[str, Any], command: str) -> str:
+            if command == "id -nG":
+                return "xilinx adm sudo video render"
+            return "running"
+
+        with (
+            mock.patch.object(self.state, "_run_ssh", side_effect=fake_run_ssh),
+            mock.patch.object(self.state, "_run_ssh_sudo") as run_ssh_sudo,
+            mock.patch.object(self.state, "_run_ssh_detached"),
+            mock.patch.object(self.state, "_wait_for_board_agent_health"),
+        ):
+            self.state._restart_user_space_agent(
+                self.state._get_pynq_board(board["id"]),
+                {},
+            )
+
+        run_ssh_sudo.assert_not_called()
+
+    def test_failed_device_grant_does_not_block_the_restart(self) -> None:
+        """A board that refuses sudo should still get its agent back, with a reason."""
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+                "password": "board-secret",
+            }
+        )
+
+        def fake_run_ssh(board_record: dict[str, Any], command: str) -> str:
+            if command == "id -nG":
+                return "xilinx"
+            return "running"
+
+        with (
+            mock.patch.object(self.state, "_run_ssh", side_effect=fake_run_ssh),
+            mock.patch.object(
+                self.state,
+                "_run_ssh_sudo",
+                side_effect=RuntimeError("sudo: a password is required"),
+            ),
+            mock.patch.object(self.state, "_run_ssh_detached") as run_ssh_detached,
+            mock.patch.object(self.state, "_wait_for_board_agent_health"),
+        ):
+            self.state._restart_user_space_agent(
+                self.state._get_pynq_board(board["id"]),
+                {},
+            )
+
+        run_ssh_detached.assert_called_once()
+
+    def test_sudo_password_travels_on_stdin_not_in_the_command(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+                "password": "board-secret",
+            }
+        )
+
+        completed = subprocess.CompletedProcess(
+            args=["ssh"], returncode=0, stdout="", stderr=""
+        )
+        with mock.patch.object(
+            subprocess, "run", return_value=completed
+        ) as subprocess_run:
+            self.state._run_ssh_sudo(
+                self.state._get_pynq_board(board["id"]),
+                "usermod -aG video,render xilinx",
+            )
+
+        kwargs = subprocess_run.call_args.kwargs
+        self.assertEqual(kwargs["input"], "board-secret\n")
+        remote_command = subprocess_run.call_args.args[0][-1]
+        self.assertEqual(
+            remote_command, "sudo -S -p '' usermod -aG video,render xilinx"
+        )
+        self.assertNotIn("board-secret", remote_command)
+
+    def test_restart_user_space_agent_reports_a_start_that_never_happened(
+        self,
+    ) -> None:
+        """A dead start must not be reported as a slow board 120s later."""
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+
+        with (
+            mock.patch.object(self.state, "_run_ssh", return_value="missing"),
+            mock.patch.object(self.state, "_run_ssh_detached"),
+            mock.patch.object(
+                self.state, "_wait_for_board_agent_health"
+            ) as wait_for_health,
+        ):
+            with self.assertRaises(RuntimeError) as raised:
+                self.state._restart_user_space_agent(
+                    self.state._get_pynq_board(board["id"]),
+                    {},
+                )
+
+        self.assertIn("did not start", str(raised.exception))
+        wait_for_health.assert_not_called()
 
     def test_akida_host_connectivity_marks_host_reachable(self) -> None:
         host = self.state.create_akida_host(

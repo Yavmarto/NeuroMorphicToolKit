@@ -126,106 +126,36 @@ enum PynqBackendRuntimeMode {
 }
 
 /// Typed deploy-time config for POST /hardware/pynq/deploy.
+///
+/// Keys the toolkit has no field for — `timestep_us` today — are kept in
+/// [additionalFields] and sent back untouched, so adding one to the backend
+/// contract does not silently drop it here.
 class PynqDeployConfig {
+  static const Set<String> _knownJsonKeys = <String>{
+    'threshold',
+    'bit_width',
+    'scale_factor',
+  };
+
   final double threshold;
   final int bitWidth;
   final double scaleFactor;
+  final Map<String, dynamic> additionalFields;
 
   const PynqDeployConfig({
     required this.threshold,
     required this.bitWidth,
     required this.scaleFactor,
+    this.additionalFields = const <String, dynamic>{},
   });
 
   factory PynqDeployConfig.fromJson(Map<String, dynamic> json) {
+    final additionalFields = Map<String, dynamic>.from(json)
+      ..removeWhere((key, _) => _knownJsonKeys.contains(key));
     return PynqDeployConfig(
       threshold: (json['threshold'] as num?)?.toDouble() ?? 1.0,
       bitWidth: json['bit_width'] as int? ?? 8,
       scaleFactor: (json['scale_factor'] as num?)?.toDouble() ?? 1.0,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return <String, dynamic>{
-      'threshold': threshold,
-      'bit_width': bitWidth,
-      'scale_factor': scaleFactor,
-    };
-  }
-}
-
-/// Typed MMIO register map for the PYNQ SNN overlay.
-class PynqRegisterMap {
-  static const Set<String> _knownJsonKeys = <String>{
-    'base_address',
-    'control_reg_offset',
-    'status_reg_offset',
-    'population_count_offset',
-    'input_neuron_count_offset',
-    'output_neuron_count_offset',
-    'timestep_count_offset',
-    'threshold_base_offset',
-    'neuron_base_offset',
-    'weight_base_offset',
-    'dma_channel',
-    'input_buffer_addr',
-    'output_buffer_addr',
-    'timestep_us',
-  };
-
-  final int baseAddress;
-  final int controlRegOffset;
-  final int statusRegOffset;
-  final int populationCountOffset;
-  final int inputNeuronCountOffset;
-  final int outputNeuronCountOffset;
-  final int timestepCountOffset;
-  final int thresholdBaseOffset;
-  final int neuronBaseOffset;
-  final int weightBaseOffset;
-  final String dmaChannel;
-  final int inputBufferAddr;
-  final int outputBufferAddr;
-  final int timestepUs;
-  final Map<String, dynamic> additionalFields;
-
-  const PynqRegisterMap({
-    required this.baseAddress,
-    required this.controlRegOffset,
-    required this.statusRegOffset,
-    this.populationCountOffset = 0x08,
-    this.inputNeuronCountOffset = 0x0C,
-    this.outputNeuronCountOffset = 0x10,
-    this.timestepCountOffset = 0x14,
-    this.thresholdBaseOffset = 0x100,
-    required this.neuronBaseOffset,
-    required this.weightBaseOffset,
-    required this.dmaChannel,
-    required this.inputBufferAddr,
-    required this.outputBufferAddr,
-    required this.timestepUs,
-    this.additionalFields = const <String, dynamic>{},
-  });
-
-  factory PynqRegisterMap.fromJson(Map<String, dynamic> json) {
-    final additionalFields = Map<String, dynamic>.from(json)
-      ..removeWhere((key, _) => _knownJsonKeys.contains(key));
-    return PynqRegisterMap(
-      baseAddress: json['base_address'] as int? ?? 0x40000000,
-      controlRegOffset: json['control_reg_offset'] as int? ?? 0x00,
-      statusRegOffset: json['status_reg_offset'] as int? ?? 0x04,
-      populationCountOffset: json['population_count_offset'] as int? ?? 0x08,
-      inputNeuronCountOffset: json['input_neuron_count_offset'] as int? ?? 0x0C,
-      outputNeuronCountOffset:
-          json['output_neuron_count_offset'] as int? ?? 0x10,
-      timestepCountOffset: json['timestep_count_offset'] as int? ?? 0x14,
-      thresholdBaseOffset: json['threshold_base_offset'] as int? ?? 0x100,
-      neuronBaseOffset: json['neuron_base_offset'] as int? ?? 0x100,
-      weightBaseOffset: json['weight_base_offset'] as int? ?? 0x1000,
-      dmaChannel: json['dma_channel'] as String? ?? 'axi_dma_0',
-      inputBufferAddr: json['input_buffer_addr'] as int? ?? 0,
-      outputBufferAddr: json['output_buffer_addr'] as int? ?? 0,
-      timestepUs: json['timestep_us'] as int? ?? 1000,
       additionalFields: additionalFields,
     );
   }
@@ -233,22 +163,41 @@ class PynqRegisterMap {
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       ...additionalFields,
-      'base_address': baseAddress,
-      'control_reg_offset': controlRegOffset,
-      'status_reg_offset': statusRegOffset,
-      'population_count_offset': populationCountOffset,
-      'input_neuron_count_offset': inputNeuronCountOffset,
-      'output_neuron_count_offset': outputNeuronCountOffset,
-      'timestep_count_offset': timestepCountOffset,
-      'threshold_base_offset': thresholdBaseOffset,
-      'neuron_base_offset': neuronBaseOffset,
-      'weight_base_offset': weightBaseOffset,
-      'dma_channel': dmaChannel,
-      'input_buffer_addr': inputBufferAddr,
-      'output_buffer_addr': outputBufferAddr,
-      'timestep_us': timestepUs,
+      'threshold': threshold,
+      'bit_width': bitWidth,
+      'scale_factor': scaleFactor,
     };
   }
+}
+
+/// The overlay's register map, carried between backend and board unchanged.
+///
+/// This is a contract token, not UI data: the backend resolves it from the
+/// built overlay's `.hwh`, and the board runtime rejects a deploy whose map is
+/// not *equal* to the manifest it has installed. No screen reads a field of it.
+///
+/// It used to be modelled as typed overlay-v1 registers, which turned the
+/// round-trip into a rewrite: v2's keys survived only as passengers while nine
+/// v1 keys the backend never sent (`status_reg_offset`, `neuron_base_offset`,
+/// `weight_base_offset`, the buffer addresses …) were invented from defaults
+/// and posted to the board. Equality could never hold, so every deploy came
+/// back `422 OVERLAY_REGISTER_MAP_MISMATCH` — with both real maps identical.
+/// Whatever the toolkit does not understand has to survive the trip untouched.
+class PynqRegisterMap {
+  /// The map exactly as the backend sent it.
+  final Map<String, dynamic> values;
+
+  const PynqRegisterMap(this.values);
+
+  factory PynqRegisterMap.fromJson(Map<String, dynamic> json) =>
+      PynqRegisterMap(Map<String, dynamic>.from(json));
+
+  Map<String, dynamic> toJson() => Map<String, dynamic>.from(values);
+
+  /// The DMA channel the engine streams through, for display and diagnostics.
+  String get dmaChannel => values['dma_channel'] as String? ?? '';
+
+  bool get isEmpty => values.isEmpty;
 }
 
 /// One weight matrix in the overlay's layer chain, as the board runtime sees it.

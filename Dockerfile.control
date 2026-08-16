@@ -41,6 +41,13 @@ COPY --from=neurochip-artifact-builder /artifacts/ /app/artifacts/neurochip/
 # the second place `overlay_staging_candidates()` looks.
 COPY Neurochip/overlay_staging/pynq_z2/ /app/artifacts/neurochip/overlay_staging/pynq_z2/
 
+# A missing overlay would make every reachable PYNQ board fail before its
+# first SSH call. Keep this in the image build so a release cannot publish a
+# launcher-control image with an incomplete hardware package.
+RUN test -s /app/artifacts/neurochip/overlay_staging/pynq_z2/snn_overlay.bit \
+ && test -s /app/artifacts/neurochip/overlay_staging/pynq_z2/snn_overlay.hwh \
+ && test -s /app/artifacts/neurochip/overlay_staging/pynq_z2/overlay_manifest.json
+
 # State and secrets are redirected to Docker volumes via these env vars.
 # Matches the volume mount points declared in docker-compose.yml.
 ENV NMTK_STATE_DIR=/app/state

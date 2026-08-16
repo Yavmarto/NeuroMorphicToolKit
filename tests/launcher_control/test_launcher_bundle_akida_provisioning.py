@@ -30,7 +30,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
     ) -> None:
         command = self.state._build_remote_pynq_user_space_launch_command(
             agent_venv_path="/opt/agent",
-            pynq_venv_path="/opt/pynq",
+            pynq_python_path="/opt/pynq/bin/python",
             install_status_path="/tmp/install-status.json",
             overlay_dir="/srv/overlay",
             runtime_log_path="/tmp/runtime.log",
@@ -54,7 +54,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         with mock.patch.object(Path, "exists", autospec=True, side_effect=fake_exists):
             command = self.state._build_remote_pynq_user_space_launch_command(
                 agent_venv_path="/opt/agent",
-                pynq_venv_path="/opt/pynq",
+                pynq_python_path="/opt/pynq/bin/python",
                 install_status_path="/tmp/install-status.json",
                 overlay_dir="/srv/overlay",
                 runtime_log_path="/tmp/runtime.log",
@@ -114,6 +114,15 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         self.assertIn("started_at = time.monotonic()", install_script)
         self.assertIn("deadline = started_at + 120.0", install_script)
         self.assertIn("Still waiting for runtime health", install_script)
+        # The script stops the agent through the shared helper, so the launcher and
+        # the install path can never drift on how the agent is stopped.
+        self.assertIn(
+            'pkill -f "$AGENT_VENV_PATH/bin/$AGENT_EXECUTABLE_NAME" >/dev/null 2>&1 || true',
+            install_script,
+        )
+        # User-space installs are restartable from the launcher; only surviving a
+        # board reboot needs privileges.
+        self.assertNotIn("launcher restart require privileged setup", install_script)
 
     def test_build_local_pynq_bundle_uses_bundled_runtime_artifact(self) -> None:
         board = self.state.create_pynq_board(

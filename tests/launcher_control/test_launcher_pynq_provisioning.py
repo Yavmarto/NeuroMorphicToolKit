@@ -227,7 +227,12 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             mock.patch.object(
                 self.state,
                 "_run_ssh",
-                side_effect=["", RuntimeError("install script failed on remote host")],
+                # mkdir, then the device-group check, then the install script.
+                side_effect=[
+                    "",
+                    "xilinx video render",
+                    RuntimeError("install script failed on remote host"),
+                ],
             ),
             mock.patch.object(self.state, "_run_scp"),
             mock.patch.object(self.state, "_emit_runtime_log_tail") as emit_runtime_log_tail,
@@ -663,6 +668,64 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             "never connected to the engine",
             "\n".join(status["issues"]),
         )
+
+    def test_overlay_failure_names_the_package_that_exists_not_the_missing_root(
+        self,
+    ) -> None:
+        """In the container the module root is not there; the artifact dir is.
+
+        Reporting the module root's "directory not found" for an artifact package
+        that exists but is malformed told users to update a backend that was
+        already current, and hid the real defect (a manifest key dropped by the
+        overlay build) behind a path the image never ships.
+        """
+        artifact_root = self.repo_root / "artifacts" / "neurochip"
+        artifact_staging = artifact_root / "overlay_staging" / "pynq_z2"
+        _stage_overlay_package(artifact_staging)
+        manifest_path = artifact_staging / "overlay_manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        del manifest["register_map"]["dma_channel"]
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+        with mock.patch.dict(
+            "os.environ",
+            {"NMTK_NEUROCHIP_ARTIFACT_DIR": str(artifact_root)},
+        ):
+            status = self.state._inspect_local_pynq_overlay_package()
+
+        self.assertFalse(status["ready"])
+        self.assertEqual(status["stagingDir"], str(artifact_staging.resolve()))
+        self.assertIn("dma_channel", "\n".join(status["issues"]))
+
+    def test_overlay_install_message_distinguishes_invalid_from_absent(self) -> None:
+        """"Files are there but rejected" is not "files are missing"."""
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "username": "xilinx",
+            }
+        )
+        staging_dir = self.repo_root / "Neurochip" / "overlay_staging" / "pynq_z2"
+        _stage_overlay_package(staging_dir)
+        manifest_path = staging_dir / "overlay_manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        del manifest["register_map"]["dma_channel"]
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+        with (
+            mock.patch.object(self.state, "_run_ssh") as run_ssh,
+            mock.patch.object(self.state, "_run_scp") as run_scp,
+        ):
+            result = self.state.install_pynq_overlay_assets(board["id"])
+
+        message = result["board"]["lastPreflightMessage"]
+        self.assertEqual(result["board"]["state"], "overlay_missing")
+        self.assertIn("does not match the contract", message)
+        self.assertNotIn("is missing or incomplete", message)
+        self.assertIn("dma_channel", message)
+        run_ssh.assert_not_called()
+        run_scp.assert_not_called()
 
     def test_overlay_v1_is_refused_with_a_reason_a_user_can_act_on(self) -> None:
         """v1 could not compute, so a board still carrying it must not be used.

@@ -92,6 +92,39 @@ def _shell_value(value: str, *, shell_safe_values: bool) -> str:
     return value if shell_safe_values else shlex.quote(value)
 
 
+def build_pynq_agent_match_pattern(agent_executable: str) -> str:
+    """Return a ``pkill -f``/``pgrep -f`` pattern that cannot match its own carrier.
+
+    ``-f`` matches whole command lines, so when the pattern travels inside the very
+    command line that runs it — an inline ``ssh host 'pkill -f /path/agent; … start …'``
+    — it matches the remote shell as well as the agent, and the stop step kills the
+    process that was about to do the restart. Bracketing the first character of the
+    executable name keeps the regex matching the real process (whose command line is
+    ``…/neurochip-pynq-agent``) while the literal ``…/[n]eurochip-pynq-agent`` sitting in
+    a carrier's argv does not match it.
+
+    Executables written as shell expressions (the install-script call sites, where the
+    pattern lives in a file and never appears in a command line) are returned unchanged.
+    """
+    head, separator, name = agent_executable.rpartition("/")
+    if not name or not name[0].isalnum():
+        return agent_executable
+    return f"{head}{separator}[{name[0]}]{name[1:]}"
+
+
+def build_pynq_agent_stop_command(
+    *,
+    agent_executable: str,
+    shell_safe_values: bool = False,
+) -> str:
+    """Build the shell command that stops a running user-space PYNQ agent."""
+    pattern = _shell_value(
+        build_pynq_agent_match_pattern(agent_executable),
+        shell_safe_values=shell_safe_values,
+    )
+    return f"pkill -f {pattern} >/dev/null 2>&1 || true"
+
+
 def build_pynq_user_space_agent_launch_command(
     *,
     agent_executable: str,
@@ -100,6 +133,8 @@ def build_pynq_user_space_agent_launch_command(
     overlay_dir: str,
     runtime_log_path: str,
     shell_safe_values: bool = False,
+    xilinx_xrt_path: str = DEFAULT_XILINX_XRT_PATH,
+    board_name: str = DEFAULT_BOARD_NAME,
 ) -> str:
     """Build a durable shell command for launching the PYNQ agent in user space."""
     env_assignments = " ".join(
@@ -108,6 +143,14 @@ def build_pynq_user_space_agent_launch_command(
             'NEUROCHIP_PYNQ_INSTALL_MODE="user-space"',
             f"NEUROCHIP_PYNQ_INSTALL_STATUS_PATH={_shell_value(install_status_path, shell_safe_values=shell_safe_values)}",
             f"NEUROCHIP_PYNQ_OVERLAY_DIR={_shell_value(overlay_dir, shell_safe_values=shell_safe_values)}",
+            # The same XRT environment the systemd unit injects. The stock image
+            # sets these in /etc/profile.d/xrt_setup.sh, which a detached
+            # `setsid sh -c` never sources — without them pynq reports "No devices
+            # found, is the XRT environment sourced?" and enumerates nothing, so a
+            # user-space agent could never see the board it is running on.
+            f"XILINX_XRT={xilinx_xrt_path}",
+            f"LD_LIBRARY_PATH={xilinx_xrt_path}/lib:/usr/lib:/usr/local/lib",
+            f"BOARD={board_name}",
         ]
     )
     executable = _shell_value(agent_executable, shell_safe_values=shell_safe_values)
@@ -182,6 +225,10 @@ def _pynq_install_script_text(
     runtime_log_path: str,
     wheel_name: str,
 ) -> str:
+    stop_command = build_pynq_agent_stop_command(
+        agent_executable='"$AGENT_VENV_PATH/bin/$AGENT_EXECUTABLE_NAME"',
+        shell_safe_values=True,
+    )
     launch_command = build_pynq_user_space_agent_launch_command(
         agent_executable='"$AGENT_VENV_PATH/bin/$AGENT_EXECUTABLE_NAME"',
         pynq_python_path='"$EFFECTIVE_PYNQ_PYTHON"',
@@ -336,8 +383,8 @@ def _pynq_install_script_text(
             '  sudo -n systemctl restart "$SERVICE_NAME.service"',
             "else",
             '  log_step "Passwordless sudo unavailable; falling back to user-space runtime install"',
-            '  write_install_status "user-space" "Runtime installed in user space; auto-start and launcher restart require privileged setup."',
-            '  pkill -f "$AGENT_VENV_PATH/bin/$AGENT_EXECUTABLE_NAME" >/dev/null 2>&1 || true',
+            '  write_install_status "user-space" "Runtime installed in user space; the launcher can start and restart it, but it will not come back automatically after a board reboot without privileged setup."',
+            f"  {stop_command}",
             f"  {launch_command}",
             "fi",
             'log_step "Waiting for runtime health endpoint"',

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 import shutil
 import socket
 import subprocess
@@ -24,6 +25,8 @@ from typing import Any, Callable
 
 from .provisioning_helpers import (
     build_pynq_agent_bundle,
+    build_pynq_agent_match_pattern,
+    build_pynq_agent_stop_command,
     build_pynq_user_space_agent_launch_command,
 )
 from .runtime_artifact import discover_neurochip_runtime_artifact
@@ -55,6 +58,13 @@ from .server import (
     _serialize_pynq_board,
     _ssh_failure_message,
 )
+
+
+#: Unix groups that own the PL device nodes on the stock PYNQ image
+#: (``/dev/dri/card0`` is ``root:video``, ``/dev/dri/renderD128`` is
+#: ``root:render``, both mode 0660). A user-space agent must be in both or it
+#: cannot open the board it is running on.
+PYNQ_DEVICE_GROUPS: tuple[str, ...] = ("video", "render")
 
 
 class PynqServiceMixin:
@@ -176,6 +186,98 @@ class PynqServiceMixin:
         self._emit_pynq_terminal_log(board, "ssh step completed")
         return "\n".join(stdout_lines).strip()
 
+    def _run_ssh_sudo(
+        self,
+        board: dict[str, Any],
+        remote_command: str,
+        *,
+        timeout: float = 60.0,
+    ) -> str:
+        """Run one privileged command on the board using the board's own password.
+
+        The password already authenticates every SSH call to this board, so this
+        adds no new secret — only a broader command. It travels on the SSH
+        session's stdin into ``sudo -S`` rather than in argv or the environment,
+        so it never appears in the board's process list.
+        """
+        password = str(board.get("password") or "")
+        if not password:
+            raise RuntimeError("No SSH password is configured for this PYNQ board")
+        target = f"{board['username']}@{board['host']}"
+        command, env, cleanup = self._prepare_ssh_invocation(board)
+        command.extend([target, f"sudo -S -p '' {remote_command}"])
+        self._emit_pynq_terminal_log(board, f"ssh (sudo) -> {target}: {remote_command}")
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
+                env=env,
+                input=f"{password}\n",
+            )
+        finally:
+            if cleanup is not None:
+                cleanup()
+        stdout_lines = [line for line in result.stdout.splitlines() if line.strip()]
+        stderr_lines = [
+            line
+            for line in result.stderr.splitlines()
+            if line.strip() and not _is_benign_ssh_warning_line(line.strip())
+        ]
+        for line in stdout_lines:
+            self._emit_pynq_terminal_log(board, line)
+        for line in stderr_lines:
+            self._emit_pynq_terminal_log(board, line, stderr=True)
+        if result.returncode != 0:
+            raise RuntimeError(_ssh_failure_message(stdout_lines, stderr_lines))
+        self._emit_pynq_terminal_log(board, "sudo step completed")
+        return "\n".join(stdout_lines).strip()
+
+    def _ensure_pynq_device_group_access(self, board: dict[str, Any]) -> None:
+        """Give the agent user read access to the PL device nodes.
+
+        A user-space agent runs as the SSH user, but ``/dev/dri/card0`` and
+        ``/dev/dri/renderD128`` ship as ``root:video`` / ``root:render`` mode 0660
+        on the stock image — which nobody notices while everything runs as root.
+        Without membership the agent starts, sees the device through XRT, and then
+        fails to open it: "PYNQ device probe failed: no programmable devices
+        found". Membership applies to new login sessions, and the agent is always
+        launched over a fresh SSH session after this, so one grant is enough.
+        """
+        try:
+            groups = self._run_ssh(board, "id -nG").split()
+        except RuntimeError as exc:
+            self._emit_pynq_terminal_log(
+                board, f"could not read group membership: {exc}", stderr=True
+            )
+            return
+        missing = [group for group in PYNQ_DEVICE_GROUPS if group not in groups]
+        if not missing:
+            return
+        self._emit_pynq_terminal_log(
+            board,
+            f"granting {board['username']} access to the PL device nodes "
+            f"(adding to {', '.join(missing)})",
+        )
+        try:
+            self._run_ssh_sudo(
+                board,
+                f"usermod -aG {','.join(missing)} {shlex.quote(str(board['username']))}",
+            )
+        except RuntimeError as exc:
+            # Not fatal: the agent still starts, it just cannot open the device.
+            # Say so here, or the only symptom is a device-probe failure that
+            # looks like a hardware fault.
+            self._emit_pynq_terminal_log(
+                board,
+                "could not grant device access, so the board will report no "
+                f"programmable devices until {board['username']} joins the "
+                f"{', '.join(missing)} group(s): {exc}",
+                stderr=True,
+            )
+
     def _remote_pynq_install_status_path(self, board: dict[str, Any]) -> str:
         return str(
             board.get("remoteInstallStatusPath")
@@ -276,7 +378,7 @@ class PynqServiceMixin:
         self,
         *,
         agent_venv_path: str,
-        pynq_venv_path: str,
+        pynq_python_path: str,
         install_status_path: str,
         overlay_dir: str,
         runtime_log_path: str,
@@ -284,7 +386,7 @@ class PynqServiceMixin:
     ) -> str:
         return build_pynq_user_space_agent_launch_command(
             agent_executable=f"{agent_venv_path}/bin/{agent_executable_name}",
-            pynq_python_path=f"{pynq_venv_path}/bin/python",
+            pynq_python_path=pynq_python_path,
             install_status_path=install_status_path,
             overlay_dir=overlay_dir,
             runtime_log_path=runtime_log_path,
@@ -340,9 +442,14 @@ class PynqServiceMixin:
                 ]
                 if stdout_lines:
                     raise RuntimeError("\n".join(stdout_lines))
+                # Name the exit code. A remote shell killed by a signal exits
+                # non-zero with nothing on either stream, and reporting that as
+                # plain success is how a restart that killed itself looked like a
+                # restart that worked.
                 self._emit_pynq_terminal_log(
                     board,
-                    "ssh step completed with only benign SSH warnings; proceeding to health check",
+                    f"ssh step exited {result.returncode} with no output beyond benign "
+                    "SSH warnings; proceeding to health check",
                 )
                 return
             self._emit_pynq_terminal_log(board, "ssh step completed")
@@ -362,8 +469,14 @@ class PynqServiceMixin:
         agent_venv_path = str(
             install_status.get("agentVenvPath") or board["remoteVenvPath"]
         )
-        pynq_venv_path = str(
-            install_status.get("pynqVenvPath") or board["remotePynqVenvPath"]
+        # The interpreter the install actually settled on wins. The isolated
+        # pynq-venv is only built when the board has no canonical stock-image
+        # interpreter, so assuming it restarts a working board with a python that
+        # does not exist — the agent comes back up, finds no pynq, and silently
+        # reports simulator mode instead of hardware.
+        pynq_python_path = str(
+            install_status.get("effectivePynqPython")
+            or f"{install_status.get('pynqVenvPath') or board['remotePynqVenvPath']}/bin/python"
         )
         runtime_log_path = str(
             install_status.get("runtimeLogPath")
@@ -382,24 +495,53 @@ class PynqServiceMixin:
             board,
             f"restarting user-space agent with NEUROCHIP_PYNQ_OVERLAY_DIR={overlay_dir}",
         )
+        agent_executable = f"{agent_venv_path}/bin/{agent_executable_name}"
         launch_command = self._build_remote_pynq_user_space_launch_command(
             agent_venv_path=agent_venv_path,
-            pynq_venv_path=pynq_venv_path,
+            pynq_python_path=pynq_python_path,
             install_status_path=install_status_path,
             overlay_dir=overlay_dir,
             runtime_log_path=runtime_log_path,
             agent_executable_name=agent_executable_name,
         )
-        restart_cmd = (
-            f'pkill -f "{agent_venv_path}/bin/{agent_executable_name}" >/dev/null 2>&1 || true; '
-            f"sleep 1; "
-            f"{launch_command}"
+        # Stop and start travel as two separate SSH commands on purpose. Sent as
+        # one, the remote shell's own command line carries the agent path, `pkill
+        # -f` matches it, and the stop step kills the shell that was about to run
+        # the start step — the agent goes down and never comes back.
+        self._run_ssh(
+            board,
+            build_pynq_agent_stop_command(agent_executable=agent_executable)
+            + "; sleep 1",
         )
-        self._run_ssh_detached(board, restart_cmd)
+        # Before the launch, not after: group membership only reaches new login
+        # sessions, and the launch below opens one.
+        self._ensure_pynq_device_group_access(board)
+        self._run_ssh_detached(board, launch_command)
+        self._confirm_remote_pynq_agent_process(board, agent_executable)
         self._emit_pynq_terminal_log(
             board, "waiting for restarted agent to become healthy"
         )
         self._wait_for_board_agent_health(board)
+
+    def _confirm_remote_pynq_agent_process(
+        self, board: dict[str, Any], agent_executable: str
+    ) -> None:
+        """Fail immediately when the launch command left no process behind.
+
+        Without this the only signal is a 120s health timeout followed by three
+        45s retries, and the reported failure is "did not become healthy" — which
+        reads as a slow board rather than a start that never happened.
+        """
+        pattern = build_pynq_agent_match_pattern(agent_executable)
+        found = self._run_ssh(
+            board,
+            f"pgrep -f {shlex.quote(pattern)} >/dev/null 2>&1 && echo running || echo missing",
+        )
+        if "running" in found:
+            return
+        raise RuntimeError(
+            "the agent process did not start on the board; see runtime.log below"
+        )
 
     def _run_scp(
         self,
@@ -683,6 +825,14 @@ class PynqServiceMixin:
         for result in inspected:
             if bool(result.get("ready", False)):
                 return result
+        # Nothing is usable, so this becomes the failure the user reads. Prefer a
+        # candidate that actually exists on disk: its issues name the real defect
+        # (a malformed manifest, a truncated bitstream) instead of "directory not
+        # found" for the module root, which in the container never exists and
+        # sends the user off to update a backend that is already current.
+        for result in inspected:
+            if Path(str(result["stagingDir"])).exists():
+                return result
         return inspected[0]
 
     def provision_pynq_board(self, board_id: str) -> dict[str, Any]:
@@ -714,6 +864,10 @@ class PynqServiceMixin:
                     board, f"uploading provisioning bundle to {remote_bundle_parent}"
                 )
                 self._run_scp(board, bundle_dir, remote_bundle_parent, recursive=True)
+                # The install script starts the agent itself when it falls back to
+                # a user-space install, so the grant has to land first to reach
+                # that process.
+                self._ensure_pynq_device_group_access(board)
                 self._emit_pynq_terminal_log(board, "running remote install script")
                 install_script_started = True
                 self._run_ssh(
@@ -805,11 +959,29 @@ class PynqServiceMixin:
             )
             # The overlay ships with the backend, so this is a broken install
             # rather than something the user forgot to do — telling them to go
-            # synthesise a bitstream would be wrong and unactionable.
+            # synthesise a bitstream would be wrong and unactionable. Say which
+            # kind of broken it is: "files are absent" and "the files are there
+            # but their manifest is rejected" send the user looking in very
+            # different places, and the second one used to be reported as the first.
+            files_present = all(
+                bool(overlay_package.get(key))
+                for key in ("bitstreamExists", "hwhExists", "manifestPresent")
+            )
+            if files_present:
+                summary = (
+                    "The PYNQ overlay that ships with the backend does not match "
+                    "the contract this launcher expects, so installing it could "
+                    "leave the board running an overlay that cannot compute. "
+                    "Update the backend to get a matching overlay."
+                )
+            else:
+                summary = (
+                    "The PYNQ overlay package that ships with the backend is "
+                    "missing or incomplete, so there is nothing to install on "
+                    "the board. Update the backend to restore it."
+                )
             message = (
-                "The PYNQ overlay package that ships with the backend is missing "
-                "or incomplete, so there is nothing to install on the board. "
-                "Update the backend to restore it. "
+                f"{summary} "
                 f"Looked in {overlay_package['stagingDir']}. Details: {issues_text}"
             )
             self._emit_pynq_terminal_log(
