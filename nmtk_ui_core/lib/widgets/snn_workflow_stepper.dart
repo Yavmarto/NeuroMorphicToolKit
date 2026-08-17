@@ -5,7 +5,15 @@ import 'package:nmtk_ui_core/zeta_theme.dart';
 
 enum SnnWorkflowStage { setup, design, execute }
 
-enum SnnWorkflowPhase { selectData, defineModel, defineTrain, defineEval, run, deployHardware, deployReview }
+enum SnnWorkflowPhase {
+  selectData,
+  defineModel,
+  defineTrain,
+  defineEval,
+  run,
+  deployHardware,
+  deployReview,
+}
 
 const Map<SnnWorkflowStage, String> kSnnStageLabels = {
   SnnWorkflowStage.setup: 'Setup',
@@ -15,7 +23,11 @@ const Map<SnnWorkflowStage, String> kSnnStageLabels = {
 
 const Map<SnnWorkflowStage, List<SnnWorkflowPhase>> kSnnPhasesByStage = {
   SnnWorkflowStage.setup: [SnnWorkflowPhase.selectData],
-  SnnWorkflowStage.design: [SnnWorkflowPhase.defineModel, SnnWorkflowPhase.defineTrain, SnnWorkflowPhase.defineEval],
+  SnnWorkflowStage.design: [
+    SnnWorkflowPhase.defineModel,
+    SnnWorkflowPhase.defineTrain,
+    SnnWorkflowPhase.defineEval,
+  ],
   SnnWorkflowStage.execute: [
     SnnWorkflowPhase.run,
     SnnWorkflowPhase.deployHardware,
@@ -47,7 +59,9 @@ const double _kConnectorSlotWidth = 30;
 /// every stage keeps the panel from resizing — and the single-phase Setup rail
 /// from drifting to the centre — when the active stage changes.
 final double _kPhaseRailWidth = (() {
-  final maxPhases = kSnnPhasesByStage.values.map((phases) => phases.length).reduce((a, b) => a > b ? a : b);
+  final maxPhases = kSnnPhasesByStage.values
+      .map((phases) => phases.length)
+      .reduce((a, b) => a > b ? a : b);
   return maxPhases * _kPhasePillWidth + (maxPhases - 1) * _kConnectorSlotWidth;
 })();
 
@@ -117,7 +131,8 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
   void didUpdateWidget(covariant SnnWorkflowStepper oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.currentPhase != widget.currentPhase) {
-      _lastVisitedByStage[snnStageForPhase(widget.currentPhase)] = widget.currentPhase;
+      _lastVisitedByStage[snnStageForPhase(widget.currentPhase)] =
+          widget.currentPhase;
     }
   }
 
@@ -148,7 +163,8 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
             mainAxisSize: MainAxisSize.min,
             children: [
               for (final stage in SnnWorkflowStage.values) ...[
-                if (stage != SnnWorkflowStage.values.first) const SizedBox(width: _kStageGap),
+                if (stage != SnnWorkflowStage.values.first)
+                  const SizedBox(width: _kStageGap),
                 SizedBox(
                   width: _kPhasePillWidth,
                   child: _StageDestination(
@@ -197,7 +213,10 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
   Widget _buildChildRail(BuildContext context, SnnWorkflowStage stage) {
     final stagePhases = kSnnPhasesByStage[stage]!;
     final secondary = widget.secondaryPhase;
-    final localSecondary = secondary != null && snnStageForPhase(secondary) == stage ? secondary : null;
+    final localSecondary =
+        secondary != null && snnStageForPhase(secondary) == stage
+        ? secondary
+        : null;
     final localSplitStep = localSecondary == null ? null : widget.splitStep;
     final colors = Zeta.of(context).colors;
 
@@ -210,7 +229,8 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       stepAccentColor: colors.mainPrimary,
       stepStyle: NmtkPipelineStepStyle.destination,
       stepWidth: _kPhasePillWidth,
-      statusBarSemanticsLabel: '${widget.stageLabels[stage] ?? stage.name} steps',
+      statusBarSemanticsLabel:
+          '${widget.stageLabels[stage] ?? stage.name} steps',
       selectedStepId: widget.currentPhase.name,
       secondarySelectedStepId: localSecondary?.name,
       disabledStepIds: widget.lockedPhases.map((p) => p.name).toSet(),
@@ -219,8 +239,12 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       onSplitBetween: widget.onSplitBetween == null
           ? null
           : (leftId, rightId) {
-              final left = SnnWorkflowPhase.values.firstWhere((phase) => phase.name == leftId);
-              final right = SnnWorkflowPhase.values.firstWhere((phase) => phase.name == rightId);
+              final left = SnnWorkflowPhase.values.firstWhere(
+                (phase) => phase.name == leftId,
+              );
+              final right = SnnWorkflowPhase.values.firstWhere(
+                (phase) => phase.name == rightId,
+              );
               if (snnStageForPhase(left) == snnStageForPhase(right)) {
                 widget.onSplitBetween!(leftId, rightId);
               }
@@ -228,17 +252,22 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       onCollapseStep: widget.onCollapseStep,
       onSelected: widget.onPhaseSelected == null
           ? null
-          : (id) => widget.onPhaseSelected!(SnnWorkflowPhase.values.firstWhere((p) => p.name == id)),
+          : (id) => widget.onPhaseSelected!(
+              SnnWorkflowPhase.values.firstWhere((p) => p.name == id),
+            ),
       steps: [for (final phase in stagePhases) _buildStepData(phase)],
     );
   }
 
-  bool _stageIsLocked(SnnWorkflowStage stage) => kSnnPhasesByStage[stage]!.every(widget.lockedPhases.contains);
+  bool _stageIsLocked(SnnWorkflowStage stage) =>
+      kSnnPhasesByStage[stage]!.every(widget.lockedPhases.contains);
 
-  bool _stageIsCompleted(SnnWorkflowStage stage) => kSnnPhasesByStage[stage]!.last.index < widget.currentPhase.index;
+  bool _stageIsCompleted(SnnWorkflowStage stage) =>
+      kSnnPhasesByStage[stage]!.last.index < widget.currentPhase.index;
 
   bool _stageIsRunning(SnnWorkflowStage stage) =>
-      widget.runningPhase != null && snnStageForPhase(widget.runningPhase!) == stage;
+      widget.runningPhase != null &&
+      snnStageForPhase(widget.runningPhase!) == stage;
 
   void _selectStage(SnnWorkflowStage stage) {
     if (widget.onPhaseSelected == null || _stageIsLocked(stage)) return;
@@ -247,7 +276,11 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
         .toList(growable: false);
     if (unlocked.isEmpty) return;
     final remembered = _lastVisitedByStage[stage];
-    widget.onPhaseSelected!(remembered != null && unlocked.contains(remembered) ? remembered : unlocked.first);
+    widget.onPhaseSelected!(
+      remembered != null && unlocked.contains(remembered)
+          ? remembered
+          : unlocked.first,
+    );
   }
 
   NmtkPipelineStepData _buildStepData(SnnWorkflowPhase phase) {
@@ -322,7 +355,9 @@ class _StageDestination extends StatelessWidget {
         color: selected ? colors.surfacePrimarySubtle : Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(tokens.radiusSm),
-          side: BorderSide(color: selected ? colors.borderPrimary : Colors.transparent),
+          side: BorderSide(
+            color: selected ? colors.borderPrimary : Colors.transparent,
+          ),
         ),
         child: InkWell(
           onTap: disabled ? null : onTap,
@@ -377,7 +412,8 @@ class _SubstepRailSwitcher extends StatefulWidget {
   State<_SubstepRailSwitcher> createState() => _SubstepRailSwitcherState();
 }
 
-class _SubstepRailSwitcherState extends State<_SubstepRailSwitcher> with SingleTickerProviderStateMixin {
+class _SubstepRailSwitcherState extends State<_SubstepRailSwitcher>
+    with SingleTickerProviderStateMixin {
   static const double _travel = 36;
 
   late AnimationController _controller;
@@ -388,7 +424,11 @@ class _SubstepRailSwitcherState extends State<_SubstepRailSwitcher> with SingleT
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.perPhaseDuration * 2, value: 1);
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.perPhaseDuration * 2,
+      value: 1,
+    );
     _buildCurves();
   }
 
@@ -449,7 +489,10 @@ class _SubstepRailSwitcherState extends State<_SubstepRailSwitcher> with SingleT
               child: ExcludeSemantics(
                 child: Opacity(
                   opacity: 1 - _outCurve.value,
-                  child: Transform.translate(offset: Offset(0, -_outCurve.value * _travel), child: child),
+                  child: Transform.translate(
+                    offset: Offset(0, -_outCurve.value * _travel),
+                    child: child,
+                  ),
                 ),
               ),
             ),
@@ -465,7 +508,10 @@ class _SubstepRailSwitcherState extends State<_SubstepRailSwitcher> with SingleT
                   excluding: !settled,
                   child: Opacity(
                     opacity: _inCurve.value,
-                    child: Transform.translate(offset: Offset(0, -(1 - _inCurve.value) * _travel), child: child),
+                    child: Transform.translate(
+                      offset: Offset(0, -(1 - _inCurve.value) * _travel),
+                      child: child,
+                    ),
                   ),
                 ),
               );

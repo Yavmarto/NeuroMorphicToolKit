@@ -12,6 +12,8 @@ import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
 
+import 'package:nmtk_ui_core/models/trained_weight_status.dart';
+
 /// Support state for PYNQ Z2 target.
 ///
 /// Export-time states are deterministic at planning time.
@@ -377,41 +379,15 @@ class PynqDeployPayload {
 
 /// Where the deploy payload's weights came from.
 ///
-/// The load-bearing field is [applied]. The CNL spec stores tensor *shape* only,
+/// The load-bearing field is `applied`. The CNL spec stores tensor *shape* only,
 /// so without a trained NIR graph the payload's weights are all zeros: the board
 /// loads the overlay, runs, and fires nothing. A UI that does not surface this
 /// presents a zero-weight deploy as a successful hardware result.
-class PynqTrainedWeightStatus {
-  final bool applied;
-  final String? sourceNode;
-  final List<int>? shape;
-  final int nonzero;
-  final String detail;
-
-  const PynqTrainedWeightStatus({
-    required this.applied,
-    required this.detail,
-    this.sourceNode,
-    this.shape,
-    this.nonzero = 0,
-  });
-
-  /// True when weights were applied but every one of them is zero — a model
-  /// exported before training ran. Deploys, computes nothing.
-  bool get isAllZero => applied && nonzero == 0;
-
-  factory PynqTrainedWeightStatus.fromJson(Map<String, dynamic> json) {
-    return PynqTrainedWeightStatus(
-      applied: json['applied'] as bool? ?? false,
-      sourceNode: json['source_node'] as String?,
-      shape: (json['shape'] as List<dynamic>?)
-          ?.map((value) => (value as num).toInt())
-          .toList(growable: false),
-      nonzero: (json['nonzero'] as num?)?.toInt() ?? 0,
-      detail: json['detail'] as String? ?? '',
-    );
-  }
-}
+///
+/// The software simulators report the same thing about the same artifact, so the
+/// model itself lives in `trained_weight_status.dart`; this name is kept for the
+/// PYNQ call sites.
+typedef PynqTrainedWeightStatus = TrainedWeightStatus;
 
 /// Response from PYNQ exportability planning endpoint.
 class PynqNetworkResponse {
@@ -435,8 +411,8 @@ class PynqNetworkResponse {
   });
 
   /// True when the payload carries learned values that will actually fire.
-  bool get hasTrainedWeights => trainedWeights?.applied == true &&
-      trainedWeights!.nonzero > 0;
+  bool get hasTrainedWeights =>
+      trainedWeights?.applied == true && trainedWeights!.nonzero > 0;
 
   factory PynqNetworkResponse.fromJson(Map<String, dynamic> json) {
     return PynqNetworkResponse(
@@ -985,15 +961,33 @@ class PynqSitlStepResult {
 /// Single PYNQ runtime run result from POST /hardware/pynq/run.
 class PynqRunResult {
   final String status;
+
+  /// The raw output stream: one word per output neuron per timestep, 1 for a
+  /// spike. Overlay-v1 sent a list of neuron indices, which is why callers must
+  /// never read this as "the neurons that fired" or its length as a spike
+  /// count — ten zeros is a silent run, not ten spikes. Use [outputNeurons] to
+  /// fold it back into frames.
   final List<int> outputSpikes;
   final int timesteps;
   final double executionTimeUs;
+
+  /// Neurons per output frame, or 0 when the board did not say. Without it the
+  /// stream cannot be split into timesteps.
+  final int outputNeurons;
+
+  /// Whether the engine asserted `ap_done` before the host read the buffer.
+  /// False means the numbers below it were read from a kernel that never
+  /// reported finishing, so they are not evidence of anything — the run still
+  /// comes back `status: success`, which is why this has to be shown.
+  final bool kernelReportedDone;
 
   const PynqRunResult({
     required this.status,
     required this.outputSpikes,
     required this.timesteps,
     required this.executionTimeUs,
+    this.outputNeurons = 0,
+    this.kernelReportedDone = true,
   });
 
   factory PynqRunResult.fromJson(Map<String, dynamic> json) {
@@ -1005,7 +999,52 @@ class PynqRunResult {
               .toList(growable: false),
       timesteps: (json['timesteps'] as num?)?.toInt() ?? 1,
       executionTimeUs: (json['execution_time_us'] as num?)?.toDouble() ?? 0.0,
+      outputNeurons: (json['output_neurons'] as num?)?.toInt() ?? 0,
+      // Absent means an older board runtime that did not report it; treating
+      // that as "not done" would put a warning on every run it serves.
+      kernelReportedDone: json['kernel_reported_done'] as bool? ?? true,
     );
+  }
+
+  /// Neurons per frame, falling back to the whole stream when the board did not
+  /// report a width — a single frame is the only safe reading of an
+  /// unsplittable stream.
+  int get frameWidth {
+    if (outputNeurons > 0) return outputNeurons;
+    if (timesteps > 0 && outputSpikes.length % timesteps == 0) {
+      return outputSpikes.length ~/ timesteps;
+    }
+    return outputSpikes.length;
+  }
+
+  /// Spikes per output neuron, summed over the run. This is the readout the
+  /// model was trained against: the class is the neuron that fired most.
+  List<int> get spikeCountsPerNeuron {
+    final width = frameWidth;
+    if (width <= 0) return const <int>[];
+    final counts = List<int>.filled(width, 0);
+    for (var index = 0; index < outputSpikes.length; index++) {
+      counts[index % width] += outputSpikes[index];
+    }
+    return counts;
+  }
+
+  /// Total spikes across the whole run.
+  int get totalSpikes => outputSpikes.fold<int>(0, (sum, value) => sum + value);
+
+  /// The output neuron that spiked most, or null when nothing fired. Ties go to
+  /// the lowest index, matching `argmax`.
+  int? get predictedClass {
+    final counts = spikeCountsPerNeuron;
+    var best = -1;
+    var bestCount = 0;
+    for (var index = 0; index < counts.length; index++) {
+      if (counts[index] > bestCount) {
+        bestCount = counts[index];
+        best = index;
+      }
+    }
+    return best < 0 ? null : best;
   }
 }
 

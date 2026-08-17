@@ -523,6 +523,168 @@ class PynqServiceMixin:
         )
         self._wait_for_board_agent_health(board)
 
+    def _run_ssh_privileged(
+        self,
+        board: dict[str, Any],
+        remote_command: str,
+        *,
+        timeout: float = 60.0,
+    ) -> str:
+        """Run a privileged command whichever way this board grants root.
+
+        A board paired with a password uses it; one paired with a key has to
+        already have passwordless sudo, which is exactly the case the install
+        script's own ``sudo -n`` branch covers.
+        """
+        if str(board.get("password") or "").strip():
+            return self._run_ssh_sudo(board, remote_command, timeout=timeout)
+        return self._run_ssh(board, f"sudo -n {remote_command}")
+
+    def _promote_pynq_install_to_systemd(
+        self,
+        board: dict[str, Any],
+        remote_bundle_dir: str,
+        install_status: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Reinstall a user-space runtime as a root-owned systemd service.
+
+        PYNQ refuses to program the PL from a non-root process — ``Overlay(...)``
+        raises "Root permissions required." — so a user-space agent passes every
+        readiness check the app shows and then fails the first real deploy with
+        an error the user can do nothing about. The install script only reaches
+        its systemd branch when *passwordless* sudo works, which the stock PYNQ
+        image does not have. The board's own password does, and the launcher
+        already holds it to open every SSH session to this board, so this asks
+        for nothing the user has not already given.
+
+        Best effort by design: a board that will not grant root keeps the
+        user-space runtime it already has, and the user-space guidance the
+        caller appends still applies.
+        """
+        service_name = str(board["remoteServiceName"])
+        agent_venv_path = str(
+            install_status.get("agentVenvPath") or board["remoteVenvPath"]
+        )
+        agent_executable_name = str(
+            board.get("agentExecutableName")
+            or _load_neurochip_launcher_runtime_contract().pynq.agent_executable_name
+        )
+        agent_executable = f"{agent_venv_path}/bin/{agent_executable_name}"
+        pynq_python_path = str(install_status.get("effectivePynqPython") or "").strip()
+
+        try:
+            self._run_ssh_privileged(board, "true", timeout=30.0)
+        except Exception as exc:  # noqa: BLE001
+            self._emit_pynq_terminal_log(
+                board,
+                f"this board grants no administrator access ({exc}), so the "
+                "runtime stays in user space and cannot program the FPGA",
+                stderr=True,
+            )
+            return install_status
+
+        self._emit_pynq_terminal_log(
+            board,
+            "promoting the runtime to a privileged systemd service so it can "
+            "program the FPGA and start itself after a reboot",
+        )
+        staged_unit = f"/tmp/{service_name}.service"
+        unit_source = f"{remote_bundle_dir}/systemd/{service_name}.service"
+        try:
+            if pynq_python_path:
+                # The unit ships the default interpreter path; the install has
+                # since settled on whichever one the board actually has.
+                expression = (
+                    "s|^Environment=NEUROCHIP_PYNQ_PYTHON=.*|"
+                    f"Environment=NEUROCHIP_PYNQ_PYTHON={pynq_python_path}|"
+                )
+                stage = (
+                    f"sed {shlex.quote(expression)} {shlex.quote(unit_source)} "
+                    f"> {shlex.quote(staged_unit)}"
+                )
+            else:
+                stage = f"cp {shlex.quote(unit_source)} {shlex.quote(staged_unit)}"
+            self._run_ssh(board, f"{stage} && chmod 0644 {shlex.quote(staged_unit)}")
+            self._run_ssh(
+                board,
+                build_pynq_agent_stop_command(agent_executable=agent_executable)
+                + "; sleep 1",
+            )
+            self._run_ssh_privileged(
+                board,
+                f"mv {shlex.quote(staged_unit)} "
+                f"/etc/systemd/system/{service_name}.service",
+            )
+            self._run_ssh_privileged(board, "systemctl daemon-reload")
+            self._run_ssh_privileged(board, f"systemctl enable {service_name}.service")
+            self._run_ssh_privileged(board, f"systemctl restart {service_name}.service")
+            self._write_remote_pynq_install_mode(
+                board,
+                "systemd",
+                "Runtime installed as a privileged systemd service; it can "
+                "program the FPGA and starts again by itself after a board "
+                "reboot.",
+            )
+            self._wait_for_board_agent_health(board)
+        except Exception as exc:  # noqa: BLE001
+            self._emit_pynq_terminal_log(
+                board,
+                f"privileged runtime install did not complete ({exc}); restoring "
+                "the user-space runtime",
+                stderr=True,
+            )
+            try:
+                self._restart_user_space_agent(board, install_status)
+            except Exception as restore_exc:  # noqa: BLE001
+                self._emit_pynq_terminal_log(
+                    board,
+                    f"could not restore the user-space runtime either: {restore_exc}",
+                    stderr=True,
+                )
+            return install_status
+
+        self._emit_pynq_terminal_log(
+            board, "privileged runtime install completed; the agent now runs as root"
+        )
+        try:
+            return self._read_remote_pynq_install_status(board)
+        except Exception:  # noqa: BLE001
+            return install_status
+
+    def _write_remote_pynq_install_mode(
+        self, board: dict[str, Any], install_mode: str, message: str
+    ) -> None:
+        """Rewrite installMode in the board's install-status file.
+
+        Preflight and every restart path read this file to decide how to talk to
+        the runtime, so a promoted board that still claims "user-space" would be
+        restarted with the launch command instead of systemctl.
+        """
+        script = (
+            "import json,sys\n"
+            "path, mode, message = sys.argv[1:4]\n"
+            'with open(path, encoding="utf-8") as handle:\n'
+            "    data = json.load(handle)\n"
+            'data["installMode"] = mode\n'
+            'data["message"] = message\n'
+            'data["autoStartSupported"] = True\n'
+            'with open(path, "w", encoding="utf-8") as handle:\n'
+            "    json.dump(data, handle, indent=2, sort_keys=True)\n"
+        )
+        path = self._remote_pynq_install_status_path(board)
+        self._run_ssh(
+            board,
+            " ".join(
+                [
+                    "python3 -c",
+                    shlex.quote(script),
+                    shlex.quote(path),
+                    shlex.quote(install_mode),
+                    shlex.quote(message),
+                ]
+            ),
+        )
+
     def _confirm_remote_pynq_agent_process(
         self, board: dict[str, Any], agent_executable: str
     ) -> None:
@@ -671,13 +833,23 @@ class PynqServiceMixin:
             board_state = "degraded_optional_capability"
         elif status == PREFLIGHT_FAILED:
             board_state = "preflight_failed"
-        return self._update_pynq_board_fields(
-            board_id,
-            state=board_state,
-            lastPreflightStatus=status,
-            lastPreflightMessage=message,
-            lastRuntimeMode=runtime_mode,
-        )
+        fields: dict[str, Any] = {
+            "state": board_state,
+            "lastPreflightStatus": status,
+            "lastPreflightMessage": message,
+            "lastRuntimeMode": runtime_mode,
+        }
+        # The board reads the overlay version out of the manifest it actually
+        # installed, and this is the only place that answer reaches the record.
+        # Nothing wrote it before, so the app showed "Overlay: Not installed"
+        # beside a board whose overlay was loaded and running. An absent value
+        # leaves the stored one alone: a preflight that could not read the
+        # manifest is not evidence the overlay was removed.
+        if isinstance(overlay_assets, dict):
+            overlay_version = str(overlay_assets.get("overlay_version") or "").strip()
+            if overlay_version:
+                fields["overlayVersion"] = overlay_version
+        return self._update_pynq_board_fields(board_id, **fields)
 
     def test_pynq_board_connection(self, board_id: str) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
@@ -895,6 +1067,17 @@ class PynqServiceMixin:
                     board,
                     f"runtime install mode resolved to {install_mode}",
                 )
+                if install_mode != "systemd":
+                    # A user-space agent cannot program the FPGA at all, so this
+                    # is not a nicety — without root the board reaches "ready"
+                    # and then fails every deploy.
+                    install_status = self._promote_pynq_install_to_systemd(
+                        board, remote_bundle_dir, install_status
+                    )
+                    install_mode = (
+                        str(install_status.get("installMode") or "unknown").strip()
+                        or "unknown"
+                    )
             self._update_pynq_board_fields(board_id, state="runtime_installed")
             self._emit_pynq_terminal_log(
                 board, "runtime install finished; fetching preflight"
@@ -1111,8 +1294,11 @@ class PynqServiceMixin:
         self._emit_pynq_terminal_log(
             board, f"restarting systemd service {board['remoteServiceName']}.service"
         )
-        self._run_ssh(
-            board, f"sudo systemctl restart {board['remoteServiceName']}.service"
+        # Through the password-carrying helper: the stock PYNQ image has no
+        # passwordless sudo, so a plain `sudo systemctl` here waits for a prompt
+        # that never comes and the restart times out.
+        self._run_ssh_privileged(
+            board, f"systemctl restart {board['remoteServiceName']}.service"
         )
         self._emit_pynq_terminal_log(
             board, "waiting for restarted systemd service to become healthy"

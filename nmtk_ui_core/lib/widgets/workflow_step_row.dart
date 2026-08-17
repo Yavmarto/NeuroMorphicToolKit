@@ -46,9 +46,9 @@ class NmtkWorkflowStepRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Zeta.of(
+                    context,
+                  ).textStyles.bodyMedium.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(

@@ -113,18 +113,23 @@ class NmtkSurfaceCard extends StatelessWidget {
                                     title!,
                                     style:
                                         titleStyle ??
-                                        Zeta.of(context).textStyles.titleMedium
-                                            .copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
+                                        Zeta.of(
+                                          context,
+                                        ).textStyles.titleMedium.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                   ),
                                 if (subtitle != null) ...[
                                   if (title != null) const SizedBox(height: 4),
                                   Text(
                                     subtitle!,
-                                    style: Zeta.of(context).textStyles.bodyMedium
+                                    style: Zeta.of(context)
+                                        .textStyles
+                                        .bodyMedium
                                         .copyWith(
-                                          color: theme.colorScheme.onSurfaceVariant,
+                                          color: theme
+                                              .colorScheme
+                                              .onSurfaceVariant,
                                         ),
                                   ),
                                 ],

@@ -135,9 +135,8 @@ class TileGridNeuronRenderer {
       onHover: (event) => _hoveredTile.value = _hitTest(event.localPosition),
       onExit: (_) => _hoveredTile.value = null,
       child: GestureDetector(
-        onTapUp: (details) => _hoveredTile.value = _hitTest(
-          details.localPosition,
-        ),
+        onTapUp: (details) =>
+            _hoveredTile.value = _hitTest(details.localPosition),
         child: Stack(
           children: [
             RepaintBoundary(

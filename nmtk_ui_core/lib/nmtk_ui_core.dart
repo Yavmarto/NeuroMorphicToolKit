@@ -8,6 +8,7 @@ export 'models/quantization_report.dart';
 export 'models/sensor_frame.dart';
 export 'models/bulk_spike_frame.dart';
 export 'models/teensy_deployment_model.dart';
+export 'models/trained_weight_status.dart';
 export 'models/pynq_deployment_model.dart';
 export 'models/akida_deployment_model.dart';
 export 'shell_tokens.dart';

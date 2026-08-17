@@ -150,32 +150,36 @@ void main() {
         'network_summary': {'n_neurons': 100, 'n_synapses': 200},
         'deploy_payload': {
           'weights': [1, 2, 3],
-          'config': {'threshold': 1.0, 'bit_width': 8, 'scale_factor': 127.0},
+          'config': {
+            'threshold': 1.0,
+            'bit_width': 8,
+            'scale_factor': 127.0,
+            'timestep_us': 1000,
+          },
           'bitstream_path': '/opt/overlays/snn_overlay.bit',
-          'overlay_id': 'snn_overlay_v1',
-          'overlay_version': '1.0.1',
+          'overlay_id': 'snn_overlay_v2',
+          'overlay_version': '2.0.0',
           'weight_bit_width': 8,
-          'max_supported_neurons': 256,
-          'max_supported_synapses': 15360,
+          'max_supported_neurons': 4096,
+          'max_supported_synapses': 262144,
           'dma_ip_name': 'axi_dma_0',
           'snn_ip_name': 'snn_engine_0',
           'contract_digest': 'abc123',
+          // The overlay-v2 map as the backend resolves it from the `.hwh`.
           'register_map': {
+            'resolved_from_hwh': true,
             'base_address': 1073741824,
             'control_reg_offset': 0,
-            'status_reg_offset': 4,
-            'population_count_offset': 8,
-            'input_neuron_count_offset': 12,
-            'output_neuron_count_offset': 16,
-            'timestep_count_offset': 20,
-            'threshold_base_offset': 256,
-            'neuron_base_offset': 256,
-            'weight_base_offset': 4096,
+            'global_interrupt_enable_offset': 4,
+            'interrupt_enable_offset': 8,
+            'interrupt_status_offset': 12,
+            'weights_ptr_offset': 16,
+            'layer_config_ptr_offset': 28,
+            'layer_count_offset': 40,
+            'weight_count_offset': 48,
+            'timestep_count_offset': 56,
             'dma_channel': 'axi_dma_0',
-            'input_buffer_addr': 0,
-            'output_buffer_addr': 0,
             'timestep_us': 1000,
-            'addr_range': 65536,
           },
         },
       };
@@ -188,29 +192,31 @@ void main() {
       expect(response.deployPayload, isNotNull);
       expect(response.deployPayload!.weightCount, 3);
       expect(response.deployPayload!.config.bitWidth, 8);
-      expect(response.deployPayload!.overlayVersion, '1.0.1');
-      expect(response.deployPayload!.maxSupportedSynapses, 15360);
+      expect(response.deployPayload!.overlayVersion, '2.0.0');
+      expect(response.deployPayload!.maxSupportedSynapses, 262144);
       expect(response.deployPayload!.registerMap.dmaChannel, 'axi_dma_0');
-      expect(response.deployPayload!.registerMap.populationCountOffset, 8);
-      expect(response.deployPayload!.registerMap.thresholdBaseOffset, 256);
 
       final roundTrip = response.deployPayload!.toJson();
-      final roundTripRegisterMap =
-          roundTrip['register_map'] as Map<String, dynamic>;
-      expect(roundTrip['overlay_id'], 'snn_overlay_v1');
-      expect(roundTrip['overlay_version'], '1.0.1');
+      expect(roundTrip['overlay_id'], 'snn_overlay_v2');
+      expect(roundTrip['overlay_version'], '2.0.0');
       expect(roundTrip['weight_bit_width'], 8);
-      expect(roundTrip['max_supported_neurons'], 256);
-      expect(roundTrip['max_supported_synapses'], 15360);
+      expect(roundTrip['max_supported_neurons'], 4096);
+      expect(roundTrip['max_supported_synapses'], 262144);
       expect(roundTrip['dma_ip_name'], 'axi_dma_0');
       expect(roundTrip['snn_ip_name'], 'snn_engine_0');
       expect(roundTrip['contract_digest'], 'abc123');
-      expect(roundTripRegisterMap['population_count_offset'], 8);
-      expect(roundTripRegisterMap['input_neuron_count_offset'], 12);
-      expect(roundTripRegisterMap['output_neuron_count_offset'], 16);
-      expect(roundTripRegisterMap['timestep_count_offset'], 20);
-      expect(roundTripRegisterMap['threshold_base_offset'], 256);
-      expect(roundTripRegisterMap['addr_range'], 65536);
+
+      // The board rejects a deploy whose register map is not *equal* to the
+      // manifest it has installed, so the map has to come back exactly as it
+      // arrived — no key added, none dropped, none renamed.
+      final payloadJson = json['deploy_payload'] as Map<String, dynamic>;
+      expect(
+        roundTrip['register_map'],
+        equals(payloadJson['register_map']),
+      );
+      // Same rule for config: `timestep_us` has no field here and still has to
+      // reach the board.
+      expect(roundTrip['config'], equals(payloadJson['config']));
     });
 
     test('fromJson parses exportable_with_warnings state', () {
@@ -249,7 +255,7 @@ void main() {
           'weights': [1, 2, 3],
           'config': {'bit_width': 8},
           'bitstream_path': 'snn_overlay.bit',
-          'register_map': {'weight_base_offset': 4096},
+          'register_map': {'weights_ptr_offset': 16},
         },
       };
       final response = PynqNetworkResponse.fromJson(json);
@@ -257,7 +263,10 @@ void main() {
       expect(response.deployPayload, isNotNull);
       expect(response.deployPayload!.weights, [1.0, 2.0, 3.0]);
       expect(response.deployPayload!.config.bitWidth, 8);
-      expect(response.deployPayload!.registerMap.weightBaseOffset, 4096);
+      expect(
+        response.deployPayload!.registerMap.values['weights_ptr_offset'],
+        16,
+      );
     });
   });
 
@@ -435,6 +444,73 @@ void main() {
 
       expect(result.passed, isFalse);
       expect(result.passedCases, 1);
+    });
+  });
+
+  group('PynqRunResult', () {
+    test('reads an all-zero frame as a silent run, not ten spikes', () {
+      // The board's answer to the screenshot's run: one word per output neuron,
+      // all zero. Reporting `outputSpikes.length` as the spike total said
+      // "Output spikes 10" for a network that fired nothing.
+      final result = PynqRunResult.fromJson({
+        'status': 'success',
+        'output_spikes': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        'timesteps': 1,
+        'execution_time_us': 36420.0,
+        'output_neurons': 10,
+        'kernel_reported_done': true,
+      });
+
+      expect(result.outputNeurons, 10);
+      expect(result.frameWidth, 10);
+      expect(result.totalSpikes, 0);
+      expect(result.predictedClass, isNull);
+    });
+
+    test('folds a multi-timestep stream into per-neuron spike counts', () {
+      final result = PynqRunResult.fromJson({
+        'status': 'success',
+        'output_spikes': [
+          0, 0, 1, // t0 — neuron 2
+          0, 1, 1, // t1 — neurons 1 and 2
+        ],
+        'timesteps': 2,
+        'execution_time_us': 1000.0,
+        'output_neurons': 3,
+      });
+
+      expect(result.spikeCountsPerNeuron, [0, 1, 2]);
+      expect(result.totalSpikes, 3);
+      expect(result.predictedClass, 2);
+    });
+
+    test('an older runtime that omits the new fields is not flagged', () {
+      final result = PynqRunResult.fromJson({
+        'status': 'success',
+        'output_spikes': [1, 0, 0, 1],
+        'timesteps': 2,
+        'execution_time_us': 500.0,
+      });
+
+      expect(result.kernelReportedDone, isTrue);
+      // No width reported, but the stream divides evenly by the timesteps:
+      // [1, 0] at t0 and [0, 1] at t1, so each neuron fired once.
+      expect(result.frameWidth, 2);
+      expect(result.spikeCountsPerNeuron, [1, 1]);
+    });
+
+    test('carries a kernel that never reported done', () {
+      final result = PynqRunResult.fromJson({
+        'status': 'success',
+        'output_spikes': [0, 0],
+        'timesteps': 1,
+        'execution_time_us': 10.0,
+        'output_neurons': 2,
+        'kernel_reported_done': false,
+      });
+
+      expect(result.status, 'success');
+      expect(result.kernelReportedDone, isFalse);
     });
   });
 
