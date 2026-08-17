@@ -113,6 +113,13 @@ class NmtkPipelineStepper extends StatefulWidget {
   /// toolbar padding by default.
   final EdgeInsetsGeometry contentPadding;
 
+  /// Whether the step row may scroll horizontally on overflow.
+  ///
+  /// Disable this when embedding the stepper inside a widget that already
+  /// provides its own horizontal scroll (or reflow) for overflow — nesting
+  /// two horizontal scrollables causes unbounded-width layout errors.
+  final bool scrollable;
+
   const NmtkPipelineStepper({
     super.key,
     required this.steps,
@@ -138,6 +145,7 @@ class NmtkPipelineStepper extends StatefulWidget {
       horizontal: 12,
       vertical: 8,
     ),
+    this.scrollable = true,
   });
 
   @override
@@ -237,7 +245,14 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
           label: widget.statusBarSemanticsLabel,
           child: Padding(
             padding: widget.contentPadding,
-            child: !widget.wrapOnCompact || constraints.maxWidth >= 840
+            child: !widget.scrollable
+                ? Row(
+                    key: _rowKey,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: steps,
+                  )
+                : !widget.wrapOnCompact || constraints.maxWidth >= 840
                 ? SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     controller: _scrollController,
@@ -414,6 +429,38 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
               );
             },
             child: slotChild,
+          ),
+        );
+      }
+    }
+
+    // The interior loop above only places a − button in a connector slot
+    // between two steps. When the split's left pane is the very first step
+    // (or the right pane is the very last), there is no connector slot on
+    // that outer side to hold one, so that pane could never be closed —
+    // only the other side could. Add a boundary button for that edge so
+    // either side of a split can always be collapsed.
+    if (isSplit && widget.onCollapseStep != null) {
+      if (leftSplitIdx == 0) {
+        final keepId = widget.steps[rightSplitIdx].id;
+        widgets.insert(
+          0,
+          _ConnectorSlotButton(
+            key: const ValueKey('minus_left_boundary'),
+            icon: ZetaIcons.remove,
+            tooltip: widget.closeLeftPaneTooltip,
+            onTap: () => widget.onCollapseStep!(keepId),
+          ),
+        );
+      }
+      if (rightSplitIdx == widget.steps.length - 1) {
+        final keepId = widget.steps[leftSplitIdx].id;
+        widgets.add(
+          _ConnectorSlotButton(
+            key: const ValueKey('minus_right_boundary'),
+            icon: ZetaIcons.remove,
+            tooltip: widget.closeRightPaneTooltip,
+            onTap: () => widget.onCollapseStep!(keepId),
           ),
         );
       }

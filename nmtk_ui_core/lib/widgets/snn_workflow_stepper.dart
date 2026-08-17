@@ -46,23 +46,35 @@ SnnWorkflowStage snnStageForPhase(SnnWorkflowPhase phase) => switch (phase) {
 };
 
 const double _kStageGap = 8;
+
+/// Width of the stage pill's label segment (present whether or not it's the
+/// active/expanded stage).
 const double _kPhasePillWidth = 110;
 
-/// Horizontal inset shared by the stage row and the phase rail so both rows
-/// start on the same x.
+/// Width of the inline sub-step destination pills nested inside the active
+/// stage's pill. They stay smaller than the stage label they're nested under.
+const double _kSubstepPillWidth = 96;
+
+/// Horizontal inset around the whole stage row.
 const double _kRowInset = 12;
 
 /// Fixed width of a connector slot in [NmtkPipelineStepper] (arrow or +/−).
 const double _kConnectorSlotWidth = 30;
 
-/// Width reserved for the phase rail: the widest stage's rail. Reserving it for
-/// every stage keeps the panel from resizing — and the single-phase Setup rail
-/// from drifting to the centre — when the active stage changes.
+/// Gap between a stage's label and its nested sub-step segment when expanded.
+const double _kLabelToSubstepGap = 8;
+
+/// Width reserved for the nested sub-step segment: the widest stage's set of
+/// sub-steps. Reserving the same width for every stage — rather than sizing to
+/// however many sub-steps the active stage actually has — keeps the panel from
+/// resizing, and the single-substep Setup pill from drifting to the centre,
+/// when the active stage changes.
 final double _kPhaseRailWidth = (() {
   final maxPhases = kSnnPhasesByStage.values
       .map((phases) => phases.length)
       .reduce((a, b) => a > b ? a : b);
-  return maxPhases * _kPhasePillWidth + (maxPhases - 1) * _kConnectorSlotWidth;
+  return maxPhases * _kSubstepPillWidth +
+      (maxPhases - 1) * _kConnectorSlotWidth;
 })();
 
 /// Base step-name labels shared by the desktop, compact, and drawer steppers.
@@ -78,9 +90,10 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
 
 /// A floating Studio workflow header.
 ///
-/// The three stages sit in a single row up top; the active stage's local
-/// phases render in a shared row beneath it, keeping navigation available
-/// without occupying a full canvas edge.
+/// The three stages sit in a single row. The active stage's local phases
+/// nest inline inside its own pill; the other two stages stay collapsed to
+/// just their label — keeping navigation available without occupying a
+/// second row.
 class SnnWorkflowStepper extends StatefulWidget {
   final SnnWorkflowPhase currentPhase;
   final int epochPulseTick;
@@ -153,46 +166,43 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
     final tokens = NmtkShellTokens.of(context);
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
 
-    final inner = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: _kRowInset),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final stage in SnnWorkflowStage.values) ...[
-                if (stage != SnnWorkflowStage.values.first)
-                  const SizedBox(width: _kStageGap),
-                SizedBox(
-                  width: _kPhasePillWidth,
-                  child: _StageDestination(
-                    number: stage.index + 1,
-                    label: widget.stageLabels[stage] ?? stage.name,
-                    selected: stage == activeStage,
-                    completed: _stageIsCompleted(stage),
-                    running: _stageIsRunning(stage),
-                    disabled: _stageIsLocked(stage),
-                    disabledTooltip: widget.disabledTooltip,
-                    onTap: () => _selectStage(stage),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: _kPhaseRailWidth + _kRowInset * 2,
-          child: _SubstepRailSwitcher(
-            stage: activeStage,
-            perPhaseDuration: tokens.standardMotion,
-            reducedMotion: reducedMotion,
-            railBuilder: _buildChildRail,
-          ),
-        ),
-      ],
+    // Only the active stage carries its sub-steps, nested inline inside its
+    // own pill; the other two stages render as a plain label. Because exactly
+    // one stage is always active and every stage reserves the same sub-step
+    // width (see `_kPhaseRailWidth`), the row's total width never changes as
+    // the active stage moves — `AnimatedSize` on each pill just makes that
+    // handoff read as a smooth grow/shrink instead of a jump cut.
+    final stageRow = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _kRowInset),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final stage in SnnWorkflowStage.values) ...[
+            if (stage != SnnWorkflowStage.values.first)
+              const SizedBox(width: _kStageGap),
+            _StageCell(
+              number: stage.index + 1,
+              label: widget.stageLabels[stage] ?? stage.name,
+              selected: stage == activeStage,
+              completed: _stageIsCompleted(stage),
+              running: _stageIsRunning(stage),
+              disabled: _stageIsLocked(stage),
+              disabledTooltip: widget.disabledTooltip,
+              onTap: () => _selectStage(stage),
+              substeps: stage == activeStage
+                  ? _buildChildRail(context, stage)
+                  : null,
+              duration: tokens.standardMotion,
+              reducedMotion: reducedMotion,
+            ),
+          ],
+        ],
+      ),
+    );
+
+    final inner = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: stageRow,
     );
 
     if (widget.bare) {
@@ -224,11 +234,11 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       key: ValueKey<SnnWorkflowStage>(stage),
       bare: true,
       shrinkWrap: true,
-      wrapOnCompact: false,
-      contentPadding: const EdgeInsets.symmetric(horizontal: _kRowInset),
+      scrollable: false,
+      contentPadding: EdgeInsets.zero,
       stepAccentColor: colors.mainPrimary,
       stepStyle: NmtkPipelineStepStyle.destination,
-      stepWidth: _kPhasePillWidth,
+      stepWidth: _kSubstepPillWidth,
       statusBarSemanticsLabel:
           '${widget.stageLabels[stage] ?? stage.name} steps',
       selectedStepId: widget.currentPhase.name,
@@ -302,8 +312,17 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
   }
 }
 
-class _StageDestination extends StatelessWidget {
-  const _StageDestination({
+/// A stage pill that shows just its label when collapsed, and — when
+/// [selected] and [substeps] is non-null — grows to nest that stage's
+/// sub-step chips inline, inside the same pill border.
+///
+/// `AnimatedSize` on the appended segment turns the swap between stages into
+/// a smooth grow/shrink instead of a jump cut; because every stage reserves
+/// the same sub-step width regardless of how many sub-steps it actually has
+/// (see `_kPhaseRailWidth`), the row's total width never changes as the
+/// segment moves from one pill to another.
+class _StageCell extends StatelessWidget {
+  const _StageCell({
     required this.number,
     required this.label,
     required this.selected,
@@ -312,6 +331,9 @@ class _StageDestination extends StatelessWidget {
     required this.disabled,
     required this.disabledTooltip,
     required this.onTap,
+    required this.substeps,
+    required this.duration,
+    required this.reducedMotion,
   });
 
   final int number;
@@ -322,6 +344,9 @@ class _StageDestination extends StatelessWidget {
   final bool disabled;
   final String disabledTooltip;
   final VoidCallback onTap;
+  final Widget? substeps;
+  final Duration duration;
+  final bool reducedMotion;
 
   @override
   Widget build(BuildContext context) {
@@ -343,6 +368,66 @@ class _StageDestination extends StatelessWidget {
         : selected
         ? 'Current'
         : 'Available';
+
+    final expanded = selected && substeps != null;
+    final labelWidget = SizedBox(
+      width: _kPhasePillWidth,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: Zeta.of(context).textStyles.bodySmall.copyWith(
+              color: foreground,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final segmentChild = expanded
+        ? Padding(
+            key: const ValueKey<String>('expanded'),
+            padding: const EdgeInsets.only(right: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 1.5,
+                  height: 20,
+                  color: colors.borderPrimary.withValues(alpha: 0.4),
+                ),
+                const SizedBox(width: _kLabelToSubstepGap),
+                // Every stage reserves the same width here regardless of
+                // how many sub-steps it actually has, so the row's total
+                // width stays constant across which stage is active.
+                SizedBox(
+                  width: _kPhaseRailWidth,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: substeps!,
+                  ),
+                ),
+              ],
+            ),
+          )
+        : const SizedBox.shrink(key: ValueKey<String>('collapsed'));
+
+    // `AnimatedSize` does not tolerate a zero duration (it re-dirties itself
+    // mid-layout), so reduced motion skips it entirely rather than feeding
+    // it `Duration.zero`.
+    final segment = reducedMotion
+        ? segmentChild
+        : AnimatedSize(
+            duration: duration,
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.centerLeft,
+            child: segmentChild,
+          );
+
     final destination = Semantics(
       button: true,
       selected: selected,
@@ -362,22 +447,9 @@ class _StageDestination extends StatelessWidget {
         child: InkWell(
           onTap: disabled ? null : onTap,
           borderRadius: BorderRadius.circular(tokens.radiusSm),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: Zeta.of(context).textStyles.bodySmall.copyWith(
-                      color: foreground,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [labelWidget, segment],
           ),
         ),
       ),
@@ -386,140 +458,6 @@ class _StageDestination extends StatelessWidget {
     return Tooltip(
       message: disabledTooltip,
       child: Opacity(opacity: 0.38, child: destination),
-    );
-  }
-}
-
-/// Shows the active stage's phase rail in a single slot below the stage row.
-///
-/// On a stage switch, the outgoing rail slides/fades upward as if pulled into
-/// the stage row above, then the incoming rail slides/fades down out of it —
-/// a sequential two-phase transition, not a crossfade.
-class _SubstepRailSwitcher extends StatefulWidget {
-  const _SubstepRailSwitcher({
-    required this.stage,
-    required this.perPhaseDuration,
-    required this.reducedMotion,
-    required this.railBuilder,
-  });
-
-  final SnnWorkflowStage stage;
-  final Duration perPhaseDuration;
-  final bool reducedMotion;
-  final Widget Function(BuildContext, SnnWorkflowStage) railBuilder;
-
-  @override
-  State<_SubstepRailSwitcher> createState() => _SubstepRailSwitcherState();
-}
-
-class _SubstepRailSwitcherState extends State<_SubstepRailSwitcher>
-    with SingleTickerProviderStateMixin {
-  static const double _travel = 36;
-
-  late AnimationController _controller;
-  late CurvedAnimation _outCurve;
-  late CurvedAnimation _inCurve;
-  SnnWorkflowStage? _outgoingStage;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.perPhaseDuration * 2,
-      value: 1,
-    );
-    _buildCurves();
-  }
-
-  void _buildCurves() {
-    _outCurve = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic),
-    );
-    _inCurve = CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant _SubstepRailSwitcher oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.perPhaseDuration != widget.perPhaseDuration) {
-      _controller.duration = widget.perPhaseDuration * 2;
-    }
-    if (widget.reducedMotion) {
-      _controller.value = 1;
-      _outgoingStage = null;
-      return;
-    }
-    if (oldWidget.stage != widget.stage) {
-      _outgoingStage = oldWidget.stage;
-      _controller.forward(from: 0).whenCompleteOrCancel(() {
-        if (mounted && _controller.isCompleted) {
-          setState(() => _outgoingStage = null);
-        }
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (widget.reducedMotion || _outgoingStage == null) {
-      return ClipRect(child: widget.railBuilder(context, widget.stage));
-    }
-
-    final outgoing = widget.railBuilder(context, _outgoingStage!);
-    final incoming = widget.railBuilder(context, widget.stage);
-
-    return ClipRect(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          AnimatedBuilder(
-            animation: _outCurve,
-            builder: (context, child) => IgnorePointer(
-              child: ExcludeSemantics(
-                child: Opacity(
-                  opacity: 1 - _outCurve.value,
-                  child: Transform.translate(
-                    offset: Offset(0, -_outCurve.value * _travel),
-                    child: child,
-                  ),
-                ),
-              ),
-            ),
-            child: outgoing,
-          ),
-          AnimatedBuilder(
-            animation: _inCurve,
-            builder: (context, child) {
-              final settled = _inCurve.value >= 1;
-              return IgnorePointer(
-                ignoring: !settled,
-                child: ExcludeSemantics(
-                  excluding: !settled,
-                  child: Opacity(
-                    opacity: _inCurve.value,
-                    child: Transform.translate(
-                      offset: Offset(0, -(1 - _inCurve.value) * _travel),
-                      child: child,
-                    ),
-                  ),
-                ),
-              );
-            },
-            child: incoming,
-          ),
-        ],
-      ),
     );
   }
 }

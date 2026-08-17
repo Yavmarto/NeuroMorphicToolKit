@@ -47,7 +47,9 @@ void main() {
         ),
       );
 
-      final stage = find.byKey(const ValueKey('workflow-stage-2'));
+      // Setup is not the active stage here, so its pill stays collapsed to
+      // plain text — no icons at all.
+      final collapsedStage = find.byKey(const ValueKey('workflow-stage-1'));
       final model = find.byKey(const ValueKey('pipeline-step-defineModel'));
       final training = find.byKey(const ValueKey('pipeline-step-defineTrain'));
       final evaluation = find.byKey(const ValueKey('pipeline-step-defineEval'));
@@ -55,7 +57,7 @@ void main() {
       expect(tester.getSize(model).width, tester.getSize(training).width);
       expect(tester.getSize(training).width, tester.getSize(evaluation).width);
       expect(
-        find.descendant(of: stage, matching: find.byType(Icon)),
+        find.descendant(of: collapsedStage, matching: find.byType(Icon)),
         findsNothing,
       );
       expect(
@@ -188,7 +190,7 @@ void main() {
     });
 
     testWidgets(
-      'stage switch plays a sequential out-then-in substep transition',
+      'stage switch nests the new stage sub-steps inline and drops the old ones',
       (tester) async {
         final phase = ValueNotifier<SnnWorkflowPhase>(
           SnnWorkflowPhase.defineTrain,
@@ -198,7 +200,7 @@ void main() {
             ValueListenableBuilder<SnnWorkflowPhase>(
               valueListenable: phase,
               builder: (context, value, child) => SizedBox(
-                width: 640,
+                width: 800,
                 child: SnnWorkflowStepper(currentPhase: value),
               ),
             ),
@@ -206,21 +208,9 @@ void main() {
         );
 
         expect(find.text('Training').hitTestable(), findsOneWidget);
+        expect(find.text('Run').hitTestable(), findsNothing);
 
         phase.value = SnnWorkflowPhase.run;
-        await tester.pump();
-        // Mid phase A (outgoing "Design" rail sliding/fading up): neither
-        // rail is settled yet, so neither is hit-testable.
-        await tester.pump(const Duration(milliseconds: 90));
-        expect(find.text('Training').hitTestable(), findsNothing);
-        expect(find.text('Run').hitTestable(), findsNothing);
-
-        // Mid phase B (incoming "Execute" rail sliding/fading down): the
-        // outgoing rail is gone, the incoming one is still settling in.
-        await tester.pump(const Duration(milliseconds: 180));
-        expect(find.text('Training').hitTestable(), findsNothing);
-        expect(find.text('Run').hitTestable(), findsNothing);
-
         await tester.pumpAndSettle();
 
         expect(find.text('Training').hitTestable(), findsNothing);
@@ -259,7 +249,7 @@ void main() {
       expect(tester.getSize(panel).height, initialHeight);
     });
 
-    testWidgets('first phase pill starts at the same x as the stage row', (
+    testWidgets('active stage substeps nest inside its own pill, left-aligned', (
       tester,
     ) async {
       final phase = ValueNotifier<SnnWorkflowPhase>(
@@ -276,21 +266,29 @@ void main() {
         ),
       );
 
+      // The substep chip sits just right of the stage's own label, inside
+      // the same pill — not centred, not off in a separate row.
       final stageLeft = tester
-          .getTopLeft(find.byKey(const ValueKey('workflow-stage-1')))
+          .getTopLeft(find.byKey(const ValueKey('workflow-stage-2')))
           .dx;
-      expect(
-        tester.getTopLeft(find.byKey(const ValueKey('pipeline-step-defineModel'))).dx,
-        stageLeft,
-      );
+      final substepLeft = tester
+          .getTopLeft(find.byKey(const ValueKey('pipeline-step-defineModel')))
+          .dx;
+      expect(substepLeft, greaterThan(stageLeft + 100));
+      expect(substepLeft, lessThan(stageLeft + 140));
 
-      // A single-phase stage must stay left-aligned, not drift to the centre.
+      // A single-substep stage must stay left-aligned within its reserved
+      // width, not drift to the centre.
       phase.value = SnnWorkflowPhase.selectData;
       await tester.pumpAndSettle();
-      expect(
-        tester.getTopLeft(find.byKey(const ValueKey('pipeline-step-selectData'))).dx,
-        stageLeft,
-      );
+      final setupStageLeft = tester
+          .getTopLeft(find.byKey(const ValueKey('workflow-stage-1')))
+          .dx;
+      final prepareLeft = tester
+          .getTopLeft(find.byKey(const ValueKey('pipeline-step-selectData')))
+          .dx;
+      expect(prepareLeft, greaterThan(setupStageLeft + 100));
+      expect(prepareLeft, lessThan(setupStageLeft + 140));
     });
 
     testWidgets('active stage phases stay horizontally scrollable in narrow space', (

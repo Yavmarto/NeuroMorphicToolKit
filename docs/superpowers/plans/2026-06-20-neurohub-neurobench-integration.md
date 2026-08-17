@@ -115,7 +115,7 @@ if (_deployExpanded) ...[
 
   In the imports block:
   ```dart
-  import '../../../widgets/neurobench_panel.dart';
+
   ```
 
 - [ ] **Step 2: Add `_benchmarkExpanded` state variable**

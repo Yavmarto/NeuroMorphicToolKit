@@ -82,7 +82,7 @@ class _PipelineStepState extends State<_PipelineStep>
 
     final labelStyle =
         (destinationStyle
-                ? Zeta.of(context).textStyles.bodySmall
+                ? Zeta.of(context).textStyles.bodyXSmall
                 : Zeta.of(context).textStyles.bodyMedium)
             .copyWith(
               color: destinationStyle
@@ -116,19 +116,22 @@ class _PipelineStepState extends State<_PipelineStep>
         key: ValueKey<String>('pipeline-step-${widget.data.id}'),
         width: widget.width,
         padding: EdgeInsets.symmetric(
-          horizontal: destinationStyle ? 12 : 8,
-          vertical: destinationStyle ? 7 : 6,
+          horizontal: destinationStyle ? 10 : 8,
+          vertical: destinationStyle ? 4 : 6,
         ),
         decoration: BoxDecoration(
+          // destinationStyle chips nest inside a parent pill (e.g. the
+          // active SnnWorkflowStage's own bordered/filled cell) that already
+          // carries the selected look — drawing a second bordered/filled box
+          // here on top of it produced a "double pill". Selection here is
+          // conveyed by the label's color/weight (see labelStyle) instead.
           color: destinationStyle
-              ? (widget.selected
-                    ? colors.surfacePrimarySubtle
-                    : Colors.transparent)
+              ? Colors.transparent
               : _getBgColor(context, theme, tokens),
           borderRadius: BorderRadius.circular(tokens.radiusSm),
           border: Border.all(
             color: destinationStyle
-                ? (widget.selected ? colors.borderPrimary : Colors.transparent)
+                ? Colors.transparent
                 : _getBorderColor(context, theme, tokens),
             width: borderWidth,
           ),
@@ -137,7 +140,9 @@ class _PipelineStepState extends State<_PipelineStep>
           mainAxisSize: widget.width == null
               ? MainAxisSize.min
               : MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: destinationStyle
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.center,
           children: [
             if (!destinationStyle) ...[
               _buildIcon(context, theme, tokens),
@@ -153,6 +158,9 @@ class _PipelineStepState extends State<_PipelineStep>
                 child: Text(
                   widget.data.label,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: destinationStyle
+                      ? TextAlign.start
+                      : TextAlign.center,
                   style: labelStyle,
                 ),
               ),
