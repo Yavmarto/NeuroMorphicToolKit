@@ -221,6 +221,63 @@ Verified with the **real** downloaded artifacts, not synthetic ones:
 | snnTorch | run failed | 113 spikes, membrane [−2.54, 1.11] |
 | SC-NeuroCore | run failed | 116 spikes, membrane [−2.54, 1.00] |
 
+## Follow-up 3: Lava was failing for an unrelated reason
+
+Reported as "either Lava works and the other two don't, or the other way round".
+Measured against the live backend instead of guessing — three backends, two
+passes each:
+
+| backend | pass 1 | pass 2 |
+|---|---|---|
+| snntorch_sim | OK, 113 spikes | OK, 113 spikes |
+| sc_neurocore_sim | OK, 116 spikes | OK, 116 spikes |
+| lava_sim | FAIL | FAIL |
+
+So it is deterministic, not alternating, and the two halves of the report were
+different points in time: **before** the redeploy, Lava was the only one that
+"worked" — because `_lava_lif_params` fell back to Lava's own decay on a zero
+time constant while snnTorch and SC-NeuroCore refused. **After** the redeploy the
+other two work and Lava fails on its own, unrelated problem.
+
+Lava's error:
+
+```
+Remote Lava worker request failed: HTTP 422:
+{"detail":"Execution failed: [Errno 24] Too many open files: '/psm_4c5885de'"}
+```
+
+A two-neuron network fails identically, so it is not the graph — the worker is in
+a permanently exhausted state.
+
+Cause: a resource leak in the Lava worker, predating all of this. Lava's runtime
+is OS processes backed by POSIX shared memory (`/psm_*`) that only `stop()`
+releases. `Neurochip/neurochip/app/services/lava_backend.py`'s `run()` called
+`stop()` **only in its error path**, and the client
+(`lava_io.compile_and_run_remote`) calls `/compile` and `/run` but never `/stop`.
+So every *successful* Lava simulation leaked a whole runtime until the worker hit
+its descriptor limit, after which every run failed until the container restarted.
+
+Fixes:
+
+- `lava_backend.run()` releases the runtime in a `finally`, after the spikes have
+  been collected. Regression test added (`test_lava.py`).
+- `lava_io.compile_and_run_remote` calls `/stop` in a `finally`, best-effort, so
+  cleanup also happens against an older worker or when the run raises.
+- `_lava_lif_params` now **raises** on a zero time constant with the same
+  actionable message the other two backends give, instead of quietly substituting
+  Lava's defaults. That leniency is what made one backend appear to work while
+  the others failed on the identical network — which reads as the backends
+  disagreeing rather than as the network missing its parameters.
+
+Verification: `neurocnl` 19 failed / 1752 passed (unchanged failure set);
+`Neurochip` 12 failed / 439 passed against a HEAD baseline of 12 failed / 438
+passed — same failures, plus the new test. The two red Neurochip tests near this
+area (`test_artifact_contracts`) concern export zips and do not import
+`lava_backend`.
+
+**The deployed worker is still holding leaked handles** and needs restarting once
+before it recovers; redeploying the backend does that.
+
 ## Not done / known
 
 - `test_diagnostic_properties.py::test_property_7_unknown_primitive_phrase` is
