@@ -15,7 +15,6 @@ class NmtkDeployLayout extends StatelessWidget {
   const NmtkDeployLayout({
     super.key,
     required this.title,
-    this.subtitle,
     this.leading,
     this.trailing,
     required this.inference,
@@ -28,9 +27,6 @@ class NmtkDeployLayout extends StatelessWidget {
 
   /// Headline title for the deployment section.
   final String title;
-
-  /// Optional subtitle explaining the target status or guidance.
-  final String? subtitle;
 
   /// Optional leading widget in the section header.
   final Widget? leading;
@@ -60,15 +56,12 @@ class NmtkDeployLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return NmtkSection(
       title: title,
-      subtitle: subtitle,
       leading: leading,
       trailing: trailing,
       titleStyle: titleStyle,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isNarrow =
-              isCompact ||
-              constraints.maxWidth < NmtkShellTokens.normalBreakpoint;
+          final isNarrow = isCompact || constraints.maxWidth < NmtkShellTokens.normalBreakpoint;
 
           if (isNarrow) {
             return Column(
