@@ -17,6 +17,11 @@ class _MemorySecretStorage implements DeploymentSecretStorage {
   Future<void> write(String key, String value) async {
     values[key] = value;
   }
+
+  @override
+  Future<void> delete(String key) async {
+    values.remove(key);
+  }
 }
 
 void main() {

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 abstract class DeploymentSecretStorage {
   Future<String?> read(String key);
   Future<void> write(String key, String value);
+  Future<void> delete(String key);
 }
 
 class PlatformDeploymentSecretStorage implements DeploymentSecretStorage {
@@ -24,6 +25,9 @@ class PlatformDeploymentSecretStorage implements DeploymentSecretStorage {
   @override
   Future<void> write(String key, String value) =>
       _storage.write(key: key, value: value);
+
+  @override
+  Future<void> delete(String key) => _storage.delete(key: key);
 }
 
 class DeploymentPersistence {
@@ -140,5 +144,13 @@ class DeploymentPersistence {
       return true;
     }
     return trusted == next;
+  }
+
+  /// Drops the previously trusted fingerprint for [host]:[port] so the next
+  /// connection trusts whatever key the server presents instead of rejecting
+  /// it as changed — for when the server's host key legitimately changed
+  /// (reinstall, replaced disk) and the user has confirmed that in person.
+  Future<void> forgetHostKey({required String host, required int port}) {
+    return _secureStorage.delete('$_fingerprintPrefix$host:$port');
   }
 }

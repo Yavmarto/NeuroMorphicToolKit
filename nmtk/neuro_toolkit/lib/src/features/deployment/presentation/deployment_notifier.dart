@@ -289,6 +289,13 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     return job;
   }
 
+  Future<void> forgetHostKey({
+    required String host,
+    required int sshPort,
+  }) {
+    return _service.forgetHostKey(host: host, sshPort: sshPort);
+  }
+
   DeploymentTarget? _targetForRetry(DeploymentState current) {
     final job = current.activeJob;
     if (job != null) {

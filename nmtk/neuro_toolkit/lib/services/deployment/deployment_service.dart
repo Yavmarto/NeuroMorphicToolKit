@@ -269,4 +269,14 @@ abstract class DeploymentService {
   }) {
     throw UnsupportedError('Target reinstall is not supported.');
   }
+
+  /// Drops the previously trusted SSH host key for [host]:[sshPort], for
+  /// when the server's key legitimately changed (reinstall, replaced disk)
+  /// and the user has confirmed that in person.
+  Future<void> forgetHostKey({
+    required String host,
+    required int sshPort,
+  }) {
+    throw UnsupportedError('Forgetting a host key is not supported.');
+  }
 }

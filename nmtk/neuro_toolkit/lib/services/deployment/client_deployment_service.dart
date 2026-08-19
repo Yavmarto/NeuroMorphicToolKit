@@ -569,6 +569,8 @@ fi
             if (current.terminalOutput.isEmpty ||
                 !current.terminalOutput.last.startsWith('[client:'))
               '[client: ${failure.summary}]',
+            if (failure.technicalDetails.isNotEmpty)
+              '[client-detail: ${failure.technicalDetails}]',
           ]),
           requiresEphemeralAdministrator: false,
           clearActiveOperation: true,
@@ -610,12 +612,20 @@ fi
     );
     final isAuthentication =
         friendly.toLowerCase().contains('authentication failed');
+    final isHostKeyMismatch =
+        friendly.toLowerCase().contains('does not match the one previously');
     return DeploymentFailureDetails(
-      code: isAuthentication ? 'admin_authentication_failed' : 'ssh_failed',
+      code: isHostKeyMismatch
+          ? 'host_key_mismatch'
+          : isAuthentication
+              ? 'admin_authentication_failed'
+              : 'ssh_failed',
       phase: currentPhase,
-      summary: isAuthentication
-          ? 'Administrator authentication failed'
-          : 'Could not connect to the server',
+      summary: isHostKeyMismatch
+          ? 'Server identity changed'
+          : isAuthentication
+              ? 'Administrator authentication failed'
+              : 'Could not connect to the server',
       recovery: friendly,
       technicalDetails: detail,
       existingConnectionReachable: existingConnectionReachable,
@@ -2322,6 +2332,14 @@ step_marker finish 40 false "Finalizing secure deployment handoff"
     return deploy(request);
   }
 
+  @override
+  Future<void> forgetHostKey({
+    required String host,
+    required int sshPort,
+  }) async {
+    await (await _store).forgetHostKey(host: host, port: sshPort);
+  }
+
   bool get _isDesktop =>
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.macOS ||
@@ -3631,11 +3649,32 @@ exit 1
 
   static String _friendlySshError(Object error) {
     final message = error.toString();
-    if (message.toLowerCase().contains('host key')) {
-      return 'The SSH host key changed. Confirm the server identity before '
-          'trying again.';
+    final lower = message.toLowerCase();
+    // Storing/reading the trusted fingerprint for this host failed on this
+    // device (e.g. secure storage/keychain access) — unrelated to whether
+    // the credentials are correct, so don't call it an auth failure.
+    if (lower.contains('host key trust check failed')) {
+      return 'Could not save or verify this server\'s trusted host key on '
+          'this device: $message. This is unrelated to the administrator '
+          'password or key.';
     }
-    if (message.toLowerCase().contains('auth')) {
+    if (lower.contains('hostkey verification failed') ||
+        lower.contains('signature verification failed')) {
+      return 'The SSH host key does not match the one previously trusted '
+          'for this server. Confirm the server\'s identity before retrying.';
+    }
+    // The transport closed before any credential was checked — e.g.
+    // fail2ban/rate limiting, MaxStartups throttling, or a firewall reset.
+    // Distinct from a real credential rejection, which arrives as a
+    // userauth failure message instead of the connection dropping early.
+    if (lower.contains('closed before authentication')) {
+      return 'The server closed the connection before authentication could '
+          'happen. This usually means the server is rate-limiting or '
+          'blocking this connection (e.g. fail2ban, MaxStartups) rather than '
+          'rejecting the credentials. Check the server\'s SSH/auth logs, '
+          'wait a bit, then retry.';
+    }
+    if (lower.contains('auth')) {
       return 'SSH authentication failed. Check the username and credentials.';
     }
     return 'Could not connect over SSH: $message';

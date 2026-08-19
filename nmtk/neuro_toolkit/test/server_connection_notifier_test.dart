@@ -119,6 +119,10 @@ class _RepairService implements DeploymentService {
     required String containerEngine,
   }) =>
       throw UnimplementedError();
+
+  @override
+  Future<void> forgetHostKey({required String host, required int sshPort}) =>
+      throw UnimplementedError();
 }
 
 Future<void> _flushMicrotasks() async {

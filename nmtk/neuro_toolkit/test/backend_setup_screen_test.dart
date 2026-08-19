@@ -162,6 +162,16 @@ class _FakeDeploymentService implements DeploymentService {
       logs: const [],
     );
   }
+
+  final List<String> forgottenHostKeys = <String>[];
+
+  @override
+  Future<void> forgetHostKey({
+    required String host,
+    required int sshPort,
+  }) async {
+    forgottenHostKeys.add('$host:$sshPort');
+  }
 }
 
 const _savedTarget = DeploymentTarget(
@@ -871,7 +881,8 @@ void main() {
     );
   });
 
-  testWidgets('new remote setup never offers destructive reset',
+  testWidgets(
+      'new remote setup offers factory reset but never triggers it unasked',
       (tester) async {
     final service = _FakeDeploymentService();
     await tester.pumpWidget(
@@ -879,7 +890,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Factory reset server data'), findsNothing);
+    expect(find.text('Factory reset server data'), findsOneWidget);
     expect(find.text('Erase and reinstall'), findsNothing);
     expect(service.setupCalls, 0);
   });

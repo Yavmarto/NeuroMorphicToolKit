@@ -89,6 +89,11 @@ class _FakeDeploymentService implements DeploymentService {
   Future<void> retryJupyter(String targetId) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> forgetHostKey({required String host, required int sshPort}) {
+    throw UnimplementedError();
+  }
 }
 
 class _NoUpdateService extends UpdateService {

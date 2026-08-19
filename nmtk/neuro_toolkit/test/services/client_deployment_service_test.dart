@@ -24,6 +24,11 @@ class _MemorySecretStorage implements DeploymentSecretStorage {
   Future<void> write(String key, String value) async {
     _values[key] = value;
   }
+
+  @override
+  Future<void> delete(String key) async {
+    _values.remove(key);
+  }
 }
 
 class _ManifestAssetBundle extends CachingAssetBundle {

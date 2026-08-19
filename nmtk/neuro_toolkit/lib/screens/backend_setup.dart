@@ -932,8 +932,6 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               _choice(_modeLabel(mode), mode, isMode: true),
           ],
         ),
-        SizedBox(height: tokens.compactGap),
-        Text(_modeDescription(_mode)),
       ],
     );
   }
@@ -985,6 +983,21 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               'Admin SSH key',
               focusNode: _rootPrivateKeyFocus,
             ),
+          SizedBox(height: tokens.sectionGap),
+          Material(
+            type: MaterialType.transparency,
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Factory reset server data'),
+              subtitle: const Text(
+                'Optional and destructive. Normal setup removes old NMTK '
+                'containers across Docker and Podman while preserving '
+                'notebooks, databases, and workspace data.',
+              ),
+              value: _factoryReset,
+              onChanged: (value) => setState(() => _factoryReset = value),
+            ),
+          ),
           if (_setupError != null) ...[
             SizedBox(height: tokens.compactGap),
             NmtkStatusBanner(
@@ -1284,18 +1297,40 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               ),
             ],
             SizedBox(height: tokens.compactGap),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: ZetaButton.outline(
-                key: Key('deployment-view-details-${job.id}'),
-                onPressed: () => _showTerminalOutput(job),
-                label: 'View raw SSH output',
-              ),
+            Wrap(
+              spacing: tokens.compactGap,
+              runSpacing: tokens.compactGap,
+              children: [
+                ZetaButton.outline(
+                  key: Key('deployment-view-details-${job.id}'),
+                  onPressed: () => _showTerminalOutput(job),
+                  label: 'View raw SSH output',
+                ),
+                if (failure?.code == 'host_key_mismatch')
+                  ZetaButton.outline(
+                    key: Key('deployment-trust-host-key-${job.id}'),
+                    onPressed: _isWorking
+                        ? null
+                        : () => _trustHostKeyAndRetry(),
+                    label: 'Trust this server\'s identity and retry',
+                  ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Only offer this once the user has seen the mismatch warning above and
+  /// chosen to proceed — never trust a changed host key silently.
+  Future<void> _trustHostKeyAndRetry() async {
+    final host = _host.text.trim();
+    if (host.isEmpty) return;
+    await ref
+        .read(backendDeploymentProvider.notifier)
+        .forgetHostKey(host: host, sshPort: 22);
+    await _retryRemoteSetup();
   }
 
   Future<void> _showTerminalOutput(DeploymentJob job) async {
@@ -1954,18 +1989,4 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     return 'Standalone';
   }
 
-  String _modeDescription(String mode) {
-    if (mode == 'docker') {
-      return 'Docker runs the backend in containers and is easier to move and reset. '
-          '${_targetType == 'remote_host' ? 'If missing on the remote host, deployment installs it automatically.' : 'Install it on this machine before deploying.'}';
-    }
-    if (mode == 'podman') {
-      return 'Podman is rootless and needs no background daemon. '
-          '${_targetType == 'remote_host' ? 'If missing on the remote host, deployment installs it automatically via apt (Debian/Ubuntu) as long as the account has sudo access -- no separate step required.' : 'Install it on this machine before deploying.'}';
-    }
-    if (mode == 'kubernetes') {
-      return 'Kubernetes is best when you already operate a cluster.';
-    }
-    return 'Standalone runs the backend directly on the machine you choose.';
-  }
 }
