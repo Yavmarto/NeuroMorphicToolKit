@@ -278,6 +278,54 @@ area (`test_artifact_contracts`) concern export zips and do not import
 **The deployed worker is still holding leaked handles** and needs restarting once
 before it recovers; redeploying the backend does that.
 
+## Follow-up 4: the Lava worker was never restarted, and it ignores tau
+
+"Still the same, only Lava fails." Inspected the worker instead of assuming the
+redeploy had reached it:
+
+```
+container            nmtk-deploy-lava-backend-1   Up 36 hours (healthy)
+/dev/shm psm_* segs  273        (leaked)
+fd limit             1024
+fds in use           1010       (saturated)
+python processes     0          (procs gone, handles not)
+```
+
+Two separate facts:
+
+1. **The redeploy never restarted this container** — it was 36 hours old, so it
+   had neither the leak fix nor a clean slate. The leak diagnosis was right; the
+   fix simply was not running. Restarting it dropped the segments 273 → 7 and
+   descriptors 1010 → 42, and all three simulators then ran against the real
+   workspace: snnTorch 113, SC-NeuroCore 116, **Lava 967**.
+
+2. **Lava's numbers disagree because the worker never reads tau.** The earlier
+   Lava discretization fix landed in `runtime/lava_simulator.py`, which is the
+   *in-process* path — and this deployment uses the *remote worker*. The worker
+   builds `LIF(shape, vth=threshold)` and its payload parser
+   (`_normalize`) drops `tau_rc`, `r`, `v_leak` and `dt` outright, so every
+   population runs with Lava's default decay: a pure integrator, threshold
+   unscaled. Hence ~8x the spikes of the other two backends.
+
+Fix: keep the discretization in one place and make the worker a dumb executor.
+`lif_semantics.lava_lif_parameters` now owns the `(du, dv, vth)` mapping;
+`lava_io.to_runtime_payload` emits those three keys per population, and
+`lava_simulator._lava_lif_params` prefers them so the in-process and remote paths
+cannot compute different neurons from one graph. The worker carries the keys
+through `_normalize` and passes them to `LIF(...)`, ignoring them when absent so
+an older payload keeps the previous behaviour.
+
+Verified payload for tau = 0.002 s at dt = 1e-4:
+`du = 1.0, dv = 0.05 (= dt/tau), vth = 20.0 (= 1.0 / 0.05)`.
+
+`neurocnl` 19 failed / 1752 passed; `Neurochip` 12 failed / 439 passed (baseline
+12 / 438) — unchanged failure sets.
+
+**Still required:** the worker image has to be rebuilt and republished for the
+du/dv change and the leak fix to take effect. Until then Lava runs (post-restart)
+but with Lava's default decay, so its spike counts will keep disagreeing with the
+other two backends. Restarting alone does not fix that.
+
 ## Not done / known
 
 - `test_diagnostic_properties.py::test_property_7_unknown_primitive_phrase` is

@@ -53,6 +53,17 @@ for entry in "${images[@]}"; do
   else
     docker buildx build --platform linux/amd64 -t "$tag" -f "$file" --push .
   fi
+
+  # Cross-platform (amd64-on-arm64) builds are emulated and leave large layer
+  # caches behind; Docker Desktop's VM disk is a fixed size, so back-to-back
+  # heavy images (torch, tensorflow, akida SDK, ...) can exhaust it mid-run
+  # even though each individual push already succeeded. Reclaim build cache
+  # after every image instead of only at the end — but keep a generous
+  # floor: pruning too aggressively (e.g. 10GB) evicts shared base-image
+  # layers a later image still has cached-and-reused, and BuildKit only
+  # notices the blob is gone once it tries to push it ("unknown blob"),
+  # failing a build that otherwise built and "succeeded" cleanly.
+  docker buildx prune -f --keep-storage 25GB >/dev/null
 done
 
 echo "--------------------------------------------------------"
