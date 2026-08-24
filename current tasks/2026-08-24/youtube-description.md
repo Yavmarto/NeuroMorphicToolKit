@@ -1,5 +1,10 @@
 # YouTube description — NMTK demo (3 min)
 
+> **2026-08-24:** the repository link is removed — the current GitHub repo is being
+> deleted and the public snapshot does not exist yet. Publish the video **unlisted**
+> for now. Once the snapshot is live, add the URL back and flip the video to public;
+> the link does not change when you do.
+
 Trimmed ~15% from the first draft. Chapters are a separate optional block at the bottom.
 
 Title suggestions (keep stable once published):
@@ -27,13 +32,13 @@ In deze demo van drie minuten:
 
 Wat werkt vandaag, en wat niet
 
-NMTK installeert of configureert géén fysieke neuromorphic hardware. Hardwarepaden vereisen een fysiek apparaat plus vendor-SDK, en die zitten niet in de container images. De repository documenteert per onderdeel of het works, needs hardware of not implemented is, en per exporttarget hoe getrouw de conversie is (faithful, approximate, unsupported).
+NMTK installeert of configureert géén fysieke neuromorphic hardware. Hardwarepaden vereisen een fysiek apparaat plus vendor-SDK, en die zitten niet in de container images. Niet elk target draait al: drie software-runtimes plus Akida voeren echt uit, de rest is codegeneratie of integratie in uitvoering. De repository documenteert per onderdeel of het works, needs hardware of not implemented is, en per exporttarget hoe getrouw de conversie is (faithful, approximate, unsupported).
 
 Onder de motorkap
 
-Flutter-app voor macOS, Windows, Linux, Android en iOS. Python/FastAPI-backend. Een CNL→IR→NIR compiler als ruggengraat, met integraties richting snnTorch, Nengo, Rockpool, Sinabs, Brian2, Lava, PyNN/SpiNNaker en Akida.
+Flutter-app voor macOS, Windows, Linux, Android en iOS. Python/FastAPI-backend. Een CNL→IR→NIR compiler als ruggengraat. Vandaag draaien drie software-runtimes plus Akida; Brian2 en PyNN exporteren naar uitvoerbare notebooks. Voor PYNQ-Z2, Loihi en enkele andere targets is de codegeneratie gevalideerd maar de integratie nog niet af.
 
-Open source onder AGPL-3.0-or-later: https://github.com/Completed-Spoon-6/NeuroMorphicToolKit
+De broncode wordt binnenkort gepubliceerd onder AGPL-3.0-or-later.
 
 Gemaakt door Yoshi Martodihardjo-Bink. Vragen, feedback en samenwerking welkom.
 
@@ -60,13 +65,13 @@ In this three-minute demo:
 
 What works today, and what doesn't
 
-NMTK does not install or configure physical neuromorphic hardware. Hardware paths need a physical device plus its vendor SDK, and those are not in the container images. The repository documents, per component, whether something works, needs hardware or is not implemented, and rates each export target's fidelity as faithful, approximate or unsupported.
+NMTK does not install or configure physical neuromorphic hardware. Hardware paths need a physical device plus its vendor SDK, and those are not in the container images. Not every target executes yet: three software runtimes plus Akida really run, the rest are at code-generation or integration stage. The repository documents, per component, whether something works, needs hardware or is not implemented, and rates each export target's fidelity as faithful, approximate or unsupported.
 
 Under the hood
 
-Flutter app for macOS, Windows, Linux, Android and iOS. Python/FastAPI backend. A CNL→IR→NIR compiler as the spine, with integrations targeting snnTorch, Nengo, Rockpool, Sinabs, Brian2, Lava, PyNN/SpiNNaker and Akida.
+Flutter app for macOS, Windows, Linux, Android and iOS. Python/FastAPI backend. A CNL→IR→NIR compiler as the spine. Three software runtimes plus Akida execute today; Brian2 and PyNN export to runnable notebooks. PYNQ-Z2, Loihi and several other targets are at validated code-generation or integration stage.
 
-Open source under AGPL-3.0-or-later: https://github.com/Completed-Spoon-6/NeuroMorphicToolKit
+Source will be published shortly under AGPL-3.0-or-later.
 
 Built by Yoshi Martodihardjo-Bink. Questions, feedback and collaboration welcome.
 

@@ -1,0 +1,36 @@
+SHORT VERSION — 1326 chars  (recommended for Discord)
+======================================================================
+Hi all — first, thanks: this only exists because of NIR/NIRTorch, snnTorch, Brian2, PyNN, Sinabs, Rockpool, Lava and NeuroBench.
+
+I built it in response to the Dutch neuromorphic alliance (NC-NL), whose white paper keeps naming the same bottleneck: hardware setup, drivers and simulators eat weeks, and there's little usable tooling on top. Six months later, a proof of concept:
+
+🎥 3-min demo: [video URL]
+
+Design an SNN visually or in controlled English, train it once in snnTorch, run it through NIR on several platforms — including a real Akida card. Three runtimes plus Akida execute today; the rest is in progress.
+
+Two questions:
+
+**1.** Has anyone systematically measured what survives across NIR conversion paths? In my pipeline I found silent semantic loss — e.g. shape survived while trained weights did not, so simulators ran a zero-weight network without failing. I'm considering this as my MSc thesis.
+
+**2.** I'm a software engineer (8 yrs) coming into neuromorphic from outside, building this alongside a full-time job. What evidence would make a project like this useful to you: fidelity tests, reproducible benchmarks, or broader hardware coverage?
+
+Solo project, soon open source. I used AI agents heavily for implementation; I set the architecture and tests and own the hardware debugging and verification.
+
+
+LONGER VERSION — 1424 chars  (if the channel tolerates it)
+======================================================================
+Hi all — first, thanks: this only exists because of work from this community. NIR/NIRTorch, snnTorch, Brian2, PyNN, Sinabs, Rockpool, Lava, NeuroBench.
+
+I built it in response to the Dutch neuromorphic alliance (NC-NL), whose white paper and action plan keep naming the same bottleneck: setting up hardware, drivers and simulators eats weeks, and there's little usable tooling on top. Six months later, a proof of concept:
+
+🎥 3-min demo: [video URL]
+
+Design an SNN visually or in controlled English, train it once in snnTorch, run it through NIR on several platforms — including a real Akida card. PoC status: three runtimes plus Akida actually execute, the rest is in progress.
+
+Two things I'd value:
+
+**1.** Feedback on semantic fidelity across NIR conversion paths. In my pipeline I found cases where shape survived but trained weights did not, so simulators ran a zero-weight network without failing. Which losses are known, and has anyone systematically measured them? I'm considering this as my MSc thesis.
+
+**2.** I'm a software engineer (8 yrs) coming into neuromorphic from outside, building this alongside a full-time job. What evidence would make a project like this useful to you: fidelity tests, reproducible benchmarks, or broader hardware coverage?
+
+Solo project, soon open source. I used AI agents heavily for implementation; I set the architecture and tests and own the hardware debugging and verification.

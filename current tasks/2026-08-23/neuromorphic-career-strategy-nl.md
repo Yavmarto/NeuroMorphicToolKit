@@ -273,13 +273,22 @@ Do the same, separately, with **Mission 10X** and the **NL-ECO** coalition (Hans
 
 ### 6.3 Two things to fix before you show anyone
 
-- **The `Neurobench` module name is a collision.** NeuroBench is an established community benchmark
-  framework (Nature Communications, 2025, ~100 co-authors across 50+ institutions, backed by
-  Telluride/NICE/ICONS). Anyone in this field will read your module name as either confusion or
-  appropriation. Two good options: rename your module, or — better — keep a differently-named
-  module and *integrate the real NeuroBench harness* as a supported benchmark suite. The second
-  option turns a liability into a headline feature and gives you a legitimate reason to contact the
-  NeuroBench maintainers.
+- ~~**The `Neurobench` module name is a collision.**~~ **Corrected 2026-08-24 — I was wrong, three
+  times over.** Your module already *is* the integration I was recommending. Verified in
+  `Neurobench/neurobench/app/services/neurobench_executor.py`: it imports
+  `neurobench.benchmarks.Benchmark`, `neurobench.datasets` (WISDM, MackeyGlass, PrimateReaching,
+  SpeechCommands), `neurobench.metrics.static`, `neurobench.metrics.workload`,
+  `neurobench.models.NeuroBenchModel` and `MFCCPreProcessor`. So there is no name collision to
+  apologise for — it is an integration. **But it is not finished** (established 2026-08-24): it is
+  not wired end-to-end from CNL Studio. The Setup benchmark dropdown only stores a selection,
+  Review's benchmark result field is never populated, and the bridge passes CNL text rather than the
+  trained checkpoint, NIR weights, test set or Akida bundle. Describe it as an in-progress
+  standardised benchmarking workbench, never as a shipped feature, and keep it off the CV until the
+  handoff works. Do not rush a connection either — a quick wire-up would return CPU-estimated
+  numbers that look like measurements of the trained model or the hardware, which is worse than
+  having none. Smallest honest milestone: one MNIST handoff carrying the exact trained artifact and
+  test set, returning accuracy, latency and provenance into Review. Then rename to **NeuroBench UI**
+  and credit the upstream package in `THIRD_PARTY_NOTICES.md`.
 - **Your CV says "Python: Basic knowledge."** Your repository is overwhelmingly Python — FastAPI
   services, a compiler pipeline, hardware workers, a test suite. Either that line is four years
   stale or you are underselling yourself into the reject pile. Fix it before you send anything.
@@ -1094,6 +1103,153 @@ at a 404. That fixes the order:
 8. **Then** send the emails.
 
 Steps 1–2 are the only ones with any real risk attached. Everything after is reversible.
+
+### 12.6 Deleting GitHub and moving to Gitea — evaluated (2026-08-24)
+
+Proposal: delete the GitHub repositories, push to a self-hosted Gitea, delete the offending files,
+and leave the project alone until after a job is secured, since the semester is starting.
+
+**The single fact that simplifies all of this: rotating the two SSH passwords neutralises the
+risk entirely.** Once those passwords are changed, the values sitting in git history are worthless
+strings. There is then no security urgency at all, and everything else — history rewriting,
+deleting GitHub, moving hosts — becomes a question of tidiness and publication readiness, not a
+question of exposure. The Grafana value needs nothing; that service no longer exists in any compose
+file.
+
+So the real question is not "how do I make this safe", it is "do I want this public during the job
+search". Those are separable decisions and should be made separately.
+
+**Three options.**
+
+| | Effort | What you get | What you give up |
+|---|---|---|---|
+| **A. Rotate, change nothing else** | ~30 min | Risk closed. Repo stays private on GitHub. Publication decision deferred to whenever it has a payoff. | Nothing, until you decide to publish. |
+| **B. Rotate, move to Gitea, delete GitHub** | ~2–4 h + ongoing | No third-party bot access. Full control of the host. | GitHub presence, one-click Zenodo archiving, and an uptime obligation during a job search. |
+| **C. Rotate, scrub history, publish** | ~4–6 h | The full strategy in this document, including the NC-NL open-source play. | Time you have said you do not have. |
+
+**Recommendation: A.** Your constraint is time, and A costs almost none of it. B is more work than A
+for a benefit you do not currently need — a self-hosted Gitea is not a portfolio, nobody at Innatera
+or NC-NL is going to make an account on your server to look at your code, and a self-hosted service
+that goes down mid-job-search is a liability rather than an asset. C is correct only if you want the
+NC-NL conversation now, and that conversation keeps.
+
+**Three corrections to the plan as stated.**
+
+1. **Deleting the files does not remove them from history.** They are already untracked at HEAD, but
+   every old commit still contains them. If you push the existing history to Gitea, the secrets go
+   with it. The only ways around that are a `filter-repo` pass or starting a fresh history — and a
+   fresh history throws away the ~1,100-commit record, which is itself portfolio evidence. Do not
+   squash it away.
+2. **Rotate regardless of where the code lives.** Three bot integrations — `google-labs-jules`
+   (387 commits), `dependabot` and `copilot-swe-agent` — have had read access to a private
+   repository containing live SSH passwords. Deleting the repository afterwards does not undo that.
+3. **You already have the archive.** The mirror clones at `~/nmtk-backup-2026-08-24` hold complete
+   history for all seven repositories. If the motivation for Gitea is "somewhere safe that is not
+   GitHub", that is already satisfied. Gitea only earns its keep if you want a working remote to
+   push to daily, which by your own account you will not be doing for months.
+
+**What not publishing actually costs you.** Less than the earlier sections imply. The video carries
+most of the weight — three minutes of working software is stronger evidence than a repository most
+people would never open. The CV and the outreach templates work unchanged. What you lose is §5, the
+NC-NL play, which genuinely depends on there being an open-source asset the alliance can point at.
+That play is worth a lot, but it is not time-critical, and it is strictly better executed when you
+have the capacity to follow it up.
+
+**And when someone asks to see the code**, the honest answer is a good one:
+
+> "It isn't public yet — there's cleanup I haven't had time for with the semester starting. Happy to
+> give you read access if you want to look."
+
+Thirty seconds to add a collaborator. That reads as busy and careful, not as evasive.
+
+**So: rotate the two passwords, leave the repositories private on GitHub, and revisit publication
+when you are employed or when the NC-NL conversation actually starts.** The `filter-repo` script and
+the verification script stay where they are; they will still work in six months.
+
+### 12.6 Revised plan: delete GitHub, move to Gitea, publish a frozen snapshot
+
+You proposed deleting the GitHub repositories and submodules outright, pushing to a self-hosted
+Gitea, dropping the bad files, and parking the project until after you have a job — restructuring
+later, and only continuing it if a future employer wants it.
+
+**On security, this is better than what I proposed.** Force-pushing a rewritten history leaves the
+old commits reachable by SHA on GitHub until garbage collection, which is why GitHub's own guidance
+is to contact Support afterwards. Deleting the repository removes the whole object store instead.
+It is also *less* work than `filter-repo` across seven repositories and thirty branches. And it is
+recoverable — GitHub keeps a deleted repository restorable for a window, so it is not a one-way
+door.
+
+Two things it does not fix, and one thing it breaks.
+
+**Still required: rotate the two deployment secrets.** Deleting a repository does not un-read
+anything. `google-labs-jules`, `dependabot` and `copilot-swe-agent` all had read access to a
+repository containing live SSH passwords for your dev hosts. Rotation is the control; deletion is
+hygiene. The Grafana value needs nothing — see §12.5 — because the service no longer exists in any
+compose file.
+
+**Still required if you ever publish: the identity rewrite.** Moving the repositories as-is carries
+all 360 employer-domain commit fields to the new remote unchanged. The good news is that your plan
+makes this *easier*, not harder: pushing cleaned history into a fresh, empty remote with no
+collaborators, no forks and no open pull requests removes every reason I had for hesitating. The
+`.mailmap` files are already committed and `scrub-history.sh` already exists.
+
+**What it breaks: the portfolio.** This is the part to think about carefully. Everything in sections
+2 through 6 rests on a stranger being able to click a link and see that this exists. A private
+Gitea instance behind your home network is invisible to Innatera, invisible to a thesis supervisor,
+and invisible to NC-NL. It also cannot be reached by anyone you send the video to, and it cannot
+carry a Zenodo DOI. You would be removing the evidence at exactly the moment you need it.
+
+**The resolution: "public" and "actively developed" are different things.**
+
+You do not have to choose between publishing and parking. Publish a **frozen snapshot**, tagged
+`v0.9.0`, with a README line saying it is a research preview and not under active development while
+you finish your degree. Nobody expects maintenance from a `v0.x` research preview — an archived,
+read-only public repository is a perfectly normal portfolio artifact, and arguably a cleaner one
+than a repository with sporadic commits.
+
+That gives you:
+
+| | Canonical dev repo (Gitea, private) | Public snapshot |
+|---|---|---|
+| Where work happens | Yes, when you resume | No — frozen |
+| Full history | Yes | Optional |
+| Reachable by a recruiter or professor | No | Yes |
+| Zenodo DOI possible | No | Yes |
+| Maintenance expectation | None | None, if labelled |
+
+**Two ways to build the snapshot.** Both are fine; pick by how much you care about the commit count.
+
+*Option A — snapshot with no history (fastest, ~45 minutes).* A fresh `git init` on a clean export
+of the tree. There is no history, so there are no secrets, no employer addresses, no committed
+virtualenvs, no `current tasks/`, and no thirty stale agent branches — every problem in this section
+disappears by construction rather than by surgery. You lose the "~1,100 commits over two years"
+signal, which you can simply state in the README instead. Nobody counts commits.
+
+*Option B — snapshot with cleaned history (~2 hours).* Run `scrub-history.sh`, then push the result
+to the new public remote instead of force-pushing over the old one. You keep the commit record,
+which is mild evidence of sustained work. The script is written and `git-filter-repo` is installed.
+
+I would take Option A. You said you want to restructure anyway, you have no time this semester, and
+a snapshot is the one path where "restructure later" costs you nothing now.
+
+**One thing to decide while you are restructuring: collapse the submodules.** Six submodules means
+six repositories to migrate, six sets of `.gitmodules` URLs to rewrite, six histories to clean and
+six things that can drift out of sync. If you are restructuring anyway, a monorepo would remove all
+of that permanently, and the module boundaries you care about are directory boundaries, not
+repository boundaries. This is the single highest-value structural change available to you and it
+is much cheaper to do during a migration than after.
+
+**Order of operations.** Do not delete anything on GitHub until the new home has verified copies.
+
+1. Rotate the two deployment secrets; move those hosts to key-based auth if convenient.
+2. Stand up Gitea. Push all seven repositories to it. Verify by cloning fresh from Gitea and
+   checking the submodule pointers resolve.
+3. Confirm the backup at `~/nmtk-backup-2026-08-24` is intact and keep it until you are settled.
+4. Build the public snapshot (Option A or B) as a *separate* new repository.
+5. Only then delete the GitHub repositories.
+
+The mirror backups mean step 5 is safe even if something is wrong, but the ordering still matters —
+deleting last costs nothing and removes the failure mode entirely.
 
 ---
 
