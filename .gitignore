@@ -63,3 +63,16 @@ workspaces/e2e.nmtk
 workspaces/shd-e2e.ipynb.nmtk
 workspaces
 data
+
+# --- secrets: never commit (added 2026-08-24) ---
+.env
+.env.*
+!.env.example
+.nmtk/deployment_secrets.json
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+.netrc
