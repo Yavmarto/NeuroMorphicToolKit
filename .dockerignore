@@ -84,8 +84,6 @@ nmtk/neuro_toolkit/build/
 nmtk/neuro_toolkit/.dart_tool/
 nmtk_ui_core/build/
 nmtk_ui_core/.dart_tool/
-neurocnl/frontend/rust/**/target/
-neurocnl/frontend/rust/target/
 
 # Tool caches, at every depth. Docker matches each pattern against the whole
 # relative path, so a bare `.mypy_cache` covers only the repo root -- the ones

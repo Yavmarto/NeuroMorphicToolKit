@@ -10,7 +10,12 @@ set -euo pipefail
 #   4. Ad-hoc code signs the bundle
 #   5. Optionally creates a DMG
 #
-# Usage: ./build-standalone.sh [--skip-flutter] [--dmg]
+# Usage: ./build-standalone.sh [--skip-flutter] [--dmg] [--version 1.2.3]
+#
+# --version names the DMG. When omitted it is read from
+# nmtk/neuro_toolkit/pubspec.yaml, which the release pipeline bumps; the DMG
+# used to be hardcoded to "dev" so every published release carried the same
+# unversioned filename.
 #
 # Prerequisites: Flutter SDK, internet access (for Python download)
 
@@ -28,6 +33,7 @@ SKIP_FLUTTER=false
 CREATE_DMG=false
 SIGNING_IDENTITY="${MACOS_SIGNING_IDENTITY:-}"
 NOTARIZE=false
+VERSION=""
 SIGN_HELPER="$SCRIPT_DIR/sign-and-notarize.sh"
 
 while [[ $# -gt 0 ]]; do
@@ -36,9 +42,16 @@ while [[ $# -gt 0 ]]; do
     --dmg) CREATE_DMG=true; shift ;;
     --sign) SIGNING_IDENTITY="$2"; shift 2 ;;
     --notarize) NOTARIZE=true; shift ;;
+    --version) VERSION="$2"; shift 2 ;;
     *) echo "Unknown argument: $1"; exit 1 ;;
   esac
 done
+
+if [ -z "$VERSION" ]; then
+  VERSION="$(sed -n 's/^version:[[:space:]]*\([0-9][0-9.]*\).*/\1/p' \
+    "$TOOLKIT_DIR/pubspec.yaml" | head -1)"
+fi
+VERSION="${VERSION:-0.0.0-dev}"
 
 if [ "$NOTARIZE" = false ]; then
   case "${MACOS_NOTARIZE:-}" in
@@ -292,9 +305,9 @@ fi
 # --- Optionally create DMG ---
 if [ "$CREATE_DMG" = true ]; then
   echo "==> Creating DMG..."
-  bash "$SCRIPT_DIR/create-dmg.sh" "$APP_PATH" "dev" "$SIGNING_IDENTITY"
+  bash "$SCRIPT_DIR/create-dmg.sh" "$APP_PATH" "$VERSION" "$SIGNING_IDENTITY"
 
-  DMG_FILE="NeuroMorphicToolKit-dev-macos.dmg"
+  DMG_FILE="NeuroMorphicToolKit-${VERSION}-macos.dmg"
   if [ "$NOTARIZE" = true ]; then
     export MACOS_NOTARIZE=true
     bash "$SIGN_HELPER" notarize "$DMG_FILE"

@@ -21,8 +21,8 @@ source "$ROOT_DIR/scripts/ci/lib.sh"
 source "$ROOT_DIR/scripts/dev/changed_paths.sh"
 
 # ── Module registry ───────────────────────────────────────────────────
-PY_NAMES=(Neurochip Neurosense Neurohub Neuro-Dream-Hand neurocnl Neurobench)
-PY_DIRS=(Neurochip Neurosense/neurosense Neurohub/neurohub Neuro-Dream-Hand neurocnl Neurobench/neurobench)
+PY_NAMES=(SuiteAPI NeuroCLI Neurochip Neurosense Neurohub Neuro-Dream-Hand neurocnl Neurobench)
+PY_DIRS=(suite_api neurocli Neurochip Neurosense/neurosense Neurohub/neurohub Neuro-Dream-Hand neurocnl Neurobench/neurobench)
 
 FL_NAMES=(nmtk_ui_core neuro_toolkit neurocnl_frontend Neurochip_frontend Neurohub_frontend Neurosense_frontend Neurobench_frontend)
 FL_DIRS=(nmtk_ui_core nmtk/neuro_toolkit neurocnl/frontend Neurochip/frontend Neurohub/frontend Neurosense/frontend Neurobench/frontend)
@@ -169,6 +169,8 @@ detect_changed_modules() {
     local dir_prefix
     case "$mod" in
       neurocnl) dir_prefix="neurocnl/" ;;
+      SuiteAPI) dir_prefix="suite_api/" ;;
+      NeuroCLI) dir_prefix="neurocli/" ;;
       *)        dir_prefix="$mod/" ;;
     esac
     echo "$changed_files" | grep -q "^${dir_prefix}" && add_unique "$mod"
@@ -252,7 +254,16 @@ run_launcher_guardrails_stage() {
   local args=()
   [ "$RUN_LAUNCHER_INTEGRATION" = true ] && args+=("--with-integration")
 
-  if capture_local_stage "launcher_guardrails" bash "$ROOT_DIR/scripts/run_launcher_guardrails.sh" "${args[@]+"${args[@]}"}"; then
+  # root_integration_tests hits SUITE_API_URL, which defaults to
+  # 127.0.0.1:9000 if unset. That's wrong here: the dev backend developers
+  # actually edit lives on DEV_BACKEND_HOST (see Makefile), reached over
+  # `make dev-update`; localhost:9000 is whatever Backend Setup happens to
+  # have deployed there, which can be stale or absent. Point at the real
+  # dev backend by default, but never clobber an explicit override.
+  local dev_backend_host="${DEV_BACKEND_HOST:-moosebun2@192.168.2.90}"
+  local suite_api_url="${SUITE_API_URL:-http://${dev_backend_host#*@}:9000}"
+
+  if SUITE_API_URL="$suite_api_url" capture_local_stage "launcher_guardrails" bash "$ROOT_DIR/scripts/run_launcher_guardrails.sh" "${args[@]+"${args[@]}"}"; then
     MOD_NAMES+=("launcher_guardrails"); MOD_RESULTS+=("pass")
   else
     MOD_NAMES+=("launcher_guardrails"); MOD_RESULTS+=("FAIL")

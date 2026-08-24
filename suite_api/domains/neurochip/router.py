@@ -10,6 +10,7 @@ is not running, those routes return HTTP 503.
 Suite_api starts cleanly on machines without Akida/PYNQ/Lava/Speck installed
 (the hardware routes simply 503 when the worker is not running).
 """
+
 import logging
 import importlib
 from typing import Any
@@ -69,6 +70,7 @@ for prefix in [
     "/hardware/pynq/{path:path}",
     "/api/neurochip/serial/{path:path}",
 ]:
+
     @router.api_route(
         prefix,
         methods=["GET", "POST", "DELETE", "PUT", "PATCH"],

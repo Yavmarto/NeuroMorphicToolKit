@@ -135,6 +135,17 @@ cleanup_runtime() {
 
 trap handle_failure ERR
 
+mkdir -p credentials
+if [ ! -s credentials/admin-token ]; then
+  umask 077
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32 >credentials/admin-token
+  else
+    head -c 48 /dev/urandom | base64 | tr -d '\n=' >credentials/admin-token
+  fi
+fi
+chmod 600 credentials/admin-token
+
 export SUITE_API_PORT="$BACKEND_PORT"
 export LAUNCHER_CONTROL_PORT=8090
 export NMTK_IMAGE_TAG="$IMAGE_TAG"
@@ -149,6 +160,21 @@ write_status preflight_running 10 "Validating container provider"
 compose config --quiet >>"$LOG_FILE" 2>&1
 
 write_status reconciling_existing_install 16 "Removing existing NMTK containers"
+MIGRATION_DIR=".migration-staging/p0-owner-v1"
+MIGRATION_MARKER=".migration-staging/p0-owner-v1.complete"
+if [ "$CLEAN_INSTALL" != "true" ] && [ ! -f "$MIGRATION_MARKER" ]; then
+  mkdir -p "$MIGRATION_DIR"
+  compose cp suite_api:/repo/projects.db "$MIGRATION_DIR/neurosim-projects.db" \
+    >>"$LOG_FILE" 2>&1 || true
+  compose cp suite_api:/repo/Neurochip/neurochip/app/deployments.db \
+    "$MIGRATION_DIR/neurochip-deployments.db" >>"$LOG_FILE" 2>&1 || true
+  compose cp suite_api:/home/app/data/neurobench.sqlite \
+    "$MIGRATION_DIR/neurobench.sqlite" >>"$LOG_FILE" 2>&1 || true
+  compose cp neurochip-hw-worker:/tmp/akida-models \
+    "$MIGRATION_DIR/akida-models" >>"$LOG_FILE" 2>&1 || true
+  compose cp neurosense-hw-worker:/repo/recordings \
+    "$MIGRATION_DIR/neurosense-recordings" >>"$LOG_FILE" 2>&1 || true
+fi
 cleanup_runtime docker
 cleanup_runtime podman
 
@@ -253,6 +279,43 @@ curl --silent --show-error --fail \
   "http://127.0.0.1:$BACKEND_PORT/api/suite/health" \
   >>"$LOG_FILE" 2>&1
 
+if [ -d "$MIGRATION_DIR" ] && [ ! -f "$MIGRATION_MARKER" ]; then
+  write_status verifying_suite_api 93 "Migrating saved backend data"
+  migration_ok=true
+  migrate_sqlite() {
+    local service="$1" source="$2" target="$3" remote_source
+    [ -f "$source" ] || return 0
+    remote_source="/tmp/nmtk-legacy-$(basename "$source")"
+    compose cp migrate_legacy.py "$service:/tmp/nmtk-migrate-legacy.py" \
+      >>"$LOG_FILE" 2>&1 && \
+      compose cp "$source" "$service:$remote_source" >>"$LOG_FILE" 2>&1 && \
+      compose exec -T "$service" python /tmp/nmtk-migrate-legacy.py \
+        "$remote_source" "$target" >>"$LOG_FILE" 2>&1 || migration_ok=false
+  }
+  migrate_directory() {
+    local service="$1" source="$2" target="$3" remote_source
+    [ -d "$source" ] || return 0
+    remote_source="/tmp/nmtk-legacy-$(basename "$source")"
+    compose cp "$source" "$service:$remote_source" >>"$LOG_FILE" 2>&1 && \
+      compose exec -T --user 0:0 "$service" sh -c \
+        "mkdir -p '$target' && cp -Rn '$remote_source'/.' '$target'/" \
+        >>"$LOG_FILE" 2>&1 || migration_ok=false
+  }
+  migrate_sqlite suite_api "$MIGRATION_DIR/neurosim-projects.db" \
+    /home/app/data/neurosim/projects.db
+  migrate_sqlite suite_api "$MIGRATION_DIR/neurochip-deployments.db" \
+    /home/app/data/neurochip/deployments.db
+  migrate_sqlite neurobench-runner-worker "$MIGRATION_DIR/neurobench.sqlite" \
+    /app/data/neurobench.sqlite
+  migrate_directory neurochip-hw-worker "$MIGRATION_DIR/akida-models" \
+    /app/data/akida-models
+  migrate_directory neurosense-hw-worker "$MIGRATION_DIR/neurosense-recordings" \
+    /app/recordings
+  if [ "$migration_ok" != "true" ]; then
+    fail_stage "Saved backend data could not be migrated safely; the protected staging copy was preserved."
+  fi
+fi
+
 write_status verifying_launcher_control 96 "Waiting for launcher control"
 for _attempt in $(seq 1 60); do
   if curl --silent --show-error --fail \
@@ -270,6 +333,11 @@ if ! curl --silent --show-error --fail \
   printf '%s\n' \
     "degraded optional capability: Jupyter is not ready; core services are available." \
     >>"$LOG_FILE"
+fi
+
+if [ -d "$MIGRATION_DIR" ] && [ ! -f "$MIGRATION_MARKER" ]; then
+  touch "$MIGRATION_MARKER"
+  rm -rf "$MIGRATION_DIR"
 fi
 
 write_status completed 100 "Backend and launcher control are ready"

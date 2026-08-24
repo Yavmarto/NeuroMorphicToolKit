@@ -16,3 +16,7 @@ Enforce a zero state management dependency policy in nmtk_ui_core. The package d
 ## Status Update (2026-07-16 audit)
 
 The claim that the package depends only on Flutter core SDK and google_fonts at runtime is stale. Reading `nmtk_ui_core/pubspec.yaml` confirms actual runtime dependencies are `cupertino_icons`, `ffi`, `nmtk_wgpu_renderer_plugin` (a local Rust-backed FFI plugin at `../rust/nmtk_wgpu_renderer_plugin`), and `zeta_flutter` (a third-party design-system package) — with no `google_fonts` dependency at all. The "no state management dependency" part of this ADR does still hold: a grep of `nmtk_ui_core/lib/` finds no `package:provider`, `package:riverpod`/`package:flutter_riverpod` imports, and no `ChangeNotifier` usage. Only the specific runtime-dependency list is stale.
+
+## Status Update (2026-08-21)
+
+The dormant Rust-backed renderer and its `ffi` dependency have been removed. The package's runtime dependencies are now `cupertino_icons`, Flutter, and `zeta_flutter`; the zero state-management dependency remains intact.

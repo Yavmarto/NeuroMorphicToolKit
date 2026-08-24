@@ -197,11 +197,32 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final notifier = _FakeDeploymentNotifier(const DeploymentState());
     var completionCount = 0;
+    final container = ProviderContainer(
+      overrides: [
+        backendDeploymentProvider.overrideWith(() => notifier),
+      ],
+    );
+    addTearDown(container.dispose);
+    final keepAlive = container.listen(
+      backendDeploymentProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+    addTearDown(keepAlive.close);
 
     await tester.pumpWidget(
-      _buildHarness(
-        notifier: notifier,
-        onDeploymentReady: (_) async => completionCount++,
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: BackendSetupForm(
+                localDeploymentAvailable: true,
+                onDeploymentReady: (_) async => completionCount++,
+              ),
+            ),
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -220,6 +241,68 @@ void main() {
     await tester.pump();
 
     expect(completionCount, 1);
+    notifier.completeDeployment();
+    await tester.pump();
+    expect(completionCount, 1);
+  });
+
+  testWidgets('completion does not fire after the setup form is disposed', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final notifier = _FakeDeploymentNotifier(const DeploymentState());
+    var completionCount = 0;
+    final container = ProviderContainer(
+      overrides: [
+        backendDeploymentProvider.overrideWith(() => notifier),
+      ],
+    );
+    final keepAlive = container.listen(
+      backendDeploymentProvider,
+      (_, __) {},
+      fireImmediately: true,
+    );
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: BackendSetupForm(
+                localDeploymentAvailable: true,
+                onDeploymentReady: (_) async => completionCount++,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-validate')));
+    await tester.tap(find.byKey(const Key('backend-setup-validate')));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-deploy')));
+    await tester.tap(find.byKey(const Key('backend-setup-deploy')));
+    await tester.pump();
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: SizedBox.shrink()),
+      ),
+    );
+    notifier.completeDeployment();
+    await tester.pump();
+
+    expect(completionCount, 0);
+    expect(tester.takeException(), isNull);
+    keepAlive.close();
+    container.dispose();
+    await tester.pump();
   });
 
   testWidgets(

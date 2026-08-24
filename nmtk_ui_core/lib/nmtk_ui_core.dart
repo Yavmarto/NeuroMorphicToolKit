@@ -14,6 +14,8 @@ export 'models/akida_deployment_model.dart';
 export 'shell_tokens.dart';
 export 'widgets/backend_support_banner.dart';
 export 'widgets/buttons.dart';
+export 'widgets/code_text_area.dart';
+export 'widgets/content_dialog.dart';
 export 'widgets/empty_state.dart';
 export 'widgets/energy_bar_chart.dart';
 export 'widgets/error_card.dart';
@@ -66,7 +68,6 @@ export 'widgets/command_palette.dart';
 export 'widgets/shortcut_scope.dart';
 export 'visualization/renderer_interface.dart';
 export 'visualization/fragment_shader_renderer.dart';
-export 'visualization/wgpu_native_renderer.dart';
 export 'visualization/renderer_registry.dart';
 export 'visualization/tile_grid_renderer.dart';
 export 'widgets/deploy_layout.dart'; // NmtkDeployLayout

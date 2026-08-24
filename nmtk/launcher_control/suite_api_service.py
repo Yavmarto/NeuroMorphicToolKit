@@ -225,6 +225,36 @@ def _suite_api_health_probe() -> tuple[bool, str | None]:
 
 
 class SuiteApiServiceMixin:
+    def _suite_api_static_readiness_result(self) -> PreflightResult:
+        """Validate Suite API installation without starting or probing a service."""
+        if os.environ.get("NMTK_BACKEND_DEPLOYMENT_READY", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }:
+            return PreflightResult(
+                status=PREFLIGHT_OK,
+                message="Suite API is provided by the deployed backend stack.",
+            )
+
+        source_entrypoint = REPO_ROOT / "suite_api" / "main.py"
+        if source_entrypoint.is_file():
+            return PreflightResult(
+                status=PREFLIGHT_OK,
+                message="Suite API source entrypoint is available.",
+            )
+
+        venv_python = _suite_api_env_python(_suite_api_env_dir())
+        if venv_python.is_file():
+            return PreflightResult(
+                status=PREFLIGHT_OK,
+                message="Suite API environment is installed.",
+            )
+        return PreflightResult(
+            status=PREFLIGHT_FAILED,
+            message="Suite API source and managed environment are both missing.",
+        )
+
     def _set_suite_api_state(self, status: str, message: str | None = None) -> None:
         with self._lock:
             self._suite_api_status = status

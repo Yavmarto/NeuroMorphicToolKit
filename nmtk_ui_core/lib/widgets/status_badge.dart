@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:nmtk_ui_core/shell_tokens.dart';
@@ -15,6 +16,8 @@ class NmtkStatusBadge extends StatelessWidget {
     this.tone = NmtkTone.neutral,
     this.icon,
     this.semanticsLabel,
+    this.onPressed,
+    this.compact = false,
     super.key,
   });
 
@@ -22,13 +25,17 @@ class NmtkStatusBadge extends StatelessWidget {
   final NmtkTone tone;
   final IconData? icon;
   final String? semanticsLabel;
+  final VoidCallback? onPressed;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final palette = resolveNmtkTonePalette(context, tone);
     final tokens = NmtkShellTokens.of(context);
-    return Semantics(
+    final badge = Semantics(
       label: semanticsLabel ?? label,
+      button: onPressed != null,
+      enabled: onPressed != null ? true : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
@@ -41,16 +48,31 @@ class NmtkStatusBadge extends StatelessWidget {
           children: [
             if (icon != null) ...[
               Icon(icon, size: 12, color: palette.foreground),
-              const SizedBox(width: 6),
+              if (!compact) const SizedBox(width: 6),
             ],
-            Text(
-              label,
-              style: Zeta.of(context).textStyles.labelSmall.copyWith(
-                fontWeight: FontWeight.w700,
-                color: palette.foreground,
+            if (!compact)
+              Text(
+                label,
+                style: Zeta.of(context).textStyles.labelSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: palette.foreground,
+                ),
               ),
-            ),
           ],
+        ),
+      ),
+    );
+    final callback = onPressed;
+    if (callback == null) return badge;
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.enter): callback,
+        const SingleActivator(LogicalKeyboardKey.space): callback,
+      },
+      child: Focus(
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(onTap: callback, child: badge),
         ),
       ),
     );

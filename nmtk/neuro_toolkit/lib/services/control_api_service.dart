@@ -113,7 +113,12 @@ class ControlApiService {
     http.Client? client,
     required Uri baseUri,
     AnalyticsService? analyticsService,
-  })  : _client = _LoggedHttpClient(client ?? http.Client(), analyticsService),
+    String adminToken = '',
+  })  : _client = _LoggedHttpClient(
+          client ?? http.Client(),
+          analyticsService,
+          adminToken,
+        ),
         _baseUri = baseUri;
 
   final http.Client _client;
@@ -169,7 +174,7 @@ class ControlApiService {
     final normalized = host.trim().toLowerCase();
     return normalized.isEmpty ||
         normalized == 'localhost' ||
-        normalized == '127.0.0.1' ||
+        normalized.startsWith('127.') ||
         normalized == '::1' ||
         normalized == '[::1]';
   }
@@ -736,15 +741,19 @@ class ControlApiService {
 }
 
 class _LoggedHttpClient extends http.BaseClient {
-  _LoggedHttpClient(this._inner, this._analytics);
+  _LoggedHttpClient(this._inner, this._analytics, this._adminToken);
 
   static const _requestTimeout = Duration(seconds: 10);
 
   final http.Client _inner;
   final AnalyticsService? _analytics;
+  final String _adminToken;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (_adminToken.isNotEmpty) {
+      request.headers['X-NMTK-Admin-Token'] = _adminToken;
+    }
     final stopwatch = Stopwatch()..start();
     final requestBody = _requestBody(request);
     try {

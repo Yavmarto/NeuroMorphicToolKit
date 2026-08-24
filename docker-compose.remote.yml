@@ -4,7 +4,14 @@ services:
   # bindings avoids collisions with native services and stale rootlessport
   # helpers on the target host.
   suite_api:
+    ports: !override
+      - "127.0.0.1:${SUITE_API_PORT:-9000}:9000"
     user: "0:0"
+    environment:
+      - NMTK_AUTH_REQUIRED=1
+      - NMTK_ADMIN_TOKEN_FILE=/run/secrets/nmtk_admin_token
+    secrets:
+      - nmtk_admin_token
 
   neurosense-hw-worker:
     ports: !reset []
@@ -26,3 +33,20 @@ services:
 
   snn-mlir-compiler:
     ports: !reset []
+
+  launcher-control:
+    ports: !override
+      - "127.0.0.1:${LAUNCHER_CONTROL_PORT:-8090}:8091"
+    environment:
+      - NMTK_AUTH_REQUIRED=1
+      - NMTK_ADMIN_TOKEN_FILE=/run/secrets/nmtk_admin_token
+    secrets:
+      - nmtk_admin_token
+
+  jupyter-server:
+    ports: !override
+      - "127.0.0.1:${JUPYTER_PORT:-8008}:8008"
+
+secrets:
+  nmtk_admin_token:
+    file: ${NMTK_ADMIN_TOKEN_PATH:-./credentials/admin-token}

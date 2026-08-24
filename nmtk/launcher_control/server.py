@@ -1159,6 +1159,7 @@ class LauncherControlState(
         *,
         manage_suite_api: bool = False,
         external_probe_host: str | None = None,
+        diagnostic: bool = False,
     ) -> None:
         self._lock = threading.RLock()
         self._terminal_lock = threading.Lock()
@@ -1167,6 +1168,7 @@ class LauncherControlState(
         )
         self._manage_suite_api = manage_suite_api
         self._external_probe_host = external_probe_host or "127.0.0.1"
+        self._diagnostic = diagnostic
         self._suite_api_status = (
             SUITE_API_STATUS_STARTING if manage_suite_api else SUITE_API_STATUS_DISABLED
         )
@@ -1197,18 +1199,20 @@ class LauncherControlState(
         self._shutdown = threading.Event()
         self._hardware_discovery_done: bool = False
         self._hardware_discovery_lock = threading.Lock()
-        self._health_thread = threading.Thread(
-            target=self._health_poll_loop,
-            name="launcher-control-health",
-            daemon=True,
-        )
-        self._health_thread.start()
-        threading.Thread(
-            target=self._auto_discover_local_hardware,
-            name="launcher-hardware-discovery",
-            daemon=True,
-        ).start()
-        if self._manage_suite_api:
+        self._health_thread: threading.Thread | None = None
+        if not diagnostic:
+            self._health_thread = threading.Thread(
+                target=self._health_poll_loop,
+                name="launcher-control-health",
+                daemon=True,
+            )
+            self._health_thread.start()
+            threading.Thread(
+                target=self._auto_discover_local_hardware,
+                name="launcher-hardware-discovery",
+                daemon=True,
+            ).start()
+        if self._manage_suite_api and not diagnostic:
             threading.Thread(
                 target=self._ensure_suite_api_ready,
                 name="launcher-control-suite-api",
@@ -1664,7 +1668,7 @@ def main(argv: list[str] | None = None) -> int:
     os.environ.setdefault("NMTK_UVICORN_HOST", str(args.host).strip() or "0.0.0.0")
 
     if args.doctor:
-        state = LauncherControlState()
+        state = LauncherControlState(diagnostic=True)
         try:
             report = state.doctor_report()
         finally:

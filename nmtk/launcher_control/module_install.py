@@ -61,7 +61,9 @@ class ModuleInstallMixin:
         module = self._get_module(module_id)
         runtime = _normalize_akida_runtime_config(module.get("akidaRuntime"))
         if runtime is None:
-            raise RuntimeError(f"Module '{module_id}' does not define an Akida runtime profile")
+            raise RuntimeError(
+                f"Module '{module_id}' does not define an Akida runtime profile"
+            )
 
         preflight = self._preflight_module(module, allow_repair=False)
         self._update_module_fields(module_id, **preflight.state_fields())
@@ -649,5 +651,7 @@ class ModuleInstallMixin:
         self._update_module_fields(
             module_id,
             status=next_status,
-            healthStatus=preflight.message if preflight.status == PREFLIGHT_DEGRADED else None,
+            healthStatus=preflight.message
+            if preflight.status == PREFLIGHT_DEGRADED
+            else None,
         )

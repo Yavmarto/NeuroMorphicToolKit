@@ -58,4 +58,6 @@ SUITE_API_ENV_ROOT: Path = _data_dir() / "suite_api_env"
 
 # ── Paths always relative to the repo root (baked into the image) ─────────────
 
-MODULES_MANIFEST: Path = REPO_ROOT / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+MODULES_MANIFEST: Path = (
+    REPO_ROOT / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
+)

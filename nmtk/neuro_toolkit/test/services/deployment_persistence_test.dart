@@ -32,6 +32,7 @@ void main() {
   test('credentials stay out of ordinary preferences', () async {
     const password = 'do-not-store-in-preferences';
     const privateKey = '-----BEGIN OPENSSH PRIVATE KEY-----secret';
+    const adminToken = 'generated-admin-token';
     final preferences = await SharedPreferences.getInstance();
     final secrets = _MemorySecretStorage();
     final persistence = DeploymentPersistence(
@@ -56,6 +57,7 @@ void main() {
       authMethod: 'ssh_password',
       sshPassword: password,
       sshPrivateKey: privateKey,
+      adminToken: adminToken,
     );
 
     await persistence.saveTarget(target, request);
@@ -66,7 +68,12 @@ void main() {
         .toList(growable: false));
     expect(ordinaryValues, isNot(contains(password)));
     expect(ordinaryValues, isNot(contains(privateKey)));
+    expect(ordinaryValues, isNot(contains(adminToken)));
     expect(jsonEncode(secrets.values), contains(password));
+    expect(
+      (await persistence.requestForTarget(target)).adminToken,
+      adminToken,
+    );
   });
 
   test('host keys use trust on first use and reject later changes', () async {

@@ -23,8 +23,6 @@ class ModuleTabBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final zeta = Zeta.of(context);
-    final colors = zeta.colors;
     final tokens = NmtkShellTokens.of(context);
     final workspaceStateAsync = ref.watch(workspaceProvider);
     final moduleStateAsync = ref.watch(moduleProvider);
@@ -71,15 +69,6 @@ class ModuleTabBar extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final module = activeModules[index];
                 final isActive = module.id == activeModuleId;
-                final foregroundColor =
-                    isActive ? colors.mainDefault : colors.mainSubtle;
-                final backgroundColor = isActive
-                    ? colors.surfaceDefault
-                    : colors.surfaceDefault.withValues(alpha: 0.18);
-                final borderColor = isActive
-                    ? colors.mainPrimary.withValues(alpha: 0.4)
-                    : colors.borderSubtle.withValues(alpha: 0.22);
-
                 return Padding(
                   key: ValueKey<String>(module.id),
                   padding: EdgeInsets.only(
@@ -87,73 +76,25 @@ class ModuleTabBar extends ConsumerWidget {
                         ? 0
                         : tokens.compactGap,
                   ),
-                  child: Semantics(
-                    label: '${module.name} module tab',
-                    selected: isActive,
-                    button: true,
-                    child: Material(
-                      color: colors.surfaceDefault.withValues(alpha: 0),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(tokens.radiusMd),
-                        onTap: () => onTabSelected(module.id),
-                        child: Ink(
-                          key: ValueKey<String>('module-tab-${module.id}'),
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          decoration: BoxDecoration(
-                            color: backgroundColor,
-                            borderRadius: BorderRadius.circular(
-                              tokens.radiusMd,
-                            ),
-                            border: Border.all(color: borderColor),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                module.hasFrontend
-                                    ? Icons.web
-                                    : Icons
-                                        .api, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                                size: 16,
-                                color: foregroundColor,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                module.name,
-                                style: Zeta.of(context)
-                                    .textStyles
-                                    .bodyMedium
-                                    .copyWith(
-                                      fontWeight: isActive
-                                          ? FontWeight.w700
-                                          : FontWeight.w600,
-                                      color: foregroundColor,
-                                    ),
-                              ),
-                              const SizedBox(width: 10),
-                              SizedBox.square(
-                                dimension: 44,
-                                child: IconButton(
-                                  icon: Icon(
-                                    ZetaIcons.close,
-                                    size: 16,
-                                    color: foregroundColor,
-                                  ),
-                                  onPressed: () => onTabClosed(module.id),
-                                  tooltip: 'Close ${module.name}',
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints.tightFor(
-                                    width: 44,
-                                    height: 44,
-                                  ),
-                                  splashRadius: 22,
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ZetaButton(
+                        key: ValueKey<String>('module-tab-${module.id}'),
+                        label: module.name,
+                        semanticLabel: '${module.name} module tab',
+                        leadingIcon: module.hasFrontend ? Icons.web : Icons.api,
+                        type: isActive
+                            ? ZetaButtonType.primary
+                            : ZetaButtonType.outlineSubtle,
+                        onPressed: () => onTabSelected(module.id),
                       ),
-                    ),
+                      ZetaIconButton.text(
+                        icon: ZetaIcons.close,
+                        semanticLabel: 'Close ${module.name}',
+                        onPressed: () => onTabClosed(module.id),
+                      ),
+                    ],
                   ),
                 )
                     .animate()

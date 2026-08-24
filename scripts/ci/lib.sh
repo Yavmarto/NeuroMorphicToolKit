@@ -3,6 +3,11 @@
 #
 # Source this file from a module script. ROOT_DIR must be set before sourcing.
 
+# Local workstations may have PYTEST_ADDOPTS configured for parallel execution.
+# Individual Poetry environments do not necessarily install pytest-xdist, so
+# inherit it only when callers deliberately opt in through this CI-specific var.
+export PYTEST_ADDOPTS="${NMTK_CI_PYTEST_ADDOPTS:-}"
+
 # ── Colors ───────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'

@@ -1,15 +1,18 @@
-.PHONY: install verify test lint typecheck
+.PHONY: install verify test lint format-check typecheck
 
 install:
-	pip install -e ".[dev]" -q
+	python -m pip install -e ".[dev]" -q
 
-verify: install lint typecheck test
+verify: install lint format-check typecheck test
 
 test:
-	python -m pytest tests/ -q
+	env -u PYTEST_ADDOPTS PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest tests/ -q
 
 lint:
-	ruff check neurocli/
+	ruff check neurocli/ tests/
+
+format-check:
+	ruff format --check neurocli/ tests/
 
 typecheck:
 	mypy neurocli/ --ignore-missing-imports

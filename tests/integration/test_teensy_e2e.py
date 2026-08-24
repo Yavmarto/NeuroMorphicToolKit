@@ -22,8 +22,9 @@ from urllib.parse import urlparse
 import httpx
 import pytest
 
-NEUROCNL_URL = os.getenv("NEUROCNL_URL", "http://neurocnl:8000")
-NEUROCHIP_URL = os.getenv("NEUROCHIP_URL", "http://neurochip:8000")
+SUITE_API_URL = os.getenv("SUITE_API_URL", "http://127.0.0.1:9000").rstrip("/")
+NEUROCNL_URL = SUITE_API_URL
+NEUROCHIP_URL = SUITE_API_URL
 
 
 def _service_label(url: str) -> str:
@@ -40,20 +41,22 @@ async def _request_or_skip(
     try:
         return await client.request(method, url, **kwargs)
     except httpx.RequestError as exc:
-        pytest.skip(f"Integration service {_service_label(url)} unavailable: {exc}")
+        pytest.fail(f"Required Suite API {_service_label(url)} unavailable: {exc}")
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
-VALID_REFLEX_ARC_SPEC = (
-    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0\n"
-    "The motor neuron MUST emit a spike ONLY IF membrane potential exceeds 0.8\n"
-    "The sensory neuron MUST NOT fire DURING the refractory period of 0.002 seconds\n"
-    "The motor neuron MUST NOT fire DURING the refractory period of 0.002 seconds\n"
-    "The sensory neuron membrane potential MUST decay WITH time constant of 0.02 seconds\n"
-    "The motor neuron membrane potential MUST decay WITH time constant of 0.02 seconds\n"
-    "The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 0.8\n"
+VALID_REFLEX_ARC_SPEC = "\n".join(
+    [
+        "Define a network named teensy_reflex.",
+        "Define an input port named input with shape (1,).",
+        "Define a LIF neuron named relay with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.",
+        "Define an output port named output with shape (1,).",
+        "input connects to relay.",
+        "relay connects to output.",
+    ]
 )
 
 OVERSIZED_NETWORK_SPEC = "\n".join(
@@ -92,12 +95,12 @@ async def test_teensy_e2e_happy_path():
         deploy_resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/teensy/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": VALID_REFLEX_ARC_SPEC, "weight_bit_width": 8},
         )
-        assert deploy_resp.status_code == 200, (
-            f"Deploy failed: {deploy_resp.status_code} {deploy_resp.text}"
-        )
+        assert (
+            deploy_resp.status_code == 200
+        ), f"Deploy failed: {deploy_resp.status_code} {deploy_resp.text}"
 
         deploy_data = deploy_resp.json()
         assert deploy_data["verdict"] in ("faithful", "approximate")
@@ -121,18 +124,24 @@ async def test_teensy_e2e_happy_path():
             json=payload,
             params={"bit_width": 8},
         )
-        assert export_resp.status_code == 200, (
-            f"Export failed: {export_resp.status_code} {export_resp.text}"
-        )
+        assert (
+            export_resp.status_code == 200
+        ), f"Export failed: {export_resp.status_code} {export_resp.text}"
         assert export_resp.headers["content-type"] == "application/zip"
 
         # Step 3: Verify the firmware zip contents
         firmware_zip = zipfile.ZipFile(io.BytesIO(export_resp.content))
         names = firmware_zip.namelist()
         assert any("main.ino" in n for n in names), f"main.ino not found in {names}"
-        assert any("network_params.h" in n for n in names), f"network_params.h not found in {names}"
-        assert any("lif_engine.h" in n for n in names), f"lif_engine.h not found in {names}"
-        assert any("platformio.ini" in n for n in names), f"platformio.ini not found in {names}"
+        assert any(
+            "network_params.h" in n for n in names
+        ), f"network_params.h not found in {names}"
+        assert any(
+            "lif_engine.h" in n for n in names
+        ), f"lif_engine.h not found in {names}"
+        assert any(
+            "platformio.ini" in n for n in names
+        ), f"platformio.ini not found in {names}"
 
 
 @pytest.mark.asyncio
@@ -153,7 +162,7 @@ async def test_teensy_e2e_happy_path_with_warnings():
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/teensy/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": large_spec, "weight_bit_width": 8},
         )
         # May be 200 (deployable with warnings) or 422 (not_deployable) depending on
@@ -171,61 +180,53 @@ async def test_teensy_e2e_happy_path_with_warnings():
 
 @pytest.mark.asyncio
 async def test_teensy_rejected_oversized_network():
-    """Network with >4096 neurons must be rejected with EXCEEDS_NEURON_CAPACITY."""
+    """Retired biological CNL is rejected before deployment planning."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/teensy/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": OVERSIZED_NETWORK_SPEC, "weight_bit_width": 8},
         )
         assert resp.status_code == 422
 
         detail = resp.json()["detail"]
-        assert detail["error"] == "not_deployable"
-        assert len(detail["rejection_reasons"]) > 0
-        reasons_text = " ".join(detail["rejection_reasons"]).lower()
-        assert "neuron" in reasons_text or "capacity" in reasons_text
+        assert detail["error"] == "parse_failed"
+        assert detail["items"]
 
 
 @pytest.mark.asyncio
 async def test_teensy_rejected_recurrent_topology():
-    """Recurrent connections must be rejected with UNSUPPORTED_TOPOLOGY."""
+    """Retired biological CNL is rejected before deployment planning."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/teensy/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": RECURRENT_SPEC, "weight_bit_width": 8},
         )
         assert resp.status_code == 422
 
         detail = resp.json()["detail"]
-        assert detail["error"] == "not_deployable"
-        reasons_text = " ".join(detail["rejection_reasons"]).lower()
-        assert "topology" in reasons_text or "recurrent" in reasons_text
+        assert detail["error"] == "parse_failed"
+        assert detail["items"]
 
 
 @pytest.mark.asyncio
 async def test_teensy_rejected_learning_rule():
-    """STDP learning must be rejected before any Teensy payload is produced."""
+    """Retired STDP syntax is rejected before any Teensy payload is produced."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/teensy/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": STDP_SPEC, "weight_bit_width": 8},
         )
         assert resp.status_code == 422
 
         detail = resp.json()["detail"]
-        assert detail["error"] in {"lowering_failed", "not_deployable"}
-        detail_text = " ".join(
-            [str(detail.get("error", ""))]
-            + [str(msg) for msg in detail.get("messages", [])]
-            + [str(msg) for msg in detail.get("rejection_reasons", [])]
-        ).lower()
-        assert "learning" in detail_text or "stdp" in detail_text
+        assert detail["error"] == "parse_failed"
+        assert detail["items"]
 
 
 @pytest.mark.asyncio
@@ -235,7 +236,7 @@ async def test_teensy_rejected_invalid_bit_width():
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/teensy/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": VALID_REFLEX_ARC_SPEC, "weight_bit_width": 4},
         )
         assert resp.status_code == 422
@@ -248,7 +249,7 @@ async def test_teensy_rejected_network_does_not_reach_neurochip():
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/teensy/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": RECURRENT_SPEC, "weight_bit_width": 8},
         )
         assert resp.status_code == 422
@@ -280,7 +281,7 @@ async def test_teensy_post_flash_verification_contract():
         deploy_resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/teensy/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": VALID_REFLEX_ARC_SPEC, "weight_bit_width": 8},
         )
         if deploy_resp.status_code != 200:
@@ -319,9 +320,7 @@ async def test_teensy_post_flash_verification_contract():
 
         # Step 2: Poll flash status (contract shape verification)
         poll_resp = await _request_or_skip(
-            client,
-            "GET",
-            f"{NEUROCHIP_URL}/api/neurochip/serial/flash/{job_id}"
+            client, "GET", f"{NEUROCHIP_URL}/api/neurochip/serial/flash/{job_id}"
         )
         assert poll_resp.status_code == 200
         poll_data = poll_resp.json()
@@ -397,7 +396,7 @@ async def test_teensy_payload_schema_consistency():
         deploy_resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/teensy/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": VALID_REFLEX_ARC_SPEC, "weight_bit_width": 16},
         )
         if deploy_resp.status_code != 200:
@@ -415,9 +414,9 @@ async def test_teensy_payload_schema_consistency():
             "populations",
             "connections",
         }
-        assert required_fields.issubset(set(payload.keys())), (
-            f"Missing fields: {required_fields - set(payload.keys())}"
-        )
+        assert required_fields.issubset(
+            set(payload.keys())
+        ), f"Missing fields: {required_fields - set(payload.keys())}"
 
         # It should be accepted by Neurochip export endpoint
         export_resp = await _request_or_skip(

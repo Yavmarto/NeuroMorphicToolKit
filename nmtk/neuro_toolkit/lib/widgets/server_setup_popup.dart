@@ -125,52 +125,58 @@ class ServerSetupPopupSurface extends ConsumerWidget {
       effectiveConnection.label,
     ].join(' · ');
 
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: isSheet
-          ? BorderRadius.vertical(top: Radius.circular(tokens.radiusLg))
-          : null,
-      clipBehavior: Clip.antiAlias,
-      child: AnimatedPadding(
-        duration: NmtkMotionTokens.durationBase,
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.circle, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                    color: _connectionColor(effectiveConnection.phase, tokens),
-                    size: 14,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      headerLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
+    final borderRadius = isSheet
+        ? BorderRadius.vertical(top: Radius.circular(tokens.radiusLg))
+        : BorderRadius.zero;
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: ColoredBox(
+        color: Theme.of(context).colorScheme.surface,
+        child: Padding(
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+          child: Column(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.circle, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                      color:
+                          _connectionColor(effectiveConnection.phase, tokens),
+                      size: 14,
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(ZetaIcons.close),
-                    tooltip: 'Close',
-                    onPressed: onClose,
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        headerLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    Tooltip(
+                      message: 'Close',
+                      child: ZetaIconButton.text(
+                        icon: ZetaIcons.close,
+                        semanticLabel: 'Close',
+                        onPressed: onClose,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: InAppBackendSetupScreen(
-                initialHost: _displayHost(initialHost),
-                message: message,
-                onComplete: onClose,
+              Expanded(
+                child: InAppBackendSetupScreen(
+                  initialHost: _displayHost(initialHost),
+                  message: message,
+                  onComplete: onClose,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

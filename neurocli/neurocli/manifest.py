@@ -51,8 +51,7 @@ def _find_manifest_path(start: Path) -> Path:
             return candidate
 
     raise ManifestNotFoundError(
-        f"Could not find {_MANIFEST_REL} walking up from {start}. "
-        "Set NMTK_ROOT to the repository root."
+        f"Could not find {_MANIFEST_REL} walking up from {start}. Set NMTK_ROOT to the repository root."
     )
 
 

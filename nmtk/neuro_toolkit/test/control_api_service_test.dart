@@ -80,6 +80,25 @@ void main() {
     );
   });
 
+  test('authenticated transport injects the admin token', () async {
+    String? observedToken;
+    final service = ControlApiService(
+      baseUri: Uri.parse('http://127.0.0.1:8090'),
+      adminToken: 'session-token',
+      client: MockClient((request) async {
+        observedToken = request.headers['X-NMTK-Admin-Token'];
+        return http.Response(
+          '{"backendDeploymentReady":true,"pynqBoards":[],"akidaHosts":[]}',
+          200,
+        );
+      }),
+    );
+
+    await service.fetchSettings();
+
+    expect(observedToken, 'session-token');
+  });
+
   group('suite API address', () {
     ControlApiService serviceAt(String controlBaseUrl, {http.Client? client}) =>
         ControlApiService(

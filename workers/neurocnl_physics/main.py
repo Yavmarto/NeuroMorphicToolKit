@@ -11,6 +11,8 @@ worker is running; returns 503 when it is not.
 """
 import sys
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -23,10 +25,24 @@ if str(_BACKEND_PATH) not in sys.path:
 
 logger = logging.getLogger("neurocnl_physics_worker")
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None, None]:
+    # job_store's sqlite tables are created lazily by initialize(); the main
+    # neurocnl backend does this in its own lifespan, but this worker runs
+    # as a separate process/DB and was never wired up to do the same, so
+    # every submit() hit "no such table: jobs".
+    from backend.app.services.job_store import job_store
+
+    await job_store.initialize()
+    yield
+
+
 app = FastAPI(
     title="neurocnl Physics Worker",
     version="0.1.0",
     description="MuJoCo physics co-simulation worker. Profile: physics.",
+    lifespan=lifespan,
 )
 
 # Mount the prosthetic simulate router (the only one that needs MuJoCo)

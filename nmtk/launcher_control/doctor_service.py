@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 from pathlib import Path
 from typing import Any
 
-from .config import REPO_ROOT
-from .suite_api_service import _suite_api_env_dir, _suite_api_env_python, _suite_api_pythonpath
+from .suite_api_service import (
+    _read_suite_api_capability_warnings,
+    _suite_api_env_dir,
+    _suite_api_env_python,
+)
 from .server import PREFLIGHT_DEGRADED, PREFLIGHT_FAILED, PREFLIGHT_OK
 
 
@@ -96,7 +98,7 @@ def _global_preflight_checks() -> list[dict[str, Any]]:
 
 
 def _studio_framework_sdk_check() -> dict[str, Any]:
-    """Advisory check: Studio target SDKs in the suite_api runtime."""
+    """Read cached Studio capability metadata without executing the runtime."""
     check_id = "studio-framework-sdks"
     check_name = "Studio framework SDKs"
     env_dir = _suite_api_env_dir()
@@ -110,24 +112,8 @@ def _studio_framework_sdk_check() -> dict[str, Any]:
             "capabilityWarnings": [],
         }
 
-    probe_script = (
-        "from neurocnl.target_sdk import probe_target_availability; "
-        "availability = probe_target_availability(); "
-        "required = ('brian2', 'pynn', 'akida', 'lava_sim'); "
-        "missing = [name for name in required if not availability.get(name)]; "
-        "import sys; "
-        "print(','.join(missing)); "
-        "sys.exit(0 if not missing else 1)"
-    )
-    result = subprocess.run(
-        [str(venv_python), "-c", probe_script],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-        env={**os.environ, "PYTHONPATH": _suite_api_pythonpath()},
-    )
-    if result.returncode == 0:
+    warnings = _read_suite_api_capability_warnings(env_dir)
+    if not warnings:
         return {
             "id": check_id,
             "name": check_name,
@@ -136,28 +122,16 @@ def _studio_framework_sdk_check() -> dict[str, Any]:
             "capabilityWarnings": [],
         }
 
-    missing = [part for part in result.stdout.strip().split(",") if part]
-    lava_hint = (
-        " Start lava-backend (docker compose up) or set NEUROCNL_LAVA_WORKER_URL."
-        if "lava_sim" in missing
-        else ""
-    )
-    reinstall_hint = (
-        " Reinstall suite_api env: delete "
-        f"{env_dir} and restart launcher control."
-    )
     return {
         "id": check_id,
         "name": check_name,
         "preflightStatus": PREFLIGHT_DEGRADED,
         "preflightMessage": (
-            "Studio target SDKs missing in suite_api: "
-            + (", ".join(missing) if missing else "unknown")
-            + reinstall_hint
-            + lava_hint
+            "Suite API reports optional Studio capability limits: "
+            + "; ".join(warnings)
         ),
         "capabilityWarnings": [
-            f"Setup may show download icons for: {', '.join(missing) if missing else 'framework targets'}"
+            "Setup may show download icons for unavailable framework targets."
         ],
     }
 

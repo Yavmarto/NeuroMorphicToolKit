@@ -35,7 +35,7 @@ Do NOT:
 
 ## Shell mode
 
-The launcher uses `NmtkShellMode.command`. Pass `mode: NmtkShellMode.command` to `NmtkDesktopScaffold`. This is the default, but always pass it explicitly for clarity.
+ADR-0009 intentionally keeps the wide launcher host chrome-free: `ToolViewScreen` owns the single workspace surface and must not add an outer desktop top bar or navigation rail. Whenever the launcher does instantiate a shared shell widget (currently `NmtkMobileScaffold`), pass `mode: NmtkShellMode.command` explicitly; the bare wide `Scaffold` is the documented ADR-0009 exception, not a missing shell.
 
 The sidebar `navItems` list is dynamic — it is built from the installed module manifest at runtime. Module-specific product UI must not live in the launcher; it belongs in `nmtk_ui_core` or the owning module's frontend.
 

@@ -35,13 +35,16 @@ from neurocli.output import error_exit, print_result
 studio_app = typer.Typer(help="NeuroStudio (neurocnl): generate and run notebooks from a workspace file.")
 
 _REPO_ROOT = Path(__file__).parent.parent.parent  # neurocli/ -> repo root
-_FALLBACK_BASE_URL = "http://localhost:9000"
+_FALLBACK_BASE_URL = "http://127.0.0.1:9000"
 
 
 def _resolve_base_url(flag: str | None) -> str:
     """Resolve the neurocnl backend base URL: flag > NMTK_ROOT manifest > fallback."""
     if flag:
         return flag.rstrip("/")
+    configured = os.environ.get("NMTK_SUITE_API_URL")
+    if configured:
+        return configured.rstrip("/")
     try:
         modules = load_manifest(Path(os.environ.get("NMTK_ROOT", _REPO_ROOT)))
     except (ManifestNotFoundError, OSError, json.JSONDecodeError):
@@ -62,9 +65,7 @@ def _load_workspace(workspace_file: Path) -> dict[str, Any]:
 def _active_spec(workspace: dict[str, Any]) -> str:
     files = workspace.get("files", [])
     active_id = workspace.get("activeFileId")
-    active_file = next((f for f in files if f.get("id") == active_id), None) or (
-        files[0] if files else None
-    )
+    active_file = next((f for f in files if f.get("id") == active_id), None) or (files[0] if files else None)
     if active_file is None:
         return ""
     canonical = (active_file.get("canonicalDocument") or {}).get("cnlText", "")
@@ -82,7 +83,9 @@ def _post(url: str, base_url: str, json_mode: bool, error_msg: str, **kwargs: An
     except httpx.HTTPStatusError as exc:
         detail = _safe_detail(exc.response)
         code = 2 if exc.response.status_code >= 500 else 1
-        error_exit({"error": error_msg, "status_code": exc.response.status_code, "detail": detail}, json_mode, code=code)
+        error_exit(
+            {"error": error_msg, "status_code": exc.response.status_code, "detail": detail}, json_mode, code=code
+        )
         raise
 
 
@@ -100,13 +103,15 @@ def run(
     learning_rate: float = typer.Option(1e-3, "--learning-rate", help="Optimizer learning rate"),
     optimizer: str = typer.Option("Adam", "--optimizer", help="Optimizer algorithm"),
     batch_size: int = typer.Option(32, "--batch-size", help="Mini-batch size"),
-    framework: str | None = typer.Option(
-        None, "--framework", help="Overrides the workspace file's selectedPlatforms"
+    framework: str | None = typer.Option(None, "--framework", help="Overrides the workspace file's selectedPlatforms"),
+    dataset: str | None = typer.Option(None, "--dataset", help="Overrides the workspace file's selectedDataset"),
+    registry: str | None = typer.Option(
+        None,
+        "--api-url",
+        "--registry",
+        "-r",
+        help="Suite API base URL (`--registry` is retained for compatibility)",
     ),
-    dataset: str | None = typer.Option(
-        None, "--dataset", help="Overrides the workspace file's selectedDataset"
-    ),
-    registry: str | None = typer.Option(None, "--registry", "-r", help="neurocnl backend base URL"),
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ) -> None:
     """Generate a Jupyter notebook from a workspace file's CNL spec and run it."""
@@ -181,6 +186,7 @@ def _stream_progress(base_url: str, job_id: str, json_mode: bool) -> int:
     url = f"{base_url}/api/training/jobs/{job_id}/events"
     try:
         with httpx.stream("GET", url, timeout=None) as response:
+            response.raise_for_status()
             for line in response.iter_lines():
                 if not line.startswith("data: "):
                     continue
@@ -195,6 +201,16 @@ def _stream_progress(base_url: str, job_id: str, json_mode: bool) -> int:
                     return 2
     except httpx.ConnectError:
         error_exit({"error": "backend_unreachable", "base_url": base_url}, json_mode, code=2)
+    except httpx.HTTPStatusError as exc:
+        error_exit(
+            {
+                "error": "progress_stream_failed",
+                "status_code": exc.response.status_code,
+                "detail": _safe_detail(exc.response),
+            },
+            json_mode,
+            code=2,
+        )
     return 2
 
 

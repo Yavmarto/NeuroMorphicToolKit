@@ -1,5 +1,0 @@
-# nmtk_wgpu_renderer_plugin
-
-macOS-only Flutter plugin that bridges the native `nmtk_wgpu` Rust renderer (built from `neurocnl/frontend/rust/nmtk_wgpu` via a `cargo` script phase in this pod's `podspec`) into a Flutter `Texture`. The Rust side renders spike/density frames into a shared `CVPixelBuffer`; this plugin's Swift `FlutterPlugin` (`NmtkWgpuRendererPlugin.swift`) registers that buffer with the engine's texture registry over a single `MethodChannel`, and the Dart wrapper (`lib/nmtk_wgpu_renderer_plugin.dart`) exposes `registerTexture` / `unregisterTexture` / `textureFrameAvailable`.
-
-It exists only because registering a native texture against the embedder's texture registry isn't reachable from `dart:ffi` alone — everything else in the render path (frame pushes, buffer creation/resize) goes through `dart:ffi` directly. Consumed by `nmtk_ui_core`'s `WgpuNativeNeuronRenderer` (`lib/visualization/wgpu_native_renderer.dart`), which nmtk_ui_core depends on via a local path dependency in its `pubspec.yaml`.

@@ -7,6 +7,7 @@ Neurobench's app/config.py has been updated with extra="ignore" so that
 suite-level env vars (SUITE_API_PORT, NEUROCNL_PORT, etc.) in the root .env
 do not cause ValidationError when loading Settings().
 """
+
 import sys
 from pathlib import Path
 

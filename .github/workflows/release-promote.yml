@@ -21,13 +21,18 @@ permissions:
 
 jobs:
   promote:
-    runs-on: self-hosted
+    # Pure git work — no reason to wait on a self-hosted machine.
+    runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN is scoped to this repository only: it can neither read
+          # nor push the sibling submodule repositories this job merges and
+          # tags. NMTK_SUBMODULE_TOKEN needs *write* access for this workflow,
+          # unlike the read-only use in release-docker.yml.
+          token: ${{ secrets.NMTK_SUBMODULE_TOKEN || github.token }}
 
       - name: Configure git
         run: |
@@ -35,6 +40,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Promote submodules (dev → main)
+        # VERSION was previously only exported on the parent-repo step below, so
+        # `git tag "$VERSION"` here expanded to an empty tag name, failed, and
+        # was swallowed by the `||` — submodules were merged but never tagged.
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
           FAILED=""
           # shellcheck disable=SC2016

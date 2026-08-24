@@ -220,7 +220,9 @@ void main() {
       },
     );
 
-    testWidgets('panel size is consistent across phase changes', (tester) async {
+    testWidgets('panel size is consistent across phase changes', (
+      tester,
+    ) async {
       final phase = ValueNotifier<SnnWorkflowPhase>(
         SnnWorkflowPhase.selectData,
       );
@@ -249,72 +251,82 @@ void main() {
       expect(tester.getSize(panel).height, initialHeight);
     });
 
-    testWidgets('active stage substeps nest inside its own pill, left-aligned', (
-      tester,
-    ) async {
-      final phase = ValueNotifier<SnnWorkflowPhase>(
-        SnnWorkflowPhase.defineModel,
-      );
-      addTearDown(phase.dispose);
-      await tester.pumpWidget(
-        _wrap(
-          ValueListenableBuilder<SnnWorkflowPhase>(
-            valueListenable: phase,
-            builder: (context, value, child) =>
-                SnnWorkflowStepper(currentPhase: value),
-          ),
-        ),
-      );
-
-      // The substep chip sits just right of the stage's own label, inside
-      // the same pill — not centred, not off in a separate row.
-      final stageLeft = tester
-          .getTopLeft(find.byKey(const ValueKey('workflow-stage-2')))
-          .dx;
-      final substepLeft = tester
-          .getTopLeft(find.byKey(const ValueKey('pipeline-step-defineModel')))
-          .dx;
-      expect(substepLeft, greaterThan(stageLeft + 100));
-      expect(substepLeft, lessThan(stageLeft + 140));
-
-      // A single-substep stage must stay left-aligned within its reserved
-      // width, not drift to the centre.
-      phase.value = SnnWorkflowPhase.selectData;
-      await tester.pumpAndSettle();
-      final setupStageLeft = tester
-          .getTopLeft(find.byKey(const ValueKey('workflow-stage-1')))
-          .dx;
-      final prepareLeft = tester
-          .getTopLeft(find.byKey(const ValueKey('pipeline-step-selectData')))
-          .dx;
-      expect(prepareLeft, greaterThan(setupStageLeft + 100));
-      expect(prepareLeft, lessThan(setupStageLeft + 140));
-    });
-
-    testWidgets('active stage phases stay horizontally scrollable in narrow space', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _wrap(
-          const SizedBox(
-            width: 500,
-            child: SnnWorkflowStepper(
-              currentPhase: SnnWorkflowPhase.defineTrain,
+    testWidgets(
+      'active stage substeps nest inside its own pill, left-aligned',
+      (tester) async {
+        final phase = ValueNotifier<SnnWorkflowPhase>(
+          SnnWorkflowPhase.defineModel,
+        );
+        addTearDown(phase.dispose);
+        await tester.pumpWidget(
+          _wrap(
+            ValueListenableBuilder<SnnWorkflowPhase>(
+              valueListenable: phase,
+              builder: (context, value, child) =>
+                  SnnWorkflowStepper(currentPhase: value),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(tester.takeException(), isNull);
-      expect(
-        find.byWidgetPredicate(
-          (widget) =>
-              widget is SingleChildScrollView &&
-              widget.scrollDirection == Axis.horizontal,
-        ),
-        findsOneWidget,
-      );
-    });
+        // The substep chip sits just right of the stage's own label, inside
+        // the same pill — not centred, not off in a separate row.
+        final stageLeft = tester
+            .getTopLeft(find.byKey(const ValueKey('workflow-stage-2')))
+            .dx;
+        final substepLeft = tester
+            .getTopLeft(find.byKey(const ValueKey('pipeline-step-defineModel')))
+            .dx;
+        expect(substepLeft, greaterThan(stageLeft + 100));
+        expect(substepLeft, lessThan(stageLeft + 140));
+
+        // A single-substep stage must stay left-aligned within its reserved
+        // width, not drift to the centre.
+        phase.value = SnnWorkflowPhase.selectData;
+        await tester.pumpAndSettle();
+        final setupStageLeft = tester
+            .getTopLeft(find.byKey(const ValueKey('workflow-stage-1')))
+            .dx;
+        final prepareLeft = tester
+            .getTopLeft(find.byKey(const ValueKey('pipeline-step-selectData')))
+            .dx;
+        expect(prepareLeft, greaterThan(setupStageLeft + 100));
+        expect(prepareLeft, lessThan(setupStageLeft + 140));
+      },
+    );
+
+    testWidgets(
+      'active stage phases stay horizontally scrollable in narrow space',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            const SizedBox(
+              width: 500,
+              child: SnnWorkflowStepper(
+                currentPhase: SnnWorkflowPhase.defineTrain,
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        // defineTrain's stage is Design (stage 2); its nested phase rail is
+        // the horizontally-scrollable region under test here. The stage row
+        // itself also scrolls horizontally, so this must be scoped to the
+        // active stage's pill rather than matching the whole tree.
+        final activeStage = find.byKey(const ValueKey('workflow-stage-2'));
+        expect(
+          find.descendant(
+            of: activeStage,
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is SingleChildScrollView &&
+                  widget.scrollDirection == Axis.horizontal,
+            ),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('shrinking between stages clips the outgoing child row', (
       tester,
@@ -389,9 +401,7 @@ void main() {
       expect(selected, SnnWorkflowPhase.run);
     });
 
-    testWidgets('reduced motion swaps substep rails instantly', (
-      tester,
-    ) async {
+    testWidgets('reduced motion swaps substep rails instantly', (tester) async {
       final phase = ValueNotifier<SnnWorkflowPhase>(
         SnnWorkflowPhase.defineModel,
       );

@@ -61,7 +61,9 @@ class NmtkDeployLayout extends StatelessWidget {
       titleStyle: titleStyle,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final isNarrow = isCompact || constraints.maxWidth < NmtkShellTokens.normalBreakpoint;
+          final isNarrow =
+              isCompact ||
+              constraints.maxWidth < NmtkShellTokens.normalBreakpoint;
 
           if (isNarrow) {
             return Column(

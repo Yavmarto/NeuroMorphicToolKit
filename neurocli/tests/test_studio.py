@@ -82,16 +82,12 @@ def test_run_generate_then_run_then_stream_success(tmp_path: Path) -> None:
         {"workspace_folder": "my-project/notebooks", "notebooks": [{"filename": "pipeline_snntorch_sim.ipynb"}]}
     )
     run_resp = _make_response({"job_id": "job-1"})
-    sse = _sse_response(
-        [{"type": "epoch", "epoch": 1, "total_epochs": 2, "loss": 0.5}, {"type": "done"}]
-    )
+    sse = _sse_response([{"type": "epoch", "epoch": 1, "total_epochs": 2, "loss": 0.5}, {"type": "done"}])
     with (
         patch("neurocli.studio.httpx.post", side_effect=[gen_resp, run_resp]) as mock_post,
         patch("neurocli.studio.httpx.stream", return_value=sse),
     ):
-        result = runner.invoke(
-            app, ["studio", "run", str(workspace_file), "-r", "http://x.test", "--json"]
-        )
+        result = runner.invoke(app, ["studio", "run", str(workspace_file), "-r", "http://x.test", "--json"])
     assert result.exit_code == 0, result.output
     gen_call = mock_post.call_args_list[0]
     assert gen_call.args[0] == "http://x.test/api/notebook/generate-v2"
@@ -119,8 +115,18 @@ def test_run_flags_override_workspace_config(tmp_path: Path) -> None:
         result = runner.invoke(
             app,
             [
-                "studio", "run", str(workspace_file), "-r", "http://x.test",
-                "--framework", "lava_sim", "--dataset", "shd", "--epochs", "5", "--json",
+                "studio",
+                "run",
+                str(workspace_file),
+                "-r",
+                "http://x.test",
+                "--framework",
+                "lava_sim",
+                "--dataset",
+                "shd",
+                "--epochs",
+                "5",
+                "--json",
             ],
         )
     assert result.exit_code == 0, result.output

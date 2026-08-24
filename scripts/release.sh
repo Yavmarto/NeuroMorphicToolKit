@@ -80,6 +80,9 @@ CORE_FILES=(
   "$ROOT_DIR/nmtk/neuro_toolkit/pubspec.yaml"
   "$ROOT_DIR/nmtk_ui_core/pubspec.yaml"
   "$ROOT_DIR/suite_api/pyproject.toml"
+  # neurocli ships as a wheel on the GitHub release (release-desktop.yml,
+  # build-python). It was stuck at 0.1.0 because it was never listed here.
+  "$ROOT_DIR/neurocli/pyproject.toml"
 )
 python3 "$SCRIPT_DIR/bump_version.py" "$VERSION" "${CORE_FILES[@]}"
 

@@ -22,6 +22,11 @@ Mount `LauncherAppHost` directly through `MaterialApp.home`. The host owns the
 startup server-setup prompt and launcher-update dialog, and always keeps
 `ToolViewScreen` mounted as the base surface.
 
+The wide launcher intentionally uses that workspace surface without an outer
+`NmtkDesktopScaffold`, top bar, or navigation rail. Shared shell widgets used
+by narrow layouts still receive `NmtkShellMode.command` explicitly; audits
+must treat the chrome-free wide host as this ADR's deliberate exception.
+
 Use `launcherNavigationProvider` for command-palette and module-picker intents.
 The provider emits typed one-shot requests to open a module, reload the
 workspace, or invoke a shell action; `ToolViewScreen` resolves those requests
@@ -33,6 +38,8 @@ module handoff contracts are unchanged.
 
 ## Consequences
 - The launcher has one application surface and one navigation state model.
+- Adding an outer desktop shell would duplicate navigation and violate this
+  single-surface decision.
 - Module commands no longer rebuild the outer application to select a module.
 - Tests assert visible workspace behavior instead of synthetic route paths.
 - Old launcher-only paths such as `/module/neurobench` and `/environments` are

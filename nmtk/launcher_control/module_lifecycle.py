@@ -590,7 +590,11 @@ class ModuleLifecycleMixin:
                         ],
                     )
             elif _module_start_strategy(module) == "none":
-                result = self._suite_api_ready_result()
+                result = (
+                    self._suite_api_static_readiness_result()
+                    if self._diagnostic
+                    else self._suite_api_ready_result()
+                )
             else:
                 result = self._preflight_module(module, allow_repair=False)
 

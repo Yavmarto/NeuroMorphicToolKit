@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import hmac
+import os
 import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
@@ -46,13 +49,21 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
         query = parse_qs(parsed.query)
         try:
+            if path != "/health" and not self._is_authorized():
+                self._send_json(
+                    HTTPStatus.UNAUTHORIZED,
+                    {
+                        "error": "unauthorized",
+                        "message": "Administrator authentication required.",
+                    },
+                )
+                return
             body = self._read_body()
             if method == "GET" and path == "/health":
                 self._send_json(
                     HTTPStatus.OK,
                     {
                         "status": "ok",
-                        **self.server.state.get_settings(),
                     },
                 )
                 return
@@ -669,6 +680,26 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
 
     def _read_body(self) -> dict[str, Any] | None:
         return read_json_body(self)
+
+    def _is_authorized(self) -> bool:
+        required = os.environ.get("NMTK_AUTH_REQUIRED", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        if not required:
+            return True
+        secret_file = os.environ.get("NMTK_ADMIN_TOKEN_FILE", "").strip()
+        try:
+            expected = (
+                Path(secret_file).read_text(encoding="utf-8").strip()
+                if secret_file
+                else os.environ.get("NMTK_ADMIN_TOKEN", "").strip()
+            )
+        except OSError:
+            return False
+        provided = self.headers.get("X-NMTK-Admin-Token", "")
+        return bool(expected and provided and hmac.compare_digest(expected, provided))
 
     def _send_json(self, status: HTTPStatus, payload: Any) -> None:
         send_json(self, status, payload)

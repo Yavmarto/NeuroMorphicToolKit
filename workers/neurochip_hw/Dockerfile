@@ -17,6 +17,7 @@ COPY Neurochip/ /repo/Neurochip/
 RUN pip install --no-cache-dir /repo/Neurochip
 
 RUN groupadd --system appgroup && useradd --system --gid appgroup appuser \
+ && mkdir -p /app/data \
  && chown -R appuser:appgroup /app /repo
 USER appuser
 

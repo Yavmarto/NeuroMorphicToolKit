@@ -13,6 +13,7 @@ export 'package:zeta_flutter/zeta_flutter.dart'
         ZetaContrast,
         ZetaPrimitives,
         ZetaButton,
+        ZetaIconButton,
         ZetaButtonType,
         ZetaTextInput,
         ZetaAvatar,
@@ -37,7 +38,15 @@ export 'package:zeta_flutter/zeta_flutter.dart'
         ZetaDropdownSize,
         ZetaSelectInput,
         ZetaSwitch,
-        ZetaSwitchType;
+        ZetaSwitchType,
+        ZetaRadio,
+        ZetaDialog,
+        ZetaDialogHeaderAlignment,
+        ZetaProgressCircle,
+        ZetaCircleSizes,
+        ZetaProgressBar,
+        ZetaProgressBarType,
+        showZetaDialog;
 
 /// Central Zeta theme configuration for the NeuroMorphicToolKit suite.
 ///

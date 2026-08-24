@@ -1,0 +1,17 @@
+[Unit]
+Description=Suspend the NMTK runner host once it has been idle
+Documentation=file:///docs/ci-runners.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/nmtk/scripts/ci/runner-idle-suspend.sh
+Restart=always
+RestartSec=60
+# Runs as root: suspending the host (or invoking WSL interop against
+# powrprof.dll) needs it, and it must be able to see the runner's worker
+# processes regardless of which user the runner service runs as.
+
+[Install]
+WantedBy=multi-user.target

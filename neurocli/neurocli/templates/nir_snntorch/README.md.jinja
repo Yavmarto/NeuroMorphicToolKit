@@ -1,23 +1,23 @@
 # {{ project_name }}
 
-**Framework**: NIR → snnTorch simulator
+**Framework**: NIR + snnTorch training
 **Task**: {{ task }}
 
 ## Getting started
 
 ```bash
 uv sync
-uv run python src/main.py
+uv run python src/train.py
 ```
 
 ## What this scaffold gives you
 
-- A minimal NIR graph compiled with `neurocnl.compile_to_nir()`
-- Fixed-weight simulation via `snntorch` (no training)
-- Deterministic spike-train stimulus from the shared NMTK simulator contract
+- A deterministic snnTorch training smoke test
+- `network.cnl`, the architecture used for target validation
+- `artifacts/trained.nir`, generated after training with non-zero weights
 
 ## Next steps
 
-1. Edit `src/main.py` to describe your network in NIR-native CNL.
-2. Run `neuro run neurocnl` to start the NeuroCNL backend.
-3. Use `neuro hub push` to share your model once ready.
+1. Replace the tiny sample data and model in `src/train.py`.
+2. Keep the layer names and shapes in `network.cnl` synchronized with the exported NIR graph.
+3. Package for PYNQ with `neuro deploy network.cnl --trained-nir artifacts/trained.nir --hardware pynq --output pynq.zip`.

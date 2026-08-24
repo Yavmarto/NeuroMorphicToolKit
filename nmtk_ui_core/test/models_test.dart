@@ -210,10 +210,7 @@ void main() {
       // manifest it has installed, so the map has to come back exactly as it
       // arrived — no key added, none dropped, none renamed.
       final payloadJson = json['deploy_payload'] as Map<String, dynamic>;
-      expect(
-        roundTrip['register_map'],
-        equals(payloadJson['register_map']),
-      );
+      expect(roundTrip['register_map'], equals(payloadJson['register_map']));
       // Same rule for config: `timestep_us` has no field here and still has to
       // reach the board.
       expect(roundTrip['config'], equals(payloadJson['config']));

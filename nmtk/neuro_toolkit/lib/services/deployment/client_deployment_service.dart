@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/foundation.dart';
@@ -136,6 +137,7 @@ class ClientDeploymentService implements DeploymentService {
     'docker-compose.prod.yml',
     'docker-compose.remote.yml',
     'install.sh',
+    'migrate_legacy.py',
     'nmtk-stack.sh',
     'monitoring/alertmanager/alertmanager.yml',
     'monitoring/loki/loki-config.yml',
@@ -1886,6 +1888,9 @@ step_marker finish 40 false "Finalizing secure deployment handoff"
     DeploymentRequest request, {
     required bool persistTargetImmediately,
   }) async {
+    if (request.targetType == 'remote_host' && request.adminToken.isEmpty) {
+      request = request.withAdminToken(_newAdminToken());
+    }
     final bundle = await _loadDeploymentBundle();
     final targetId = request.targetType == 'remote_host'
         ? 'remote-${request.host.trim().replaceAll('.', '-')}'
@@ -2784,6 +2789,41 @@ exit 1
         await remote.close();
       }
     }
+    if (request.adminToken.isNotEmpty) {
+      final credentialsDir = path.posix.join(deployDir, 'credentials');
+      await _runChecked(
+        client,
+        'mkdir -p ${_shellQuote(credentialsDir)}',
+        'Could not prepare deployment credentials.',
+        job: job,
+        request: request,
+      );
+      final remote = await sftp.open(
+        path.posix.join(credentialsDir, 'admin-token'),
+        mode: SftpFileOpenMode.create |
+            SftpFileOpenMode.truncate |
+            SftpFileOpenMode.write,
+      );
+      try {
+        await remote
+            .writeBytes(Uint8List.fromList(utf8.encode(request.adminToken)));
+      } finally {
+        await remote.close();
+      }
+      await _runChecked(
+        client,
+        'chmod 600 ${_shellQuote(path.posix.join(credentialsDir, 'admin-token'))}',
+        'Could not protect deployment credentials.',
+        job: job,
+        request: request,
+      );
+    }
+  }
+
+  String _newAdminToken() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+    return base64Url.encode(bytes).replaceAll('=', '');
   }
 
   Future<DeploymentAssetBundle> _loadDeploymentBundle() async {

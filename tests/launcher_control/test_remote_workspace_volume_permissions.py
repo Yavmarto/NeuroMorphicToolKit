@@ -76,3 +76,30 @@ def test_production_suite_api_persists_writable_application_data() -> None:
     assert "\n      - /home/app/data\n" not in suite_api_override
     assert "os.access(data_dir, os.W_OK)" in suite_api_override
     assert "/api/suite/health" in suite_api_override
+
+
+def test_remote_public_ports_are_loopback_only_and_authenticated() -> None:
+    remote_override = (ROOT / "docker-compose.remote.yml").read_text()
+
+    for binding in (
+        "127.0.0.1:${SUITE_API_PORT:-9000}:9000",
+        "127.0.0.1:${LAUNCHER_CONTROL_PORT:-8090}:8091",
+        "127.0.0.1:${JUPYTER_PORT:-8008}:8008",
+    ):
+        assert binding in remote_override
+    assert remote_override.count("NMTK_AUTH_REQUIRED=1") == 2
+    assert remote_override.count("nmtk_admin_token") >= 5
+    assert "neurosense-hw-worker:\n    ports: !reset []" in remote_override
+    assert "neurobench-runner-worker:\n    ports: !reset []" in remote_override
+    assert "neurochip-hw-worker:\n    ports: !reset []" in remote_override
+
+
+def test_upgrade_stages_and_verifies_legacy_data_before_cleanup() -> None:
+    install_script = (DEPLOYMENT_ASSETS / "install.sh").read_text()
+
+    assert "p0-owner-v1" in install_script
+    assert "migrate_legacy.py" in install_script
+    assert "INSERT OR IGNORE" in (DEPLOYMENT_ASSETS / "migrate_legacy.py").read_text()
+    assert 'if [ "$migration_ok" != "true" ]' in install_script
+    assert 'touch "$MIGRATION_MARKER"' in install_script
+    assert 'rm -rf "$MIGRATION_DIR"' in install_script

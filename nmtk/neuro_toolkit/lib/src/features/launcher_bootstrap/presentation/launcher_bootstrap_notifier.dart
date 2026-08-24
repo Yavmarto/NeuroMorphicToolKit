@@ -7,6 +7,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/backend_tunnel_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 part 'launcher_bootstrap_notifier.g.dart';
@@ -14,7 +15,10 @@ part 'launcher_bootstrap_notifier.g.dart';
 typedef LauncherBootstrapProbe = Future<LauncherBootstrapState> Function(
     Uri baseUri);
 
-typedef LauncherControlApiFactory = ControlApiService Function(Uri baseUri);
+typedef LauncherControlApiFactory = ControlApiService Function(
+  Uri baseUri,
+  String adminToken,
+);
 typedef LauncherSelectionSaver = Future<void> Function(
     Uri launcherBaseUri, Uri? suiteBaseUri);
 
@@ -27,9 +31,10 @@ final launcherBootstrapProbeProvider = Provider<LauncherBootstrapProbe>((ref) {
 final launcherControlApiFactoryProvider = Provider<LauncherControlApiFactory>((
   ref,
 ) {
-  return (baseUri) => ControlApiService(
+  return (baseUri, adminToken) => ControlApiService(
         baseUri: baseUri,
         analyticsService: ref.read(analyticsServiceProvider),
+        adminToken: adminToken,
       );
 });
 
@@ -50,8 +55,28 @@ final launcherSelectionSaverProvider = Provider<LauncherSelectionSaver>((ref) {
 class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
   @override
   Future<LauncherBootstrapData> build() async {
-    // Defer actual bootstrap; start in the loading state so the host widget
-    // can immediately render the loading view without a manual trigger.
+    final configured =
+        ref.read(settingsProvider).value?.launcherControlApiBaseUrl;
+    final snapshot = await ref.read(deploymentServiceProvider).load();
+    final remoteTargets = snapshot.targets
+        .where((target) => target.targetType == 'remote_host')
+        .toList(growable: false);
+    if (remoteTargets.length == 1 &&
+        (configured == null ||
+            configured.isEmpty ||
+            configured.contains(remoteTargets.single.host))) {
+      try {
+        final tunnel = await ref
+            .read(backendTunnelServiceProvider)
+            .open(remoteTargets.single);
+        return _runBootstrap(
+          explicitBaseUriOverride: tunnel.launcherUri,
+          adminToken: tunnel.adminToken,
+        );
+      } on Object catch (error) {
+        await _recordFailure('tunnel', error, null);
+      }
+    }
     return _runBootstrap();
   }
 
@@ -60,12 +85,18 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
   }
 
   Future<void> connectToDeploymentTarget(DeploymentTarget target) async {
-    await _connect(target.host, deployedTarget: target);
+    final tunnel = await ref.read(backendTunnelServiceProvider).open(target);
+    await _connect(
+      tunnel.launcherUri.toString(),
+      deployedTarget: target,
+      tunnel: tunnel,
+    );
   }
 
   Future<String?> _connect(
     String rawInput, {
     DeploymentTarget? deployedTarget,
+    BackendTunnelSession? tunnel,
   }) async {
     final previousSelection = state.value;
     late final Uri candidateBaseUri;
@@ -80,12 +111,22 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
       }
       return result.setupMessage;
     }
+    if (deployedTarget == null &&
+        !ControlApiService.isLoopbackHost(candidateBaseUri.host)) {
+      const message =
+          'Choose a saved Backend Setup target to connect securely over SSH.';
+      if (previousSelection?.isReady != true) {
+        state = AsyncData(LauncherBootstrapData.needsSetup(message: message));
+      }
+      return message;
+    }
 
     // Keep the current setup form mounted while the field shows its local
     // Connecting state. Replacing the provider value with AsyncLoading here
     // used to discard the user's input and produced the visible flicker.
     final result = await _runBootstrap(
       explicitBaseUriOverride: candidateBaseUri,
+      adminToken: tunnel?.adminToken ?? '',
     );
 
     if (!result.isReady) {
@@ -105,11 +146,12 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
       final suiteHost = suiteTarget.host.trim().isEmpty
           ? candidateBaseUri.host
           : suiteTarget.host.trim();
-      suiteUri = Uri(
-        scheme: candidateBaseUri.scheme,
-        host: suiteHost,
-        port: suiteTarget.backendPort,
-      );
+      suiteUri = tunnel?.suiteApiUri ??
+          Uri(
+            scheme: candidateBaseUri.scheme,
+            host: suiteHost,
+            port: suiteTarget.backendPort,
+          );
     }
 
     // The verified service is authoritative for this app session. Enter the
@@ -117,10 +159,10 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
     // can never turn a successful launcher connection back into setup.
     state = AsyncData(result);
     try {
-      await ref.read(launcherSelectionSaverProvider)(
-        candidateBaseUri,
-        suiteUri,
-      );
+      if (tunnel == null) {
+        await ref.read(launcherSelectionSaverProvider)(
+            candidateBaseUri, suiteUri);
+      }
     } on Object catch (error) {
       await _recordFailure('persistence', error, candidateBaseUri);
     }
@@ -129,6 +171,7 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
 
   Future<LauncherBootstrapData> _runBootstrap({
     Uri? explicitBaseUriOverride,
+    String adminToken = '',
   }) async {
     Uri? explicitBaseUri = explicitBaseUriOverride;
     if (explicitBaseUri == null) {
@@ -171,6 +214,7 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
           bootstrapState: bootstrap,
           controlApiService: ref.read(launcherControlApiFactoryProvider)(
             bootstrap.baseUri!,
+            adminToken,
           ),
           message: bootstrap.message,
         );
@@ -180,6 +224,7 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
 
     final controlApiService = ref.read(launcherControlApiFactoryProvider)(
       bootstrap.baseUri!,
+      adminToken,
     );
 
     try {

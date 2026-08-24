@@ -1,68 +1,51 @@
 # neurocli
 
-`neurocli` appears intended to be the command-line companion to the NMTK suite.
+`neurocli` is the scriptable developer front door to NMTK. The proof of concept
+ships one verified project scaffold, manages the consolidated backend through
+the repository's Compose stack, runs Studio workspaces, talks to Neurohub, and
+builds validated offline PYNQ packages.
 
-## What It Should Do
-
-Based on the only tracked issue in this folder and the rest of the workspace, the most likely purpose of `neurocli` is:
-
-- bootstrap new neuromorphic projects from the terminal
-- generate starter layouts for common frameworks and targets
-- provide a lightweight alternative to the desktop launcher for automation-heavy users
-- expose repeatable commands that can later be called from CI, shell scripts, or other modules
-
-The clearest intended workflow is documented in
-[`issues-archive/22mar1_project_scaffolder.md`](./issues-archive/22mar1_project_scaffolder.md):
+## Install and verify
 
 ```bash
-neuro new --framework nir --target snntorch --task kws
+cd neurocli
+python -m pip install -e ".[dev]"
+make verify
 ```
 
-That points to a scaffolding-first CLI rather than a simulation or orchestration service.
+The installed command is `neuro`.
 
-## Why This Fits The Rest Of NMTK
-
-The repository already has:
-
-- a desktop launcher in `nmtk/neuro_toolkit`
-- module-specific CLIs inside some submodules such as `neurocnl` and `Neuro-Dream-Hand`
-- GitHub workflows for scaffolding and agent-driven module creation
-
-What is still missing is a single user-facing CLI that can sit above those pieces and help a terminal-first developer:
-
-- create a new project
-- choose a framework
-- choose a hardware target
-- get a boilerplate directory with dependencies, scripts, and docs
-
-So `neurocli` most likely belongs in the "developer tooling / project bootstrap" layer of the suite.
-
-## Current State
-
-`neurocli` is implemented as a Typer-based Python package (`neuro` entry point). Shipped commands:
-
-- `neuro new` — scaffold a project from a framework + target template bundle
-- `neuro status` / `neuro install` / `neuro run` — headless module lifecycle helpers
-- `neuro hub login` / `push` / `pull` / `search` — talk to the Neurohub Global Registry
-  over its `/api/v1` API using `neurohub://` URIs
-- `neuro studio run` — read a NeuroStudio workspace file (`*.nmtk`),
-  generate a Jupyter notebook from its CNL spec via the `neurocnl` backend, and run it,
-  streaming live training progress
-
-`neuro hub` resolves the registry URL from `nmtk/neuro_toolkit/assets/modules.json`
-(the Neurohub port), an `--registry` flag, the `NEUROHUB_REGISTRY` env var, or the stored
-credentials file, and verifies SHA-256 checksums on every `pull`. The shared
-`neurocli/uri_parser.py` is kept in sync with the backend copy at
-`Neurohub/neurohub/app/utils/uri_parser.py`, but the two are not currently identical:
-Neurohub's `ArtefactType` enum has 8 members (including `custom_node`), while the
-neurocli copy has only the original 7. This means `hub push --type custom_node` is
-accepted by the backend but currently fails CLI-side validation — the CLI copy needs
-its `ArtefactType` enum updated to add `custom_node` to restore parity.
-
-## Verification
+## Verified workflow
 
 ```bash
-cd neurocli && make verify   # ruff + mypy + pytest (incl. tests/properties/)
+neuro new demo --trainer snntorch --data static
+cd demo
+uv sync
+uv run python src/train.py
+neuro deploy network.cnl --trained-nir artifacts/trained.nir --hardware pynq --output pynq.zip
 ```
 
-If the desktop launcher is the GUI front door to NMTK, `neurocli` is the scriptable front door.
+The generated project trains a deterministic two-class snnTorch model and
+writes non-zero weights to `artifacts/trained.nir`. Deployment calls Suite API
+for target validation and package generation; it never programs hardware.
+
+The other template bundles remain available for exploration with
+`--experimental`, but they are not part of the PoC acceptance contract.
+
+## Backend and integrations
+
+- `neuro install` builds `suite_api`, `launcher-control`, and `jupyter-server`
+  from the canonical root Compose file.
+- `neuro run` starts those services and waits for Suite API health.
+- `neuro status` reads `/api/suite/health` and `/api/suite/health/modules`.
+- `neuro studio run FILE.nmtk` generates, runs, and follows a Studio notebook.
+- `neuro hub login|push|pull|search` uses Neurohub's `/api/v1` registry.
+
+Set `NMTK_ROOT` when the CLI cannot locate this checkout,
+`NMTK_SUITE_API_URL` when Suite API is not at `http://127.0.0.1:9000`, and
+`NEUROHUB_REGISTRY`/`NEUROHUB_TOKEN` for non-interactive registry access.
+
+All commands expose `--json`; exit code `1` means invalid input or a rejected
+operation, while `2` means a runtime or infrastructure failure.
+
+Full command reference: [`docs/user-guide.md`](docs/user-guide.md).

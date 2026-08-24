@@ -20,6 +20,28 @@ RUN pip install --no-cache-dir \
     "jinja2>=3.1.0" \
     "httpx>=0.27.0"
 
+# neurocnl's base (non-extra) deps include torch/snntorch/sc-neurocore. Pull
+# CPU-only torch first (matches suite_api/Dockerfile) so the neurocnl install
+# below is satisfied by this small CPU wheel instead of pip's default full
+# CUDA build (multi-GB nvidia-* packages) — this worker never needs a GPU.
+RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch \
+ && pip install --no-cache-dir \
+    "nir>=1.0.5" \
+    snntorch \
+    "sc-neurocore>=3.13.0,<4"
+
+# Neurobench/neurobench declares neurocnl ^0.6.0, but PyPI's "neurocnl" is a
+# squatted name stuck at 0.0.0 — pip can never satisfy that constraint from
+# PyPI. benchmark_runner.py also imports neurocnl.simulation directly at
+# runtime, so install the real local package first (no-deps: its heavy deps
+# are already installed above). Order matters — installing this BEFORE
+# Neurobench means pip resolves Neurobench's neurocnl^0.6.0 against this
+# already-satisfied local install and never queries PyPI for it.
+COPY neurocnl/ neurocnl/
+RUN pip install --no-cache-dir --no-deps ./neurocnl
+
 # WORKDIR is /repo so __file__ = /repo/workers/neurobench_runner/main.py
 # and Path(__file__).parents[2] == /repo  ← required by main.py sys.path logic
 # Default image installs the core wrapper only. Pass

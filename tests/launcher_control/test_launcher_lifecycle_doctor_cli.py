@@ -12,11 +12,35 @@ from unittest import mock
 import os
 import subprocess
 import sys
+import threading
 import urllib.request
 from base import LauncherControlServiceTestBase, PROJECT_ROOT
 
 
 class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
+    def test_diagnostic_state_starts_no_background_work(self) -> None:
+        with (
+            mock.patch.object(threading.Thread, "start") as start_thread,
+            mock.patch.object(subprocess, "Popen") as start_process,
+            mock.patch.object(launcher_server, "_write_json_file") as server_write,
+            mock.patch.object(
+                launcher_module_lifecycle, "_write_json_file"
+            ) as lifecycle_write,
+            mock.patch.object(Path, "write_text") as path_write,
+        ):
+            state = launcher_server.LauncherControlState(diagnostic=True)
+            try:
+                report = state.doctor_report()
+            finally:
+                state.shutdown()
+
+        start_thread.assert_not_called()
+        start_process.assert_not_called()
+        server_write.assert_not_called()
+        lifecycle_write.assert_not_called()
+        path_write.assert_not_called()
+        self.assertIn("fatalCount", report)
+
     def test_doctor_report_skips_not_installed_module_preflight(self) -> None:
         module = self.state._get_module("dummy")
         module["status"] = launcher_server.STATUS_INDEX["notInstalled"]
@@ -239,7 +263,10 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
 
         # Stop background health thread to prevent race conditions during synchronous test
         self.state._shutdown.set()
-        if hasattr(self.state, "_health_thread") and self.state._health_thread.is_alive():
+        if (
+            hasattr(self.state, "_health_thread")
+            and self.state._health_thread.is_alive()
+        ):
             self.state._health_thread.join(timeout=2.0)
         self.state._shutdown.clear()
 
@@ -496,7 +523,10 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
 
         # Stop background health thread to prevent race conditions during synchronous test
         self.state._shutdown.set()
-        if hasattr(self.state, "_health_thread") and self.state._health_thread.is_alive():
+        if (
+            hasattr(self.state, "_health_thread")
+            and self.state._health_thread.is_alive()
+        ):
             self.state._health_thread.join(timeout=2.0)
         self.state._shutdown.clear()
 
@@ -691,13 +721,14 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         with (
             mock.patch.object(
                 launcher_server, "LauncherControlState", return_value=fake_state
-            ),
+            ) as state_factory,
             mock.patch.object(sys, "stdout", stdout),
         ):
             exit_code = launcher_server.main(["--doctor", "--json"])
 
         self.assertEqual(exit_code, 1)
         fake_state.shutdown.assert_called_once()
+        state_factory.assert_called_once_with(diagnostic=True)
         self.assertEqual(
             json.loads(stdout.getvalue()), fake_state.doctor_report.return_value
         )

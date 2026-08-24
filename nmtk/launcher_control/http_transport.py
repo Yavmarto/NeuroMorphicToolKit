@@ -3,11 +3,24 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from http import HTTPStatus
 from typing import Any, Protocol
 
 MAX_JSON_BODY_BYTES = 48 * 1024 * 1024
+
+
+def _cors_origin(handler: JsonHandler) -> str | None:
+    origin = str(handler.headers.get("Origin", "")).strip()
+    if not origin:
+        return None
+    allowed = {
+        item.strip()
+        for item in os.environ.get("NMTK_ALLOWED_ORIGINS", "").split(",")
+        if item.strip()
+    }
+    return origin if origin in allowed else None
 
 
 class RequestBodyTooLarge(ValueError):
@@ -50,8 +63,13 @@ def send_json(handler: JsonHandler, status: HTTPStatus, payload: Any) -> None:
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json")
     handler.send_header("Content-Length", str(len(encoded)))
-    handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Access-Control-Allow-Headers", "Content-Type")
+    allowed_origin = _cors_origin(handler)
+    if allowed_origin:
+        handler.send_header("Access-Control-Allow-Origin", allowed_origin)
+        handler.send_header("Vary", "Origin")
+    handler.send_header(
+        "Access-Control-Allow-Headers", "Content-Type, X-NMTK-Admin-Token"
+    )
     handler.send_header(
         "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"
     )
@@ -66,7 +84,10 @@ def stream_deployment_sse(handler: JsonHandler, job_id: str) -> None:
     handler.send_header("Content-Type", "text/event-stream")
     handler.send_header("Cache-Control", "no-cache")
     handler.send_header("Connection", "keep-alive")
-    handler.send_header("Access-Control-Allow-Origin", "*")
+    allowed_origin = _cors_origin(handler)
+    if allowed_origin:
+        handler.send_header("Access-Control-Allow-Origin", allowed_origin)
+        handler.send_header("Vary", "Origin")
     handler.end_headers()
     sent = 0
     deadline = time.monotonic() + 60.0

@@ -67,6 +67,25 @@ def test_new_existing_dir_exits_1(tmp_path: Path) -> None:
     assert data["error"] == "destination_exists"
 
 
+def test_new_rejects_path_traversal_name(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["new", "../outside", "--trainer", "snntorch", "--json", "--output-dir", str(tmp_path)],
+    )
+    assert result.exit_code == 1
+    assert json.loads(result.output)["error"] == "invalid_project_name"
+    assert not (tmp_path.parent / "outside").exists()
+
+
+def test_new_rejects_unverified_template_without_opt_in(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["new", "lava", "--framework", "nir", "--target", "lava_sim", "--json", "--output-dir", str(tmp_path)],
+    )
+    assert result.exit_code == 1
+    assert json.loads(result.output)["error"] == "experimental_template"
+
+
 def test_new_all_bundles_render(tmp_path: Path) -> None:
     combos = [
         ("nir", "snntorch"),
@@ -79,7 +98,17 @@ def test_new_all_bundles_render(tmp_path: Path) -> None:
     for fw, tgt in combos:
         result = runner.invoke(
             app,
-            ["new", f"proj_{fw}_{tgt}", "--framework", fw, "--target", tgt, "--output-dir", str(tmp_path)],
+            [
+                "new",
+                f"proj_{fw}_{tgt}",
+                "--framework",
+                fw,
+                "--target",
+                tgt,
+                "--experimental",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0, f"{fw}+{tgt} failed: {result.output}"
         assert (tmp_path / f"proj_{fw}_{tgt}" / "pyproject.toml").exists()
@@ -88,7 +117,17 @@ def test_new_all_bundles_render(tmp_path: Path) -> None:
 def test_new_nir_sc_neurocore_creates_structure(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
-        ["new", "sc_proj", "--framework", "nir", "--target", "sc_neurocore", "--output-dir", str(tmp_path)],
+        [
+            "new",
+            "sc_proj",
+            "--framework",
+            "nir",
+            "--target",
+            "sc_neurocore",
+            "--experimental",
+            "--output-dir",
+            str(tmp_path),
+        ],
     )
     assert result.exit_code == 0, result.output
     assert (tmp_path / "sc_proj" / "pyproject.toml").exists()

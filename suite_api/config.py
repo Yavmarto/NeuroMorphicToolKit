@@ -1,6 +1,7 @@
 """Centralised configuration for suite_api.
 All values are read from environment variables with safe defaults.
 """
+
 import os
 
 from pydantic_settings import BaseSettings
@@ -25,15 +26,17 @@ class Settings(BaseSettings):
     neurohub_db_url: str = f"sqlite:///{_data_dir}/neurohub.db"
 
     # Phase 4: optional worker URLs (started only with the matching Docker profile)
-    neurosense_hw_worker_url: str = "http://localhost:8004"   # profile: hardware
-    neurobench_runner_url: str = "http://localhost:8003"       # profile: jobs
-    neurochip_hw_worker_url: str = "http://localhost:8002"    # profile: hardware
+    neurosense_hw_worker_url: str = "http://localhost:8004"  # profile: hardware
+    neurobench_runner_url: str = "http://localhost:8003"  # profile: jobs
+    neurochip_hw_worker_url: str = "http://localhost:8002"  # profile: hardware
     # API key sent to the Akida hardware worker as X-API-Key. Required when
     # pointing at the native neurochip.service (NEUROCHIP_AUTH_ENABLED=true
     # there); left empty for the unauthenticated Docker stub worker.
     neurochip_hw_worker_api_key: str = ""
-    neurocnl_physics_worker_url: str = "http://localhost:8006" # profile: physics
-    jupyter_worker_url: str = "http://localhost:8008"          # internal URL suite_api uses to probe Jupyter
+    neurocnl_physics_worker_url: str = "http://localhost:8006"  # profile: physics
+    jupyter_worker_url: str = (
+        "http://localhost:8008"  # internal URL suite_api uses to probe Jupyter
+    )
     # Public URL returned to the Flutter app so its WebView can load JupyterLab.
     # In Docker deployments this must point to the host-accessible address
     # (e.g. http://my-server:8008/lab).  Override via JUPYTER_PUBLIC_URL env var.

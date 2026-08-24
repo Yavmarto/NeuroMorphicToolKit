@@ -38,6 +38,10 @@ services:
       # this, and both were writing into /repo. /home/app/data is created and chowned in
       # suite_api/Dockerfile:58-61. neurocnl-physics-worker already does this (see below).
       - NEUROCNL_DATA_DIR=/home/app/data
+      - NEUROSIM_PROJECT_DB=/home/app/data/neurosim/projects.db
+      - NEUROCHIP_DEPLOYMENT_DB=/home/app/data/neurochip/deployments.db
+    volumes:
+      - suite_api_data:/home/app/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/api/suite/health')"]
       start_period: 120s
@@ -63,8 +67,10 @@ services:
       - "${NEUROSENSE_PORT:-8004}:8004"
     environment:
       - PYTHONUNBUFFERED=1
+      - NEUROSENSE_RECORDINGS_DIR=/app/recordings
     volumes:
       - .:/repo:ro
+      - neurosense-recordings:/app/recordings
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health')"]
       start_period: 90s
@@ -81,10 +87,12 @@ services:
       - "${NEUROBENCH_PORT:-8003}:8003"
     environment:
       - PYTHONUNBUFFERED=1
-      - NEUROCNL_DATA_DIR=/tmp
+      - NEUROCNL_DATA_DIR=/app/data
+      - NEUROBENCH_DATA_DIR=/app/data
       - SNN_MLIR_COMPILER_WORKER_URL=http://snn-mlir-compiler:8007
     volumes:
       - .:/repo:ro
+      - neurobench-data:/app/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health')"]
       start_period: 90s
@@ -102,8 +110,11 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - NEUROCHIP_LAVA_BACKEND_URL=http://lava-backend:8012
+      - NMTK_DATA_DIR=/app/data
+      - NEUROCHIP_AKIDA_MODEL_DIR=/app/data/akida-models
     volumes:
       - .:/repo:ro
+      - neurochip-data:/app/data
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health')"]
       start_period: 90s
@@ -242,3 +253,7 @@ volumes:
   jupyter_notebooks:
   launcher_control_state:
   launcher_control_data:
+  suite_api_data:
+  neurobench-data:
+  neurochip-data:
+  neurosense-recordings:

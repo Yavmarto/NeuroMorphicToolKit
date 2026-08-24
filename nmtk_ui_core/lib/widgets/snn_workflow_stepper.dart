@@ -234,7 +234,11 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       key: ValueKey<SnnWorkflowStage>(stage),
       bare: true,
       shrinkWrap: true,
-      scrollable: false,
+      // The stage rail has a fixed-width viewport inside the horizontally
+      // scrollable workflow bar. Let its substeps scroll within that viewport
+      // instead of forcing their row to overflow during split-pane layouts.
+      scrollable: true,
+      wrapOnCompact: false,
       contentPadding: EdgeInsets.zero,
       stepAccentColor: colors.mainPrimary,
       stepStyle: NmtkPipelineStepStyle.destination,

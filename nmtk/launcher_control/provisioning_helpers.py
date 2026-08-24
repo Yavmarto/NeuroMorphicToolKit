@@ -991,7 +991,11 @@ def _parse_python_range(python_range: str) -> tuple[tuple[int, int], tuple[int, 
         match = re.match(r"^(>=|<)\s*(\d+)\.(\d+)", clause)
         if not match:
             continue
-        operator, major, minor = match.group(1), int(match.group(2)), int(match.group(3))
+        operator, major, minor = (
+            match.group(1),
+            int(match.group(2)),
+            int(match.group(3)),
+        )
         if operator == ">=":
             minimum = (major, minor)
         else:
@@ -1294,7 +1298,7 @@ def _akida_install_script_text(
                     f"  if akida_pip install --no-cache-dir {package_install}; then",
                     "    return",
                     "  fi",
-                    "  fail_install \"The Akida SDK could not be downloaded onto this server. The files kept arriving damaged or incomplete, even after a clean retry. Check this server's internet connection, then run setup again.\"",
+                    '  fail_install "The Akida SDK could not be downloaded onto this server. The files kept arriving damaged or incomplete, even after a clean retry. Check this server\'s internet connection, then run setup again."',
                     "}",
                 ]
                 if package_install
@@ -1399,7 +1403,7 @@ def _akida_install_script_text(
             # board that is fitted but not answering instead of shrugging. Not
             # every host has this group, and none of this is worth failing an
             # install over.
-            '  if getent group systemd-journal >/dev/null 2>&1; then',
+            "  if getent group systemd-journal >/dev/null 2>&1; then",
             '    sudo_cmd usermod -aG systemd-journal "$SERVICE_USER" || true',
             "  fi",
             '  log_step "Preparing install directories"',
@@ -1412,7 +1416,7 @@ def _akida_install_script_text(
             '  sudo_cmd rm -rf "$NEXT_VENV_PATH"',
             '  sudo_cmd -u "$SERVICE_USER" "$AKIDA_PYTHON" -m venv "$NEXT_VENV_PATH"',
             '  log_step "Upgrading pip"',
-            '  akida_pip install --upgrade pip setuptools wheel',
+            "  akida_pip install --upgrade pip setuptools wheel",
             '  log_step "Installing Neurochip wheel"',
             '  akida_pip install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
             *(
@@ -1476,7 +1480,7 @@ def _akida_install_script_text(
             '  rm -rf "$NEXT_VENV_PATH"',
             '  "$AKIDA_PYTHON" -m venv "$NEXT_VENV_PATH"',
             '  log_step "Upgrading pip"',
-            '  akida_pip install --upgrade pip setuptools wheel',
+            "  akida_pip install --upgrade pip setuptools wheel",
             '  log_step "Installing Neurochip wheel"',
             '  akida_pip install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"',
             *(

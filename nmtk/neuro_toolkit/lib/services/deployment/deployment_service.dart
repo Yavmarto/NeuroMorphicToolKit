@@ -162,6 +162,7 @@ class DeploymentRequest {
     this.apiServer = '',
     this.containerEngine = 'docker',
     this.kubeconfig = '',
+    this.adminToken = '',
     this.cleanInstall = false,
   });
 
@@ -180,7 +181,28 @@ class DeploymentRequest {
   final String apiServer;
   final String containerEngine;
   final String kubeconfig;
+  final String adminToken;
   final bool cleanInstall;
+
+  DeploymentRequest withAdminToken(String value) => DeploymentRequest(
+        targetType: targetType,
+        mode: mode,
+        displayName: displayName,
+        host: host,
+        username: username,
+        sshPort: sshPort,
+        authMethod: authMethod,
+        sshPassword: sshPassword,
+        sshPrivateKey: sshPrivateKey,
+        backendPort: backendPort,
+        namespace: namespace,
+        context: context,
+        apiServer: apiServer,
+        containerEngine: containerEngine,
+        kubeconfig: kubeconfig,
+        adminToken: value,
+        cleanInstall: cleanInstall,
+      );
 
   Map<String, dynamic> toPublicJson({required String id}) => {
         'id': id,
@@ -206,6 +228,7 @@ class DeploymentRequest {
         if (sshPassword.isNotEmpty) 'sshPassword': sshPassword,
         if (sshPrivateKey.isNotEmpty) 'sshPrivateKey': sshPrivateKey,
         if (kubeconfig.isNotEmpty) 'kubeconfig': kubeconfig,
+        if (adminToken.isNotEmpty) 'adminToken': adminToken,
       };
 }
 

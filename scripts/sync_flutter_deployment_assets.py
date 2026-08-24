@@ -23,7 +23,7 @@ SOURCES = (
     Path("monitoring/promtail/promtail-config.yml"),
 )
 MANIFEST = DESTINATION / "deployment-manifest.json"
-BUNDLE_VERSION = 9
+BUNDLE_VERSION = 10
 
 
 def _manifest_payload() -> dict[str, object]:
@@ -31,7 +31,7 @@ def _manifest_payload() -> dict[str, object]:
         relative.as_posix(): hashlib.sha256((ROOT / relative).read_bytes()).hexdigest()
         for relative in SOURCES
     }
-    for script_name in ("install.sh", "nmtk-stack.sh"):
+    for script_name in ("install.sh", "migrate_legacy.py", "nmtk-stack.sh"):
         script = DESTINATION / script_name
         if script.is_file():
             bundled_files[script_name] = hashlib.sha256(script.read_bytes()).hexdigest()

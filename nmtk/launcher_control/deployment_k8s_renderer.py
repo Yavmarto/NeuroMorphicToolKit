@@ -17,8 +17,7 @@ from .deployment_contracts import DeploymentTarget
 def _indent(text: str, prefix: str = "  ") -> str:
     """Indent every non-empty line of *text* by *prefix*."""
     return "\n".join(
-        prefix + line if line.strip() else line
-        for line in text.splitlines()
+        prefix + line if line.strip() else line for line in text.splitlines()
     )
 
 
@@ -191,9 +190,8 @@ _INGRESS = Template(
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _render_env_block(
-    env: dict[str, str], secret_name: str | None = None
-) -> str:
+
+def _render_env_block(env: dict[str, str], secret_name: str | None = None) -> str:
     """Render an ``env:`` list for a Deployment manifest.
 
     Plain values are emitted as ``value:`` entries; keys that match
@@ -210,7 +208,7 @@ def _render_env_block(
                 f"      key: {key}"
             )
         else:
-            lines.append(f"- name: {key}\n  value: \"{value}\"")
+            lines.append(f'- name: {key}\n  value: "{value}"')
     return "\n".join(lines) if lines else ""
 
 
@@ -230,6 +228,7 @@ def _build_image(image: str, tag: str) -> str:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def render_manifests(
     target: DeploymentTarget,

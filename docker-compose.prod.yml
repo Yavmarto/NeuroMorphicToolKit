@@ -24,6 +24,8 @@ services:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1
       - NEUROCNL_FIREBASE_BUCKET=${NEUROCNL_FIREBASE_BUCKET:-nmtk-41e11.firebasestorage.app}
+      - NEUROSIM_PROJECT_DB=/home/app/data/neurosim/projects.db
+      - NEUROCHIP_DEPLOYMENT_DB=/home/app/data/neurochip/deployments.db
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -44,6 +46,7 @@ services:
     environment:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1
+      - NEUROSENSE_RECORDINGS_DIR=/app/recordings
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -61,6 +64,8 @@ services:
     environment:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1
+      - NEUROCNL_DATA_DIR=/app/data
+      - NEUROBENCH_DATA_DIR=/app/data
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -79,6 +84,8 @@ services:
       - PYTHONOPTIMIZE=1
       - PYTHONUNBUFFERED=1
       - NEUROCHIP_LAVA_BACKEND_URL=http://lava-backend:8012
+      - NMTK_DATA_DIR=/app/data
+      - NEUROCHIP_AKIDA_MODEL_DIR=/app/data/akida-models
     security_opt:
       - no-new-privileges:true
     cap_drop:

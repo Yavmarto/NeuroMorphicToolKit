@@ -11,6 +11,7 @@ defined in suite_api/domains/neurohub/lifespan.py.
 The NEUROHUB_DB_URL env var is set here (before neurohub imports run) so that
 neurohub.db.database picks up the correct SQLite path.
 """
+
 import os
 from pathlib import Path
 

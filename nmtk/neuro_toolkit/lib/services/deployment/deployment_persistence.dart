@@ -110,6 +110,7 @@ class DeploymentPersistence {
       apiServer: target.apiServer,
       containerEngine: target.containerEngine,
       kubeconfig: secrets['kubeconfig'] as String? ?? '',
+      adminToken: secrets['adminToken'] as String? ?? '',
       cleanInstall: cleanInstall,
     );
   }

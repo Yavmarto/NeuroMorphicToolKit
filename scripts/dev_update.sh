@@ -61,6 +61,10 @@ EXPLAIN_PATHS=()
 # unset = auto-detect; 1/0 = forced. See resolve_akida_native().
 AKIDA_NATIVE="${AKIDA_NATIVE:-}"
 AKIDA_DETECTED_VIA=""
+# Sent to the native neurochip.service as X-API-Key when AKIDA_NATIVE=1 (that
+# service requires auth; the containerized stub worker does not). Fetched
+# from the host in apply_akida_overlay(); mirrors Makefile's docker-ex-all.
+NEUROCHIP_HW_WORKER_API_KEY="${NEUROCHIP_HW_WORKER_API_KEY:-}"
 NEUROCHIP_PORT=8002
 APP_MANAGED_STACK=false
 APP_UPDATE_TMP_DIR=""
@@ -361,6 +365,7 @@ compose_remote() {
   $REMOVE_ORPHANS && orphans="--remove-orphans"
   remote "cd $DEPLOY_DIR && LAUNCHER_CONTROL_PORT=8090 \
 JUPYTER_PUBLIC_URL=http://${host_ip}:8008/lab \
+NEUROCHIP_HW_WORKER_API_KEY='${NEUROCHIP_HW_WORKER_API_KEY}' \
 $CONTAINER_ENGINE compose $COMPOSE_ARGS $* $orphans"
 }
 
@@ -437,6 +442,15 @@ apply_akida_overlay() {
     log "  → adding docker-compose.akida-native.yml: the containerized"
     log "    neurochip-hw-worker stays down (it has no Akida SDK) and port"
     log "    $NEUROCHIP_PORT is left to the native service."
+    if [ -z "$NEUROCHIP_HW_WORKER_API_KEY" ]; then
+      log "  → fetching Akida worker API key from $REMOTE_HOST..."
+      NEUROCHIP_HW_WORKER_API_KEY="$(remote_probe "sudo nmtk-read-akida-key" | tr -d '\r\n')"
+      if [ -z "$NEUROCHIP_HW_WORKER_API_KEY" ]; then
+        warn "  could not read the Akida API key from $REMOTE_HOST (sudo nmtk-read-akida-key"
+        warn "  returned nothing) — suite_api will proxy without X-API-Key and the"
+        warn "  native neurochip.service will reject every hardware route with 401."
+      fi
+    fi
     # The failed run that prompted this leaves a Created-but-unstarted
     # container behind. It can never work here, so clear it once.
     local stale

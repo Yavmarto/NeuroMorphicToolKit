@@ -107,9 +107,7 @@ def parse_uri(uri: str) -> NeurohubURI:
     """
     if not uri.startswith(_SCHEME_PREFIX):
         received = uri.split("://", 1)[0] if "://" in uri else uri
-        raise URIParseError(
-            f"Invalid scheme '{received}': URI must start with '{_SCHEME_PREFIX}'"
-        )
+        raise URIParseError(f"Invalid scheme '{received}': URI must start with '{_SCHEME_PREFIX}'")
 
     remainder = uri[len(_SCHEME_PREFIX) :]
 
@@ -117,9 +115,7 @@ def parse_uri(uri: str) -> NeurohubURI:
     if "@" in remainder:
         path_part, _, version_part = remainder.rpartition("@")
         if not _SEMVER_RE.match(version_part):
-            raise URIParseError(
-                f"Invalid version '{version_part}': must be MAJOR.MINOR.PATCH semver"
-            )
+            raise URIParseError(f"Invalid version '{version_part}': must be MAJOR.MINOR.PATCH semver")
         version = version_part
     else:
         path_part = remainder
@@ -128,8 +124,7 @@ def parse_uri(uri: str) -> NeurohubURI:
     # type + owner(1-2) + slug → 3 or 4 segments.
     if len(segments) not in (3, 4) or any(seg == "" for seg in segments):
         raise URIParseError(
-            f"Invalid URI structure '{uri}': expected "
-            f"neurohub://{{type}}/{{owner}}/{{slug}}[@{{version}}]"
+            f"Invalid URI structure '{uri}': expected neurohub://{{type}}/{{owner}}/{{slug}}[@{{version}}]"
         )
 
     type_segment = segments[0]
@@ -140,9 +135,7 @@ def parse_uri(uri: str) -> NeurohubURI:
         artefact_type = ArtefactType(type_segment)
     except ValueError as exc:
         valid = ", ".join(t.value for t in ArtefactType)
-        raise URIParseError(
-            f"Invalid type '{type_segment}': must be one of {valid}"
-        ) from exc
+        raise URIParseError(f"Invalid type '{type_segment}': must be one of {valid}") from exc
 
     for owner_segment in owner_segments:
         _validate_identifier(owner_segment, "owner")

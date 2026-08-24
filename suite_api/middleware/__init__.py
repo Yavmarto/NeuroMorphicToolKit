@@ -1,25 +1,83 @@
 """Shared middleware for suite_api.
 Attach all middleware through the single attach_middleware() function.
 """
+
+import hmac
+import logging
 import os
 import time
 import uuid
-import logging
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.datastructures import Headers
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 logger = logging.getLogger("suite_api")
 
+_ADMIN_HEADER = "X-NMTK-Admin-Token"
+_ADMIN_COOKIE = "nmtk_admin_session"
+
+
+def _load_admin_token() -> str:
+    secret_file = os.getenv("NMTK_ADMIN_TOKEN_FILE", "").strip()
+    if secret_file:
+        try:
+            return Path(secret_file).read_text(encoding="utf-8").strip()
+        except OSError:
+            logger.exception("admin_token_file_unreadable")
+            return ""
+    return os.getenv("NMTK_ADMIN_TOKEN", "").strip()
+
+
+def admin_token_valid(provided: str) -> bool:
+    """Validate one supplied administrator credential in constant time."""
+    expected = _load_admin_token()
+    return bool(expected and provided and hmac.compare_digest(provided, expected))
+
+
+class _AdminWebSocketMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        required = os.getenv("NMTK_AUTH_REQUIRED", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        if scope["type"] == "websocket" and required:
+            headers = Headers(scope=scope)
+            cookie_token = ""
+            for item in headers.get("cookie", "").split(";"):
+                name, _, value = item.strip().partition("=")
+                if name == _ADMIN_COOKIE:
+                    cookie_token = value
+                    break
+            provided = headers.get(_ADMIN_HEADER, "") or cookie_token
+            if not admin_token_valid(provided):
+                await send(
+                    {
+                        "type": "websocket.close",
+                        "code": 4401,
+                        "reason": "Administrator authentication required",
+                    }
+                )
+                return
+        await self.app(scope, receive, send)
+
 
 def attach_middleware(app: FastAPI) -> None:
+    app.add_middleware(_AdminWebSocketMiddleware)
     # CORS — read from env var so production can lock this down.
     # allow_credentials=True is incompatible with allow_origins=["*"] per the
     # CORS spec; Starlette silently drops credentials when origins is a wildcard,
     # so we only enable it when specific origins are configured.
     _allowed_origins_str = os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:9000,http://127.0.0.1:9000,http://localhost:3000",
+        "",
     )
     _origins = [o.strip() for o in _allowed_origins_str.split(",") if o.strip()]
     _allow_credentials = "*" not in _origins
@@ -33,8 +91,49 @@ def attach_middleware(app: FastAPI) -> None:
         allow_origins=_origins,
         allow_credentials=_allow_credentials,
         allow_methods=["*"],
-        allow_headers=["*"],
+        allow_headers=[
+            "Accept",
+            "Content-Type",
+            "X-NMTK-Admin-Token",
+            "X-Request-ID",
+        ],
     )
+
+    @app.middleware("http")
+    async def admin_auth_middleware(request: Request, call_next) -> Response:
+        protected = (
+            request.url.path != "/api/suite/health" and request.method != "OPTIONS"
+        )
+        required = os.getenv("NMTK_AUTH_REQUIRED", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        if not required:
+            return await call_next(request)
+        expected = _load_admin_token()
+        header_token = request.headers.get(_ADMIN_HEADER, "")
+        provided = header_token or request.cookies.get(_ADMIN_COOKIE, "")
+        if protected and (
+            not expected or not provided or not admin_token_valid(provided)
+        ):
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "error": "unauthorized",
+                    "message": "Administrator authentication required.",
+                },
+            )
+        response = await call_next(request)
+        if header_token and expected and hmac.compare_digest(header_token, expected):
+            response.set_cookie(
+                _ADMIN_COOKIE,
+                expected,
+                httponly=True,
+                samesite="strict",
+                path="/",
+            )
+        return response
 
     @app.middleware("http")
     async def request_id_middleware(request: Request, call_next) -> Response:

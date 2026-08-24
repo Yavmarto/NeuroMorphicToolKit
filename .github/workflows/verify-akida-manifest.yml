@@ -35,7 +35,10 @@ jobs:
     name: Resolve pinned Akida packages
     # Must be Linux: the manifest has to resolve the way a paired host will,
     # and the script drives docker to pin the interpreter per supported minor.
-    runs-on: [self-hosted, Linux, X64]
+    # GitHub-hosted by default: this gate blocks every Docker release and the
+    # nightly, so it must not depend on a self-hosted machine being awake.
+    # Override with the RELEASE_RUNNER_LINUX repository variable.
+    runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
 
     steps:
       - uses: actions/checkout@v4

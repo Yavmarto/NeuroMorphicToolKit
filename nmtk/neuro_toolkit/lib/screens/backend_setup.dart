@@ -12,117 +12,14 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:zeta_flutter/zeta_flutter.dart' show ZetaDialog;
 
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 import 'package:neuro_toolkit/src/features/deployment/domain/deployment_state.dart';
 
-class BackendSetupScreen extends StatelessWidget {
-  const BackendSetupScreen({
-    super.key,
-    required this.onDeploymentReady,
-    this.onQuickConnect,
-    this.onQuickConnectSuccess,
-    this.initialHost,
-    this.message,
-    this.localDeploymentAvailable,
-  });
-
-  final Future<void> Function(DeploymentTarget target) onDeploymentReady;
-  final Future<String?> Function(String input)? onQuickConnect;
-  final void Function()? onQuickConnectSuccess;
-  final String? initialHost;
-  final String? message;
-  final bool? localDeploymentAvailable;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 980),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(context.nmtkTokens.sectionGap * 1.5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Set up your backend',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  SizedBox(height: context.nmtkTokens.compactGap),
-                  Text(
-                    message ??
-                        'Choose where the backend should run. NeuroToolkit '
-                            'will install it and connect automatically.',
-                  ),
-                  SizedBox(height: context.nmtkTokens.sectionGap * 1.5),
-                  BackendSetupForm(
-                    initialHost: initialHost,
-                    localDeploymentAvailable: localDeploymentAvailable,
-                    onQuickConnect: onQuickConnect,
-                    onQuickConnectSuccess: onQuickConnectSuccess,
-                    onDeploymentReady: onDeploymentReady,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class InAppBackendSetupScreen extends ConsumerWidget {
-  const InAppBackendSetupScreen({
-    super.key,
-    required this.onComplete,
-    this.initialHost,
-    this.message,
-  });
-
-  final VoidCallback onComplete;
-  final String? initialHost;
-  final String? message;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final notifier = ref.read(launcherBootstrapProvider.notifier);
-    return BackendSetupScreen(
-      initialHost: initialHost,
-      message: message,
-      onQuickConnect: (input) async {
-        final error = await notifier.connectToLauncher(input);
-        if (error != null) {
-          return error;
-        }
-        await _refreshServerBackedProviders(ref);
-        onComplete();
-        return null;
-      },
-      onDeploymentReady: (target) async {
-        await notifier.connectToDeploymentTarget(target);
-        await _refreshServerBackedProviders(ref);
-        onComplete();
-      },
-    );
-  }
-
-  Future<void> _refreshServerBackedProviders(WidgetRef ref) async {
-    ref.invalidate(controlApiServiceProvider);
-    await Future.wait([
-      ref.refresh(moduleProvider.future),
-      ref.refresh(workspaceProvider.future),
-    ]);
-    ref.invalidate(serverConnectionProvider);
-    ref.invalidate(backendVersionProvider);
-    ref.invalidate(backendUpdateProvider);
-  }
-}
+part 'backend_setup/backend_setup_screen.dart';
+part 'backend_setup/in_app_backend_setup_screen.dart';
 
 class BackendSetupForm extends ConsumerStatefulWidget {
   const BackendSetupForm({
@@ -270,6 +167,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     _resetConfirmation.addListener(_onResetConfirmationChanged);
     ref.listenManual(backendDeploymentProvider, (previous, next) {
       final state = next.value;
+      _syncHeartbeat(state?.activeJob);
+      _completeSubmittedDeployment(state);
       if (!_healthCheckedAutomatically && state?.targets.isNotEmpty == true) {
         _healthCheckedAutomatically = true;
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -289,7 +188,24 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           if (mounted) unawaited(_checkSystemHealth());
         });
       }
-    });
+    }, fireImmediately: true);
+  }
+
+  void _completeSubmittedDeployment(DeploymentState? state) {
+    if (!mounted) return;
+    final activeJob = state?.activeJob;
+    final submittedJobCompleted = activeJob?.id == _submittedDeploymentJobId &&
+        activeJob?.stage == DeploymentPhase.completed.wireName;
+    if (!submittedJobCompleted || state?.isReady != true || _completionQueued) {
+      return;
+    }
+    for (final target in state?.targets ?? const <DeploymentTarget>[]) {
+      if (target.id != activeJob?.targetId) continue;
+      _completionQueued = true;
+      final callback = widget.onDeploymentReady;
+      if (callback != null) unawaited(callback(target));
+      return;
+    }
   }
 
   /// ZetaTextInput resyncs its controller's text (re-reading `controller.text`
@@ -367,35 +283,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   Widget build(BuildContext context) {
     final deploymentStateAsync = ref.watch(backendDeploymentProvider);
     final deploymentState = deploymentStateAsync.value;
-    final isReady = deploymentState?.isReady ?? false;
     final tokens = NmtkShellTokens.of(context);
     final activeJob = deploymentState?.activeJob;
-
-    final submittedJobCompleted = activeJob?.id == _submittedDeploymentJobId &&
-        activeJob?.stage == 'completed';
-    if (submittedJobCompleted && isReady && !_completionQueued) {
-      _completionQueued = true;
-      DeploymentTarget? target;
-      for (final candidate
-          in deploymentState?.targets ?? const <DeploymentTarget>[]) {
-        if (candidate.id == activeJob?.targetId) {
-          target = candidate;
-          break;
-        }
-      }
-      final completedTarget = target;
-      if (completedTarget != null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          final callback = widget.onDeploymentReady;
-          if (callback != null) {
-            unawaited(callback(completedTarget));
-          }
-        });
-      }
-    }
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _syncHeartbeat(activeJob),
-    );
 
     return Column(
       key: const ValueKey<String>('backend-setup-form'),
@@ -966,14 +855,20 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               'Admin password',
               focusNode: _rootPasswordFocus,
               obscureText: _obscureRootPassword,
-              suffix: IconButton(
-                icon: Icon(
-                  _obscureRootPassword
+              suffix: Tooltip(
+                message: _obscureRootPassword
+                    ? 'Show administrator password'
+                    : 'Hide administrator password',
+                child: ZetaIconButton.text(
+                  icon: _obscureRootPassword
                       ? ZetaIcons.visibility_off
                       : ZetaIcons.visibility,
-                ),
-                onPressed: () => setState(
-                  () => _obscureRootPassword = !_obscureRootPassword,
+                  semanticLabel: _obscureRootPassword
+                      ? 'Show administrator password'
+                      : 'Hide administrator password',
+                  onPressed: () => setState(
+                    () => _obscureRootPassword = !_obscureRootPassword,
+                  ),
                 ),
               ),
             )
@@ -984,19 +879,14 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               focusNode: _rootPrivateKeyFocus,
             ),
           SizedBox(height: tokens.sectionGap),
-          Material(
-            type: MaterialType.transparency,
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Factory reset server data'),
-              subtitle: const Text(
-                'Optional and destructive. Normal setup removes old NMTK '
-                'containers across Docker and Podman while preserving '
+          ZetaListItem.toggle(
+            primaryText: 'Factory reset server data',
+            secondaryText: 'Optional and destructive. Normal setup removes '
+                'old NMTK containers across Docker and Podman while preserving '
                 'notebooks, databases, and workspace data.',
-              ),
-              value: _factoryReset,
-              onChanged: (value) => setState(() => _factoryReset = value),
-            ),
+            value: _factoryReset,
+            onChanged: (value) =>
+                setState(() => _factoryReset = value ?? false),
           ),
           if (_setupError != null) ...[
             SizedBox(height: tokens.compactGap),
@@ -1027,18 +917,14 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         ],
         if (_targetType == 'local') ...[
           SizedBox(height: tokens.sectionGap),
-          Material(
-            type: MaterialType.transparency,
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Factory reset local data'),
-              subtitle: const Text(
+          ZetaListItem.toggle(
+            primaryText: 'Factory reset local data',
+            secondaryText:
                 'Wipes existing backend data volumes before deploying. '
                 'This erases all database contents.',
-              ),
-              value: _factoryReset,
-              onChanged: (value) => setState(() => _factoryReset = value),
-            ),
+            value: _factoryReset,
+            onChanged: (value) =>
+                setState(() => _factoryReset = value ?? false),
           ),
         ],
       ],
@@ -1046,10 +932,13 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   }
 
   Widget _adminAuthChoice(String label, String value) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: _rootAuthMethod == value,
-      onSelected: (_) => setState(() => _rootAuthMethod = value),
+    return ZetaRadio<String>(
+      label: _radioLabel(label),
+      value: value,
+      groupValue: _rootAuthMethod,
+      onChanged: (selected) {
+        if (selected != null) setState(() => _rootAuthMethod = selected);
+      },
     );
   }
 
@@ -1240,7 +1129,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               // step. The active operation and its ticking elapsed time below
               // confirm it has not frozen; phases without operation metadata
               // retain the generic last-update heartbeat.
-              LinearProgressIndicator(value: job.percent / 100),
+              ZetaProgressBar.standard(
+                progress: job.percent / 100,
+                isThin: true,
+              ),
               if (activeOperation != null) ...[
                 SizedBox(height: tokens.compactGap),
                 Text(
@@ -1309,9 +1201,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                 if (failure?.code == 'host_key_mismatch')
                   ZetaButton.outline(
                     key: Key('deployment-trust-host-key-${job.id}'),
-                    onPressed: _isWorking
-                        ? null
-                        : () => _trustHostKeyAndRetry(),
+                    onPressed:
+                        _isWorking ? null : () => _trustHostKeyAndRetry(),
                     label: 'Trust this server\'s identity and retry',
                   ),
               ],
@@ -1523,10 +1414,11 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
 
   Widget _choice(String label, String value, {bool isMode = false}) {
     final selected = isMode ? _mode == value : _targetType == value;
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) {
+    return ZetaRadio<String>(
+      label: _radioLabel(label),
+      value: value,
+      groupValue: selected ? value : null,
+      onChanged: (_) {
         setState(() {
           if (isMode) {
             _mode = value;
@@ -1576,22 +1468,22 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     String label, {
     FocusNode? focusNode,
   }) {
-    // Disabled for the same reason as NmtkTextInput -- see its build() --
-    // this field bypasses that wrapper and builds TextField directly.
-    return SelectionContainer.disabled(
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        minLines: 4,
-        maxLines: 8,
-        style: const TextStyle(fontFamily: 'JetBrainsMono', fontSize: 12),
-        decoration: InputDecoration(
-          border: const OutlineInputBorder(),
-          labelText: label,
-        ),
-      ),
+    return NmtkCodeTextArea(
+      controller: controller,
+      focusNode: focusNode,
+      minLines: 4,
+      maxLines: 8,
+      label: label,
     );
   }
+
+  Widget _radioLabel(String label) => Tooltip(
+        message: label,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 210),
+          child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ),
+      );
 
   Future<void> _pickKubeconfig() async {
     final result = await FilePicker.pickFiles(
@@ -1792,7 +1684,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                 Text(akidaJob.message),
                 if (!akidaJob.isTerminal) ...[
                   SizedBox(height: tokens.compactGap),
-                  LinearProgressIndicator(value: akidaJob.progress / 100),
+                  ZetaProgressBar.standard(
+                    progress: akidaJob.progress / 100,
+                    isThin: true,
+                  ),
                 ],
                 if (akidaJob.isFailed && akidaJob.recovery.isNotEmpty) ...[
                   SizedBox(height: tokens.compactGap),
@@ -1988,5 +1883,4 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     if (mode == 'kubernetes') return 'Kubernetes';
     return 'Standalone';
   }
-
 }

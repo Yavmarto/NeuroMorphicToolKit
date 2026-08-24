@@ -218,8 +218,8 @@ void main() {
         );
 
     test('offers the release when the backend is behind', () async {
-      final update = await serviceReturning('v1.2.0')
-          .checkForBackendUpdate('1.1.0');
+      final update =
+          await serviceReturning('v1.2.0').checkForBackendUpdate('1.1.0');
 
       expect(update, isNotNull);
       expect(update!.version, '1.2.0');

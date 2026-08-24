@@ -25,22 +25,12 @@ check_health() {
   return 1
 }
 
-# Wait for all services
-check_health "neurocnl" "http://localhost:8000"
-check_health "neurosim" "http://localhost:8000"
-check_health "neurochip" "http://localhost:8002"
-check_health "neurobench" "http://localhost:8003"
-check_health "neurosense" "http://localhost:8004"
-check_health "neurohub" "http://localhost:8005"
+# All ordinary module routes are mounted by Suite API.
+check_health "suite_api" "http://localhost:9000/api/suite"
 
 echo "🧪 Running cross-module integration tests..."
 # Pass service URLs pointing to localhost for the host-based test runner
-export NEUROCNL_URL=http://localhost:8000
-export NEUROSIM_URL=http://localhost:8000
-export NEUROCHIP_URL=http://localhost:8002
-export NEUROSENSE_URL=http://localhost:8004
-export NEUROHUB_URL=http://localhost:8005
-export NEUROBENCH_URL=http://localhost:8003
+export SUITE_API_URL=http://localhost:9000
 
 pytest tests/integration/test_cross_module.py
 

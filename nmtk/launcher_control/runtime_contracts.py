@@ -75,9 +75,7 @@ class PynqLauncherRuntimeContract:
         """
         candidates = [self.overlay_staging_dir_for(module_root)]
         if artifact_root is not None:
-            candidates.append(
-                (artifact_root / self.overlay_staging_subdir).resolve()
-            )
+            candidates.append((artifact_root / self.overlay_staging_subdir).resolve())
         return tuple(candidates)
 
 
@@ -108,8 +106,12 @@ class AkidaLauncherRuntimeContract:
 
 @dataclass(frozen=True)
 class NeurochipLauncherRuntimeContract:
-    pynq: PynqLauncherRuntimeContract = field(default_factory=PynqLauncherRuntimeContract)
-    akida: AkidaLauncherRuntimeContract = field(default_factory=AkidaLauncherRuntimeContract)
+    pynq: PynqLauncherRuntimeContract = field(
+        default_factory=PynqLauncherRuntimeContract
+    )
+    akida: AkidaLauncherRuntimeContract = field(
+        default_factory=AkidaLauncherRuntimeContract
+    )
 
 
 def _string(value: Any, default: str) -> str:
@@ -149,32 +151,65 @@ def load_neurochip_launcher_runtime_contract(
         pynq=PynqLauncherRuntimeContract(
             runtime_port=_integer(pynq_raw.get("runtimePort"), pynq.runtime_port),
             ssh_port=_integer(pynq_raw.get("sshPort"), pynq.ssh_port),
-            default_username=_string(pynq_raw.get("defaultUsername"), pynq.default_username),
+            default_username=_string(
+                pynq_raw.get("defaultUsername"), pynq.default_username
+            ),
             default_state=_string(pynq_raw.get("defaultState"), pynq.default_state),
-            default_auth_mode=_string(pynq_raw.get("defaultAuthMode"), pynq.default_auth_mode),
-            legacy_install_root=_string(pynq_raw.get("legacyInstallRoot"), pynq.legacy_install_root),
-            install_root_template=_string(pynq_raw.get("installRootTemplate"), pynq.install_root_template),
-            agent_venv_dir_name=_string(pynq_raw.get("agentVenvDirName"), pynq.agent_venv_dir_name),
-            runtime_venv_dir_name=_string(pynq_raw.get("runtimeVenvDirName"), pynq.runtime_venv_dir_name),
-            overlay_dir_name=_string(pynq_raw.get("overlayDirName"), pynq.overlay_dir_name),
+            default_auth_mode=_string(
+                pynq_raw.get("defaultAuthMode"), pynq.default_auth_mode
+            ),
+            legacy_install_root=_string(
+                pynq_raw.get("legacyInstallRoot"), pynq.legacy_install_root
+            ),
+            install_root_template=_string(
+                pynq_raw.get("installRootTemplate"), pynq.install_root_template
+            ),
+            agent_venv_dir_name=_string(
+                pynq_raw.get("agentVenvDirName"), pynq.agent_venv_dir_name
+            ),
+            runtime_venv_dir_name=_string(
+                pynq_raw.get("runtimeVenvDirName"), pynq.runtime_venv_dir_name
+            ),
+            overlay_dir_name=_string(
+                pynq_raw.get("overlayDirName"), pynq.overlay_dir_name
+            ),
             service_name=_string(pynq_raw.get("serviceName"), pynq.service_name),
-            agent_executable_name=_string(pynq_raw.get("agentExecutableName"), pynq.agent_executable_name),
-            install_status_filename=_string(pynq_raw.get("installStatusFilename"), pynq.install_status_filename),
-            runtime_log_filename=_string(pynq_raw.get("runtimeLogFilename"), pynq.runtime_log_filename),
-            overlay_staging_subdir=_string(pynq_raw.get("overlayStagingSubdir"), pynq.overlay_staging_subdir),
+            agent_executable_name=_string(
+                pynq_raw.get("agentExecutableName"), pynq.agent_executable_name
+            ),
+            install_status_filename=_string(
+                pynq_raw.get("installStatusFilename"), pynq.install_status_filename
+            ),
+            runtime_log_filename=_string(
+                pynq_raw.get("runtimeLogFilename"), pynq.runtime_log_filename
+            ),
+            overlay_staging_subdir=_string(
+                pynq_raw.get("overlayStagingSubdir"), pynq.overlay_staging_subdir
+            ),
         ),
         akida=AkidaLauncherRuntimeContract(
             runtime_port=_integer(akida_raw.get("runtimePort"), akida.runtime_port),
             control_port=_integer(akida_raw.get("controlPort"), akida.control_port),
             ssh_port=_integer(akida_raw.get("sshPort"), akida.ssh_port),
             default_state=_string(akida_raw.get("defaultState"), akida.default_state),
-            default_auth_mode=_string(akida_raw.get("defaultAuthMode"), akida.default_auth_mode),
+            default_auth_mode=_string(
+                akida_raw.get("defaultAuthMode"), akida.default_auth_mode
+            ),
             install_root=_string(akida_raw.get("installRoot"), akida.install_root),
             service_user=_string(akida_raw.get("serviceUser"), akida.service_user),
             venv_dir_name=_string(akida_raw.get("venvDirName"), akida.venv_dir_name),
-            runtime_service_name=_string(akida_raw.get("runtimeServiceName"), akida.runtime_service_name),
-            control_service_name=_string(akida_raw.get("controlServiceName"), akida.control_service_name),
-            token_relative_path=_string(akida_raw.get("tokenRelativePath"), akida.token_relative_path),
-            install_status_relative_path=_string(akida_raw.get("installStatusRelativePath"), akida.install_status_relative_path),
+            runtime_service_name=_string(
+                akida_raw.get("runtimeServiceName"), akida.runtime_service_name
+            ),
+            control_service_name=_string(
+                akida_raw.get("controlServiceName"), akida.control_service_name
+            ),
+            token_relative_path=_string(
+                akida_raw.get("tokenRelativePath"), akida.token_relative_path
+            ),
+            install_status_relative_path=_string(
+                akida_raw.get("installStatusRelativePath"),
+                akida.install_status_relative_path,
+            ),
         ),
     )

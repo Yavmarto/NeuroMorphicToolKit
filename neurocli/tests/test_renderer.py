@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from jinja2 import UndefinedError
 
 from neurocli.renderer import UnknownBundleError, render_template
 
@@ -20,6 +21,7 @@ def test_renderer_creates_files(tmp_path: Path) -> None:
     assert (tmp_path / "pyproject.toml").exists()
     assert (tmp_path / "README.md").exists()
     assert (tmp_path / "src" / "train.py").exists()
+    assert (tmp_path / "network.cnl").exists()
     assert (tmp_path / "scripts" / "run.sh").exists()
 
 
@@ -47,6 +49,7 @@ def test_renderer_pyproject_parseable(tmp_path: Path) -> None:
     render_template("nir_snntorch", _VARS, tmp_path)
     content = (tmp_path / "pyproject.toml").read_text()
     import tomllib
+
     tomllib.loads(content)
 
 
@@ -55,14 +58,19 @@ def test_renderer_unknown_bundle_raises(tmp_path: Path) -> None:
         render_template("does_not_exist", _VARS, tmp_path)
 
 
-def test_renderer_pyproject_has_jupyterlab(tmp_path: Path) -> None:
+def test_renderer_pyproject_is_non_package_uv_project(tmp_path: Path) -> None:
     render_template("nir_snntorch", _VARS, tmp_path)
     content = (tmp_path / "pyproject.toml").read_text()
-    assert "jupyterlab" in content
+    assert "package = false" in content
+    assert "snntorch" in content
 
 
-def test_renderer_run_sh_launches_jupyter(tmp_path: Path) -> None:
+def test_renderer_run_sh_trains_model(tmp_path: Path) -> None:
     render_template("nir_snntorch", _VARS, tmp_path)
     run_sh = (tmp_path / "scripts" / "run.sh").read_text()
-    assert "jupytext --to notebook" in run_sh
-    assert "jupyter lab" in run_sh
+    assert "python src/train.py" in run_sh
+
+
+def test_renderer_missing_variable_raises(tmp_path: Path) -> None:
+    with pytest.raises(UndefinedError):
+        render_template("nir_snntorch", {"project_name": "x"}, tmp_path)

@@ -173,7 +173,7 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
                 child: SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: ZetaProgressCircle(size: ZetaCircleSizes.xs),
                 ),
               ),
             )

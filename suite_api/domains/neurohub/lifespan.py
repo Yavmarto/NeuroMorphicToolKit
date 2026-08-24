@@ -3,6 +3,7 @@
 Runs Alembic migrations on startup. Called from suite_api/main.py's
 asynccontextmanager lifespan.
 """
+
 import logging
 import os
 from pathlib import Path

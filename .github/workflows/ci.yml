@@ -40,6 +40,7 @@ jobs:
       macos_installer: ${{ steps.filter.outputs.macos_installer }}
       windows_installer: ${{ steps.filter.outputs.windows_installer }}
       nmtk_ui_core: ${{ steps.filter.outputs.nmtk_ui_core }}
+      suite_api: ${{ steps.filter.outputs.suite_api }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -92,6 +93,25 @@ jobs:
               - '.github/workflows/release-desktop.yml'
             nmtk_ui_core:
               - 'nmtk_ui_core/**'
+            suite_api:
+              - 'suite_api/**'
+              - 'workers/**'
+              - 'scripts/ci/suiteapi.sh'
+              - 'tests/integration/**'
+
+  test-suite-api:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.suite_api == 'true'
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run canonical Suite API checks
+        run: bash scripts/ci/suiteapi.sh
 
   pre-commit:
     runs-on: [self-hosted, Linux, X64]
@@ -824,6 +844,7 @@ jobs:
       - test-macos-installer-signing
       - test-windows-installer-signing
       - test-nmtk-ui-core
+      - test-suite-api
     if: always()
     steps:
       - name: Check results
@@ -838,6 +859,7 @@ jobs:
           echo "  neurocnl:       ${{ needs.test-neurocnl-backend.result }}"
           echo "  nmtk-ui-core:   ${{ needs.test-nmtk-ui-core.result }}"
           echo "  neurotoolkit:   ${{ needs.test-neurotoolkit.result }}"
+          echo "  suite-api:      ${{ needs.test-suite-api.result }}"
           echo "  macos-installer: ${{ needs.test-macos-installer-signing.result }}"
           echo "  windows-installer: ${{ needs.test-windows-installer-signing.result }}"
 
@@ -857,6 +879,7 @@ jobs:
             "${{ needs.test-neurocnl-frontend.result }}" \
             "${{ needs.test-nmtk-ui-core.result }}" \
             "${{ needs.test-neurotoolkit.result }}" \
+            "${{ needs.test-suite-api.result }}" \
             "${{ needs.test-macos-installer-signing.result }}" \
             "${{ needs.test-windows-installer-signing.result }}"; do
             if [ "$result" = "failure" ]; then

@@ -13,8 +13,11 @@ import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/backend_tunnel_service.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
 import 'package:neuro_toolkit/src/features/app/presentation/launcher_navigation_notifier.dart';
+import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
+import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
 import 'package:neuro_toolkit/widgets/module_error_view.dart';
 import 'package:neuro_toolkit/widgets/module_icon.dart';
@@ -25,6 +28,9 @@ import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
+
+part 'tool_view/inline_server_connection_control.dart';
+part 'tool_view/launcher_profile_button.dart';
 
 class ToolViewScreen extends ConsumerStatefulWidget {
   const ToolViewScreen({super.key});
@@ -51,7 +57,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       <String, ModuleStatus>{};
 
   String _activeModuleId = '';
-  bool _workspaceInitialized = false;
   // Guards the entire async _initializeWorkspace() operation (not just its
   // aftermath) so overlapping rebuilds during boot — e.g. a module flipping
   // starting -> running while ensureDefaultSessionsOnce is still in flight —
@@ -63,6 +68,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
   Uri? _launcherBaseUri() =>
       ref.read(selectedControlApiServiceProvider)?.baseUri;
+
+  BackendTunnelSession? get _tunnelSession =>
+      ref.read(backendTunnelServiceProvider).currentSession;
 
   Future<void> _showServerConnectionPopup(BuildContext context) {
     return showAdaptiveServerSetupPopup(
@@ -134,20 +142,23 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     // If it's on the monolith port (9000), we use path-based routing.
     if (module.effectivePort == 9000) {
+      final tunnelBase = _tunnelSession?.suiteApiUri;
       if (healthCheck) {
-        return Uri(
-          scheme: _serviceScheme(),
-          host: _serviceHost(),
-          port: 9000,
-          path: '/api/$moduleId/health',
-        );
+        return tunnelBase?.replace(path: '/api/$moduleId/health') ??
+            Uri(
+              scheme: _serviceScheme(),
+              host: _serviceHost(),
+              port: 9000,
+              path: '/api/$moduleId/health',
+            );
       }
-      return Uri(
-        scheme: _serviceScheme(),
-        host: _serviceHost(),
-        port: 9000,
-        path: '/$moduleId/',
-      );
+      return tunnelBase?.replace(path: '/$moduleId/') ??
+          Uri(
+            scheme: _serviceScheme(),
+            host: _serviceHost(),
+            port: 9000,
+            path: '/$moduleId/',
+          );
     }
 
     // Standalone modules on non-monolith ports.
@@ -157,6 +168,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         ? module.deployment!.healthPath
         : '/health';
     final path = healthCheck ? healthPath : (module.hasFrontend ? '' : '/docs');
+    if (module.effectivePort == 8008 && _tunnelSession != null) {
+      return _tunnelSession!.jupyterUri.replace(path: path);
+    }
     return Uri(
       scheme: _serviceScheme(),
       host: _serviceHost(),
@@ -173,12 +187,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     if (module.effectivePort != 9000) {
       return null;
     }
-    return Uri(
-      scheme: _serviceScheme(),
-      host: _serviceHost(),
-      port: 9000,
-      path: '/api/neurocnl',
-    ).toString();
+    return (_tunnelSession?.suiteApiUri ??
+            Uri(
+              scheme: _serviceScheme(),
+              host: _serviceHost(),
+              port: 9000,
+            ))
+        .replace(path: '/api/neurocnl')
+        .toString();
   }
 
   String _surfaceModeForModule(String moduleId) {
@@ -194,9 +210,94 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       launcherNavigationProvider,
       _handleLauncherNavigation,
     );
+    ref.listenManual<AsyncValue<ModuleState>>(
+      moduleProvider,
+      _handleModuleStateChanged,
+      fireImmediately: true,
+    );
+    ref.listenManual<AsyncValue<WorkspaceState>>(
+      workspaceProvider,
+      _handleWorkspaceStateChanged,
+      fireImmediately: true,
+    );
+    ref.listenManual<ControlApiService?>(
+      selectedControlApiServiceProvider,
+      _handleControlApiChanged,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initializeWorkspace();
     });
+  }
+
+  void _handleModuleStateChanged(
+    AsyncValue<ModuleState>? previous,
+    AsyncValue<ModuleState> next,
+  ) {
+    final modules = next.value?.modules;
+    if (modules == null) return;
+    final eligibleModules =
+        modules.where(_shouldOpenModule).toList(growable: false);
+    var clearedFailure = false;
+    for (final module in eligibleModules) {
+      final previousStatus = _prevModuleStatuses[module.id];
+      final isReady = module.status == ModuleStatus.running ||
+          module.status == ModuleStatus.degraded;
+      final wasReady = previousStatus == ModuleStatus.running ||
+          previousStatus == ModuleStatus.degraded;
+      if (previousStatus != null &&
+          isReady &&
+          !wasReady &&
+          _moduleLoadFailures.remove(module.id) != null) {
+        _controllers.remove(module.id);
+        clearedFailure = true;
+      }
+      _prevModuleStatuses[module.id] = module.status;
+    }
+    _reconcileActiveModule(eligibleModules, ref.read(workspaceProvider).value);
+    if (clearedFailure && mounted) setState(() {});
+    unawaited(_initializeWorkspace());
+  }
+
+  void _handleWorkspaceStateChanged(
+    AsyncValue<WorkspaceState>? previous,
+    AsyncValue<WorkspaceState> next,
+  ) {
+    final moduleState = ref.read(moduleProvider).value;
+    final workspaceState = next.value;
+    if (moduleState == null || workspaceState == null) return;
+    final eligibleModules =
+        moduleState.modules.where(_shouldOpenModule).toList(growable: false);
+    _reconcileActiveModule(eligibleModules, workspaceState);
+    unawaited(_initializeWorkspace());
+  }
+
+  void _handleControlApiChanged(
+    ControlApiService? previous,
+    ControlApiService? next,
+  ) {
+    if (previous?.baseUri == next?.baseUri) return;
+    _workspaceServerGeneration++;
+    _workspaceInitializing = false;
+    if (!mounted) return;
+    setState(() {
+      _controllers.clear();
+      _pendingModuleRequests.clear();
+      _moduleLoadFailures.clear();
+      _prevModuleStatuses.clear();
+    });
+    unawaited(_initializeWorkspace());
+  }
+
+  void _reconcileActiveModule(
+    List<Module> eligibleModules,
+    WorkspaceState? workspaceState,
+  ) {
+    if (!mounted || eligibleModules.isEmpty || workspaceState == null) return;
+    final preferred =
+        _preferredModuleId(eligibleModules, workspaceState.focusedModuleId) ??
+            eligibleModules.first.id;
+    if (preferred == _activeModuleId) return;
+    setState(() => _activeModuleId = preferred);
   }
 
   void _handleLauncherNavigation(
@@ -230,7 +331,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     _workspaceServerGeneration++;
     _workspaceInitializing = false;
     setState(() {
-      _workspaceInitialized = false;
       _controllers.clear();
       _pendingModuleRequests.clear();
       _moduleLoadFailures.clear();
@@ -267,14 +367,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           workspaceStateAsync.isLoading ||
           moduleState == null ||
           workspaceState == null) {
-        if (mounted &&
-            serverGeneration == _workspaceServerGeneration &&
-            serverKey == _launcherBaseUri()?.toString()) {
-          _workspaceInitializing = false;
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            await _initializeWorkspace();
-          });
-        }
         return;
       }
       if (serverGeneration != _workspaceServerGeneration ||
@@ -322,7 +414,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         return;
       }
 
-      _workspaceInitialized = true;
       await _activateModule(targetModuleId, requestFocus: true);
     } finally {
       _workspaceInitializing = false;
@@ -473,7 +564,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       key: ValueKey<String>(
         'webview-${_launcherBaseUri()?.authority ?? 'disconnected'}-${module.id}',
       ),
-      initialUrlRequest: URLRequest(url: WebUri.uri(initialUri)),
+      initialUrlRequest: URLRequest(
+        url: WebUri.uri(initialUri),
+        headers: _tunnelSession?.adminToken.isNotEmpty == true
+            ? <String, String>{
+                'X-NMTK-Admin-Token': _tunnelSession!.adminToken,
+              }
+            : null,
+      ),
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,
         useShouldOverrideUrlLoading: true,
@@ -741,14 +839,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     );
   }
 
-  /// Records the current module statuses as "previous" for the next comparison.
-  /// Called from postFrameCallback so it never runs inside build().
-  void _snapshotModuleStatuses(List<Module> modules) {
-    for (final module in modules) {
-      _prevModuleStatuses[module.id] = module.status;
-    }
-  }
-
   /// Builds the active embedded surface for a module.
   ///
   /// Shared by the desktop [Scaffold] and narrow [NmtkMobileScaffold] paths.
@@ -758,45 +848,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   Widget _buildModuleChild(
       Module module, Map<String, WorkspaceSession> sessionsByModuleId,
       {Widget? workspaceHeaderAction}) {
-    // Auto-clear stale WebView failures when a module *recovers* — i.e.
-    // transitions from a non-ready state back to running/degraded.  We
-    // deliberately do NOT clear failures that were recorded while the
-    // module was already running (those are fresh errors, not stale ones
-    // from a prior crash), because clearing them would restart the WebView
-    // and cause an infinite flicker loop.
-    //
-    // Strategy: compare current status against the status we saw in the
-    // previous build.  A non-ready → ready transition signals recovery.
-    // The failure object itself is captured so the postFrameCallback only
-    // removes it if a newer failure has not already replaced it.
-    final prevStatus = _prevModuleStatuses[module.id];
-    final currentStatus = module.status;
-    // (no write here — snapshotted post-frame by _snapshotModuleStatuses)
-
-    final isNowReady = currentStatus == ModuleStatus.running ||
-        currentStatus == ModuleStatus.degraded;
-    final wasPreviouslyReady = prevStatus == ModuleStatus.running ||
-        prevStatus == ModuleStatus.degraded;
-
-    if (isNowReady &&
-        !wasPreviouslyReady &&
-        prevStatus != null &&
-        _moduleLoadFailures.containsKey(module.id)) {
-      final staleFailure = _moduleLoadFailures[module.id];
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        // Guard: only clear the exact failure that triggered this recovery.
-        // If the user navigated away and a newer failure was recorded,
-        // leave it in place.
-        if (_moduleLoadFailures[module.id] == staleFailure) {
-          setState(() {
-            _moduleLoadFailures.remove(module.id);
-            _controllers.remove(module.id);
-          });
-        }
-      });
-    }
-
     final session = sessionsByModuleId[module.id];
     final loadFailure = _moduleLoadFailures[module.id];
     final supported = _isWebViewSupported();
@@ -844,6 +895,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                               module.id,
                               session,
                               initialServerUrl: _nativeSurfaceServerUrl(module),
+                              initialAdminToken:
+                                  _tunnelSession?.adminToken ?? '',
                               workspaceHeaderAction: workspaceHeaderAction,
                               onEditServer: () =>
                                   _showServerConnectionPopup(context),
@@ -873,50 +926,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         ref.watch(selectedControlApiServiceProvider)?.baseUri.toString() ??
             'disconnected';
 
-    // Compute eligibleModules early so ref.listen can close over it.
     final eligibleModules = moduleState == null
         ? const <Module>[]
         : moduleState.modules.where(_shouldOpenModule).toList(growable: false);
-
-    // Unconditional ref.listen calls — must be called on every build, before any returns.
-    ref.listen(moduleProvider, (prev, next) {
-      final modules = next.value?.modules;
-      if (modules == null) return;
-      final eligible = modules.where(_shouldOpenModule).toList(growable: false);
-      if (mounted) _snapshotModuleStatuses(eligible);
-    });
-
-    ref.listen(workspaceProvider, (prev, next) {
-      final ws = next.value;
-      if (ws == null || eligibleModules.isEmpty) return;
-      final eligibleIds = eligibleModules.map((m) => m.id).toSet();
-      String newId = _activeModuleId;
-      if (ws.focusedModuleId != null &&
-          eligibleIds.contains(ws.focusedModuleId) &&
-          ws.focusedModuleId != _activeModuleId) {
-        newId = ws.focusedModuleId!;
-      } else if (!eligibleIds.contains(_activeModuleId)) {
-        newId = eligibleModules.first.id;
-      }
-      if (newId != _activeModuleId) setState(() => _activeModuleId = newId);
-    });
-
-    ref.listen(selectedControlApiServiceProvider, (previous, next) {
-      if (previous?.baseUri == next?.baseUri) return;
-      _workspaceServerGeneration++;
-      _workspaceInitializing = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() {
-          _workspaceInitialized = false;
-          _controllers.clear();
-          _pendingModuleRequests.clear();
-          _moduleLoadFailures.clear();
-          _prevModuleStatuses.clear();
-        });
-        unawaited(_initializeWorkspace());
-      });
-    });
 
     if (moduleState == null || workspaceState == null) {
       final loadError = moduleStateAsync.error ?? workspaceStateAsync.error;
@@ -945,19 +957,12 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           ),
         );
       }
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(child: ZetaProgressCircle(size: ZetaCircleSizes.s)),
+      );
     }
 
     final sessions = workspaceState.sessions;
-
-    if (!_workspaceInitialized &&
-        !_workspaceInitializing &&
-        !moduleStateAsync.isLoading &&
-        !workspaceStateAsync.isLoading) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _initializeWorkspace();
-      });
-    }
 
     // Build the horizontal workspace destinations from the eligible module
     // manifest, not only the currently open workspace sessions.
@@ -977,6 +982,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     if (eligibleModules.isEmpty) {
       if (isMobile) {
         return const NmtkMobileScaffold(
+          mode: NmtkShellMode.command,
           navItems: [],
           selectedIndex: 0,
           pageTitle: 'NeuroToolkit',
@@ -1000,9 +1006,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         eligibleModules.map((Module module) => module.id).toSet();
     final focusedModuleId = workspaceState.focusedModuleId;
 
-    // Sync _activeModuleId to workspace focus without calling setState during
-    // build. Mutations are deferred to a post-frame callback so the framework
-    // never sees state changes mid-layout (avoids assertion failures).
     final desiredModuleId = () {
       if (focusedModuleId != null &&
           eligibleModuleIds.contains(focusedModuleId) &&
@@ -1014,12 +1017,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       }
       return _activeModuleId;
     }();
-    if (desiredModuleId != _activeModuleId) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _activeModuleId = desiredModuleId);
-      });
-    }
-
     final selectedIndex = navItems.indexWhere(
       (NmtkSidebarItem item) => item.id == desiredModuleId,
     );
@@ -1072,6 +1069,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               mobileActiveSession?.surfaceMode == 'native';
 
       return NmtkMobileScaffold(
+        mode: NmtkShellMode.command,
         navItems: mobileNavItems,
         selectedIndex: mobileClampedIndex,
         onNavItemSelected: (i) {
@@ -1154,133 +1152,5 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         ),
       ),
     );
-  }
-}
-
-class LauncherProfileButton extends StatelessWidget {
-  const LauncherProfileButton({super.key, this.iconColor});
-
-  final Color? iconColor;
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-        icon: Icon(
-          Icons.person_outline,
-          color: iconColor ?? Zeta.of(context).colors.mainDefault,
-        ),
-        onPressed: () => showHubPopup(
-          context,
-          intent: HubPopupIntent.profile,
-        ),
-        tooltip: 'Profile',
-      );
-}
-
-class _InlineServerConnectionControl extends ConsumerWidget {
-  const _InlineServerConnectionControl({
-    required this.onPressed,
-    this.iconOnly = false,
-  });
-
-  final VoidCallback onPressed;
-  final bool iconOnly;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final controlApi = ref.watch(selectedControlApiServiceProvider);
-    final connection = ref.watch(serverConnectionProvider);
-    final backendVersion = ref.watch(backendVersionProvider).value;
-    final effectiveConnection = controlApi == null
-        ? const ServerConnectionState.disconnected()
-        : connection.baseUri == controlApi.baseUri
-            ? connection
-            : ServerConnectionState(
-                phase: ServerConnectionPhase.checking,
-                baseUri: controlApi.baseUri,
-              );
-    final tokens = NmtkShellTokens.of(context);
-    final statusColor = _colorForPhase(effectiveConnection.phase, tokens);
-    final hostLabel = controlApi?.baseUri.host ?? 'Connect server';
-    final serverLabel = backendVersion != null ? 'v$backendVersion' : hostLabel;
-
-    if (iconOnly) {
-      return Tooltip(
-        message: 'Server connection · ${effectiveConnection.label}',
-        child: Semantics(
-          button: true,
-          label:
-              'Server connection: $serverLabel, ${effectiveConnection.label}',
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              key: const ValueKey<String>('inline-server-connection-icon'),
-              borderRadius: BorderRadius.circular(20),
-              onTap: onPressed,
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Icon(Icons.circle, color: statusColor, size: 14),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Tooltip(
-      message: 'Server connection · ${effectiveConnection.label}',
-      child: Semantics(
-        button: true,
-        label: 'Server connection: $serverLabel, ${effectiveConnection.label}',
-        child: Material(
-          color: Zeta.of(context).colors.surfaceDefault.withValues(alpha: 0),
-          child: InkWell(
-            key: const ValueKey<String>('inline-server-connection'),
-            borderRadius: BorderRadius.circular(tokens.radiusChip),
-            onTap: onPressed,
-            child: Ink(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(tokens.radiusChip),
-                border: Border.all(color: statusColor.withValues(alpha: 0.55)),
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 240),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.circle, color: statusColor, size: 8),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        serverLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Zeta.of(context).textStyles.labelMedium.copyWith(
-                              color: Zeta.of(context).colors.mainDefault,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _colorForPhase(
-    ServerConnectionPhase phase,
-    NmtkShellTokens tokens,
-  ) {
-    return switch (phase) {
-      ServerConnectionPhase.checking => tokens.runningColor,
-      ServerConnectionPhase.connected => tokens.healthyColor,
-      ServerConnectionPhase.unstable => tokens.warningColor,
-      ServerConnectionPhase.disconnected => tokens.errorColor,
-    };
   }
 }

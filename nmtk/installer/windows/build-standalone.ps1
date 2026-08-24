@@ -6,13 +6,19 @@
 #   3. Bundles Python + all module source code into the release directory
 #   4. (Optional) Compiles the Inno Setup installer
 #
-# Usage: .\build-standalone.ps1 [-SkipFlutter] [-NoInstaller]
+# Usage: .\build-standalone.ps1 [-SkipFlutter] [-NoInstaller] [-Version 1.2.3]
+#
+# -Version stamps the installer (AppVersion and the output filename). When
+# omitted it is read from nmtk/neuro_toolkit/pubspec.yaml, which the release
+# pipeline bumps, so a local build is never named after setup.iss's 1.0.0
+# fallback.
 #
 # Prerequisites: Flutter SDK, Git, Inno Setup (ISCC.exe in PATH)
 
 param(
     [switch]$SkipFlutter,
-    [switch]$NoInstaller
+    [switch]$NoInstaller,
+    [string]$Version = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,6 +34,16 @@ $PythonRelease = "20241016"
 $PythonArch = "x86_64" # We only support x64 for now
 $PythonTarball = "cpython-$PythonVersion+$PythonRelease-$PythonArch-pc-windows-msvc-shared-install_only.tar.gz"
 $PythonUrl = "https://github.com/indygreg/python-build-standalone/releases/download/$PythonRelease/$PythonTarball"
+
+# --- Resolve the version to stamp into the installer ---
+if (-not $Version) {
+    $Pubspec = Join-Path $ToolkitDir "pubspec.yaml"
+    if (Test-Path $Pubspec) {
+        $Match = Select-String -Path $Pubspec -Pattern '^version:\s*([0-9]+\.[0-9]+\.[0-9]+[^\s+]*)' | Select-Object -First 1
+        if ($Match) { $Version = $Match.Matches[0].Groups[1].Value }
+    }
+}
+if (-not $Version) { $Version = "0.0.0-dev" }
 
 $CacheDir = Join-Path $RepoRoot ".cache\python-standalone"
 $PythonCache = Join-Path $CacheDir $PythonTarball
@@ -133,8 +149,11 @@ if (-not $NoInstaller) {
 
     if (Get-Command $ISCC -ErrorAction SilentlyContinue) {
         $IssPath = Join-Path $ScriptDir "setup.iss"
-        & $ISCC $IssPath
-        Write-Host "==> Installer created successfully!" -ForegroundColor Green
+        # setup.iss only defaults MyAppVersion to 1.0.0 when nothing is passed;
+        # without this every release shipped an installer named 1.0.0.
+        & $ISCC "/DMyAppVersion=$Version" $IssPath
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Write-Host "==> Installer created successfully (version $Version)!" -ForegroundColor Green
 
         # --- Code signing (conditional on WINDOWS_SIGNING_THUMBPRINT) ---
         if ($env:WINDOWS_SIGNING_THUMBPRINT) {

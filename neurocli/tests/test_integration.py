@@ -12,7 +12,7 @@ runner = CliRunner()
 def test_full_help_tree() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    for cmd in ("new", "install", "run", "status", "hub"):
+    for cmd in ("new", "deploy", "install", "run", "status", "hub", "studio"):
         assert cmd in result.output, f"'{cmd}' not found in --help output:\n{result.output}"
 
 
@@ -30,16 +30,17 @@ def test_new_help_lists_supported_combos() -> None:
         assert combo in result.output, f"'{combo}' not found in new --help:\n{result.output}"
 
 
-def test_status_returns_without_error() -> None:
+def test_status_unreachable_is_runtime_error() -> None:
     from unittest.mock import patch
 
-    with patch("neurocli.lifecycle.httpx.get", side_effect=ConnectionError):
-        result = runner.invoke(app, ["status"])
-    assert result.exit_code == 0
+    import httpx
+
+    with patch("neurocli.lifecycle.httpx.get", side_effect=httpx.ConnectError("refused")):
+        result = runner.invoke(app, ["status", "--json"])
+    assert result.exit_code == 2
 
 
 def test_new_all_five_combos_json(tmp_path: Path) -> None:  # type: ignore[name-defined]  # noqa: F821
-
     combos = [
         ("nir", "snntorch"),
         ("nir", "lava_sim"),
@@ -50,6 +51,17 @@ def test_new_all_five_combos_json(tmp_path: Path) -> None:  # type: ignore[name-
     for fw, tgt in combos:
         result = runner.invoke(
             app,
-            ["new", f"p_{fw}_{tgt}", "--framework", fw, "--target", tgt, "--json", "--output-dir", str(tmp_path)],
+            [
+                "new",
+                f"p_{fw}_{tgt}",
+                "--framework",
+                fw,
+                "--target",
+                tgt,
+                "--experimental",
+                "--json",
+                "--output-dir",
+                str(tmp_path),
+            ],
         )
         assert result.exit_code == 0, f"{fw}+{tgt}: {result.output}"

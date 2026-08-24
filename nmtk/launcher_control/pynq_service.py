@@ -90,9 +90,7 @@ class PynqServiceMixin:
         if auth_mode == "password":
             password = str(board.get("password") or "")
             if not password:
-                raise RuntimeError(
-                    "No SSH password is configured for this PYNQ board"
-                )
+                raise RuntimeError("No SSH password is configured for this PYNQ board")
             sshpass = shutil.which("sshpass")
             if sshpass is not None:
                 prefix.extend([sshpass, "-p", password])
@@ -890,7 +888,9 @@ class PynqServiceMixin:
             "preflight": preflight,
         }
 
-    def _refresh_pynq_board_preflight(self, board_id: str, *, stage: str) -> dict[str, Any]:
+    def _refresh_pynq_board_preflight(
+        self, board_id: str, *, stage: str
+    ) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
         request_timeout = _resolve_pynq_preflight_timeout()
         last_error: RuntimeRequestError | None = None
@@ -981,9 +981,11 @@ class PynqServiceMixin:
 
     def _inspect_local_pynq_overlay_package(self) -> dict[str, Any]:
         artifact_root = str(os.getenv("NMTK_NEUROCHIP_ARTIFACT_DIR") or "").strip()
-        candidates = _load_neurochip_launcher_runtime_contract().pynq.overlay_staging_candidates(
-            _neurochip_module_root(),
-            Path(artifact_root) if artifact_root else None,
+        candidates = (
+            _load_neurochip_launcher_runtime_contract().pynq.overlay_staging_candidates(
+                _neurochip_module_root(),
+                Path(artifact_root) if artifact_root else None,
+            )
         )
         # Report the first complete package. Falling back on `ready` rather than
         # on directory existence matters in the container, where the module root
@@ -991,8 +993,7 @@ class PynqServiceMixin:
         # would tell the user to stage files into a directory the image never
         # ships, instead of using the overlay it already carries.
         inspected = [
-            _inspect_staged_pynq_overlay_package(candidate)
-            for candidate in candidates
+            _inspect_staged_pynq_overlay_package(candidate) for candidate in candidates
         ]
         for result in inspected:
             if bool(result.get("ready", False)):
@@ -1331,7 +1332,10 @@ class PynqServiceMixin:
     def proxy_pynq_run(self, board_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         board = self._get_pynq_board(board_id)
         return self._runtime_json_request(
-            board, "POST", "/hardware/pynq/run", payload,
+            board,
+            "POST",
+            "/hardware/pynq/run",
+            payload,
             timeout=_resolve_pynq_run_timeout(),
         )
 

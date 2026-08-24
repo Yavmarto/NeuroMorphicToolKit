@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/services/analytics_service.dart';
+import 'package:neuro_toolkit/services/backend_tunnel_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/services/deployment/client_deployment_service.dart';
 import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
@@ -50,6 +51,12 @@ final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
 
 final deploymentServiceProvider = Provider<DeploymentService>((ref) {
   return ClientDeploymentService();
+});
+
+final backendTunnelServiceProvider = Provider<BackendTunnelService>((ref) {
+  final service = BackendTunnelService();
+  ref.onDispose(service.close);
+  return service;
 });
 
 final updateServiceProvider = Provider<UpdateService>((ref) {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neurocnl_studio/providers/neurohub_provider.dart';
+import 'package:neurocnl_studio/services/neurohub_session_storage.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
@@ -15,6 +17,19 @@ import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.d
 import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
 import 'package:neuro_toolkit/widgets/module_loading_view.dart';
+
+class _EmptyNeurohubTokenStorage implements NeurohubTokenStorage {
+  const _EmptyNeurohubTokenStorage();
+
+  @override
+  Future<void> delete() async {}
+
+  @override
+  Future<String?> read() async => null;
+
+  @override
+  Future<void> write(String token) async {}
+}
 
 class _RecordingNavigatorObserver extends NavigatorObserver {
   final List<Route<dynamic>> pushedRoutes = <Route<dynamic>>[];
@@ -140,16 +155,32 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
 
     await tester.pumpWidget(
-      MaterialApp(
-        navigatorObservers: <NavigatorObserver>[observer],
-        home: const Scaffold(
-          body: LauncherProfileButton(iconColor: Colors.black),
+      ProviderScope(
+        overrides: [
+          neurohubTokenStorageProvider.overrideWithValue(
+            const _EmptyNeurohubTokenStorage(),
+          ),
+        ],
+        child: ZetaProvider(
+          initialContrast: ZetaContrast.aa,
+          initialThemeMode: ThemeMode.dark,
+          builder: (context, light, dark, mode) => MaterialApp(
+            theme: light,
+            darkTheme: dark,
+            themeMode: mode,
+            navigatorObservers: <NavigatorObserver>[observer],
+            home: const Scaffold(
+              body: LauncherProfileButton(iconColor: Colors.black),
+            ),
+          ),
         ),
       ),
     );
 
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
     await tester.tap(find.byTooltip('Profile'));
+    await tester.pumpAndSettle();
 
     expect(observer.pushedRoutes, hasLength(2));
     expect(observer.pushedRoutes.last, isA<DialogRoute<void>>());

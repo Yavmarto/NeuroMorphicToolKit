@@ -63,7 +63,8 @@ void main() {
       expect(
         restored.layers.map((layer) => layer.inputSize),
         <int>[784, 256],
-        reason: 'the engine walks layers in order; a reorder is a wrong network',
+        reason:
+            'the engine walks layers in order; a reorder is a wrong network',
       );
       expect(restored.layers.last.weightOffset, 200704);
     });
@@ -87,11 +88,14 @@ void main() {
   });
 
   group('PynqBoardState', () {
-    test('a stored board that nothing has contacted does not say "Unpaired"', () {
-      // The record only exists because the user paired the board. "No board at
-      // all" is a separate branch in both the Setup dot and the setup pane.
-      expect(PynqBoardState.unpaired.label, 'Not checked yet');
-      expect(PynqBoardState.unpaired.apiValue, 'unpaired');
-    });
+    test(
+      'a stored board that nothing has contacted does not say "Unpaired"',
+      () {
+        // The record only exists because the user paired the board. "No board at
+        // all" is a separate branch in both the Setup dot and the setup pane.
+        expect(PynqBoardState.unpaired.label, 'Not checked yet');
+        expect(PynqBoardState.unpaired.apiValue, 'unpaired');
+      },
+    );
   });
 }

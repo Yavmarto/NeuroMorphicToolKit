@@ -113,9 +113,12 @@ class ModuleLoadingView extends StatelessWidget {
                     ),
               ),
               const SizedBox(height: 14),
-              LinearProgressIndicator(
-                value: hasProgress ? module.installProgress : null,
-              ),
+              hasProgress
+                  ? ZetaProgressBar.standard(
+                      progress: module.installProgress,
+                      isThin: true,
+                    )
+                  : const ZetaProgressBar.indeterminate(isThin: true),
             ],
           ),
         ),

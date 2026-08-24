@@ -8,6 +8,7 @@ import 'package:neurobench_frontend/shell_adapter.dart';
 typedef NativeSurfaceBuilder = Widget Function(
   WorkspaceSession session, {
   String? initialServerUrl,
+  String initialAdminToken,
   Widget? workspaceHeaderAction,
   Future<void> Function()? onEditServer,
 });
@@ -18,12 +19,14 @@ class NativeSurfaceRegistry {
     'neurocnl': (
       WorkspaceSession session, {
       String? initialServerUrl,
+      String initialAdminToken = '',
       Widget? workspaceHeaderAction,
       Future<void> Function()? onEditServer,
     }) {
       return NeurocnlShellAdapter(
         initialLocation: session.deepLink ?? '/',
         initialServerUrl: initialServerUrl,
+        initialAdminToken: initialAdminToken,
         workspaceHeaderAction: workspaceHeaderAction,
         onEditServer: onEditServer,
       );
@@ -31,6 +34,7 @@ class NativeSurfaceRegistry {
     'Neurochip': (
       WorkspaceSession session, {
       String? initialServerUrl,
+      String initialAdminToken = '',
       Widget? workspaceHeaderAction,
       Future<void> Function()? onEditServer,
     }) {
@@ -40,12 +44,14 @@ class NativeSurfaceRegistry {
             ? const <String, Object?>{}
             : session.restoreState,
         initialServerUrl: initialServerUrl,
+        initialAdminToken: initialAdminToken,
         onEditServer: onEditServer,
       );
     },
     'Neurobench': (
       WorkspaceSession session, {
       String? initialServerUrl,
+      String initialAdminToken = '',
       Widget? workspaceHeaderAction,
       Future<void> Function()? onEditServer,
     }) {
@@ -62,6 +68,7 @@ class NativeSurfaceRegistry {
     String moduleId,
     WorkspaceSession session, {
     String? initialServerUrl,
+    String initialAdminToken = '',
     Widget? workspaceHeaderAction,
     Future<void> Function()? onEditServer,
   }) {
@@ -72,6 +79,7 @@ class NativeSurfaceRegistry {
     return builder(
       session,
       initialServerUrl: initialServerUrl,
+      initialAdminToken: initialAdminToken,
       workspaceHeaderAction: workspaceHeaderAction,
       onEditServer: onEditServer,
     );

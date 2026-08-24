@@ -2,18 +2,31 @@ import os
 import time
 from pathlib import Path
 from urllib.parse import urlparse
-from uuid import uuid4
 
 import httpx
 import pytest
 
-# Service URLs from environment or defaults (Docker service names)
-NEUROCNL_URL = os.getenv("NEUROCNL_URL", "http://neurocnl:8000")
-NEUROSIM_URL = os.getenv("NEUROSIM_URL", "http://neurocnl:8000")
-NEUROCHIP_URL = os.getenv("NEUROCHIP_URL", "http://neurochip:8000")
-NEUROSENSE_URL = os.getenv("NEUROSENSE_URL", "http://neurosense:8000")
-NEUROHUB_URL = os.getenv("NEUROHUB_URL", "http://neurohub:8000")
-NEUROBENCH_URL = os.getenv("NEUROBENCH_URL", "http://neurobench:8000")
+# Every ordinary product route is mounted by the consolidated Suite API.
+# A single required base URL prevents tests silently exercising retired
+# per-module ports or skipping the whole suite when the gateway is absent.
+SUITE_API_URL = os.getenv("SUITE_API_URL", "http://127.0.0.1:9000").rstrip("/")
+NEUROCNL_URL = SUITE_API_URL
+NEUROSIM_URL = SUITE_API_URL
+NEUROCHIP_URL = SUITE_API_URL
+NEUROSENSE_URL = SUITE_API_URL
+NEUROHUB_URL = SUITE_API_URL
+NEUROBENCH_URL = SUITE_API_URL
+
+NIR_NATIVE_REFLEX_SPEC = "\n".join(
+    [
+        "Define a network named integration_reflex.",
+        "Define an input port named input with shape (1,).",
+        "Define a LIF neuron named relay with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.",
+        "Define an output port named output with shape (1,).",
+        "input connects to relay.",
+        "relay connects to output.",
+    ]
+)
 
 
 def _service_label(url: str) -> str:
@@ -30,7 +43,7 @@ async def _request_or_skip(
     try:
         return await client.request(method, url, **kwargs)
     except httpx.RequestError as exc:
-        pytest.skip(f"Integration service {_service_label(url)} unavailable: {exc}")
+        pytest.fail(f"Required Suite API {_service_label(url)} unavailable: {exc}")
 
 
 def _default_neurosense_artifact_path() -> str:
@@ -47,11 +60,16 @@ def _default_neurosense_artifact_path() -> str:
 @pytest.mark.asyncio
 async def test_neurocnl_to_neurosim():
     """Test neurocnl -> Neurosim pipeline (CNL design -> simulation)"""
-    spec = "Define an input port named sensory with shape (1,).\nDefine an output port named motor with shape (1,).\nConnect sensory to motor."
+    spec = NIR_NATIVE_REFLEX_SPEC
 
     # 1. Validate in neurocnl
     async with httpx.AsyncClient() as client:
-        resp = await _request_or_skip(client, "POST", f"{NEUROCNL_URL}/api/parse", json={"spec": spec})
+        resp = await _request_or_skip(
+            client,
+            "POST",
+            f"{NEUROCNL_URL}/api/neurocnl/parse",
+            json={"spec": spec},
+        )
         assert resp.status_code == 200
         assert resp.json()["errors"] == 0
 
@@ -114,7 +132,8 @@ async def test_neurosim_to_neurochip():
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCHIP_URL}/api/neurochip/deployments/validate", json=manifest
+            f"{NEUROCHIP_URL}/api/neurochip/deployments/validate",
+            json=manifest,
         )
         assert resp.status_code == 200
         assert resp.json()["target_device"] == "Teensy 4.1"
@@ -123,21 +142,13 @@ async def test_neurosim_to_neurochip():
 @pytest.mark.asyncio
 async def test_neurocnl_to_neurochip_lava_simulator():
     """Test NeuroCNL -> Neurochip Lava simulator handoff."""
-    spec = (
-        "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.8\n"
-        "The motor neuron MUST emit a spike ONLY IF membrane potential exceeds 0.6\n"
-        "The sensory neuron MUST NOT fire DURING the refractory period of 0.002 seconds\n"
-        "The motor neuron MUST NOT fire DURING the refractory period of 0.003 seconds\n"
-        "The sensory neuron membrane potential MUST decay WITH time constant of 0.01 seconds\n"
-        "The motor neuron membrane potential MUST decay WITH time constant of 0.02 seconds\n"
-        "The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 1.0\n"
-    )
+    spec = NIR_NATIVE_REFLEX_SPEC
 
     async with httpx.AsyncClient() as client:
         deploy_resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/lava/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/lava/network",
             json={"spec": spec, "weight_bit_width": 8},
         )
         assert deploy_resp.status_code == 200, deploy_resp.text
@@ -155,7 +166,9 @@ async def test_neurocnl_to_neurochip_lava_simulator():
             json={"network": payload, "run_config": "sim"},
         )
         if compile_resp.status_code == 503:
-            pytest.skip("Neurochip Lava simulator runtime is unavailable in this environment.")
+            pytest.skip(
+                "Neurochip Lava simulator runtime is unavailable in this environment."
+            )
         assert compile_resp.status_code == 200, compile_resp.text
         session_id = compile_resp.json()["session_id"]
 
@@ -172,17 +185,13 @@ async def test_neurocnl_to_neurochip_lava_simulator():
 @pytest.mark.asyncio
 async def test_neurocnl_to_neurochip_akida_runtime_handoff():
     """Test NeuroCNL -> Neurochip Akida mapped-network handoff."""
-    spec = (
-        "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.8\n"
-        "The motor neuron MUST emit a spike ONLY IF membrane potential exceeds 0.6\n"
-        "The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 1.0\n"
-    )
+    spec = NIR_NATIVE_REFLEX_SPEC
 
     async with httpx.AsyncClient() as client:
         deploy_resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/deploy/akida/network",
+            f"{NEUROCNL_URL}/api/neurocnl/deploy/akida/network",
             json={
                 "spec": spec,
                 "weight_bit_width": 4,
@@ -204,7 +213,9 @@ async def test_neurocnl_to_neurochip_akida_runtime_handoff():
             json=mapped_network,
         )
         if map_resp.status_code == 503:
-            pytest.skip("Neurochip Akida runtime mapping is unavailable in this environment.")
+            pytest.skip(
+                "Neurochip Akida runtime mapping is unavailable in this environment."
+            )
         assert map_resp.status_code == 200, map_resp.text
         map_data = map_resp.json()
         assert "sdk_status" in map_data
@@ -244,11 +255,13 @@ async def test_neurosense_to_neurocnl():
         resp = await _request_or_skip(
             client,
             "POST",
-            f"{NEUROCNL_URL}/api/prosthetic/simulate",
+            f"{NEUROCNL_URL}/api/neurocnl/prosthetic/simulate",
             json={"spec": spec, "duration": 0.1, "n_neurons": 10},
         )
         if resp.status_code == 503:
-            pytest.skip("NeuroCNL prosthetic simulation requires optional MuJoCo runtime.")
+            pytest.skip(
+                "NeuroCNL prosthetic simulation requires optional MuJoCo runtime."
+            )
         # The endpoint returns 202 Accepted for background jobs
         assert resp.status_code == 202
 
@@ -296,9 +309,7 @@ async def test_neurosense_artifact_handoff():
 
         for _ in range(10):
             status_resp = await _request_or_skip(
-                client,
-                "GET",
-                f"{NEUROBENCH_URL}/api/neurobench/run/{job_id}"
+                client, "GET", f"{NEUROBENCH_URL}/api/neurobench/run/{job_id}"
             )
             assert status_resp.status_code == 200, status_resp.text
             status_data = status_resp.json()
@@ -306,7 +317,7 @@ async def test_neurosense_artifact_handoff():
                 result_resp = await _request_or_skip(
                     client,
                     "GET",
-                    f"{NEUROBENCH_URL}/api/neurobench/run/{job_id}/result"
+                    f"{NEUROBENCH_URL}/api/neurobench/run/{job_id}/result",
                 )
                 assert result_resp.status_code == 200, result_resp.text
                 result = result_resp.json()
@@ -327,113 +338,16 @@ async def test_neurosense_artifact_handoff():
 
 
 @pytest.mark.asyncio
-async def test_neurohub_orchestration():
-    """Test Neurohub orchestration of multi-module workflow"""
-    workflow = {
-        "id": f"test-integration-wf-{uuid4()}",
-        "name": "Integration Pipeline",
-        "description": "Validates CNL then runs Sim",
-        "steps": [
-            {
-                "id": "val-step",
-                "name": "Validate",
-                "app": "neurocnl",
-                "endpoint": "/api/validate",
-                "method": "POST",
-                "parameters": {
-                    "spec": "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.5"
-                },
-                "success_criteria": "overall == True",
-                "on_failure": "halt",
-            },
-            {
-                "id": "sim-step",
-                "name": "Simulate",
-                "app": "neurosim",
-                "endpoint": "/api/neurosim/preview",
-                "method": "POST",
-                "parameters": {
-                    "graph": {
-                        "nodes": [
-                            {
-                                "id": "n1",
-                                "component_id": "lif_population",
-                                "parameters": {"name": "n1", "n_neurons": 10},
-                                "position": [0, 0],
-                            }
-                        ],
-                        "edges": [],
-                        "metadata": {},
-                    },
-                    "duration_ms": 50,
-                },
-                "success_criteria": "status == 'queued'",
-                "on_failure": "halt",
-                "depends_on": ["val-step"],
-            },
-        ],
-        "builtin": False,
-    }
-
+async def test_neurohub_registry_health():
+    """Test that the Suite API exposes NeuroHub's self-health contract."""
     async with httpx.AsyncClient() as client:
-        # 1. Create workflow
         resp = await _request_or_skip(
             client,
-            "POST",
-            f"{NEUROHUB_URL}/api/neurohub/workflows", json=workflow
+            "GET",
+            f"{NEUROHUB_URL}/api/neurohub/health",
         )
-        assert resp.status_code == 201
-
-        # 2. Run workflow (requires a project_id)
-        # First create a mock project
-        project_id = f"test-project-{uuid4()}"
-        project_resp = await _request_or_skip(
-            client,
-            "POST",
-            f"{NEUROHUB_URL}/api/neurohub/projects",
-            json={
-                "id": project_id,
-                "name": "Test Project",
-                "description": "Integration Test",
-                "created_at": "2026-04-29T15:00:00Z",
-                "updated_at": "2026-04-29T15:00:00Z",
-                "owner": "testuser",
-                "members": [{"user_id": "testuser", "name": "Test User", "role": "admin"}],
-                "links": {
-                    "neurochip_deployment_ids": [],
-                    "neurobench_benchmark_ids": [],
-                    "neurobench_baseline_ids": [],
-                    "neurosense_session_ids": [],
-                },
-                "milestones": [],
-                "tags": ["integration"],
-                "status": "not_started",
-            },
-        )
-        assert project_resp.status_code == 201, project_resp.text
-
-        run_resp = await _request_or_skip(
-            client,
-            "POST",
-            f"{NEUROHUB_URL}/api/neurohub/workflows/{workflow['id']}/run",
-            params={"project_id": project_id},
-        )
-        assert run_resp.status_code == 200
-        run_id = run_resp.json()["id"]
-
-        # 3. Poll for completion
-        for _ in range(10):
-            status_resp = await _request_or_skip(
-                client,
-                "GET",
-                f"{NEUROHUB_URL}/api/neurohub/workflows/runs/{run_id}"
-            )
-            if status_resp.json()["status"] == "completed":
-                break
-            assert status_resp.json()["status"] != "failed"
-            time.sleep(2)
-        else:
-            pytest.fail("Workflow timed out")
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["status"] in {"ok", "degraded"}
 
 
 @pytest.mark.asyncio

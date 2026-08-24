@@ -1,10 +1,11 @@
 {
-  "bundleVersion": 9,
+  "bundleVersion": 10,
   "files": {
-    "docker-compose.prod.yml": "2fece04feea49f0c08a2579cbbe80a7b89b88aa5b0e1caf90bc815b9d7ff73ae",
-    "docker-compose.remote.yml": "23b34d4599ff850d4ba909d57e35c84b604cd030c4b44e575dd03d2c9109c489",
-    "docker-compose.yml": "8516218e9326d72621e00adfbe472dea7e69244b68c87c65acce05958a8803e0",
-    "install.sh": "671633065957b388123ff83ef3c5110307aea8564b2f0d95287b75450c4ebb6a",
+    "docker-compose.prod.yml": "f199fe7232659a2e7d916358775872d5fc335473abd17644469a94c98f3622cc",
+    "docker-compose.remote.yml": "1af42da796c985b55e11ca0f8fb68e0098874ec1fe70fc4500c8430b194df44e",
+    "docker-compose.yml": "bc20387c34b9e7274a2e4a1bd5d01018db600df4be23c8f1b9bdd1bdd1a541b4",
+    "install.sh": "021e1d0b09b9c0afb6da4edc5914d5827d0044f05f039b43731e85f435e81b3b",
+    "migrate_legacy.py": "72bdf5f04fc5b85ef76d24956873bab54c617c478d901efb03c342bb59df6a3b",
     "monitoring/alertmanager/alertmanager.yml": "5e37524bbb610300cc965e41488b3c9d11fa5886f55d1196e5949ccf21da9d0e",
     "monitoring/loki/loki-config.yml": "414e3dadeb587963c52740adc3097af79710eb6d8bf7b5e7da648008469cd8c6",
     "monitoring/prometheus/alert_rules.yml": "44becb4686525477082c3aeb8f46d5824db0c827b1c15b8bf2de05c60e6597fa",

@@ -569,7 +569,14 @@ class ProcessManager {
               );
               try {
                 await File(getPipPath).delete();
-              } catch (_) {}
+              } on FileSystemException {
+                if (kDebugMode) {
+                  debugPrint(
+                    '[${module.id}] Could not remove the temporary pip '
+                    'bootstrap file.',
+                  );
+                }
+              }
             }
             if (pipBootstrap.exitCode != 0) {
               throw Exception('Failed to bootstrap pip in venv');

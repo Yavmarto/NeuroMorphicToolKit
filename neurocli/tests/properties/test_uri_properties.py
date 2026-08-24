@@ -62,9 +62,7 @@ def test_uri_parse_idempotence(uri: str) -> None:
 # Feature: neurohub-global-registry, Property 11: URI parse error — wrong scheme
 @settings(max_examples=100)
 @given(
-    scheme=st.text(alphabet="abcdefghijklmnopqrstuvwxyz", min_size=1, max_size=8).filter(
-        lambda s: s != "neurohub"
-    ),
+    scheme=st.text(alphabet="abcdefghijklmnopqrstuvwxyz", min_size=1, max_size=8).filter(lambda s: s != "neurohub"),
     rest=_valid_uris(),
 )
 def test_uri_parse_error_wrong_scheme(scheme: str, rest: str) -> None:
@@ -82,9 +80,11 @@ def test_uri_parse_error_wrong_scheme(scheme: str, rest: str) -> None:
     owner=_IDENTIFIER,
     slug=_IDENTIFIER,
     bad_version=st.text(min_size=1, max_size=8).filter(
-        lambda v: __import__("re").fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", v) is None
-        and "/" not in v
-        and "@" not in v
+        lambda v: (
+            __import__("re").fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", v) is None
+            and "/" not in v
+            and "@" not in v
+        )
     ),
 )
 def test_uri_parse_error_invalid_semver(type_: str, owner: str, slug: str, bad_version: str) -> None:
@@ -140,9 +140,7 @@ def test_cli_backend_uri_parse_equivalence(uri: str) -> None:
 
 @settings(max_examples=50)
 @given(
-    scheme=st.text(alphabet="abcdefghijklmnopqrstuvwxyz", min_size=1, max_size=8).filter(
-        lambda s: s != "neurohub"
-    ),
+    scheme=st.text(alphabet="abcdefghijklmnopqrstuvwxyz", min_size=1, max_size=8).filter(lambda s: s != "neurohub"),
     rest=_valid_uris(),
 )
 def test_cli_backend_equivalence_on_errors(scheme: str, rest: str) -> None:

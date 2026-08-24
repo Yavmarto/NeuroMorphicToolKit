@@ -2,6 +2,7 @@
 
 Start with: uvicorn suite_api.main:app --port 9000 --reload
 """
+
 import logging
 import traceback
 from contextlib import asynccontextmanager
@@ -11,7 +12,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from suite_api.middleware import attach_middleware
 from suite_api.routers import health
-from suite_api.domains.neurocnl.lifespan import neurocnl_startup, neurocnl_shutdown
+from suite_api.domains.neurocnl.lifespan import neurocnl_shutdown, neurocnl_startup
+from suite_api.domains.neurohub.lifespan import neurohub_shutdown, neurohub_startup
 
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
@@ -19,11 +21,11 @@ from pathlib import Path
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # await neurohub_startup()
     await neurocnl_startup(app)
+    await neurohub_startup()
     yield
+    await neurohub_shutdown()
     await neurocnl_shutdown()
-    # await neurohub_shutdown()
 
 
 app = FastAPI(
@@ -48,24 +50,31 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 app.include_router(health.router, prefix="/api/suite", tags=["health"])
 
 from suite_api.domains.neurocnl.router import router as neurocnl_router  # noqa: E402
+
 app.include_router(neurocnl_router)
 
 from suite_api.domains.neurosim.router import router as neurosim_router  # noqa: E402
+
 app.include_router(neurosim_router)
 
 from suite_api.domains.neurochip.router import router as neurochip_router  # noqa: E402
+
 app.include_router(neurochip_router)
 
 from suite_api.domains.neurobench.router import router as neurobench_router  # noqa: E402
+
 app.include_router(neurobench_router)
 
 from suite_api.domains.neurosense.router import router as neurosense_router  # noqa: E402
+
 app.include_router(neurosense_router)
 
-# from suite_api.domains.neurohub.router import router as neurohub_router  # noqa: E402
-# app.include_router(neurohub_router)
+from suite_api.domains.neurohub.router import router as neurohub_router  # noqa: E402
+
+app.include_router(neurohub_router)
 
 from suite_api.domains.jupyter.router import router as jupyter_router  # noqa: E402
+
 app.include_router(jupyter_router)
 
 

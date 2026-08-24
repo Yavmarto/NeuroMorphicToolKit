@@ -120,7 +120,7 @@ def _request(
         resp = req_func(url, **kwargs)
         resp.raise_for_status()
         return resp
-    except httpx.ConnectError:
+    except httpx.RequestError:
         error_exit({"error": "registry_unreachable", "registry": registry_url}, json_mode, code=2)
         raise  # Unreachable, error_exit calls sys.exit
     except httpx.HTTPStatusError as exc:
@@ -149,8 +149,9 @@ def login(
     url = _resolve_registry(registry)
 
     # Direct-token path: store the supplied token without contacting the registry.
-    if token:
-        _write_credentials(url, token)
+    resolved_token = token or os.environ.get("NEUROHUB_TOKEN")
+    if resolved_token:
+        _write_credentials(url, resolved_token)
         print_result({"status": "ok", "registry": url}, json_mode)
         return
 
@@ -287,7 +288,16 @@ def pull(
     )
 
     meta = meta_resp.json()
-    expected_sha = meta.get("sha256", "")
+    expected_sha = str(meta.get("sha256") or "")
+    if len(expected_sha) != 64:
+        error_exit(
+            {
+                "error": "missing_checksum",
+                "message": "The registry did not provide a valid SHA-256 checksum; no file was downloaded.",
+            },
+            json_mode,
+            code=2,
+        )
     resolved_version = meta.get("version", parsed.version or "latest")
     download_url = meta.get("download_url")
     if not download_url:
@@ -311,7 +321,7 @@ def pull(
     dest.write_bytes(blob)
 
     actual_sha = hashlib.sha256(blob).hexdigest()
-    if expected_sha and actual_sha != expected_sha:
+    if actual_sha != expected_sha:
         dest.unlink(missing_ok=True)
         msg = {
             "error": "checksum_mismatch",
@@ -324,9 +334,7 @@ def pull(
             print(f"  checksum mismatch: expected {expected_sha}, got {actual_sha}", file=sys.stderr)
         sys.exit(2)
 
-    print_result(
-        {"status": "pulled", "path": str(dest), "sha256": actual_sha, "uri": uri}, json_mode
-    )
+    print_result({"status": "pulled", "path": str(dest), "sha256": actual_sha, "uri": uri}, json_mode)
 
 
 # ---------------------------------------------------------------------------

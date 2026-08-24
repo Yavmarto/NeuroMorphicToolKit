@@ -9,6 +9,9 @@ import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/src/features/app/presentation/launcher_app_host.dart';
 import 'package:neuro_toolkit/src/features/app/presentation/command_provider.dart';
 
+part 'launcher_bootstrap_host.dart';
+part 'neuro_toolkit_app.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -45,53 +48,4 @@ void main() async {
       child: const LauncherBootstrapHost(),
     ),
   );
-}
-
-/// Compatibility wrapper retained for existing launch and widget-test entry
-/// points. The application itself now has one MaterialApp and provider graph.
-class LauncherBootstrapHost extends StatelessWidget {
-  const LauncherBootstrapHost({super.key});
-
-  @override
-  Widget build(BuildContext context) => const NeuroToolkitApp();
-}
-
-class NeuroToolkitApp extends ConsumerWidget {
-  const NeuroToolkitApp({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settingsState = ref.watch(settingsProvider);
-    final settings = settingsState.value;
-    if (settings == null) {
-      return const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
-      );
-    }
-    return NmtkZetaTheme.wrap(
-      builder: (context, light, dark, mode) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'NeuroToolkit',
-        theme:
-            settings.isHighContrast ? AppTheme.highContrastLightTheme : light,
-        darkTheme:
-            settings.isHighContrast ? AppTheme.highContrastDarkTheme : dark,
-        themeMode: settings.isHighContrast ? settings.themeMode : mode,
-        home: const LauncherAppHost(),
-        builder: (BuildContext ctx, Widget? child) {
-          final commands = ref.watch(commandStateProvider);
-          return NmtkShortcutScope(
-            globalCommands: commands,
-            child: MediaQuery(
-              data: MediaQuery.of(ctx).copyWith(
-                textScaler: TextScaler.linear(settings.fontSizeFactor),
-              ),
-              child: child ?? const SizedBox.shrink(),
-            ),
-          );
-        },
-      ),
-    );
-  }
 }

@@ -6,13 +6,14 @@ same prefixes as ``Neurohub/neurohub/app/main.py``.
 Neurohub's lifespan (Alembic migrations) is handled separately in
 ``suite_api/main.py``'s asynccontextmanager.
 """
+
 import logging
 
 from fastapi import APIRouter
 from neurohub.app.routers import (
     assets,
-    auth,
     config as nh_config,
+    github_auth,
     health as nh_health,
     projects,
     registry_artefacts,
@@ -21,6 +22,7 @@ from neurohub.app.routers import (
     registry_health,
     registry_search,
     sharing,
+    workspaces,
 )
 
 logger = logging.getLogger("suite_api.neurohub")
@@ -28,12 +30,13 @@ logger = logging.getLogger("suite_api.neurohub")
 router = APIRouter()
 
 for _r in (
-    auth.router,
     projects.router,
     assets.router,
     nh_health.router,
     nh_config.router,
     sharing.router,
+    workspaces.router,
+    github_auth.router,
 ):
     router.include_router(_r, prefix="/api/neurohub")
 

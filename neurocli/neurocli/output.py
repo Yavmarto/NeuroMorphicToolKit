@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import Any
+from typing import Any, NoReturn
 
 
 def print_result(data: dict[str, Any] | list[Any], json_mode: bool) -> None:
@@ -24,7 +24,7 @@ def _human(data: dict[str, Any] | list[Any]) -> None:
             print(f"  {key}: {value}")
 
 
-def error_exit(data: dict[str, Any], json_mode: bool, code: int = 1) -> None:
+def error_exit(data: dict[str, Any], json_mode: bool, code: int = 1) -> NoReturn:
     """Print error *data* and exit with *code*."""
     print_result(data, json_mode)
     sys.exit(code)

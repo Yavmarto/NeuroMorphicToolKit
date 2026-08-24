@@ -119,7 +119,7 @@ class ProcessSupervisionMixin:
             if start > 0:
                 first_newline = text.find("\n")
                 if 0 <= first_newline < len(text) - 1:
-                    text = text[first_newline + 1:]
+                    text = text[first_newline + 1 :]
             lines = text.splitlines()
             if not lines:
                 return ["No logs found."]
@@ -129,7 +129,12 @@ class ProcessSupervisionMixin:
 
     def _get_dart_analytics_dir(self) -> Path:
         if sys.platform == "darwin":
-            return Path.home() / "Library" / "Application Support" / "com.example.neuroToolkit"
+            return (
+                Path.home()
+                / "Library"
+                / "Application Support"
+                / "com.example.neuroToolkit"
+            )
         elif sys.platform == "win32":
             return Path(os.environ.get("APPDATA", "")) / "com.example" / "neuroToolkit"
         else:

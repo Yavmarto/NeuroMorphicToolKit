@@ -2,7 +2,7 @@
 target: Execute > Deploy tab (Hardware/Simulator/Lava target tables)
 total_score: 21
 max_score: 40
-na_heuristics: 
+na_heuristics:
 p0_count: 2
 p1_count: 2
 timestamp: 2026-08-18T09-22-59Z

@@ -165,11 +165,7 @@ def ssh_root_bootstrap(
     )
     remote_cmd = encode_remote_script(
         script,
-        env=(
-            {"NMTK_DEPLOY_SUDO_PASSWORD": root_password}
-            if root_password
-            else None
-        ),
+        env=({"NMTK_DEPLOY_SUDO_PASSWORD": root_password} if root_password else None),
     )
 
     key_path = None

@@ -3,6 +3,10 @@
 
 set -uo pipefail
 
+# Do not inherit workstation-wide pytest concurrency flags whose plugins may
+# not exist in the environment selected below.
+export PYTEST_ADDOPTS="${NMTK_GUARDRAIL_PYTEST_ADDOPTS:-}"
+
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 

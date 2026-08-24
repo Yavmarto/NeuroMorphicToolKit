@@ -47,6 +47,7 @@ def _parse_version(version: str) -> Version | None:
     except InvalidVersion:
         return None
 
+
 def _compare_versions(left: str, right: str) -> int:
     try:
         left_parsed = parse_version(left)
@@ -79,7 +80,10 @@ def _is_prerelease_version(version: str) -> bool:
         parsed = parse_version(version)
         return parsed.is_prerelease
     except InvalidVersion:
-        return PRERELEASE_VERSION_PATTERN.search(_normalize_version_string(version)) is not None
+        return (
+            PRERELEASE_VERSION_PATTERN.search(_normalize_version_string(version))
+            is not None
+        )
 
 
 def _normalize_github_repo_api_url(remote_url: str) -> str | None:
@@ -128,7 +132,12 @@ def _read_json_url(url: str) -> Any | None:
             timeout=GITHUB_API_TIMEOUT_SECONDS,
         ) as response:
             return json.loads(response.read().decode("utf-8"))
-    except (json.JSONDecodeError, TimeoutError, urllib.error.HTTPError, urllib.error.URLError):
+    except (
+        json.JSONDecodeError,
+        TimeoutError,
+        urllib.error.HTTPError,
+        urllib.error.URLError,
+    ):
         return None
 
 
@@ -163,7 +172,9 @@ def _resolve_remote_module_version(module: dict[str, Any]) -> str | None:
 
 
 class ModuleRegistryMixin:
-    def serialize_modules(self, *, refresh_updates: bool = False) -> list[dict[str, Any]]:
+    def serialize_modules(
+        self, *, refresh_updates: bool = False
+    ) -> list[dict[str, Any]]:
         if refresh_updates:
             self.refresh_remote_versions()
         with self._lock:
@@ -191,9 +202,7 @@ class ModuleRegistryMixin:
             if bool(module.get("versionPinned", False)):
                 refreshed_versions[module_id] = current_version
                 continue
-            existing_remote_version = str(
-                module.get("remoteVersion", current_version)
-            )
+            existing_remote_version = str(module.get("remoteVersion", current_version))
             resolved_version = self._remote_version_resolver(module)
             refreshed_versions[module_id] = _coerce_remote_update_version(
                 current_version,
