@@ -1,26 +1,59 @@
 # NC-NL introduction email
 
-**To:** `nc-nl@digital-holland.nl`
-**Then, a day later:** Johan Mentink (Radboud University) — coordinator of the white-paper core team.
-A general inbox gets triaged; a named academic replies.
+## Aan wie, en in welke volgorde
 
-**Attach nothing.** One link. A CV attachment turns this into a job application, which it is not.
+**1. Bas van der Starre — Kwartiermaker Neuromorphic Technologies, Digital Holland.** Dit is de
+persoon wiens functie letterlijk is om dit ecosysteem op te bouwen. Een kwartiermaker krijgt betaald
+om te weten wat er in het veld gebeurt en wie wat bouwt; een ongevraagd aanbod van een werkende
+toolkit is voor hem nieuws, geen ruis. Stuur naar `nc-nl@digital-holland.nl` met **"T.a.v. Bas van
+der Starre"** bovenaan, en leg daarnaast een LinkedIn-connectie aan met een verwijzing naar de mail.
 
-**Before sending:** publish the video **unlisted**, and check its description no longer links to the
-GitHub repository (already fixed in `youtube-description.md`).
+**2. Johan Mentink (Radboud Universiteit)** — het boegbeeld van NC-NL en coördinator van het
+white-paper kernteam. Stuur hem een dag later een vrijwel identieke mail op zijn RU-adres (te vinden
+op zijn medewerkerspagina). Een naam reageert waar een algemene inbox getrieerd wordt.
 
-**Accuracy note:** the claims below match the verified status in
-`current tasks/2026-08-16/GUIDE-multi-platform-demo.md`. Three software runtimes plus Akida are
-demonstrable; everything else is described as integration in progress. Do not upgrade any of this
-language without re-checking that guide.
+Verdere namen, alleen relevant als je verder komt: **Frits Grotenhuis** (directeur/bestuur Digital
+Holland) en **Tijs Koops** (programmamanager internationalisering en innovatief mkb).
+
+**Nooit "Beste lezer".** Dat leest als een nieuwsbrief en signaleert een massamailing — precies het
+tegenovergestelde van wat je wilt. Heb je echt geen naam, gebruik dan "Beste NC-NL-team".
+
+## Onderwerpregel
+
+Primair:
+
+> `Proof of concept gebouwd op de knelpunten uit het NC-NL Action Plan`
+
+"Proof of concept" is bescheidener en nieuwsgieriger dan "toolkit", dat als verkoop kan lezen. Het
+noemen van hun eigen document is wat de mail geopend krijgt: het zegt dat je hun werk hebt gelezen,
+niet dat je iets aanbiedt.
+
+Alternatief, als je de drempel nog lager wil leggen:
+
+> `Proof of concept op de NC-NL knelpunten — demo van 3 minuten`
+
+Het noemen van de lengte vertelt ze precies wat het ze kost om te kijken. Werkt goed bij mensen met
+een volle agenda.
+
+## Verder
+
+**Voeg niets bij.** Eén link. Een cv als bijlage maakt er een sollicitatie van, en dat is dit niet.
+
+**Voor verzending:** zet de video **unlisted** online en controleer dat de beschrijving niet meer
+naar de GitHub-repository verwijst (al aangepast in `youtube-description.md`).
+
+**Accuratesse:** deze versie noemt niet meer welke targets wél en niet draaien. Dat detail staat nu
+alleen nog in de videobeschrijving — vul die dus in vóórdat de link de deur uitgaat.
 
 ---
 
 ## Dutch — FINAL (approved 2026-08-24, send as-is)
 
-**Onderwerp:** `Open-source toolkit gebouwd op de knelpunten uit het NC-NL Action Plan`
+**Onderwerp:** `Proof of concept gebouwd op de knelpunten uit het NC-NL Action Plan`
 
-> Beste [naam / NC-NL],
+> T.a.v. Bas van der Starre
+>
+> Beste Bas,
 >
 > De afgelopen zes maanden heb ik naast mijn werk een proof of concept gebouwd dat direct voortkomt uit jullie eigen documenten. Het white paper, de roadmap en het Action Plan benoemen telkens hetzelfde: hardware opzetten is moeilijk, drivers, simulators en remote servers werkend krijgen kost weken, en er is nauwelijks standaardisatie of gebruiksvriendelijke software. Ik liep daar zelf tegenaan, en ben gaan bouwen.
 >
@@ -51,7 +84,7 @@ video description, so make sure the description is filled in before the link goe
 
 ## English — only if they route it to a non-Dutch reader
 
-**Subject:** `Open-source toolkit built on the bottlenecks in the NC-NL Action Plan`
+**Subject:** `Proof of concept built on the bottlenecks in the NC-NL Action Plan`
 
 > Dear [name],
 >
