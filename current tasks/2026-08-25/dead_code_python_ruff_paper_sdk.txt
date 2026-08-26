@@ -1,0 +1,25 @@
+paper/01_lif/debug_spike_representation/snntorch_debug.py:5:35: F401 [*] `snntorch.spikeplot` imported but unused
+paper/02_cnn/ann_pretraining/nmnist.py:2:40: F401 [*] `typing.Tuple` imported but unused
+paper/02_cnn/ann_pretraining/nmnist.py:6:8: F401 [*] `tonic` imported but unused
+paper/02_cnn/ann_pretraining/nmnist.py:7:39: F401 [*] `tonic.MemoryCachedDataset` imported but unused
+paper/03_rnn/extras/braille_generate_rnn_nir_graph.py:9:42: F401 [*] `torch.utils.data.TensorDataset` imported but unused
+paper/03_rnn/extras/lava__qat.py:3:8: F401 [*] `json` imported but unused
+paper/03_rnn/extras/lava__qat.py:4:8: F401 [*] `os` imported but unused
+paper/03_rnn/extras/lava__qat.py:6:20: F401 [*] `snntorch` imported but unused
+paper/03_rnn/extras/lava__qat.py:8:22: F401 [*] `snntorch.surrogate` imported but unused
+paper/03_rnn/extras/lava__qat.py:15:8: F401 [*] `nirtorch` imported but unused
+paper/03_rnn/extras/lava__qat.py:18:18: F401 [*] `tqdm.tqdm` imported but unused
+paper/03_rnn/extras/lava_analysis_simple.py:1:8: F401 [*] `nir` imported but unused
+paper/03_rnn/extras/snntorch_debug.py:2:8: F401 [*] `os` imported but unused
+paper/03_rnn/extras/snntorch_test_export.py:4:8: F401 [*] `argparse` imported but unused
+paper/figures/NIR_as_IR/NIR_as_IR.py:1:17: F401 [*] `numpy` imported but unused
+paper/nir_to_lava.py:70:9: F841 Local variable `tau_syn` is assigned to but never used
+paper/nir_to_lava.py:125:5: F841 Local variable `dt` is assigned to but never used
+paper/nir_to_lava.py:126:5: F841 Local variable `fixed_pt` is assigned to but never used
+paper/nir_to_lava.py:562:5: F841 Local variable `dt` is assigned to but never used
+paper/nir_to_lava.py:563:5: F841 Local variable `fixed_pt` is assigned to but never used
+paper/notebooks-main/setup.py:4:8: F401 [*] `os` imported but unused
+paper/spikingjelly-master/spikingjelly/activation_based/ann2snn/examples/cnn_mnist.py:296:5: F841 Local variable `train_data_loader` is assigned to but never used
+paper/spikingjelly-master/spikingjelly/activation_based/ann2snn/rules.py:7:43: F401 [*] `spikingjelly.activation_based.neuron` imported but unused
+Found 23 errors.
+[*] 17 fixable with the `--fix` option (6 hidden fixes can be enabled with the `--unsafe-fixes` option).
