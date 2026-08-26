@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/ci/neurocnl_frontend.sh — CI for neurocnl Flutter web frontend
+# scripts/ci/neurocnl_frontend.sh — CI for the NeuroStudio Flutter feature
 set -uo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 source "$ROOT_DIR/scripts/ci/lib.sh"

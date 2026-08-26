@@ -47,7 +47,7 @@ jobs:
           submodules: false
           fetch-depth: 0
       - name: Update submodules safely
-        run: git submodule update --init || true
+        run: git submodule update --init
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -70,9 +70,11 @@ jobs:
               - 'Neurohub/frontend/**'
               - 'nmtk_ui_core/**'
             neurocnl:
+              - 'neurocnl'
               - 'neurocnl/**'
               - '!neurocnl/frontend/**'
             neurocnl_frontend:
+              - 'neurocnl'
               - 'neurocnl/frontend/**'
               - 'nmtk_ui_core/**'
             neurobench:
@@ -81,6 +83,7 @@ jobs:
               - 'Neurobench/frontend/**'
               - 'nmtk_ui_core/**'
             neurotoolkit:
+              - 'neurocnl'
               - 'nmtk/neuro_toolkit/**'
               - 'nmtk_ui_core/**'
             macos_installer:
@@ -102,6 +105,10 @@ jobs:
   test-suite-api:
     needs: detect-changes
     if: needs.detect-changes.outputs.suite_api == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
@@ -109,9 +116,31 @@ jobs:
           submodules: true
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
       - name: Run canonical Suite API checks
         run: bash scripts/ci/suiteapi.sh
+
+  test-reference-assets:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: .cache/nmtk/reference-assets
+          key: reference-assets-${{ hashFiles('tools/reference_assets.lock.json') }}
+      - name: Fetch and verify pinned reference assets
+        run: |
+          python tools/reference_assets.py fetch all
+          python tools/reference_assets.py verify all
+      - name: Test reference resolver
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_reference_assets.py
 
   pre-commit:
     runs-on: [self-hosted, Linux, X64]
@@ -161,7 +190,7 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurochip || true
+        run: git submodule update --init Neurochip
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -181,33 +210,22 @@ jobs:
           fi
       - name: Install dependencies
         run: |
-          if [ -d "Neurochip" ] && [ -f "Neurochip/pyproject.toml" ]; then
-            python -m pip install poetry
-            cd Neurochip
-            poetry install --no-interaction
-          else
-            echo "Submodule missing, skipping"
-          fi
+          python -m pip install poetry
+          cd Neurochip
+          poetry install --no-interaction
       - name: Lint with ruff
         run: |
-          if [ -d "Neurochip" ] && [ -f "Neurochip/pyproject.toml" ]; then
-            cd Neurochip
-            poetry run ruff check .
-            poetry run ruff format --check .
-          fi
-        continue-on-error: true # Allow for now if not configured
+          cd Neurochip
+          poetry run ruff check .
+          poetry run ruff format --check .
       - name: Type check with mypy
         run: |
-          if [ -d "Neurochip" ] && [ -f "Neurochip/pyproject.toml" ]; then
-            cd Neurochip
-            poetry run mypy .
-          fi
+          cd Neurochip
+          poetry run mypy .
       - name: Run tests
         run: |
-          if [ -d "Neurochip" ] && [ -f "Neurochip/pyproject.toml" ]; then
-            cd Neurochip
-            poetry run pytest --tb=short --hypothesis-show-statistics
-          fi
+          cd Neurochip
+          poetry run pytest --tb=short --hypothesis-show-statistics
 
   test-neurosense:
     needs: detect-changes
@@ -237,7 +255,7 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurosense || true
+        run: git submodule update --init Neurosense
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -257,31 +275,21 @@ jobs:
           fi
       - name: Install dependencies
         run: |
-          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/pyproject.toml" ]; then
-            python -m pip install -e "./Neurosense[dev]"
-            python -m pip install ruff mypy
-          else
-            echo "Submodule missing, skipping"
-          fi
+          python -m pip install -e "./Neurosense[dev]"
+          python -m pip install ruff mypy
       - name: Lint with ruff
         run: |
-          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/pyproject.toml" ]; then
-            cd Neurosense
-            python -m ruff check .
-            python -m ruff format --check .
-          fi
+          cd Neurosense
+          python -m ruff check .
+          python -m ruff format --check .
       - name: Type check with mypy
         run: |
-          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/pyproject.toml" ]; then
-            cd Neurosense
-            python -m mypy neurosense
-          fi
+          cd Neurosense
+          python -m mypy neurosense
       - name: Run tests
         run: |
-          if [ -d "Neurosense/neurosense" ] && [ -f "Neurosense/pyproject.toml" ]; then
-            cd Neurosense
-            python -m pytest --tb=short --hypothesis-show-statistics
-          fi
+          cd Neurosense
+          python -m pytest --tb=short --hypothesis-show-statistics
 
   test-neurohub:
     needs: detect-changes
@@ -311,7 +319,7 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurohub || true
+        run: git submodule update --init Neurohub
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -330,31 +338,20 @@ jobs:
             which pytest || true
           fi
       - name: Install dependencies
-        run: |
-          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/pyproject.toml" ]; then
-            python -m pip install -e "./Neurohub[dev]"
-          else
-            echo "Submodule missing, skipping"
-          fi
+        run: python -m pip install -e "./Neurohub[dev]"
       - name: Lint with ruff
         run: |
-          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/pyproject.toml" ]; then
-            cd Neurohub
-            python -m ruff check .
-            python -m ruff format --check .
-          fi
+          cd Neurohub
+          python -m ruff check .
+          python -m ruff format --check .
       - name: Type check with mypy
         run: |
-          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/pyproject.toml" ]; then
-            cd Neurohub
-            python -m mypy neurohub
-          fi
+          cd Neurohub
+          python -m mypy neurohub
       - name: Run tests
         run: |
-          if [ -d "Neurohub/neurohub" ] && [ -f "Neurohub/pyproject.toml" ]; then
-            cd Neurohub
-            python -m pytest --tb=short --hypothesis-show-statistics
-          fi
+          cd Neurohub
+          python -m pytest --tb=short --hypothesis-show-statistics
 
   test-neurocnl-backend:
     needs: detect-changes
@@ -385,7 +382,7 @@ jobs:
           submodules: false
       - name: Update required submodules
         run: |
-          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${{ secrets.GITHUB_TOKEN }}" submodule update --init neurocnl || true
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${{ secrets.GITHUB_TOKEN }}" submodule update --init neurocnl
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -405,53 +402,29 @@ jobs:
           fi
       - name: Install core package
         run: |
-          if [ -d "neurocnl" ] && [ -f "neurocnl/pyproject.toml" ]; then
-            python -m pip install -e ./neurocnl
-            python -m pip install pytest httpx ruff mypy
-          else
-            echo "neurocnl missing, skipping install"
-          fi
+          python -m pip install -e ./neurocnl
+          python -m pip install 'pytest>=8,<9' httpx ruff mypy
       - name: Lint with ruff
         run: |
-          if [ -f "neurocnl/pyproject.toml" ]; then
-            cd neurocnl
-            python -m ruff check .
-            python -m ruff format --check .
-          else
-            echo "neurocnl missing, skipping lint"
-          fi
+          cd neurocnl
+          python -m ruff check .
+          python -m ruff format --check .
       - name: Type check with mypy
         run: |
-          if [ -f "neurocnl/pyproject.toml" ]; then
-            cd neurocnl
-            python -m mypy neurocnl
-          else
-            echo "neurocnl missing, skipping type check"
-          fi
+          cd neurocnl
+          python -m mypy neurocnl
       - name: Install backend deps
         run: |
-          if [ -f "neurocnl/backend/requirements.txt" ]; then
-            cd neurocnl/backend
-            python -m pip install -r requirements.txt
-          else
-            echo "neurocnl/backend missing, skipping backend deps"
-          fi
+          cd neurocnl/backend
+          python -m pip install -r requirements.txt
       - name: Run core tests
         run: |
-          if [ -f "neurocnl/pyproject.toml" ]; then
-            cd neurocnl
-            python -m pytest neurocnl/ -v --tb=short
-          else
-            echo "neurocnl missing, skipping core tests"
-          fi
+          cd neurocnl
+          python -m pytest neurocnl/ -v --tb=short
       - name: Run backend tests
         run: |
-          if [ -f "neurocnl/backend/requirements.txt" ]; then
-            cd neurocnl/backend
-            PYTHONPATH=. python -m pytest tests --tb=short
-          else
-            echo "neurocnl/backend missing, skipping backend tests"
-          fi
+          cd neurocnl/backend
+          PYTHONPATH=. python -m pytest tests --tb=short
 
   test-neurobench:
     needs: detect-changes
@@ -481,7 +454,7 @@ jobs:
         with:
           submodules: false
       - name: Update submodule
-        run: git submodule update --init Neurobench || true
+        run: git submodule update --init Neurobench neurocnl
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -500,34 +473,22 @@ jobs:
             which pytest || true
           fi
       - name: Install poetry
-        run: |
-          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
-            python -m pip install poetry
-          fi
+        run: python -m pip install poetry
       - name: Install dependencies
-        run: |
-          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
-            cd Neurobench/neurobench && poetry install
-          fi
+        run: cd Neurobench/neurobench && poetry install
       - name: Lint with ruff
         run: |
-          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
-            cd Neurobench/neurobench
-            poetry run ruff check .
-            poetry run ruff format --check .
-          fi
+          cd Neurobench/neurobench
+          poetry run ruff check .
+          poetry run ruff format --check .
       - name: Type check with mypy
         run: |
-          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
-            cd Neurobench/neurobench
-            poetry run mypy .
-          fi
+          cd Neurobench/neurobench
+          poetry run mypy .
       - name: Run tests
         run: |
-          if [ -d "Neurobench/neurobench" ] && [ -f "Neurobench/neurobench/pyproject.toml" ]; then
-            cd Neurobench/neurobench
-            poetry run pytest --tb=short --hypothesis-show-statistics
-          fi
+          cd Neurobench/neurobench
+          poetry run pytest --tb=short --hypothesis-show-statistics
 
   test-nmtk-ui-core:
     needs: detect-changes
@@ -583,6 +544,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - name: Update compiled feature submodules
+        run: git submodule update --init neurocnl Neurobench
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'

@@ -105,27 +105,27 @@ _install_python_deps() {
 
   # neurocnl requires Neuro-Dream-Hand as an extra dependency
   if [ "$mod" = "neurocnl" ] && [ -f "${ROOT_DIR}/Neuro-Dream-Hand/pyproject.toml" ]; then
-    python -m pip install -e "${ROOT_DIR}/Neuro-Dream-Hand" --quiet 2>&1 | tail -1 || true
+    python -m pip install -e "${ROOT_DIR}/Neuro-Dream-Hand" --quiet
   fi
 
   case "$method" in
     pip)
-      [ -f "$dir/pyproject.toml" ] && python -m pip install -e "./$dir" --quiet 2>&1 | tail -1 || true
+      python -m pip install -e "./$dir" --quiet
       # trio: anyio's pytest plugin parametrizes every async test over both the
       # asyncio and trio backends by default; without trio installed, every
       # [trio] parametrization fails with `ModuleNotFoundError: No module
       # named 'trio'` (neurocnl/backend/tests has ~25 such tests).
-      python -m pip install pytest httpx ruff mypy trio --quiet 2>&1 | tail -1 || true
+      python -m pip install 'pytest>=8,<9' httpx ruff mypy trio --quiet
       if [ "$mod" = "neurocnl" ] && [ -f "neurocnl/backend/requirements.txt" ]; then
-        (cd neurocnl/backend && python -m pip install -r requirements.txt --quiet 2>&1 | tail -1) || true
+        (cd neurocnl/backend && python -m pip install -r requirements.txt --quiet)
       fi
       ;;
     pip_dev)
-      [ -f "$dir/pyproject.toml" ] && python -m pip install -e "./${dir}[dev]" --quiet 2>&1 | tail -1 || true
-      python -m pip install ruff mypy --quiet 2>&1 | tail -1 || true
+      python -m pip install -e "./${dir}[dev]" --quiet
+      python -m pip install ruff mypy --quiet
       ;;
     poetry)
-      [ -f "$dir/pyproject.toml" ] && (cd "$dir" && poetry install --no-interaction --quiet 2>&1 | tail -1) || true
+      (cd "$dir" && poetry install --no-interaction --quiet)
       ;;
   esac
 }

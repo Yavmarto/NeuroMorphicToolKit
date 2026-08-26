@@ -13,5 +13,5 @@ fi
 
 export PYTHONPATH=".:neurocnl:Neurochip:Neurosense:Neurobench/neurobench:Neurohub"
 python -m ruff check suite_api workers
-python -m mypy suite_api
+python -m mypy --config-file suite_api/pyproject.toml suite_api
 python -m pytest -q suite_api/tests
