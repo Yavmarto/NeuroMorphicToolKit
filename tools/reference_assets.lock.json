@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "nir-paper",
+      "display_name": "Neuromorphic Intermediate Representation paper assets",
+      "repository_url": "https://github.com/neuromorphs/NIR",
+      "revision": "7883c3c85f1be27ed113ccc9e8d6ab47ab541df4",
+      "archive_url": "https://codeload.github.com/neuromorphs/NIR/tar.gz/7883c3c85f1be27ed113ccc9e8d6ab47ab541df4",
+      "archive_sha256": "924da838cf4b11efaf7c6576bad30d858619578ad07b6b288db6869e211d883a",
+      "license": "BSD-3-Clause",
+      "include": [
+        "paper/01_lif/**",
+        "paper/02_cnn/**",
+        "paper/03_rnn/**",
+        "LICENSE"
+      ],
+      "legacy": [
+        {
+          "path": "paper/01_lif",
+          "source_subdir": "paper/01_lif"
+        },
+        {
+          "path": "paper/02_cnn",
+          "source_subdir": "paper/02_cnn"
+        },
+        {
+          "path": "paper/03_rnn",
+          "source_subdir": "paper/03_rnn"
+        }
+      ]
+    },
+    {
+      "id": "norse-notebooks",
+      "display_name": "Norse notebook tutorials",
+      "repository_url": "https://github.com/norse/notebooks",
+      "revision": "3306adb613dd9a7dd86f73bc7f5325227a0734b2",
+      "archive_url": "https://codeload.github.com/norse/notebooks/tar.gz/3306adb613dd9a7dd86f73bc7f5325227a0734b2",
+      "archive_sha256": "9655f81d90ff32d685ccae88019cffbd8a2e4a4104220006ebf515e64990f1da",
+      "license": "LGPL-3.0-only",
+      "include": [
+        "*.ipynb",
+        "README.md",
+        "LICENSE"
+      ],
+      "legacy": [
+        {
+          "path": "paper/notebooks-main",
+          "source_subdir": ""
+        }
+      ]
+    },
+    {
+      "id": "snntorch-tutorials",
+      "display_name": "snnTorch tutorials",
+      "repository_url": "https://github.com/jeshraghian/snntorch",
+      "revision": "9c45b86fa7b18ea49b91b00a475c5a0b6d7089f9",
+      "archive_url": "https://codeload.github.com/jeshraghian/snntorch/tar.gz/9c45b86fa7b18ea49b91b00a475c5a0b6d7089f9",
+      "archive_sha256": "c57ce84531a17874dafa8859386688a5f22f6e5da656e5a616ded697a7553405",
+      "license": "MIT",
+      "include": [
+        "examples/tutorial_[1-6]*.ipynb",
+        "README.md",
+        "LICENSE"
+      ],
+      "legacy": [
+        {
+          "path": "paper/Spiking-Neural-Networks-Tutorials-main",
+          "source_subdir": "examples"
+        }
+      ]
+    },
+    {
+      "id": "spikingjelly-tutorials",
+      "display_name": "SpikingJelly community tutorials",
+      "repository_url": "https://github.com/fangwei123456/spikingjelly",
+      "revision": "8932ac0668fe19b3efd0afedb3ca454cd8c126d3",
+      "archive_url": "https://codeload.github.com/fangwei123456/spikingjelly/tar.gz/8932ac0668fe19b3efd0afedb3ca454cd8c126d3",
+      "archive_sha256": "964993b720958bb542ff966584620a1f8f37f84762dfbee49431a1c6d60c00c9",
+      "license": "Apache-2.0",
+      "include": [
+        "community_tutorials/jupyter/chinese/*.ipynb",
+        "README.md",
+        "LICENSE"
+      ],
+      "legacy": [
+        {
+          "path": "paper/spikingjelly-master",
+          "source_subdir": ""
+        }
+      ]
+    }
+  ]
+}
