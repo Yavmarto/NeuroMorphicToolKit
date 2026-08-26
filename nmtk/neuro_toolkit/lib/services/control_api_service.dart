@@ -32,8 +32,9 @@ class LauncherControlSettings {
 
   factory LauncherControlSettings.fromJson(Map<String, dynamic> json) {
     return LauncherControlSettings(
-      logLevel:
-          json['logLevel'] is String ? json['logLevel'] as String : 'info',
+      logLevel: json['logLevel'] is String
+          ? json['logLevel'] as String
+          : 'info',
       mujocoAvailable: json['mujocoAvailable'] is bool
           ? json['mujocoAvailable'] as bool
           : false,
@@ -114,12 +115,12 @@ class ControlApiService {
     required Uri baseUri,
     AnalyticsService? analyticsService,
     String adminToken = '',
-  })  : _client = _LoggedHttpClient(
-          client ?? http.Client(),
-          analyticsService,
-          adminToken,
-        ),
-        _baseUri = baseUri;
+  }) : _client = _LoggedHttpClient(
+         client ?? http.Client(),
+         analyticsService,
+         adminToken,
+       ),
+       _baseUri = baseUri;
 
   final http.Client _client;
   final Uri _baseUri;
@@ -127,14 +128,12 @@ class ControlApiService {
   Uri get baseUri => _baseUri;
 
   static String get configuredBaseUrl => const String.fromEnvironment(
-        'NMTK_CONTROL_API_BASE_URL',
-        defaultValue: '',
-      );
+    'NMTK_CONTROL_API_BASE_URL',
+    defaultValue: '',
+  );
 
-  static int get configuredPort => const int.fromEnvironment(
-        'NMTK_CONTROL_API_PORT',
-        defaultValue: 8090,
-      );
+  static int get configuredPort =>
+      const int.fromEnvironment('NMTK_CONTROL_API_PORT', defaultValue: 8090);
 
   static Uri normalizeBaseUri(String input) {
     var value = input.trim();
@@ -316,9 +315,8 @@ class ControlApiService {
       _uri('/api/launcher/settings'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({
-        if (logLevel != null) 'logLevel': logLevel,
-        if (selectedAkidaHostId != null)
-          'selectedAkidaHostId': selectedAkidaHostId,
+        'logLevel': ?logLevel,
+        'selectedAkidaHostId': ?selectedAkidaHostId,
       }),
     );
     await _ensureSuccess(response);
@@ -568,9 +566,7 @@ class ControlApiService {
     String jobId,
   ) async {
     final response = await _client.get(
-      _uri(
-        '/api/launcher/akida/hosts/$hostId/runtime-update-jobs/$jobId',
-      ),
+      _uri('/api/launcher/akida/hosts/$hostId/runtime-update-jobs/$jobId'),
     );
     await _ensureSuccess(response);
     return AkidaRuntimeUpdateJob.fromJson(await _readJsonResponse(response));
@@ -679,10 +675,10 @@ class ControlApiService {
       _uri('/api/launcher/modules/$moduleId/settings'),
       headers: const {'Content-Type': 'application/json'},
       body: jsonEncode({
-        if (isEnabled != null) 'isEnabled': isEnabled,
+        'isEnabled': ?isEnabled,
         'customPort': customPort,
-        if (versionPinned != null) 'versionPinned': versionPinned,
-        if (startOnLaunch != null) 'startOnLaunch': startOnLaunch,
+        'versionPinned': ?versionPinned,
+        'startOnLaunch': ?startOnLaunch,
       }),
     );
     await _ensureSuccess(response);
@@ -692,8 +688,9 @@ class ControlApiService {
   Future<List<String>> fetchBackendLogs({bool errorOnly = false}) async {
     final response = await _client.get(
       _uri('/api/launcher/logs').replace(
-        queryParameters:
-            errorOnly ? const <String, String>{'filter': 'error'} : null,
+        queryParameters: errorOnly
+            ? const <String, String>{'filter': 'error'}
+            : null,
       ),
     );
     await _ensureSuccess(response);
@@ -725,8 +722,9 @@ class ControlApiService {
   }) async {
     final response = await _client.get(
       _uri('/api/launcher/backend-activity-log').replace(
-        queryParameters:
-            errorOnly ? const <String, String>{'filter': 'error'} : null,
+        queryParameters: errorOnly
+            ? const <String, String>{'filter': 'error'}
+            : null,
       ),
     );
     await _ensureSuccess(response);
@@ -736,7 +734,8 @@ class ControlApiService {
       return lines.cast<String>();
     }
     throw Exception(
-        'Unexpected backend-activity-log payload: ${response.body}');
+      'Unexpected backend-activity-log payload: ${response.body}',
+    );
   }
 }
 
@@ -757,7 +756,9 @@ class _LoggedHttpClient extends http.BaseClient {
     final stopwatch = Stopwatch()..start();
     final requestBody = _requestBody(request);
     try {
-      final response = await _inner.send(request).timeout(
+      final response = await _inner
+          .send(request)
+          .timeout(
             _requestTimeout,
             onTimeout: () => throw TimeoutException(
               'Control API request timed out: ${request.method} ${request.url}',
@@ -765,13 +766,13 @@ class _LoggedHttpClient extends http.BaseClient {
             ),
           );
       final bytes = await response.stream.toBytes().timeout(
-            _requestTimeout,
-            onTimeout: () => throw TimeoutException(
-              'Control API response body timed out: '
-              '${request.method} ${request.url}',
-              _requestTimeout,
-            ),
-          );
+        _requestTimeout,
+        onTimeout: () => throw TimeoutException(
+          'Control API response body timed out: '
+          '${request.method} ${request.url}',
+          _requestTimeout,
+        ),
+      );
       stopwatch.stop();
       final responseBody = utf8.decode(bytes, allowMalformed: true);
       await _analytics?.recordBackendActivity(

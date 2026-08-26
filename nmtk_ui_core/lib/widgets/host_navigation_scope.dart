@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:nmtk_ui_core/models/host_navigation_models.dart';
+import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 
 class NmtkHostNavigationScope extends InheritedWidget {
   const NmtkHostNavigationScope({
@@ -9,9 +9,9 @@ class NmtkHostNavigationScope extends InheritedWidget {
     required super.child,
   });
 
-  final NmtkHostModuleNavigator navigator;
+  final NmtkFeatureNavigator navigator;
 
-  static NmtkHostModuleNavigator? maybeNavigatorOf(BuildContext context) {
+  static NmtkFeatureNavigator? maybeNavigatorOf(BuildContext context) {
     return context
         .dependOnInheritedWidgetOfExactType<NmtkHostNavigationScope>()
         ?.navigator;
@@ -19,7 +19,7 @@ class NmtkHostNavigationScope extends InheritedWidget {
 
   static Future<bool> openModule(
     BuildContext context,
-    NmtkHostNavigationRequest request,
+    NmtkFeatureNavigationRequest request,
   ) async {
     final navigator = maybeNavigatorOf(context);
     if (navigator == null) {

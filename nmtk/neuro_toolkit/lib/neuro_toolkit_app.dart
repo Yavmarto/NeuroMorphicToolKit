@@ -19,11 +19,15 @@ class NeuroToolkitApp extends ConsumerWidget {
       builder: (context, light, dark, mode) => MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'NeuroToolkit',
-        theme:
-            settings.isHighContrast ? AppTheme.highContrastLightTheme : light,
-        darkTheme:
-            settings.isHighContrast ? AppTheme.highContrastDarkTheme : dark,
+        theme: settings.isHighContrast
+            ? AppTheme.highContrastLightTheme
+            : light,
+        darkTheme: settings.isHighContrast
+            ? AppTheme.highContrastDarkTheme
+            : dark,
         themeMode: settings.isHighContrast ? settings.themeMode : mode,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: const LauncherAppHost(),
         builder: (BuildContext ctx, Widget? child) {
           final commands = ref.watch(commandStateProvider);

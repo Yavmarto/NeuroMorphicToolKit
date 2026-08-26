@@ -11,6 +11,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
+  nmtk_module_contracts:
+    path: ../nmtk_module_contracts
   zeta_flutter: ^1.4.5
 
 dev_dependencies:

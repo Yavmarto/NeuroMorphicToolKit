@@ -6,11 +6,12 @@ import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 import 'package:yaml/yaml.dart';
 
-typedef KubernetesProgress = Future<void> Function(
-  DeploymentPhase phase,
-  double percent,
-  String message,
-);
+typedef KubernetesProgress =
+    Future<void> Function(
+      DeploymentPhase phase,
+      double percent,
+      String message,
+    );
 
 class KubernetesDeploymentService {
   const KubernetesDeploymentService();
@@ -22,14 +23,13 @@ class KubernetesDeploymentService {
     return KubernetesConfigInfo(
       server: credentials.server,
       usesBearerToken: credentials.token?.isNotEmpty ?? false,
-      usesClientCertificate: credentials.clientCertificate != null &&
+      usesClientCertificate:
+          credentials.clientCertificate != null &&
           credentials.clientKey != null,
     );
   }
 
-  Future<DeploymentPreflightResult> preflight(
-    DeploymentRequest request,
-  ) async {
+  Future<DeploymentPreflightResult> preflight(DeploymentRequest request) async {
     try {
       final credentials = await _credentials(request);
       final client = _KubernetesClient(credentials);
@@ -63,8 +63,9 @@ class KubernetesDeploymentService {
   }) async {
     final credentials = await _credentials(request);
     final client = _KubernetesClient(credentials);
-    final namespace =
-        request.namespace.trim().isEmpty ? 'nmtk' : request.namespace.trim();
+    final namespace = request.namespace.trim().isEmpty
+        ? 'nmtk'
+        : request.namespace.trim();
     try {
       await onProgress(
         DeploymentPhase.preflight,
@@ -146,8 +147,9 @@ class KubernetesDeploymentService {
     }
 
     var token = userBody['token']?.toString();
-    var clientCertificate =
-        _decodeData(userBody['client-certificate-data']?.toString());
+    var clientCertificate = _decodeData(
+      userBody['client-certificate-data']?.toString(),
+    );
     var clientKey = _decodeData(userBody['client-key-data']?.toString());
     final exec = userBody['exec'];
     if (exec is YamlMap || exec is Map<dynamic, dynamic>) {
@@ -170,18 +172,15 @@ class KubernetesDeploymentService {
       }
       final result = await Process.run(command, args);
       if (result.exitCode != 0) {
-        throw StateError(
-          'Kubernetes login command failed: ${result.stderr}',
-        );
+        throw StateError('Kubernetes login command failed: ${result.stderr}');
       }
       final payload = jsonDecode(result.stdout.toString());
       final status = payload is Map<String, dynamic>
           ? payload['status'] as Map<String, dynamic>? ?? const {}
           : const <String, dynamic>{};
       token = status['token'] as String? ?? token;
-      clientCertificate = _decodeData(
-            status['clientCertificateData'] as String?,
-          ) ??
+      clientCertificate =
+          _decodeData(status['clientCertificateData'] as String?) ??
           clientCertificate;
       clientKey = _decodeData(status['clientKeyData'] as String?) ?? clientKey;
     }
@@ -189,8 +188,9 @@ class KubernetesDeploymentService {
     return _KubeCredentials(
       server: Uri.parse(server),
       token: token,
-      certificateAuthority:
-          _decodeData(clusterBody['certificate-authority-data']?.toString()),
+      certificateAuthority: _decodeData(
+        clusterBody['certificate-authority-data']?.toString(),
+      ),
       clientCertificate: clientCertificate,
       clientKey: clientKey,
       insecureSkipTlsVerify:
@@ -218,9 +218,7 @@ class KubernetesDeploymentService {
 
   static Map<String, dynamic> _stringMap(dynamic raw) {
     if (raw is! Map<dynamic, dynamic>) return const {};
-    return {
-      for (final entry in raw.entries) entry.key.toString(): entry.value,
-    };
+    return {for (final entry in raw.entries) entry.key.toString(): entry.value};
   }
 
   static List<int>? _decodeData(String? value) {
@@ -228,110 +226,109 @@ class KubernetesDeploymentService {
     return base64Decode(value);
   }
 
-  static String _friendlyError(Object error) => error
-      .toString()
-      .replaceFirst(RegExp(r'^(FormatException|StateError): '), '');
+  static String _friendlyError(Object error) => error.toString().replaceFirst(
+    RegExp(r'^(FormatException|StateError): '),
+    '',
+  );
 
   static Map<String, dynamic> _namespace(String namespace) => {
-        'apiVersion': 'v1',
-        'kind': 'Namespace',
-        'metadata': {'name': namespace},
-      };
+    'apiVersion': 'v1',
+    'kind': 'Namespace',
+    'metadata': {'name': namespace},
+  };
 
   static List<_KubeResource> _resources(String namespace) => [
-        _deployment(
-          namespace: namespace,
-          name: 'nmtk-suite-api',
-          image:
-              'ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest',
-          port: 9000,
-          healthPath: '/api/suite/health',
-          environment: {
-            'PYTHONUNBUFFERED': '1',
-            'NEUROSENSE_HW_WORKER_URL': 'http://neurosense-hw-worker:8004',
-            'NEUROBENCH_RUNNER_URL': 'http://neurobench-runner-worker:8003',
-            'NEUROCHIP_HW_WORKER_URL': 'http://neurochip-hw-worker:8002',
-            'NEUROCNL_PHYSICS_WORKER_URL':
-                'http://neurocnl-physics-worker:8006',
-            'NEUROCNL_LAVA_WORKER_URL': 'http://lava-backend:8012',
-            'SNN_MLIR_COMPILER_WORKER_URL': 'http://snn-mlir-compiler:8007',
-            'JUPYTER_WORKER_URL': 'http://jupyter-server:8008',
-          },
-        ),
-        _service(namespace, 'nmtk-suite-api', 9000, external: true),
-        _deployment(
-          namespace: namespace,
-          name: 'nmtk-launcher-control',
-          image:
-              'ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest',
-          port: 8091,
-          healthPath: '/health',
-          environment: {
-            'PYTHONUNBUFFERED': '1',
-            'NMTK_STATE_DIR': '/app/state',
-            'NMTK_DATA_DIR': '/app/data',
-            'NMTK_BACKEND_DEPLOYMENT_READY': '1',
-            'NMTK_SUITE_API_URL': 'http://nmtk-suite-api:9000',
-          },
-        ),
-        _service(
-          namespace,
-          'nmtk-launcher-control',
-          8090,
-          targetPort: 8091,
-          external: true,
-        ),
-        ..._workerResources(
-          namespace,
-          name: 'neurosense-hw-worker',
-          image:
-              'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurosense-hw-worker:latest',
-          port: 8004,
-        ),
-        ..._workerResources(
-          namespace,
-          name: 'neurobench-runner-worker',
-          image:
-              'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurobench-runner-worker:latest',
-          port: 8003,
-        ),
-        ..._workerResources(
-          namespace,
-          name: 'neurochip-hw-worker',
-          image:
-              'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurochip-hw-worker:latest',
-          port: 8002,
-        ),
-        ..._workerResources(
-          namespace,
-          name: 'lava-backend',
-          image:
-              'ghcr.io/completed-spoon-6/neuromorphictoolkit/lava-backend:latest',
-          port: 8012,
-        ),
-        ..._workerResources(
-          namespace,
-          name: 'neurocnl-physics-worker',
-          image:
-              'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurocnl-physics-worker:latest',
-          port: 8006,
-        ),
-        ..._workerResources(
-          namespace,
-          name: 'snn-mlir-compiler',
-          image:
-              'ghcr.io/completed-spoon-6/neuromorphictoolkit/snn-mlir-compiler:latest',
-          port: 8007,
-        ),
-        ..._workerResources(
-          namespace,
-          name: 'jupyter-server',
-          image:
-              'ghcr.io/completed-spoon-6/neuromorphictoolkit/jupyter-server:latest',
-          port: 8008,
-          healthPath: '/api/status',
-        ),
-      ];
+    _deployment(
+      namespace: namespace,
+      name: 'nmtk-suite-api',
+      image: 'ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest',
+      port: 9000,
+      healthPath: '/api/suite/health',
+      environment: {
+        'PYTHONUNBUFFERED': '1',
+        'NEUROSENSE_HW_WORKER_URL': 'http://neurosense-hw-worker:8004',
+        'NEUROBENCH_RUNNER_URL': 'http://neurobench-runner-worker:8003',
+        'NEUROCHIP_HW_WORKER_URL': 'http://neurochip-hw-worker:8002',
+        'NEUROCNL_PHYSICS_WORKER_URL': 'http://neurocnl-physics-worker:8006',
+        'NEUROCNL_LAVA_WORKER_URL': 'http://lava-backend:8012',
+        'SNN_MLIR_COMPILER_WORKER_URL': 'http://snn-mlir-compiler:8007',
+        'JUPYTER_WORKER_URL': 'http://jupyter-server:8008',
+      },
+    ),
+    _service(namespace, 'nmtk-suite-api', 9000, external: true),
+    _deployment(
+      namespace: namespace,
+      name: 'nmtk-launcher-control',
+      image:
+          'ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest',
+      port: 8091,
+      healthPath: '/health',
+      environment: {
+        'PYTHONUNBUFFERED': '1',
+        'NMTK_STATE_DIR': '/app/state',
+        'NMTK_DATA_DIR': '/app/data',
+        'NMTK_BACKEND_DEPLOYMENT_READY': '1',
+        'NMTK_SUITE_API_URL': 'http://nmtk-suite-api:9000',
+      },
+    ),
+    _service(
+      namespace,
+      'nmtk-launcher-control',
+      8090,
+      targetPort: 8091,
+      external: true,
+    ),
+    ..._workerResources(
+      namespace,
+      name: 'neurosense-hw-worker',
+      image:
+          'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurosense-hw-worker:latest',
+      port: 8004,
+    ),
+    ..._workerResources(
+      namespace,
+      name: 'neurobench-runner-worker',
+      image:
+          'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurobench-runner-worker:latest',
+      port: 8003,
+    ),
+    ..._workerResources(
+      namespace,
+      name: 'neurochip-hw-worker',
+      image:
+          'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurochip-hw-worker:latest',
+      port: 8002,
+    ),
+    ..._workerResources(
+      namespace,
+      name: 'lava-backend',
+      image:
+          'ghcr.io/completed-spoon-6/neuromorphictoolkit/lava-backend:latest',
+      port: 8012,
+    ),
+    ..._workerResources(
+      namespace,
+      name: 'neurocnl-physics-worker',
+      image:
+          'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurocnl-physics-worker:latest',
+      port: 8006,
+    ),
+    ..._workerResources(
+      namespace,
+      name: 'snn-mlir-compiler',
+      image:
+          'ghcr.io/completed-spoon-6/neuromorphictoolkit/snn-mlir-compiler:latest',
+      port: 8007,
+    ),
+    ..._workerResources(
+      namespace,
+      name: 'jupyter-server',
+      image:
+          'ghcr.io/completed-spoon-6/neuromorphictoolkit/jupyter-server:latest',
+      port: 8008,
+      healthPath: '/api/status',
+    ),
+  ];
 
   static List<_KubeResource> _workerResources(
     String namespace, {
@@ -339,18 +336,17 @@ class KubernetesDeploymentService {
     required String image,
     required int port,
     String healthPath = '/health',
-  }) =>
-      [
-        _deployment(
-          namespace: namespace,
-          name: name,
-          image: image,
-          port: port,
-          healthPath: healthPath,
-          environment: const {'PYTHONUNBUFFERED': '1'},
-        ),
-        _service(namespace, name, port),
-      ];
+  }) => [
+    _deployment(
+      namespace: namespace,
+      name: name,
+      image: image,
+      port: port,
+      healthPath: healthPath,
+      environment: const {'PYTHONUNBUFFERED': '1'},
+    ),
+    _service(namespace, name, port),
+  ];
 
   static _KubeResource _deployment({
     required String namespace,
@@ -379,18 +375,18 @@ class KubernetesDeploymentService {
                   'name': name,
                   'image': image,
                   'ports': [
-                    {'containerPort': port}
+                    {'containerPort': port},
                   ],
                   'env': [
                     for (final entry in environment.entries)
-                      {'name': entry.key, 'value': entry.value}
+                      {'name': entry.key, 'value': entry.value},
                   ],
                   'readinessProbe': {
                     'httpGet': {'path': healthPath, 'port': port},
                     'initialDelaySeconds': 5,
                     'periodSeconds': 5,
                   },
-                }
+                },
               ],
             },
           },
@@ -417,11 +413,7 @@ class KubernetesDeploymentService {
           'type': external ? 'LoadBalancer' : 'ClusterIP',
           'selector': {'app.kubernetes.io/name': name},
           'ports': [
-            {
-              'name': 'http',
-              'port': port,
-              'targetPort': targetPort ?? port,
-            }
+            {'name': 'http', 'port': port, 'targetPort': targetPort ?? port},
           ],
         },
       },
@@ -434,8 +426,9 @@ class KubernetesDeploymentService {
     String name,
   ) async {
     for (var attempt = 0; attempt < 100; attempt++) {
-      final deployment = await client
-          .get('/apis/apps/v1/namespaces/$namespace/deployments/$name');
+      final deployment = await client.get(
+        '/apis/apps/v1/namespaces/$namespace/deployments/$name',
+      );
       final status = deployment['status'] as Map<String, dynamic>? ?? const {};
       if ((status['availableReplicas'] as num? ?? 0).toInt() >= 1) return;
       await Future<void>.delayed(const Duration(seconds: 3));
@@ -448,8 +441,9 @@ class KubernetesDeploymentService {
     String namespace,
   ) async {
     for (var attempt = 0; attempt < 100; attempt++) {
-      final service = await client
-          .get('/api/v1/namespaces/$namespace/services/nmtk-launcher-control');
+      final service = await client.get(
+        '/api/v1/namespaces/$namespace/services/nmtk-launcher-control',
+      );
       final status = service['status'] as Map<String, dynamic>? ?? const {};
       final loadBalancer =
           status['loadBalancer'] as Map<String, dynamic>? ?? const {};
@@ -525,7 +519,7 @@ class _KubernetesClient {
     }
     _client = HttpClient(context: context);
     if (credentials.insecureSkipTlsVerify) {
-      _client.badCertificateCallback = (_, __, ___) => true;
+      _client.badCertificateCallback = (_, _, _) => true;
     }
   }
 
@@ -557,7 +551,7 @@ class _KubernetesClient {
     final next = Map<String, dynamic>.from(body);
     next['metadata'] = {
       ...(body['metadata'] as Map<String, dynamic>),
-      if (resourceVersion != null) 'resourceVersion': resourceVersion,
+      'resourceVersion': ?resourceVersion,
     };
     await _request('PUT', '$collectionPath/$name', body: next);
   }

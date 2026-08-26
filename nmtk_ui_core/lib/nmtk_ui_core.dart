@@ -3,30 +3,18 @@ export 'widgets/responsive_scaffold.dart'; // ResponsiveScaffold, NavigationDest
 export 'zeta_theme.dart'; // NmtkZetaTheme + re-exports: ZetaProvider, Zeta, ZetaColors, ZetaButton, etc.
 export 'models/host_navigation_models.dart';
 export 'models/shell_models.dart';
-export 'models/energy_report.dart';
-export 'models/quantization_report.dart';
-export 'models/sensor_frame.dart';
-export 'models/bulk_spike_frame.dart';
 export 'models/teensy_deployment_model.dart';
 export 'models/trained_weight_status.dart';
 export 'models/pynq_deployment_model.dart';
 export 'models/akida_deployment_model.dart';
 export 'shell_tokens.dart';
-export 'widgets/backend_support_banner.dart';
 export 'widgets/buttons.dart';
 export 'widgets/code_text_area.dart';
 export 'widgets/content_dialog.dart';
 export 'widgets/empty_state.dart';
-export 'widgets/energy_bar_chart.dart';
 export 'widgets/error_card.dart';
 export 'widgets/info_chip.dart';
 export 'widgets/key_value_row.dart';
-export 'widgets/pipeline_stepper.dart';
-export 'widgets/snn_workflow_stepper.dart';
-export 'widgets/snn_mobile_workflow_stepper.dart';
-export 'widgets/pynq_deploy_status_card.dart';
-export 'widgets/akida_support_state_card.dart';
-export 'widgets/quantization_table.dart';
 export 'widgets/progress_card.dart';
 export 'widgets/result_card.dart';
 export 'widgets/section_card.dart';
@@ -39,7 +27,6 @@ export 'widgets/summary_card.dart';
 export 'widgets/top_app_bar.dart';
 export 'widgets/workspace_switcher_bar.dart'; // NmtkWorkspaceSwitcherBar
 export 'widgets/workspace_chip.dart'; // NmtkWorkspaceChip
-export 'widgets/workspace_shell.dart';
 export 'widgets/workspace_overview_card.dart';
 export 'widgets/workflow_card.dart';
 export 'widgets/workflow_step_row.dart';
@@ -70,5 +57,4 @@ export 'visualization/renderer_interface.dart';
 export 'visualization/fragment_shader_renderer.dart';
 export 'visualization/renderer_registry.dart';
 export 'visualization/tile_grid_renderer.dart';
-export 'widgets/deploy_layout.dart'; // NmtkDeployLayout
 export 'widgets/nmtk_text_input.dart';

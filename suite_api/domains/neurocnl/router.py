@@ -11,9 +11,6 @@ neurocnl-physics-worker (port 8006). When the physics worker is not running,
 /api/neurocnl/prosthetic/simulate returns 503.
 """
 
-# Ensure neurocnl/backend is importable via sys.path preamble
-import suite_api.domains.neurocnl  # noqa: F401 (side-effect import)
-
 import logging
 import shutil
 from datetime import UTC, datetime
@@ -24,23 +21,30 @@ from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
 import neurocnl
+from suite_api.config import settings
+from suite_api.proxy import proxy_to_worker
+
+# Ensure neurocnl/backend is importable before importing its top-level
+# ``backend`` package. Keep this side-effect import block in this order.
+# isort: off
+import suite_api.domains.neurocnl  # noqa: F401
 
 from backend.app.routers import (
     datasets,
+    deploy,
+    export,
+    generate,
+    jobs,
     kernel_runner,
+    neurosim_handoff,
+    nir_inspect,
     notebook,
     parse,
-    validate,
-    generate,
     simulate,
     simulators,
-    export,
-    deploy,
-    jobs,
-    neurosim_handoff,
     templates,
     training,
-    nir_inspect,
+    validate,
     workspaces,
 )
 from backend.app.routers.prosthetic import (
@@ -48,9 +52,7 @@ from backend.app.routers.prosthetic import (
     export as prosthetic_export,
     sleep as prosthetic_sleep,
 )
-
-from suite_api.config import settings
-from suite_api.proxy import proxy_to_worker
+# isort: on
 
 logger = logging.getLogger("suite_api.neurocnl")
 
@@ -75,7 +77,7 @@ def neurocnl_health() -> dict[str, Any]:
         "neurocnl_version": neurocnl.__version__,
         "timestamp": datetime.now(UTC).isoformat(),
         "modules": {},
-        "physics_worker": settings.neurocnl_physics_worker_url,
+        "physics_worker": "configured",
         "disk": {
             "total_gb": round(disk.total / (1024**3), 2),
             "used_gb": round((disk.total - disk.free) / (1024**3), 2),
@@ -122,11 +124,7 @@ if _has_prosthetic_hw:
 # Returns 503 when the physics worker is not running (MuJoCo not available).
 
 
-@router.api_route(
-    "/prosthetic/simulate",
-    methods=["GET", "POST"],
-)
-async def proxy_neurocnl_prosthetic_simulate(request: Request) -> Response:
+async def _proxy_neurocnl_prosthetic_simulate(request: Request) -> Response:
     """Proxy MuJoCo physics simulation to the physics worker.
 
     Returns 503 if the physics worker (MuJoCo) is not running.
@@ -135,3 +133,15 @@ async def proxy_neurocnl_prosthetic_simulate(request: Request) -> Response:
         request,
         settings.neurocnl_physics_worker_url,
     )
+
+
+@router.get("/prosthetic/simulate")
+async def get_neurocnl_prosthetic_simulate(request: Request) -> Response:
+    """Proxy a compatibility GET simulation request to the physics worker."""
+    return await _proxy_neurocnl_prosthetic_simulate(request)
+
+
+@router.post("/prosthetic/simulate")
+async def post_neurocnl_prosthetic_simulate(request: Request) -> Response:
+    """Proxy a simulation request to the physics worker."""
+    return await _proxy_neurocnl_prosthetic_simulate(request)

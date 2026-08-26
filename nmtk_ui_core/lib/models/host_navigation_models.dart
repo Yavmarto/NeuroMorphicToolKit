@@ -1,17 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 
-typedef NmtkHostModuleNavigator =
-    Future<bool> Function(NmtkHostNavigationRequest request);
+export 'package:nmtk_module_contracts/nmtk_module_contracts.dart'
+    show NmtkFeatureNavigationRequest, NmtkFeatureNavigator;
 
-@immutable
-class NmtkHostNavigationRequest {
-  const NmtkHostNavigationRequest({
-    required this.moduleId,
-    this.deepLink,
-    this.restoreState = const <String, dynamic>{},
-  });
-
-  final String moduleId;
-  final String? deepLink;
-  final Map<String, dynamic> restoreState;
-}
+typedef NmtkHostModuleNavigator = NmtkFeatureNavigator;
+typedef NmtkHostNavigationRequest = NmtkFeatureNavigationRequest;

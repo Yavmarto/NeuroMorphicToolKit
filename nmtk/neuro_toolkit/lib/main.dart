@@ -3,7 +3,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:neurocnl_studio/services/server_config_service.dart';
+import 'package:neurocnl_studio/neurocnl_studio.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/src/features/app/presentation/launcher_app_host.dart';
@@ -14,11 +14,6 @@ part 'neuro_toolkit_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // NeuroCNL workspaces may contain trained weight matrices that are far too
-  // large for macOS UserDefaults. Migrate that cache before any launcher
-  // preference write so an unrelated workspace cannot block Quick Connect.
-  await ServerConfigService.initialize();
 
   final analytics = AnalyticsService();
   await analytics.init();
@@ -34,9 +29,7 @@ void main() async {
   };
 
   final container = ProviderContainer(
-    overrides: [
-      analyticsServiceProvider.overrideWithValue(analytics),
-    ],
+    overrides: [analyticsServiceProvider.overrideWithValue(analytics)],
   );
 
   // Await the settings to be loaded from SharedPreferences asynchronously

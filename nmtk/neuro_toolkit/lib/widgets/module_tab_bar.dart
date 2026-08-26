@@ -56,9 +56,7 @@ class ModuleTabBar extends ConsumerWidget {
       ),
       decoration: BoxDecoration(
         color: tokens.workspaceBarBackground,
-        border: Border(
-          bottom: BorderSide(color: tokens.chromeBorder),
-        ),
+        border: Border(bottom: BorderSide(color: tokens.chromeBorder)),
       ),
       child: Row(
         children: [
@@ -70,40 +68,42 @@ class ModuleTabBar extends ConsumerWidget {
                 final module = activeModules[index];
                 final isActive = module.id == activeModuleId;
                 return Padding(
-                  key: ValueKey<String>(module.id),
-                  padding: EdgeInsets.only(
-                    right: index == activeModules.length - 1
-                        ? 0
-                        : tokens.compactGap,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ZetaButton(
-                        key: ValueKey<String>('module-tab-${module.id}'),
-                        label: module.name,
-                        semanticLabel: '${module.name} module tab',
-                        leadingIcon: module.hasFrontend ? Icons.web : Icons.api,
-                        type: isActive
-                            ? ZetaButtonType.primary
-                            : ZetaButtonType.outlineSubtle,
-                        onPressed: () => onTabSelected(module.id),
+                      key: ValueKey<String>(module.id),
+                      padding: EdgeInsets.only(
+                        right: index == activeModules.length - 1
+                            ? 0
+                            : tokens.compactGap,
                       ),
-                      ZetaIconButton.text(
-                        icon: ZetaIcons.close,
-                        semanticLabel: 'Close ${module.name}',
-                        onPressed: () => onTabClosed(module.id),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ZetaButton(
+                            key: ValueKey<String>('module-tab-${module.id}'),
+                            label: module.name,
+                            semanticLabel: '${module.name} module tab',
+                            leadingIcon: module.hasFrontend
+                                ? Icons.web
+                                : Icons.api,
+                            type: isActive
+                                ? ZetaButtonType.primary
+                                : ZetaButtonType.outlineSubtle,
+                            onPressed: () => onTabSelected(module.id),
+                          ),
+                          ZetaIconButton.text(
+                            icon: ZetaIcons.close,
+                            semanticLabel: 'Close ${module.name}',
+                            onPressed: () => onTabClosed(module.id),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                )
+                    )
                     .animate()
                     .fadeIn(duration: NmtkMotionTokens.durationFast)
                     .slideX(begin: 0.3, curve: NmtkMotionTokens.easeEnter);
               },
             ),
           ),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

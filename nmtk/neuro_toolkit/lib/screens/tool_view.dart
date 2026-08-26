@@ -188,11 +188,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       return null;
     }
     return (_tunnelSession?.suiteApiUri ??
-            Uri(
-              scheme: _serviceScheme(),
-              host: _serviceHost(),
-              port: 9000,
-            ))
+            Uri(scheme: _serviceScheme(), host: _serviceHost(), port: 9000))
         .replace(path: '/api/neurocnl')
         .toString();
   }
@@ -235,14 +231,17 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   ) {
     final modules = next.value?.modules;
     if (modules == null) return;
-    final eligibleModules =
-        modules.where(_shouldOpenModule).toList(growable: false);
+    final eligibleModules = modules
+        .where(_shouldOpenModule)
+        .toList(growable: false);
     var clearedFailure = false;
     for (final module in eligibleModules) {
       final previousStatus = _prevModuleStatuses[module.id];
-      final isReady = module.status == ModuleStatus.running ||
+      final isReady =
+          module.status == ModuleStatus.running ||
           module.status == ModuleStatus.degraded;
-      final wasReady = previousStatus == ModuleStatus.running ||
+      final wasReady =
+          previousStatus == ModuleStatus.running ||
           previousStatus == ModuleStatus.degraded;
       if (previousStatus != null &&
           isReady &&
@@ -265,8 +264,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final moduleState = ref.read(moduleProvider).value;
     final workspaceState = next.value;
     if (moduleState == null || workspaceState == null) return;
-    final eligibleModules =
-        moduleState.modules.where(_shouldOpenModule).toList(growable: false);
+    final eligibleModules = moduleState.modules
+        .where(_shouldOpenModule)
+        .toList(growable: false);
     _reconcileActiveModule(eligibleModules, workspaceState);
     unawaited(_initializeWorkspace());
   }
@@ -295,7 +295,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     if (!mounted || eligibleModules.isEmpty || workspaceState == null) return;
     final preferred =
         _preferredModuleId(eligibleModules, workspaceState.focusedModuleId) ??
-            eligibleModules.first.id;
+        eligibleModules.first.id;
     if (preferred == _activeModuleId) return;
     setState(() => _activeModuleId = preferred);
   }
@@ -374,8 +374,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         return;
       }
 
-      final eligibleModules =
-          moduleState.modules.where(_shouldOpenModule).toList(growable: false);
+      final eligibleModules = moduleState.modules
+          .where(_shouldOpenModule)
+          .toList(growable: false);
       if (eligibleModules.isEmpty) {
         return;
       }
@@ -389,22 +390,22 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             (Module module) =>
                 (existingSessions[module.id] ?? _defaultSessionFor(module))
                     .copyWith(
-              surfaceMode: _surfaceModeForModule(module.id),
-              readinessState: _readinessStateForModule(module),
-            ),
+                      surfaceMode: _surfaceModeForModule(module.id),
+                      readinessState: _readinessStateForModule(module),
+                    ),
           )
           .toList(growable: false);
-      final targetModuleId = _preferredModuleId(
-            eligibleModules,
-            workspaceState.focusedModuleId,
-          ) ??
+      final targetModuleId =
+          _preferredModuleId(eligibleModules, workspaceState.focusedModuleId) ??
           eligibleModules.first.id;
 
       if (serverGeneration != _workspaceServerGeneration ||
           serverKey != _launcherBaseUri()?.toString()) {
         return;
       }
-      await ref.read(workspaceProvider.notifier).ensureDefaultSessionsOnce(
+      await ref
+          .read(workspaceProvider.notifier)
+          .ensureDefaultSessionsOnce(
             sessions: desiredSessions,
             focusedModuleId: targetModuleId,
           );
@@ -491,7 +492,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     }
     final desiredReadiness = _readinessStateForModule(module);
     if (currentSession == null) {
-      await ref.read(workspaceProvider.notifier).openSession(
+      await ref
+          .read(workspaceProvider.notifier)
+          .openSession(
             moduleId,
             surfaceMode: _surfaceModeForModule(moduleId),
             readinessState: desiredReadiness,
@@ -567,9 +570,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       initialUrlRequest: URLRequest(
         url: WebUri.uri(initialUri),
         headers: _tunnelSession?.adminToken.isNotEmpty == true
-            ? <String, String>{
-                'X-NMTK-Admin-Token': _tunnelSession!.adminToken,
-              }
+            ? <String, String>{'X-NMTK-Admin-Token': _tunnelSession!.adminToken}
             : null,
       ),
       initialSettings: InAppWebViewSettings(
@@ -595,7 +596,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
         final urlString = uri.toString();
 
         if (urlString.startsWith('blob:')) {
-          final base64data = await controller.evaluateJavascript(source: """
+          final base64data = await controller.evaluateJavascript(
+            source:
+                """
             new Promise((resolve, reject) => {
               var xhr = new XMLHttpRequest();
               xhr.open('GET', '$urlString', true);
@@ -614,7 +617,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               };
               xhr.send();
             });
-          """);
+          """,
+          );
 
           if (base64data != null && base64data is String) {
             final commaIndex = base64data.indexOf(',');
@@ -634,8 +638,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           final commaIndex = urlString.indexOf(',');
           if (commaIndex != -1) {
             final b64 = urlString.substring(commaIndex + 1);
-            final isBase64 =
-                urlString.substring(0, commaIndex).contains(';base64');
+            final isBase64 = urlString
+                .substring(0, commaIndex)
+                .contains(';base64');
             final savePath = await FilePicker.saveFile(
               dialogTitle: 'Save File',
               fileName: downloadRequest.suggestedFilename ?? 'download',
@@ -745,7 +750,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     if (requestUri.scheme == 'nmtk' && requestUri.host == 'system-health') {
       await showAdaptiveServerSetupPopup(
         context,
-        message: 'System Health checks the backend, storage, Jupyter, '
+        message:
+            'System Health checks the backend, storage, Jupyter, '
             'snnTorch, launcher control, and configured hardware.',
       );
       return true;
@@ -765,7 +771,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final targetModule = navigation.targetModule;
     _pendingModuleRequests[targetModule.id] = navigation.targetUri;
 
-    await ref.read(workspaceProvider.notifier).openSession(
+    await ref
+        .read(workspaceProvider.notifier)
+        .openSession(
           targetModule.id,
           surfaceMode: _surfaceModeForModule(targetModule.id),
           deepLink: launcherDeepLinkFromUri(navigation.targetUri),
@@ -786,14 +794,20 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   }
 
   Future<bool> _handleHostedModuleNavigationRequest(
-    NmtkHostNavigationRequest request,
+    NmtkFeatureNavigationRequest request,
   ) async {
     if (!mounted) return false;
     final moduleState = ref.read(moduleProvider).value;
     final workspaceState = ref.read(workspaceProvider).value;
     if (moduleState == null || workspaceState == null) return false;
 
-    final targetModule = _findModule(moduleState.modules, request.moduleId);
+    final targetModule = moduleState.modules
+        .where(
+          (Module module) =>
+              NmtkModuleId.fromExternal(module.id) == request.moduleId,
+        )
+        .cast<Module?>()
+        .firstWhere((Module? module) => module != null, orElse: () => null);
     if (targetModule == null || !_shouldOpenModule(targetModule)) {
       return false;
     }
@@ -807,11 +821,13 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
           (WorkspaceSession? session) => session != null,
           orElse: () => null,
         );
-    final restoreState = Map<String, dynamic>.from(request.restoreState);
+    final restoreState = Map<String, dynamic>.from(request.restorationState);
     final readinessState = _readinessStateForModule(targetModule);
 
     if (existingSession == null) {
-      await ref.read(workspaceProvider.notifier).openSession(
+      await ref
+          .read(workspaceProvider.notifier)
+          .openSession(
             targetModule.id,
             surfaceMode: _surfaceModeForModule(targetModule.id),
             deepLink: request.deepLink,
@@ -819,7 +835,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             readinessState: readinessState,
           );
     } else {
-      await ref.read(workspaceProvider.notifier).updateSession(
+      await ref
+          .read(workspaceProvider.notifier)
+          .updateSession(
             targetModule.id,
             deepLink: request.deepLink,
             restoreState: restoreState,
@@ -830,6 +848,27 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     await _activateModule(targetModule.id, requestFocus: true);
     return true;
+  }
+
+  Future<void> _reportHostedFeatureError(
+    BuildContext context,
+    NmtkFeatureErrorEvent event,
+  ) async {
+    if (!mounted) return;
+    final requiresBackendSetup =
+        event.kind == NmtkFeatureErrorKind.connection ||
+        event.kind == NmtkFeatureErrorKind.authentication;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(event.message),
+        action: requiresBackendSetup
+            ? SnackBarAction(
+                label: 'Backend Setup',
+                onPressed: () => _showServerConnectionPopup(context),
+              )
+            : null,
+      ),
+    );
   }
 
   Widget _buildLoadingState(Module module) {
@@ -846,14 +885,17 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
   /// trees and WebViews must be disposed when a user switches away instead of
   /// accumulating hidden frontends in memory.
   Widget _buildModuleChild(
-      Module module, Map<String, WorkspaceSession> sessionsByModuleId,
-      {Widget? workspaceHeaderAction}) {
+    Module module,
+    Map<String, WorkspaceSession> sessionsByModuleId, {
+    Widget? workspaceHeaderAction,
+  }) {
     final session = sessionsByModuleId[module.id];
     final loadFailure = _moduleLoadFailures[module.id];
     final supported = _isWebViewSupported();
     final launchBlocked =
         module.isPreflightFailed || module.status == ModuleStatus.error;
-    final isReady = module.status == ModuleStatus.running ||
+    final isReady =
+        module.status == ModuleStatus.running ||
         module.status == ModuleStatus.degraded;
 
     // SelectionContainer.disabled: the module workspace (canvases, steppers,
@@ -885,32 +927,42 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
                 ),
               )
             : session == null || !isReady
-                ? _buildLoadingState(module)
-                : loadFailure != null
-                    ? _buildModuleLoadFailureState(module, loadFailure)
-                    : session.surfaceMode == 'native'
-                        ? NmtkHostNavigationScope(
-                            navigator: _handleHostedModuleNavigationRequest,
-                            child: NativeSurfaceRegistry.build(
-                              module.id,
-                              session,
-                              initialServerUrl: _nativeSurfaceServerUrl(module),
-                              initialAdminToken:
-                                  _tunnelSession?.adminToken ?? '',
-                              workspaceHeaderAction: workspaceHeaderAction,
-                              onEditServer: () =>
-                                  _showServerConnectionPopup(context),
-                            ),
-                          )
-                        : supported
-                            ? _buildWebView(module)
-                            : NmtkEmptyState(
-                                title: 'WebView Not Supported',
-                                message:
-                                    '${module.name} cannot be displayed on this platform.',
-                                icon: ZetaIcons.warning_outline,
-                                tone: NmtkTone.warning,
-                              ),
+            ? _buildLoadingState(module)
+            : loadFailure != null
+            ? _buildModuleLoadFailureState(module, loadFailure)
+            : session.surfaceMode == 'native'
+            ? NativeSurfaceRegistry.build(
+                session,
+                launchContext: NmtkFeatureLaunchContext(
+                  moduleId: NmtkModuleId.fromExternal(module.id),
+                  backendUri: Uri.parse(
+                    _nativeSurfaceServerUrl(module) ??
+                        (throw StateError(
+                          'The root launcher must supply a backend URL for ${module.id}.',
+                        )),
+                  ),
+                  authentication: NmtkFeatureAuthentication(
+                    adminToken: _tunnelSession?.adminToken ?? '',
+                  ),
+                  initialLocation:
+                      session.deepLink ??
+                      (module.id == 'Neurochip' ? '/?panel=deploy' : '/'),
+                  restorationState: session.restoreState,
+                  onNavigate: _handleHostedModuleNavigationRequest,
+                  onReportError: (NmtkFeatureErrorEvent event) =>
+                      _reportHostedFeatureError(context, event),
+                  onEditServer: () => _showServerConnectionPopup(context),
+                  workspaceHeaderAction: workspaceHeaderAction,
+                ),
+              )
+            : supported
+            ? _buildWebView(module)
+            : NmtkEmptyState(
+                title: 'WebView Not Supported',
+                message: '${module.name} cannot be displayed on this platform.',
+                icon: ZetaIcons.warning_outline,
+                tone: NmtkTone.warning,
+              ),
       ),
     );
   }
@@ -924,7 +976,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
     final tokens = NmtkShellTokens.of(context);
     final currentServerKey =
         ref.watch(selectedControlApiServiceProvider)?.baseUri.toString() ??
-            'disconnected';
+        'disconnected';
 
     final eligibleModules = moduleState == null
         ? const <Module>[]
@@ -1002,8 +1054,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       );
     }
 
-    final eligibleModuleIds =
-        eligibleModules.map((Module module) => module.id).toSet();
+    final eligibleModuleIds = eligibleModules
+        .map((Module module) => module.id)
+        .toSet();
     final focusedModuleId = workspaceState.focusedModuleId;
 
     final desiredModuleId = () {
@@ -1047,26 +1100,29 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
       // first visible module so the user always sees a valid pane.
       final mobileActiveId = _kMobileHiddenModuleIds.contains(desiredModuleId)
           ? (mobileModules.isNotEmpty
-              ? mobileModules.first.id
-              : desiredModuleId)
+                ? mobileModules.first.id
+                : desiredModuleId)
           : desiredModuleId;
       final mobileSelectedIndex = mobileNavItems.indexWhere(
         (item) => item.id == mobileActiveId,
       );
-      final mobileClampedIndex =
-          mobileSelectedIndex < 0 ? 0 : mobileSelectedIndex;
-      final mobileActiveModule =
-          mobileModules.isNotEmpty ? mobileModules[mobileClampedIndex] : null;
+      final mobileClampedIndex = mobileSelectedIndex < 0
+          ? 0
+          : mobileSelectedIndex;
+      final mobileActiveModule = mobileModules.isNotEmpty
+          ? mobileModules[mobileClampedIndex]
+          : null;
       final mobileActiveSession = mobileActiveModule != null
           ? sessionsByModuleId[mobileActiveModule.id]
           : null;
-      final mobileActiveModuleIsReady = mobileActiveModule != null &&
+      final mobileActiveModuleIsReady =
+          mobileActiveModule != null &&
           (mobileActiveModule.status == ModuleStatus.running ||
               mobileActiveModule.status == ModuleStatus.degraded);
       final showMobileInlineServerControl =
           mobileActiveModule?.id == 'neurocnl' &&
-              mobileActiveModuleIsReady &&
-              mobileActiveSession?.surfaceMode == 'native';
+          mobileActiveModuleIsReady &&
+          mobileActiveSession?.surfaceMode == 'native';
 
       return NmtkMobileScaffold(
         mode: NmtkShellMode.command,
@@ -1088,10 +1144,10 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
             : PageTransitionSwitcher(
                 transitionBuilder: (child, animation, secondaryAnimation) =>
                     FadeThroughTransition(
-                  animation: animation,
-                  secondaryAnimation: secondaryAnimation,
-                  child: child,
-                ),
+                      animation: animation,
+                      secondaryAnimation: secondaryAnimation,
+                      child: child,
+                    ),
                 child: KeyedSubtree(
                   key: ValueKey<String>(
                     '$currentServerKey:${mobileActiveModule!.id}',
@@ -1114,9 +1170,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
 
     final activeModule = eligibleModules[clampedIndex];
     final activeSession = sessionsByModuleId[activeModule.id];
-    final activeModuleIsReady = activeModule.status == ModuleStatus.running ||
+    final activeModuleIsReady =
+        activeModule.status == ModuleStatus.running ||
         activeModule.status == ModuleStatus.degraded;
-    final showInlineServerControl = activeModule.id == 'neurocnl' &&
+    final showInlineServerControl =
+        activeModule.id == 'neurocnl' &&
         activeModuleIsReady &&
         activeSession?.surfaceMode == 'native';
 
@@ -1132,10 +1190,10 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen> {
               child: PageTransitionSwitcher(
                 transitionBuilder: (child, animation, secondaryAnimation) =>
                     FadeThroughTransition(
-                  animation: animation,
-                  secondaryAnimation: secondaryAnimation,
-                  child: child,
-                ),
+                      animation: animation,
+                      secondaryAnimation: secondaryAnimation,
+                      child: child,
+                    ),
                 child: KeyedSubtree(
                   key: ValueKey<String>('$currentServerKey:$desiredModuleId'),
                   child: _buildModuleChild(

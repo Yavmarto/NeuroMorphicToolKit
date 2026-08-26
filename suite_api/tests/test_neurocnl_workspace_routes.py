@@ -5,9 +5,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+# Install the NeuroCNL monorepo import path before importing its backend package.
+# isort: off
+import suite_api.domains.neurocnl  # noqa: F401
+
 from backend.app.services.workspace_store import workspace_store
 from suite_api.domains.neurocnl.lifespan import neurocnl_shutdown, neurocnl_startup
 from suite_api.domains.neurocnl.router import router
+# isort: on
 
 
 def test_suite_api_initializes_and_serves_neurocnl_workspaces(

@@ -52,9 +52,7 @@ class _FakeDeploymentService implements DeploymentService {
   }
 
   @override
-  Future<DeploymentJob> setupRemoteServer(
-    RemoteServerSetupRequest request,
-  ) {
+  Future<DeploymentJob> setupRemoteServer(RemoteServerSetupRequest request) {
     throw UnimplementedError();
   }
 
@@ -470,9 +468,7 @@ void main() {
 
       tester
           .widget<InkWell>(
-            find.byKey(
-              const ValueKey<String>('inline-server-connection-icon'),
-            ),
+            find.byKey(const ValueKey<String>('inline-server-connection-icon')),
           )
           .onTap!();
       await tester.pump();
@@ -494,14 +490,8 @@ void main() {
         requestedAuthorities,
         containsAll(<String>['127.0.0.1:8090', '127.0.0.2:8090']),
       );
-      expect(
-        requestedPaths,
-        contains('127.0.0.2/api/launcher/modules'),
-      );
-      expect(
-        requestedPaths,
-        contains('127.0.0.2/api/launcher/workspace'),
-      );
+      expect(requestedPaths, contains('127.0.0.2/api/launcher/modules'));
+      expect(requestedPaths, contains('127.0.0.2/api/launcher/workspace'));
 
       final preferences = await SharedPreferences.getInstance();
       expect(
@@ -602,7 +592,7 @@ void main() {
               ),
             ),
             launcherSelectionSaverProvider.overrideWithValue(
-              (_, __) async => throw StateError('preferences unavailable'),
+              (_, _) async => throw StateError('preferences unavailable'),
             ),
             serverConnectionProvider.overrideWith(
               _StaticConnectionNotifier.new,

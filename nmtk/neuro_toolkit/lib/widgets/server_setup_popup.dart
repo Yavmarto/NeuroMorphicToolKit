@@ -9,8 +9,8 @@ const double _mobileSetupBreakpoint = 840;
 
 final startupServerSetupPromptProvider =
     NotifierProvider<StartupServerSetupPromptNotifier, bool>(
-  StartupServerSetupPromptNotifier.new,
-);
+      StartupServerSetupPromptNotifier.new,
+    );
 
 class StartupServerSetupPromptNotifier extends Notifier<bool> {
   @override
@@ -105,13 +105,14 @@ class ServerSetupPopupSurface extends ConsumerWidget {
     final effectiveConnection = controlApi == null
         ? const ServerConnectionState.disconnected()
         : connection.baseUri == controlApi.baseUri
-            ? connection
-            : ServerConnectionState(
-                phase: ServerConnectionPhase.checking,
-                baseUri: controlApi.baseUri,
-              );
+        ? connection
+        : ServerConnectionState(
+            phase: ServerConnectionPhase.checking,
+            baseUri: controlApi.baseUri,
+          );
     final tokens = NmtkShellTokens.of(context);
-    final hostLabel = controlApi?.baseUri.host ??
+    final hostLabel =
+        controlApi?.baseUri.host ??
         _displayHost(initialHost) ??
         'No server selected';
     final versionLabel = switch (version) {
@@ -121,7 +122,7 @@ class ServerSetupPopupSurface extends ConsumerWidget {
     };
     final headerLabel = [
       hostLabel,
-      if (versionLabel != null) versionLabel,
+      ?versionLabel,
       effectiveConnection.label,
     ].join(' · ');
 
@@ -133,19 +134,24 @@ class ServerSetupPopupSurface extends ConsumerWidget {
       child: ColoredBox(
         color: Theme.of(context).colorScheme.surface,
         child: Padding(
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
           child: Column(
             children: [
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.circle, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                      color:
-                          _connectionColor(effectiveConnection.phase, tokens),
+                      color: _connectionColor(
+                        effectiveConnection.phase,
+                        tokens,
+                      ),
                       size: 14,
                     ),
                     const SizedBox(width: 8),
@@ -190,10 +196,7 @@ String? _displayHost(String? input) {
   return uri?.host.isNotEmpty == true ? uri!.host : value;
 }
 
-Color _connectionColor(
-  ServerConnectionPhase phase,
-  NmtkShellTokens tokens,
-) {
+Color _connectionColor(ServerConnectionPhase phase, NmtkShellTokens tokens) {
   return switch (phase) {
     ServerConnectionPhase.checking => tokens.runningColor,
     ServerConnectionPhase.connected => tokens.healthyColor,

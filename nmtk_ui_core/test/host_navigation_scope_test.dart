@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 
 void main() {
   testWidgets('openModule uses the nearest host navigator', (tester) async {
-    NmtkHostNavigationRequest? receivedRequest;
+    NmtkFeatureNavigationRequest? receivedRequest;
 
     await tester.pumpWidget(
       Directionality(
@@ -20,8 +21,8 @@ void main() {
                 onPressed: () {
                   NmtkHostNavigationScope.openModule(
                     context,
-                    const NmtkHostNavigationRequest(
-                      moduleId: 'Neurochip',
+                    NmtkFeatureNavigationRequest(
+                      moduleId: NmtkModuleId.neurochip,
                       deepLink: '/?import_network=abc123',
                     ),
                   );
@@ -38,7 +39,7 @@ void main() {
     await tester.pump();
 
     expect(receivedRequest, isNotNull);
-    expect(receivedRequest!.moduleId, 'Neurochip');
+    expect(receivedRequest!.moduleId, NmtkModuleId.neurochip);
     expect(receivedRequest!.deepLink, '/?import_network=abc123');
   });
 
@@ -54,7 +55,9 @@ void main() {
               onPressed: () async {
                 result = await NmtkHostNavigationScope.openModule(
                   context,
-                  const NmtkHostNavigationRequest(moduleId: 'Neurochip'),
+                  NmtkFeatureNavigationRequest(
+                    moduleId: NmtkModuleId.neurochip,
+                  ),
                 );
               },
               child: const Text('Open Without Scope'),

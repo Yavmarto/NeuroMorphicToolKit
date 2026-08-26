@@ -50,18 +50,18 @@ class _RepairService implements DeploymentService {
 
   @override
   Future<DeploymentSnapshot> load() async => const DeploymentSnapshot(
-        targets: [
-          DeploymentTarget(
-            id: 'target-1',
-            displayName: 'Server',
-            targetType: 'remote_host',
-            mode: 'docker',
-            authMode: 'ssh_key',
-            backendPort: 9000,
-            host: '192.168.2.90',
-          ),
-        ],
-      );
+    targets: [
+      DeploymentTarget(
+        id: 'target-1',
+        displayName: 'Server',
+        targetType: 'remote_host',
+        mode: 'docker',
+        authMode: 'ssh_key',
+        backendPort: 9000,
+        host: '192.168.2.90',
+      ),
+    ],
+  );
 
   @override
   Future<SystemHealthReport> repairTarget(String targetId) async {
@@ -82,8 +82,7 @@ class _RepairService implements DeploymentService {
   Future<DeploymentJob> reinstallTarget(
     String targetId, {
     bool factoryReset = false,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<DeploymentJob> setupRemoteServer(RemoteServerSetupRequest request) =>
@@ -117,8 +116,7 @@ class _RepairService implements DeploymentService {
     required String rootPassword,
     required String rootPrivateKey,
     required String containerEngine,
-  }) =>
-      throw UnimplementedError();
+  }) => throw UnimplementedError();
 
   @override
   Future<void> forgetHostKey({required String host, required int sshPort}) =>
@@ -151,7 +149,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    container.listen(serverConnectionProvider, (_, __) {});
+    container.listen(serverConnectionProvider, (_, _) {});
     await _flushMicrotasks();
     expect(
       container.read(serverConnectionProvider).phase,
@@ -165,10 +163,7 @@ void main() {
       ServerConnectionPhase.unstable,
     );
     await notifier.checkNow();
-    expect(
-      container.read(serverConnectionProvider).consecutiveFailures,
-      2,
-    );
+    expect(container.read(serverConnectionProvider).consecutiveFailures, 2);
     await notifier.checkNow();
     expect(
       container.read(serverConnectionProvider).phase,
@@ -196,7 +191,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    container.listen(serverConnectionProvider, (_, __) {});
+    container.listen(serverConnectionProvider, (_, _) {});
     await _flushMicrotasks();
     final notifier = container.read(serverConnectionProvider.notifier);
     for (var attempt = 0; attempt < 6; attempt++) {
@@ -222,7 +217,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    container.listen(serverConnectionProvider, (_, __) {});
+    container.listen(serverConnectionProvider, (_, _) {});
     await _flushMicrotasks();
     final notifier = container.read(serverConnectionProvider.notifier);
     for (var attempt = 0; attempt < 6; attempt++) {
@@ -255,7 +250,7 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    container.listen(serverConnectionProvider, (_, __) {});
+    container.listen(serverConnectionProvider, (_, _) {});
     await _flushMicrotasks();
 
     bootstrap.select(_readyAt('http://192.168.2.34:8090'));

@@ -9,12 +9,16 @@ The Flutter desktop application for the NeuroMorphicToolKit suite. This is the o
 It is deliberately thin. The launcher:
 
 - Hosts a single `MaterialApp` and the suite theme
+- Owns localization, accessibility scaling, shortcuts, and global overlays for mounted surfaces
 - Fetches the module manifest from `launcher-control` and tracks module lifecycle and health
 - Handles backend connection and setup, and the update dialog
 - Mounts exactly **one** module surface, full-window, and renders no navigation chrome of its own
 - Hosts a WebView for modules that are not native surfaces, such as Jupyter
 
 Everything a user sees — nav, chrome, workspace switching, the pipeline — belongs to the mounted surface, which in practice is NeuroStudio. `NativeSurfaceRegistry` is the hand-maintained map from a manifest module id to a Flutter surface builder; it is the real plugin mechanism.
+
+NeuroStudio is compiled as the internal `neurocnl_studio` feature package. It has no standalone
+Flutter runner and renders its GoRouter directly beneath this app's `MaterialApp`.
 
 ## Key files
 

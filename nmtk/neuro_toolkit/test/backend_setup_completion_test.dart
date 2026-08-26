@@ -53,14 +53,13 @@ class _FakeDeploymentNotifier extends BackendDeploymentNotifier {
     String apiServer = '',
     String containerEngine = 'docker',
     String kubeconfig = '',
-  }) async =>
-      const DeploymentPreflightResult(
-        status: 'ok',
-        message: 'Ready',
-        blockingFindings: [],
-        degradedFindings: [],
-        suggestedRecovery: '',
-      );
+  }) async => const DeploymentPreflightResult(
+    status: 'ok',
+    message: 'Ready',
+    blockingFindings: [],
+    degradedFindings: [],
+    suggestedRecovery: '',
+  );
 
   @override
   Future<DeploymentJob> deploy({
@@ -81,10 +80,9 @@ class _FakeDeploymentNotifier extends BackendDeploymentNotifier {
     String kubeconfig = '',
     bool cleanInstall = false,
   }) async {
-    state = AsyncData(initialState.copyWith(
-      targets: const [_target],
-      activeJob: _queuedJob,
-    ));
+    state = AsyncData(
+      initialState.copyWith(targets: const [_target], activeJob: _queuedJob),
+    );
     return _queuedJob;
   }
 
@@ -141,9 +139,7 @@ Widget _buildHarness({
   required Future<void> Function(DeploymentTarget target) onDeploymentReady,
 }) {
   return ProviderScope(
-    overrides: [
-      backendDeploymentProvider.overrideWith(() => notifier),
-    ],
+    overrides: [backendDeploymentProvider.overrideWith(() => notifier)],
     child: MaterialApp(
       home: Scaffold(
         // BackendSetupForm is embedded inside BackendSetupScreen's
@@ -163,8 +159,9 @@ Widget _buildHarness({
 }
 
 void main() {
-  testWidgets('existing ready deployment leaves setup form open',
-      (tester) async {
+  testWidgets('existing ready deployment leaves setup form open', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1440, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -187,64 +184,64 @@ void main() {
     expect(completionCount, 0);
   });
 
-  testWidgets('current form completes once after its deployment becomes ready',
-      (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final notifier = _FakeDeploymentNotifier(const DeploymentState());
-    var completionCount = 0;
-    final container = ProviderContainer(
-      overrides: [
-        backendDeploymentProvider.overrideWith(() => notifier),
-      ],
-    );
-    addTearDown(container.dispose);
-    final keepAlive = container.listen(
-      backendDeploymentProvider,
-      (_, __) {},
-      fireImmediately: true,
-    );
-    addTearDown(keepAlive.close);
+  testWidgets(
+    'current form completes once after its deployment becomes ready',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final notifier = _FakeDeploymentNotifier(const DeploymentState());
+      var completionCount = 0;
+      final container = ProviderContainer(
+        overrides: [backendDeploymentProvider.overrideWith(() => notifier)],
+      );
+      addTearDown(container.dispose);
+      final keepAlive = container.listen(
+        backendDeploymentProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      addTearDown(keepAlive.close);
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: BackendSetupForm(
-                localDeploymentAvailable: true,
-                onDeploymentReady: (_) async => completionCount++,
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: BackendSetupForm(
+                  localDeploymentAvailable: true,
+                  onDeploymentReady: (_) async => completionCount++,
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    await tester.ensureVisible(find.byKey(const Key('backend-setup-validate')));
-    await tester.tap(find.byKey(const Key('backend-setup-validate')));
-    await tester.pump();
-    await tester.ensureVisible(find.byKey(const Key('backend-setup-deploy')));
-    await tester.tap(find.byKey(const Key('backend-setup-deploy')));
-    await tester.pump();
-    expect(completionCount, 0);
+      await tester.ensureVisible(
+        find.byKey(const Key('backend-setup-validate')),
+      );
+      await tester.tap(find.byKey(const Key('backend-setup-validate')));
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const Key('backend-setup-deploy')));
+      await tester.tap(find.byKey(const Key('backend-setup-deploy')));
+      await tester.pump();
+      expect(completionCount, 0);
 
-    notifier.completeDeployment();
-    await tester.pump();
-    await tester.pump();
+      notifier.completeDeployment();
+      await tester.pump();
+      await tester.pump();
 
-    expect(completionCount, 1);
-    notifier.completeDeployment();
-    await tester.pump();
-    expect(completionCount, 1);
-  });
+      expect(completionCount, 1);
+      notifier.completeDeployment();
+      await tester.pump();
+      expect(completionCount, 1);
+    },
+  );
 
   testWidgets('completion does not fire after the setup form is disposed', (
     tester,
@@ -256,13 +253,11 @@ void main() {
     final notifier = _FakeDeploymentNotifier(const DeploymentState());
     var completionCount = 0;
     final container = ProviderContainer(
-      overrides: [
-        backendDeploymentProvider.overrideWith(() => notifier),
-      ],
+      overrides: [backendDeploymentProvider.overrideWith(() => notifier)],
     );
     final keepAlive = container.listen(
       backendDeploymentProvider,
-      (_, __) {},
+      (_, _) {},
       fireImmediately: true,
     );
 
@@ -305,8 +300,7 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets(
-      'current form completes once after its deployment becomes ready '
+  testWidgets('current form completes once after its deployment becomes ready '
       '(mobile viewport)', (tester) async {
     // Phone-sized viewport -- this flow has no mobile-specific rendering,
     // but nothing previously exercised BackendSetupForm below the desktop
@@ -346,8 +340,9 @@ void main() {
     expect(completionCount, 1);
   });
 
-  testWidgets('degraded Jupyter deployment offers saved-target recovery',
-      (tester) async {
+  testWidgets('degraded Jupyter deployment offers saved-target recovery', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1440, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -378,10 +373,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _buildHarness(
-        notifier: notifier,
-        onDeploymentReady: (_) async {},
-      ),
+      _buildHarness(notifier: notifier, onDeploymentReady: (_) async {}),
     );
     await tester.pump();
 
@@ -398,8 +390,9 @@ void main() {
     expect(notifier.state.value?.activeJob?.error, isEmpty);
   });
 
-  testWidgets('degraded Akida update keeps backend ready and offers retry',
-      (tester) async {
+  testWidgets('degraded Akida update keeps backend ready and offers retry', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(1440, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -424,7 +417,8 @@ void main() {
           stage: 'completed',
           percent: 100,
           stageLabel: 'Backend and launcher control are ready',
-          error: 'degraded optional capability: the selected Akida host is '
+          error:
+              'degraded optional capability: the selected Akida host is '
               'offline; core services are available.',
           logs: [],
         ),
@@ -432,10 +426,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _buildHarness(
-        notifier: notifier,
-        onDeploymentReady: (_) async {},
-      ),
+      _buildHarness(notifier: notifier, onDeploymentReady: (_) async {}),
     );
     await tester.pump();
 
@@ -445,92 +436,93 @@ void main() {
   });
 
   testWidgets(
-      'a degraded Akida host raises the update banner without a failed job',
-      (tester) async {
-    tester.view.physicalSize = const Size(1440, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+    'a degraded Akida host raises the update banner without a failed job',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    // A host that installed cleanly, is on the current version, and has no
-    // failed job — but landed on the simulator. "Retry Akida update" used to be
-    // gated on a pending version or a deploy job whose error text matched
-    // 'degraded optional capability:' + 'akida', so in this state there was no
-    // way to reach it from the app at all.
-    const simulatorOnlyHost = AkidaPairedHost(
-      id: 'akida-1',
-      displayName: 'Bench Akida',
-      host: '192.168.2.90',
-      sshPort: 22,
-      username: 'moosebun2',
-      runtimeApiUrl: 'http://192.168.2.90:8002',
-      controlApiUrl: 'http://192.168.2.90:8091',
-      authMode: AkidaHostAuthMode.password,
-      credentialRef: '',
-      password: '',
-      hasPassword: true,
-      sshKeyPath: '',
-      remoteInstallRoot: '/opt/neurochip-akida-host',
-      serviceUser: 'neurochip',
-      hostOs: 'Ubuntu 24.04',
-      pythonVersion: '3.11.9',
-      runtimeMode: AkidaRuntimeMode.remoteSdk,
-      state: AkidaPairedHostState.simulatorOnly,
-      lastReadinessMessage:
-          'No physical Akida device was enumerated on the host.',
-      lastVerifiedAt: '2026-08-05T09:00:00Z',
-      installedRuntimeVersion: '0.4.2',
-      availableRuntimeVersion: '0.4.2',
-    );
+      // A host that installed cleanly, is on the current version, and has no
+      // failed job — but landed on the simulator. "Retry Akida update" used to be
+      // gated on a pending version or a deploy job whose error text matched
+      // 'degraded optional capability:' + 'akida', so in this state there was no
+      // way to reach it from the app at all.
+      const simulatorOnlyHost = AkidaPairedHost(
+        id: 'akida-1',
+        displayName: 'Bench Akida',
+        host: '192.168.2.90',
+        sshPort: 22,
+        username: 'moosebun2',
+        runtimeApiUrl: 'http://192.168.2.90:8002',
+        controlApiUrl: 'http://192.168.2.90:8091',
+        authMode: AkidaHostAuthMode.password,
+        credentialRef: '',
+        password: '',
+        hasPassword: true,
+        sshKeyPath: '',
+        remoteInstallRoot: '/opt/neurochip-akida-host',
+        serviceUser: 'neurochip',
+        hostOs: 'Ubuntu 24.04',
+        pythonVersion: '3.11.9',
+        runtimeMode: AkidaRuntimeMode.remoteSdk,
+        state: AkidaPairedHostState.simulatorOnly,
+        lastReadinessMessage:
+            'No physical Akida device was enumerated on the host.',
+        lastVerifiedAt: '2026-08-05T09:00:00Z',
+        installedRuntimeVersion: '0.4.2',
+        availableRuntimeVersion: '0.4.2',
+      );
 
-    final notifier = _FakeDeploymentNotifier(
-      const DeploymentState(isReady: true),
-    );
+      final notifier = _FakeDeploymentNotifier(
+        const DeploymentState(isReady: true),
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          backendDeploymentProvider.overrideWith(() => notifier),
-          backendUpdateProvider.overrideWith((ref) async => null),
-          selectedAkidaRuntimeStatusProvider.overrideWith(
-            (ref) async => simulatorOnlyHost,
-          ),
-        ],
-        child: MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: BackendSetupForm(
-                localDeploymentAvailable: true,
-                onDeploymentReady: (_) async {},
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            backendDeploymentProvider.overrideWith(() => notifier),
+            backendUpdateProvider.overrideWith((ref) async => null),
+            selectedAkidaRuntimeStatusProvider.overrideWith(
+              (ref) async => simulatorOnlyHost,
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: BackendSetupForm(
+                  localDeploymentAvailable: true,
+                  onDeploymentReady: (_) async {},
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 16));
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 16));
 
-    expect(find.byKey(const Key('backend-update-available')), findsOneWidget);
-    expect(
-      find.text(
-        'Selected Akida runtime needs attention — Simulator Only',
-      ),
-      findsOneWidget,
-      reason: 'A degraded host does not need "an update"; the title must say '
-          'what is actually wrong.',
-    );
-    expect(
-      find.textContaining(
-        'No physical Akida device was enumerated on the host.',
-      ),
-      findsOneWidget,
-      reason: 'lastReadinessMessage is the reason and must be shown, not just '
-          'a generic "will be updated" line.',
-    );
-    expect(
-      find.byKey(const Key('backend-update-retry-akida')),
-      findsOneWidget,
-    );
-  });
+      expect(find.byKey(const Key('backend-update-available')), findsOneWidget);
+      expect(
+        find.text('Selected Akida runtime needs attention — Simulator Only'),
+        findsOneWidget,
+        reason:
+            'A degraded host does not need "an update"; the title must say '
+            'what is actually wrong.',
+      );
+      expect(
+        find.textContaining(
+          'No physical Akida device was enumerated on the host.',
+        ),
+        findsOneWidget,
+        reason:
+            'lastReadinessMessage is the reason and must be shown, not just '
+            'a generic "will be updated" line.',
+      );
+      expect(
+        find.byKey(const Key('backend-update-retry-akida')),
+        findsOneWidget,
+      );
+    },
+  );
 }
