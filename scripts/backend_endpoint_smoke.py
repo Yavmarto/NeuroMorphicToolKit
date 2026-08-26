@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Lightweight backend endpoint smoke helper for NMTK agents."""
 
 from __future__ import annotations
@@ -21,14 +20,18 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MODULES_MANIFEST = REPO_ROOT / "nmtk" / "neuro_toolkit" / "assets" / "modules.json"
-DEFAULT_HOST = "127.0.0.1"
+DEFAULT_HOST = os.environ.get("NMTK_BACKEND_HOST", "127.0.0.1").strip() or "127.0.0.1"
 DEFAULT_TIMEOUT_SECONDS = 5.0
 STARTUP_TIMEOUT_SECONDS = 20.0
 
 NEUROCNL_SMOKE_SPEC = (
-    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.5\n"
-    "The motor neuron MUST emit a spike ONLY IF membrane potential exceeds 0.7\n"
-    "The connection from sensory neuron to motor neuron MUST have WITH synaptic weight of 2.0"
+    "Define a network named endpoint_smoke.\n"
+    "Define an input port named input with shape (1,).\n"
+    "Define a LIF neuron named relay with time constant 0.02, resistance 1.0, "
+    "leak voltage 0.0, and firing threshold 1.0.\n"
+    "Define an output port named output with shape (1,).\n"
+    "input connects to relay.\n"
+    "relay connects to output."
 )
 
 
@@ -48,23 +51,31 @@ class ModuleSpec:
     run_path: str
     start_strategy: str
     uvicorn_target: str
+    health_path: str
 
     @classmethod
-    def from_manifest(cls, raw: dict[str, Any]) -> "ModuleSpec":
+    def from_manifest(cls, raw: dict[str, Any]) -> ModuleSpec:
         uvicorn_target = str(raw.get("uvicornTarget") or "").strip()
         start_strategy = str(raw.get("startStrategy") or "").strip().lower()
         if not start_strategy:
             start_strategy = "uvicorn" if uvicorn_target else "none"
         port = raw.get("port")
+        deployment = raw.get("deployment")
+        if not isinstance(deployment, dict):
+            deployment = {}
         return cls(
             id=str(raw.get("id") or "").strip(),
             name=str(raw.get("name") or raw.get("id") or "").strip(),
             port=port if isinstance(port, int) else None,
-            install_path=str(raw.get("installPath") or raw.get("directory") or "").strip(),
+            install_path=str(
+                raw.get("installPath") or raw.get("directory") or ""
+            ).strip(),
             source_path=str(raw.get("sourcePath") or ".").strip() or ".",
-            run_path=str(raw.get("runPath") or raw.get("sourcePath") or ".").strip() or ".",
+            run_path=str(raw.get("runPath") or raw.get("sourcePath") or ".").strip()
+            or ".",
             start_strategy=start_strategy,
             uvicorn_target=uvicorn_target,
+            health_path=str(deployment.get("healthPath") or "/health"),
         )
 
     @property
@@ -74,6 +85,25 @@ class ModuleSpec:
             and self.port is not None
             and self.start_strategy == "uvicorn"
             and bool(self.uvicorn_target)
+        )
+
+    @property
+    def suite_managed(self) -> bool:
+        """Whether this product is mounted inside the consolidated Suite API."""
+        return self.port == 9000 and self.start_strategy == "none"
+
+    @property
+    def probeable(self) -> bool:
+        return bool(self.id) and self.port is not None
+
+    @property
+    def effective_health_path(self) -> str:
+        if self.suite_managed:
+            return f"/api/{self.id.lower()}/health"
+        return (
+            self.health_path
+            if self.health_path.startswith("/")
+            else f"/{self.health_path}"
         )
 
 
@@ -129,13 +159,18 @@ def runnable_modules(modules: Iterable[ModuleSpec]) -> list[ModuleSpec]:
     return [module for module in modules if module.runnable]
 
 
+def probeable_modules(modules: Iterable[ModuleSpec]) -> list[ModuleSpec]:
+    """Return manifest modules that expose a suite or standalone HTTP port."""
+    return [module for module in modules if module.probeable]
+
+
 def find_module(module_id: str, modules: Iterable[ModuleSpec]) -> ModuleSpec:
     normalized = module_id.strip().lower()
     for module in modules:
         if module.id.lower() == normalized:
             return module
-    known = ", ".join(module.id for module in runnable_modules(modules))
-    raise SmokeError(f"Unknown module '{module_id}'. Runnable modules: {known}")
+    known = ", ".join(module.id for module in probeable_modules(modules))
+    raise SmokeError(f"Unknown module '{module_id}'. Probeable modules: {known}")
 
 
 def module_root(module: ModuleSpec, repo_root: Path = REPO_ROOT) -> Path:
@@ -164,6 +199,9 @@ def module_python_path(module: ModuleSpec, repo_root: Path = REPO_ROOT) -> Path:
 def module_base_url(module: ModuleSpec, host: str = DEFAULT_HOST) -> str:
     if module.port is None:
         raise SmokeError(f"Module '{module.id}' does not define a port")
+    suite_api_url = os.environ.get("SUITE_API_URL", "").strip().rstrip("/")
+    if module.suite_managed and suite_api_url:
+        return suite_api_url
     return f"http://{host}:{module.port}"
 
 
@@ -174,7 +212,9 @@ def build_uvicorn_command(
     log_level: str = "info",
 ) -> tuple[list[str], Path]:
     if not module.runnable:
-        raise SmokeError(f"Module '{module.id}' does not define a runnable uvicorn backend")
+        raise SmokeError(
+            f"Module '{module.id}' does not define a runnable uvicorn backend"
+        )
     python_path = module_python_path(module, repo_root)
     if not python_path.exists():
         raise SmokeError(f"Module python missing at {python_path}")
@@ -242,6 +282,15 @@ def http_request(
 ) -> HttpResponse:
     data: bytes | None = None
     headers: dict[str, str] = {"Accept": "application/json"}
+    admin_token = os.environ.get("NMTK_ADMIN_TOKEN", "").strip()
+    token_file = os.environ.get("NMTK_ADMIN_TOKEN_FILE", "").strip()
+    if not admin_token and token_file:
+        try:
+            admin_token = Path(token_file).read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise SmokeError(f"Cannot read NMTK_ADMIN_TOKEN_FILE: {exc}") from exc
+    if admin_token:
+        headers["X-NMTK-Admin-Token"] = admin_token
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -255,7 +304,8 @@ def http_request(
     try:
         with opener(request, timeout=timeout) as response:
             response_headers = {
-                str(key): str(value) for key, value in getattr(response, "headers", {}).items()
+                str(key): str(value)
+                for key, value in getattr(response, "headers", {}).items()
             }
             return HttpResponse(
                 status=int(getattr(response, "status", response.getcode())),
@@ -268,7 +318,7 @@ def http_request(
             body=exc.read(),
             headers={str(key): str(value) for key, value in exc.headers.items()},
         )
-    except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
+    except (urllib.error.URLError, TimeoutError) as exc:
         raise SmokeError(f"Request failed for {url}: {exc}") from exc
 
 
@@ -302,15 +352,20 @@ def print_response(response: HttpResponse) -> None:
 
 
 def command_list(modules: list[ModuleSpec], repo_root: Path) -> int:
-    print("module\tport\tuvicorn target\trun dir")
-    for module in runnable_modules(modules):
+    print("module\tport\truntime\trun dir")
+    for module in probeable_modules(modules):
         run_dir = module_run_dir(module, repo_root)
-        print(f"{module.id}\t{module.port}\t{module.uvicorn_target}\t{run_dir}")
+        runtime = (
+            "suite-api" if module.suite_managed else module.uvicorn_target or "external"
+        )
+        print(f"{module.id}\t{module.port}\t{runtime}\t{run_dir}")
     return 0
 
 
-def probe_health(module: ModuleSpec, timeout: float = DEFAULT_TIMEOUT_SECONDS) -> HttpResponse:
-    url = f"{module_base_url(module)}/health"
+def probe_health(
+    module: ModuleSpec, timeout: float = DEFAULT_TIMEOUT_SECONDS
+) -> HttpResponse:
+    url = f"{module_base_url(module)}{module.effective_health_path}"
     response = http_request(url, timeout=timeout)
     if not _health_ok(response):
         require_success(response, url)
@@ -322,7 +377,11 @@ def command_health(
     module_id: str,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> int:
-    selected = runnable_modules(modules) if module_id == "all" else [find_module(module_id, modules)]
+    selected = (
+        probeable_modules(modules)
+        if module_id == "all"
+        else [find_module(module_id, modules)]
+    )
     failed = False
     for module in selected:
         try:
@@ -332,7 +391,10 @@ def command_health(
             print(f"{module.id}: failed: {exc}")
             continue
         label = "degraded optional capability" if response.status == 503 else "ok"
-        print(f"{module.id}: {label} HTTP {response.status} {module_base_url(module)}/health")
+        print(
+            f"{module.id}: {label} HTTP {response.status} "
+            f"{module_base_url(module)}{module.effective_health_path}"
+        )
     return 1 if failed else 0
 
 
@@ -346,7 +408,11 @@ def summarize_openapi(payload: Any) -> str:
     method_count = 0
     for operations in paths.values():
         if isinstance(operations, dict):
-            method_count += sum(1 for key in operations if key.upper() in {"GET", "POST", "PUT", "PATCH", "DELETE"})
+            method_count += sum(
+                1
+                for key in operations
+                if key.upper() in {"GET", "POST", "PUT", "PATCH", "DELETE"}
+            )
     return f"{title} ({version}): {len(paths)} paths, {method_count} operations"
 
 
@@ -368,13 +434,20 @@ def command_call(args: argparse.Namespace, modules: list[ModuleSpec]) -> int:
     path = args.path if args.path.startswith("/") else f"/{args.path}"
     url = f"{module_base_url(module)}{path}"
     payload = parse_json_arg(args.json_body)
-    response = http_request(url, method=args.method, payload=payload, timeout=args.timeout)
+    response = http_request(
+        url, method=args.method, payload=payload, timeout=args.timeout
+    )
     print_response(response)
     require_success(response, url, allow_statuses=parse_statuses(args.allow_status))
     return 0
 
 
 def start_backend(module: ModuleSpec, repo_root: Path) -> StartedBackend:
+    if not module.runnable:
+        raise SmokeError(
+            f"Module '{module.id}' is managed by Suite API and cannot be started "
+            "as a standalone backend. Start it from Backend Setup."
+        )
     if module.port is None:
         raise SmokeError(f"Module '{module.id}' does not define a port")
     if is_port_open(DEFAULT_HOST, module.port):
@@ -397,7 +470,9 @@ def start_backend(module: ModuleSpec, repo_root: Path) -> StartedBackend:
     return StartedBackend(process=process, log_handle=log_handle, log_path=log_path)
 
 
-def wait_for_health(module: ModuleSpec, process: subprocess.Popen[Any] | None = None) -> HttpResponse:
+def wait_for_health(
+    module: ModuleSpec, process: subprocess.Popen[Any] | None = None
+) -> HttpResponse:
     deadline = time.monotonic() + STARTUP_TIMEOUT_SECONDS
     last_error = "timed out"
     while time.monotonic() < deadline:
@@ -410,19 +485,25 @@ def wait_for_health(module: ModuleSpec, process: subprocess.Popen[Any] | None = 
         except SmokeError as exc:
             last_error = str(exc)
         time.sleep(0.5)
-    raise SmokeError(f"Timed out waiting for {module_base_url(module)}/health: {last_error}")
+    raise SmokeError(
+        f"Timed out waiting for {module_base_url(module)}"
+        f"{module.effective_health_path}: {last_error}"
+    )
 
 
 def run_neurocnl_examples(module: ModuleSpec) -> None:
-    parse_url = f"{module_base_url(module)}/api/parse"
-    parse_response = http_request(parse_url, method="POST", payload={"spec": NEUROCNL_SMOKE_SPEC})
+    prefix = "/api/neurocnl" if module.suite_managed else "/api"
+    parse_url = f"{module_base_url(module)}{prefix}/parse"
+    parse_response = http_request(
+        parse_url, method="POST", payload={"spec": NEUROCNL_SMOKE_SPEC}
+    )
     require_success(parse_response, parse_url)
     parse_payload = parse_response.json()
     if parse_payload.get("errors") != 0:
         raise SmokeError(f"NeuroCNL parse smoke returned errors: {parse_response.text}")
     print("neurocnl parse: ok")
 
-    validate_url = f"{module_base_url(module)}/api/validate"
+    validate_url = f"{module_base_url(module)}{prefix}/validate"
     validate_response = http_request(
         validate_url,
         method="POST",
@@ -431,7 +512,9 @@ def run_neurocnl_examples(module: ModuleSpec) -> None:
     require_success(validate_response, validate_url)
     validate_payload = validate_response.json()
     if validate_payload.get("overall") is not True:
-        raise SmokeError(f"NeuroCNL validate smoke did not pass: {validate_response.text}")
+        raise SmokeError(
+            f"NeuroCNL validate smoke did not pass: {validate_response.text}"
+        )
     print("neurocnl validate: ok")
 
 
@@ -450,7 +533,9 @@ def _check_training_modules() -> None:
             print(f"training module: {mod_name} NOT available (optional)")
 
 
-def command_smoke(args: argparse.Namespace, modules: list[ModuleSpec], repo_root: Path) -> int:
+def command_smoke(
+    args: argparse.Namespace, modules: list[ModuleSpec], repo_root: Path
+) -> int:
     module = find_module(args.module, modules)
     started: StartedBackend | None = None
     try:
@@ -459,7 +544,9 @@ def command_smoke(args: argparse.Namespace, modules: list[ModuleSpec], repo_root
             health_response = wait_for_health(module, started.process)
         else:
             health_response = probe_health(module)
-        health_label = "degraded optional capability" if health_response.status == 503 else "ok"
+        health_label = (
+            "degraded optional capability" if health_response.status == 503 else "ok"
+        )
         print(f"health: {health_label} HTTP {health_response.status}")
 
         openapi_url = f"{module_base_url(module)}/openapi.json"
@@ -501,18 +588,24 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("list", help="List runnable manifest modules.")
 
-    health = subparsers.add_parser("health", help="Probe /health for one module or all modules.")
+    health = subparsers.add_parser(
+        "health", help="Probe /health for one module or all modules."
+    )
     health.add_argument("--module", required=True, help="Module id, or 'all'.")
     health.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
 
-    openapi = subparsers.add_parser("openapi", help="Fetch and summarize /openapi.json.")
+    openapi = subparsers.add_parser(
+        "openapi", help="Fetch and summarize /openapi.json."
+    )
     openapi.add_argument("--module", required=True, help="Module id.")
     openapi.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
 
     call = subparsers.add_parser("call", help="Call an arbitrary endpoint.")
     call.add_argument("--module", required=True, help="Module id.")
     call.add_argument("--method", default="GET", help="HTTP method.")
-    call.add_argument("--path", required=True, help="Endpoint path, for example /api/parse.")
+    call.add_argument(
+        "--path", required=True, help="Endpoint path, for example /api/parse."
+    )
     call.add_argument(
         "--json",
         dest="json_body",
@@ -525,9 +618,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     call.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT_SECONDS)
 
-    smoke = subparsers.add_parser("smoke", help="Run health/OpenAPI and known smoke calls.")
+    smoke = subparsers.add_parser(
+        "smoke", help="Run health/OpenAPI and known smoke calls."
+    )
     smoke.add_argument("--module", required=True, help="Module id.")
-    smoke.add_argument("--start", action="store_true", help="Start the module before probing.")
+    smoke.add_argument(
+        "--start", action="store_true", help="Start the module before probing."
+    )
     smoke.add_argument(
         "--keep-running",
         action="store_true",

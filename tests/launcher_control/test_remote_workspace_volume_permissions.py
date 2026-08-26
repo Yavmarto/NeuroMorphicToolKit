@@ -43,8 +43,7 @@ def test_remote_install_bounds_every_registry_and_runtime_step() -> None:
     assert 'compose_with_timeout "$PULL_TIMEOUT" pull' in install_script
     assert (
         'timeout --signal=TERM --kill-after=30s "${UP_TIMEOUT}s" \\\n'
-        '  bash ./nmtk-stack.sh start "$ENGINE"'
-        in install_script
+        '  bash ./nmtk-stack.sh start "$ENGINE"' in install_script
     )
     assert "timeout --signal=TERM --kill-after=30s" in install_script
 

@@ -14,9 +14,11 @@ import logging
 
 import httpx
 from fastapi import Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 from websockets import connect
 from websockets.exceptions import ConnectionClosed
+
+from suite_api.errors import error_response, request_id_for
 
 logger = logging.getLogger("suite_api.proxy")
 
@@ -104,6 +106,7 @@ async def proxy_to_worker(
         target_url = f"{target_url}?{request.url.query}"
 
     headers = _forward_headers(request)
+    headers.setdefault("X-Request-ID", request_id_for(request))
     if extra_headers:
         headers.update(extra_headers)
     body = await request.body()
@@ -124,21 +127,21 @@ async def proxy_to_worker(
             request.url.path,
             exc,
         )
-        return JSONResponse(
+        return error_response(
+            request,
             status_code=503,
-            content={
-                "detail": f"Worker at {worker_base_url} is not running.",
-                "worker_url": worker_base_url,
-            },
+            code="worker_unavailable",
+            message="The requested service is temporarily unavailable.",
+            retryable=True,
         )
     except httpx.TimeoutException as exc:
         logger.warning("Worker %s timeout: %s", worker_base_url, exc)
-        return JSONResponse(
+        return error_response(
+            request,
             status_code=503,
-            content={
-                "detail": f"Worker at {worker_base_url} timed out.",
-                "worker_url": worker_base_url,
-            },
+            code="worker_timeout",
+            message="The requested service did not respond in time.",
+            retryable=True,
         )
 
     # Forward the worker response, stripping hop-by-hop headers

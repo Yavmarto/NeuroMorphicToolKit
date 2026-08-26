@@ -1,10 +1,4 @@
-"""PYNQ board lifecycle, provisioning, and runtime proxy behavior.
-
-Imported by ``server.py`` right before ``LauncherControlState`` is defined, so
-the ``from .server import ...`` below resolves against the partially
-initialized module rather than re-entering it — the names it pulls in must
-already be bound in ``server.py`` above that import line.
-"""
+"""PYNQ board lifecycle, provisioning, and runtime proxy behavior."""
 
 from __future__ import annotations
 
@@ -23,29 +17,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
-from .provisioning_helpers import (
-    build_pynq_agent_bundle,
-    build_pynq_agent_match_pattern,
-    build_pynq_agent_stop_command,
-    build_pynq_user_space_agent_launch_command,
-)
-from .runtime_artifact import discover_neurochip_runtime_artifact
-from .runtime_shared import (
-    _build_password_askpass_env,
-    _neurochip_module_root,
-    _runtime_request_error_kind,
-)
-from .server import (
-    DEFAULT_PYNQ_AUTH_MODE,
-    PREFLIGHT_DEGRADED,
-    PREFLIGHT_FAILED,
-    PREFLIGHT_OK,
-    PYNQ_AGENT_HEALTH_HEARTBEAT_AFTER_SECONDS,
-    PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE,
-    PYNQ_PREFLIGHT_RETRY_COUNT,
-    PYNQ_PREFLIGHT_RETRY_DELAY_SECONDS,
-    PYNQ_RUNTIME_LOG_TAIL_LINES,
-    RuntimeRequestError,
+from .hardware_models import (
     _describe_pynq_preflight,
     _inspect_staged_pynq_overlay_package,
     _is_benign_ssh_warning_line,
@@ -57,6 +29,30 @@ from .server import (
     _resolved_pynq_runtime_api_url,
     _serialize_pynq_board,
     _ssh_failure_message,
+)
+from .provisioning_helpers import (
+    build_pynq_agent_bundle,
+    build_pynq_agent_match_pattern,
+    build_pynq_agent_stop_command,
+    build_pynq_user_space_agent_launch_command,
+)
+from .runtime_artifact import discover_neurochip_runtime_artifact
+from .runtime_errors import RuntimeRequestError
+from .runtime_shared import (
+    _build_password_askpass_env,
+    _neurochip_module_root,
+    _runtime_request_error_kind,
+)
+from .state_contracts import (
+    DEFAULT_PYNQ_AUTH_MODE,
+    PREFLIGHT_DEGRADED,
+    PREFLIGHT_FAILED,
+    PREFLIGHT_OK,
+    PYNQ_AGENT_HEALTH_HEARTBEAT_AFTER_SECONDS,
+    PYNQ_OVERLAY_UPLOAD_RECOVERY_MESSAGE,
+    PYNQ_PREFLIGHT_RETRY_COUNT,
+    PYNQ_PREFLIGHT_RETRY_DELAY_SECONDS,
+    PYNQ_RUNTIME_LOG_TAIL_LINES,
 )
 
 

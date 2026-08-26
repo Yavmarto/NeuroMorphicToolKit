@@ -1,11 +1,4 @@
-"""Akida host CRUD, provisioning, SSH/HTTP transport, and runtime proxy behavior.
-
-Imported by ``server.py`` right before ``LauncherControlState`` is defined, so
-the ``from .server import ...`` below resolves against the partially
-initialized module rather than re-entering it — the names it pulls in must
-already be bound in ``server.py`` above that import line. Mirrors the
-``PynqServiceMixin`` extraction in ``pynq_service.py``.
-"""
+"""Akida host CRUD, provisioning, SSH/HTTP transport, and runtime proxy behavior."""
 
 from __future__ import annotations
 
@@ -25,17 +18,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlparse
 
-from .runtime_shared import (
-    _build_password_askpass_env,
-    _module_root,
-    _runtime_request_error_kind,
-)
-from .server import (
-    DEFAULT_AKIDA_AUTH_MODE,
-    PREFLIGHT_DEGRADED,
-    PREFLIGHT_FAILED,
-    PREFLIGHT_OK,
-    RuntimeRequestError,
+from .hardware_models import (
     _akida_hardware_runtime_ready,
     _akida_host_state_for_status,
     _akida_user_space_upgrade_message,
@@ -53,6 +36,18 @@ from .server import (
 )
 from .provisioning_helpers import DEFAULT_AKIDA_PYTHON_RANGE, build_akida_host_bundle
 from .runtime_artifact import discover_neurochip_runtime_artifact
+from .runtime_errors import RuntimeRequestError
+from .runtime_shared import (
+    _build_password_askpass_env,
+    _module_root,
+    _runtime_request_error_kind,
+)
+from .state_contracts import (
+    DEFAULT_AKIDA_AUTH_MODE,
+    PREFLIGHT_DEGRADED,
+    PREFLIGHT_FAILED,
+    PREFLIGHT_OK,
+)
 
 # Signatures of raw driver/SDK output: a bare errno wrapper as the Akida SDK
 # writes it ("err(110)", "errno(110)"), or a hex register address. Matching the

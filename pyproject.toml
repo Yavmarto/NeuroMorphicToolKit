@@ -18,15 +18,8 @@ markers = [
 ]
 
 [tool.ruff.lint]
-# Per-file suppressions for intentional E402 (module-level import not at top).
-# Each entry is documented with the reason the late import is required.
+# Per-file suppressions for imports that must follow runtime initialization.
 [tool.ruff.lint.per-file-ignores]
-# server.py uses a deliberate partial-initialisation import pattern: mixin modules
-# import constants from server.py, so they must be loaded AFTER those constants are
-# defined.  Moving these imports to the top would re-introduce the circular import
-# that this pattern was designed to avoid. Furthermore, many of these imports are
-# only exposed for use by other modules and test mocks, triggering F401.
-"nmtk/launcher_control/server.py" = ["E402", "F401"]
 # neurosense_hw/main.py appends a runtime path to sys.path before importing the
 # neurosense package — the import cannot precede the path setup.
 "workers/neurosense_hw/main.py" = ["E402"]

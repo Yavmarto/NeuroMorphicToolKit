@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import json
 import hmac
+import json
+import logging
 import os
 import threading
 from http import HTTPStatus
@@ -11,6 +12,7 @@ from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+from uuid import uuid4
 
 from .http_transport import (
     RequestBodyTooLarge,
@@ -20,42 +22,45 @@ from .http_transport import (
 )
 from .runtime_errors import RuntimeRequestError
 
+LOGGER = logging.getLogger(__name__)
+
 
 class LauncherControlHandler(BaseHTTPRequestHandler):
     """HTTP adapter exposing launcher control state over a JSON API."""
 
     server: Any
 
-    def do_OPTIONS(self) -> None:  # noqa: N802
+    def do_OPTIONS(self) -> None:
         self._send_json(HTTPStatus.NO_CONTENT, {})
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         self._dispatch("GET")
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         self._dispatch("POST")
 
-    def do_PUT(self) -> None:  # noqa: N802
+    def do_PUT(self) -> None:
         self._dispatch("PUT")
 
-    def do_DELETE(self) -> None:  # noqa: N802
+    def do_DELETE(self) -> None:
         self._dispatch("DELETE")
 
     def log_message(self, format: str, *args: Any) -> None:
         return
 
     def _dispatch(self, method: str) -> None:
+        self._request_id = str(self.headers.get("X-Request-ID", "")).strip() or str(
+            uuid4()
+        )
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         query = parse_qs(parsed.query)
         try:
             if path != "/health" and not self._is_authorized():
-                self._send_json(
+                self._send_error(
                     HTTPStatus.UNAUTHORIZED,
-                    {
-                        "error": "unauthorized",
-                        "message": "Administrator authentication required.",
-                    },
+                    code="unauthorized",
+                    message="Administrator authentication required.",
                 )
                 return
             body = self._read_body()
@@ -642,13 +647,29 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     )
                     return
 
-            self._send_json(HTTPStatus.NOT_FOUND, {"error": f"Unknown route: {path}"})
+            self._send_error(
+                HTTPStatus.NOT_FOUND,
+                code="not_found",
+                message="The requested launcher route does not exist.",
+            )
         except RequestBodyTooLarge as exc:
-            self._send_json(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": str(exc)})
+            self._send_error(
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                code="request_too_large",
+                message=str(exc),
+            )
         except KeyError as exc:
-            self._send_json(HTTPStatus.NOT_FOUND, {"error": str(exc)})
+            self._send_error(
+                HTTPStatus.NOT_FOUND,
+                code="resource_not_found",
+                message=str(exc).strip("'"),
+            )
         except ValueError as exc:
-            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(exc)})
+            self._send_error(
+                HTTPStatus.BAD_REQUEST,
+                code="invalid_request",
+                message=str(exc),
+            )
         except RuntimeRequestError as exc:
             status = (
                 HTTPStatus.GATEWAY_TIMEOUT
@@ -660,22 +681,48 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     status = HTTPStatus(exc.status_code)
                 except ValueError:
                     status = HTTPStatus.BAD_GATEWAY
-            payload: dict[str, Any] = {
-                "error": str(exc),
-                "path": path,
-                "method": method,
-            }
+            code = "runtime_timeout" if exc.kind == "timeout" else "runtime_failed"
+            message = (
+                "The hardware runtime did not respond in time."
+                if exc.kind == "timeout"
+                else "The hardware runtime could not complete the request."
+            )
             if exc.response_body:
-                payload["runtimeBody"] = exc.response_body
                 try:
-                    payload["runtimeJson"] = json.loads(exc.response_body)
-                except json.JSONDecodeError:
+                    runtime_payload = json.loads(exc.response_body)
+                    runtime_detail = runtime_payload.get("detail", {})
+                    if isinstance(runtime_detail, dict):
+                        candidate_code = runtime_detail.get(
+                            "code", runtime_detail.get("error_code")
+                        )
+                        if (
+                            isinstance(candidate_code, str)
+                            and candidate_code.replace("_", "")
+                            .replace("-", "")
+                            .isalnum()
+                        ):
+                            code = candidate_code.lower()
+                except (AttributeError, json.JSONDecodeError):
                     pass
-            self._send_json(status, payload)
-        except Exception as exc:  # noqa: BLE001
-            self._send_json(
+            LOGGER.warning(
+                "runtime_request_failed request_id=%s method=%s path=%s kind=%s",
+                self._request_id,
+                method,
+                path,
+                exc.kind,
+            )
+            self._send_error(status, code=code, message=message, retryable=True)
+        except Exception:
+            LOGGER.exception(
+                "launcher_request_failed request_id=%s method=%s path=%s",
+                self._request_id,
+                method,
+                path,
+            )
+            self._send_error(
                 HTTPStatus.INTERNAL_SERVER_ERROR,
-                {"error": str(exc), "path": path, "method": method},
+                code="internal_error",
+                message="An internal launcher error occurred.",
             )
 
     def _read_body(self) -> dict[str, Any] | None:
@@ -698,11 +745,34 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
             )
         except OSError:
             return False
-        provided = self.headers.get("X-NMTK-Admin-Token", "")
+        authorization = str(self.headers.get("Authorization", "")).strip()
+        scheme, _, credential = authorization.partition(" ")
+        bearer_token = credential.strip() if scheme.lower() == "bearer" else ""
+        provided = self.headers.get("X-NMTK-Admin-Token", "") or bearer_token
         return bool(expected and provided and hmac.compare_digest(expected, provided))
 
     def _send_json(self, status: HTTPStatus, payload: Any) -> None:
         send_json(self, status, payload)
+
+    def _send_error(
+        self,
+        status: HTTPStatus,
+        *,
+        code: str,
+        message: str,
+        retryable: bool = False,
+    ) -> None:
+        self._send_json(
+            status,
+            {
+                "detail": {
+                    "code": code,
+                    "message": message,
+                    "request_id": self._request_id,
+                    "retryable": retryable,
+                }
+            },
+        )
 
     def _send_deployment_sse(self, job_id: str) -> None:
         stream_deployment_sse(self, job_id)

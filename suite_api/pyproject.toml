@@ -25,7 +25,8 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "pytest>=8.0",
+    # Keep the shared test environment compatible with Nengo's pytest plugin.
+    "pytest>=8.0,<9",
     "pytest-asyncio>=0.23",
     "pytest-xdist>=3.6",
     "aiosqlite>=0.20",
@@ -37,3 +38,21 @@ test = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["suite_api*"]
+
+[tool.mypy]
+python_version = "3.11"
+follow_imports = "skip"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "suite_api.errors",
+    "suite_api.storage",
+    "suite_api.proxy",
+]
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+warn_return_any = true

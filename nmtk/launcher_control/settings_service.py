@@ -1,30 +1,30 @@
-"""Persisted launcher settings: log level, selected Akida host / PYNQ board, hardware lists.
-
-Imported by ``server.py`` right before ``LauncherControlState`` is defined, so
-the ``from .server import ...`` below resolves against the partially
-initialized module rather than re-entering it — the names it pulls in must
-already be bound in ``server.py`` above that import line. ``get_settings``
-(which composes this state with live suite_api/deployment status) stays on
-``LauncherControlState`` itself since it reaches across multiple mixins.
-"""
+"""Persisted launcher settings and hardware selection behavior."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from typing import Any
 
 from .config import SETTINGS_FILE
-from .runtime_shared import _read_json_file, _write_json_file
-from .server import (
-    DEFAULT_CONTROL_LOG_LEVEL,
+from .hardware_models import (
     _mujoco_available,
     _normalize_akida_host,
     _normalize_pynq_board,
 )
+from .runtime_shared import _read_json_file, _write_json_file
+from .state_contracts import DEFAULT_CONTROL_LOG_LEVEL, LauncherSettingsRecord
 
 
 class SettingsServiceMixin:
-    def _load_settings(self) -> dict[str, Any]:
-        defaults = {
+    """Load and update settings owned by the composed launcher state."""
+
+    _lock: AbstractContextManager[Any]
+    _settings: LauncherSettingsRecord
+    get_settings: Callable[[], dict[str, Any]]
+
+    def _load_settings(self) -> LauncherSettingsRecord:
+        defaults: LauncherSettingsRecord = {
             "logLevel": DEFAULT_CONTROL_LOG_LEVEL,
             "mujocoAvailable": _mujoco_available(),
             "pythonAvailable": True,

@@ -2,11 +2,10 @@
 All values are read from environment variables with safe defaults.
 """
 
-import os
-
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
-_data_dir = os.environ.get("NEUROCNL_DATA_DIR", ".")
+from suite_api.storage import default_neurohub_db_url
 
 
 class Settings(BaseSettings):
@@ -21,9 +20,9 @@ class Settings(BaseSettings):
     neurosense_url: str = "http://localhost:8004"
     neurohub_url: str = "http://localhost:8005"
 
-    # Neurohub database — writable path resolved from NEUROCNL_DATA_DIR (Docker)
-    # or cwd (local dev)
-    neurohub_db_url: str = f"sqlite:///{_data_dir}/neurohub.db"
+    # NeuroHub owns this database. Explicit legacy variables retain priority;
+    # new installations resolve it below NMTK_DATA_DIR/neurohub.
+    neurohub_db_url: str = Field(default_factory=default_neurohub_db_url)
 
     # Phase 4: optional worker URLs (started only with the matching Docker profile)
     neurosense_hw_worker_url: str = "http://localhost:8004"  # profile: hardware

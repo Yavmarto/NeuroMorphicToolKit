@@ -5,11 +5,13 @@ the field has to be present and has to fall back to something that means "not a
 release" rather than to a version-shaped lie.
 """
 
-import importlib
 import asyncio
+import importlib
 import sqlite3
 
-import suite_api.routers.health as health
+import httpx
+
+from suite_api.routers import health
 
 
 def _reload_with_version(monkeypatch, raw: str | None) -> str:
@@ -99,3 +101,64 @@ def test_suite_doctor_fails_when_storage_is_unwritable(monkeypatch, tmp_path) ->
     storage = next(check for check in report.checks if check.id == "dataset-storage")
     assert storage.status == health.DoctorStatus.FAILED
     assert report.overall == health.DoctorStatus.FAILED
+
+
+def test_suite_doctor_moves_storage_probe_off_event_loop(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("NEUROCNL_DATA_DIR", str(tmp_path))
+    calls = []
+
+    async def tracked_to_thread(function, *args):
+        calls.append((function, args))
+        return function(*args)
+
+    async def jupyter_ok(_capabilities):
+        return {"overall": "ok", "checks": []}
+
+    monkeypatch.setattr(health.asyncio, "to_thread", tracked_to_thread)
+    monkeypatch.setattr(health, "probe_jupyter_doctor", jupyter_ok)
+
+    asyncio.run(health.suite_doctor(health.DoctorRequest()))
+
+    assert calls == [(health._storage_checks, (tmp_path,))]
+
+
+def test_module_health_redacts_private_response_and_transport_details(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        health,
+        "MODULE_URLS",
+        {
+            "degraded": "http://10.0.0.8:8002/health",
+            "offline": "http://10.0.0.9:8003/health",
+        },
+    )
+
+    class FakeClient:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def get(self, url):
+            if "8002" in url:
+                return httpx.Response(503, text="database at /private/jobs.db failed")
+            raise httpx.ConnectError("connection refused for http://10.0.0.9:8003")
+
+    monkeypatch.setattr(health.httpx, "AsyncClient", FakeClient)
+
+    payload = asyncio.run(health.modules_health())
+
+    serialized = str(payload)
+    assert payload["modules"]["degraded"]["error"] == (
+        "Module health check returned HTTP 503."
+    )
+    assert payload["modules"]["offline"]["error"] == (
+        "Module health check is unavailable."
+    )
+    assert "10.0.0" not in serialized
+    assert "/private/jobs.db" not in serialized

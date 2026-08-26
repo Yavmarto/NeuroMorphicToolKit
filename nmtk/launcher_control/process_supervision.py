@@ -1,10 +1,4 @@
-"""Generic process/log/health-probe mechanics — no install/update semantics.
-
-Imported by ``server.py`` right before ``LauncherControlState`` is defined, so
-the ``from .server import ...`` below resolves against the partially
-initialized module rather than re-entering it — the names it pulls in must
-already be bound in ``server.py`` above that import line.
-"""
+"""Generic process, log, command, and health-probe mechanics."""
 
 from __future__ import annotations
 
@@ -27,7 +21,7 @@ from .module_environment import (
     _is_externally_managed_service,
     _module_start_strategy,
 )
-from .server import LOG_LINE_LIMIT, PREFLIGHT_DEGRADED, STATUS_INDEX
+from .state_contracts import LOG_LINE_LIMIT, PREFLIGHT_DEGRADED, STATUS_INDEX
 
 
 @dataclass

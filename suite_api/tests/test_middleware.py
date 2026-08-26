@@ -74,9 +74,12 @@ def test_admin_token_protects_api_routes(monkeypatch: pytest.MonkeyPatch) -> Non
 
     unauthorized = client.get("/api/private")
     assert unauthorized.status_code == 401
-    assert unauthorized.json() == {
-        "error": "unauthorized",
+    detail = unauthorized.json()["detail"]
+    assert detail == {
+        "code": "unauthorized",
         "message": "Administrator authentication required.",
+        "request_id": unauthorized.headers["X-Request-Id"],
+        "retryable": False,
     }
     assert client.get("/probe").status_code == 401
 
@@ -90,6 +93,31 @@ def test_admin_token_protects_api_routes(monkeypatch: pytest.MonkeyPatch) -> Non
 
     cookie_authenticated = client.get("/api/private")
     assert cookie_authenticated.status_code == 200
+
+
+def test_admin_auth_accepts_standard_bearer_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = _make_client(monkeypatch, origins_env="https://app.example.com")
+    monkeypatch.setenv("NMTK_AUTH_REQUIRED", "1")
+    monkeypatch.setenv("NMTK_ADMIN_TOKEN", "correct-token")
+
+    authorized = client.get(
+        "/api/private",
+        headers={"Authorization": "Bearer correct-token"},
+    )
+
+    assert authorized.status_code == 200
+    assert "nmtk_admin_session=" in authorized.headers["set-cookie"]
+    preflight = client.options(
+        "/api/private",
+        headers={
+            "Origin": "https://app.example.com",
+            "Access-Control-Request-Method": "GET",
+            "Access-Control-Request-Headers": "authorization",
+        },
+    )
+    assert "Authorization" in preflight.headers["access-control-allow-headers"]
 
 
 def test_health_remains_available_without_token(

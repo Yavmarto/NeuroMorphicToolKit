@@ -12,6 +12,7 @@ import tempfile
 import zipfile
 import nmtk.launcher_control.provisioning_helpers as provisioning_helpers
 import nmtk.launcher_control.module_environment as module_environment
+import nmtk.launcher_control.pynq_service as pynq_service
 from base import LauncherControlServiceTestBase
 
 
@@ -550,9 +551,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         # be re-derived with the others, or the download unpacks into the very
         # directory that was already refused.
         self.assertIn('  MANAGED_PYTHON_ROOT="$INSTALL_ROOT/python"', script)
-        self.assertIn(
-            '  MANAGED_PYTHON_BIN="$MANAGED_PYTHON_ROOT/bin/python3"', script
-        )
+        self.assertIn('  MANAGED_PYTHON_BIN="$MANAGED_PYTHON_ROOT/bin/python3"', script)
         userspace = script[script.index('  INSTALL_ROOT="$CURRENT_HOME') :]
         self.assertLess(
             userspace.index('  MANAGED_PYTHON_ROOT="$INSTALL_ROOT/python"'),
@@ -623,7 +622,11 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         preamble = script[: script.index('\nINSTALL_MODE="systemd"')]
         venv_bin = workspace / "venv" / "bin"
         venv_bin.mkdir(parents=True)
-        fail_clause = "exit 1" if always_fail else 'if [ -e "$PIP_STATE" ]; then\n  exit 0\nfi\n: > "$PIP_STATE"\nexit 1'
+        fail_clause = (
+            "exit 1"
+            if always_fail
+            else 'if [ -e "$PIP_STATE" ]; then\n  exit 0\nfi\n: > "$PIP_STATE"\nexit 1'
+        )
         (venv_bin / "pip").write_text(
             "#!/bin/sh\n"
             'printf "%s\\n" "$*" >> "$PIP_LOG"\n'
@@ -647,7 +650,11 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
             text=True,
             capture_output=True,
             check=False,
-            env={**os.environ, "PIP_LOG": str(workspace / "pip.log"), "PIP_STATE": str(workspace / "pip.state")},
+            env={
+                **os.environ,
+                "PIP_LOG": str(workspace / "pip.log"),
+                "PIP_STATE": str(workspace / "pip.state"),
+            },
         )
 
     def test_akida_package_install_retries_once_without_the_download_cache(
@@ -726,9 +733,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
         Optional by design: a host without that group still installs.
         """
         script = self._akida_script()
-        self.assertIn(
-            '  if getent group systemd-journal >/dev/null 2>&1; then', script
-        )
+        self.assertIn("  if getent group systemd-journal >/dev/null 2>&1; then", script)
         self.assertIn(
             '    sudo_cmd usermod -aG systemd-journal "$SERVICE_USER" || true',
             script,
@@ -839,7 +844,12 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
 
         absent = self._device_message(
             runtime_target="akd1000_simulator",
-            probe={"present": False, "bdf": "", "driver": "", "memorySpaceEnabled": None},
+            probe={
+                "present": False,
+                "bdf": "",
+                "driver": "",
+                "memorySpaceEnabled": None,
+            },
         )
         self.assertEqual(absent, "No Akida board was found in this host.")
 
@@ -1538,7 +1548,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
                     {"board": {"state": "ready"}},
                 ],
             ) as fetch_preflight,
-            mock.patch("nmtk.launcher_control.server.time.sleep", return_value=None),
+            mock.patch.object(pynq_service.time, "sleep", return_value=None),
         ):
             result = self.state.provision_pynq_board(board["id"])
 
@@ -1579,7 +1589,7 @@ class TestLauncherBundleAkidaProvisioning(LauncherControlServiceTestBase):
                     {"board": {"state": "ready"}},
                 ],
             ) as fetch_preflight,
-            mock.patch("nmtk.launcher_control.server.time.sleep", return_value=None),
+            mock.patch.object(pynq_service.time, "sleep", return_value=None),
         ):
             result = self.state.restart_pynq_runtime(board["id"])
 

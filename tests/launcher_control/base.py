@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 import nmtk.launcher_control.server as launcher_server
+import nmtk.launcher_control.hardware_models as launcher_hardware_models
 import nmtk.launcher_control.runtime_shared as launcher_runtime_shared
 import nmtk.launcher_control.settings_service as launcher_settings_service
 import nmtk.launcher_control.module_environment as launcher_module_environment
@@ -129,8 +130,14 @@ class LauncherControlServiceTestBase(unittest.TestCase):
 
         self._patches = [
             mock.patch.object(launcher_server, "REPO_ROOT", self.repo_root),
+            mock.patch.object(launcher_hardware_models, "REPO_ROOT", self.repo_root),
             mock.patch.object(
                 launcher_server,
+                "MODULES_MANIFEST",
+                assets_dir / "modules.json",
+            ),
+            mock.patch.object(
+                launcher_hardware_models,
                 "MODULES_MANIFEST",
                 assets_dir / "modules.json",
             ),

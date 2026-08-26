@@ -1,11 +1,4 @@
-"""Module install/update/repair/start/stop orchestration, health polling, and
-the doctor report.
-
-Imported by ``server.py`` right before ``LauncherControlState`` is defined, so
-the ``from .server import ...`` below resolves against the partially
-initialized module rather than re-entering it — the names it pulls in must
-already be bound in ``server.py`` above that import line.
-"""
+"""Module lifecycle orchestration, health polling, and doctor reporting."""
 
 from __future__ import annotations
 
@@ -14,10 +7,18 @@ import time
 from typing import Any
 from urllib.parse import urlparse
 
-from .config import STATE_FILE, MODULES_MANIFEST
-from .preflight_types import PreflightResult
-from .process_supervision import ManagedProcess, _status_for_health_response
-from .runtime_shared import _module_root, _read_json_file, _write_json_file
+from .config import MODULES_MANIFEST, STATE_FILE
+from .doctor_service import _global_preflight_checks
+from .hardware_models import (
+    _load_neurochip_launcher_runtime_contract,
+    _normalize_akida_host_state,
+    _normalize_akida_runtime_mode,
+    _normalize_pynq_board_state,
+    _resolved_akida_base_url,
+    _resolved_akida_control_api_url,
+    _resolved_pynq_runtime_api_url,
+    _status_name,
+)
 from .module_environment import (
     _effective_port,
     _is_externally_managed_service,
@@ -35,14 +36,11 @@ from .module_environment import (
     _normalized_import_list,
     _uvicorn_host,
 )
-from .suite_api_service import (
-    SUITE_API_STATUS_PREFLIGHT_FAILED,
-    SUITE_API_STATUS_READY,
-    _suite_api_health_probe,
-)
-from .doctor_service import _global_preflight_checks
 from .module_registry import _coerce_remote_update_version, _is_newer_version
-from .server import (
+from .preflight_types import PreflightResult
+from .process_supervision import ManagedProcess, _status_for_health_response
+from .runtime_shared import _module_root, _read_json_file, _write_json_file
+from .state_contracts import (
     HEALTH_POLL_SECONDS,
     PREFLIGHT_DEGRADED,
     PREFLIGHT_FAILED,
@@ -50,14 +48,11 @@ from .server import (
     STARTUP_GRACE_SECONDS,
     STATUS_INDEX,
     SUPPORTED_START_STRATEGIES,
-    _load_neurochip_launcher_runtime_contract,
-    _normalize_akida_host_state,
-    _normalize_akida_runtime_mode,
-    _normalize_pynq_board_state,
-    _resolved_akida_base_url,
-    _resolved_akida_control_api_url,
-    _resolved_pynq_runtime_api_url,
-    _status_name,
+)
+from .suite_api_service import (
+    SUITE_API_STATUS_PREFLIGHT_FAILED,
+    SUITE_API_STATUS_READY,
+    _suite_api_health_probe,
 )
 
 

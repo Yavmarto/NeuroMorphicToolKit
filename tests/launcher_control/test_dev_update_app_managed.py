@@ -161,9 +161,7 @@ def test_changed_paths_expands_dirty_submodule_files(tmp_path: Path) -> None:
         cwd=parent,
     )
     _git("commit", "-am", "initial", cwd=parent)
-    (parent / "Neurochip" / "backend.py").write_text(
-        "OLD = False\n", encoding="utf-8"
-    )
+    (parent / "Neurochip" / "backend.py").write_text("OLD = False\n", encoding="utf-8")
 
     result = subprocess.run(
         [
@@ -212,7 +210,7 @@ def test_dev_update_classifies_large_recovery_list_without_subshells() -> None:
         [
             "bash",
             "-c",
-            r'''
+            r"""
 dev_update="$1"
 paths="$2"
 shift 2
@@ -220,7 +218,7 @@ set --
 source "$dev_update"
 collect_actions "$paths"
 printf 'rebuild=%s\n' "${COLLECTED_REBUILD[*]}"
-''',
+""",
             "_",
             str(DEV_UPDATE),
             paths,
@@ -244,14 +242,14 @@ def test_dev_update_rejects_a_second_local_run(tmp_path: Path) -> None:
         [
             "bash",
             "-c",
-            r'''
+            r"""
 dev_update="$1"
 shift
 set --
 source "$dev_update"
 acquire_update_lock
 sleep 30
-''',
+""",
             "_",
             str(DEV_UPDATE),
         ],
@@ -271,13 +269,13 @@ sleep 30
             [
                 "bash",
                 "-c",
-                r'''
+                r"""
 dev_update="$1"
 shift
 set --
 source "$dev_update"
 acquire_update_lock
-''',
+""",
                 "_",
                 str(DEV_UPDATE),
             ],
@@ -305,13 +303,13 @@ def test_dev_update_times_out_while_writing_recovery_state(tmp_path: Path) -> No
         [
             "bash",
             "-c",
-            r'''
+            r"""
 dev_update="$1"
 shift
 set --
 source "$dev_update"
 write_pending_paths "Neurochip/neurochip/runtime.py"
-''',
+""",
             "_",
             str(DEV_UPDATE),
         ],
@@ -328,7 +326,10 @@ write_pending_paths "Neurochip/neurochip/runtime.py"
     )
 
     assert result.returncode != 0
-    assert "timed out after 1 seconds while recording dev-update recovery state" in result.stderr
+    assert (
+        "timed out after 1 seconds while recording dev-update recovery state"
+        in result.stderr
+    )
 
 
 def test_app_managed_handoff_reloads_and_recreates_only_selected_service(
@@ -448,8 +449,7 @@ def test_app_managed_helper_installs_a_scoped_passwordless_entry(
     assert installed_helper.read_bytes() == HELPER.read_bytes()
     assert installed_helper.stat().st_mode & 0o777 == 0o755
     assert sudoers_file.read_text(encoding="utf-8") == (
-        "moosebun2 ALL=(root) NOPASSWD: "
-        f"{installed_helper} *\n"
+        f"moosebun2 ALL=(root) NOPASSWD: {installed_helper} *\n"
     )
     assert sudoers_file.stat().st_mode & 0o777 == 0o440
 
@@ -462,7 +462,7 @@ def test_dev_update_reuses_the_installed_helper_without_scp_or_password(
         [
             "bash",
             "-c",
-            r'''
+            r"""
 dev_update="$1"
 set --
 source "$dev_update"
@@ -493,7 +493,7 @@ scp() {
   return 97
 }
 app_managed_update_services launcher-control
-''',
+""",
             "_",
             str(DEV_UPDATE),
         ],
@@ -590,13 +590,8 @@ esac
     assert result.returncode != 0
     assert "previous image was restored" in result.stderr
     calls = call_log.read_text(encoding="utf-8")
-    assert (
-        "tag sha256:previous-image ghcr.io/example/launcher-control:0.6.0"
-        in calls
-    )
-    assert calls.count(
-        "up -d --no-deps --force-recreate launcher-control"
-    ) == 2
+    assert "tag sha256:previous-image ghcr.io/example/launcher-control:0.6.0" in calls
+    assert calls.count("up -d --no-deps --force-recreate launcher-control") == 2
     assert not archive.exists()
 
 

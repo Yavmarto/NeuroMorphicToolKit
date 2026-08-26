@@ -13,10 +13,10 @@ neurohub.db.database picks up the correct SQLite path.
 """
 
 import os
-from pathlib import Path
+
+from suite_api.storage import default_neurohub_db_url
 
 # Neurohub's database engine is initialised at import time via os.getenv().
 # We must set NEUROHUB_DB_URL *before* the neurohub package is first imported.
 if "NEUROHUB_DB_URL" not in os.environ:
-    _db_path = Path(__file__).parents[3] / "Neurohub" / "neurohub.db"
-    os.environ["NEUROHUB_DB_URL"] = f"sqlite:///{_db_path}"
+    os.environ["NEUROHUB_DB_URL"] = default_neurohub_db_url()

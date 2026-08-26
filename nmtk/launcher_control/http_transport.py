@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import uuid
 from http import HTTPStatus
 from typing import Any, Protocol
 
@@ -63,12 +64,14 @@ def send_json(handler: JsonHandler, status: HTTPStatus, payload: Any) -> None:
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json")
     handler.send_header("Content-Length", str(len(encoded)))
+    handler.send_header("X-Request-Id", _request_id(handler))
     allowed_origin = _cors_origin(handler)
     if allowed_origin:
         handler.send_header("Access-Control-Allow-Origin", allowed_origin)
         handler.send_header("Vary", "Origin")
     handler.send_header(
-        "Access-Control-Allow-Headers", "Content-Type, X-NMTK-Admin-Token"
+        "Access-Control-Allow-Headers",
+        "Authorization, Content-Type, X-NMTK-Admin-Token, X-Request-ID",
     )
     handler.send_header(
         "Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS"
@@ -76,6 +79,17 @@ def send_json(handler: JsonHandler, status: HTTPStatus, payload: Any) -> None:
     handler.end_headers()
     if status != HTTPStatus.NO_CONTENT:
         handler.wfile.write(encoded)
+
+
+def _request_id(handler: JsonHandler) -> str:
+    """Return one request correlation ID without trusting blank input."""
+    existing = str(getattr(handler, "_request_id", "")).strip()
+    if existing:
+        return existing
+    incoming = str(handler.headers.get("X-Request-ID", "")).strip()
+    generated = incoming or str(uuid.uuid4())
+    handler._request_id = generated
+    return generated
 
 
 def stream_deployment_sse(handler: JsonHandler, job_id: str) -> None:

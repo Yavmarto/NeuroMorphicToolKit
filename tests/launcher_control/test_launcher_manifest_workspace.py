@@ -2,6 +2,7 @@
 
 from typing import Any
 import json
+import nmtk.launcher_control.hardware_models as launcher_hardware_models
 import nmtk.launcher_control.server as launcher_server
 import nmtk.launcher_control.suite_api_service as suite_api_service
 from unittest import mock
@@ -199,7 +200,7 @@ class TestLauncherManifestWorkspace(LauncherControlServiceTestBase):
         with (
             mock.patch.dict(os.environ, {}, clear=True),
             mock.patch.object(
-                launcher_server,
+                launcher_hardware_models,
                 "_lava_backend_reachable",
                 return_value=True,
             ),

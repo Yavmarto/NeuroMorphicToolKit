@@ -8,7 +8,9 @@ from base import LauncherControlServiceTestBase, _stage_overlay_package
 
 
 class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
-    def test_read_remote_pynq_install_status_decodes_machine_readable_result(self) -> None:
+    def test_read_remote_pynq_install_status_decodes_machine_readable_result(
+        self,
+    ) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
@@ -20,9 +22,13 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         with mock.patch.object(
             self.state,
             "_run_ssh",
-            return_value=json.dumps({"installMode": "user-space", "message": "fallback"}),
+            return_value=json.dumps(
+                {"installMode": "user-space", "message": "fallback"}
+            ),
         ):
-            status = self.state._read_remote_pynq_install_status(self.state._get_pynq_board(board["id"]))
+            status = self.state._read_remote_pynq_install_status(
+                self.state._get_pynq_board(board["id"])
+            )
 
         self.assertEqual(status["installMode"], "user-space")
 
@@ -59,13 +65,13 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             result = self.state.restart_pynq_runtime(board["id"])
 
         restart.assert_called_once()
-        refresh.assert_called_once_with(
-            board["id"], stage="user-space runtime restart"
-        )
+        refresh.assert_called_once_with(board["id"], stage="user-space runtime restart")
         self.assertEqual(result["board"]["state"], "overlay_missing")
         self.assertEqual(result["installStatus"]["installMode"], "user-space")
 
-    def test_preflight_with_missing_overlay_stays_actionable_when_degraded(self) -> None:
+    def test_preflight_with_missing_overlay_stays_actionable_when_degraded(
+        self,
+    ) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
@@ -211,7 +217,10 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         )
 
         self.assertIn("Bitstream not found", description)
-        self.assertIn("/home/xilinx/.local/share/neurochip-pynq-agent/overlays/snn_overlay.bit", description)
+        self.assertIn(
+            "/home/xilinx/.local/share/neurochip-pynq-agent/overlays/snn_overlay.bit",
+            description,
+        )
 
     def test_provision_pynq_board_reports_install_status(self) -> None:
         board = self.state.create_pynq_board(
@@ -269,7 +278,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             result["board"]["lastPreflightMessage"],
         )
 
-    def test_provision_pynq_board_tails_runtime_log_when_install_script_fails(self) -> None:
+    def test_provision_pynq_board_tails_runtime_log_when_install_script_fails(
+        self,
+    ) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
@@ -291,7 +302,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
                 ],
             ),
             mock.patch.object(self.state, "_run_scp"),
-            mock.patch.object(self.state, "_emit_runtime_log_tail") as emit_runtime_log_tail,
+            mock.patch.object(
+                self.state, "_emit_runtime_log_tail"
+            ) as emit_runtime_log_tail,
         ):
             result = self.state.provision_pynq_board(board["id"])
 
@@ -469,7 +482,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         )
         restart_agent.assert_not_called()
         self.assertEqual(run_scp.call_count, 3)
-        self.assertEqual(run_scp.call_args_list[0].args[1].resolve(), bitstream.resolve())
+        self.assertEqual(
+            run_scp.call_args_list[0].args[1].resolve(), bitstream.resolve()
+        )
         self.assertEqual(
             run_scp.call_args_list[0].args[2],
             f"{board['remoteOverlayDir']}/snn_overlay.bit",
@@ -479,7 +494,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             run_scp.call_args_list[1].args[2],
             f"{board['remoteOverlayDir']}/snn_overlay.hwh",
         )
-        self.assertEqual(run_scp.call_args_list[2].args[1].resolve(), manifest.resolve())
+        self.assertEqual(
+            run_scp.call_args_list[2].args[1].resolve(), manifest.resolve()
+        )
         self.assertEqual(
             run_scp.call_args_list[2].args[2],
             f"{board['remoteOverlayDir']}/overlay_manifest.json",
@@ -561,13 +578,17 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
                 "fetch_pynq_board_preflight",
                 return_value={"board": {"state": "degraded_optional_capability"}},
             ),
-            mock.patch.object(self.state, "_emit_pynq_terminal_log", side_effect=record_emit),
+            mock.patch.object(
+                self.state, "_emit_pynq_terminal_log", side_effect=record_emit
+            ),
         ):
             result = self.state.install_pynq_overlay_assets(board["id"])
 
         self.assertIn("overlayRestartWarning", result)
         self.assertIn("agent did not become healthy", result["overlayRestartWarning"])
-        tail_messages = [msg for msg, _stderr in emissions if msg.startswith("runtime.log | ")]
+        tail_messages = [
+            msg for msg, _stderr in emissions if msg.startswith("runtime.log | ")
+        ]
         self.assertEqual(
             tail_messages,
             ["runtime.log | line1", "runtime.log | line2"],
@@ -575,7 +596,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         summary_messages = [
             msg for msg, _stderr in emissions if "restart did not become healthy" in msg
         ]
-        self.assertTrue(summary_messages, "expected a summary line about restart failure")
+        self.assertTrue(
+            summary_messages, "expected a summary line about restart failure"
+        )
 
     def test_install_pynq_overlay_assets_degrades_when_readiness_refresh_fails_after_upload(
         self,
@@ -613,7 +636,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
                 "fetch_pynq_board_preflight",
                 side_effect=RuntimeError("connection refused"),
             ),
-            mock.patch.object(self.state, "_emit_pynq_terminal_log", side_effect=record_emit),
+            mock.patch.object(
+                self.state, "_emit_pynq_terminal_log", side_effect=record_emit
+            ),
         ):
             result = self.state.install_pynq_overlay_assets(board["id"])
 
@@ -626,7 +651,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         self.assertIn("overlayRestartWarning", result)
         self.assertIn("agent did not become healthy", result["overlayRestartWarning"])
         duplicate_refresh_messages = [
-            msg for msg, _stderr in emissions if "readiness refresh after overlay upload did not complete" in msg
+            msg
+            for msg, _stderr in emissions
+            if "readiness refresh after overlay upload did not complete" in msg
         ]
         self.assertEqual(
             duplicate_refresh_messages,
@@ -634,7 +661,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
             "restart failure should remain the single summary line for this recovery path",
         )
 
-    def test_install_pynq_overlay_assets_preserves_explicit_overlay_missing_preflight(self) -> None:
+    def test_install_pynq_overlay_assets_preserves_explicit_overlay_missing_preflight(
+        self,
+    ) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
@@ -670,7 +699,9 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         self.assertEqual(result["board"]["state"], "overlay_missing")
         self.assertNotIn("overlayRestartWarning", result)
 
-    def test_install_pynq_overlay_assets_preserves_explicit_preflight_failure(self) -> None:
+    def test_install_pynq_overlay_assets_preserves_explicit_preflight_failure(
+        self,
+    ) -> None:
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",
@@ -754,7 +785,7 @@ class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
         self.assertIn("dma_channel", "\n".join(status["issues"]))
 
     def test_overlay_install_message_distinguishes_invalid_from_absent(self) -> None:
-        """"Files are there but rejected" is not "files are missing"."""
+        """ "Files are there but rejected" is not "files are missing"."""
         board = self.state.create_pynq_board(
             {
                 "displayName": "Desk PYNQ",

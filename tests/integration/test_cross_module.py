@@ -1,15 +1,19 @@
+import asyncio
 import os
-import time
 from pathlib import Path
-from urllib.parse import urlparse
 
 import httpx
 import pytest
 
+from .suite_api_client import request_suite_api, suite_api_url
+
 # Every ordinary product route is mounted by the consolidated Suite API.
 # A single required base URL prevents tests silently exercising retired
 # per-module ports or skipping the whole suite when the gateway is absent.
-SUITE_API_URL = os.getenv("SUITE_API_URL", "http://127.0.0.1:9000").rstrip("/")
+# The supported developer backend runs on the shared dev host.  Override this
+# in CI or for another deployment instead of accidentally exercising whatever
+# unrelated service happens to own local port 9000 (commonly MinIO).
+SUITE_API_URL = suite_api_url()
 NEUROCNL_URL = SUITE_API_URL
 NEUROSIM_URL = SUITE_API_URL
 NEUROCHIP_URL = SUITE_API_URL
@@ -17,33 +21,18 @@ NEUROSENSE_URL = SUITE_API_URL
 NEUROHUB_URL = SUITE_API_URL
 NEUROBENCH_URL = SUITE_API_URL
 
-NIR_NATIVE_REFLEX_SPEC = "\n".join(
-    [
-        "Define a network named integration_reflex.",
-        "Define an input port named input with shape (1,).",
-        "Define a LIF neuron named relay with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.",
-        "Define an output port named output with shape (1,).",
-        "input connects to relay.",
-        "relay connects to output.",
-    ]
+NIR_NATIVE_REFLEX_SPEC = (
+    "Define a network named integration_reflex.\n"
+    "Define an input port named input with shape (1,).\n"
+    "Define a LIF neuron named relay with time constant 0.02, resistance 1.0, "
+    "leak voltage 0.0, and firing threshold 1.0.\n"
+    "Define an output port named output with shape (1,).\n"
+    "input connects to relay.\n"
+    "relay connects to output."
 )
 
 
-def _service_label(url: str) -> str:
-    parsed = urlparse(url)
-    return parsed.netloc or parsed.path or url
-
-
-async def _request_or_skip(
-    client: httpx.AsyncClient,
-    method: str,
-    url: str,
-    **kwargs: object,
-) -> httpx.Response:
-    try:
-        return await client.request(method, url, **kwargs)
-    except httpx.RequestError as exc:
-        pytest.fail(f"Required Suite API {_service_label(url)} unavailable: {exc}")
+_request_or_skip = request_suite_api
 
 
 def _default_neurosense_artifact_path() -> str:
@@ -332,7 +321,7 @@ async def test_neurosense_artifact_handoff():
                 pytest.fail(
                     f"NeuroBench recording benchmark failed: {status_data.get('error')}"
                 )
-            time.sleep(1)
+            await asyncio.sleep(1)
         else:
             pytest.fail("Timed out waiting for NeuroBench recording benchmark job.")
 

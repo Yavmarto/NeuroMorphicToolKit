@@ -1,23 +1,31 @@
 """Launcher control service tests: TestLauncherLifecycleDoctorCli."""
 
-from pathlib import Path
 import io
 import json
-import nmtk.launcher_control.server as launcher_server
-import nmtk.launcher_control.module_lifecycle as launcher_module_lifecycle
-import nmtk.launcher_control.module_install as launcher_module_install
-import nmtk.launcher_control.doctor_service as launcher_doctor_service
-import nmtk.launcher_control.suite_api_service as launcher_suite_api_service
-from unittest import mock
 import os
 import subprocess
 import sys
 import threading
 import urllib.request
-from base import LauncherControlServiceTestBase, PROJECT_ROOT
+from pathlib import Path
+from unittest import mock
+
+from base import PROJECT_ROOT, LauncherControlServiceTestBase
+
+import nmtk.launcher_control.doctor_service as launcher_doctor_service
+import nmtk.launcher_control.module_install as launcher_module_install
+import nmtk.launcher_control.module_lifecycle as launcher_module_lifecycle
+import nmtk.launcher_control.server as launcher_server
+import nmtk.launcher_control.suite_api_service as launcher_suite_api_service
 
 
 class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
+    def test_cli_binds_to_loopback_unless_remote_host_is_explicit(self) -> None:
+        parser = launcher_server._build_cli_parser()
+
+        self.assertEqual(parser.parse_args([]).host, "127.0.0.1")
+        self.assertEqual(parser.parse_args(["--host", "0.0.0.0"]).host, "0.0.0.0")
+
     def test_diagnostic_state_starts_no_background_work(self) -> None:
         with (
             mock.patch.object(threading.Thread, "start") as start_thread,
@@ -67,6 +75,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             capture_output=True,
             text=True,
             env=env,
+            check=False,
         )
 
         self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
@@ -92,6 +101,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
             cwd=PROJECT_ROOT,
             capture_output=True,
             text=True,
+            check=False,
         )
 
         self.assertEqual(result.returncode, 0, msg=result.stderr or result.stdout)
@@ -154,9 +164,9 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
                 ),
             ),
             mock.patch.object(launcher_server.subprocess, "Popen") as popen,
+            self.assertRaises(RuntimeError),
         ):
-            with self.assertRaises(RuntimeError):
-                self.state._start_sync("dummy")
+            self.state._start_sync("dummy")
 
         popen.assert_not_called()
         payload = self.state.serialize_module("dummy")
@@ -240,13 +250,15 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
         module["port"] = launcher_server.DEFAULT_SUITE_API_PORT
         self.state._manage_suite_api = False
 
-        with mock.patch.object(
-            launcher_suite_api_service,
-            "_suite_api_health_probe",
-            return_value=(False, "connection refused"),
+        with (
+            mock.patch.object(
+                launcher_suite_api_service,
+                "_suite_api_health_probe",
+                return_value=(False, "connection refused"),
+            ),
+            self.assertRaises(RuntimeError),
         ):
-            with self.assertRaises(RuntimeError):
-                self.state._start_sync("dummy")
+            self.state._start_sync("dummy")
 
         payload = self.state.serialize_module("dummy")
         self.assertEqual(payload["status"], launcher_server.STATUS_INDEX["error"])
@@ -677,9 +689,7 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
 
         def fake_access(path: str | os.PathLike[str], mode: int) -> bool:
             normalized = Path(path).resolve()
-            if normalized in {resolved_cache_dir, resolved_engine_stamp}:
-                return False
-            return True
+            return normalized not in {resolved_cache_dir, resolved_engine_stamp}
 
         with (
             mock.patch.object(
@@ -1130,9 +1140,11 @@ class TestLauncherLifecycleDoctorCli(LauncherControlServiceTestBase):
                 raise RuntimeError("pip install failed: network error")
             return original_run_cmd(command, cwd, module_id)  # type: ignore[return-value]
 
-        with mock.patch.object(self.state, "_run_command", side_effect=fail_on_pip):
-            with self.assertRaises(RuntimeError):
-                self.state._install_sync("dummy")
+        with (
+            mock.patch.object(self.state, "_run_command", side_effect=fail_on_pip),
+            self.assertRaises(RuntimeError),
+        ):
+            self.state._install_sync("dummy")
 
         self.assertFalse(
             venv_path.exists(),

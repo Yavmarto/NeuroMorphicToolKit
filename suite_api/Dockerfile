@@ -50,7 +50,7 @@ COPY Neurochip/ Neurochip/
 ENV PYTHONPATH="/repo/neurocnl:/repo/Neurochip"
 # jinja2 is a dep of both Neurochip and suite_api — installed by those, not needed here
 
-# ── Neurobench wrapper (declares neurocnl ^0.0.0 on PyPI — reinstall local) ───
+# ── Neurobench wrapper (uses the local, pinned workspace NeuroCNL package) ────
 COPY Neurobench/neurobench/ Neurobench/neurobench/
 RUN pip install --no-cache-dir Neurobench/neurobench/ \
  && pip install --no-cache-dir --no-deps "./neurocnl[training,studio,rockpool,synsense,norse]"

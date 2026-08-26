@@ -868,9 +868,7 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
 
         # Membership only reaches new login sessions, so the grant must precede
         # the launch that opens one.
-        self.assertEqual(
-            order, ["sudo:usermod -aG video,render xilinx", "launch"]
-        )
+        self.assertEqual(order, ["sudo:usermod -aG video,render xilinx", "launch"])
 
     def test_restart_skips_the_grant_when_the_user_is_already_in_both_groups(
         self,
@@ -1063,9 +1061,9 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
         """
         namespace: dict[str, Any] = {}
         exec(  # noqa: S102
-            provisioning_helpers._remote_control_script_text().split(
-                "def _local_json"
-            )[0],
+            provisioning_helpers._remote_control_script_text().split("def _local_json")[
+                0
+            ],
             namespace,
         )
         return str(namespace["_akida_device_message"](probe, usb))

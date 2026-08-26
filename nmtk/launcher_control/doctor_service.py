@@ -1,10 +1,4 @@
-"""Pure doctor-report helpers: SDK/toolchain preflight checks and rendering.
-
-Imported by ``server.py`` right before ``LauncherControlState`` is defined, so
-the ``from .server import ...`` below resolves against the partially
-initialized module rather than re-entering it — the names it pulls in must
-already be bound in ``server.py`` above that import line.
-"""
+"""Pure doctor-report helpers: SDK/toolchain preflight checks and rendering."""
 
 from __future__ import annotations
 
@@ -18,7 +12,7 @@ from .suite_api_service import (
     _suite_api_env_dir,
     _suite_api_env_python,
 )
-from .server import PREFLIGHT_DEGRADED, PREFLIGHT_FAILED, PREFLIGHT_OK
+from .state_contracts import PREFLIGHT_DEGRADED, PREFLIGHT_FAILED, PREFLIGHT_OK
 
 
 def _doctor_prefix(status: str) -> str:

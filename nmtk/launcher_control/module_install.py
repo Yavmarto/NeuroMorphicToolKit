@@ -1,13 +1,4 @@
-"""Module install/update/repair synchronous workers, preflight, and Akida
-runtime dependency preparation.
-
-Split out of module_lifecycle.py (which still owns start/stop/health-poll/
-doctor reporting) because the combined file exceeded ~1300 lines. Imported by
-``server.py`` right before ``LauncherControlState`` is defined, so the
-``from .server import ...`` below resolves against the partially initialized
-module rather than re-entering it — the names it pulls in must already be
-bound in ``server.py`` above that import line.
-"""
+"""Module install/update/repair workers, preflight, and Akida preparation."""
 
 from __future__ import annotations
 
@@ -45,7 +36,7 @@ from .module_environment import (
     _poetry_fallback_env_root,
     _version_matches_range,
 )
-from .server import (
+from .state_contracts import (
     IMPORT_PROBE_SCRIPT,
     PREFLIGHT_DEGRADED,
     PREFLIGHT_FAILED,

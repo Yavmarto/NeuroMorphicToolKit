@@ -1,17 +1,80 @@
 """Launcher control service tests: TestLauncherHardwareRuntimeProxy."""
 
-from pathlib import Path
 import json
-import nmtk.launcher_control.server as launcher_server
-import nmtk.launcher_control.module_install as launcher_module_install
-from unittest import mock
 import subprocess
 import threading
 import urllib.request
+from pathlib import Path
+from unittest import mock
+
 from base import LauncherControlServiceTestBase
+
+import nmtk.launcher_control.module_install as launcher_module_install
+import nmtk.launcher_control.server as launcher_server
 
 
 class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
+    def test_launcher_accepts_bearer_token_and_keeps_legacy_header(self) -> None:
+        with mock.patch.dict(
+            "os.environ",
+            {"NMTK_AUTH_REQUIRED": "1", "NMTK_ADMIN_TOKEN": "app-token"},
+            clear=False,
+        ):
+            server = launcher_server.create_server("127.0.0.1", 0)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            self.addCleanup(server.shutdown)
+            self.addCleanup(server.server_close)
+            self.addCleanup(thread.join, 1.0)
+            base = f"http://127.0.0.1:{server.server_address[1]}"
+
+            bearer_request = urllib.request.Request(
+                f"{base}/api/launcher/settings",
+                headers={"Authorization": "Bearer app-token"},
+            )
+            with urllib.request.urlopen(bearer_request, timeout=5) as response:
+                self.assertEqual(response.status, 200)
+
+            legacy_request = urllib.request.Request(
+                f"{base}/api/launcher/settings",
+                headers={"X-NMTK-Admin-Token": "app-token"},
+            )
+            with urllib.request.urlopen(legacy_request, timeout=5) as response:
+                self.assertEqual(response.status, 200)
+
+            with self.assertRaises(urllib.error.HTTPError) as error:
+                urllib.request.urlopen(f"{base}/api/launcher/settings", timeout=5)
+            self.assertEqual(error.exception.code, 401)
+
+    def test_http_errors_are_correlated_and_do_not_echo_internal_paths(self) -> None:
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{server.server_address[1]}/missing",
+            headers={"X-Request-ID": "launcher-trace-1"},
+        )
+        with self.assertRaises(urllib.error.HTTPError) as exc_info:
+            urllib.request.urlopen(request, timeout=5)
+
+        payload = json.loads(exc_info.exception.read().decode("utf-8"))
+        self.assertEqual(exc_info.exception.headers["X-Request-Id"], "launcher-trace-1")
+        self.assertEqual(
+            payload,
+            {
+                "detail": {
+                    "code": "not_found",
+                    "message": "The requested launcher route does not exist.",
+                    "request_id": "launcher-trace-1",
+                    "retryable": False,
+                }
+            },
+        )
+
     def test_akida_runtime_update_job_http_endpoints(self) -> None:
         server = launcher_server.create_server("127.0.0.1", 0)
         thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -261,10 +324,11 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
         self.assertEqual(exc_info.exception.code, 422)
         payload = json.loads(exc_info.exception.read().decode("utf-8"))
         self.assertEqual(
-            payload["runtimeJson"]["detail"]["error_code"],
-            "OVERLAY_REGISTER_MAP_MISMATCH",
+            payload["detail"]["code"],
+            "overlay_register_map_mismatch",
         )
-        self.assertIn("OVERLAY_REGISTER_MAP_MISMATCH", payload["runtimeBody"])
+        self.assertNotIn("192.168.2.99", json.dumps(payload))
+        self.assertNotIn("runtimeBody", payload)
 
     def test_pynq_deploy_http_endpoint_reports_unreachable_runtime_as_bad_gateway(
         self,
@@ -311,8 +375,10 @@ class TestLauncherHardwareRuntimeProxy(LauncherControlServiceTestBase):
 
         self.assertEqual(exc_info.exception.code, 502)
         payload = json.loads(exc_info.exception.read().decode("utf-8"))
-        self.assertIn("192.168.2.90:8002", payload["error"])
-        self.assertIn("Connection refused", payload["error"])
+        self.assertEqual(payload["detail"]["code"], "runtime_failed")
+        self.assertTrue(payload["detail"]["retryable"])
+        self.assertNotIn("192.168.2.90:8002", json.dumps(payload))
+        self.assertNotIn("Connection refused", json.dumps(payload))
 
     def test_pynq_run_http_endpoint_proxies_runtime_payload(self) -> None:
         server = launcher_server.create_server("127.0.0.1", 0)

@@ -377,15 +377,15 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         with executor._kubectl_env_ctx(target) as env:
             path = env.get("KUBECONFIG", "")
             assert path, "expected KUBECONFIG to be set inside the context"
-            assert os.path.exists(
-                path
-            ), "expected temp file to exist inside the context"
+            assert os.path.exists(path), (
+                "expected temp file to exist inside the context"
+            )
             leaked_path.append(path)
 
         assert leaked_path, "context manager did not yield"
-        assert not os.path.exists(
-            leaked_path[0]
-        ), f"kubeconfig temp file was NOT deleted after context exit: {leaked_path[0]}"
+        assert not os.path.exists(leaked_path[0]), (
+            f"kubeconfig temp file was NOT deleted after context exit: {leaked_path[0]}"
+        )
 
     def test_k8s_preflight_blocks_without_kubectl(self) -> None:
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
@@ -468,9 +468,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         assert captured_cmds, "expected _ssh_run to be called"
         cmd = captured_cmds[0]
         # shlex.quote wraps the path in single quotes, neutralising the injection
-        assert (
-            "echo INJECTED" not in cmd.split("'")[0]
-        ), f"shell injection not neutralised; raw cmd: {cmd!r}"
+        assert "echo INJECTED" not in cmd.split("'")[0], (
+            f"shell injection not neutralised; raw cmd: {cmd!r}"
+        )
 
     def test_init_remote_secrets_clean_path(self) -> None:
         """A clean deploy_dir produces a valid shell command without altering the path."""
@@ -525,9 +525,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
 
         assert captured_cmds, "expected _ssh_run to be called"
         cmd = captured_cmds[0]
-        assert (
-            "'/opt/my deploy dir'" in cmd
-        ), f"expected path with spaces to be single-quoted; cmd: {cmd!r}"
+        assert "'/opt/my deploy dir'" in cmd, (
+            f"expected path with spaces to be single-quoted; cmd: {cmd!r}"
+        )
 
     @staticmethod
     def _fake_rsync_popen(returncode: int = 0, output_lines: "list[str] | None" = None):
@@ -837,9 +837,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             )
 
         assert any(" ps -a" in command for command in commands), commands
-        assert any(
-            "logs --tail=100 lava-backend" in command for command in commands
-        ), commands
+        assert any("logs --tail=100 lava-backend" in command for command in commands), (
+            commands
+        )
         assert any("inspect --format" in command for command in commands), commands
         assert any("probe_status" in command for command in commands), commands
         assert any("config --format json" in command for command in commands), commands
@@ -1185,15 +1185,15 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
 
         assert len(commands) == 8, commands
         assert "--project-name nmtk" in commands[1], commands
-        assert all(
-            "--project-name nmtk" in command for command in commands[4:7]
-        ), commands
+        assert all("--project-name nmtk" in command for command in commands[4:7]), (
+            commands
+        )
         assert "down --remove-orphans" in commands[4], commands
         assert " pull" in commands[5], commands
         assert "up -d --remove-orphans" in commands[6], commands
-        assert (
-            "Lava is optional" in commands[7] or "inspect --format" in commands[7]
-        ), commands
+        assert "Lava is optional" in commands[7] or "inspect --format" in commands[7], (
+            commands
+        )
 
     def test_remote_deploy_blocks_when_stale_stack_cleanup_fails(self) -> None:
         from nmtk.launcher_control.deployment_contracts import DeploymentTarget
@@ -1851,9 +1851,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             executor._deploy_remote(target, emit)
 
         assert call_order.index("install") < call_order.index("permissions"), call_order
-        assert call_order.index("permissions") < call_order.index(
-            "manifests"
-        ), call_order
+        assert call_order.index("permissions") < call_order.index("manifests"), (
+            call_order
+        )
 
     def test_deploy_remote_aborts_before_manifests_when_engine_install_fails(
         self,
@@ -2124,9 +2124,9 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
             )
 
         assert observed_key_paths, "expected the root key to be written to a temp file"
-        assert not os.path.exists(
-            observed_key_paths[0]
-        ), "root key temp file must be deleted after use"
+        assert not os.path.exists(observed_key_paths[0]), (
+            "root key temp file must be deleted after use"
+        )
 
     def test_ssh_root_bootstrap_requires_exactly_one_credential(self) -> None:
         from nmtk.launcher_control.deployment_user_bootstrap import ssh_root_bootstrap

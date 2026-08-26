@@ -5,8 +5,8 @@ Covers:
 2. Rejected network paths: oversized, recurrent, STDP → proper rejection
 3. Post-flash verification via Dream-Hand /api/neurochip/serial/flash/{job_id}/verify
 
-Requires running services (typically via docker-compose).
-Service URLs are read from environment variables with Docker service-name defaults.
+Requires the running Suite API. Its URL and optional app-provisioned administrator
+credential are read from the environment, with the supported dev host as the URL default.
 
 This file is intentionally Teensy-specific. It does not validate the PYNQ Z2
 deployment path or a real PYNQ board.
@@ -15,48 +15,33 @@ deployment path or a real PYNQ board.
 from __future__ import annotations
 
 import io
-import os
 import zipfile
-from urllib.parse import urlparse
 
 import httpx
 import pytest
 
-SUITE_API_URL = os.getenv("SUITE_API_URL", "http://127.0.0.1:9000").rstrip("/")
+from .suite_api_client import request_suite_api, suite_api_url
+
+SUITE_API_URL = suite_api_url()
 NEUROCNL_URL = SUITE_API_URL
 NEUROCHIP_URL = SUITE_API_URL
 
 
-def _service_label(url: str) -> str:
-    parsed = urlparse(url)
-    return parsed.netloc or parsed.path or url
-
-
-async def _request_or_skip(
-    client: httpx.AsyncClient,
-    method: str,
-    url: str,
-    **kwargs: object,
-) -> httpx.Response:
-    try:
-        return await client.request(method, url, **kwargs)
-    except httpx.RequestError as exc:
-        pytest.fail(f"Required Suite API {_service_label(url)} unavailable: {exc}")
+_request_or_skip = request_suite_api
 
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
 
-VALID_REFLEX_ARC_SPEC = "\n".join(
-    [
-        "Define a network named teensy_reflex.",
-        "Define an input port named input with shape (1,).",
-        "Define a LIF neuron named relay with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.",
-        "Define an output port named output with shape (1,).",
-        "input connects to relay.",
-        "relay connects to output.",
-    ]
+VALID_REFLEX_ARC_SPEC = (
+    "Define a network named teensy_reflex.\n"
+    "Define an input port named input with shape (1,).\n"
+    "Define a LIF neuron named relay with time constant 0.02, resistance 1.0, "
+    "leak voltage 0.0, and firing threshold 1.0.\n"
+    "Define an output port named output with shape (1,).\n"
+    "input connects to relay.\n"
+    "relay connects to output."
 )
 
 OVERSIZED_NETWORK_SPEC = "\n".join(
@@ -98,9 +83,9 @@ async def test_teensy_e2e_happy_path():
             f"{NEUROCNL_URL}/api/neurocnl/deploy/teensy/network",
             json={"spec": VALID_REFLEX_ARC_SPEC, "weight_bit_width": 8},
         )
-        assert (
-            deploy_resp.status_code == 200
-        ), f"Deploy failed: {deploy_resp.status_code} {deploy_resp.text}"
+        assert deploy_resp.status_code == 200, (
+            f"Deploy failed: {deploy_resp.status_code} {deploy_resp.text}"
+        )
 
         deploy_data = deploy_resp.json()
         assert deploy_data["verdict"] in ("faithful", "approximate")
@@ -124,38 +109,36 @@ async def test_teensy_e2e_happy_path():
             json=payload,
             params={"bit_width": 8},
         )
-        assert (
-            export_resp.status_code == 200
-        ), f"Export failed: {export_resp.status_code} {export_resp.text}"
+        assert export_resp.status_code == 200, (
+            f"Export failed: {export_resp.status_code} {export_resp.text}"
+        )
         assert export_resp.headers["content-type"] == "application/zip"
 
         # Step 3: Verify the firmware zip contents
         firmware_zip = zipfile.ZipFile(io.BytesIO(export_resp.content))
         names = firmware_zip.namelist()
         assert any("main.ino" in n for n in names), f"main.ino not found in {names}"
-        assert any(
-            "network_params.h" in n for n in names
-        ), f"network_params.h not found in {names}"
-        assert any(
-            "lif_engine.h" in n for n in names
-        ), f"lif_engine.h not found in {names}"
-        assert any(
-            "platformio.ini" in n for n in names
-        ), f"platformio.ini not found in {names}"
+        assert any("network_params.h" in n for n in names), (
+            f"network_params.h not found in {names}"
+        )
+        assert any("lif_engine.h" in n for n in names), (
+            f"lif_engine.h not found in {names}"
+        )
+        assert any("platformio.ini" in n for n in names), (
+            f"platformio.ini not found in {names}"
+        )
 
 
 @pytest.mark.asyncio
 async def test_teensy_e2e_happy_path_with_warnings():
     """Verify a near-capacity network returns 'approximate' verdict with warnings."""
     # Build a network that is within limits but close to capacity
-    large_spec = "\n".join(
-        [
-            "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0",
-            "The network MUST contain an excitatory hidden population of 3000 neurons",
-            "The motor neuron MUST fire ONLY IF membrane potential exceeds 1.0",
-            "The connection from sensory neuron to hidden MUST have WITH synaptic weight of 0.5",
-            "The connection from hidden to motor neuron MUST have WITH synaptic weight of 0.5",
-        ]
+    large_spec = (
+        "The sensory neuron MUST fire ONLY IF membrane potential exceeds 1.0\n"
+        "The network MUST contain an excitatory hidden population of 3000 neurons\n"
+        "The motor neuron MUST fire ONLY IF membrane potential exceeds 1.0\n"
+        "The connection from sensory neuron to hidden MUST have WITH synaptic weight of 0.5\n"
+        "The connection from hidden to motor neuron MUST have WITH synaptic weight of 0.5"
     )
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -414,9 +397,9 @@ async def test_teensy_payload_schema_consistency():
             "populations",
             "connections",
         }
-        assert required_fields.issubset(
-            set(payload.keys())
-        ), f"Missing fields: {required_fields - set(payload.keys())}"
+        assert required_fields.issubset(set(payload.keys())), (
+            f"Missing fields: {required_fields - set(payload.keys())}"
+        )
 
         # It should be accepted by Neurochip export endpoint
         export_resp = await _request_or_skip(

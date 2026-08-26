@@ -10,10 +10,11 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
+
+from suite_api.errors import error_response
 
 logger = logging.getLogger("suite_api")
 
@@ -38,6 +39,12 @@ def admin_token_valid(provided: str) -> bool:
     return bool(expected and provided and hmac.compare_digest(provided, expected))
 
 
+def _bearer_token(headers: Headers) -> str:
+    authorization = headers.get("authorization", "").strip()
+    scheme, _, credential = authorization.partition(" ")
+    return credential.strip() if scheme.lower() == "bearer" else ""
+
+
 class _AdminWebSocketMiddleware:
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -56,7 +63,9 @@ class _AdminWebSocketMiddleware:
                 if name == _ADMIN_COOKIE:
                     cookie_token = value
                     break
-            provided = headers.get(_ADMIN_HEADER, "") or cookie_token
+            provided = (
+                headers.get(_ADMIN_HEADER, "") or _bearer_token(headers) or cookie_token
+            )
             if not admin_token_valid(provided):
                 await send(
                     {
@@ -93,6 +102,7 @@ def attach_middleware(app: FastAPI) -> None:
         allow_methods=["*"],
         allow_headers=[
             "Accept",
+            "Authorization",
             "Content-Type",
             "X-NMTK-Admin-Token",
             "X-Request-ID",
@@ -113,19 +123,21 @@ def attach_middleware(app: FastAPI) -> None:
             return await call_next(request)
         expected = _load_admin_token()
         header_token = request.headers.get(_ADMIN_HEADER, "")
-        provided = header_token or request.cookies.get(_ADMIN_COOKIE, "")
+        bearer_token = _bearer_token(request.headers)
+        request_token = header_token or bearer_token
+        provided = request_token or request.cookies.get(_ADMIN_COOKIE, "")
         if protected and (
             not expected or not provided or not admin_token_valid(provided)
         ):
-            return JSONResponse(
+            return error_response(
+                request,
                 status_code=401,
-                content={
-                    "error": "unauthorized",
-                    "message": "Administrator authentication required.",
-                },
+                code="unauthorized",
+                message="Administrator authentication required.",
+                retryable=False,
             )
         response = await call_next(request)
-        if header_token and expected and hmac.compare_digest(header_token, expected):
+        if request_token and expected and hmac.compare_digest(request_token, expected):
             response.set_cookie(
                 _ADMIN_COOKIE,
                 expected,

@@ -8,9 +8,12 @@ import tempfile
 import unittest
 import urllib.error
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
+from unittest import mock
 
-SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "backend_endpoint_smoke.py"
+SCRIPT_PATH = (
+    Path(__file__).resolve().parents[1] / "scripts" / "backend_endpoint_smoke.py"
+)
 SPEC = importlib.util.spec_from_file_location("backend_endpoint_smoke", SCRIPT_PATH)
 assert SPEC is not None
 backend_endpoint_smoke = importlib.util.module_from_spec(SPEC)
@@ -25,10 +28,10 @@ class FakeHTTPResponse:
         self._payload = payload
         self.headers: dict[str, str] = {"content-type": "application/json"}
 
-    def __enter__(self) -> "FakeHTTPResponse":
+    def __enter__(self) -> Self:
         return self
 
-    def __exit__(self, *_args: Any) -> None:
+    def __exit__(self, *_args: object) -> None:
         return None
 
     def read(self) -> bytes:
@@ -73,7 +76,9 @@ class BackendEndpointSmokeTests(unittest.TestCase):
             modules = backend_endpoint_smoke.load_manifest(manifest_path)
             runnable = backend_endpoint_smoke.runnable_modules(modules)
 
-        self.assertEqual([module.id for module in modules], ["neurocnl", "cli_only_stub"])
+        self.assertEqual(
+            [module.id for module in modules], ["neurocnl", "cli_only_stub"]
+        )
         self.assertEqual([module.id for module in runnable], ["neurocnl"])
 
     def test_find_module_and_base_url_are_manifest_driven(self) -> None:
@@ -91,6 +96,21 @@ class BackendEndpointSmokeTests(unittest.TestCase):
 
         self.assertEqual(found.id, "Neurochip")
         self.assertEqual(base_url, "http://127.0.0.1:8002")
+
+    def test_consolidated_module_uses_suite_domain_health_path(self) -> None:
+        module = backend_endpoint_smoke.ModuleSpec.from_manifest(
+            {
+                "id": "Neurobench",
+                "port": 9000,
+                "startStrategy": "none",
+                "uvicornTarget": "",
+            }
+        )
+
+        self.assertTrue(module.suite_managed)
+        self.assertTrue(module.probeable)
+        self.assertFalse(module.runnable)
+        self.assertEqual(module.effective_health_path, "/api/neurobench/health")
 
     def test_build_uvicorn_command_uses_manifest_paths_and_venv_python(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -110,7 +130,9 @@ class BackendEndpointSmokeTests(unittest.TestCase):
                 }
             )
 
-            command, run_dir = backend_endpoint_smoke.build_uvicorn_command(module, root)
+            command, run_dir = backend_endpoint_smoke.build_uvicorn_command(
+                module, root
+            )
 
         self.assertEqual(command[0], str(python_path.resolve()))
         self.assertEqual(command[1:4], ["-m", "uvicorn", "backend.app.main:app"])
@@ -151,13 +173,33 @@ class BackendEndpointSmokeTests(unittest.TestCase):
             timeout=2.0,
             opener=opener,
         )
-        backend_endpoint_smoke.require_success(response, "http://127.0.0.1:8000/api/test")
+        backend_endpoint_smoke.require_success(
+            response, "http://127.0.0.1:8000/api/test"
+        )
 
         self.assertEqual(response.status, 200)
         self.assertEqual(response.json(), {"ok": True})
         self.assertEqual(captured["method"], "POST")
-        self.assertEqual(json.loads(captured["data"].decode("utf-8")), {"hello": "world"})
+        self.assertEqual(
+            json.loads(captured["data"].decode("utf-8")), {"hello": "world"}
+        )
         self.assertEqual(captured["timeout"], 2.0)
+
+    def test_http_request_adds_app_provisioned_admin_token(self) -> None:
+        captured: dict[str, Any] = {}
+
+        def opener(request: Any, timeout: float) -> FakeHTTPResponse:
+            captured["token"] = request.get_header("X-nmtk-admin-token")
+            return FakeHTTPResponse(200, b"{}")
+
+        with mock.patch.dict(
+            "os.environ", {"NMTK_ADMIN_TOKEN": "test-token"}, clear=False
+        ):
+            backend_endpoint_smoke.http_request(
+                "http://127.0.0.1:9000/api/suite/health", opener=opener
+            )
+
+        self.assertEqual(captured["token"], "test-token")
 
     def test_http_error_can_be_allowed_or_rejected(self) -> None:
         def opener(_request: Any, timeout: float) -> FakeHTTPResponse:
@@ -178,7 +220,9 @@ class BackendEndpointSmokeTests(unittest.TestCase):
         )
 
         with self.assertRaises(backend_endpoint_smoke.SmokeError):
-            backend_endpoint_smoke.require_success(response, "http://127.0.0.1:8000/api/test")
+            backend_endpoint_smoke.require_success(
+                response, "http://127.0.0.1:8000/api/test"
+            )
         backend_endpoint_smoke.require_success(
             response,
             "http://127.0.0.1:8000/api/test",

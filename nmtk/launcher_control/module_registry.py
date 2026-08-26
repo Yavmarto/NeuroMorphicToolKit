@@ -1,10 +1,4 @@
-"""Module state serialization plus remote-version resolution (GitHub tags).
-
-Imported by ``server.py`` right before ``LauncherControlState`` is defined, so
-the ``from .server import ...`` below resolves against the partially
-initialized module rather than re-entering it — the names it pulls in must
-already be bound in ``server.py`` above that import line.
-"""
+"""Module state serialization plus remote-version resolution."""
 
 from __future__ import annotations
 

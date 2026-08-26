@@ -23,8 +23,7 @@ def test_launcher_control_image_build_requires_complete_pynq_overlay() -> None:
     dockerfile = DOCKERFILE.read_text(encoding="utf-8")
 
     assert (
-        "COPY Neurochip/overlay_staging/pynq_z2/ "
-        f"{ARTIFACT_DIRECTORY}/" in dockerfile
+        f"COPY Neurochip/overlay_staging/pynq_z2/ {ARTIFACT_DIRECTORY}/" in dockerfile
     )
     for filename in REQUIRED_OVERLAY_FILES:
         assert (OVERLAY_DIRECTORY / filename).is_file()

@@ -1,11 +1,4 @@
-"""suite_api subprocess lifecycle: venv bootstrap, health probing, log streaming.
-
-Imported by ``server.py`` right before ``LauncherControlState`` is defined, so
-the ``from .server import ...`` below resolves against the partially
-initialized module rather than re-entering it — the names it pulls in must
-already be bound in ``server.py`` above that import line. Mirrors the
-``PynqServiceMixin``/``AkidaServiceMixin`` extractions.
-"""
+"""Suite API subprocess lifecycle, environment bootstrap, and health probing."""
 
 from __future__ import annotations
 
@@ -23,15 +16,14 @@ from http import HTTPStatus
 from pathlib import Path
 
 from .config import REPO_ROOT, SUITE_API_ENV_ROOT
-from .preflight_types import PreflightResult
-from .runtime_shared import _hash_file
-from .server import (
-    PREFLIGHT_FAILED,
-    PREFLIGHT_OK,
+from .hardware_models import (
     _default_user_data_dir,
     _resolved_lava_worker_url,
     _running_in_bundled_mode,
 )
+from .preflight_types import PreflightResult
+from .runtime_shared import _hash_file
+from .state_contracts import PREFLIGHT_FAILED, PREFLIGHT_OK
 
 DEFAULT_SUITE_API_PORT = 9000
 SUITE_API_STARTUP_TIMEOUT_SECONDS = 120.0

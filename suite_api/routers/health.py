@@ -4,12 +4,13 @@ GET /api/suite/health/modules — aggregated health of all module backends.
 """
 
 import asyncio
+import logging
 import os
-from datetime import datetime, timezone
-from pathlib import Path
 import sqlite3
 import tempfile
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -23,8 +24,10 @@ from suite_api.schemas.doctor import (
     DoctorRequest,
     DoctorStatus,
 )
+from suite_api.storage import default_neurocnl_data_dir
 
 router = APIRouter()
+logger = logging.getLogger("suite_api.health")
 
 # Stamped into the image by .github/workflows/release-docker.yml (see
 # suite_api/Dockerfile's NMTK_VERSION ARG). "dev" means a local/source build:
@@ -59,10 +62,19 @@ async def modules_health() -> dict[str, Any]:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 resp = await client.get(url)
             status = "online" if resp.status_code == 200 else "degraded"
-            error = None if resp.status_code == 200 else resp.text
+            error = (
+                None
+                if resp.status_code == 200
+                else f"Module health check returned HTTP {resp.status_code}."
+            )
         except Exception as exc:
+            logger.warning(
+                "module_health_probe_failed",
+                extra={"module_name": name},
+                exc_info=exc,
+            )
             status = "offline"
-            error = str(exc)
+            error = "Module health check is unavailable."
         response_time_ms = (time.perf_counter() - start) * 1000
         return name, {
             "status": status,
@@ -150,7 +162,8 @@ def _overall_status(checks: list[DoctorCheck]) -> DoctorStatus:
 @router.post("/doctor", response_model=DoctorReport, response_model_by_alias=True)
 async def suite_doctor(request: DoctorRequest) -> DoctorReport:
     """Exercise storage, databases, Jupyter, and configured frameworks."""
-    data_dir = Path(os.environ.get("NEUROCNL_DATA_DIR", Path.home() / ".neurocnl"))
+    data_dir = default_neurocnl_data_dir()
+    storage_checks = await asyncio.to_thread(_storage_checks, data_dir)
     checks = [
         DoctorCheck(
             id="suite-api",
@@ -158,7 +171,7 @@ async def suite_doctor(request: DoctorRequest) -> DoctorReport:
             status=DoctorStatus.OK,
             detail="Suite API is serving diagnostic requests.",
         ),
-        *_storage_checks(data_dir),
+        *storage_checks,
     ]
     try:
         jupyter_payload = await probe_jupyter_doctor(request.capabilities)
