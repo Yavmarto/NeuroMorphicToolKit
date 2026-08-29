@@ -1,7 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
-import 'package:neurobench_frontend/shell_adapter.dart';
+import 'package:neuro_toolkit/features/neurobench/shell_adapter.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 
 Future<void> _noopEditServer() async {}
@@ -23,9 +24,11 @@ void main() {
     );
 
     await tester.pumpWidget(
-      NativeSurfaceRegistry.build(
-        const WorkspaceSession(moduleId: 'Neurobench'),
-        launchContext: launchContext,
+      MaterialApp(
+        home: NativeSurfaceRegistry.build(
+          const WorkspaceSession(moduleId: 'Neurobench'),
+          launchContext: launchContext,
+        ),
       ),
     );
 

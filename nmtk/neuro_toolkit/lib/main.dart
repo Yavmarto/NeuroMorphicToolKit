@@ -3,7 +3,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:neurocnl_studio/neurocnl_studio.dart';
+import 'package:neuro_toolkit/features/neurocnl/neurocnl_studio.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/src/features/app/presentation/launcher_app_host.dart';

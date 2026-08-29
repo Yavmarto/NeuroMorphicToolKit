@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:neurocnl_studio/neurocnl_studio.dart';
+import 'package:neuro_toolkit/features/neurocnl/neurocnl_studio.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';

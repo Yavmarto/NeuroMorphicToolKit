@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
-import 'package:neurocnl_studio/providers/neurohub_provider.dart';
-import 'package:neurocnl_studio/services/neurohub_session_storage.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/neurohub_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/services/neurohub_session_storage.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
@@ -11,6 +11,7 @@ import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
+import 'package:neuro_toolkit/screens/tool_view/launcher_profile_button.dart';
 import 'package:neuro_toolkit/src/features/app/presentation/launcher_navigation_notifier.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
@@ -104,8 +105,9 @@ class _FakeWorkspaceNotifier extends WorkspaceNotifier {
 
   @override
   Future<void> focusSession(String moduleId) async {
-    state =
-        state.whenData((value) => value.copyWith(focusedModuleId: moduleId));
+    state = state.whenData(
+      (value) => value.copyWith(focusedModuleId: moduleId),
+    );
   }
 
   @override
@@ -253,10 +255,7 @@ void main() {
     container
         .read(launcherNavigationProvider.notifier)
         .openModule('Neurobench');
-    expect(
-      container.read(launcherNavigationProvider)?.moduleId,
-      'Neurobench',
-    );
+    expect(container.read(launcherNavigationProvider)?.moduleId, 'Neurobench');
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
     expect(

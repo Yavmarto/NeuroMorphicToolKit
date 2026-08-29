@@ -3,9 +3,9 @@ import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:nmtk_ui_core/nmtk_ui_core.dart';
 // Native module adapters hosted by the launcher's single workspace surface.
-import 'package:neurocnl_studio/neurocnl_studio.dart';
+import 'package:neuro_toolkit/features/neurocnl/neurocnl_studio.dart';
 // import 'package:neurochip/shell_adapter.dart';
-import 'package:neurobench_frontend/shell_adapter.dart';
+import 'package:neuro_toolkit/features/neurobench/shell_adapter.dart';
 
 typedef NativeSurfaceBuilder =
     Widget Function(NmtkFeatureLaunchContext launchContext);
