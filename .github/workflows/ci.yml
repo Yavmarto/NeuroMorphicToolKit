@@ -33,9 +33,7 @@ jobs:
       neurohub_frontend: ${{ steps.filter.outputs.neurohub_frontend }}
       neurodreamhand: ${{ steps.filter.outputs.neurodreamhand }}
       neurocnl: ${{ steps.filter.outputs.neurocnl }}
-      neurocnl_frontend: ${{ steps.filter.outputs.neurocnl_frontend }}
       neurobench: ${{ steps.filter.outputs.neurobench }}
-      neurobench_frontend: ${{ steps.filter.outputs.neurobench_frontend }}
       neurotoolkit: ${{ steps.filter.outputs.neurotoolkit }}
       macos_installer: ${{ steps.filter.outputs.macos_installer }}
       windows_installer: ${{ steps.filter.outputs.windows_installer }}
@@ -72,16 +70,8 @@ jobs:
             neurocnl:
               - 'neurocnl'
               - 'neurocnl/**'
-              - '!neurocnl/frontend/**'
-            neurocnl_frontend:
-              - 'neurocnl'
-              - 'neurocnl/frontend/**'
-              - 'nmtk_ui_core/**'
             neurobench:
               - 'Neurobench/neurobench/**'
-            neurobench_frontend:
-              - 'Neurobench/frontend/**'
-              - 'nmtk_ui_core/**'
             neurotoolkit:
               - 'neurocnl'
               - 'nmtk/neuro_toolkit/**'
@@ -592,49 +582,6 @@ jobs:
       - name: Verify Windows signing release plumbing
         run: python -m pytest tests/test_windows_installer_signing.py -v --tb=short --noconftest
 
-  test-neurocnl-frontend:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.neurocnl_frontend == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - [self-hosted, macOS, ARM64]
-          - [self-hosted, Windows, X64]
-          - [self-hosted, Linux, X64]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Add Git to PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-          fetch-depth: 0
-      - name: Update submodules safely
-        run: git submodule update --init || true
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: false
-      - name: Install dependencies
-        run: |
-          if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
-            flutter pub get --directory neurocnl/frontend
-          fi
-      - name: Analyze
-        run: |
-          if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
-            flutter analyze --directory neurocnl/frontend
-          fi
-      - name: Run tests
-        run: |
-          if [ -d "neurocnl/frontend" ] && [ -f "neurocnl/frontend/pubspec.yaml" ]; then
-            cd neurocnl/frontend && flutter test --coverage
-          fi
-
   test-neurochip-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurochip_frontend == 'true'
@@ -749,44 +696,6 @@ jobs:
             flutter analyze --directory Neurosense/frontend
           fi
 
-  test-neurobench-frontend:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.neurobench_frontend == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - [self-hosted, macOS, ARM64]
-          - [self-hosted, Windows, X64]
-          - [self-hosted, Linux, X64]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Add Git to PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-          fetch-depth: 0
-      - name: Update submodules safely
-        run: git submodule update --init || true
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: false
-      - name: Install dependencies
-        run: |
-          if [ -d "Neurobench/frontend" ] && [ -f "Neurobench/frontend/pubspec.yaml" ]; then
-            flutter pub get --directory Neurobench/frontend
-          fi
-      - name: Analyze
-        run: |
-          if [ -d "Neurobench/frontend" ] && [ -f "Neurobench/frontend/pubspec.yaml" ]; then
-            flutter analyze --directory Neurobench/frontend
-          fi
-
   # Summary job that branch protection can require
   ci-passed:
     runs-on: [self-hosted, Linux, X64]
@@ -801,8 +710,6 @@ jobs:
       - test-neurodreamhand
       - test-neurobench
       - test-neurocnl-backend
-      - test-neurocnl-frontend
-      - test-neurobench-frontend
       - test-neurotoolkit
       - test-macos-installer-signing
       - test-windows-installer-signing
@@ -837,9 +744,7 @@ jobs:
             "${{ needs.test-neurohub-frontend.result }}" \
             "${{ needs.test-neurodreamhand.result }}" \
             "${{ needs.test-neurobench.result }}" \
-            "${{ needs.test-neurobench-frontend.result }}" \
             "${{ needs.test-neurocnl-backend.result }}" \
-            "${{ needs.test-neurocnl-frontend.result }}" \
             "${{ needs.test-nmtk-ui-core.result }}" \
             "${{ needs.test-neurotoolkit.result }}" \
             "${{ needs.test-suite-api.result }}" \
