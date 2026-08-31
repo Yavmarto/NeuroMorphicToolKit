@@ -8,7 +8,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/server_config_provider
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/studio_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers_test.mocks.dart';

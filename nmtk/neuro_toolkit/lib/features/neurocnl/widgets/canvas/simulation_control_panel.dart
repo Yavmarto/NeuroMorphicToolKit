@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/simulation_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/validation_provider.dart';

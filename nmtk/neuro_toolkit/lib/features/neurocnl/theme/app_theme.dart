@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' as ui_core;
-import 'package:nmtk_ui_core/nmtk_ui_core.dart'
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' as ui_core;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart'
     show NmtkNeurocnlTokens, NmtkThemeVariant, NmtkThemeExtension;
-import 'package:nmtk_ui_core/shell_tokens.dart' show NmtkShellTokens;
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart' show NmtkShellTokens;
 
-export 'package:nmtk_ui_core/nmtk_ui_core.dart'
+export 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart'
     show NmtkThemeVariant, NmtkThemeExtension, NmtkNeurocnlTokens;
 
 /// Neuromorphic-inspired theme for neurocnl Studio.

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/motion_tokens.dart';
+import 'package:neuro_toolkit/ui_core/motion_tokens.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/workflow/snn_workflow_stepper.dart'
     show
         SnnWorkflowPhase,

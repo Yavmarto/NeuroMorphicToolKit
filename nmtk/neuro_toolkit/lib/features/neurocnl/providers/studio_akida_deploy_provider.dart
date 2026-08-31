@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_result_session_provider.dart';

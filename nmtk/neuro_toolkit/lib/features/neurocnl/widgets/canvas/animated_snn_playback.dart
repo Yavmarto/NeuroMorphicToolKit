@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' hide AppTheme;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/backend_setup.dart';
@@ -33,6 +33,8 @@ class _FakeDeploymentService implements DeploymentService {
   RemoteServerSetupRequest? lastSetupRequest;
   final List<String> cancelledJobIds = <String>[];
   int diagnoseCalls = 0;
+  String? lastDiagnosedTargetId;
+  String? lastDiagnosedHost;
   int repairCalls = 0;
   int reinstallCalls = 0;
   bool? lastFactoryReset;
@@ -41,9 +43,7 @@ class _FakeDeploymentService implements DeploymentService {
   Future<DeploymentSnapshot> load() async => snapshot;
 
   @override
-  Future<DeploymentPreflightResult> preflight(
-    DeploymentRequest request,
-  ) async {
+  Future<DeploymentPreflightResult> preflight(DeploymentRequest request) async {
     return preflightResult;
   }
 
@@ -121,6 +121,29 @@ class _FakeDeploymentService implements DeploymentService {
   @override
   Future<SystemHealthReport> diagnoseTarget(String targetId) async {
     diagnoseCalls++;
+    lastDiagnosedTargetId = targetId;
+    return doctorReport ??
+        SystemHealthReport(
+          overall: SystemHealthStatus.ok,
+          checkedAt: DateTime(2026, 8, 13, 12),
+          checks: const [
+            SystemHealthCheck(
+              id: 'suite-api',
+              label: 'Suite API',
+              status: SystemHealthStatus.ok,
+              detail: 'Ready',
+            ),
+          ],
+        );
+  }
+
+  @override
+  Future<SystemHealthReport> diagnoseHost(
+    String host, {
+    int backendPort = 9000,
+  }) async {
+    diagnoseCalls++;
+    lastDiagnosedHost = host;
     return doctorReport ??
         SystemHealthReport(
           overall: SystemHealthStatus.ok,
@@ -190,6 +213,7 @@ Widget _harness({
   String? backendVersion,
   LauncherUpdate? backendUpdate,
   AkidaPairedHost? selectedAkidaHost,
+  String? initialHost,
 }) {
   return ProviderScope(
     overrides: [
@@ -205,6 +229,7 @@ Widget _harness({
     child: MaterialApp(
       home: BackendSetupScreen(
         localDeploymentAvailable: localDeploymentAvailable,
+        initialHost: initialHost,
         onDeploymentReady: (_) async {},
       ),
     ),
@@ -212,8 +237,9 @@ Widget _harness({
 }
 
 void main() {
-  testWidgets('System Health checks all configured services automatically',
-      (tester) async {
+  testWidgets('System Health checks all configured services automatically', (
+    tester,
+  ) async {
     final service = _FakeDeploymentService(
       snapshot: const DeploymentSnapshot(targets: [_savedTarget]),
       doctorReport: SystemHealthReport(
@@ -246,6 +272,58 @@ void main() {
     expect(service.diagnoseCalls, 1);
   });
 
+  testWidgets('System Health follows the connected host instead of the newest '
+      'saved target', (tester) async {
+    final service = _FakeDeploymentService(
+      snapshot: DeploymentSnapshot(
+        targets: [
+          const DeploymentTarget(
+            id: 'connected-target',
+            displayName: 'Connected server',
+            targetType: 'remote_host',
+            mode: 'docker',
+            authMode: 'ssh_key',
+            backendPort: 9000,
+            host: '192.168.2.90',
+          ),
+          DeploymentTarget(
+            id: 'newer-failed-target',
+            displayName: 'Failed setup',
+            targetType: 'remote_host',
+            mode: 'docker',
+            authMode: 'ssh_key',
+            backendPort: 9000,
+            host: '192.168.2.34',
+            updatedAt: DateTime(2026, 8, 26),
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      _harness(deploymentService: service, initialHost: '192.168.2.90'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.lastDiagnosedTargetId, 'connected-target');
+    expect(service.lastDiagnosedHost, isNull);
+    expect(find.text('Everything configured is working'), findsOneWidget);
+  });
+
+  testWidgets('System Health diagnoses a directly connected host without a '
+      'saved deployment', (tester) async {
+    final service = _FakeDeploymentService();
+
+    await tester.pumpWidget(
+      _harness(deploymentService: service, initialHost: '192.168.2.90'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.lastDiagnosedTargetId, isNull);
+    expect(service.lastDiagnosedHost, '192.168.2.90');
+    expect(find.text('Everything configured is working'), findsOneWidget);
+  });
+
   testWidgets('failed health offers repair before reinstall', (tester) async {
     final service = _FakeDeploymentService(
       snapshot: const DeploymentSnapshot(targets: [_savedTarget]),
@@ -267,7 +345,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-        find.byKey(const Key('backend-system-health-repair')), findsOneWidget);
+      find.byKey(const Key('backend-system-health-repair')),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const Key('backend-system-health-reinstall')),
       findsNothing,
@@ -285,30 +365,34 @@ void main() {
       findsNothing,
     );
   });
-  testWidgets('setup opens the deployment form without launcher connection UI',
-      (tester) async {
-    await tester.pumpWidget(_harness(localDeploymentAvailable: true));
-    await tester.pump();
+  testWidgets(
+    'setup opens the deployment form without launcher connection UI',
+    (tester) async {
+      await tester.pumpWidget(_harness(localDeploymentAvailable: true));
+      await tester.pump();
 
-    expect(find.text('Set up your backend'), findsOneWidget);
-    expect(find.byType(BackendSetupForm), findsOneWidget);
-    expect(find.text('Connect to server'), findsOneWidget);
-    expect(find.text('Set up new server'), findsOneWidget);
-    expect(find.text('Server address'), findsNothing);
-    expect(find.text('Save & Retry'), findsNothing);
-    expect(find.text('Step 1 — Python'), findsNothing);
-  });
+      expect(find.text('Set up your backend'), findsOneWidget);
+      expect(find.byType(BackendSetupForm), findsOneWidget);
+      expect(find.text('Connect to server'), findsOneWidget);
+      expect(find.text('Set up new server'), findsOneWidget);
+      expect(find.text('Server address'), findsNothing);
+      expect(find.text('Save & Retry'), findsNothing);
+      expect(find.text('Step 1 — Python'), findsNothing);
+    },
+  );
 
-  testWidgets('no update banner when the backend has nothing to update to',
-      (tester) async {
+  testWidgets('no update banner when the backend has nothing to update to', (
+    tester,
+  ) async {
     await tester.pumpWidget(_harness(localDeploymentAvailable: true));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('backend-update-available')), findsNothing);
   });
 
-  testWidgets('stale selected Akida runtime keeps retry banner visible',
-      (tester) async {
+  testWidgets('stale selected Akida runtime keeps retry banner visible', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _harness(
         localDeploymentAvailable: true,
@@ -346,35 +430,34 @@ void main() {
   });
 
   testWidgets('keeps backend version out of the setup form', (tester) async {
-    await tester.pumpWidget(_harness(
-      localDeploymentAvailable: true,
-      backendVersion: '1.2.0',
-    ));
+    await tester.pumpWidget(
+      _harness(localDeploymentAvailable: true, backendVersion: '1.2.0'),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('backend-version')), findsNothing);
     expect(find.text('Backend version: 1.2.0'), findsNothing);
   });
 
-  testWidgets('an available backend release offers a one-tap update',
-      (tester) async {
+  testWidgets('an available backend release offers a one-tap update', (
+    tester,
+  ) async {
     final service = _FakeDeploymentService();
-    await tester.pumpWidget(_harness(
-      localDeploymentAvailable: true,
-      deploymentService: service,
-      backendUpdate: LauncherUpdate(
-        version: '1.2.0',
-        url: 'https://example.invalid/v1.2.0',
-        releaseNotes: 'notes',
+    await tester.pumpWidget(
+      _harness(
+        localDeploymentAvailable: true,
+        deploymentService: service,
+        backendUpdate: LauncherUpdate(
+          version: '1.2.0',
+          url: 'https://example.invalid/v1.2.0',
+          releaseNotes: 'notes',
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('backend-update-available')), findsOneWidget);
-    expect(
-      find.text('Backend update available — 1.2.0'),
-      findsOneWidget,
-    );
+    expect(find.text('Backend update available — 1.2.0'), findsOneWidget);
 
     final action = find.byKey(const Key('backend-update-action'));
     await tester.ensureVisible(action);
@@ -389,15 +472,17 @@ void main() {
     // The whole difference between an update and a clean install: `down -v`
     // would take the user's workspaces and notebooks with it.
     final service = _FakeDeploymentService();
-    await tester.pumpWidget(_harness(
-      localDeploymentAvailable: true,
-      deploymentService: service,
-      backendUpdate: LauncherUpdate(
-        version: '1.2.0',
-        url: 'https://example.invalid/v1.2.0',
-        releaseNotes: 'notes',
+    await tester.pumpWidget(
+      _harness(
+        localDeploymentAvailable: true,
+        deploymentService: service,
+        backendUpdate: LauncherUpdate(
+          version: '1.2.0',
+          url: 'https://example.invalid/v1.2.0',
+          releaseNotes: 'notes',
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     final cleanInstallToggle = find.byType(SwitchListTile);
@@ -416,8 +501,9 @@ void main() {
     expect(service.lastDeployRequest!.cleanInstall, isFalse);
   });
 
-  testWidgets('deployment stays locked until the current setup validates',
-      (tester) async {
+  testWidgets('deployment stays locked until the current setup validates', (
+    tester,
+  ) async {
     final service = _FakeDeploymentService();
     await tester.pumpWidget(
       _harness(localDeploymentAvailable: true, deploymentService: service),
@@ -431,9 +517,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.ensureVisible(
-      find.byKey(const Key('backend-setup-validate')),
-    );
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-validate')));
     await tester.tap(find.byKey(const Key('backend-setup-validate')));
     await tester.pumpAndSettle();
 
@@ -450,9 +534,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.ensureVisible(
-      find.byKey(const Key('backend-setup-validate')),
-    );
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-validate')));
     await tester.tap(find.byKey(const Key('backend-setup-validate')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(deploy);
@@ -462,8 +544,9 @@ void main() {
     expect(service.deployCalls, 1);
   });
 
-  testWidgets('failed validation keeps deployment locked with recovery copy',
-      (tester) async {
+  testWidgets('failed validation keeps deployment locked with recovery copy', (
+    tester,
+  ) async {
     final service = _FakeDeploymentService(
       preflightResult: const DeploymentPreflightResult(
         status: 'failed',
@@ -478,9 +561,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.ensureVisible(
-      find.byKey(const Key('backend-setup-validate')),
-    );
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-validate')));
     await tester.tap(find.byKey(const Key('backend-setup-validate')));
     await tester.pumpAndSettle();
 
@@ -491,16 +572,15 @@ void main() {
     );
     expect(
       tester
-          .widget<ZetaButton>(
-            find.byKey(const Key('backend-setup-deploy')),
-          )
+          .widget<ZetaButton>(find.byKey(const Key('backend-setup-deploy')))
           .onPressed,
       isNull,
     );
   });
 
-  testWidgets('optional validation warnings still allow deployment',
-      (tester) async {
+  testWidgets('optional validation warnings still allow deployment', (
+    tester,
+  ) async {
     final service = _FakeDeploymentService(
       preflightResult: const DeploymentPreflightResult(
         status: 'ok',
@@ -515,9 +595,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.ensureVisible(
-      find.byKey(const Key('backend-setup-validate')),
-    );
+    await tester.ensureVisible(find.byKey(const Key('backend-setup-validate')));
     await tester.tap(find.byKey(const Key('backend-setup-validate')));
     await tester.pumpAndSettle();
 
@@ -527,16 +605,15 @@ void main() {
     );
     expect(
       tester
-          .widget<ZetaButton>(
-            find.byKey(const Key('backend-setup-deploy')),
-          )
+          .widget<ZetaButton>(find.byKey(const Key('backend-setup-deploy')))
           .onPressed,
       isNotNull,
     );
   });
 
-  testWidgets('mobile omits the impossible local deployment target',
-      (tester) async {
+  testWidgets('mobile omits the impossible local deployment target', (
+    tester,
+  ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -553,36 +630,40 @@ void main() {
     expect(find.text('Podman'), findsOneWidget);
   });
 
-  testWidgets('remote setup uses one action with ephemeral administrator input',
-      (tester) async {
-    final service = _FakeDeploymentService();
-    await tester.pumpWidget(
-      _harness(localDeploymentAvailable: false, deploymentService: service),
-    );
-    await tester.pump();
+  testWidgets(
+    'remote setup uses one action with ephemeral administrator input',
+    (tester) async {
+      final service = _FakeDeploymentService();
+      await tester.pumpWidget(
+        _harness(localDeploymentAvailable: false, deploymentService: service),
+      );
+      await tester.pump();
 
-    final fields = find.byType(TextField);
-    await tester.enterText(fields.at(1), '192.168.2.34');
-    await tester.enterText(fields.at(3), 'temporary-admin-secret');
-    final setupButton =
-        find.byKey(const Key('backend-setup-set-up-and-connect'));
-    await tester.ensureVisible(setupButton);
-    await tester.tap(setupButton);
-    await tester.pumpAndSettle();
+      final fields = find.byType(TextField);
+      await tester.enterText(fields.at(1), '192.168.2.34');
+      await tester.enterText(fields.at(3), 'temporary-admin-secret');
+      final setupButton = find.byKey(
+        const Key('backend-setup-set-up-and-connect'),
+      );
+      await tester.ensureVisible(setupButton);
+      await tester.tap(setupButton);
+      await tester.pumpAndSettle();
 
-    expect(service.setupCalls, 1);
-    expect(service.lastSetupRequest?.host, '192.168.2.34');
-    expect(service.lastSetupRequest?.adminUsername, 'root');
-    expect(service.lastSetupRequest?.adminPassword, 'temporary-admin-secret');
-    expect(service.lastSetupRequest?.containerEngine, 'docker');
-    expect(
-      service.lastSetupRequest?.reinstallMode,
-      RemoteReinstallMode.preserveData,
-    );
-  });
+      expect(service.setupCalls, 1);
+      expect(service.lastSetupRequest?.host, '192.168.2.34');
+      expect(service.lastSetupRequest?.adminUsername, 'root');
+      expect(service.lastSetupRequest?.adminPassword, 'temporary-admin-secret');
+      expect(service.lastSetupRequest?.containerEngine, 'docker');
+      expect(
+        service.lastSetupRequest?.reinstallMode,
+        RemoteReinstallMode.preserveData,
+      );
+    },
+  );
 
-  testWidgets('factory reset appears only after safe recovery paths fail',
-      (tester) async {
+  testWidgets('factory reset appears only after safe recovery paths fail', (
+    tester,
+  ) async {
     final service = _FakeDeploymentService(
       snapshot: const DeploymentSnapshot(targets: [_savedTarget]),
       reinstallThrows: true,
@@ -614,15 +695,14 @@ void main() {
     await tester.tap(find.byKey(const Key('backend-system-health-reinstall')));
     await tester.pumpAndSettle();
 
-    final resetButton =
-        find.byKey(const Key('backend-system-health-factory-reset'));
+    final resetButton = find.byKey(
+      const Key('backend-system-health-factory-reset'),
+    );
     expect(resetButton, findsOneWidget);
     expect(tester.widget<ZetaButton>(resetButton).onPressed, isNull);
     await tester.enterText(
       find.descendant(
-        of: find.byKey(
-          const Key('backend-system-health-reset-confirmation'),
-        ),
+        of: find.byKey(const Key('backend-system-health-reset-confirmation')),
         matching: find.byType(TextField),
       ),
       'RESET',
@@ -636,152 +716,156 @@ void main() {
   });
 
   testWidgets(
-      'failed setup explains the cause and keeps prior connection contextual',
-      (tester) async {
-    MethodCall? clipboardCall;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') clipboardCall = call;
-      return null;
-    });
-    addTearDown(
-      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(SystemChannels.platform, null),
-    );
-    const job = DeploymentJob(
-      id: 'failed-setup',
-      targetId: 'remote-192-168-2-34',
-      mode: 'docker',
-      stage: 'failed',
-      percent: 100,
-      stageLabel: 'Podman installations could not be inspected',
-      logs: <String>[
-        'Checking administrator access',
-        'Removing existing NMTK containers',
-      ],
-      terminalOutput: <String>[
-        r'$ podman info (user: deploy)',
-        '✗ podman info failed (exit 125)',
-        '  cannot connect to Podman socket',
-      ],
-      failureDetails: DeploymentFailureDetails(
-        code: 'podman_inspection_failed',
-        phase: 'reconciling_existing_install',
-        summary: 'Podman installations could not be inspected',
-        recovery: 'Ensure Podman is available for each server user and retry.',
-        technicalDetails: 'podman info returned exit status 125',
-        exitCode: 29,
-        existingConnectionReachable: true,
-      ),
-    );
-    final service = _FakeDeploymentService(
-      snapshot: const DeploymentSnapshot(
-        activeJob: job,
-        isReady: true,
-      ),
-    );
+    'failed setup explains the cause and keeps prior connection contextual',
+    (tester) async {
+      MethodCall? clipboardCall;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+            if (call.method == 'Clipboard.setData') clipboardCall = call;
+            return null;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+      const job = DeploymentJob(
+        id: 'failed-setup',
+        targetId: 'remote-192-168-2-34',
+        mode: 'docker',
+        stage: 'failed',
+        percent: 100,
+        stageLabel: 'Podman installations could not be inspected',
+        logs: <String>[
+          'Checking administrator access',
+          'Removing existing NMTK containers',
+        ],
+        terminalOutput: <String>[
+          r'$ podman info (user: deploy)',
+          '✗ podman info failed (exit 125)',
+          '  cannot connect to Podman socket',
+        ],
+        failureDetails: DeploymentFailureDetails(
+          code: 'podman_inspection_failed',
+          phase: 'reconciling_existing_install',
+          summary: 'Podman installations could not be inspected',
+          recovery:
+              'Ensure Podman is available for each server user and retry.',
+          technicalDetails: 'podman info returned exit status 125',
+          exitCode: 29,
+          existingConnectionReachable: true,
+        ),
+      );
+      final service = _FakeDeploymentService(
+        snapshot: const DeploymentSnapshot(activeJob: job, isReady: true),
+      );
 
-    await tester.pumpWidget(
-      _harness(localDeploymentAvailable: false, deploymentService: service),
-    );
-    await tester.pump();
+      await tester.pumpWidget(
+        _harness(localDeploymentAvailable: false, deploymentService: service),
+      );
+      await tester.pump();
 
-    expect(
-      find.text('Podman installations could not be inspected'),
-      findsOneWidget,
-    );
-    expect(
-      find.text(
-        'The reinstall failed, but the existing server is still connected.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Deployed'), findsNothing);
+      expect(
+        find.text('Podman installations could not be inspected'),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'The reinstall failed, but the existing server is still connected.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Deployed'), findsNothing);
 
-    final details =
-        find.byKey(const Key('deployment-view-details-failed-setup'));
-    await tester.ensureVisible(details);
-    await tester.tap(details);
-    await tester.pumpAndSettle();
+      final details = find.byKey(
+        const Key('deployment-view-details-failed-setup'),
+      );
+      await tester.ensureVisible(details);
+      await tester.tap(details);
+      await tester.pumpAndSettle();
 
-    expect(find.text('Raw SSH output — 192.168.2.34'), findsOneWidget);
-    expect(
-      find.textContaining('cannot connect to Podman socket'),
-      findsOneWidget,
-    );
-    expect(find.text('Copy output'), findsOneWidget);
-    await tester.tap(find.text('Copy output'));
-    await tester.pumpAndSettle();
-    expect(
-      clipboardCall?.arguments.toString(),
-      contains(r'$ podman info (user: deploy)'),
-    );
-  });
+      expect(find.text('Raw SSH output — 192.168.2.34'), findsOneWidget);
+      expect(
+        find.textContaining('cannot connect to Podman socket'),
+        findsOneWidget,
+      );
+      expect(find.text('Copy output'), findsOneWidget);
+      await tester.tap(find.text('Copy output'));
+      await tester.pumpAndSettle();
+      expect(
+        clipboardCall?.arguments.toString(),
+        contains(r'$ podman info (user: deploy)'),
+      );
+    },
+  );
 
   testWidgets(
-      'active setup shows simple progress while raw commands stay hidden',
-      (tester) async {
-    final job = DeploymentJob(
-      id: 'active-setup',
-      targetId: 'remote-192-168-2-34',
-      mode: 'podman',
-      stage: 'bootstrapping_access',
-      percent: 17,
-      stageLabel: 'Preparing the NMTK deployment account',
-      logs: const ['Preparing the NMTK deployment account'],
-      terminalOutput: const [
-        r'$ systemctl --user enable podman.socket',
-        'Created symlink podman.socket',
-      ],
-      updatedAt: DateTime.now().subtract(const Duration(seconds: 4)),
-      activeOperation: DeploymentActiveOperation(
-        label: 'Verifying rootless Podman API',
-        startedAt: DateTime.now().subtract(const Duration(seconds: 7)),
-        timeoutSeconds: 20,
-        automaticRecovery: true,
-      ),
-    );
-    final service = _FakeDeploymentService(
-      snapshot: DeploymentSnapshot(activeJob: job),
-    );
+    'active setup shows simple progress while raw commands stay hidden',
+    (tester) async {
+      final job = DeploymentJob(
+        id: 'active-setup',
+        targetId: 'remote-192-168-2-34',
+        mode: 'podman',
+        stage: 'bootstrapping_access',
+        percent: 17,
+        stageLabel: 'Preparing the NMTK deployment account',
+        logs: const ['Preparing the NMTK deployment account'],
+        terminalOutput: const [
+          r'$ systemctl --user enable podman.socket',
+          'Created symlink podman.socket',
+        ],
+        updatedAt: DateTime.now().subtract(const Duration(seconds: 4)),
+        activeOperation: DeploymentActiveOperation(
+          label: 'Verifying rootless Podman API',
+          startedAt: DateTime.now().subtract(const Duration(seconds: 7)),
+          timeoutSeconds: 20,
+          automaticRecovery: true,
+        ),
+      );
+      final service = _FakeDeploymentService(
+        snapshot: DeploymentSnapshot(activeJob: job),
+      );
 
-    await tester.pumpWidget(
-      _harness(localDeploymentAvailable: false, deploymentService: service),
-    );
-    await tester.pump();
+      await tester.pumpWidget(
+        _harness(localDeploymentAvailable: false, deploymentService: service),
+      );
+      await tester.pump();
 
-    final progress = find.textContaining(
-      'Automatic recovery · Verifying rootless Podman API',
-    );
-    expect(progress, findsOneWidget);
-    final firstText = tester.widget<Text>(progress).data!;
-    final firstElapsed =
-        int.parse(RegExp(r'(\d+)s elapsed').firstMatch(firstText)!.group(1)!);
-    final laterText = BackendSetupForm.operationProgressLabelForTesting(
-      job.activeOperation!,
-      job.activeOperation!.startedAt.add(const Duration(seconds: 9)),
-    );
-    final laterElapsed =
-        int.parse(RegExp(r'(\d+)s elapsed').firstMatch(laterText)!.group(1)!);
-    expect(laterElapsed, greaterThan(firstElapsed));
-    expect(laterText, endsWith('up to 20s'));
-    expect(
-      BackendSetupForm.operationProgressLabelForTesting(
+      final progress = find.textContaining(
+        'Automatic recovery · Verifying rootless Podman API',
+      );
+      expect(progress, findsOneWidget);
+      final firstText = tester.widget<Text>(progress).data!;
+      final firstElapsed = int.parse(
+        RegExp(r'(\d+)s elapsed').firstMatch(firstText)!.group(1)!,
+      );
+      final laterText = BackendSetupForm.operationProgressLabelForTesting(
         job.activeOperation!,
-        job.activeOperation!.startedAt.add(const Duration(seconds: 20)),
-      ),
-      'Automatic recovery · Verifying rootless Podman API · '
-      'timeout reached · stopping safely',
-    );
-    expect(
-      find.text(r'$ systemctl --user enable podman.socket'),
-      findsNothing,
-    );
-    expect(find.text('View raw SSH output'), findsOneWidget);
-  });
+        job.activeOperation!.startedAt.add(const Duration(seconds: 9)),
+      );
+      final laterElapsed = int.parse(
+        RegExp(r'(\d+)s elapsed').firstMatch(laterText)!.group(1)!,
+      );
+      expect(laterElapsed, greaterThan(firstElapsed));
+      expect(laterText, endsWith('up to 20s'));
+      expect(
+        BackendSetupForm.operationProgressLabelForTesting(
+          job.activeOperation!,
+          job.activeOperation!.startedAt.add(const Duration(seconds: 20)),
+        ),
+        'Automatic recovery · Verifying rootless Podman API · '
+        'timeout reached · stopping safely',
+      );
+      expect(
+        find.text(r'$ systemctl --user enable podman.socket'),
+        findsNothing,
+      );
+      expect(find.text('View raw SSH output'), findsOneWidget);
+    },
+  );
 
-  testWidgets('a setup that stopped reporting says so instead of showing 17%',
-      (tester) async {
+  testWidgets('a setup that stopped reporting says so instead of showing 17%', (
+    tester,
+  ) async {
     // The reported bug: the job sat at 17% with a live progress bar forever.
     // A job whose last real progress is older than the staleness budget must
     // read as stopped, and must offer a way out.
@@ -818,14 +902,15 @@ void main() {
       find.text('17% — Preparing the NMTK deployment account'),
       findsNothing,
     );
-    expect(find.text('Last step: Preparing the NMTK deployment account'),
-        findsOneWidget);
+    expect(
+      find.text('Last step: Preparing the NMTK deployment account'),
+      findsOneWidget,
+    );
     expect(find.text('View raw SSH output'), findsOneWidget);
     expect(find.byKey(const Key('backend-setup-retry')), findsOneWidget);
   });
 
-  testWidgets(
-      'retrying a stalled setup re-asks only for the administrator '
+  testWidgets('retrying a stalled setup re-asks only for the administrator '
       'credential', (tester) async {
     final job = DeploymentJob(
       id: 'stalled-setup',
@@ -882,21 +967,21 @@ void main() {
   });
 
   testWidgets(
-      'new remote setup offers factory reset but never triggers it unasked',
-      (tester) async {
-    final service = _FakeDeploymentService();
-    await tester.pumpWidget(
-      _harness(localDeploymentAvailable: false, deploymentService: service),
-    );
-    await tester.pump();
+    'new remote setup offers factory reset but never triggers it unasked',
+    (tester) async {
+      final service = _FakeDeploymentService();
+      await tester.pumpWidget(
+        _harness(localDeploymentAvailable: false, deploymentService: service),
+      );
+      await tester.pump();
 
-    expect(find.text('Factory reset server data'), findsOneWidget);
-    expect(find.text('Erase and reinstall'), findsNothing);
-    expect(service.setupCalls, 0);
-  });
+      expect(find.text('Factory reset server data'), findsOneWidget);
+      expect(find.text('Erase and reinstall'), findsNothing);
+      expect(service.setupCalls, 0);
+    },
+  );
 
-  testWidgets(
-      'quick-connect card connects directly to an already-running '
+  testWidgets('quick-connect card connects directly to an already-running '
       'server by host', (tester) async {
     DeploymentTarget? connected;
     await tester.pumpWidget(
@@ -918,10 +1003,7 @@ void main() {
 
     expect(find.text('Connect to server'), findsOneWidget);
 
-    await tester.enterText(
-      find.byType(TextField).first,
-      '192.168.2.90',
-    );
+    await tester.enterText(find.byType(TextField).first, '192.168.2.90');
     await tester.tap(find.byKey(const Key('backend-setup-quick-connect')));
     await tester.pumpAndSettle();
 
@@ -930,8 +1012,9 @@ void main() {
     expect(connected!.targetType, 'remote_host');
   });
 
-  testWidgets('quick-connect preserves input and shows an actionable failure',
-      (tester) async {
+  testWidgets('quick-connect preserves input and shows an actionable failure', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -959,14 +1042,12 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('could not be reached'), findsOneWidget);
-    expect(
-      tester.widget<TextField>(input).controller!.text,
-      '192.168.2.90',
-    );
+    expect(tester.widget<TextField>(input).controller!.text, '192.168.2.90');
   });
 
-  testWidgets('quick connect rejects URLs and hostnames before connecting',
-      (tester) async {
+  testWidgets('quick connect rejects URLs and hostnames before connecting', (
+    tester,
+  ) async {
     var callbackCalled = false;
     await tester.pumpWidget(
       ProviderScope(

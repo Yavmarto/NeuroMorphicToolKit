@@ -1,7 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/akida_workspace/support.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/akida_metric_comparison/support.dart';

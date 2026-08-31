@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/models/studio_pipeline_steps.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/pipeline_stage_area/single_stage_view.dart';

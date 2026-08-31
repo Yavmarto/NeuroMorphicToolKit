@@ -1,7 +1,7 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/akida_workspace/studio_akida_workspace.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/codegen_preview_panel/codegen_preview_panel.dart';

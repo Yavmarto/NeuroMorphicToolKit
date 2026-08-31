@@ -7,7 +7,7 @@ import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 class LauncherControlSettings {
   const LauncherControlSettings({

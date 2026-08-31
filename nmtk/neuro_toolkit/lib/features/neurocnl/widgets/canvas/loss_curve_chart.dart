@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Generic single-series training-curve chart (loss, accuracy, or any other
 /// per-epoch scalar), matching the visual language of [TimeSeriesChart] used

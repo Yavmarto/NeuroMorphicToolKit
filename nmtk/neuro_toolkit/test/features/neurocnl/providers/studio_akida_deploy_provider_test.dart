@@ -6,7 +6,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/studio_akida_deploy_pr
 import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/studio_akida_deploy_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/studio_target_registry_service.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'dart:typed_data';
 
 class _FakeStudioAkidaDeployService extends StudioAkidaDeployService {

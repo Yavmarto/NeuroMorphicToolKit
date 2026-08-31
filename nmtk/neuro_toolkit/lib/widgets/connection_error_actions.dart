@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Shared action row for "can't reach a server" error states.
 ///

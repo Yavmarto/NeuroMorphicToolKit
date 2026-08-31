@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/pynq_deploy_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/spec_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/pynq_deploy_panel.dart';

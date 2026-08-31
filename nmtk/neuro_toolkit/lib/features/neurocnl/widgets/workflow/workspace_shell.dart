@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/workflow/pipeline_stepper.dart';
 
 class NmtkWorkspaceShell extends StatelessWidget {

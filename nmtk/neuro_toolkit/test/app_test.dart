@@ -5,7 +5,7 @@ import 'package:neuro_toolkit/features/neurocnl/neurocnl_studio.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _noopEditServer() async {}

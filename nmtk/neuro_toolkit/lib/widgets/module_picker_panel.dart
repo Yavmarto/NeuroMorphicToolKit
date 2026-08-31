@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
@@ -77,10 +77,10 @@ class ModulePickerPanel extends ConsumerWidget {
             message: hasSelectedServer
                 ? 'The launcher did not load any modules.'
                 : 'Choose an existing server or set up a new one to load '
-                    'your modules.',
+                      'your modules.',
             icon: hasSelectedServer
                 ? Icons
-                    .inventory_2_outlined // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                      .inventory_2_outlined // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 : ZetaIcons.cloud_off,
             action: hasSelectedServer
                 ? null
@@ -96,11 +96,11 @@ class ModulePickerPanel extends ConsumerWidget {
               final crossAxisCount = constraints.maxWidth >= 900
                   ? 3
                   : constraints.maxWidth >= 840
-                      ? 2
-                      : 1;
+                  ? 2
+                  : 1;
               final cardWidth =
                   (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
-                      crossAxisCount;
+                  crossAxisCount;
               return Wrap(
                 spacing: spacing,
                 runSpacing: spacing,
@@ -111,26 +111,32 @@ class ModulePickerPanel extends ConsumerWidget {
                       module.requiresMuJoCo && !moduleState.mujocoAvailable;
                   return SizedBox(
                     width: cardWidth,
-                    child: _ModuleCard(
-                      module: module,
-                      isMuJoCoUnavailable: isMuJoCoUnavailable,
-                      onInstall: () => controller.installModule(module.id),
-                      onLaunch: () => controller.launchModule(module.id),
-                      onOpen: () => ref
-                          .read(launcherNavigationProvider.notifier)
-                          .openModule(module.id),
-                      onStop: () => controller.stopModule(module.id),
-                      onUpdate: _hasUpdateAvailable(module)
-                          ? () => unawaited(controller.updateModule(module.id))
-                          : null,
-                      onRepair: () => controller.repairModule(module.id),
-                    )
-                        .animate(delay: Duration(milliseconds: 40 * index))
-                        .fadeIn(duration: NmtkMotionTokens.durationBase)
-                        .slideY(
-                          begin: 0.06,
-                          curve: NmtkMotionTokens.easeEnter,
-                        ),
+                    child:
+                        _ModuleCard(
+                              module: module,
+                              isMuJoCoUnavailable: isMuJoCoUnavailable,
+                              onInstall: () =>
+                                  controller.installModule(module.id),
+                              onLaunch: () =>
+                                  controller.launchModule(module.id),
+                              onOpen: () => ref
+                                  .read(launcherNavigationProvider.notifier)
+                                  .openModule(module.id),
+                              onStop: () => controller.stopModule(module.id),
+                              onUpdate: _hasUpdateAvailable(module)
+                                  ? () => unawaited(
+                                      controller.updateModule(module.id),
+                                    )
+                                  : null,
+                              onRepair: () =>
+                                  controller.repairModule(module.id),
+                            )
+                            .animate(delay: Duration(milliseconds: 40 * index))
+                            .fadeIn(duration: NmtkMotionTokens.durationBase)
+                            .slideY(
+                              begin: 0.06,
+                              curve: NmtkMotionTokens.easeEnter,
+                            ),
                   );
                 }).toList(),
               );

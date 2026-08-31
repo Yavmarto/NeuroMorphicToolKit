@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/workflow/pipeline_stepper.dart';
 // ignore: unnecessary_import — explicit Zeta import for clarity over re-export
 import 'package:zeta_flutter/zeta_flutter.dart';

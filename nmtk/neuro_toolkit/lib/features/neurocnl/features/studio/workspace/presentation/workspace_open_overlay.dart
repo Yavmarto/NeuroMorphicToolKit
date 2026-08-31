@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Transient workspace-opening feedback owned by the workspace feature.
 class WorkspaceOpenOverlay extends StatefulWidget {

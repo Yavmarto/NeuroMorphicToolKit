@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/features/neurobench/app.dart';
 import 'package:neuro_toolkit/features/neurobench/providers/feature_launch_provider.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 const String kTestNeurobenchServerUrl = 'http://127.0.0.1:9000/api/neurobench';
 

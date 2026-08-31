@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
 
@@ -44,10 +44,10 @@ class ModuleErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     final hostHint = isRemoteHosted
         ? 'Confirm that ${failure.uri} is reachable from the Android device '
-            'and that the suite API is serving the module frontend on that host.'
+              'and that the suite API is serving the module frontend on that host.'
         : 'Confirm the launcher host is reachable and that this module\'s '
-            'service is running — externally managed services like Jupyter '
-            'need to be started separately from the launcher.';
+              'service is running — externally managed services like Jupyter '
+              'need to be started separately from the launcher.';
 
     return NmtkEmptyState(
       title: '${module.name} Page Could Not Load',

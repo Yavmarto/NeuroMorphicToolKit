@@ -15,7 +15,7 @@ import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/shell_adapter.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/network_canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/cnl_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';

@@ -3,7 +3,7 @@ import 'package:zeta_flutter/zeta_flutter.dart';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' show NmtkShellTokens;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' show NmtkShellTokens;
 
 /// Palette shared by the time-series chart and animated playback painters.
 ///

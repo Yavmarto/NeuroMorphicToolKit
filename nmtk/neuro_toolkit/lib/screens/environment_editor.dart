@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/src/features/environment/domain/environment_state.dart';
 import 'package:neuro_toolkit/services/environment_api_service.dart';
@@ -46,7 +46,9 @@ class _EnvironmentEditorScreenState
   }
 
   Future<void> _runGuarded(
-      Future<void> Function() action, String success) async {
+    Future<void> Function() action,
+    String success,
+  ) async {
     final stateAsync = ref.read(environmentProvider);
     ref.read(environmentProvider);
     try {
@@ -56,7 +58,9 @@ class _EnvironmentEditorScreenState
     } catch (_) {
       if (!mounted) return;
       NmtkToasts.error(
-          context, stateAsync.error?.toString() ?? 'Operation failed.');
+        context,
+        stateAsync.error?.toString() ?? 'Operation failed.',
+      );
     }
   }
 
@@ -76,8 +80,9 @@ class _EnvironmentEditorScreenState
         title: const Text('Python Environments'),
         actions: [
           Padding(
-            padding:
-                EdgeInsets.symmetric(horizontal: context.nmtkTokens.compactGap),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.nmtkTokens.compactGap,
+            ),
             child: ZetaButton.text(
               label: 'Refresh',
               onPressed: provider.busy
@@ -98,7 +103,9 @@ class _EnvironmentEditorScreenState
   }
 
   Widget _buildBody(
-      AsyncValue<EnvironmentState> providerAsync, EnvironmentState provider) {
+    AsyncValue<EnvironmentState> providerAsync,
+    EnvironmentState provider,
+  ) {
     if (providerAsync.isLoading && provider.environments.isEmpty) {
       return const Center(child: ZetaProgressCircle(size: ZetaCircleSizes.s));
     }
@@ -162,8 +169,10 @@ class _EnvironmentEditorScreenState
 
   // ── clone / import ───────────────────────────────────────────────────────--
   Future<void> _promptClone() async {
-    final name =
-        await _promptForName('Clone NeuroStudio', 'New environment name');
+    final name = await _promptForName(
+      'Clone NeuroStudio',
+      'New environment name',
+    );
     if (name == null || name.trim().isEmpty) return;
     await _runGuarded(
       () =>
@@ -191,7 +200,8 @@ class _EnvironmentEditorScreenState
       context: context,
       builder: (ctx) => ZetaDialog(
         title: 'Delete "${env.displayName}"?',
-        message: 'This removes the environment and its Jupyter kernel. '
+        message:
+            'This removes the environment and its Jupyter kernel. '
             'Notebooks using it will need a different kernel.',
         primaryButtonLabel: 'Delete',
         onPrimaryButtonPressed: () => Navigator.pop(ctx, true),
@@ -217,10 +227,7 @@ class _EnvironmentEditorScreenState
           placeholder: placeholder,
         ),
         actions: [
-          ZetaButton.text(
-            onPressed: () => Navigator.pop(ctx),
-            label: 'Cancel',
-          ),
+          ZetaButton.text(onPressed: () => Navigator.pop(ctx), label: 'Cancel'),
           ZetaButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
             label: 'Create',

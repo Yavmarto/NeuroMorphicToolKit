@@ -44,7 +44,7 @@ import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.d
 import 'package:neuro_toolkit/features/neurocnl/services/studio_target_registry_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/src/features/studio/domain/workspace_file.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/export_menu.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:webview_flutter_platform_interface/webview_flutter_platform_interface.dart';
 

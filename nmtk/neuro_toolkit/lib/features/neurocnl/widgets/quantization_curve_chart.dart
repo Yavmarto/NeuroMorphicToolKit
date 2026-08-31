@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/widgets/adaptive_layout.dart';
+import 'package:neuro_toolkit/ui_core/widgets/adaptive_layout.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/quantization_report.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 

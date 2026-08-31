@@ -1,4 +1,4 @@
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 // NOTE: This file is also duplicated in `Neurochip/frontend/lib/models/`. The
 // launcher retains it so `control_api_service.dart` — which is still consumed
@@ -13,10 +13,7 @@ String? _normalizedWarning(Object? value) {
 }
 
 class PynqOverlayInstallResult {
-  const PynqOverlayInstallResult({
-    required this.board,
-    this.warning,
-  });
+  const PynqOverlayInstallResult({required this.board, this.warning});
 
   factory PynqOverlayInstallResult.fromJson(Map<String, dynamic> json) {
     final boardJson = json['board'] as Map<String, dynamic>? ?? json;
@@ -33,10 +30,7 @@ class PynqOverlayInstallResult {
 }
 
 class PynqRestartRuntimeResult {
-  const PynqRestartRuntimeResult({
-    required this.board,
-    this.warning,
-  });
+  const PynqRestartRuntimeResult({required this.board, this.warning});
 
   factory PynqRestartRuntimeResult.fromJson(Map<String, dynamic> json) {
     final boardJson = json['board'] as Map<String, dynamic>? ?? json;

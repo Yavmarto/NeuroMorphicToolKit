@@ -1,7 +1,7 @@
 // ignore_for_file: unused_shown_name, depend_on_referenced_packages
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart'
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart'
     show
         NmtkSection,
         NmtkSnackBars,

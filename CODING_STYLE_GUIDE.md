@@ -8,14 +8,13 @@ End-user convenience is the highest product priority. When a design decision inv
 
 ## Audited module map
 
-- `neurocnl`: Python + Dart. See `neurocnl/pyproject.toml`, `neurocnl/frontend/pubspec.yaml`, `neurocnl/frontend/analysis_options.yaml`, `neurocnl/.pre-commit-config.yaml`.
+- `neurocnl`: Python + Dart. See `neurocnl/pyproject.toml`, `neurocnl/.pre-commit-config.yaml`. Its Flutter frontend now lives in `nmtk/neuro_toolkit/lib/features/neurocnl/`.
 - `Neurochip`: Python + Dart. See `Neurochip/pyproject.toml`, `Neurochip/frontend/pubspec.yaml`, `Neurochip/frontend/analysis_options.yaml`.
-- `Neurobench`: Python + Dart. See `Neurobench/neurobench/pyproject.toml`, `Neurobench/frontend/pubspec.yaml`, `Neurobench/frontend/analysis_options.yaml`.
+- `Neurobench`: Python + Dart. See `Neurobench/neurobench/pyproject.toml`. Its Flutter frontend now lives in `nmtk/neuro_toolkit/lib/features/neurobench/`.
 - `Neuro-Dream-Hand`: Python. See `Neuro-Dream-Hand/pyproject.toml`.
 - `Neurosense`: Python + Dart. See `Neurosense/pyproject.toml`, `Neurosense/frontend/pubspec.yaml`, `Neurosense/frontend/analysis_options.yaml`, `Neurosense/.pre-commit-config.yaml`.
 - `Neurohub`: Python + Dart. See `Neurohub/pyproject.toml`, `Neurohub/frontend/pubspec.yaml`, `Neurohub/frontend/analysis_options.yaml`, `Neurohub/.pre-commit-config.yaml`.
-- `nmtk`: Dart + Python helpers. See `nmtk/neuro_toolkit/pubspec.yaml`, `nmtk/neuro_toolkit/analysis_options.yaml`.
-- `nmtk_ui_core`: Dart. See `nmtk_ui_core/pubspec.yaml`, `nmtk_ui_core/analysis_options.yaml`.
+- `nmtk`: Dart + Python helpers. See `nmtk/neuro_toolkit/pubspec.yaml`, `nmtk/neuro_toolkit/analysis_options.yaml`. Shared design-system code (formerly the separate `nmtk_ui_core` package) now lives at `nmtk/neuro_toolkit/lib/ui_core/`.
 - `neurocli`: Markdown-only planning at present; if implementation starts, it must share launcher manifest semantics from `nmtk/neuro_toolkit/assets/modules.json`.
 
 ## Cross-repo defaults

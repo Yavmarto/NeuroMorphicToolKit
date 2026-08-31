@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/backend_tunnel_service.dart';
@@ -123,8 +123,9 @@ final backendUpdateProvider = FutureProvider<LauncherUpdate?>((ref) async {
 /// Selected Akida host release status, kept independent from core backend
 /// update availability so a failed optional runtime remains recoverable after
 /// the suite itself is current.
-final selectedAkidaRuntimeStatusProvider =
-    FutureProvider<AkidaPairedHost?>((ref) async {
+final selectedAkidaRuntimeStatusProvider = FutureProvider<AkidaPairedHost?>((
+  ref,
+) async {
   final controlApi = ref.watch(selectedControlApiServiceProvider);
   if (controlApi == null) return null;
   try {

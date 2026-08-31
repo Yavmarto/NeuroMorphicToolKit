@@ -1,7 +1,7 @@
-import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
-import 'package:nmtk_ui_core/models/akida_deployment_model.dart';
+import 'package:neuro_toolkit/ui_core/models/akida_deployment_model.dart';
 
 /// Displays a NeuroCNL [AkidaSupportState] as a coloured summary card.
 ///

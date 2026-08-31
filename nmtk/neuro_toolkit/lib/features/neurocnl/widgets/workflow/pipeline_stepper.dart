@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/shell_tokens.dart';
-import 'package:nmtk_ui_core/zeta_theme.dart';
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/zeta_theme.dart';
 
 part 'pipeline_stepper_parts.dart';
 

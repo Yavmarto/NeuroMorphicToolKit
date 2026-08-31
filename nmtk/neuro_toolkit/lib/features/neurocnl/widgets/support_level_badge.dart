@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' show ZetaIcons, NmtkShellTokens;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' show ZetaIcons, NmtkShellTokens;
 
 /// A compact pill-shaped badge for a nir_support.py classification level
 /// ('exact' / 'approximate' / 'unsupported' / null-while-loading).

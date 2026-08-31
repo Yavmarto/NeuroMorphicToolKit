@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/workflow_feature.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_step/support.dart' show rdbuColor;

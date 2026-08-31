@@ -68,7 +68,7 @@ Read before edit:
 - If editing `Neurosense/**`, read `Neurosense/AGENTS.md`.
 - If editing `Neurohub/**`, read `Neurohub/AGENTS.md`.
 - If editing `nmtk/**`, read `nmtk/AGENTS.md`.
-- If editing `nmtk_ui_core/**`, read `nmtk_ui_core/AGENTS.md`.
+- If editing `nmtk/neuro_toolkit/lib/ui_core/**`, read `nmtk/neuro_toolkit/lib/ui_core/AGENTS.md`.
 - If editing `neurocli/**`, read `neurocli/AGENTS.md`.
 - If editing root-owned `docs/**`, `scripts/**`, `tests/**`, `monitoring/**`, or root config files, stay in the root repo and read the owning module `AGENTS.md` for every contract you touch.
 - If editing more than one top-level module, name the write set explicitly and run the owning checks plus `python3 -m pytest tests/integration/test_cross_module.py` and `python3 -m pytest tests/integration/test_teensy_e2e.py`.
@@ -213,7 +213,7 @@ included set is `docker-compose*.yml`, `Dockerfile*`, `.dockerignore`, `suite_ap
 `Neurobench/neurobench/`, `nmtk/launcher_control/`, `nmtk/neuro_toolkit/assets/` and
 `scripts/launcher_control_service.py` — every one of them traced to a Dockerfile `COPY`, a
 compose bind mount, or a path the backend reads at runtime. The `Makefile`, this file, all
-docs, `tests/`, `tools/`, `nmtk_ui_core/`, the Flutter app and the rest of `scripts/` never
+docs, `tests/`, `tools/`, the Flutter app and the rest of `scripts/` never
 leave your machine. Rules are first-match-wins, so the junk block must stay above the `+`
 block. Adding a new backend directory means adding a `+` rule, or it silently never ships.
 

@@ -4,7 +4,7 @@ import 'package:neuro_toolkit/features/neurocnl/app.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/feature_launch_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 const String kTestNeurocnlServerUrl = 'http://127.0.0.1:9000/api/neurocnl';
 

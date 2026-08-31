@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' hide AppTheme;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
 import 'package:neuro_toolkit/features/neurocnl/services/deploy_error_formatter.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';

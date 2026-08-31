@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
-import 'package:nmtk_ui_core/shell_tokens.dart';
-import 'package:nmtk_ui_core/widgets/status_badge.dart';
-import 'package:nmtk_ui_core/widgets/tone.dart';
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/widgets/status_badge.dart';
+import 'package:neuro_toolkit/ui_core/widgets/tone.dart';
 
 /// NeuroCNL's verdict-toned banner for displaying backend support status.
 ///

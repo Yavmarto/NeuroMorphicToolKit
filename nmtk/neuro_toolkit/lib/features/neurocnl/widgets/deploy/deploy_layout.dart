@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/shell_tokens.dart';
-import 'package:nmtk_ui_core/widgets/section.dart';
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/widgets/section.dart';
 
 /// NeuroCNL's standard two-pane platform deployment layout.
 ///

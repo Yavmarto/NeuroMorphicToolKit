@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:nmtk_ui_core/visualization/renderer_interface.dart';
+import 'package:neuro_toolkit/ui_core/visualization/renderer_interface.dart';
 
 /// Per-node compact spike payload within a NeuroCNL bulk (large-network) frame.
 /// Mirrors `NodeBulkData` in

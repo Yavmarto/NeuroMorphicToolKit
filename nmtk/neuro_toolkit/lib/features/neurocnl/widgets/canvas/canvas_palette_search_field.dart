@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Search field shown above every canvas node palette — the two bottom-bar
 /// ones ("Add Node", "Add NIR Primitive") and the port-anchored connect

@@ -8,7 +8,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' show ZetaIcons;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' show ZetaIcons;
 
 import 'package:neuro_toolkit/features/neurocnl/widgets/cnl_sentence_builder_dialog.dart';
 

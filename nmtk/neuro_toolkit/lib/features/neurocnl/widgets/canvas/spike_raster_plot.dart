@@ -2,7 +2,7 @@
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' show NmtkShellTokens;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' show NmtkShellTokens;
 
 /// Bordered spike raster plot with synSubject-colored spikes.
 ///

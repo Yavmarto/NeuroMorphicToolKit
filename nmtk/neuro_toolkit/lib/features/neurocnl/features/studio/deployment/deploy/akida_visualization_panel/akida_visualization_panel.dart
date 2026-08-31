@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/services/studio_akida_deploy_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/canvas_projection_utils.dart';

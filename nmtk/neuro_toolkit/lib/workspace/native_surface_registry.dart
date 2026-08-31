@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 // Native module adapters hosted by the launcher's single workspace surface.
 import 'package:neuro_toolkit/features/neurocnl/neurocnl_studio.dart';
 // import 'package:neurochip/shell_adapter.dart';

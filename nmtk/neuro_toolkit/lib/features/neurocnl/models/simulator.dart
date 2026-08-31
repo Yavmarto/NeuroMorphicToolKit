@@ -6,7 +6,7 @@
 /// API responses without shape ambiguity.
 library;
 
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 // ---------------------------------------------------------------------------
 // Enums

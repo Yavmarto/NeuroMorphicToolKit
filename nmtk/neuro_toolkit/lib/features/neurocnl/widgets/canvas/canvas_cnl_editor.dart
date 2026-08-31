@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/imported_cnl_spec.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/cnl_import_provider.dart';

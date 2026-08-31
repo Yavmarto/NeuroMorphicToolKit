@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:mockito/mockito.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' show ZetaButton;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' show ZetaButton;
 import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/sensor_frame.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';

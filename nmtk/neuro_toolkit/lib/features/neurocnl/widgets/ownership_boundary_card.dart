@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Frame-less ownership-boundary banner used inside Studio surfaces (Analysis,
 /// Hardware) to communicate the handoff between Studio authoring and the

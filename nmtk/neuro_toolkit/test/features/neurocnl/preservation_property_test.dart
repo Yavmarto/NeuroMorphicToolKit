@@ -33,7 +33,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/cnl_editor.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart'
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart'
     show NmtkNeurocnlTokens, NmtkDesktopScaffold, NmtkSidebarItem;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
@@ -67,7 +67,7 @@ String _resolveWorkspaceRoot() {
   if (cwd.endsWith('frontend')) {
     return Directory(cwd).parent.parent.path;
   }
-  if (File('$cwd/nmtk_ui_core/pubspec.yaml').existsSync()) {
+  if (File('$cwd/nmtk_module_contracts/pubspec.yaml').existsSync()) {
     return cwd;
   }
   if (cwd.endsWith('neurocnl')) {
@@ -75,7 +75,7 @@ String _resolveWorkspaceRoot() {
   }
   var dir = Directory(cwd);
   while (dir.path != dir.parent.path) {
-    if (File('${dir.path}/nmtk_ui_core/pubspec.yaml').existsSync()) {
+    if (File('${dir.path}/nmtk_module_contracts/pubspec.yaml').existsSync()) {
       return dir.path;
     }
     dir = dir.parent;
@@ -483,7 +483,7 @@ void main() {
     test('P11 — desktop_scaffold.dart source: _kMobileBreakpoint == 840.0', () {
       final workspaceRoot = _resolveWorkspaceRoot();
       final scaffoldFile = File(
-        '$workspaceRoot/nmtk_ui_core/lib/widgets/desktop_scaffold.dart',
+        '$workspaceRoot/nmtk/neuro_toolkit/lib/ui_core/widgets/desktop_scaffold.dart',
       );
 
       final content = scaffoldFile.readAsStringSync();

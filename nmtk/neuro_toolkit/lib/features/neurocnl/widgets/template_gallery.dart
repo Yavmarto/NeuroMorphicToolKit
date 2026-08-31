@@ -10,7 +10,7 @@ import 'package:neuro_toolkit/features/neurocnl/services/template_load_guard.dar
 import 'package:neuro_toolkit/features/neurocnl/widgets/loading_shimmer.dart';
 import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' hide AppTheme;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
 /// Template gallery dialog showing available CNL spec templates.
 ///

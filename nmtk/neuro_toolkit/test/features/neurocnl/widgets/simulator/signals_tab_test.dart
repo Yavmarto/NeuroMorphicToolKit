@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/simulator.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/simulator/signals_tab.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 SimulatorRunResult _result({

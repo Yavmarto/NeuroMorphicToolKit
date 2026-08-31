@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:nmtk_ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 
 import 'package:neuro_toolkit/features/custom_nodes/custom_node_repository.dart';
@@ -93,8 +93,10 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
   Future<void> _onSave() async {
     final source = await _fetchCode();
     if (source == null || source.isEmpty) {
-      _showSnackBar('Editor returned no code — nothing to save.',
-          isError: true);
+      _showSnackBar(
+        'Editor returned no code — nothing to save.',
+        isError: true,
+      );
       return;
     }
 
@@ -133,10 +135,7 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
         ? NmtkShellTokens.of(context).errorColor
         : null;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: colorToken,
-      ),
+      SnackBar(content: Text(message), backgroundColor: colorToken),
     );
   }
 
@@ -161,9 +160,9 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
         title: Text(
           'Custom Node Editor',
           style: Zeta.of(context).textStyles.titleMedium.copyWith(
-                color: scheme.onSurface,
-                fontWeight: FontWeight.w700,
-              ),
+            color: scheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         actions: [
           if (_saving)

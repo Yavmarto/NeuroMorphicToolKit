@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// The scene-space bounding box that contains every rect in [nodeRects].
 /// Returns [Rect.zero] when [nodeRects] is empty.

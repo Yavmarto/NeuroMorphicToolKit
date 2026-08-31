@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/models/dataset_sample.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/trained_nir_artifact.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/utils/canvas_palette_search.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_palette_search_field.dart';

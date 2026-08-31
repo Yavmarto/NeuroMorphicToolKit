@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/bulk_spike_frame.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' show VisualizationScale;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' show VisualizationScale;
 
 void main() {
   test(

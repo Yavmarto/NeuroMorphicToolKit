@@ -11,7 +11,7 @@ import 'package:neuro_toolkit/features/neurocnl/screens/hub_popup.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurohub_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurohub_session_storage.dart';
 import 'package:neuro_toolkit/features/neurocnl/src/features/studio/domain/workspace_file.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 class _MemoryTokenStorage implements NeurohubTokenStorage {
   _MemoryTokenStorage([this.token]);

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' hide AppTheme;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
 import 'package:neuro_toolkit/features/neurocnl/models/sc_neurocore_synthesis_target.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';

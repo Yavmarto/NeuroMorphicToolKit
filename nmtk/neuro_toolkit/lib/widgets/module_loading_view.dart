@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/module.dart';
 
@@ -100,17 +100,17 @@ class ModuleLoadingView extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Zeta.of(context).textStyles.titleMedium.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Zeta.of(
+                  context,
+                ).textStyles.titleMedium.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
                 subtitle,
                 textAlign: TextAlign.center,
-                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                      color: colors.mainSubtle,
-                    ),
+                style: Zeta.of(
+                  context,
+                ).textStyles.bodyMedium.copyWith(color: colors.mainSubtle),
               ),
               const SizedBox(height: 14),
               hasProgress

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/dataset_sample.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_pynq_deploy_provider.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Overlay-v2 consumes one word per input neuron per timestep. The execution
 /// pane still asks for neuron *indices* because typing three numbers beats

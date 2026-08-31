@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_akida_deploy_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/presentation/studio_status_line.dart';

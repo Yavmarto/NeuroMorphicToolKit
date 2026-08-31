@@ -20,7 +20,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/studio_pynq_deploy_pro
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/studio_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import '../providers_test.mocks.dart';
 

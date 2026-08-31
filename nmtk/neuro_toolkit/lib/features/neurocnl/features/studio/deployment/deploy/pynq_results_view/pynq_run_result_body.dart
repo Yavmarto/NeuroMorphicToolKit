@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/presentation/studio_status_line.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/pynq_results_view/support.dart';

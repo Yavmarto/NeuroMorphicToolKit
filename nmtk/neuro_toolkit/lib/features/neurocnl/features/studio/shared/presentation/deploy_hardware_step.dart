@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Applies the deployment surface's responsive outer padding.
 

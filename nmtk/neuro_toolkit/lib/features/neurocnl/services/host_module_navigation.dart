@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 bool hasHostedModuleNavigator(BuildContext context) {
   return NmtkHostNavigationScope.maybeNavigatorOf(context) != null;

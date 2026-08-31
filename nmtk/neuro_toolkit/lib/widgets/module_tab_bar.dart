@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nmtk_ui_core/shell_tokens.dart';
-import 'package:nmtk_ui_core/motion_tokens.dart';
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/motion_tokens.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 

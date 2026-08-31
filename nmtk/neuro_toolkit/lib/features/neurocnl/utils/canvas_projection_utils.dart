@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart' show Color;
-import 'package:nmtk_ui_core/nmtk_ui_core.dart' show ZetaColors;
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' show ZetaColors;
 
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canonical_editor_document.dart' as canonical;
