@@ -21,32 +21,28 @@ enum DeploymentPhase {
 
 extension DeploymentPhaseWireName on DeploymentPhase {
   String get wireName => switch (this) {
-        DeploymentPhase.queued => 'queued',
-        DeploymentPhase.connecting => 'connecting',
-        DeploymentPhase.preflight => 'preflight_running',
-        DeploymentPhase.bootstrappingAccess => 'bootstrapping_access',
-        DeploymentPhase.reconcilingExistingInstall =>
-          'reconciling_existing_install',
-        DeploymentPhase.installingPrerequisites => 'installing_prerequisites',
-        DeploymentPhase.uploadingAssets => 'uploading_assets',
-        DeploymentPhase.pullingImages => 'pulling_images',
-        DeploymentPhase.startingContainers => 'starting_containers',
-        DeploymentPhase.verifyingSuiteApi => 'verifying_suite_api',
-        DeploymentPhase.verifyingLauncherControl =>
-          'verifying_launcher_control',
-        DeploymentPhase.verifyingOptionalCapabilities =>
-          'verifying_optional_capabilities',
-        DeploymentPhase.updatingAkidaRuntime => 'updating_akida_runtime',
-        DeploymentPhase.completed => 'completed',
-        DeploymentPhase.failed => 'failed',
-        DeploymentPhase.cancelled => 'cancelled',
-      };
+    DeploymentPhase.queued => 'queued',
+    DeploymentPhase.connecting => 'connecting',
+    DeploymentPhase.preflight => 'preflight_running',
+    DeploymentPhase.bootstrappingAccess => 'bootstrapping_access',
+    DeploymentPhase.reconcilingExistingInstall =>
+      'reconciling_existing_install',
+    DeploymentPhase.installingPrerequisites => 'installing_prerequisites',
+    DeploymentPhase.uploadingAssets => 'uploading_assets',
+    DeploymentPhase.pullingImages => 'pulling_images',
+    DeploymentPhase.startingContainers => 'starting_containers',
+    DeploymentPhase.verifyingSuiteApi => 'verifying_suite_api',
+    DeploymentPhase.verifyingLauncherControl => 'verifying_launcher_control',
+    DeploymentPhase.verifyingOptionalCapabilities =>
+      'verifying_optional_capabilities',
+    DeploymentPhase.updatingAkidaRuntime => 'updating_akida_runtime',
+    DeploymentPhase.completed => 'completed',
+    DeploymentPhase.failed => 'failed',
+    DeploymentPhase.cancelled => 'cancelled',
+  };
 }
 
-enum RemoteReinstallMode {
-  preserveData,
-  factoryReset,
-}
+enum RemoteReinstallMode { preserveData, factoryReset }
 
 enum SystemHealthStatus {
   ok,
@@ -55,11 +51,11 @@ enum SystemHealthStatus {
   notConfigured;
 
   static SystemHealthStatus fromWireName(String value) => switch (value) {
-        'ok' => SystemHealthStatus.ok,
-        'degraded' => SystemHealthStatus.degraded,
-        'notConfigured' => SystemHealthStatus.notConfigured,
-        _ => SystemHealthStatus.failed,
-      };
+    'ok' => SystemHealthStatus.ok,
+    'degraded' => SystemHealthStatus.degraded,
+    'notConfigured' => SystemHealthStatus.notConfigured,
+    _ => SystemHealthStatus.failed,
+  };
 }
 
 class SystemHealthCheck {
@@ -107,7 +103,8 @@ class SystemHealthReport {
         overall: SystemHealthStatus.fromWireName(
           json['overall'] as String? ?? 'failed',
         ),
-        checkedAt: DateTime.tryParse(json['checkedAt'] as String? ?? '') ??
+        checkedAt:
+            DateTime.tryParse(json['checkedAt'] as String? ?? '') ??
             DateTime.now(),
         checks: (json['checks'] as List<dynamic>? ?? const <dynamic>[])
             .whereType<Map<String, dynamic>>()
@@ -185,51 +182,51 @@ class DeploymentRequest {
   final bool cleanInstall;
 
   DeploymentRequest withAdminToken(String value) => DeploymentRequest(
-        targetType: targetType,
-        mode: mode,
-        displayName: displayName,
-        host: host,
-        username: username,
-        sshPort: sshPort,
-        authMethod: authMethod,
-        sshPassword: sshPassword,
-        sshPrivateKey: sshPrivateKey,
-        backendPort: backendPort,
-        namespace: namespace,
-        context: context,
-        apiServer: apiServer,
-        containerEngine: containerEngine,
-        kubeconfig: kubeconfig,
-        adminToken: value,
-        cleanInstall: cleanInstall,
-      );
+    targetType: targetType,
+    mode: mode,
+    displayName: displayName,
+    host: host,
+    username: username,
+    sshPort: sshPort,
+    authMethod: authMethod,
+    sshPassword: sshPassword,
+    sshPrivateKey: sshPrivateKey,
+    backendPort: backendPort,
+    namespace: namespace,
+    context: context,
+    apiServer: apiServer,
+    containerEngine: containerEngine,
+    kubeconfig: kubeconfig,
+    adminToken: value,
+    cleanInstall: cleanInstall,
+  );
 
   Map<String, dynamic> toPublicJson({required String id}) => {
-        'id': id,
-        'displayName': displayName,
-        'targetType': targetType,
-        'mode': mode,
-        'authMode': targetType == 'local'
-            ? 'none'
-            : targetType == 'kubernetes_cluster'
-                ? 'kubeconfig'
-                : authMethod,
-        'host': host,
-        'username': username,
-        'sshPort': sshPort,
-        'backendPort': backendPort,
-        'namespace': namespace,
-        'context': context,
-        'apiServer': apiServer,
-        'containerEngine': containerEngine,
-      };
+    'id': id,
+    'displayName': displayName,
+    'targetType': targetType,
+    'mode': mode,
+    'authMode': targetType == 'local'
+        ? 'none'
+        : targetType == 'kubernetes_cluster'
+        ? 'kubeconfig'
+        : authMethod,
+    'host': host,
+    'username': username,
+    'sshPort': sshPort,
+    'backendPort': backendPort,
+    'namespace': namespace,
+    'context': context,
+    'apiServer': apiServer,
+    'containerEngine': containerEngine,
+  };
 
   Map<String, dynamic> toSecretJson() => {
-        if (sshPassword.isNotEmpty) 'sshPassword': sshPassword,
-        if (sshPrivateKey.isNotEmpty) 'sshPrivateKey': sshPrivateKey,
-        if (kubeconfig.isNotEmpty) 'kubeconfig': kubeconfig,
-        if (adminToken.isNotEmpty) 'adminToken': adminToken,
-      };
+    if (sshPassword.isNotEmpty) 'sshPassword': sshPassword,
+    if (sshPrivateKey.isNotEmpty) 'sshPrivateKey': sshPrivateKey,
+    if (kubeconfig.isNotEmpty) 'kubeconfig': kubeconfig,
+    if (adminToken.isNotEmpty) 'adminToken': adminToken,
+  };
 }
 
 class DeploymentSnapshot {
@@ -258,9 +255,7 @@ abstract class DeploymentService {
     required String containerEngine,
   });
 
-  Future<DeploymentJob> setupRemoteServer(
-    RemoteServerSetupRequest request,
-  ) {
+  Future<DeploymentJob> setupRemoteServer(RemoteServerSetupRequest request) {
     throw UnsupportedError('One-action remote setup is not supported.');
   }
 
@@ -282,6 +277,15 @@ abstract class DeploymentService {
     throw UnsupportedError('Whole-system diagnostics are not supported.');
   }
 
+  /// Diagnoses an already-running backend that was connected directly rather
+  /// than installed by this app.
+  Future<SystemHealthReport> diagnoseHost(
+    String host, {
+    int backendPort = 9000,
+  }) {
+    throw UnsupportedError('Direct-host diagnostics are not supported.');
+  }
+
   Future<SystemHealthReport> repairTarget(String targetId) {
     throw UnsupportedError('Whole-system repair is not supported.');
   }
@@ -296,10 +300,7 @@ abstract class DeploymentService {
   /// Drops the previously trusted SSH host key for [host]:[sshPort], for
   /// when the server's key legitimately changed (reinstall, replaced disk)
   /// and the user has confirmed that in person.
-  Future<void> forgetHostKey({
-    required String host,
-    required int sshPort,
-  }) {
+  Future<void> forgetHostKey({required String host, required int sshPort}) {
     throw UnsupportedError('Forgetting a host key is not supported.');
   }
 }

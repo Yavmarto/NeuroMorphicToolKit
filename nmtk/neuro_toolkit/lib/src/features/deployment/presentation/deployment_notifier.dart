@@ -24,8 +24,8 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
 
   static Duration _stalenessBudgetFor(DeploymentJob job) =>
       job.stage == DeploymentPhase.pullingImages.wireName
-          ? _maxPullStaleness
-          : _maxJobStaleness;
+      ? _maxPullStaleness
+      : _maxJobStaleness;
 
   Timer? _pollTimer;
   bool _pollInFlight = false;
@@ -114,10 +114,9 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     final job = await _service.setupRemoteServer(request);
     final snapshot = await _service.load();
     state = AsyncData(
-      _stateFromSnapshot(snapshot).copyWith(
-        activeJob: job,
-        connectionLostReason: null,
-      ),
+      _stateFromSnapshot(
+        snapshot,
+      ).copyWith(activeJob: job, connectionLostReason: null),
     );
     _startPolling();
     return job;
@@ -231,7 +230,8 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
       state = AsyncData(
         current.copyWith(
           activeJob: job.copyWith(
-            error: 'degraded optional capability: Jupyter restart failed: '
+            error:
+                'degraded optional capability: Jupyter restart failed: '
                 '$error',
           ),
         ),
@@ -254,30 +254,61 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     return mostRecent;
   }
 
-  Future<SystemHealthReport?> diagnoseLatestTarget() async {
-    final current = state.value;
-    if (current == null) return null;
-    final target = _mostRecentTarget(current);
-    if (target == null) return null;
+  DeploymentTarget? _targetForHost(
+    DeploymentState current,
+    String? preferredHost,
+  ) {
+    final normalizedHost = preferredHost?.trim();
+    if (normalizedHost == null || normalizedHost.isEmpty) {
+      return _mostRecentTarget(current);
+    }
+    for (final candidate in current.targets) {
+      if (candidate.host.trim() == normalizedHost) return candidate;
+    }
+    return null;
+  }
+
+  Future<SystemHealthReport?> diagnoseLatestTarget({
+    String? preferredHost,
+  }) async {
+    final current = state.value ?? await future;
+    final target = _targetForHost(current, preferredHost);
+    if (target == null) {
+      final host = preferredHost?.trim();
+      if (host == null || host.isEmpty) return null;
+      return _service.diagnoseHost(host);
+    }
     return _service.diagnoseTarget(target.id);
   }
 
-  Future<SystemHealthReport?> repairLatestTarget() async {
-    final current = state.value;
-    if (current == null) return null;
-    final target = _mostRecentTarget(current);
-    if (target == null) return null;
+  Future<SystemHealthReport?> repairLatestTarget({
+    String? preferredHost,
+  }) async {
+    final current = state.value ?? await future;
+    final target = _targetForHost(current, preferredHost);
+    if (target == null) {
+      throw StateError(
+        'This connected server has no saved deployment credential. '
+        'Set it up from this screen before running repair.',
+      );
+    }
     final report = await _service.repairTarget(target.id);
     await refresh();
     return report;
   }
 
-  Future<DeploymentJob?> reinstallLatestTarget(
-      {bool factoryReset = false}) async {
-    final current = state.value;
-    if (current == null) return null;
-    final target = _mostRecentTarget(current);
-    if (target == null) return null;
+  Future<DeploymentJob?> reinstallLatestTarget({
+    bool factoryReset = false,
+    String? preferredHost,
+  }) async {
+    final current = state.value ?? await future;
+    final target = _targetForHost(current, preferredHost);
+    if (target == null) {
+      throw StateError(
+        'This connected server has no saved deployment credential. '
+        'Set it up from this screen before reinstalling.',
+      );
+    }
     final job = await _service.reinstallTarget(
       target.id,
       factoryReset: factoryReset,
@@ -289,10 +320,7 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     return job;
   }
 
-  Future<void> forgetHostKey({
-    required String host,
-    required int sshPort,
-  }) {
+  Future<void> forgetHostKey({required String host, required int sshPort}) {
     return _service.forgetHostKey(host: host, sshPort: sshPort);
   }
 
@@ -373,7 +401,8 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
       timer.cancel();
       state = AsyncData(
         current.copyWith(
-          connectionLostReason: 'This server has not reported progress for '
+          connectionLostReason:
+              'This server has not reported progress for '
               '${budget.inMinutes} minutes. Retry setup, or open the raw SSH '
               'output to see the last thing it did.',
         ),

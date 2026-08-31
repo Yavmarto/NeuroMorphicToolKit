@@ -79,6 +79,12 @@ class _RepairService implements DeploymentService {
       repairTarget(targetId);
 
   @override
+  Future<SystemHealthReport> diagnoseHost(
+    String host, {
+    int backendPort = 9000,
+  }) => repairTarget('target-1');
+
+  @override
   Future<DeploymentJob> reinstallTarget(
     String targetId, {
     bool factoryReset = false,

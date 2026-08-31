@@ -8,8 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:neuro_toolkit/models/backend_deployment.dart';
+import 'package:neuro_toolkit/services/deployment/bootstrap_transcript_parsing.dart';
 import 'package:neuro_toolkit/services/deployment/client_deployment_service.dart';
 import 'package:neuro_toolkit/services/deployment/deployment_persistence.dart';
+import 'package:neuro_toolkit/services/deployment/remote_bootstrap_script.dart';
 import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 import 'package:neuro_toolkit/services/deployment/ssh_deployment_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -85,16 +87,12 @@ class _ManifestAssetBundle extends CachingAssetBundle {
         hashes.remove(omittedManifestFile);
       }
       if (unexpectedManifestFile != null) {
-        hashes[unexpectedManifestFile!] =
-            sha256.convert(utf8.encode('unexpected fixture')).toString();
+        hashes[unexpectedManifestFile!] = sha256
+            .convert(utf8.encode('unexpected fixture'))
+            .toString();
       }
       return _byteData(
-        utf8.encode(
-          jsonEncode({
-            'bundleVersion': 5,
-            'files': hashes,
-          }),
-        ),
+        utf8.encode(jsonEncode({'bundleVersion': 5, 'files': hashes})),
       );
     }
     if (!files.contains(relative)) {
@@ -132,7 +130,8 @@ void _writeExecutable(Directory bin, String name, String contents) {
   String commandLog,
   String dormantUser,
   String skippedUser,
-}) _runRootlessReconciliationFixture({
+})
+_runRootlessReconciliationFixture({
   bool unsafeActiveRuntime = false,
   bool failRuntimeCleanup = false,
   bool factoryReset = false,
@@ -149,8 +148,9 @@ void _writeExecutable(Directory bin, String name, String contents) {
   final runtimeBase = Directory('${fixture.path}/run-user')..createSync();
   final dormantHome = Directory('${fixture.path}/dormant-home')
     ..createSync(recursive: true);
-  Directory('${dormantHome.path}/.local/share/containers/storage')
-      .createSync(recursive: true);
+  Directory(
+    '${dormantHome.path}/.local/share/containers/storage',
+  ).createSync(recursive: true);
   final skippedHome = Directory('${fixture.path}/skipped-home')..createSync();
   const dormantUser = 'dormant-nmtk';
   const skippedUser = 'unrelated-user';
@@ -163,8 +163,9 @@ void _writeExecutable(Directory bin, String name, String contents) {
     );
   final commandLog = File('${fixture.path}/commands.log');
   if (unsafeActiveRuntime) {
-    Directory('${runtimeBase.path}/$dormantUid/libpod')
-        .createSync(recursive: true);
+    Directory(
+      '${runtimeBase.path}/$dormantUid/libpod',
+    ).createSync(recursive: true);
   }
 
   _writeExecutable(bin, 'id', '#!/bin/bash\necho 0\n');
@@ -253,17 +254,15 @@ void _writeExecutable(Directory bin, String name, String contents) {
     );
   }
 
-  final completeScript = ClientDeploymentService.buildRemoteBootstrapScript(
+  final completeScript = buildRemoteBootstrapScript(
     containerEngine: 'podman',
     factoryReset: factoryReset,
-  ).replaceFirst(
-    'done </etc/passwd',
-    'done <"${passwd.path}"',
-  );
+  ).replaceFirst('done </etc/passwd', 'done <"${passwd.path}"');
   final installPhase = completeScript.indexOf(
     '\nphase "installing_prerequisites"',
   );
-  final reconciliationScript = '${completeScript.substring(0, installPhase)}\n'
+  final reconciliationScript =
+      '${completeScript.substring(0, installPhase)}\n'
       'terminal "✓ Reconciliation fixture completed"\n';
   final script = File('${fixture.path}/reconcile.sh')
     ..writeAsStringSync(reconciliationScript);
@@ -300,11 +299,8 @@ void _writeExecutable(Directory bin, String name, String contents) {
   );
 }
 
-({
-  Directory fixture,
-  List<ProcessResult> results,
-  String commandLog,
-}) _runDeploymentAccountFixture({
+({Directory fixture, List<ProcessResult> results, String commandLog})
+_runDeploymentAccountFixture({
   required bool userExists,
   required bool groupExists,
   int runs = 1,
@@ -412,22 +408,19 @@ void _writeExecutable(Directory bin, String name, String contents) {
         'mkdir -p "\${!#}"\n',
   );
 
-  final completeScript = ClientDeploymentService.buildRemoteBootstrapScript(
+  final completeScript = buildRemoteBootstrapScript(
     containerEngine: 'docker',
     factoryReset: false,
   );
-  final preflightIndex = completeScript.indexOf(
-    '\nphase "preflight_running"',
-  );
-  final accountIndex = completeScript.indexOf(
-    '\nphase "bootstrapping_access"',
-  );
+  final preflightIndex = completeScript.indexOf('\nphase "preflight_running"');
+  final accountIndex = completeScript.indexOf('\nphase "bootstrapping_access"');
   final credentialIndex = completeScript.indexOf(
     '\ncapture_step 30 "deploy_account_failed" 26 \\\n'
     '  "Preparing deployment credential workspace"',
     accountIndex,
   );
-  final accountScript = '${completeScript.substring(0, preflightIndex)}'
+  final accountScript =
+      '${completeScript.substring(0, preflightIndex)}'
       '${completeScript.substring(accountIndex, credentialIndex)}\n'
       'terminal "✓ Deployment account fixture completed"\n';
   final script = File('${fixture.path}/account.sh')
@@ -443,8 +436,9 @@ void _writeExecutable(Directory bin, String name, String contents) {
           'NMTK_FAKE_LOG': commandLog.path,
           'NMTK_USER_STATE': userState.path,
           'NMTK_GROUP_STATE': groupState.path,
-          'NMTK_DEPLOY_HOME':
-              invalidHome ? 'relative/deploy-home' : deployHome.path,
+          'NMTK_DEPLOY_HOME': invalidHome
+              ? 'relative/deploy-home'
+              : deployHome.path,
           'NMTK_FAIL_GROUP_CREATION': '$failGroupCreation',
           'NMTK_FAKE_SECRET': 'temporary-admin-secret',
         },
@@ -457,13 +451,8 @@ void _writeExecutable(Directory bin, String name, String contents) {
   );
 }
 
-({
-  Directory fixture,
-  ProcessResult result,
-  String commandLog,
-}) _runDeploymentCredentialFixture({
-  bool failKeyGeneration = false,
-}) {
+({Directory fixture, ProcessResult result, String commandLog})
+_runDeploymentCredentialFixture({bool failKeyGeneration = false}) {
   final fixture = Directory.systemTemp.createTempSync(
     'nmtk-deployment-credential-',
   );
@@ -536,17 +525,14 @@ void _writeExecutable(Directory bin, String name, String contents) {
         'exec /usr/bin/ssh-keygen "\${arguments[@]}"\n',
   );
 
-  final completeScript = ClientDeploymentService.buildRemoteBootstrapScript(
+  final completeScript = buildRemoteBootstrapScript(
     containerEngine: 'docker',
     factoryReset: false,
   );
-  final preflightIndex = completeScript.indexOf(
-    '\nphase "preflight_running"',
-  );
-  final accountIndex = completeScript.indexOf(
-    '\nphase "bootstrapping_access"',
-  );
-  final credentialScript = '${completeScript.substring(0, preflightIndex)}'
+  final preflightIndex = completeScript.indexOf('\nphase "preflight_running"');
+  final accountIndex = completeScript.indexOf('\nphase "bootstrapping_access"');
+  final credentialScript =
+      '${completeScript.substring(0, preflightIndex)}'
       '${completeScript.substring(accountIndex)}';
   final script = File('${fixture.path}/credential.sh')
     ..writeAsStringSync(credentialScript);
@@ -567,10 +553,7 @@ void _writeExecutable(Directory bin, String name, String contents) {
   );
 }
 
-({
-  ProcessResult result,
-  String commandLog,
-}) _runPodmanApiProvisioningFixture({
+({ProcessResult result, String commandLog}) _runPodmanApiProvisioningFixture({
   int systemctlEnableExit = 0,
   int systemctlStartExit = 0,
   bool systemctlCreatesSocket = false,
@@ -654,13 +637,11 @@ void _writeExecutable(Directory bin, String name, String contents) {
         'exit 1\n',
   );
 
-  final completeScript = ClientDeploymentService.buildRemoteBootstrapScript(
+  final completeScript = buildRemoteBootstrapScript(
     containerEngine: 'podman',
     factoryReset: false,
   );
-  final preflightIndex = completeScript.indexOf(
-    '\nif [ "\$(id -u)"',
-  );
+  final preflightIndex = completeScript.indexOf('\nif [ "\$(id -u)"');
   final startIndex = completeScript.indexOf(
     '  NMTK_SETUP_AUTOMATIC_RECOVERY=true \\\n'
     '  capture_step 30 "podman_api_start_failed" 27 \\\n'
@@ -671,7 +652,8 @@ void _writeExecutable(Directory bin, String name, String contents) {
     '"Finalizing secure deployment handoff"',
     startIndex,
   );
-  final provisioningScript = '${completeScript.substring(0, preflightIndex)}\n'
+  final provisioningScript =
+      '${completeScript.substring(0, preflightIndex)}\n'
       'DEPLOY_HOME=${jsonEncode(deployHome.path)}\n'
       'DEPLOY_UID=48334\n'
       '${completeScript.substring(startIndex, endIndex)}\n'
@@ -751,108 +733,115 @@ Future<DeploymentPersistence> _completedRemotePersistence() async {
 
 void main() {
   test(
-      'deployment account reconciliation is idempotent for every partial state',
-      () {
-    final cases = <({
-      String name,
-      bool userExists,
-      bool groupExists,
-      int groupAdds,
-      int userAdds,
-      int userMods,
-    })>[
-      (
-        name: 'neither exists',
-        userExists: false,
-        groupExists: false,
-        groupAdds: 1,
-        userAdds: 1,
-        userMods: 1,
-      ),
-      (
-        name: 'group only',
-        userExists: false,
-        groupExists: true,
-        groupAdds: 0,
-        userAdds: 1,
-        userMods: 1,
-      ),
-      (
-        name: 'user only',
-        userExists: true,
-        groupExists: false,
-        groupAdds: 1,
-        userAdds: 0,
-        userMods: 2,
-      ),
-      (
-        name: 'both exist',
-        userExists: true,
-        groupExists: true,
-        groupAdds: 0,
-        userAdds: 0,
-        userMods: 2,
-      ),
-    ];
+    'deployment account reconciliation is idempotent for every partial state',
+    () {
+      final cases =
+          <
+            ({
+              String name,
+              bool userExists,
+              bool groupExists,
+              int groupAdds,
+              int userAdds,
+              int userMods,
+            })
+          >[
+            (
+              name: 'neither exists',
+              userExists: false,
+              groupExists: false,
+              groupAdds: 1,
+              userAdds: 1,
+              userMods: 1,
+            ),
+            (
+              name: 'group only',
+              userExists: false,
+              groupExists: true,
+              groupAdds: 0,
+              userAdds: 1,
+              userMods: 1,
+            ),
+            (
+              name: 'user only',
+              userExists: true,
+              groupExists: false,
+              groupAdds: 1,
+              userAdds: 0,
+              userMods: 2,
+            ),
+            (
+              name: 'both exist',
+              userExists: true,
+              groupExists: true,
+              groupAdds: 0,
+              userAdds: 0,
+              userMods: 2,
+            ),
+          ];
 
-    for (final testCase in cases) {
-      final fixture = _runDeploymentAccountFixture(
-        userExists: testCase.userExists,
-        groupExists: testCase.groupExists,
-        runs: 2,
-      );
-      addTearDown(() {
-        if (fixture.fixture.existsSync()) {
-          fixture.fixture.deleteSync(recursive: true);
-        }
-      });
-      final output = fixture.results
-          .map((result) => '${result.stdout}\n${result.stderr}')
-          .join('\n');
+      for (final testCase in cases) {
+        final fixture = _runDeploymentAccountFixture(
+          userExists: testCase.userExists,
+          groupExists: testCase.groupExists,
+          runs: 2,
+        );
+        addTearDown(() {
+          if (fixture.fixture.existsSync()) {
+            fixture.fixture.deleteSync(recursive: true);
+          }
+        });
+        final output = fixture.results
+            .map((result) => '${result.stdout}\n${result.stderr}')
+            .join('\n');
 
-      expect(
-        fixture.results.map((result) => result.exitCode),
-        everyElement(0),
-        reason: '${testCase.name}\n$output\n${fixture.commandLog}',
-      );
-      expect(
-        RegExp(r'^groupadd ', multiLine: true)
-            .allMatches(fixture.commandLog)
-            .length,
-        testCase.groupAdds,
-        reason: testCase.name,
-      );
-      expect(
-        RegExp(r'^useradd ', multiLine: true)
-            .allMatches(fixture.commandLog)
-            .length,
-        testCase.userAdds,
-        reason: testCase.name,
-      );
-      expect(
-        RegExp(r'^usermod ', multiLine: true)
-            .allMatches(fixture.commandLog)
-            .length,
-        testCase.userMods,
-        reason: testCase.name,
-      );
-      if (!testCase.userExists) {
         expect(
-          fixture.commandLog,
-          contains(
-            'useradd --create-home --shell /bin/bash '
-            '--gid nmtk-deploy nmtk-deploy',
-          ),
+          fixture.results.map((result) => result.exitCode),
+          everyElement(0),
+          reason: '${testCase.name}\n$output\n${fixture.commandLog}',
+        );
+        expect(
+          RegExp(
+            r'^groupadd ',
+            multiLine: true,
+          ).allMatches(fixture.commandLog).length,
+          testCase.groupAdds,
+          reason: testCase.name,
+        );
+        expect(
+          RegExp(
+            r'^useradd ',
+            multiLine: true,
+          ).allMatches(fixture.commandLog).length,
+          testCase.userAdds,
+          reason: testCase.name,
+        );
+        expect(
+          RegExp(
+            r'^usermod ',
+            multiLine: true,
+          ).allMatches(fixture.commandLog).length,
+          testCase.userMods,
+          reason: testCase.name,
+        );
+        if (!testCase.userExists) {
+          expect(
+            fixture.commandLog,
+            contains(
+              'useradd --create-home --shell /bin/bash '
+              '--gid nmtk-deploy nmtk-deploy',
+            ),
+            reason: testCase.name,
+          );
+        }
+        expect(
+          output,
+          contains('✓ Deployment account fixture completed'),
           reason: testCase.name,
         );
       }
-      expect(
-        output,
-        contains('✓ Deployment account fixture completed'),
-        reason: testCase.name,
-      );
-    }
-  });
+    },
+  );
 
   test('deployment account failures are actionable and redact credentials', () {
     final fixture = _runDeploymentAccountFixture(
@@ -867,7 +856,7 @@ void main() {
     });
     final result = fixture.results.single;
     final output = '${result.stdout}\n${result.stderr}';
-    final details = ClientDeploymentService.parseBootstrapFailureForTesting(
+    final details = parseBootstrapFailureForTesting(
       output,
       exitCode: result.exitCode,
       rootPassword: 'temporary-admin-secret',
@@ -880,10 +869,7 @@ void main() {
     expect(details.recovery, contains('Restart the server'));
     expect(details.recovery, contains('Retry setup'));
     expect(details.technicalDetails, contains('password=[redacted]'));
-    expect(
-      details.technicalDetails,
-      isNot(contains('temporary-admin-secret')),
-    );
+    expect(details.technicalDetails, isNot(contains('temporary-admin-secret')));
   });
 
   test('deployment account rejects an unsafe home directory', () {
@@ -910,148 +896,138 @@ void main() {
     );
   });
 
-  test('remote bootstrap reconciles both runtimes without broad sudo access',
-      () {
-    final script = ClientDeploymentService.buildRemoteBootstrapScript(
-      containerEngine: 'docker',
-      factoryReset: false,
-    );
+  test(
+    'remote bootstrap reconciles both runtimes without broad sudo access',
+    () {
+      final script = buildRemoteBootstrapScript(
+        containerEngine: 'docker',
+        factoryReset: false,
+      );
 
-    expect(script, contains(r'for project in $PROJECTS'));
-    expect(script, contains('remove_runtime_objects docker'));
-    expect(script, contains('remove_runtime_objects podman'));
-    expect(script, contains(r'runuser -u "$candidate"'));
-    expect(script, contains('com.docker.compose.project'));
-    expect(script, contains('io.podman.compose.project'));
-    expect(script, contains('jupyter-server)'));
-    expect(script, contains(r'{{.ID}} {{.Names}}'));
-    expect(script, isNot(contains('NOPASSWD:ALL')));
-    expect(script, contains('FACTORY_RESET="false"'));
-    expect(script, contains('NMTK_SETUP_PHASE|'));
-    expect(script, contains('NMTK_SETUP_ERROR|'));
-    expect(script, contains('NMTK_SETUP_TERMINAL|'));
-    expect(script, contains('capture_step 20'));
-    expect(script, contains('capture_step 60'));
-    expect(script, contains('capture_step 300'));
-    expect(script, contains('--kill-after=5s'));
-    expect(script, contains('</dev/null'));
-    expect(script, contains('mktemp -d /tmp/nmtk-deploy-key.XXXXXX'));
-    expect(
-      script,
-      contains(r'TEMPORARY_KEY="$TEMPORARY_KEY_DIR/id_ed25519"'),
-    );
-    expect(
-      script,
-      isNot(contains('mktemp /tmp/nmtk-deploy-key.XXXXXX')),
-    );
-    expect(script, contains('✓ Administrator privileges confirmed'));
-    expect(
-      script,
-      contains(r'default_storage="$home/.local/share/containers/storage"'),
-    );
-    expect(
-      script,
-      contains(r'mktemp -d "/tmp/nmtk-podman-runtime.${uid}.XXXXXX"'),
-    );
-    expect(script, contains(r'"podman (user $candidate)"'));
-    expect(script, isNot(contains(r'$runtime (${prefix[*]})')));
-    expect(
-      ClientDeploymentService.administratorShellCommand(needsSudo: false),
-      'bash',
-    );
-    expect(
-      ClientDeploymentService.administratorShellCommand(needsSudo: true),
-      'sudo -S -p "" bash',
-    );
-  });
-
-  test('bootstrap failure markers produce actionable sanitized diagnostics',
-      () {
-    final details = ClientDeploymentService.parseBootstrapFailureForTesting(
-      'sudo output temporary-admin-secret\n'
-      'NMTK_SETUP_ERROR|podman_inspection_failed|'
-      'reconciling_existing_install|29|Podman is inaccessible.',
-      exitCode: 29,
-      rootPassword: 'temporary-admin-secret',
-    );
-
-    expect(details.code, 'podman_inspection_failed');
-    expect(details.phase, 'reconciling_existing_install');
-    expect(details.summary, 'Podman installations could not be inspected');
-    expect(details.recovery, contains('Administrator access succeeded'));
-    expect(details.exitCode, 29);
-    expect(details.technicalDetails, isNot(contains('temporary-admin-secret')));
-    expect(details.technicalDetails, contains('[redacted]'));
-  });
+      expect(script, contains(r'for project in $PROJECTS'));
+      expect(script, contains('remove_runtime_objects docker'));
+      expect(script, contains('remove_runtime_objects podman'));
+      expect(script, contains(r'runuser -u "$candidate"'));
+      expect(script, contains('com.docker.compose.project'));
+      expect(script, contains('io.podman.compose.project'));
+      expect(script, contains('jupyter-server)'));
+      expect(script, contains(r'{{.ID}} {{.Names}}'));
+      expect(script, isNot(contains('NOPASSWD:ALL')));
+      expect(script, contains('FACTORY_RESET="false"'));
+      expect(script, contains('NMTK_SETUP_PHASE|'));
+      expect(script, contains('NMTK_SETUP_ERROR|'));
+      expect(script, contains('NMTK_SETUP_TERMINAL|'));
+      expect(script, contains('capture_step 20'));
+      expect(script, contains('capture_step 60'));
+      expect(script, contains('capture_step 300'));
+      expect(script, contains('--kill-after=5s'));
+      expect(script, contains('</dev/null'));
+      expect(script, contains('mktemp -d /tmp/nmtk-deploy-key.XXXXXX'));
+      expect(
+        script,
+        contains(r'TEMPORARY_KEY="$TEMPORARY_KEY_DIR/id_ed25519"'),
+      );
+      expect(script, isNot(contains('mktemp /tmp/nmtk-deploy-key.XXXXXX')));
+      expect(script, contains('✓ Administrator privileges confirmed'));
+      expect(
+        script,
+        contains(r'default_storage="$home/.local/share/containers/storage"'),
+      );
+      expect(
+        script,
+        contains(r'mktemp -d "/tmp/nmtk-podman-runtime.${uid}.XXXXXX"'),
+      );
+      expect(script, contains(r'"podman (user $candidate)"'));
+      expect(script, isNot(contains(r'$runtime (${prefix[*]})')));
+      expect(administratorShellCommand(needsSudo: false), 'bash');
+      expect(administratorShellCommand(needsSudo: true), 'sudo -S -p "" bash');
+    },
+  );
 
   test(
-      'dormant Podman user gets a temporary runtime while unrelated users are skipped',
-      () {
-    final fixture = _runRootlessReconciliationFixture();
-    final combinedOutput = '${fixture.result.stdout}\n${fixture.result.stderr}';
+    'bootstrap failure markers produce actionable sanitized diagnostics',
+    () {
+      final details = parseBootstrapFailureForTesting(
+        'sudo output temporary-admin-secret\n'
+        'NMTK_SETUP_ERROR|podman_inspection_failed|'
+        'reconciling_existing_install|29|Podman is inaccessible.',
+        exitCode: 29,
+        rootPassword: 'temporary-admin-secret',
+      );
 
-    expect(
-      fixture.result.exitCode,
-      0,
-      reason: combinedOutput,
-    );
-    expect(
-      combinedOutput,
-      contains(
-        'NMTK_SETUP_COMMAND|runuser -u ${fixture.dormantUser} -- env',
-      ),
-    );
-    expect(combinedOutput, contains('podman info'));
-    expect(
-      fixture.commandLog,
-      contains('runuser -u ${fixture.dormantUser}'),
-    );
-    expect(fixture.commandLog, isNot(contains(fixture.skippedUser)));
-    expect(combinedOutput, contains('level=warning msg="fixture warning"'));
-    expect(
-      fixture.commandLog,
-      isNot(contains('podman rm -f time=')),
-      reason: 'stderr warnings must never be treated as object identifiers.',
-    );
-    final runtimeMatch = RegExp(
-      r'XDG_RUNTIME_DIR=(/tmp/nmtk-podman-runtime\.[^\s]+)',
-    ).firstMatch(fixture.commandLog);
-    expect(runtimeMatch, isNotNull);
-    final runtimeDirectory = runtimeMatch!.group(1)!;
-    expect(
-      fixture.commandLog,
-      contains('chown 48331:48331 $runtimeDirectory'),
-    );
-    expect(
-      Directory(runtimeDirectory).existsSync(),
-      isFalse,
-      reason: 'The temporary runtime must be removed by the EXIT trap.',
-    );
-  });
+      expect(details.code, 'podman_inspection_failed');
+      expect(details.phase, 'reconciling_existing_install');
+      expect(details.summary, 'Podman installations could not be inspected');
+      expect(details.recovery, contains('Administrator access succeeded'));
+      expect(details.exitCode, 29);
+      expect(
+        details.technicalDetails,
+        isNot(contains('temporary-admin-secret')),
+      );
+      expect(details.technicalDetails, contains('[redacted]'));
+    },
+  );
 
-  test('valid stale container IDs are removed but malformed IDs are rejected',
-      () {
-    final valid = _runRootlessReconciliationFixture(
-      discoveredContainerOutput: 'deadbeefcafe',
-    );
-    expect(valid.result.exitCode, 0, reason: '${valid.result.stderr}');
-    expect(valid.commandLog, contains('podman rm -f deadbeefcafe'));
+  test(
+    'dormant Podman user gets a temporary runtime while unrelated users are skipped',
+    () {
+      final fixture = _runRootlessReconciliationFixture();
+      final combinedOutput =
+          '${fixture.result.stdout}\n${fixture.result.stderr}';
 
-    final malformed = _runRootlessReconciliationFixture(
-      discoveredContainerOutput: 'time="warning"',
-    );
-    final malformedOutput =
-        '${malformed.result.stdout}\n${malformed.result.stderr}';
-    expect(malformed.result.exitCode, 29, reason: malformedOutput);
-    expect(
-      malformedOutput,
-      contains('returned an invalid container identifier'),
-    );
-    expect(
-      malformed.commandLog,
-      isNot(contains('podman rm -f time=')),
-    );
-  });
+      expect(fixture.result.exitCode, 0, reason: combinedOutput);
+      expect(
+        combinedOutput,
+        contains('NMTK_SETUP_COMMAND|runuser -u ${fixture.dormantUser} -- env'),
+      );
+      expect(combinedOutput, contains('podman info'));
+      expect(fixture.commandLog, contains('runuser -u ${fixture.dormantUser}'));
+      expect(fixture.commandLog, isNot(contains(fixture.skippedUser)));
+      expect(combinedOutput, contains('level=warning msg="fixture warning"'));
+      expect(
+        fixture.commandLog,
+        isNot(contains('podman rm -f time=')),
+        reason: 'stderr warnings must never be treated as object identifiers.',
+      );
+      final runtimeMatch = RegExp(
+        r'XDG_RUNTIME_DIR=(/tmp/nmtk-podman-runtime\.[^\s]+)',
+      ).firstMatch(fixture.commandLog);
+      expect(runtimeMatch, isNotNull);
+      final runtimeDirectory = runtimeMatch!.group(1)!;
+      expect(
+        fixture.commandLog,
+        contains('chown 48331:48331 $runtimeDirectory'),
+      );
+      expect(
+        Directory(runtimeDirectory).existsSync(),
+        isFalse,
+        reason: 'The temporary runtime must be removed by the EXIT trap.',
+      );
+    },
+  );
+
+  test(
+    'valid stale container IDs are removed but malformed IDs are rejected',
+    () {
+      final valid = _runRootlessReconciliationFixture(
+        discoveredContainerOutput: 'deadbeefcafe',
+      );
+      expect(valid.result.exitCode, 0, reason: '${valid.result.stderr}');
+      expect(valid.commandLog, contains('podman rm -f deadbeefcafe'));
+
+      final malformed = _runRootlessReconciliationFixture(
+        discoveredContainerOutput: 'time="warning"',
+      );
+      final malformedOutput =
+          '${malformed.result.stdout}\n${malformed.result.stderr}';
+      expect(malformed.result.exitCode, 29, reason: malformedOutput);
+      expect(
+        malformedOutput,
+        contains('returned an invalid container identifier'),
+      );
+      expect(malformed.commandLog, isNot(contains('podman rm -f time=')));
+    },
+  );
 
   test('factory reset removes only validated NMTK volume names', () {
     final preserve = _runRootlessReconciliationFixture(
@@ -1068,165 +1044,163 @@ void main() {
     expect(reset.commandLog, contains('volume rm -f nmtk_workspace'));
   });
 
-  test('a responding command that never exits is terminated as a process group',
-      () {
-    final completeScript = ClientDeploymentService.buildRemoteBootstrapScript(
-      containerEngine: 'podman',
-      factoryReset: false,
-    );
-    final firstCommand = completeScript.indexOf('\nif [ "\$(id -u)"');
-    expect(firstCommand, greaterThan(0));
-    final fixture = Directory.systemTemp.createTempSync('nmtk-hanging-step-');
-    addTearDown(() {
-      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
-    });
-    final script = File('${fixture.path}/hang.sh')
-      ..writeAsStringSync(
-        '${completeScript.substring(0, firstCommand)}\n'
-        'capture_step 1 deploy_account_failed 27 "systemctl --user enable" '
-        '"socket enabled" bash -c '
-        "'echo \"Created symlink podman.socket\"; "
-        "while true; do sleep 1; done'\n",
+  test(
+    'a responding command that never exits is terminated as a process group',
+    () {
+      final completeScript = buildRemoteBootstrapScript(
+        containerEngine: 'podman',
+        factoryReset: false,
       );
+      final firstCommand = completeScript.indexOf('\nif [ "\$(id -u)"');
+      expect(firstCommand, greaterThan(0));
+      final fixture = Directory.systemTemp.createTempSync('nmtk-hanging-step-');
+      addTearDown(() {
+        if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+      });
+      final script = File('${fixture.path}/hang.sh')
+        ..writeAsStringSync(
+          '${completeScript.substring(0, firstCommand)}\n'
+          'capture_step 1 deploy_account_failed 27 "systemctl --user enable" '
+          '"socket enabled" bash -c '
+          "'echo \"Created symlink podman.socket\"; "
+          "while true; do sleep 1; done'\n",
+        );
 
-    final stopwatch = Stopwatch()..start();
-    final result = Process.runSync('bash', [script.path]);
-    stopwatch.stop();
-    final output = '${result.stdout}\n${result.stderr}';
+      final stopwatch = Stopwatch()..start();
+      final result = Process.runSync('bash', [script.path]);
+      stopwatch.stop();
+      final output = '${result.stdout}\n${result.stderr}';
 
-    expect(result.exitCode, 27, reason: output);
-    expect(output, contains('Created symlink podman.socket'));
-    expect(
-      output,
-      contains(
-        'NMTK_SETUP_STEP|start|1|false|systemctl --user enable',
-      ),
-    );
-    expect(
-      output,
-      contains(
-        'NMTK_SETUP_STEP|finish|1|false|systemctl --user enable',
-      ),
-    );
-    expect(output, contains('NMTK_SETUP_COMMAND_EXIT|timeout|1'));
-    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 6)));
-    expect(completeScript, isNot(contains('timeout --foreground')));
-  });
+      expect(result.exitCode, 27, reason: output);
+      expect(output, contains('Created symlink podman.socket'));
+      expect(
+        output,
+        contains('NMTK_SETUP_STEP|start|1|false|systemctl --user enable'),
+      );
+      expect(
+        output,
+        contains('NMTK_SETUP_STEP|finish|1|false|systemctl --user enable'),
+      );
+      expect(output, contains('NMTK_SETUP_COMMAND_EXIT|timeout|1'));
+      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 6)));
+      expect(completeScript, isNot(contains('timeout --foreground')));
+    },
+  );
 
   test(
-      'a successful command cannot leave transcript pipes open through a child',
-      () {
-    final completeScript = ClientDeploymentService.buildRemoteBootstrapScript(
-      containerEngine: 'podman',
-      factoryReset: false,
-    );
-    final firstCommand = completeScript.indexOf('\nif [ "\$(id -u)"');
-    expect(firstCommand, greaterThan(0));
-    final fixture = Directory.systemTemp.createTempSync(
-      'nmtk-successful-leaked-child-',
-    );
-    addTearDown(() {
-      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
-    });
-    final script = File('${fixture.path}/leaked-child.sh')
-      ..writeAsStringSync(
-        '${completeScript.substring(0, firstCommand)}\n'
-        'capture_step 5 deploy_account_failed 27 "podman info" '
-        '"podman ready" bash -c '
-        "'printf \"server-ready\\\\n\"; sleep 30 &'\n"
-        'terminal "capture returned"\n',
+    'a successful command cannot leave transcript pipes open through a child',
+    () {
+      final completeScript = buildRemoteBootstrapScript(
+        containerEngine: 'podman',
+        factoryReset: false,
       );
+      final firstCommand = completeScript.indexOf('\nif [ "\$(id -u)"');
+      expect(firstCommand, greaterThan(0));
+      final fixture = Directory.systemTemp.createTempSync(
+        'nmtk-successful-leaked-child-',
+      );
+      addTearDown(() {
+        if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+      });
+      final script = File('${fixture.path}/leaked-child.sh')
+        ..writeAsStringSync(
+          '${completeScript.substring(0, firstCommand)}\n'
+          'capture_step 5 deploy_account_failed 27 "podman info" '
+          '"podman ready" bash -c '
+          "'printf \"server-ready\\\\n\"; sleep 30 &'\n"
+          'terminal "capture returned"\n',
+        );
 
-    final stopwatch = Stopwatch()..start();
-    final result = Process.runSync('timeout', ['8s', 'bash', script.path]);
-    stopwatch.stop();
-    final output = '${result.stdout}\n${result.stderr}';
+      final stopwatch = Stopwatch()..start();
+      final result = Process.runSync('timeout', ['8s', 'bash', script.path]);
+      stopwatch.stop();
+      final output = '${result.stdout}\n${result.stderr}';
 
-    expect(result.exitCode, 0, reason: output);
-    expect(output, contains('server-ready'));
-    expect(
-      output,
-      contains('NMTK_SETUP_STEP|start|5|false|podman info'),
-    );
-    expect(
-      output,
-      contains('NMTK_SETUP_STEP|finish|5|false|podman info'),
-    );
-    expect(output, contains('NMTK_SETUP_TERMINAL|capture returned'));
-    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 6)));
-  });
+      expect(result.exitCode, 0, reason: output);
+      expect(output, contains('server-ready'));
+      expect(output, contains('NMTK_SETUP_STEP|start|5|false|podman info'));
+      expect(output, contains('NMTK_SETUP_STEP|finish|5|false|podman info'));
+      expect(output, contains('NMTK_SETUP_TERMINAL|capture returned'));
+      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 6)));
+    },
+  );
 
-  test('an escaped writer cannot outlive the transcript drain deadline',
-      () async {
-    final setsidResult = Process.runSync(
-      'sh',
-      const ['-c', 'command -v setsid'],
-    );
-    if (setsidResult.exitCode != 0) return;
-    final setsidPath = setsidResult.stdout.toString().trim();
-    final completeScript = ClientDeploymentService.buildRemoteBootstrapScript(
-      containerEngine: 'podman',
-      factoryReset: false,
-    );
-    final firstCommand = completeScript.indexOf('\nif [ "\$(id -u)"');
-    expect(firstCommand, greaterThan(0));
-    final fixture = Directory.systemTemp.createTempSync(
-      'nmtk-escaped-transcript-writer-',
-    );
-    final escapedPidFile = File('${fixture.path}/escaped.pid');
-    addTearDown(() {
-      if (escapedPidFile.existsSync()) {
-        final escapedPid =
-            int.tryParse(escapedPidFile.readAsStringSync().trim());
-        if (escapedPid != null) {
-          Process.runSync('kill', ['-KILL', '-$escapedPid']);
+  test(
+    'an escaped writer cannot outlive the transcript drain deadline',
+    () async {
+      final setsidResult = Process.runSync('sh', const [
+        '-c',
+        'command -v setsid',
+      ]);
+      if (setsidResult.exitCode != 0) return;
+      final setsidPath = setsidResult.stdout.toString().trim();
+      final completeScript = buildRemoteBootstrapScript(
+        containerEngine: 'podman',
+        factoryReset: false,
+      );
+      final firstCommand = completeScript.indexOf('\nif [ "\$(id -u)"');
+      expect(firstCommand, greaterThan(0));
+      final fixture = Directory.systemTemp.createTempSync(
+        'nmtk-escaped-transcript-writer-',
+      );
+      final escapedPidFile = File('${fixture.path}/escaped.pid');
+      addTearDown(() {
+        if (escapedPidFile.existsSync()) {
+          final escapedPid = int.tryParse(
+            escapedPidFile.readAsStringSync().trim(),
+          );
+          if (escapedPid != null) {
+            Process.runSync('kill', ['-KILL', '-$escapedPid']);
+          }
         }
-      }
-      if (fixture.existsSync()) fixture.deleteSync(recursive: true);
-    });
-    final writer = File('${fixture.path}/escape-writer.sh')
-      ..writeAsStringSync(
-        '#!/bin/bash\n'
-        '$setsidPath -f bash -c '
-        "'printf \"%s\\\\n\" \"\$\$\" >\"\$1\"; sleep 30' "
-        '_ "\$NMTK_ESCAPE_PID_FILE"\n'
-        'printf "escaped-ready\\n"\n',
-      );
-    Process.runSync('chmod', ['+x', writer.path]);
-    final script = File('${fixture.path}/escaped-writer.sh')
-      ..writeAsStringSync(
-        '${completeScript.substring(0, firstCommand)}\n'
-        'capture_step 5 deploy_account_failed 27 "podman info" '
-        '"podman ready" ${writer.path}\n'
-        'terminal "capture returned"\n',
-      );
+        if (fixture.existsSync()) fixture.deleteSync(recursive: true);
+      });
+      final writer = File('${fixture.path}/escape-writer.sh')
+        ..writeAsStringSync(
+          '#!/bin/bash\n'
+          '$setsidPath -f bash -c '
+          "'printf \"%s\\\\n\" \"\$\$\" >\"\$1\"; sleep 30' "
+          '_ "\$NMTK_ESCAPE_PID_FILE"\n'
+          'printf "escaped-ready\\n"\n',
+        );
+      Process.runSync('chmod', ['+x', writer.path]);
+      final script = File('${fixture.path}/escaped-writer.sh')
+        ..writeAsStringSync(
+          '${completeScript.substring(0, firstCommand)}\n'
+          'capture_step 5 deploy_account_failed 27 "podman info" '
+          '"podman ready" ${writer.path}\n'
+          'terminal "capture returned"\n',
+        );
 
-    final stopwatch = Stopwatch()..start();
-    final result = Process.runSync(
-      'timeout',
-      ['8s', 'bash', script.path],
-      environment: {
-        ...Platform.environment,
-        'NMTK_ESCAPE_PID_FILE': escapedPidFile.path,
-      },
-    );
-    stopwatch.stop();
-    final output = '${result.stdout}\n${result.stderr}';
+      final stopwatch = Stopwatch()..start();
+      final result = Process.runSync(
+        'timeout',
+        ['8s', 'bash', script.path],
+        environment: {
+          ...Platform.environment,
+          'NMTK_ESCAPE_PID_FILE': escapedPidFile.path,
+        },
+      );
+      stopwatch.stop();
+      final output = '${result.stdout}\n${result.stderr}';
 
-    expect(result.exitCode, 0, reason: output);
-    expect(output, contains('escaped-ready'));
-    expect(output, contains('NMTK_SETUP_TERMINAL|capture returned'));
-    for (var attempt = 0;
+      expect(result.exitCode, 0, reason: output);
+      expect(output, contains('escaped-ready'));
+      expect(output, contains('NMTK_SETUP_TERMINAL|capture returned'));
+      for (
+        var attempt = 0;
         attempt < 25 && !escapedPidFile.existsSync();
-        attempt += 1) {
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-    }
-    expect(escapedPidFile.existsSync(), isTrue, reason: output);
-    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 6)));
-  });
+        attempt += 1
+      ) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+      expect(escapedPidFile.existsSync(), isTrue, reason: output);
+      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 6)));
+    },
+  );
 
   test('fallback Podman service detaches without transcript descriptors', () {
-    final script = ClientDeploymentService.buildRemoteBootstrapScript(
+    final script = buildRemoteBootstrapScript(
       containerEngine: 'podman',
       factoryReset: false,
     );
@@ -1235,41 +1209,39 @@ void main() {
     expect(script, contains('podman --remote --url "\$remote_url" info'));
     expect(
       script,
-      contains(
-        '</dev/null >"\$HOME/.nmtk-podman-service.log" 2>&1',
-      ),
+      contains('</dev/null >"\$HOME/.nmtk-podman-service.log" 2>&1'),
     );
     expect(script, isNot(contains('nohup podman system service')));
     expect(script, contains('setsid is required'));
   });
 
   test(
-      'systemctl success without a usable Podman socket triggers automatic fallback',
-      () {
-    final fixture = _runPodmanApiProvisioningFixture();
-    final output = '${fixture.result.stdout}\n${fixture.result.stderr}';
+    'systemctl success without a usable Podman socket triggers automatic fallback',
+    () {
+      final fixture = _runPodmanApiProvisioningFixture();
+      final output = '${fixture.result.stdout}\n${fixture.result.stderr}';
 
-    expect(
-      fixture.result.exitCode,
-      0,
-      reason: '$output\n${fixture.commandLog}',
-    );
-    expect(
-        fixture.commandLog, contains('systemctl --user start podman.socket'));
-    expect(fixture.commandLog, contains('fallback -f podman system service'));
-    expect(
-      fixture.commandLog,
-      contains('podman --remote --url unix://'),
-    );
-    expect(
-      output,
-      contains(
-        'NMTK_SETUP_STEP|start|30|true|'
-        'Starting or repairing rootless Podman API',
-      ),
-    );
-    expect(output, contains('✓ Podman API fixture completed'));
-  });
+      expect(
+        fixture.result.exitCode,
+        0,
+        reason: '$output\n${fixture.commandLog}',
+      );
+      expect(
+        fixture.commandLog,
+        contains('systemctl --user start podman.socket'),
+      );
+      expect(fixture.commandLog, contains('fallback -f podman system service'));
+      expect(fixture.commandLog, contains('podman --remote --url unix://'));
+      expect(
+        output,
+        contains(
+          'NMTK_SETUP_STEP|start|30|true|'
+          'Starting or repairing rootless Podman API',
+        ),
+      );
+      expect(output, contains('✓ Podman API fixture completed'));
+    },
+  );
 
   test('missing user D-Bus cannot block the Podman fallback', () {
     final fixture = _runPodmanApiProvisioningFixture(
@@ -1293,10 +1265,7 @@ void main() {
     );
     expect(fixture.commandLog, contains('fallback -f podman system service'));
     expect(output, contains('✓ Podman API fixture completed'));
-    expect(
-      output,
-      isNot(contains('NMTK_SETUP_ERROR|deploy_account_failed|')),
-    );
+    expect(output, isNot(contains('NMTK_SETUP_ERROR|deploy_account_failed|')));
   });
 
   test('a delayed healthy systemd Podman socket avoids fallback startup', () {
@@ -1307,7 +1276,9 @@ void main() {
 
     expect(fixture.result.exitCode, 0, reason: output);
     expect(
-        fixture.commandLog, contains('systemctl --user start podman.socket'));
+      fixture.commandLog,
+      contains('systemctl --user start podman.socket'),
+    );
     expect(fixture.commandLog, isNot(contains('fallback ')));
     expect(output, contains('✓ Podman API fixture completed'));
   });
@@ -1339,13 +1310,10 @@ void main() {
         'The rootless Podman API did not become ready after automatic recovery.',
       ),
     );
-    expect(
-      output,
-      contains('NMTK_SETUP_ERROR|podman_api_start_failed|'),
-    );
+    expect(output, contains('NMTK_SETUP_ERROR|podman_api_start_failed|'));
     expect(output, isNot(contains('NMTK_DEPLOY_PRIVATE_KEY_B64=')));
 
-    final details = ClientDeploymentService.parseBootstrapFailureForTesting(
+    final details = parseBootstrapFailureForTesting(
       output,
       exitCode: fixture.result.exitCode,
     );
@@ -1355,7 +1323,7 @@ void main() {
   });
 
   test('privilege drops do not inherit the administrator home directory', () {
-    final script = ClientDeploymentService.buildRemoteBootstrapScript(
+    final script = buildRemoteBootstrapScript(
       containerEngine: 'podman',
       factoryReset: false,
     );
@@ -1436,9 +1404,7 @@ void main() {
   });
 
   test('temporary Podman runtime cleanup failures name the affected user', () {
-    final fixture = _runRootlessReconciliationFixture(
-      failRuntimeCleanup: true,
-    );
+    final fixture = _runRootlessReconciliationFixture(failRuntimeCleanup: true);
     final combinedOutput = '${fixture.result.stdout}\n${fixture.result.stderr}';
 
     expect(fixture.result.exitCode, 29, reason: combinedOutput);
@@ -1518,9 +1484,7 @@ void main() {
   });
 
   test('failed credential generation still removes its private workspace', () {
-    final fixture = _runDeploymentCredentialFixture(
-      failKeyGeneration: true,
-    );
+    final fixture = _runDeploymentCredentialFixture(failKeyGeneration: true);
     addTearDown(() {
       if (fixture.fixture.existsSync()) {
         fixture.fixture.deleteSync(recursive: true);
@@ -1529,10 +1493,7 @@ void main() {
     final combinedOutput = '${fixture.result.stdout}\n${fixture.result.stderr}';
 
     expect(fixture.result.exitCode, 26, reason: combinedOutput);
-    expect(
-      combinedOutput,
-      contains('NMTK_SETUP_COMMAND_EXIT|exit|42'),
-    );
+    expect(combinedOutput, contains('NMTK_SETUP_COMMAND_EXIT|exit|42'));
     final keyPath = RegExp(
       r'key-path (/[^\s]+)',
     ).firstMatch(fixture.commandLog)?.group(1);
@@ -1540,80 +1501,80 @@ void main() {
     expect(Directory(File(keyPath!).parent.path).existsSync(), isFalse);
   });
 
-  test('unknown bootstrap failures retain bounded output without credentials',
-      () {
-    final details = ClientDeploymentService.parseBootstrapFailureForTesting(
-      '${List<String>.filled(9000, 'x').join()}\nadmin-private-key',
-      exitCode: 2,
-      rootPrivateKey: 'admin-private-key',
-    );
+  test(
+    'unknown bootstrap failures retain bounded output without credentials',
+    () {
+      final details = parseBootstrapFailureForTesting(
+        '${List<String>.filled(9000, 'x').join()}\nadmin-private-key',
+        exitCode: 2,
+        rootPrivateKey: 'admin-private-key',
+      );
 
-    expect(details.code, 'unknown_bootstrap_failure');
-    expect(details.technicalDetails, startsWith('… output truncated …'));
-    expect(details.technicalDetails.length, lessThanOrEqualTo(8030));
-    expect(details.technicalDetails, isNot(contains('admin-private-key')));
-  });
+      expect(details.code, 'unknown_bootstrap_failure');
+      expect(details.technicalDetails, startsWith('… output truncated …'));
+      expect(details.technicalDetails.length, lessThanOrEqualTo(8030));
+      expect(details.technicalDetails, isNot(contains('admin-private-key')));
+    },
+  );
 
-  test('bootstrap transcript exposes raw output and hides protocol markers',
-      () {
-    expect(
-      ClientDeploymentService.parseBootstrapTranscriptLineForTesting(
-        r'NMTK_SETUP_COMMAND|podman info',
-      ),
-      r'$ podman info',
-    );
-    expect(
-      ClientDeploymentService.parseBootstrapTranscriptLineForTesting(
+  test(
+    'bootstrap transcript exposes raw output and hides protocol markers',
+    () {
+      expect(
+        parseBootstrapTranscriptLineForTesting(
+          r'NMTK_SETUP_COMMAND|podman info',
+        ),
+        r'$ podman info',
+      );
+      expect(
+        parseBootstrapTranscriptLineForTesting('host: amd64'),
         'host: amd64',
-      ),
-      'host: amd64',
-    );
-    expect(
-      ClientDeploymentService.parseBootstrapTranscriptLineForTesting(
-        'NMTK_SETUP_TERMINAL|✓ Podman is accessible',
-      ),
-      isNull,
-    );
-    expect(
-      ClientDeploymentService.parseBootstrapTranscriptLineForTesting(
-        'NMTK_SETUP_PHASE|preflight_running|7|Checking server',
-      ),
-      isNull,
-    );
-    expect(
-      ClientDeploymentService.parseBootstrapTranscriptLineForTesting(
-        'NMTK_SETUP_STEP|start|20|true|Verifying rootless Podman API',
-      ),
-      isNull,
-    );
-    expect(
-      ClientDeploymentService.parseBootstrapTranscriptLineForTesting(
-        'NMTK_DEPLOY_PRIVATE_KEY_B64=cHJpdmF0ZQ==',
-      ),
-      isNull,
-    );
-    expect(
-      ClientDeploymentService.parseBootstrapTranscriptLineForTesting(
-        'password=temporary-secret \x1b[31mfailed\x1b[0m',
-        rootPassword: 'temporary-secret',
-      ),
-      'password=[redacted] failed',
-    );
-    expect(
-      ClientDeploymentService.parseBootstrapTranscriptLineForTesting(
-        'NMTK_SETUP_COMMAND_EXIT|exit|125',
-      ),
-      '[client: command exited 125]',
-    );
-  });
+      );
+      expect(
+        parseBootstrapTranscriptLineForTesting(
+          'NMTK_SETUP_TERMINAL|✓ Podman is accessible',
+        ),
+        isNull,
+      );
+      expect(
+        parseBootstrapTranscriptLineForTesting(
+          'NMTK_SETUP_PHASE|preflight_running|7|Checking server',
+        ),
+        isNull,
+      );
+      expect(
+        parseBootstrapTranscriptLineForTesting(
+          'NMTK_SETUP_STEP|start|20|true|Verifying rootless Podman API',
+        ),
+        isNull,
+      );
+      expect(
+        parseBootstrapTranscriptLineForTesting(
+          'NMTK_DEPLOY_PRIVATE_KEY_B64=cHJpdmF0ZQ==',
+        ),
+        isNull,
+      );
+      expect(
+        parseBootstrapTranscriptLineForTesting(
+          'password=temporary-secret \x1b[31mfailed\x1b[0m',
+          rootPassword: 'temporary-secret',
+        ),
+        'password=[redacted] failed',
+      );
+      expect(
+        parseBootstrapTranscriptLineForTesting(
+          'NMTK_SETUP_COMMAND_EXIT|exit|125',
+        ),
+        '[client: command exited 125]',
+      );
+    },
+  );
 
   test('bootstrap operation markers contain only safe progress metadata', () {
-    final started =
-        ClientDeploymentService.parseBootstrapOperationMarkerForTesting(
+    final started = parseBootstrapOperationMarkerForTesting(
       'NMTK_SETUP_STEP|start|20|true|Verifying rootless Podman API',
     );
-    final finished =
-        ClientDeploymentService.parseBootstrapOperationMarkerForTesting(
+    final finished = parseBootstrapOperationMarkerForTesting(
       'NMTK_SETUP_STEP|finish|20|true|Verifying rootless Podman API',
     );
 
@@ -1623,7 +1584,7 @@ void main() {
     expect(started?.label, 'Verifying rootless Podman API');
     expect(finished?.state, 'finish');
     expect(
-      ClientDeploymentService.parseBootstrapOperationMarkerForTesting(
+      parseBootstrapOperationMarkerForTesting(
         'NMTK_SETUP_STEP|start|20|true|password=secret|extra',
       ),
       isNull,
@@ -1631,7 +1592,7 @@ void main() {
   });
 
   test('client watchdog failures are structured and retryable', () {
-    final details = ClientDeploymentService.administratorStepTimeoutForTesting(
+    final details = administratorStepTimeoutForTesting(
       label: 'Verifying rootless Podman API',
       timeoutSeconds: 20,
       phase: 'bootstrapping_access',
@@ -1646,9 +1607,7 @@ void main() {
   });
 
   test('a silent server between steps is reported instead of waited on', () {
-    final details = ClientDeploymentService.administratorStallForTesting(
-      phase: 'bootstrapping_access',
-    );
+    final details = administratorStallForTesting(phase: 'bootstrapping_access');
 
     expect(details.code, 'administrator_stalled');
     expect(details.phase, 'bootstrapping_access');
@@ -1658,7 +1617,7 @@ void main() {
   });
 
   test('the administrator script announces its own exit on every path', () {
-    final completeScript = ClientDeploymentService.buildRemoteBootstrapScript(
+    final completeScript = buildRemoteBootstrapScript(
       containerEngine: 'podman',
       factoryReset: false,
     );
@@ -1674,10 +1633,7 @@ void main() {
       ..writeAsStringSync('$prologue\nterminal "✓ prepared"\n');
     final successResult = Process.runSync('bash', [success.path]);
     expect(successResult.exitCode, 0, reason: '${successResult.stderr}');
-    expect(
-      '${successResult.stdout}',
-      contains('NMTK_SETUP_DONE|0'),
-    );
+    expect('${successResult.stdout}', contains('NMTK_SETUP_DONE|0'));
 
     final failure = File('${fixture.path}/failure.sh')
       ..writeAsStringSync(
@@ -1689,12 +1645,7 @@ void main() {
 
     // The marker is protocol, not transcript: it must never reach the raw SSH
     // output the user reads.
-    expect(
-      ClientDeploymentService.parseBootstrapTranscriptLineForTesting(
-        'NMTK_SETUP_DONE|0',
-      ),
-      isNull,
-    );
+    expect(parseBootstrapTranscriptLineForTesting('NMTK_SETUP_DONE|0'), isNull);
   });
 
   test('a transcript stream that never closes cannot block setup', () async {
@@ -1712,7 +1663,7 @@ void main() {
     final stderr = stderrController.stream.listen((_) {});
     stdoutController.add('NMTK_SETUP_DONE|0');
 
-    await ClientDeploymentService.drainTranscriptStreamsForTesting(
+    await drainTranscriptStreamsForTesting(
       stdout,
       stderr,
       timeout: const Duration(milliseconds: 50),
@@ -1730,7 +1681,7 @@ void main() {
       if (!wedged.isCompleted) wedged.complete();
     });
 
-    await ClientDeploymentService.settleStreamedUpdatesForTesting(
+    await settleStreamedUpdatesForTesting(
       wedged.future,
       timeout: const Duration(milliseconds: 50),
     ).timeout(
@@ -1762,21 +1713,21 @@ void main() {
   });
 
   test('terminal output bounds and replaces the remote install section', () {
-    final bounded = ClientDeploymentService.boundTerminalOutputForTesting(
+    final bounded = boundTerminalOutputForTesting(
       List<String>.generate(2100, (index) => 'server output $index'),
     );
     expect(bounded.length, lessThanOrEqualTo(2000));
     expect(bounded.first, '[client: earlier SSH output truncated]');
     expect(bounded.last, 'server output 2099');
 
-    final first = ClientDeploymentService.replaceRemoteInstallOutputForTesting(
+    final first = replaceRemoteInstallOutputForTesting(
       const <String>[r'$ uname -s', 'Linux'],
       const <String>['pulling image layer 1'],
     );
-    final second = ClientDeploymentService.replaceRemoteInstallOutputForTesting(
-      first,
-      const <String>['pulling image layer 1', 'pulling image layer 2'],
-    );
+    final second = replaceRemoteInstallOutputForTesting(first, const <String>[
+      'pulling image layer 1',
+      'pulling image layer 2',
+    ]);
     expect(
       second.where((line) => line == 'pulling image layer 1'),
       hasLength(1),
@@ -1829,129 +1780,139 @@ void main() {
     expect(restored.activeOperation?.automaticRecovery, isTrue);
   });
 
-  test('remote setup creates a persisted job before SSH bootstrap completes',
-      () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final secrets = _MemorySecretStorage();
-    final persistence = DeploymentPersistence(
-      preferences: await SharedPreferences.getInstance(),
-      secureStorage: secrets,
-    );
-    final service = ClientDeploymentService(
-      assets: _ManifestAssetBundle(),
-      persistenceFactory: () async => persistence,
-      ssh: _BlockingSshDeploymentService(),
-    );
-
-    final job = await service.setupRemoteServer(
-      const RemoteServerSetupRequest(
-        host: '192.168.2.34',
-        adminUsername: 'root',
-        adminPassword: 'temporary-admin-secret',
-        containerEngine: 'docker',
-      ),
-    );
-    final snapshot = await service.load();
-
-    expect(job.targetId, 'remote-192-168-2-34');
-    expect(job.requiresEphemeralAdministrator, isTrue);
-    expect(snapshot.activeJob?.id, job.id);
-    expect(snapshot.activeJob?.stage, isNot('failed'));
-    expect(
-        secrets._values.toString(), isNot(contains('temporary-admin-secret')));
-  });
-
-  test('deployment bundle accepts exact slices from offset asset data',
-      () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final persistence = DeploymentPersistence(
-      preferences: await SharedPreferences.getInstance(),
-      secureStorage: _MemorySecretStorage(),
-    );
-    final service = ClientDeploymentService(
-      assets: _ManifestAssetBundle(useOffsetByteData: true),
-      persistenceFactory: () async => persistence,
-      ssh: _BlockingSshDeploymentService(),
-    );
-
-    final job = await service.setupRemoteServer(
-      const RemoteServerSetupRequest(
-        host: '192.168.2.35',
-        adminUsername: 'root',
-        adminPassword: 'temporary-admin-secret',
-        containerEngine: 'podman',
-      ),
-    );
-
-    expect(job.bundleVersion, 5);
-    expect(job.bundleManifestHash, hasLength(64));
-    expect(persistence.loadActiveJob()?.id, job.id);
-  });
-
-  test('invalid deployment bundles fail before persistence or SSH setup',
-      () async {
-    final cases = <({String name, AssetBundle assets})>[
-      (
-        name: 'mismatched contents',
-        assets: _ManifestAssetBundle(corruptedFile: 'docker-compose.yml'),
-      ),
-      (
-        name: 'missing manifest entry',
-        assets: _ManifestAssetBundle(omittedManifestFile: 'install.sh'),
-      ),
-      (
-        name: 'unexpected manifest entry',
-        assets: _ManifestAssetBundle(unexpectedManifestFile: 'unexpected.yml'),
-      ),
-    ];
-
-    for (final testCase in cases) {
-      var persistenceCalls = 0;
+  test(
+    'remote setup creates a persisted job before SSH bootstrap completes',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final secrets = _MemorySecretStorage();
+      final persistence = DeploymentPersistence(
+        preferences: await SharedPreferences.getInstance(),
+        secureStorage: secrets,
+      );
       final service = ClientDeploymentService(
-        assets: testCase.assets,
-        persistenceFactory: () async {
-          persistenceCalls += 1;
-          throw StateError('Persistence must not be reached.');
-        },
+        assets: _ManifestAssetBundle(),
+        persistenceFactory: () async => persistence,
         ssh: _BlockingSshDeploymentService(),
       );
 
-      await expectLater(
-        service.setupRemoteServer(
-          const RemoteServerSetupRequest(
-            host: '192.168.2.36',
-            adminUsername: 'root',
-            adminPassword: 'temporary-admin-secret',
-            containerEngine: 'podman',
+      final job = await service.setupRemoteServer(
+        const RemoteServerSetupRequest(
+          host: '192.168.2.34',
+          adminUsername: 'root',
+          adminPassword: 'temporary-admin-secret',
+          containerEngine: 'docker',
+        ),
+      );
+      final snapshot = await service.load();
+
+      expect(job.targetId, 'remote-192-168-2-34');
+      expect(job.requiresEphemeralAdministrator, isTrue);
+      expect(snapshot.activeJob?.id, job.id);
+      expect(snapshot.activeJob?.stage, isNot('failed'));
+      expect(
+        secrets._values.toString(),
+        isNot(contains('temporary-admin-secret')),
+      );
+    },
+  );
+
+  test(
+    'deployment bundle accepts exact slices from offset asset data',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final persistence = DeploymentPersistence(
+        preferences: await SharedPreferences.getInstance(),
+        secureStorage: _MemorySecretStorage(),
+      );
+      final service = ClientDeploymentService(
+        assets: _ManifestAssetBundle(useOffsetByteData: true),
+        persistenceFactory: () async => persistence,
+        ssh: _BlockingSshDeploymentService(),
+      );
+
+      final job = await service.setupRemoteServer(
+        const RemoteServerSetupRequest(
+          host: '192.168.2.35',
+          adminUsername: 'root',
+          adminPassword: 'temporary-admin-secret',
+          containerEngine: 'podman',
+        ),
+      );
+
+      expect(job.bundleVersion, 5);
+      expect(job.bundleManifestHash, hasLength(64));
+      expect(persistence.loadActiveJob()?.id, job.id);
+    },
+  );
+
+  test(
+    'invalid deployment bundles fail before persistence or SSH setup',
+    () async {
+      final cases = <({String name, AssetBundle assets})>[
+        (
+          name: 'mismatched contents',
+          assets: _ManifestAssetBundle(corruptedFile: 'docker-compose.yml'),
+        ),
+        (
+          name: 'missing manifest entry',
+          assets: _ManifestAssetBundle(omittedManifestFile: 'install.sh'),
+        ),
+        (
+          name: 'unexpected manifest entry',
+          assets: _ManifestAssetBundle(
+            unexpectedManifestFile: 'unexpected.yml',
           ),
         ),
-        throwsA(
-          isA<StateError>()
-              .having(
-                (error) => error.message,
-                'message',
-                'This app build contains an inconsistent deployment bundle. '
-                    'Update or reinstall NMTK, then retry setup. '
-                    'The server was not changed.',
-              )
-              .having(
-                (error) => error.toString(),
-                'safe error',
-                isNot(contains('temporary-admin-secret')),
-              ),
-        ),
-        reason: testCase.name,
-      );
-      expect(persistenceCalls, 0, reason: testCase.name);
-    }
-  });
+      ];
+
+      for (final testCase in cases) {
+        var persistenceCalls = 0;
+        final service = ClientDeploymentService(
+          assets: testCase.assets,
+          persistenceFactory: () async {
+            persistenceCalls += 1;
+            throw StateError('Persistence must not be reached.');
+          },
+          ssh: _BlockingSshDeploymentService(),
+        );
+
+        await expectLater(
+          service.setupRemoteServer(
+            const RemoteServerSetupRequest(
+              host: '192.168.2.36',
+              adminUsername: 'root',
+              adminPassword: 'temporary-admin-secret',
+              containerEngine: 'podman',
+            ),
+          ),
+          throwsA(
+            isA<StateError>()
+                .having(
+                  (error) => error.message,
+                  'message',
+                  'This app build contains an inconsistent deployment bundle. '
+                      'Update or reinstall NMTK, then retry setup. '
+                      'The server was not changed.',
+                )
+                .having(
+                  (error) => error.toString(),
+                  'safe error',
+                  isNot(contains('temporary-admin-secret')),
+                ),
+          ),
+          reason: testCase.name,
+        );
+        expect(persistenceCalls, 0, reason: testCase.name);
+      }
+    },
+  );
 
   test('factory reset is the only bootstrap mode that removes volumes', () {
-    final preserve = ClientDeploymentService.buildRemoteBootstrapScript(
+    final preserve = buildRemoteBootstrapScript(
       containerEngine: 'podman',
       factoryReset: false,
     );
-    final reset = ClientDeploymentService.buildRemoteBootstrapScript(
+    final reset = buildRemoteBootstrapScript(
       containerEngine: 'podman',
       factoryReset: true,
     );
@@ -1968,7 +1929,7 @@ void main() {
     addTearDown(() => directory.deleteSync(recursive: true));
     final scriptFile = File('${directory.path}/bootstrap.sh')
       ..writeAsStringSync(
-        ClientDeploymentService.buildRemoteBootstrapScript(
+        buildRemoteBootstrapScript(
           containerEngine: 'docker',
           factoryReset: false,
         ),
@@ -2071,7 +2032,7 @@ void main() {
       kubeconfig: 'kubeconfig-secret',
     );
 
-    final redacted = ClientDeploymentService.redactForLogging(
+    final redacted = redactForLogging(
       'password-secret private-key-secret kubeconfig-secret',
       request,
     );
@@ -2082,214 +2043,227 @@ void main() {
     expect(redacted, '[redacted] [redacted] [redacted]');
   });
 
-  test('saving a remote target replaces older records for the same IP',
-      () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final persistence = DeploymentPersistence(
-      preferences: await SharedPreferences.getInstance(),
-      secureStorage: _MemorySecretStorage(),
-    );
-    const request = DeploymentRequest(
-      targetType: 'remote_host',
-      mode: 'docker',
-      displayName: 'Remote',
-      host: '192.168.2.34',
-      username: 'nmtk-deploy',
-      sshPrivateKey: 'generated-deploy-key',
-    );
-    for (final id in ['old-attempt', 'remote-192-168-2-34']) {
-      await persistence.saveTarget(
-        DeploymentTarget(
-          id: id,
-          displayName: 'Remote',
-          targetType: 'remote_host',
-          mode: 'docker',
-          authMode: 'ssh_key',
-          host: '192.168.2.34',
-          username: 'nmtk-deploy',
-          backendPort: 9000,
-        ),
-        request,
+  test(
+    'saving a remote target replaces older records for the same IP',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final persistence = DeploymentPersistence(
+        preferences: await SharedPreferences.getInstance(),
+        secureStorage: _MemorySecretStorage(),
       );
-    }
-
-    final targets = await persistence.loadTargets();
-    expect(targets, hasLength(1));
-    expect(targets.single.id, 'remote-192-168-2-34');
-  });
-
-  test('does not retain completed when this device cannot reach the server',
-      () async {
-    final service = ClientDeploymentService(
-      persistenceFactory: _completedRemotePersistence,
-      httpClient:
-          MockClient((_) async => throw http.ClientException('offline')),
-    );
-
-    final snapshot = await service.load();
-
-    expect(snapshot.isReady, isFalse);
-    expect(snapshot.activeJob?.stage, 'failed');
-    expect(snapshot.activeJob?.error, contains('cannot reach'));
-  });
-
-  test('interrupted setup has no persisted target or deploy credential',
-      () async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-    final secrets = _MemorySecretStorage();
-    final persistence = DeploymentPersistence(
-      preferences: await SharedPreferences.getInstance(),
-      secureStorage: secrets,
-    );
-    await persistence.saveActiveJob(
-      DeploymentJob(
-        id: 'interrupted',
-        targetId: 'remote-192-168-2-34',
+      const request = DeploymentRequest(
+        targetType: 'remote_host',
         mode: 'docker',
-        stage: 'uploading_assets',
-        percent: 25,
-        stageLabel: 'Uploading deployment bundle',
-        logs: const <String>[],
-        activeOperation: DeploymentActiveOperation(
-          label: 'Installing Docker Engine',
-          startedAt: DateTime.now(),
-          timeoutSeconds: 300,
+        displayName: 'Remote',
+        host: '192.168.2.34',
+        username: 'nmtk-deploy',
+        sshPrivateKey: 'generated-deploy-key',
+      );
+      for (final id in ['old-attempt', 'remote-192-168-2-34']) {
+        await persistence.saveTarget(
+          DeploymentTarget(
+            id: id,
+            displayName: 'Remote',
+            targetType: 'remote_host',
+            mode: 'docker',
+            authMode: 'ssh_key',
+            host: '192.168.2.34',
+            username: 'nmtk-deploy',
+            backendPort: 9000,
+          ),
+          request,
+        );
+      }
+
+      final targets = await persistence.loadTargets();
+      expect(targets, hasLength(1));
+      expect(targets.single.id, 'remote-192-168-2-34');
+    },
+  );
+
+  test(
+    'does not retain completed when this device cannot reach the server',
+    () async {
+      final service = ClientDeploymentService(
+        persistenceFactory: _completedRemotePersistence,
+        httpClient: MockClient(
+          (_) async => throw http.ClientException('offline'),
         ),
-      ),
-    );
-    final service = ClientDeploymentService(
-      persistenceFactory: () async => persistence,
-    );
+      );
 
-    final snapshot = await service.load();
+      final snapshot = await service.load();
 
-    expect(snapshot.targets, isEmpty);
-    expect(secrets._values, isEmpty);
-    expect(snapshot.isReady, isFalse);
-    expect(snapshot.activeJob?.stage, 'failed');
-    expect(snapshot.activeJob?.error, contains('administrator credential'));
-    expect(snapshot.activeJob?.activeOperation, isNull);
-  });
+      expect(snapshot.isReady, isFalse);
+      expect(snapshot.activeJob?.stage, 'failed');
+      expect(snapshot.activeJob?.error, contains('cannot reach'));
+    },
+  );
 
-  test('retains completion only after desktop-visible NeuroStudio readiness',
-      () async {
-    final service = ClientDeploymentService(
-      persistenceFactory: _completedRemotePersistence,
-      httpClient: MockClient((request) async {
-        if (request.method == 'POST' &&
-            request.url.path == '/api/launcher/modules/neurocnl/start') {
-          return http.Response('{}', 202);
-        }
-        if (request.url.path == '/api/launcher/modules') {
-          return http.Response('[{"id":"neurocnl"}]', 200);
-        }
-        if (request.url.path == '/api/launcher/modules/neurocnl') {
-          return http.Response('{"status":4}', 200);
-        }
-        return http.Response('{"status":"ok"}', 200);
-      }),
-    );
+  test(
+    'interrupted setup has no persisted target or deploy credential',
+    () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{});
+      final secrets = _MemorySecretStorage();
+      final persistence = DeploymentPersistence(
+        preferences: await SharedPreferences.getInstance(),
+        secureStorage: secrets,
+      );
+      await persistence.saveActiveJob(
+        DeploymentJob(
+          id: 'interrupted',
+          targetId: 'remote-192-168-2-34',
+          mode: 'docker',
+          stage: 'uploading_assets',
+          percent: 25,
+          stageLabel: 'Uploading deployment bundle',
+          logs: const <String>[],
+          activeOperation: DeploymentActiveOperation(
+            label: 'Installing Docker Engine',
+            startedAt: DateTime.now(),
+            timeoutSeconds: 300,
+          ),
+        ),
+      );
+      final service = ClientDeploymentService(
+        persistenceFactory: () async => persistence,
+      );
 
-    final snapshot = await service.load();
+      final snapshot = await service.load();
 
-    expect(snapshot.isReady, isTrue);
-    expect(snapshot.activeJob?.stage, 'completed');
-  });
+      expect(snapshot.targets, isEmpty);
+      expect(secrets._values, isEmpty);
+      expect(snapshot.isReady, isFalse);
+      expect(snapshot.activeJob?.stage, 'failed');
+      expect(snapshot.activeJob?.error, contains('administrator credential'));
+      expect(snapshot.activeJob?.activeOperation, isNull);
+    },
+  );
 
-  test('completed backend verification updates only the selected Akida host',
-      () async {
-    final requestedPaths = <String>[];
-    final service = ClientDeploymentService(
-      persistenceFactory: _completedRemotePersistence,
-      httpClient: MockClient((request) async {
-        requestedPaths.add('${request.method} ${request.url.path}');
-        if (request.method == 'POST' &&
-            request.url.path == '/api/launcher/modules/neurocnl/start') {
-          return http.Response('{}', 202);
-        }
-        if (request.url.path == '/api/launcher/modules') {
-          return http.Response('[{"id":"neurocnl"}]', 200);
-        }
-        if (request.url.path == '/api/launcher/modules/neurocnl') {
-          return http.Response('{"status":4}', 200);
-        }
-        if (request.url.path == '/api/launcher/settings') {
-          return http.Response(
-            '{"selectedAkidaHostId":"selected-host"}',
-            200,
-          );
-        }
-        if (request.url.path.endsWith('/runtime-update-jobs')) {
-          return http.Response(
-            '{"jobId":"runtime-job","status":"completed",'
-            '"installedVersion":"0.6.0"}',
-            202,
-          );
-        }
-        return http.Response('{"status":"ok"}', 200);
-      }),
-    );
+  test(
+    'retains completion only after desktop-visible NeuroStudio readiness',
+    () async {
+      final service = ClientDeploymentService(
+        persistenceFactory: _completedRemotePersistence,
+        httpClient: MockClient((request) async {
+          if (request.method == 'POST' &&
+              request.url.path == '/api/launcher/modules/neurocnl/start') {
+            return http.Response('{}', 202);
+          }
+          if (request.url.path == '/api/launcher/modules') {
+            return http.Response('[{"id":"neurocnl"}]', 200);
+          }
+          if (request.url.path == '/api/launcher/modules/neurocnl') {
+            return http.Response('{"status":4}', 200);
+          }
+          return http.Response('{"status":"ok"}', 200);
+        }),
+      );
 
-    final snapshot = await service.load();
+      final snapshot = await service.load();
 
-    expect(snapshot.isReady, isTrue);
-    expect(snapshot.activeJob?.error, isEmpty);
-    expect(
-      requestedPaths,
-      contains(
-        'POST /api/launcher/akida/hosts/selected-host/runtime-update-jobs',
-      ),
-    );
-    expect(
-      requestedPaths.where((path) => path.contains('other-host')),
-      isEmpty,
-    );
-  });
+      expect(snapshot.isReady, isTrue);
+      expect(snapshot.activeJob?.stage, 'completed');
+    },
+  );
 
-  test('Akida update failure is degraded and preserves core readiness',
-      () async {
-    final service = ClientDeploymentService(
-      persistenceFactory: _completedRemotePersistence,
-      httpClient: MockClient((request) async {
-        if (request.method == 'POST' &&
-            request.url.path == '/api/launcher/modules/neurocnl/start') {
-          return http.Response('{}', 202);
-        }
-        if (request.url.path == '/api/launcher/modules') {
-          return http.Response('[{"id":"neurocnl"}]', 200);
-        }
-        if (request.url.path == '/api/launcher/modules/neurocnl') {
-          return http.Response('{"status":4}', 200);
-        }
-        if (request.url.path == '/api/launcher/settings') {
-          return http.Response(
-            '{"selectedAkidaHostId":"selected-host"}',
-            200,
-          );
-        }
-        if (request.url.path.endsWith('/runtime-update-jobs')) {
-          return http.Response(
-            '{"jobId":"runtime-job","status":"failed",'
-            '"message":"The selected Akida host is offline.",'
-            '"recovery":"Power it on, then retry."}',
-            202,
-          );
-        }
-        return http.Response('{"status":"ok"}', 200);
-      }),
-    );
+  test(
+    'completed backend verification updates only the selected Akida host',
+    () async {
+      final requestedPaths = <String>[];
+      final service = ClientDeploymentService(
+        persistenceFactory: _completedRemotePersistence,
+        httpClient: MockClient((request) async {
+          requestedPaths.add('${request.method} ${request.url.path}');
+          if (request.method == 'POST' &&
+              request.url.path == '/api/launcher/modules/neurocnl/start') {
+            return http.Response('{}', 202);
+          }
+          if (request.url.path == '/api/launcher/modules') {
+            return http.Response('[{"id":"neurocnl"}]', 200);
+          }
+          if (request.url.path == '/api/launcher/modules/neurocnl') {
+            return http.Response('{"status":4}', 200);
+          }
+          if (request.url.path == '/api/launcher/settings') {
+            return http.Response(
+              '{"selectedAkidaHostId":"selected-host"}',
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/runtime-update-jobs')) {
+            return http.Response(
+              '{"jobId":"runtime-job","status":"completed",'
+              '"installedVersion":"0.6.0"}',
+              202,
+            );
+          }
+          return http.Response('{"status":"ok"}', 200);
+        }),
+      );
 
-    final snapshot = await service.load();
+      final snapshot = await service.load();
 
-    expect(snapshot.isReady, isTrue);
-    expect(snapshot.activeJob?.stage, 'completed');
-    expect(
-      snapshot.activeJob?.error,
-      startsWith('degraded optional capability:'),
-    );
-    expect(snapshot.activeJob?.error, contains('Akida'));
-    expect(snapshot.activeJob?.error, contains('Power it on, then retry.'));
-  });
+      expect(snapshot.isReady, isTrue);
+      expect(snapshot.activeJob?.error, isEmpty);
+      expect(
+        requestedPaths,
+        contains(
+          'POST /api/launcher/akida/hosts/selected-host/runtime-update-jobs',
+        ),
+      );
+      expect(
+        requestedPaths.where((path) => path.contains('other-host')),
+        isEmpty,
+      );
+    },
+  );
+
+  test(
+    'Akida update failure is degraded and preserves core readiness',
+    () async {
+      final service = ClientDeploymentService(
+        persistenceFactory: _completedRemotePersistence,
+        httpClient: MockClient((request) async {
+          if (request.method == 'POST' &&
+              request.url.path == '/api/launcher/modules/neurocnl/start') {
+            return http.Response('{}', 202);
+          }
+          if (request.url.path == '/api/launcher/modules') {
+            return http.Response('[{"id":"neurocnl"}]', 200);
+          }
+          if (request.url.path == '/api/launcher/modules/neurocnl') {
+            return http.Response('{"status":4}', 200);
+          }
+          if (request.url.path == '/api/launcher/settings') {
+            return http.Response(
+              '{"selectedAkidaHostId":"selected-host"}',
+              200,
+            );
+          }
+          if (request.url.path.endsWith('/runtime-update-jobs')) {
+            return http.Response(
+              '{"jobId":"runtime-job","status":"failed",'
+              '"message":"The selected Akida host is offline.",'
+              '"recovery":"Power it on, then retry."}',
+              202,
+            );
+          }
+          return http.Response('{"status":"ok"}', 200);
+        }),
+      );
+
+      final snapshot = await service.load();
+
+      expect(snapshot.isReady, isTrue);
+      expect(snapshot.activeJob?.stage, 'completed');
+      expect(
+        snapshot.activeJob?.error,
+        startsWith('degraded optional capability:'),
+      );
+      expect(snapshot.activeJob?.error, contains('Akida'));
+      expect(snapshot.activeJob?.error, contains('Power it on, then retry.'));
+    },
+  );
 
   test('Akida ready never hides a failed backend', () async {
     final service = ClientDeploymentService(
