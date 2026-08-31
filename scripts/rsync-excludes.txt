@@ -101,8 +101,8 @@
 
 # --- everything else stays home --------------------------------------------
 # Makefile, AGENTS.md and the other root docs, pyproject.toml, tests/, tools/,
-# neurodocs/, .github/, nmtk_module_contracts/, nmtk_ui_core/, the
-# Flutter app itself, Neurosim/ (neurosim ships inside neurocnl/),
+# neurodocs/, .github/, nmtk_module_contracts/, the
+# Flutter app itself (nmtk_ui_core now lives inside it), Neurosim/ (neurosim ships inside neurocnl/),
 # Neuro-Dream-Hand/, rust/, neurocli/, monitoring/ (the copy the app deploys
 # lives under nmtk/neuro_toolkit/assets/), skills/, paper/, reports/, output/,
 # recordings/, every .<tool>/ dir, and all of scripts/ bar the one file above.

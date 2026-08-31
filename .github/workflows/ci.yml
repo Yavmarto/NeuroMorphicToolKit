@@ -37,7 +37,6 @@ jobs:
       neurotoolkit: ${{ steps.filter.outputs.neurotoolkit }}
       macos_installer: ${{ steps.filter.outputs.macos_installer }}
       windows_installer: ${{ steps.filter.outputs.windows_installer }}
-      nmtk_ui_core: ${{ steps.filter.outputs.nmtk_ui_core }}
       suite_api: ${{ steps.filter.outputs.suite_api }}
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +74,6 @@ jobs:
             neurotoolkit:
               - 'neurocnl'
               - 'nmtk/neuro_toolkit/**'
-              - 'nmtk_ui_core/**'
             macos_installer:
               - 'nmtk/installer/macos/**'
               - 'tests/test_macos_installer_signing.py'
@@ -84,8 +82,6 @@ jobs:
               - 'nmtk/installer/windows/**'
               - 'tests/test_windows_installer_signing.py'
               - '.github/workflows/release-desktop.yml'
-            nmtk_ui_core:
-              - 'nmtk_ui_core/**'
             suite_api:
               - 'suite_api/**'
               - 'workers/**'
@@ -480,40 +476,6 @@ jobs:
           cd Neurobench/neurobench
           poetry run pytest --tb=short --hypothesis-show-statistics
 
-  test-nmtk-ui-core:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.nmtk_ui_core == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - [self-hosted, macOS, ARM64]
-          - [self-hosted, Windows, X64]
-          - [self-hosted, Linux, X64]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Add Git to PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: cmd
-        run: |
-          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
-      - uses: actions/checkout@v4
-        with:
-          submodules: false
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: false
-      - name: Install dependencies
-        run: |
-          flutter pub get --directory nmtk_ui_core
-      - name: Analyze
-        run: |
-          flutter analyze --directory nmtk_ui_core
-      - name: Run tests
-        run: |
-          cd nmtk_ui_core && flutter test --coverage
-
   test-neurotoolkit:
     needs: detect-changes
     if: needs.detect-changes.outputs.neurotoolkit == 'true'
@@ -713,7 +675,6 @@ jobs:
       - test-neurotoolkit
       - test-macos-installer-signing
       - test-windows-installer-signing
-      - test-nmtk-ui-core
       - test-suite-api
     if: always()
     steps:
@@ -727,7 +688,6 @@ jobs:
           echo "  neurodreamhand: ${{ needs.test-neurodreamhand.result }}"
           echo "  neurobench:     ${{ needs.test-neurobench.result }}"
           echo "  neurocnl:       ${{ needs.test-neurocnl-backend.result }}"
-          echo "  nmtk-ui-core:   ${{ needs.test-nmtk-ui-core.result }}"
           echo "  neurotoolkit:   ${{ needs.test-neurotoolkit.result }}"
           echo "  suite-api:      ${{ needs.test-suite-api.result }}"
           echo "  macos-installer: ${{ needs.test-macos-installer-signing.result }}"
@@ -745,7 +705,6 @@ jobs:
             "${{ needs.test-neurodreamhand.result }}" \
             "${{ needs.test-neurobench.result }}" \
             "${{ needs.test-neurocnl-backend.result }}" \
-            "${{ needs.test-nmtk-ui-core.result }}" \
             "${{ needs.test-neurotoolkit.result }}" \
             "${{ needs.test-suite-api.result }}" \
             "${{ needs.test-macos-installer-signing.result }}" \

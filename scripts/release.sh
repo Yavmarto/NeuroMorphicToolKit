@@ -47,7 +47,6 @@ for mod in "${MODULES[@]}"; do
     if [ -f "neurobench/pyproject.toml" ]; then VERSION_FILES+=("neurobench/pyproject.toml"); fi
     if [ -f "neurosense/pyproject.toml" ]; then VERSION_FILES+=("neurosense/pyproject.toml"); fi
     if [ -f "frontend/pubspec.yaml" ]; then VERSION_FILES+=("frontend/pubspec.yaml"); fi
-    if [ -f "nmtk_ui_core/pubspec.yaml" ]; then VERSION_FILES+=("nmtk_ui_core/pubspec.yaml"); fi
 
     # Bump version
     if [ ${#VERSION_FILES[@]} -gt 0 ]; then
@@ -78,7 +77,6 @@ echo "📦 Updating core components..."
 # metadata is the source-visible backend number. Keep all three aligned.
 CORE_FILES=(
   "$ROOT_DIR/nmtk/neuro_toolkit/pubspec.yaml"
-  "$ROOT_DIR/nmtk_ui_core/pubspec.yaml"
   "$ROOT_DIR/suite_api/pyproject.toml"
   # neurocli ships as a wheel on the GitHub release (release-desktop.yml,
   # build-python). It was stuck at 0.1.0 because it was never listed here.

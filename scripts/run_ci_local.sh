@@ -24,8 +24,8 @@ source "$ROOT_DIR/scripts/dev/changed_paths.sh"
 PY_NAMES=(SuiteAPI NeuroCLI Neurochip Neurosense Neurohub Neuro-Dream-Hand neurocnl Neurobench)
 PY_DIRS=(suite_api neurocli Neurochip Neurosense/neurosense Neurohub/neurohub Neuro-Dream-Hand neurocnl Neurobench/neurobench)
 
-FL_NAMES=(nmtk_ui_core neuro_toolkit neurocnl_frontend Neurochip_frontend Neurohub_frontend Neurosense_frontend Neurobench_frontend)
-FL_DIRS=(nmtk_ui_core nmtk/neuro_toolkit neurocnl/frontend Neurochip/frontend Neurohub/frontend Neurosense/frontend Neurobench/frontend)
+FL_NAMES=(neuro_toolkit neurocnl_frontend Neurochip_frontend Neurohub_frontend Neurosense_frontend Neurobench_frontend)
+FL_DIRS=(nmtk/neuro_toolkit neurocnl/frontend Neurochip/frontend Neurohub/frontend Neurosense/frontend Neurobench/frontend)
 
 ALL_MODULES=("${PY_NAMES[@]}" "${FL_NAMES[@]}")
 RUN_LAUNCHER_GUARDRAILS=false
@@ -175,13 +175,6 @@ detect_changed_modules() {
     esac
     echo "$changed_files" | grep -q "^${dir_prefix}" && add_unique "$mod"
   done
-
-  if echo "$changed_files" | grep -q "^nmtk_ui_core/"; then
-    add_unique "nmtk_ui_core"
-    for fl in neuro_toolkit neurocnl_frontend Neurochip_frontend Neurohub_frontend Neurosense_frontend Neurobench_frontend; do
-      add_unique "$fl"
-    done
-  fi
 
   echo "$changed_files" | grep -q "^nmtk/neuro_toolkit/" && add_unique "neuro_toolkit"
 

@@ -6,7 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 // they're merged-in package code, not written against these root
 // guardrails, and each carries its own pre-existing (pre-merge)
 // design-system debt that's a separate cleanup from the physical merge.
-// Root's own code must still pass with zero exceptions.
+//
+// `lib/ui_core/` is excluded for a different reason: it's the Zeta/NMTK
+// design-system implementation itself. Its widgets legitimately touch raw
+// Material (InkWell, IconButton, TextField, ProgressIndicator, ...) to
+// build the wrappers this rule requires everyone else to use — the rule
+// governs consumers of the design system, not the design system's own
+// internals.
+//
+// Root's own launcher/app code must still pass with zero exceptions.
 Iterable<File> _launcherSources() => Directory('lib')
     .listSync(recursive: true)
     .whereType<File>()
@@ -16,7 +24,8 @@ Iterable<File> _launcherSources() => Directory('lib')
           !file.path.endsWith('.g.dart') &&
           !file.path.endsWith('.freezed.dart') &&
           !file.path.startsWith('lib/features/neurocnl/') &&
-          !file.path.startsWith('lib/features/neurobench/'),
+          !file.path.startsWith('lib/features/neurobench/') &&
+          !file.path.startsWith('lib/ui_core/'),
     );
 
 String _activeSource(File file) => file

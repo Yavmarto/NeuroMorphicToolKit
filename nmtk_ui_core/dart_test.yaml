@@ -1,3 +1,0 @@
-# Default timeout and concurrency for all test packages.
-timeout: 30s
-concurrency: 4
