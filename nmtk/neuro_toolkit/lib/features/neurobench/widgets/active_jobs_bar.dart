@@ -102,7 +102,7 @@ class _ActiveJobsBarState extends ConsumerState<ActiveJobsBar> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: tone,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

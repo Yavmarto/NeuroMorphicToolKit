@@ -136,7 +136,7 @@ class _NirTypeTile extends ConsumerWidget {
       data: type,
       feedback: Material(
         elevation: 4,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         child: _PaletteItemCard(type: type, isDragging: true),
       ),
       childWhenDragging: Opacity(
@@ -163,7 +163,7 @@ class _PaletteItemCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: isDragging ? 0.15 : 0.08),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         border: isDragging ? Border.all(color: color, width: 1.5) : null,
       ),
       child: Row(

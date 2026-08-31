@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deployment_feature.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 class PlatformRoleBadge extends StatelessWidget {
   const PlatformRoleBadge({super.key, required this.targetId});
@@ -16,7 +16,7 @@ class PlatformRoleBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: trainable ? colors.surfacePositiveSubtle : colors.surfaceHover,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
       ),
       child: Text(
         trainable ? 'Training' : 'Deploy only',

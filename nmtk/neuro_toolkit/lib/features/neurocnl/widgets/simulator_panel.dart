@@ -2450,7 +2450,7 @@ class _OverrideToggle extends StatelessWidget {
         border: Border.all(color: tokens.warningColor.withValues(alpha: 0.30)),
         // radiusSm (12) is the sanctioned value for inline/compact containers
         // per CODING_STYLE_GUIDE.md § Border radius.
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
       ),
       child: Row(
         children: [

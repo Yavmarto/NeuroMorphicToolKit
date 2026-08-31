@@ -390,7 +390,7 @@ class _CnlSentenceBuilderDialogState extends State<CnlSentenceBuilderDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Zeta.of(context).colors.surfaceDefault,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 700, maxHeight: 540),
         child: Column(
@@ -620,7 +620,7 @@ class _CnlSentenceBuilderDialogState extends State<CnlSentenceBuilderDialog> {
           decoration: BoxDecoration(
             color: Zeta.of(context).colors.surfaceDefault,
             border: Border.all(color: Zeta.of(context).colors.borderDefault),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
           ),
           child: Text(
             sentence.isEmpty ? '-' : sentence,

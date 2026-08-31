@@ -812,7 +812,7 @@ class _AutocompletePopupState extends State<_AutocompletePopup> {
     return Material(
       elevation: 4,
       clipBehavior: Clip.antiAlias,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
       child: ListView.builder(
         padding: EdgeInsets.zero,
         itemCount: prompts.length,
@@ -910,7 +910,7 @@ class _SourceKindBadge extends StatelessWidget {
         color: isCustom
             ? scheme.primaryContainer
             : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusChip),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

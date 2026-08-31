@@ -191,7 +191,7 @@ class _ComparisonTable extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerHighest,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(NmtkShellTokens.of(context).radiusSm)),
           ),
           child: Row(
             children: [

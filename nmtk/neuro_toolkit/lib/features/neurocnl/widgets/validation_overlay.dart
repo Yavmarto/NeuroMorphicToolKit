@@ -390,13 +390,13 @@ class _ValidationBadge extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
             border: Border.all(color: AppTheme.border),
             boxShadow: [
               BoxShadow(
@@ -460,7 +460,7 @@ class ValidationPopup extends StatelessWidget {
         constraints: const BoxConstraints(maxHeight: 400),
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
           border: Border.all(color: AppTheme.border),
           boxShadow: [
             BoxShadow(

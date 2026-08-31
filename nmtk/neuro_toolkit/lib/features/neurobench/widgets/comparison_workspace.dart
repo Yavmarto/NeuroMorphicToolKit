@@ -306,7 +306,7 @@ class SelectionBadge extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Column(

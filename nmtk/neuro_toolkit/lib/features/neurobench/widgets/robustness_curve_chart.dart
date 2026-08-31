@@ -181,7 +181,7 @@ class _AccuracyBar extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
           child: LinearProgressIndicator(
             value: pct,
             minHeight: 12,

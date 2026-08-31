@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Workspace tab styling shared by Studio's workspace chrome.
 class ZetaStyledTab extends StatelessWidget {
@@ -59,7 +59,7 @@ class ZetaStyledTab extends StatelessWidget {
     }
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
       child: tab,
     );
   }

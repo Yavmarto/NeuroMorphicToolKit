@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
 /// Compact metric chip for compiled artifact metadata.
 
@@ -20,7 +21,7 @@ class CompiledArtifactsMetricChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppTheme.background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         border: Border.all(color: AppTheme.border),
       ),
       child: Row(

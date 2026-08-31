@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/spike_raster_plot.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/time_series_chart.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
 /// Combined SNN dynamics visualization for a single population.
 ///
@@ -279,7 +280,7 @@ class _VoltageLegend extends StatelessWidget {
                   height: 8,
                   decoration: BoxDecoration(
                     color: colors[i % colors.length],
-                    borderRadius: BorderRadius.circular(2),
+                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                   ),
                 ),
                 const SizedBox(width: 3),

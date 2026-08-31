@@ -550,7 +550,7 @@ class _FaultInjectionTabState extends ConsumerState<_FaultInjectionTab> {
                         ),
                         decoration: BoxDecoration(
                           color: AppTheme.surfaceVariant,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                           border: Border.all(color: AppTheme.border),
                         ),
                         child: Text(

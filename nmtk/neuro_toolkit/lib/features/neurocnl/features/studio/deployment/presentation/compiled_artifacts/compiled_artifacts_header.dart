@@ -41,7 +41,7 @@ class CompiledArtifactsHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         border: Border.all(color: AppTheme.border),
       ),
       child: SingleChildScrollView(

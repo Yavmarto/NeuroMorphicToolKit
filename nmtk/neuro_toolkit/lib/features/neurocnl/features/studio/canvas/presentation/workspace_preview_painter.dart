@@ -5,10 +5,15 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/canvas/presentat
 
 /// Paints a compact canvas overview without mutating canvas state.
 class WorkspacePreviewPainter extends CustomPainter {
-  const WorkspacePreviewPainter({required this.graph, required this.edgeColor});
+  const WorkspacePreviewPainter({
+    required this.graph,
+    required this.edgeColor,
+    required this.nodeRadius,
+  });
 
   final PreviewGraph graph;
   final Color edgeColor;
+  final double nodeRadius;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -18,7 +23,7 @@ class WorkspacePreviewPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1;
       canvas.drawRRect(
-        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12)),
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(nodeRadius)),
         paint,
       );
       return;
@@ -43,7 +48,7 @@ class WorkspacePreviewPainter extends CustomPainter {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           projection.rectToLocal(node.rect),
-          const Radius.circular(12),
+          Radius.circular(nodeRadius),
         ),
         Paint()..color = node.color.withValues(alpha: 0.85),
       );
@@ -52,5 +57,7 @@ class WorkspacePreviewPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant WorkspacePreviewPainter oldDelegate) =>
-      oldDelegate.graph != graph || oldDelegate.edgeColor != edgeColor;
+      oldDelegate.graph != graph ||
+      oldDelegate.edgeColor != edgeColor ||
+      oldDelegate.nodeRadius != nodeRadius;
 }

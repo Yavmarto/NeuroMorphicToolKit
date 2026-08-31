@@ -58,7 +58,7 @@ class CompiledArtifactsPanel extends ConsumerWidget {
         final graphPane = Container(
           decoration: BoxDecoration(
             color: AppTheme.background,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusMd),
             border: Border.all(color: AppTheme.border),
           ),
           child: const NetworkGraphView(),

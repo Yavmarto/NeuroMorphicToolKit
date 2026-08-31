@@ -1070,7 +1070,7 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
                           ),
                           decoration: BoxDecoration(
                             color: AppTheme.error.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(4),
+                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                           ),
                           child: lineNumWidget,
                         )
@@ -1186,7 +1186,7 @@ class _NumericLiteralDialogState extends State<_NumericLiteralDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusMd)),
       title: const Text('Edit number'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1432,7 +1432,7 @@ class _AutocompleteOverlay extends StatelessWidget {
                                     color: _sourceBadgeColor(
                                       item.source,
                                     ).withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                                   ),
                                   child: Text(
                                     _sourceBadgeLabel(item.source),

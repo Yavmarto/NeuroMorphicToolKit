@@ -272,7 +272,7 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
                         backgroundColor: AppTheme.surfaceVariant,
                         side: BorderSide.none,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
                         ),
                         showCheckmark: false,
                       ),
@@ -392,11 +392,11 @@ class _TemplateCard extends ConsumerWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
           border: Border.all(color: AppTheme.border),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
           onTap: () => _loadTemplate(context, ref),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -447,7 +447,7 @@ class _TemplateCard extends ConsumerWidget {
                             ),
                             decoration: BoxDecoration(
                               color: AppTheme.surfaceVariant,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                             ),
                             child: Text(
                               tag,
@@ -554,7 +554,7 @@ class _DifficultyBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(

@@ -196,7 +196,7 @@ class _ReportBuilderState extends ConsumerState<ReportBuilder> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusChip),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

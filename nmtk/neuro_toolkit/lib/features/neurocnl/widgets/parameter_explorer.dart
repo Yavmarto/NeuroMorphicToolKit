@@ -305,7 +305,7 @@ class _Header extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               border: Border.all(color: Zeta.of(context).colors.borderDefault),
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -374,7 +374,7 @@ class _ParameterSlider extends StatelessWidget {
                   color: Zeta.of(
                     context,
                   ).colors.mainPrimary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                 ),
                 child: Text(
                   param.isInteger

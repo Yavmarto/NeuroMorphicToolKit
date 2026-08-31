@@ -95,8 +95,8 @@ Future<CanvasConnectPaletteResult?> showCanvasConnectPalette({
     return showModalBottomSheet<CanvasConnectPaletteResult>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(NmtkShellTokens.of(context).radiusLg)),
       ),
       builder: (BuildContext sheetContext) {
         return SafeArea(
@@ -115,7 +115,7 @@ Future<CanvasConnectPaletteResult?> showCanvasConnectPalette({
     context: context,
     builder: (BuildContext dialogContext) {
       return Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560, maxHeight: 620),
           child: content(dialogContext),

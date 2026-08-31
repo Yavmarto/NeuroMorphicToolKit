@@ -32,7 +32,7 @@ class RunHistoryTimeline extends ConsumerWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                 ),
                 child: Row(
                   children: [

@@ -141,14 +141,14 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
                           margin: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: AppTheme.surface,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusMd),
                             border: Border.all(color: AppTheme.border),
                           ),
                           child: Stack(
                             children: [
                               Positioned.fill(
                                 child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(15),
+                                  borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusMd),
                                   child: GestureDetector(
                                     onPanStart: (d) => _onPanStart(d, graph),
                                     onPanUpdate: _onPanUpdate,
@@ -164,6 +164,8 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
                                         graph: graph,
                                         positions: _positions,
                                         selectedId: _selectedId,
+                                        radiusSm: NmtkShellTokens.of(context).radiusSm,
+                                        radiusMd: NmtkShellTokens.of(context).radiusMd,
                                       ),
                                     ),
                                   ),
@@ -400,7 +402,7 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
         padding: EdgeInsets.all(compact ? 10 : 12),
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusMd),
           border: Border.all(color: AppTheme.border),
         ),
         child: Row(
@@ -449,7 +451,7 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusMd),
         border: Border.all(color: AppTheme.border),
       ),
       child: Column(
@@ -509,7 +511,7 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: AppTheme.background.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusChip),
         border: Border.all(color: AppTheme.border),
       ),
       child: Row(
@@ -719,7 +721,7 @@ class _InfoPanel extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                   border: Border.all(color: color.withValues(alpha: 0.4)),
                 ),
                 child: Text(
@@ -747,7 +749,7 @@ class _InfoPanel extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: AppTheme.surfaceVariant,
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                         border: Border.all(color: AppTheme.border),
                       ),
                       child: RichText(
@@ -790,11 +792,15 @@ class _NetworkPainter extends CustomPainter {
   final NetworkGraph graph;
   final Map<String, Offset> positions;
   final String? selectedId;
+  final double radiusSm;
+  final double radiusMd;
 
   _NetworkPainter({
     required this.graph,
     required this.positions,
     this.selectedId,
+    required this.radiusSm,
+    required this.radiusMd,
   });
 
   @override
@@ -1004,7 +1010,7 @@ class _NetworkPainter extends CustomPainter {
     final offset = mid - Offset(tp.width / 2, tp.height + 4);
     final bgRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(offset.dx - 4, offset.dy - 2, tp.width + 8, tp.height + 4),
-      const Radius.circular(5),
+      Radius.circular(radiusSm),
     );
     canvas.drawRRect(
       bgRect,
@@ -1040,7 +1046,7 @@ class _NetworkPainter extends CustomPainter {
               width: radius * 2.2 + 14,
               height: radius * 2.2 + 14,
             ),
-            const Radius.circular(18),
+            Radius.circular(radiusMd),
           ),
           Paint()..color = color.withValues(alpha: 0.10),
         );
@@ -1065,7 +1071,7 @@ class _NetworkPainter extends CustomPainter {
                 width: radius * 2.2 + 12,
                 height: radius * 2.2 + 12,
               ),
-              const Radius.circular(18),
+              Radius.circular(radiusMd),
             ),
             Paint()
               ..color = Colors.white.withValues(alpha: 0.25)
@@ -1094,7 +1100,7 @@ class _NetworkPainter extends CustomPainter {
             width: radius * 2.2,
             height: radius * 2.2,
           ),
-          const Radius.circular(14),
+          Radius.circular(radiusMd),
         );
         canvas.drawRRect(rect.shift(const Offset(2, 2)), shadowPaint);
         canvas.drawRRect(rect, fillPaint);
@@ -1165,7 +1171,7 @@ class _NetworkPainter extends CustomPainter {
 
     final bgRect = RRect.fromRectAndRadius(
       Rect.fromLTWH(pos.dx - bgW / 2, bgTop - 3, bgW, totalH + 6),
-      const Radius.circular(6),
+      Radius.circular(radiusSm),
     );
     canvas.drawRRect(
       bgRect,
@@ -1198,7 +1204,9 @@ class _NetworkPainter extends CustomPainter {
   bool shouldRepaint(covariant _NetworkPainter old) =>
       old.graph != graph ||
       old.positions != positions ||
-      old.selectedId != selectedId;
+      old.selectedId != selectedId ||
+      old.radiusSm != radiusSm ||
+      old.radiusMd != radiusMd;
 }
 
 // ---------------------------------------------------------------------------

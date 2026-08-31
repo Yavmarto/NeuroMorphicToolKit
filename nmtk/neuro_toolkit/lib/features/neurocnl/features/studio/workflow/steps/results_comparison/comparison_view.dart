@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/canvas/canvas_feature.dart';
@@ -9,6 +8,7 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/p
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_comparison/comparison_sidebar.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_comparison/multi_platform_curve_chart.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_comparison/support.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
 class ComparisonView extends StatelessWidget {
   const ComparisonView({
@@ -51,7 +51,7 @@ class ComparisonView extends StatelessWidget {
           bottom: 16,
           child: Material(
             elevation: 4,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
             color: AppTheme.surface.withValues(alpha: 0.97),
             clipBehavior: Clip.antiAlias,
             child: Padding(
@@ -133,7 +133,7 @@ class ComparisonView extends StatelessWidget {
           width: 240,
           child: Material(
             elevation: 4,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
             clipBehavior: Clip.antiAlias,
             child: ComparisonSidebar(
               summaries: summaries,

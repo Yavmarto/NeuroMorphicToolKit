@@ -241,7 +241,7 @@ class _MiniBar extends StatelessWidget {
         ),
         const SizedBox(height: 3),
         ClipRRect(
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
           child: LinearProgressIndicator(
             value: fraction,
             minHeight: 8,

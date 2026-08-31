@@ -979,7 +979,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                           Navigator.of(popupContext).pop();
                           addType(type);
                         },
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -1015,8 +1015,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
         ? showModalBottomSheet<void>(
             context: context,
             isScrollControlled: true,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(NmtkShellTokens.of(context).radiusLg)),
             ),
             builder: (BuildContext sheetContext) {
               return SafeArea(
@@ -1036,7 +1036,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
             builder: (BuildContext dialogContext) {
               return Dialog(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
                 ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(
@@ -1163,7 +1163,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                           Navigator.of(popupContext).pop();
                           addNodeType(item);
                         },
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -1199,8 +1199,8 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
         ? showModalBottomSheet<void>(
             context: context,
             isScrollControlled: true,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(NmtkShellTokens.of(context).radiusLg)),
             ),
             builder: (BuildContext sheetContext) {
               return SafeArea(
@@ -1220,7 +1220,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
             builder: (BuildContext dialogContext) {
               return Dialog(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
                 ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(

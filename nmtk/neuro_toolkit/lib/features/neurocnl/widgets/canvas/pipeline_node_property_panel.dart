@@ -802,7 +802,7 @@ class _DataLoaderFields extends ConsumerWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: const Color(0xFF1E88E5).withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
             ),
             child: Row(
               children: [

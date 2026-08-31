@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
 class MujocoStreamView extends StatelessWidget {
   final String? streamUrl;
@@ -20,7 +20,7 @@ class MujocoStreamView extends StatelessWidget {
     }
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -45,7 +45,7 @@ class MujocoStreamView extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusChip),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,

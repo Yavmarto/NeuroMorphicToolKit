@@ -1,18 +1,18 @@
 // ignore_for_file: depend_on_referenced_packages
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 class LoadingShimmer extends StatelessWidget {
   final double width;
   final double height;
-  final double borderRadius;
+  final double? borderRadius;
 
   const LoadingShimmer({
     super.key,
     required this.width,
     required this.height,
-    this.borderRadius = 8,
+    this.borderRadius,
   });
 
   @override
@@ -27,7 +27,9 @@ class LoadingShimmer extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: Zeta.of(context).colors.surfaceDefault,
-          borderRadius: BorderRadius.circular(borderRadius),
+          borderRadius: BorderRadius.circular(
+            borderRadius ?? NmtkShellTokens.of(context).radiusSm,
+          ),
         ),
       ),
     );
@@ -39,7 +41,7 @@ class LoadingShimmer extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          LoadingShimmer(width: height, height: height, borderRadius: 4),
+          LoadingShimmer(width: height, height: height),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

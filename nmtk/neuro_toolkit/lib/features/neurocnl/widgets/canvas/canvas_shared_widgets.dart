@@ -301,7 +301,7 @@ class NodeCardChrome extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
         border: Border.all(color: resolvedBorder, width: resolvedWidth),
         boxShadow: [
           BoxShadow(
@@ -324,7 +324,6 @@ const double kNodeCardTitleFontSizeRegular = 12.0;
 const double kNodeCardTitleFontSizeDense = 11.0;
 const FontWeight kNodeCardTitleFontWeight = FontWeight.w700;
 const double kNodeCardSubtitleFontSize = 9.0;
-const double kNodeCardHeaderTopRadius = 7.0;
 const EdgeInsets kNodeCardHeaderPadding = EdgeInsets.symmetric(horizontal: 10);
 
 /// The icon + title (+ optional subtitle) row shared by every node card's
@@ -464,7 +463,7 @@ class NodeCardHeaderBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Radius topRadius = const Radius.circular(kNodeCardHeaderTopRadius);
+    final Radius topRadius = Radius.circular(NmtkShellTokens.of(context).radiusSm);
     final Radius bottomRadius = roundBottomCorners ? topRadius : Radius.zero;
     return Container(
       height: height,
@@ -620,7 +619,7 @@ class CanvasOutsideLabel extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(tokens.radiusSm),
             border: Border.all(color: tokens.chromeBorder),
           ),
           child: Text(

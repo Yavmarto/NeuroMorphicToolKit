@@ -56,7 +56,7 @@ class MobileCanvasChrome extends StatelessWidget {
     final bar = Container(
       decoration: BoxDecoration(
         color: barBg,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.22),
@@ -180,7 +180,7 @@ class CanvasChromeIconButton extends StatelessWidget {
       message: tooltip,
       child: InkWell(
         onTap: enabled ? onPressed : null,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Icon(icon, color: color, size: 20),

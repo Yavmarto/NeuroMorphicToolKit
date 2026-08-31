@@ -70,7 +70,7 @@ class _PlayStopButtonState extends State<PlayStopButton>
         message: widget.l10n.stopSimulation,
         child: InkWell(
           onTap: widget.onStop,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
           child: AnimatedBuilder(
             animation: _pulseAnim,
             builder: (_, _) => Stack(
@@ -106,7 +106,7 @@ class _PlayStopButtonState extends State<PlayStopButton>
           : widget.l10n.fixErrorsFirst,
       child: InkWell(
         onTap: widget.enabled ? widget.onPlay : null,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
         child: Container(
           width: 36,
           height: 36,

@@ -66,6 +66,7 @@ class WorkspaceCanvasPreview extends ConsumerWidget {
                 painter: WorkspacePreviewPainter(
                   graph: graph,
                   edgeColor: tokens.chromeBorder,
+                  nodeRadius: tokens.radiusSm,
                 ),
               ),
             ),

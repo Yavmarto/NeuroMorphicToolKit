@@ -135,7 +135,9 @@ class _PhaseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(

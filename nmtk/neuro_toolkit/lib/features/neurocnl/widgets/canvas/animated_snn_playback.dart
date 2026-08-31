@@ -609,7 +609,7 @@ class _ZoomIndicator extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.surfaceOf(context).withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
         border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Padding(

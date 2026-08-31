@@ -157,7 +157,7 @@ class SpikePlaybackTransport extends StatelessWidget {
                   message: 'Play at ${_speedLabel(s)} speed',
                   child: InkWell(
                     onTap: () => onSpeedChanged(s),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
                       padding: const EdgeInsets.symmetric(
@@ -170,7 +170,7 @@ class SpikePlaybackTransport extends StatelessWidget {
                                 context,
                               ).withValues(alpha: 0.15)
                             : Colors.transparent,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
                         border: Border.all(
                           color: speed == s
                               ? AppTheme.textSecondaryOf(context)

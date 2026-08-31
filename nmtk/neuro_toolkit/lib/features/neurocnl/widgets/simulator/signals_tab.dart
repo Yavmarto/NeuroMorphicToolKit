@@ -317,7 +317,7 @@ class _DensityBar extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           ClipRRect(
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
             child: LinearProgressIndicator(
               value: layer.density.clamp(0.0, 1.0),
               minHeight: 6,

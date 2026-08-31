@@ -386,7 +386,7 @@ class _SelectableContainer extends StatelessWidget {
                 ? Theme.of(context).colorScheme.primary
                 : Colors.transparent,
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusMd),
         ),
         child: child,
       ),
