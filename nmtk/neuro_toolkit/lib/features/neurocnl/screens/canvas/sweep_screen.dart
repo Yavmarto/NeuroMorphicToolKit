@@ -33,7 +33,9 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
           children: [
             SizedBox(
               width: 320,
-              child: Card(
+              // Allowed: single-topic surface
+              child: NmtkSurfaceCard(
+                expandChild: true,
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -135,7 +137,13 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
               ),
             ),
             const SizedBox(width: 24),
-            Expanded(child: Card(child: _buildResultsView(sweepState))),
+            Expanded(
+              // Allowed: single-topic surface
+              child: NmtkSurfaceCard(
+                expandChild: true,
+                child: _buildResultsView(sweepState),
+              ),
+            ),
           ],
         ),
       ),
@@ -186,7 +194,16 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
             itemCount: steps.length,
             itemBuilder: (context, index) {
               final step = steps[index];
-              return Card(
+              final tokens = NmtkShellTokens.of(context);
+              // Not an NmtkSurfaceCard: this grid item sits inside the
+              // surrounding results NmtkSurfaceCard, which asserts against
+              // nested surface cards.
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: tokens.subtleBorder),
+                  borderRadius: BorderRadius.circular(tokens.radiusSm),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

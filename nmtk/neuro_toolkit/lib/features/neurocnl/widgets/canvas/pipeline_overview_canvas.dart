@@ -133,13 +133,8 @@ class _PhaseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    // Allowed: single-topic surface
+    return NmtkSurfaceCard(
         child: Row(
           children: [
             // Icon circle
@@ -206,7 +201,6 @@ class _PhaseCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }

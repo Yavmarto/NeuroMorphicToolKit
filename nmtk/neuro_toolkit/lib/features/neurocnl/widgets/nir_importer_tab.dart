@@ -574,18 +574,18 @@ class _NirEdgeList extends ConsumerWidget {
     );
     final graph = ref.read(canvasProvider).graph;
     final canConnect = graph.nodes.length >= 2;
-    return Card(
+    final tokens = NmtkShellTokens.of(context);
+    // NirImporterTab is a deliberately flat subtree (see
+    // nir_inspector_no_nested_cards_test.dart) — no NmtkSurfaceCard here,
+    // matching _NirNodeCard's flat ExpansionTile above.
+    return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      color: AppTheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(
-          NmtkShellTokens.of(context).radiusSm,
-        ),
-        side: const BorderSide(color: AppTheme.border),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: tokens.subtleBorder),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
@@ -635,7 +635,6 @@ class _NirEdgeList extends ConsumerWidget {
             for (final edge in graph.edges) _NirEdgeRow(edge: edge),
           ],
         ),
-      ),
     );
   }
 }

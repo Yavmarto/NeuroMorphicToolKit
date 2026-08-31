@@ -92,7 +92,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Card(
+                    // Allowed: single-topic surface
+                    child: NmtkSurfaceCard(
+                      expandChild: true,
                       child: projects.when(
                         data: (list) => ListView.builder(
                           itemCount: list.length,
@@ -123,7 +125,9 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                   const SizedBox(width: 24),
                   Expanded(
                     flex: 2,
-                    child: Card(
+                    // Allowed: single-topic surface
+                    child: NmtkSurfaceCard(
+                      expandChild: true,
                       child: currentProject.when(
                         data: (project) {
                           if (project == null) {

@@ -45,7 +45,8 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
           children: [
             SizedBox(
               width: 320,
-              child: Card(
+              // Allowed: single-topic surface
+              child: NmtkSurfaceCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -187,7 +188,9 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
             ),
             const SizedBox(width: 24),
             Expanded(
-              child: Card(
+              // Allowed: single-topic surface
+              child: NmtkSurfaceCard(
+                expandChild: true,
                 child: exportState.isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : exportState.error != null

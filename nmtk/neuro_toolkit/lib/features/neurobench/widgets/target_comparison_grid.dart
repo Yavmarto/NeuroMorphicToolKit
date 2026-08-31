@@ -247,11 +247,9 @@ class _ComparisonTable extends StatelessWidget {
         final result = sorted[i];
         final rawTarget = result.targetId ?? result.id;
         final targetName = _kTargetPrettyNames[rawTarget] ?? rawTarget;
-        return Card(
+        return NmtkSurfaceCard(
           margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
+          child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -282,7 +280,6 @@ class _ComparisonTable extends StatelessWidget {
                   ),
               ],
             ),
-          ),
         );
       },
     );
