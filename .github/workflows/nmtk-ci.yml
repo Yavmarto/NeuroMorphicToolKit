@@ -5,13 +5,11 @@ on:
     branches: [main, dev]
     paths:
       - 'nmtk/neuro_toolkit/**'
-      - 'nmtk_ui_core/**'
       - '.github/workflows/nmtk-ci.yml'
   pull_request:
     branches: [main, dev]
     paths:
       - 'nmtk/neuro_toolkit/**'
-      - 'nmtk_ui_core/**'
       - '.github/workflows/nmtk-ci.yml'
 
 concurrency:
@@ -33,11 +31,6 @@ jobs:
           channel: ${{ matrix.flutter_channel }}
           cache: true
 
-      - name: Install dependencies (nmtk_ui_core)
-        run: |
-          cd nmtk_ui_core
-          flutter pub get
-
       - name: Install dependencies (neuro_toolkit)
         run: |
           cd nmtk/neuro_toolkit
@@ -45,22 +38,12 @@ jobs:
 
       - name: Format check
         run: |
-          dart format --output=none --set-exit-if-changed nmtk_ui_core nmtk/neuro_toolkit
-
-      - name: Analyze (nmtk_ui_core)
-        run: |
-          cd nmtk_ui_core
-          flutter analyze
+          dart format --output=none --set-exit-if-changed nmtk/neuro_toolkit
 
       - name: Analyze (neuro_toolkit)
         run: |
           cd nmtk/neuro_toolkit
           flutter analyze
-
-      - name: Run tests (nmtk_ui_core)
-        run: |
-          cd nmtk_ui_core
-          flutter test --coverage
 
       - name: Run tests (neuro_toolkit)
         run: |

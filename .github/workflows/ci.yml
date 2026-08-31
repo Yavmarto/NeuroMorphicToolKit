@@ -53,19 +53,16 @@ jobs:
               - 'Neurochip/neurochip/**'
             neurochip_frontend:
               - 'Neurochip/frontend/**'
-              - 'nmtk_ui_core/**'
             neurosense:
               - 'Neurosense/**'
               - '!Neurosense/frontend/**'
             neurosense_frontend:
               - 'Neurosense/frontend/**'
-              - 'nmtk_ui_core/**'
             neurohub:
               - 'Neurohub/**'
               - '!Neurohub/frontend/**'
             neurohub_frontend:
               - 'Neurohub/frontend/**'
-              - 'nmtk_ui_core/**'
             neurocnl:
               - 'neurocnl'
               - 'neurocnl/**'
