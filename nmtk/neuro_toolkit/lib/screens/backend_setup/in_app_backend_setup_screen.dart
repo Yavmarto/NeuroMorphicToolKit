@@ -1,4 +1,8 @@
-part of '../backend_setup.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/screens/backend_setup/backend_setup_screen.dart';
 
 class InAppBackendSetupScreen extends ConsumerWidget {
   const InAppBackendSetupScreen({

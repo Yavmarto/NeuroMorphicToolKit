@@ -1,7 +1,12 @@
-part of '../tool_view.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
-class _InlineServerConnectionControl extends ConsumerWidget {
-  const _InlineServerConnectionControl({
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+
+class InlineServerConnectionControl extends ConsumerWidget {
+  const InlineServerConnectionControl({
+    super.key,
     required this.onPressed,
     this.iconOnly = false,
   });
@@ -17,11 +22,11 @@ class _InlineServerConnectionControl extends ConsumerWidget {
     final effectiveConnection = controlApi == null
         ? const ServerConnectionState.disconnected()
         : connection.baseUri == controlApi.baseUri
-            ? connection
-            : ServerConnectionState(
-                phase: ServerConnectionPhase.checking,
-                baseUri: controlApi.baseUri,
-              );
+        ? connection
+        : ServerConnectionState(
+            phase: ServerConnectionPhase.checking,
+            baseUri: controlApi.baseUri,
+          );
     final hostLabel = controlApi?.baseUri.host ?? 'Connect server';
     final serverLabel = backendVersion != null ? 'v$backendVersion' : hostLabel;
     return Tooltip(
@@ -44,9 +49,9 @@ class _InlineServerConnectionControl extends ConsumerWidget {
   }
 
   NmtkTone _toneForPhase(ServerConnectionPhase phase) => switch (phase) {
-        ServerConnectionPhase.checking => NmtkTone.info,
-        ServerConnectionPhase.connected => NmtkTone.success,
-        ServerConnectionPhase.unstable => NmtkTone.warning,
-        ServerConnectionPhase.disconnected => NmtkTone.danger,
-      };
+    ServerConnectionPhase.checking => NmtkTone.info,
+    ServerConnectionPhase.connected => NmtkTone.success,
+    ServerConnectionPhase.unstable => NmtkTone.warning,
+    ServerConnectionPhase.disconnected => NmtkTone.danger,
+  };
 }

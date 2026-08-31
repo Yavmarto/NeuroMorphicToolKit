@@ -11,15 +11,20 @@ import 'package:flutter/foundation.dart'
         visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nmtk_ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 import 'package:neuro_toolkit/src/features/deployment/domain/deployment_state.dart';
 
-part 'backend_setup/backend_setup_screen.dart';
-part 'backend_setup/in_app_backend_setup_screen.dart';
+import 'package:neuro_toolkit/screens/backend_setup/backend_setup_controller_host.dart';
+import 'package:neuro_toolkit/screens/backend_setup/form_primitives.dart';
+import 'package:neuro_toolkit/screens/backend_setup/quick_connect_controller.dart';
+import 'package:neuro_toolkit/screens/backend_setup/system_health_controller.dart';
+
+export 'package:neuro_toolkit/screens/backend_setup/backend_setup_screen.dart';
+export 'package:neuro_toolkit/screens/backend_setup/in_app_backend_setup_screen.dart';
 
 class BackendSetupForm extends ConsumerStatefulWidget {
   const BackendSetupForm({
@@ -52,8 +57,10 @@ class BackendSetupForm extends ConsumerStatefulWidget {
     DeploymentActiveOperation operation,
     DateTime now,
   ) {
-    final elapsed =
-        now.difference(operation.startedAt).inSeconds.clamp(0, 1 << 31);
+    final elapsed = now
+        .difference(operation.startedAt)
+        .inSeconds
+        .clamp(0, 1 << 31);
     if (elapsed >= operation.timeoutSeconds) {
       return '${operation.automaticRecovery ? 'Automatic recovery · ' : ''}'
           '${operation.label} · timeout reached · stopping safely';
@@ -67,7 +74,8 @@ class BackendSetupForm extends ConsumerStatefulWidget {
   ConsumerState<BackendSetupForm> createState() => _BackendSetupFormState();
 }
 
-class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
+class _BackendSetupFormState extends ConsumerState<BackendSetupForm>
+    implements BackendSetupControllerHost {
   // Acceptable ephemeral form state: _targetType, _mode, _preflight, _isWorking,
   // and _completionQueued are form-scoped fields that gate buttons and control
   // UI branching within this widget only. They carry no cross-widget business
@@ -108,25 +116,37 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   bool _isWorking = false;
   AkidaRuntimeUpdateJob? _akidaRetryJob;
   bool _factoryReset = false;
-  SystemHealthReport? _systemHealth;
-  bool _healthCheckRunning = false;
-  bool _healthRepairRunning = false;
-  bool _healthCheckedAutomatically = false;
-  int _healthRecoveryStage = 0;
-  bool _preserveDataReinstallRequested = false;
-  String? _systemHealthError;
-  final TextEditingController _resetConfirmation = TextEditingController();
   String? _hostError;
   String? _submittedDeploymentJobId;
   bool _completionQueued = false;
-  final TextEditingController _quickConnectHost = TextEditingController();
-  bool _isQuickConnecting = false;
-  String? _quickConnectError;
   Timer? _heartbeatTimer;
   // Ticks once a second while a job is active, purely to keep the "updated
   // Xs ago" readout live. Deliberately NOT a setState() call — see
   // _buildStatusSection for why.
   final ValueNotifier<int> _tick = ValueNotifier<int>(0);
+
+  late final QuickConnectController _quickConnect = QuickConnectController(
+    this,
+    initialHostText: widget.initialHost?.trim() ?? '',
+  );
+  late final SystemHealthController _health = SystemHealthController(this);
+
+  @override
+  String? connectedHealthHost;
+
+  @override
+  void rebuild(VoidCallback fn) => setState(fn);
+
+  @override
+  Future<String?> Function(String input)? get onQuickConnect =>
+      widget.onQuickConnect;
+
+  @override
+  void Function()? get onQuickConnectSuccess => widget.onQuickConnectSuccess;
+
+  @override
+  Future<void> Function(DeploymentTarget target)? get onDeploymentReady =>
+      widget.onDeploymentReady;
 
   bool get _canRunLocally =>
       widget.localDeploymentAvailable ??
@@ -139,10 +159,11 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   void initState() {
     super.initState();
     final initialHost = widget.initialHost?.trim() ?? '';
-    _targetType =
-        initialHost.isNotEmpty || !_canRunLocally ? 'remote_host' : 'local';
+    connectedHealthHost = canonicalIpv4(initialHost);
+    _targetType = initialHost.isNotEmpty || !_canRunLocally
+        ? 'remote_host'
+        : 'local';
     _mode = 'docker';
-    _quickConnectHost.text = initialHost;
     _displayName = TextEditingController(
       text: _targetType == 'remote_host' ? 'Remote backend' : 'This machine',
     );
@@ -164,37 +185,19 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     ]) {
       controller.addListener(_onConfigurationFieldChanged);
     }
-    _resetConfirmation.addListener(_onResetConfirmationChanged);
     ref.listenManual(backendDeploymentProvider, (previous, next) {
       final state = next.value;
       _syncHeartbeat(state?.activeJob);
       _completeSubmittedDeployment(state);
-      if (!_healthCheckedAutomatically && state?.targets.isNotEmpty == true) {
-        _healthCheckedAutomatically = true;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) unawaited(_checkSystemHealth());
-        });
-      }
-      if (_preserveDataReinstallRequested &&
-          state?.activeJob?.stage == DeploymentPhase.failed.wireName) {
-        _preserveDataReinstallRequested = false;
-        if (mounted) {
-          setState(() => _healthRecoveryStage = 2);
-        }
-      } else if (_preserveDataReinstallRequested &&
-          state?.activeJob?.stage == DeploymentPhase.completed.wireName) {
-        _preserveDataReinstallRequested = false;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) unawaited(_checkSystemHealth());
-        });
-      }
+      _health.handleDeploymentStateChanged(state);
     }, fireImmediately: true);
   }
 
   void _completeSubmittedDeployment(DeploymentState? state) {
     if (!mounted) return;
     final activeJob = state?.activeJob;
-    final submittedJobCompleted = activeJob?.id == _submittedDeploymentJobId &&
+    final submittedJobCompleted =
+        activeJob?.id == _submittedDeploymentJobId &&
         activeJob?.stage == DeploymentPhase.completed.wireName;
     if (!submittedJobCompleted || state?.isReady != true || _completionQueued) {
       return;
@@ -224,12 +227,6 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       if (_preflight != null || _preflightSnapshot != null) {
         setState(_clearPreflight);
       }
-    });
-  }
-
-  void _onResetConfirmationChanged() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() {});
     });
   }
 
@@ -273,9 +270,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     _rootPasswordFocus.dispose();
     _rootPrivateKeyFocus.dispose();
     _rootPrivateKey.dispose();
-    _quickConnectHost.dispose();
-    _resetConfirmation.removeListener(_onResetConfirmationChanged);
-    _resetConfirmation.dispose();
+    _quickConnect.dispose();
+    _health.dispose();
     super.dispose();
   }
 
@@ -291,11 +287,12 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildUpdateBanner(tokens),
-        _buildQuickConnectSection(tokens),
+        _quickConnect.buildSection(tokens),
         if (deploymentState?.targets.isNotEmpty == true ||
-            _systemHealth != null) ...[
+            connectedHealthHost != null ||
+            _health.systemHealth != null) ...[
           SizedBox(height: tokens.sectionGap),
-          _buildSystemHealthCard(tokens),
+          _health.buildCard(tokens),
         ],
         SizedBox(height: tokens.sectionGap),
         _buildNewServerSection(tokens),
@@ -347,21 +344,21 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   }
 
   Map<String, String> _currentCredentialSnapshot() => {
-        'targetType': _targetType,
-        'mode': _mode,
-        'displayName': _displayName.text,
-        'host': _host.text,
-        'username': _username.text,
-        'sshPort': _sshPort.text,
-        'authMethod': _authMethod,
-        'sshPassword': _sshPassword.text,
-        'sshPrivateKey': _sshPrivateKey.text,
-        'backendPort': _backendPort.text,
-        'namespace': _namespace.text,
-        'context': _context.text,
-        'apiServer': _apiServer.text,
-        'kubeconfig': _kubeconfig.text,
-      };
+    'targetType': _targetType,
+    'mode': _mode,
+    'displayName': _displayName.text,
+    'host': _host.text,
+    'username': _username.text,
+    'sshPort': _sshPort.text,
+    'authMethod': _authMethod,
+    'sshPassword': _sshPassword.text,
+    'sshPrivateKey': _sshPrivateKey.text,
+    'backendPort': _backendPort.text,
+    'namespace': _namespace.text,
+    'context': _context.text,
+    'apiServer': _apiServer.text,
+    'kubeconfig': _kubeconfig.text,
+  };
 
   bool get _hasFreshPreflight =>
       _preflight != null &&
@@ -424,345 +421,6 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     return mostRecent;
   }
 
-  Widget _buildQuickConnectSection(NmtkShellTokens tokens) {
-    final connectButton = ZetaButton(
-      key: const Key('backend-setup-quick-connect'),
-      onPressed: _isQuickConnecting ? null : _handleQuickConnect,
-      label: _isQuickConnecting ? 'Connecting…' : 'Connect',
-    );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Connect to server'),
-        SizedBox(height: tokens.compactGap),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth >= 560) {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(child: _field(_quickConnectHost, 'Server IP')),
-                  SizedBox(width: tokens.compactGap),
-                  connectButton,
-                ],
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _field(_quickConnectHost, 'Server IP'),
-                SizedBox(height: tokens.compactGap),
-                connectButton,
-              ],
-            );
-          },
-        ),
-        if (_quickConnectError != null) ...[
-          SizedBox(height: tokens.compactGap),
-          NmtkStatusBanner(
-            key: const Key('backend-setup-quick-connect-error'),
-            title: 'Could not connect',
-            content: Text(_quickConnectError!),
-            tone: NmtkTone.danger,
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildSystemHealthCard(NmtkShellTokens tokens) {
-    final report = _systemHealth;
-    final isFailed = report?.overall == SystemHealthStatus.failed;
-    final isDegraded = report?.overall == SystemHealthStatus.degraded;
-    final title = _healthCheckRunning
-        ? 'Checking the whole system…'
-        : report == null
-            ? 'System health has not been checked'
-            : isFailed
-                ? 'System repair is needed'
-                : isDegraded
-                    ? 'System is ready with limitations'
-                    : 'Everything configured is working';
-    final tone = isFailed
-        ? NmtkTone.danger
-        : isDegraded
-            ? NmtkTone.warning
-            : NmtkTone.success;
-    return NmtkSurfaceCard(
-      key: const Key('backend-system-health-card'),
-      child: Padding(
-        padding: EdgeInsets.all(tokens.sectionGap),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            NmtkStatusBanner(
-              title: title,
-              content: Text(
-                report == null
-                    ? 'Run one check for the backend, storage, Jupyter, '
-                        'snnTorch, launcher control, and configured hardware.'
-                    : 'Checked ${_healthTimestamp(report.checkedAt)}.',
-              ),
-              tone: tone,
-            ),
-            if (_systemHealthError != null) ...[
-              SizedBox(height: tokens.compactGap),
-              Text(_systemHealthError!),
-            ],
-            if (report != null) ...[
-              SizedBox(height: tokens.sectionGap),
-              for (final check in report.checks) ...[
-                _buildHealthCheckRow(check, tokens),
-                SizedBox(height: tokens.compactGap),
-              ],
-            ],
-            Wrap(
-              spacing: tokens.compactGap,
-              runSpacing: tokens.compactGap,
-              children: [
-                ZetaButton.outline(
-                  key: const Key('backend-system-health-recheck'),
-                  onPressed: _healthCheckRunning || _healthRepairRunning
-                      ? null
-                      : _checkSystemHealth,
-                  label: _healthCheckRunning ? 'Checking…' : 'Recheck',
-                ),
-                if (isFailed)
-                  ZetaButton(
-                    key: const Key('backend-system-health-repair'),
-                    onPressed: _healthCheckRunning || _healthRepairRunning
-                        ? null
-                        : _repairSystemHealth,
-                    label: _healthRepairRunning ? 'Repairing…' : 'Repair',
-                  ),
-                if (_healthRecoveryStage >= 1)
-                  ZetaButton.outline(
-                    key: const Key('backend-system-health-reinstall'),
-                    onPressed: _healthRepairRunning
-                        ? null
-                        : _reinstallSystemKeepingData,
-                    label: 'Reinstall and keep data',
-                  ),
-              ],
-            ),
-            if (_healthRecoveryStage >= 2) ...[
-              SizedBox(height: tokens.sectionGap),
-              const Text(
-                'The safe repair and data-preserving reinstall both failed. '
-                'Factory reset permanently erases NMTK notebooks, workspaces, '
-                'databases, and container volumes.',
-              ),
-              SizedBox(height: tokens.compactGap),
-              KeyedSubtree(
-                key: const Key('backend-system-health-reset-confirmation'),
-                child: _field(
-                  _resetConfirmation,
-                  'Type RESET to unlock factory reset',
-                ),
-              ),
-              SizedBox(height: tokens.compactGap),
-              ZetaButton(
-                key: const Key('backend-system-health-factory-reset'),
-                onPressed: _resetConfirmation.text.trim() == 'RESET' &&
-                        !_healthRepairRunning
-                    ? _factoryResetSystem
-                    : null,
-                label: 'Erase and reinstall',
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHealthCheckRow(
-    SystemHealthCheck check,
-    NmtkShellTokens tokens,
-  ) {
-    final icon = switch (check.status) {
-      SystemHealthStatus.ok => ZetaIcons.check_circle,
-      SystemHealthStatus.degraded => ZetaIcons.warning_outline,
-      SystemHealthStatus.failed => ZetaIcons.error,
-      SystemHealthStatus.notConfigured => ZetaIcons.info,
-    };
-    final color = switch (check.status) {
-      SystemHealthStatus.ok => tokens.healthyColor,
-      SystemHealthStatus.degraded => tokens.warningColor,
-      SystemHealthStatus.failed => tokens.errorColor,
-      SystemHealthStatus.notConfigured => tokens.metadataForeground,
-    };
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: color, semanticLabel: check.status.name),
-        SizedBox(width: tokens.compactGap),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(check.label),
-              Text(check.detail),
-              if (check.recovery.isNotEmpty) Text(check.recovery),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _healthTimestamp(DateTime timestamp) {
-    final local = timestamp.toLocal();
-    return '${local.hour.toString().padLeft(2, '0')}:'
-        '${local.minute.toString().padLeft(2, '0')}:'
-        '${local.second.toString().padLeft(2, '0')}';
-  }
-
-  Future<void> _checkSystemHealth() async {
-    if (_healthCheckRunning) return;
-    setState(() {
-      _healthCheckRunning = true;
-      _systemHealthError = null;
-    });
-    try {
-      final report = await ref
-          .read(backendDeploymentProvider.notifier)
-          .diagnoseLatestTarget();
-      if (!mounted) return;
-      setState(() {
-        _systemHealth = report;
-        if (report?.overall == SystemHealthStatus.ok) {
-          _healthRecoveryStage = 0;
-          _resetConfirmation.clear();
-        }
-      });
-    } on Object {
-      if (!mounted) return;
-      setState(() {
-        _systemHealthError =
-            'The saved server could not be checked. Repair will use its saved '
-            'deployment credential and will preserve all data.';
-      });
-    } finally {
-      if (mounted) setState(() => _healthCheckRunning = false);
-    }
-  }
-
-  Future<void> _repairSystemHealth() async {
-    setState(() {
-      _healthRepairRunning = true;
-      _systemHealthError = null;
-    });
-    try {
-      final report = await ref
-          .read(backendDeploymentProvider.notifier)
-          .repairLatestTarget();
-      if (!mounted) return;
-      setState(() {
-        _systemHealth = report;
-        _healthRecoveryStage = report?.overall == SystemHealthStatus.ok ? 0 : 1;
-      });
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _healthRecoveryStage = 1;
-        _systemHealthError = _displaySetupError(error);
-      });
-    } finally {
-      if (mounted) setState(() => _healthRepairRunning = false);
-    }
-  }
-
-  Future<void> _reinstallSystemKeepingData() async {
-    setState(() {
-      _healthRepairRunning = true;
-      _systemHealthError = null;
-      _preserveDataReinstallRequested = true;
-    });
-    try {
-      await ref
-          .read(backendDeploymentProvider.notifier)
-          .reinstallLatestTarget();
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _preserveDataReinstallRequested = false;
-        _healthRecoveryStage = 2;
-        _systemHealthError = _displaySetupError(error);
-      });
-    } finally {
-      if (mounted) setState(() => _healthRepairRunning = false);
-    }
-  }
-
-  Future<void> _factoryResetSystem() async {
-    if (_resetConfirmation.text.trim() != 'RESET') return;
-    setState(() {
-      _healthRepairRunning = true;
-      _systemHealthError = null;
-    });
-    try {
-      await ref
-          .read(backendDeploymentProvider.notifier)
-          .reinstallLatestTarget(factoryReset: true);
-      if (mounted) _resetConfirmation.clear();
-    } on Object catch (error) {
-      if (!mounted) return;
-      setState(() => _systemHealthError = _displaySetupError(error));
-    } finally {
-      if (mounted) setState(() => _healthRepairRunning = false);
-    }
-  }
-
-  Future<void> _handleQuickConnect() async {
-    final host = _canonicalIpv4(_quickConnectHost.text);
-    if (host == null) {
-      setState(() {
-        _quickConnectError = 'Enter an IPv4 address, for example 192.168.2.34.';
-      });
-      return;
-    }
-    setState(() {
-      _isQuickConnecting = true;
-      _quickConnectError = null;
-    });
-    try {
-      final quickConnect = widget.onQuickConnect;
-      String? error;
-      if (quickConnect != null) {
-        error = await quickConnect(host);
-        if (mounted && error == null) {
-          widget.onQuickConnectSuccess?.call();
-        }
-      } else {
-        final target = DeploymentTarget(
-          id: 'quick-connect-$host',
-          displayName: host,
-          targetType: 'remote_host',
-          mode: 'docker',
-          authMode: 'none',
-          backendPort: 9000,
-          host: host,
-        );
-        await widget.onDeploymentReady?.call(target);
-      }
-      if (mounted && error != null) {
-        setState(() => _quickConnectError = error);
-      }
-    } on Object catch (error) {
-      debugPrint('Quick connect failed: $error');
-      if (mounted) {
-        setState(() {
-          _quickConnectError =
-              'The launcher could not be checked. Confirm the address and '
-              'try again.';
-        });
-      }
-    } finally {
-      if (mounted) setState(() => _isQuickConnecting = false);
-    }
-  }
-
   Widget _buildNewServerSection(NmtkShellTokens tokens) {
     return NmtkSurfaceCard(
       child: Padding(
@@ -806,8 +464,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final modes = _targetType == 'kubernetes_cluster'
         ? const <String>['kubernetes']
         : _targetType == 'remote_host'
-            ? const <String>['docker', 'podman']
-            : const <String>['standalone', 'docker', 'podman'];
+        ? const <String>['docker', 'podman']
+        : const <String>['standalone', 'docker', 'podman'];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -818,7 +476,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           runSpacing: tokens.compactGap,
           children: [
             for (final mode in modes)
-              _choice(_modeLabel(mode), mode, isMode: true),
+              _choice(modeLabel(mode), mode, isMode: true),
           ],
         ),
       ],
@@ -831,12 +489,13 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       children: [
         const Text('Required details'),
         SizedBox(height: tokens.compactGap),
-        if (_targetType != 'remote_host') _field(_displayName, 'Display name'),
+        if (_targetType != 'remote_host')
+          buildTextField(_displayName, 'Display name'),
         if (_targetType == 'remote_host') ...[
           SizedBox(height: tokens.compactGap),
-          _field(_host, 'Server IP', errorText: _hostError),
+          buildTextField(_host, 'Server IP', errorText: _hostError),
           SizedBox(height: tokens.compactGap),
-          _field(_rootUsername, 'Admin user'),
+          buildTextField(_rootUsername, 'Admin user'),
           SizedBox(height: tokens.sectionGap),
           const Text('Administrator authentication'),
           SizedBox(height: tokens.compactGap),
@@ -850,7 +509,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           ),
           SizedBox(height: tokens.compactGap),
           if (_rootAuthMethod == 'ssh_password')
-            _field(
+            buildTextField(
               _rootPassword,
               'Admin password',
               focusNode: _rootPasswordFocus,
@@ -873,7 +532,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               ),
             )
           else
-            _multilineField(
+            buildMultilineField(
               _rootPrivateKey,
               'Admin SSH key',
               focusNode: _rootPrivateKeyFocus,
@@ -881,7 +540,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           SizedBox(height: tokens.sectionGap),
           ZetaListItem.toggle(
             primaryText: 'Factory reset server data',
-            secondaryText: 'Optional and destructive. Normal setup removes '
+            secondaryText:
+                'Optional and destructive. Normal setup removes '
                 'old NMTK containers across Docker and Podman while preserving '
                 'notebooks, databases, and workspace data.',
             value: _factoryReset,
@@ -909,11 +569,11 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                 : 'Kubeconfig: $_kubeconfigName',
           ),
           SizedBox(height: tokens.compactGap),
-          _field(_context, 'Kube context'),
+          buildTextField(_context, 'Kube context'),
           SizedBox(height: tokens.compactGap),
-          _field(_namespace, 'Namespace'),
+          buildTextField(_namespace, 'Namespace'),
           SizedBox(height: tokens.compactGap),
-          _field(_apiServer, 'API server override'),
+          buildTextField(_apiServer, 'API server override'),
         ],
         if (_targetType == 'local') ...[
           SizedBox(height: tokens.sectionGap),
@@ -933,7 +593,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
 
   Widget _adminAuthChoice(String label, String value) {
     return ZetaRadio<String>(
-      label: _radioLabel(label),
+      label: buildRadioLabel(label),
       value: value,
       groupValue: _rootAuthMethod,
       onChanged: (selected) {
@@ -992,8 +652,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
               isFailed
                   ? 'Validation failed'
                   : hasWarnings
-                      ? 'Ready to deploy with optional capability warnings'
-                      : 'Ready to deploy',
+                  ? 'Ready to deploy with optional capability warnings'
+                  : 'Ready to deploy',
             ),
             SizedBox(height: tokens.compactGap),
             Text(preflight.message),
@@ -1037,10 +697,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final isSuccess = job.stage == 'completed';
     final isJupyterDegraded =
         job.error.contains('degraded optional capability:') &&
-            job.error.contains('Jupyter');
+        job.error.contains('Jupyter');
     final isAkidaDegraded =
         job.error.contains('degraded optional capability:') &&
-            job.error.toLowerCase().contains('akida');
+        job.error.toLowerCase().contains('akida');
     final isDegraded = isJupyterDegraded || isAkidaDegraded;
     // Phase updates (_emit server-side) copy their message into stageLabel,
     // so the last log entry duplicates the headline — but raw streamed
@@ -1068,14 +728,14 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final headline = isStalled
         ? 'Server setup stopped responding at ${job.percent.round()}%'
         : !isTerminal
-            ? '${job.percent.round()}% — ${job.stageLabel}'
-            : isSuccess && isAkidaDegraded
-                ? 'Akida runtime needs recovery'
-                : isSuccess
-                    ? 'Deployed'
-                    : isJupyterDegraded
-                        ? 'Notebook capability needs recovery'
-                        : job.failureDetails?.summary ?? 'Server setup failed';
+        ? '${job.percent.round()}% — ${job.stageLabel}'
+        : isSuccess && isAkidaDegraded
+        ? 'Akida runtime needs recovery'
+        : isSuccess
+        ? 'Deployed'
+        : isJupyterDegraded
+        ? 'Notebook capability needs recovery'
+        : job.failureDetails?.summary ?? 'Server setup failed';
     final failure = job.failureDetails;
 
     return NmtkSurfaceCard(
@@ -1090,19 +750,19 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                   !isTerminal && !isStalled
                       ? ZetaIcons.sync
                       : isSuccess && isDegraded
-                          ? ZetaIcons.warning_outline
-                          : isSuccess
-                              ? ZetaIcons.check_circle
-                              : ZetaIcons.error,
+                      ? ZetaIcons.warning_outline
+                      : isSuccess
+                      ? ZetaIcons.check_circle
+                      : ZetaIcons.error,
                   color: isStalled
                       ? tokens.errorColor
                       : isTerminal
-                          ? (isSuccess
-                              ? (isDegraded
+                      ? (isSuccess
+                            ? (isDegraded
                                   ? tokens.warningColor
                                   : tokens.healthyColor)
-                              : tokens.errorColor)
-                          : null,
+                            : tokens.errorColor)
+                      : null,
                 ),
                 const SizedBox(width: 8),
                 Expanded(child: Text(headline)),
@@ -1152,9 +812,10 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             ],
             if (history.isNotEmpty) ...[
               SizedBox(height: tokens.compactGap),
-              for (final line in history.length > 3
-                  ? history.sublist(history.length - 3)
-                  : history)
+              for (final line
+                  in history.length > 3
+                      ? history.sublist(history.length - 3)
+                      : history)
                 Text(line),
             ],
             if (failure != null) ...[
@@ -1165,8 +826,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                 failure.existingConnectionReachable == true
                     ? 'The reinstall failed, but the existing server is still connected.'
                     : failure.existingConnectionReachable == false
-                        ? 'The existing server is not reachable from this device.'
-                        : 'Existing connection health could not be confirmed.',
+                    ? 'The existing server is not reachable from this device.'
+                    : 'Existing connection health could not be confirmed.',
               ),
             ],
             if (bundleIdentity != null) ...[
@@ -1201,8 +862,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                 if (failure?.code == 'host_key_mismatch')
                   ZetaButton.outline(
                     key: Key('deployment-trust-host-key-${job.id}'),
-                    onPressed:
-                        _isWorking ? null : () => _trustHostKeyAndRetry(),
+                    onPressed: _isWorking
+                        ? null
+                        : () => _trustHostKeyAndRetry(),
                     label: 'Trust this server\'s identity and retry',
                   ),
               ],
@@ -1230,8 +892,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       builder: (dialogContext) => Consumer(
         builder: (context, ref, child) {
           final state = ref.watch(backendDeploymentProvider).value;
-          final current =
-              state?.activeJob?.id == job.id ? state!.activeJob! : job;
+          final current = state?.activeJob?.id == job.id
+              ? state!.activeJob!
+              : job;
           final enteredHost = _host.text.trim();
           final targetHost = RegExp(
             r'^remote-(\d+)-(\d+)-(\d+)-(\d+)$',
@@ -1239,13 +902,13 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
           final host = enteredHost.isNotEmpty
               ? enteredHost
               : targetHost == null
-                  ? ''
-                  : [
-                      targetHost.group(1),
-                      targetHost.group(2),
-                      targetHost.group(3),
-                      targetHost.group(4),
-                    ].join('.');
+              ? ''
+              : [
+                  targetHost.group(1),
+                  targetHost.group(2),
+                  targetHost.group(3),
+                  targetHost.group(4),
+                ].join('.');
           return NmtkLogViewerDialog(
             title: host.isEmpty ? 'Raw SSH output' : 'Raw SSH output — $host',
             lines: current.terminalOutput,
@@ -1303,7 +966,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       // A stalled attempt and a failed one need the same thing: start over on
       // the same host. Without this the failure text asked the user to "Select
       // Retry" while no such control existed.
-      final canRetry = isStalled ||
+      final canRetry =
+          isStalled ||
           (job != null &&
               job.stage == DeploymentPhase.failed.wireName &&
               !job.error.startsWith('degraded optional capability'));
@@ -1317,8 +981,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
             label: _isWorking
                 ? 'Preparing server…'
                 : isActive
-                    ? 'Setting up server…'
-                    : 'Set up and connect',
+                ? 'Setting up server…'
+                : 'Set up and connect',
           ),
           const Text(
             'The administrator credential is used once and is never saved. '
@@ -1362,12 +1026,12 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final canDeploy = !_isWorking && _hasFreshSuccessfulPreflight;
     final validationGuidance = _hasFreshSuccessfulPreflight
         ? 'Validation passed for the current configuration. Deploying will '
-            'install or update the backend on the selected target.'
+              'install or update the backend on the selected target.'
         : _hasFreshPreflight
-            ? 'Fix the validation findings above, then validate again to '
-                'unlock deployment.'
-            : 'Validate the current configuration to unlock deployment. '
-                'Validation does not make any server changes.';
+        ? 'Fix the validation findings above, then validate again to '
+              'unlock deployment.'
+        : 'Validate the current configuration to unlock deployment. '
+              'Validation does not make any server changes.';
     return Wrap(
       spacing: 12,
       runSpacing: 12,
@@ -1415,7 +1079,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
   Widget _choice(String label, String value, {bool isMode = false}) {
     final selected = isMode ? _mode == value : _targetType == value;
     return ZetaRadio<String>(
-      label: _radioLabel(label),
+      label: buildRadioLabel(label),
       value: value,
       groupValue: selected ? value : null,
       onChanged: (_) {
@@ -1443,48 +1107,6 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     );
   }
 
-  Widget _field(
-    TextEditingController controller,
-    String label, {
-    bool obscureText = false,
-    Widget? suffix,
-    String? errorText,
-    String Function(String value)? valueSanitizer,
-    FocusNode? focusNode,
-  }) {
-    return NmtkTextInput(
-      controller: controller,
-      label: label,
-      obscureText: obscureText,
-      suffix: suffix,
-      errorText: errorText,
-      valueSanitizer: valueSanitizer,
-      focusNode: focusNode,
-    );
-  }
-
-  Widget _multilineField(
-    TextEditingController controller,
-    String label, {
-    FocusNode? focusNode,
-  }) {
-    return NmtkCodeTextArea(
-      controller: controller,
-      focusNode: focusNode,
-      minLines: 4,
-      maxLines: 8,
-      label: label,
-    );
-  }
-
-  Widget _radioLabel(String label) => Tooltip(
-        message: label,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 210),
-          child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
-        ),
-      );
-
   Future<void> _pickKubeconfig() async {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
@@ -1493,7 +1115,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     );
     if (result == null || result.files.isEmpty) return;
     final selected = result.files.single;
-    final bytes = selected.bytes ??
+    final bytes =
+        selected.bytes ??
         (selected.path == null
             ? null
             : await File(selected.path!).readAsBytes());
@@ -1512,7 +1135,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     // Captured before the await so it reflects exactly what was validated,
     // not whatever the fields happen to hold once the request resolves.
     final snapshot = _currentCredentialSnapshot();
-    final result = await ref.read(backendDeploymentProvider.notifier).preflight(
+    final result = await ref
+        .read(backendDeploymentProvider.notifier)
+        .preflight(
           targetType: _targetType,
           mode: _mode == 'podman' ? 'docker' : _mode,
           displayName: _displayName.text,
@@ -1550,7 +1175,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       // as an unrelated, stale card.
       _clearPreflight();
     });
-    final job = await ref.read(backendDeploymentProvider.notifier).deploy(
+    final job = await ref
+        .read(backendDeploymentProvider.notifier)
+        .deploy(
           targetType: _targetType,
           mode: _mode == 'podman' ? 'docker' : _mode,
           displayName: _displayName.text,
@@ -1611,8 +1238,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       AkidaPairedHostState.preflightFailed ||
       AkidaPairedHostState.provisionFailed ||
       AkidaPairedHostState.blocked ||
-      AkidaPairedHostState.error =>
-        true,
+      AkidaPairedHostState.error => true,
       _ => false,
     };
   }
@@ -1622,7 +1248,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final akidaHost = ref.watch(selectedAkidaRuntimeStatusProvider).value;
     final akidaJob = _akidaRetryJob ?? akidaHost?.lastRuntimeUpdateJob;
     final akidaDegraded = _akidaRuntimeDegraded(akidaHost);
-    final akidaNeedsAttention = akidaHost != null &&
+    final akidaNeedsAttention =
+        akidaHost != null &&
         (akidaHost.hasRuntimeUpdate ||
             akidaJob?.isFailed == true ||
             akidaDegraded);
@@ -1642,11 +1269,11 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     final title = update != null
         ? 'Backend update available — ${update.version}'
         : isAkidaRunning
-            ? 'Updating selected Akida runtime'
-            : akidaDegradedOnly
-                ? 'Selected Akida runtime needs attention — '
-                    '${akidaHost!.state.label}'
-                : 'Selected Akida runtime needs an update';
+        ? 'Updating selected Akida runtime'
+        : akidaDegradedOnly
+        ? 'Selected Akida runtime needs attention — '
+              '${akidaHost!.state.label}'
+        : 'Selected Akida runtime needs an update';
     final akidaReason = akidaHost?.lastReadinessMessage.trim() ?? '';
     return Padding(
       padding: EdgeInsets.only(bottom: tokens.sectionGap),
@@ -1662,18 +1289,18 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
                 content: Text(
                   update != null
                       ? 'Your workspaces and notebooks are kept. The backend '
-                          'restarts, then the selected Akida runtime is updated '
-                          'automatically when one is paired.'
+                            'restarts, then the selected Akida runtime is updated '
+                            'automatically when one is paired.'
                       : akidaDegradedOnly
-                          ? '${akidaReason.isEmpty ? 'The host reported no '
-                                  'usable Akida runtime.' : akidaReason} '
-                              'Reinstalling the runtime on '
-                              '${akidaHost!.displayName} is the first thing to '
-                              'try. Backend containers, workspaces, and '
-                              'notebooks are not recreated.'
-                          : 'Only ${akidaHost?.displayName ?? 'the selected Akida host'} '
-                              'will be updated. Backend containers, workspaces, and '
-                              'notebooks are not recreated.',
+                      ? '${akidaReason.isEmpty ? 'The host reported no '
+                                      'usable Akida runtime.' : akidaReason} '
+                            'Reinstalling the runtime on '
+                            '${akidaHost!.displayName} is the first thing to '
+                            'try. Backend containers, workspaces, and '
+                            'notebooks are not recreated.'
+                      : 'Only ${akidaHost?.displayName ?? 'the selected Akida host'} '
+                            'will be updated. Backend containers, workspaces, and '
+                            'notebooks are not recreated.',
                 ),
                 tone: akidaJob?.isFailed == true || akidaDegradedOnly
                     ? NmtkTone.warning
@@ -1751,7 +1378,7 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
     } on Object catch (error) {
       if (mounted) {
         setState(() {
-          _setupError = _displaySetupError(error);
+          _setupError = displaySetupError(error);
         });
       }
     } finally {
@@ -1761,10 +1388,11 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
 
   bool _validateRemoteHost() {
     if (_targetType != 'remote_host') return true;
-    final valid = _canonicalIpv4(_host.text) != null;
+    final valid = canonicalIpv4(_host.text) != null;
     setState(() {
-      _hostError =
-          valid ? null : 'Enter an IPv4 address, for example 192.168.2.34.';
+      _hostError = valid
+          ? null
+          : 'Enter an IPv4 address, for example 192.168.2.34.';
     });
     return valid;
   }
@@ -1780,7 +1408,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         : _rootPrivateKey.text.trim().isNotEmpty;
     if (!hasCredential) {
       setState(() {
-        _setupError = 'Enter the administrator password again to retry. '
+        _setupError =
+            'Enter the administrator password again to retry. '
             'It is used once and never saved.';
       });
       (_rootAuthMethod == 'ssh_password'
@@ -1810,7 +1439,8 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
         context: context,
         builder: (dialogContext) => ZetaDialog(
           title: 'Factory reset server data?',
-          message: 'This permanently removes NMTK databases, notebooks, '
+          message:
+              'This permanently removes NMTK databases, notebooks, '
               'workspace state, and container volumes on ${_host.text.trim()}.',
           primaryButtonLabel: 'Erase and reinstall',
           onPrimaryButtonPressed: () => Navigator.pop(dialogContext, true),
@@ -1832,10 +1462,12 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       final request = RemoteServerSetupRequest(
         host: _host.text,
         adminUsername: _rootUsername.text,
-        adminPassword:
-            _rootAuthMethod == 'ssh_password' ? _rootPassword.text : '',
-        adminPrivateKey:
-            _rootAuthMethod == 'ssh_key' ? _rootPrivateKey.text : '',
+        adminPassword: _rootAuthMethod == 'ssh_password'
+            ? _rootPassword.text
+            : '',
+        adminPrivateKey: _rootAuthMethod == 'ssh_key'
+            ? _rootPrivateKey.text
+            : '',
         containerEngine: _mode,
         reinstallMode: factoryReset
             ? RemoteReinstallMode.factoryReset
@@ -1852,35 +1484,9 @@ class _BackendSetupFormState extends ConsumerState<BackendSetupForm> {
       });
     } on Object catch (error) {
       if (!mounted) return;
-      setState(() => _setupError = _displaySetupError(error));
+      setState(() => _setupError = displaySetupError(error));
     } finally {
       if (mounted) setState(() => _isWorking = false);
     }
-  }
-
-  String _displaySetupError(Object error) {
-    return error
-        .toString()
-        .replaceFirst(RegExp(r'^(Bad state|FormatException):\s*'), '');
-  }
-
-  String? _canonicalIpv4(String value) {
-    final parts = value.trim().split('.');
-    if (parts.length != 4) return null;
-    final normalized = <String>[];
-    for (final part in parts) {
-      if (!RegExp(r'^\d{1,3}$').hasMatch(part)) return null;
-      final number = int.tryParse(part);
-      if (number == null || number > 255) return null;
-      normalized.add(number.toString());
-    }
-    return normalized.join('.');
-  }
-
-  String _modeLabel(String mode) {
-    if (mode == 'docker') return 'Docker';
-    if (mode == 'podman') return 'Podman';
-    if (mode == 'kubernetes') return 'Kubernetes';
-    return 'Standalone';
   }
 }
