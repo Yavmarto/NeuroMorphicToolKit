@@ -412,7 +412,7 @@ class _NotebookStepState extends ConsumerState<NotebookStep> {
                   child: Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                       color: Zeta.of(context).colors.mainNegative,
                     ),
                   ),

@@ -134,7 +134,7 @@ class _CanvasHandwritingOverlayState extends State<CanvasHandwritingOverlay> {
                               visualDensity: VisualDensity.compact,
                               label: Text(
                                 name,
-                                style: const TextStyle(fontSize: 11),
+                                style: Zeta.of(context).textStyles.bodyXSmall.copyWith(fontSize: 11),
                               ),
                               onPressed: () => widget.onSubmitted(name),
                             ),

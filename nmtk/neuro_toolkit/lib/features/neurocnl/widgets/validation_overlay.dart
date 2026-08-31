@@ -413,7 +413,7 @@ class _ValidationBadge extends StatelessWidget {
               const SizedBox(width: 6),
               Text(
                 label,
-                style: TextStyle(
+                style: Zeta.of(context).textStyles.labelMedium.copyWith(
                   color: fgColor,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,

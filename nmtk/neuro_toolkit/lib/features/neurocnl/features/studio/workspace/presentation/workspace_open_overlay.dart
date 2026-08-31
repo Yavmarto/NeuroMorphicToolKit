@@ -58,18 +58,16 @@ class _WorkspaceOpenOverlayState extends State<WorkspaceOpenOverlay>
                 children: [
                   Text(
                     'Opening workspace',
-                    style: TextStyle(
+                    style: Zeta.of(context).textStyles.titleMedium.copyWith(
                       color: tokens.studioPalette.accentForeground,
-                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     'Obsidian Flow is restoring files, cached previews, and panel state.',
-                    style: TextStyle(
+                    style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                       color: tokens.metadataForeground,
-                      fontSize: 12,
                       height: 1.4,
                     ),
                   ),

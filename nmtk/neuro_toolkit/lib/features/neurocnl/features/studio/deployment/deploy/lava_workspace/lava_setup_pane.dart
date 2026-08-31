@@ -80,9 +80,9 @@ class LavaSetupPane extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Weight bit-width',
-                      style: TextStyle(
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         color: NmtkNeurocnlTokens.textSecondary,
                         fontSize: 11,
                       ),
@@ -112,9 +112,9 @@ class LavaSetupPane extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Run config',
-                      style: TextStyle(
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         color: NmtkNeurocnlTokens.textSecondary,
                         fontSize: 11,
                       ),

@@ -84,9 +84,8 @@ class CodegenSetupPane extends ConsumerWidget {
           ),
           error: (error, _) => Text(
             'Preview failed: $error',
-            style: TextStyle(
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
               color: NmtkShellTokens.of(context).errorColor,
-              fontSize: 12,
             ),
           ),
         ),

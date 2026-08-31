@@ -53,10 +53,9 @@ class RunningTasksIndicator extends ConsumerWidget {
               const SizedBox(width: 6),
               Text(
                 '${executingTasks.length}',
-                style: TextStyle(
+                style: Zeta.of(context).textStyles.labelSmall.copyWith(
                   color: colors.mainInfo,
                   fontWeight: FontWeight.w600,
-                  fontSize: 12,
                 ),
               ),
             ],

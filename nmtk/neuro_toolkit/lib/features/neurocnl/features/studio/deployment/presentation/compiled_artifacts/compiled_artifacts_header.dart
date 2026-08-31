@@ -48,9 +48,9 @@ class CompiledArtifactsHeader extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            const Text(
+            Text(
               'Compiled Artifacts',
-              style: TextStyle(
+              style: Zeta.of(context).textStyles.labelMedium.copyWith(
                 color: AppTheme.textPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,

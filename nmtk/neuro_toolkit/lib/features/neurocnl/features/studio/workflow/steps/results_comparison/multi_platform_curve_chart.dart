@@ -139,7 +139,7 @@ class MultiPlatformCurveChart extends StatelessWidget {
                           isLoss
                               ? s.y.toStringAsFixed(4)
                               : '${(s.y * 100).toStringAsFixed(1)}%',
-                          TextStyle(
+                          Zeta.of(context).textStyles.labelSmall.copyWith(
                             color: s.bar.color ?? Zeta.of(context).colors.mainInverse,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,

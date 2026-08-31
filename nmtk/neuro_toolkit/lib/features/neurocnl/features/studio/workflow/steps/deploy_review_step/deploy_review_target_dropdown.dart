@@ -36,7 +36,9 @@ class DeployReviewTargetDropdown extends ConsumerWidget {
                   hasResult
                       ? targetLabel(id)
                       : '${targetLabel(id)} (not run yet)',
-                  style: hasResult ? null : TextStyle(color: colors.mainSubtle),
+                  style: hasResult
+                      ? null
+                      : Zeta.of(context).textStyles.bodyMedium.copyWith(color: colors.mainSubtle),
                 );
               },
             ),

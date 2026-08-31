@@ -43,8 +43,7 @@ class CompareToggleChip extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               compareMode ? 'Per Platform' : 'Compare All',
-              style: TextStyle(
-                fontSize: 12,
+              style: Zeta.of(context).textStyles.labelSmall.copyWith(
                 fontWeight: compareMode ? FontWeight.w600 : FontWeight.normal,
                 color: compareMode ? colors.mainSecondary : null,
               ),

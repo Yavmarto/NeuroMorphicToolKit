@@ -178,7 +178,7 @@ class _CanvasParameterTextFieldState extends State<CanvasParameterTextField> {
           width: 140,
           child: Text(
             widget.label,
-            style: const TextStyle(
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
               color: NmtkNeurocnlTokens.textSecondary,
               fontSize: 11,
             ),

@@ -36,10 +36,9 @@ class ZetaStyledTab extends StatelessWidget {
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: Zeta.of(context).textStyles.labelMedium.copyWith(
               color: foreground,
               fontWeight: FontWeight.w600,
-              fontSize: 14,
             ),
           ),
           if (trailing != null) ...[const SizedBox(width: 4), trailing!],

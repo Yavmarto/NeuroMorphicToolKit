@@ -187,6 +187,9 @@ class _NeurohubWorkspacePreviewState extends State<NeurohubWorkspacePreview> {
                             edgeColor: NmtkShellTokens.of(context).chromeBorder,
                             textColor: Zeta.of(context).colors.mainInverse,
                             nodeRadius: NmtkShellTokens.of(context).radiusMd,
+                            labelStyle: Zeta.of(context).textStyles.labelMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -298,6 +301,7 @@ class _PreviewScenePainter extends CustomPainter {
     required this.edgeColor,
     required this.textColor,
     required this.nodeRadius,
+    required this.labelStyle,
   });
 
   final _PreviewScene scene;
@@ -305,6 +309,7 @@ class _PreviewScenePainter extends CustomPainter {
   final Color edgeColor;
   final Color textColor;
   final double nodeRadius;
+  final TextStyle labelStyle;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -329,11 +334,7 @@ class _PreviewScenePainter extends CustomPainter {
       final text = TextPainter(
         text: TextSpan(
           text: node.label,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+          style: labelStyle.copyWith(color: textColor),
         ),
         maxLines: 2,
         ellipsis: '…',
@@ -355,6 +356,7 @@ class _PreviewScenePainter extends CustomPainter {
         oldDelegate.nodeColor != nodeColor ||
         oldDelegate.edgeColor != edgeColor ||
         oldDelegate.textColor != textColor ||
-        oldDelegate.nodeRadius != nodeRadius;
+        oldDelegate.nodeRadius != nodeRadius ||
+        oldDelegate.labelStyle != labelStyle;
   }
 }

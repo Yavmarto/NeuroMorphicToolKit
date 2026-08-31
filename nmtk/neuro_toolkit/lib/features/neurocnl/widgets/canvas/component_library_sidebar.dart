@@ -103,7 +103,7 @@ class _CategorySection extends StatelessWidget {
                 Expanded(
                   child: Text(
                     _titleForCategory(category),
-                    style: const TextStyle(
+                    style: Zeta.of(context).textStyles.labelSmall.copyWith(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
@@ -173,8 +173,7 @@ class _PaletteItemCard extends StatelessWidget {
           Expanded(
             child: Text(
               type.displayName,
-              style: TextStyle(
-                fontSize: 12,
+              style: Zeta.of(context).textStyles.labelSmall.copyWith(
                 fontWeight: isDragging ? FontWeight.w600 : FontWeight.w500,
               ),
               overflow: TextOverflow.ellipsis,

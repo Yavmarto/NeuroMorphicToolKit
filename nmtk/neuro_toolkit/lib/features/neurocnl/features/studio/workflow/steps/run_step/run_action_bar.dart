@@ -97,7 +97,9 @@ class RunActionBar extends StatelessWidget {
                         ),
                         label: Text(
                           'Retry',
-                          style: TextStyle(color: colors.mainNegative),
+                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                            color: colors.mainNegative,
+                          ),
                         ),
                       ),
               ],

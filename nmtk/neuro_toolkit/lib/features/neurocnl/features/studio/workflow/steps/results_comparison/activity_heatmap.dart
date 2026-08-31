@@ -73,7 +73,7 @@ class ActivityHeatmap extends StatelessWidget {
                         alignment: Alignment.center,
                         child: Text(
                           data.matrix[r][c].toStringAsFixed(2),
-                          style: TextStyle(
+                          style: Zeta.of(context).textStyles.labelSmall.copyWith(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: data.matrix[r][c] > 0.6

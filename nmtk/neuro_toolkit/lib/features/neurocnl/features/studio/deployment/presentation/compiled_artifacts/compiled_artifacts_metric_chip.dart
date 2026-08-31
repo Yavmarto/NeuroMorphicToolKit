@@ -31,7 +31,7 @@ class CompiledArtifactsMetricChip extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: Zeta.of(context).textStyles.labelSmall.copyWith(
               color: AppTheme.textSecondary,
               fontSize: 11,
               fontWeight: FontWeight.w600,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 
@@ -75,7 +76,10 @@ class LabeledParameterRow extends StatelessWidget {
           width: labelWidth,
           child: Text(
             label,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
+              color: AppTheme.textSecondary,
+              fontSize: 11,
+            ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),

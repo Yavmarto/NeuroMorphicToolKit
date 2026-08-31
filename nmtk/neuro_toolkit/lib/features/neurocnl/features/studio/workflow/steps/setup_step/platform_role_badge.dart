@@ -20,7 +20,7 @@ class PlatformRoleBadge extends StatelessWidget {
       ),
       child: Text(
         trainable ? 'Training' : 'Deploy only',
-        style: TextStyle(
+        style: Zeta.of(context).textStyles.labelSmall.copyWith(
           fontSize: 10,
           fontWeight: FontWeight.w600,
           color: trainable ? colors.mainPositive : colors.mainSubtle,

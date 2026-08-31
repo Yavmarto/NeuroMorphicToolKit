@@ -17,12 +17,11 @@ void showCompiledArtifactsDialog(BuildContext context) {
               padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Compiled Artifacts',
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 16,
+                      style: Zeta.of(context).textStyles.titleMedium.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),

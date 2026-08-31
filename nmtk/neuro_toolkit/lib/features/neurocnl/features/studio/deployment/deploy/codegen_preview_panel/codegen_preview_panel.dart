@@ -26,9 +26,9 @@ class CodegenPreviewPanel extends ConsumerWidget {
         title: '$label — Generated Code',
         subtitle:
             'Run an interactive compatibility preview on the left, then inspect or export target code on the right.',
-        child: const Text(
+        child: Text(
           'Define and validate a network on the Architecture tab first.',
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 12),
+          style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.textPrimary),
         ),
       );
     }

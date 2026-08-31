@@ -119,14 +119,10 @@ class LossCurveChart extends StatelessWidget {
                     alpha: 0.7,
                   ),
                   markerIndex: markerIdx,
-                  labelStyle: (theme.textTheme.bodySmall ?? const TextStyle())
+                  labelStyle: Zeta.of(context).textStyles.bodyXSmall
                       .copyWith(color: tokens.metadataForeground, fontSize: 9),
-                  axisLabelStyle:
-                      (theme.textTheme.labelSmall ?? const TextStyle())
-                          .copyWith(
-                            color: tokens.metadataForeground,
-                            fontSize: 9,
-                          ),
+                  axisLabelStyle: Zeta.of(context).textStyles.labelSmall
+                      .copyWith(color: tokens.metadataForeground, fontSize: 9),
                   valueFormatter: valueFormatter,
                   yFloor: yFloor,
                 ),

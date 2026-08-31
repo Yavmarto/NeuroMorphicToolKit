@@ -171,7 +171,7 @@ class _JobDetailRow extends StatelessWidget {
     final theme = Theme.of(context);
     return RichText(
       text: TextSpan(
-        style: theme.textTheme.bodySmall,
+        style: Zeta.of(context).textStyles.bodySmall,
         children: [
           TextSpan(
             text: '$label: ',

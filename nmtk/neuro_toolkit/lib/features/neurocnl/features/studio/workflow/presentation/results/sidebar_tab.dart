@@ -32,8 +32,7 @@ class SidebarTab extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
+          style: Zeta.of(context).textStyles.labelSmall.copyWith(
             fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             color: selected ? colors.mainPrimary : colors.mainSubtle,
           ),
