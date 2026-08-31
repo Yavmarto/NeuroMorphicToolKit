@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 import tomllib
-
 from packaging.specifiers import SpecifierSet
 from packaging.version import InvalidVersion
 from packaging.version import parse as parse_version

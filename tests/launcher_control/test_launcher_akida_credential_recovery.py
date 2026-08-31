@@ -18,6 +18,7 @@ from typing import Any
 from unittest import mock
 
 from base import LauncherControlServiceTestBase
+
 from nmtk.launcher_control.server import RuntimeRequestError
 
 
@@ -36,7 +37,7 @@ class _Response(io.BytesIO):
 
     status = 200
 
-    def __enter__(self) -> "_Response":
+    def __enter__(self) -> _Response:
         return self
 
     def __exit__(self, *_exc: object) -> None:

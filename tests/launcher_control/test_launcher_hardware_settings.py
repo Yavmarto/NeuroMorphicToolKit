@@ -1,16 +1,16 @@
 """Launcher control service tests: TestLauncherHardwareSettings."""
 
-from typing import Any
-from pathlib import Path
-import io
 import json
 import re
-import nmtk.launcher_control.server as launcher_server
-from unittest import mock
-import nmtk.launcher_control.provisioning_helpers as provisioning_helpers
 import subprocess
-import sys
+from pathlib import Path
+from typing import Any
+from unittest import mock
+
 from base import LauncherControlServiceTestBase
+
+import nmtk.launcher_control.server as launcher_server
+from nmtk.launcher_control import provisioning_helpers
 
 
 class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
@@ -627,21 +627,24 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
                     ]
                 )
 
-            def wait(self) -> int:
+            def wait(self, timeout: float | None = None) -> int:
+                del timeout
                 return 255
+
+            def kill(self) -> None:
+                return None
 
         with mock.patch.object(
             launcher_server.subprocess,
             "Popen",
             return_value=_FakeProcess(),
+        ), self.assertRaisesRegex(
+            RuntimeError, "install script failed on remote host"
         ):
-            with self.assertRaisesRegex(
-                RuntimeError, "install script failed on remote host"
-            ):
-                self.state._run_ssh(
-                    self.state._get_pynq_board(board["id"]),
-                    "bash /tmp/install.sh",
-                )
+            self.state._run_ssh(
+                self.state._get_pynq_board(board["id"]),
+                "bash /tmp/install.sh",
+            )
 
     def test_run_scp_password_auth_uses_askpass_without_sshpass(self) -> None:
         board = self.state.create_pynq_board(
@@ -979,13 +982,12 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
             mock.patch.object(self.state, "_run_ssh_detached"),
             mock.patch.object(
                 self.state, "_wait_for_board_agent_health"
-            ) as wait_for_health,
+            ) as wait_for_health,self.assertRaises(RuntimeError) as raised
         ):
-            with self.assertRaises(RuntimeError) as raised:
-                self.state._restart_user_space_agent(
-                    self.state._get_pynq_board(board["id"]),
-                    {},
-                )
+            self.state._restart_user_space_agent(
+                self.state._get_pynq_board(board["id"]),
+                {},
+            )
 
         self.assertIn("did not start", str(raised.exception))
         wait_for_health.assert_not_called()
@@ -1284,7 +1286,6 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
             }
         )
 
-        stderr = io.StringIO()
         fallback_calls: list[tuple[str, str]] = []
 
         def _record_runtime_status(
@@ -1308,6 +1309,9 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
             }
 
         with (
+            self.assertLogs(
+                "nmtk.launcher_control.akida_remote_client", level="ERROR"
+            ) as captured,
             mock.patch.object(
                 self.state,
                 "_akida_control_json_request",
@@ -1320,11 +1324,13 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
                 "_akida_json_request",
                 side_effect=_record_runtime_status,
             ),
-            mock.patch.object(sys, "stderr", stderr),
         ):
             self.state.fetch_akida_host_preflight(host["id"])
 
-        log_output = stderr.getvalue()
+        log_output = "\n".join(
+            str(getattr(record, "message_detail", record.getMessage()))
+            for record in captured.records
+        )
         self.assertEqual(fallback_calls, [("GET", "/api/neurochip/akida/status")])
         self.assertIn("remote control API unavailable during preflight", log_output)
         self.assertIn("falling back to runtime status", log_output)
@@ -1340,8 +1346,10 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
             }
         )
 
-        stderr = io.StringIO()
         with (
+            self.assertLogs(
+                "nmtk.launcher_control.akida_remote_client", level="ERROR"
+            ) as captured,
             mock.patch.object(
                 self.state,
                 "_akida_control_json_request",
@@ -1354,12 +1362,14 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
                 "_akida_json_request",
                 return_value={"state": "mapped", "device_info": "AKD1000"},
             ),
-            mock.patch.object(sys, "stderr", stderr),
         ):
             result = self.state.fetch_akida_host_status(host["id"])
 
         self.assertEqual(result["host"]["state"], "ready")
-        log_output = stderr.getvalue()
+        log_output = "\n".join(
+            str(getattr(record, "message_detail", record.getMessage()))
+            for record in captured.records
+        )
         self.assertIn("remote control API unavailable during status poll", log_output)
         self.assertNotIn("control request failed:", log_output)
 

@@ -10,8 +10,7 @@ import urllib.request
 from typing import Any
 from urllib.parse import urlparse
 
-from packaging.version import InvalidVersion
-from packaging.version import Version
+from packaging.version import InvalidVersion, Version
 from packaging.version import parse as parse_version
 
 from .module_environment import _effective_port
@@ -30,8 +29,7 @@ PRERELEASE_VERSION_PATTERN = re.compile(
 
 def _normalize_version_string(raw: str) -> str:
     raw = raw.strip()
-    if raw.startswith("v"):
-        raw = raw[1:]
+    raw = raw.removeprefix("v")
     return raw
 
 

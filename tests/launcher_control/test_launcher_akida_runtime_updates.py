@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 from base import LauncherControlServiceTestBase
+
 from nmtk.launcher_control.runtime_artifact import (
     discover_neurochip_runtime_artifact,
     write_neurochip_runtime_artifact_manifest,

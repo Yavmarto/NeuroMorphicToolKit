@@ -6,14 +6,15 @@ import unittest
 from pathlib import Path
 from typing import Any
 from unittest import mock
-import nmtk.launcher_control.server as launcher_server
-import nmtk.launcher_control.hardware_models as launcher_hardware_models
-import nmtk.launcher_control.runtime_shared as launcher_runtime_shared
-import nmtk.launcher_control.settings_service as launcher_settings_service
-import nmtk.launcher_control.module_environment as launcher_module_environment
-import nmtk.launcher_control.module_lifecycle as launcher_module_lifecycle
-import nmtk.launcher_control.module_install as launcher_module_install
 
+import nmtk.launcher_control.hardware_models as launcher_hardware_models
+import nmtk.launcher_control.module_environment as launcher_module_environment
+import nmtk.launcher_control.module_install as launcher_module_install
+import nmtk.launcher_control.module_lifecycle as launcher_module_lifecycle
+import nmtk.launcher_control.pynq_status as launcher_pynq_status
+import nmtk.launcher_control.runtime_shared as launcher_runtime_shared
+import nmtk.launcher_control.server as launcher_server
+import nmtk.launcher_control.settings_service as launcher_settings_service
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -138,6 +139,11 @@ class LauncherControlServiceTestBase(unittest.TestCase):
             ),
             mock.patch.object(
                 launcher_hardware_models,
+                "MODULES_MANIFEST",
+                assets_dir / "modules.json",
+            ),
+            mock.patch.object(
+                launcher_pynq_status,
                 "MODULES_MANIFEST",
                 assets_dir / "modules.json",
             ),

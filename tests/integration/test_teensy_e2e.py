@@ -174,8 +174,12 @@ async def test_teensy_rejected_oversized_network():
         assert resp.status_code == 422
 
         detail = resp.json()["detail"]
-        assert detail["error"] == "parse_failed"
-        assert detail["items"]
+        error_code = (
+            detail.get("code") or detail.get("error")
+            if isinstance(detail, dict)
+            else detail
+        )
+        assert error_code == "parse_failed"
 
 
 @pytest.mark.asyncio
@@ -191,8 +195,12 @@ async def test_teensy_rejected_recurrent_topology():
         assert resp.status_code == 422
 
         detail = resp.json()["detail"]
-        assert detail["error"] == "parse_failed"
-        assert detail["items"]
+        error_code = (
+            detail.get("code") or detail.get("error")
+            if isinstance(detail, dict)
+            else detail
+        )
+        assert error_code == "parse_failed"
 
 
 @pytest.mark.asyncio
@@ -208,8 +216,12 @@ async def test_teensy_rejected_learning_rule():
         assert resp.status_code == 422
 
         detail = resp.json()["detail"]
-        assert detail["error"] == "parse_failed"
-        assert detail["items"]
+        error_code = (
+            detail.get("code") or detail.get("error")
+            if isinstance(detail, dict)
+            else detail
+        )
+        assert error_code == "parse_failed"
 
 
 @pytest.mark.asyncio

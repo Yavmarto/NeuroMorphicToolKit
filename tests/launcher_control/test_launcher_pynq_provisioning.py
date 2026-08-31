@@ -1,13 +1,41 @@
 """Launcher control service tests: TestLauncherPynqProvisioning."""
 
-from typing import Any
 import json
-import nmtk.launcher_control.server as launcher_server
+from typing import Any
 from unittest import mock
+
 from base import LauncherControlServiceTestBase, _stage_overlay_package
+
+import nmtk.launcher_control.server as launcher_server
 
 
 class TestLauncherPynqProvisioning(LauncherControlServiceTestBase):
+    def test_runtime_status_response_preserves_wire_and_persisted_fields(self) -> None:
+        board = self.state.create_pynq_board(
+            {
+                "displayName": "Desk PYNQ",
+                "host": "192.168.1.50",
+                "password": "board-secret",
+            }
+        )
+        status = {
+            "runtime_mode": " hardware ",
+            "loaded_overlay": "snn_overlay_v2",
+        }
+
+        with mock.patch.object(
+            self.state,
+            "_runtime_json_request",
+            return_value=status,
+        ):
+            result = self.state.fetch_pynq_board_status(board["id"])
+
+        self.assertEqual(result["status"], status)
+        self.assertEqual(result["board"]["lastStatus"], status)
+        self.assertEqual(result["board"]["lastRuntimeMode"], "hardware")
+        self.assertTrue(result["board"]["hasPassword"])
+        self.assertNotIn("password", result["board"])
+
     def test_read_remote_pynq_install_status_decodes_machine_readable_result(
         self,
     ) -> None:

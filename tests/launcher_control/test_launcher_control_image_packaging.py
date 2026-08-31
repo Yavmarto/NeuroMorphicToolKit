@@ -5,12 +5,14 @@ from pathlib import Path
 
 from nmtk.launcher_control.server import _validate_pynq_overlay_manifest
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DOCKERFILE = ROOT / "Dockerfile.control"
 OVERLAY_DIRECTORY = ROOT / "Neurochip" / "overlay_staging" / "pynq_z2"
 MASTER_MANIFEST = ROOT / "Neurochip" / "hardware" / "pynq_z2" / "overlay_manifest.json"
 ARTIFACT_DIRECTORY = "/app/artifacts/neurochip/overlay_staging/pynq_z2"
+PYNQ_TEMPLATE_DIRECTORY = (
+    ROOT / "nmtk" / "launcher_control" / "templates" / "pynq" / "v1"
+)
 REQUIRED_OVERLAY_FILES = (
     "snn_overlay.bit",
     "snn_overlay.hwh",
@@ -28,6 +30,15 @@ def test_launcher_control_image_build_requires_complete_pynq_overlay() -> None:
     for filename in REQUIRED_OVERLAY_FILES:
         assert (OVERLAY_DIRECTORY / filename).is_file()
         assert f"test -s {ARTIFACT_DIRECTORY}/{filename}" in dockerfile
+
+
+def test_launcher_control_image_carries_versioned_pynq_templates() -> None:
+    """The package-wide Docker copy must include every runtime template."""
+    dockerfile = DOCKERFILE.read_text(encoding="utf-8")
+
+    assert "COPY nmtk/launcher_control/ nmtk/launcher_control/" in dockerfile
+    assert (PYNQ_TEMPLATE_DIRECTORY / "install-pynq-agent.sh.tmpl").is_file()
+    assert (PYNQ_TEMPLATE_DIRECTORY / "neurochip-pynq-agent.service.tmpl").is_file()
 
 
 def test_shipped_pynq_overlay_manifest_passes_the_launcher_validator() -> None:

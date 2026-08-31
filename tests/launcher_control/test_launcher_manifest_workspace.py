@@ -1,14 +1,16 @@
 """Launcher control service tests: TestLauncherManifestWorkspace."""
 
-from typing import Any
 import json
-import nmtk.launcher_control.hardware_models as launcher_hardware_models
-import nmtk.launcher_control.server as launcher_server
-import nmtk.launcher_control.suite_api_service as suite_api_service
-from unittest import mock
 import os
 import sys
+from typing import Any
+from unittest import mock
+
 from base import LauncherControlServiceTestBase
+
+import nmtk.launcher_control.hardware_models as launcher_hardware_models
+import nmtk.launcher_control.server as launcher_server
+from nmtk.launcher_control import suite_api_service
 
 
 class TestLauncherManifestWorkspace(LauncherControlServiceTestBase):

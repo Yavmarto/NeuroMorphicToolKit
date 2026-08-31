@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any
 
 from .deployment_contracts import (
+    SECRET_FIELD_NAMES,
     DeploymentJob,
     DeploymentTarget,
-    SECRET_FIELD_NAMES,
     utc_now_iso,
 )
 
@@ -39,7 +39,7 @@ class FileBackedSecretStore:
             self._secrets = {}
 
     def put(self, *, target_id: str, field_name: str, value: str) -> str:
-        digest = hashlib.sha256(f"{target_id}:{field_name}".encode("utf-8")).hexdigest()
+        digest = hashlib.sha256(f"{target_id}:{field_name}".encode()).hexdigest()
         ref = f"file-secret:{digest[:24]}"
         self._secrets[ref] = value
         self._persist()

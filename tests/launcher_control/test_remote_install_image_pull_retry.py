@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[2]
 INSTALL_SCRIPT = (
     ROOT / "nmtk" / "neuro_toolkit" / "assets" / "deployment" / "install.sh"

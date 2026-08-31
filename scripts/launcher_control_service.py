@@ -1,8 +1,8 @@
 """Run the root launcher control service."""
 
+import sys
 from importlib import import_module
 from pathlib import Path
-import sys
 
 
 def main() -> int:

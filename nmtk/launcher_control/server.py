@@ -13,7 +13,8 @@ from collections.abc import Callable
 from http.server import ThreadingHTTPServer
 from typing import Any
 
-
+from .akida_host_service import AkidaServiceMixin
+from .akida_runtime_update_jobs import AkidaRuntimeUpdateJobsMixin
 from .config import (  # noqa: F401
     DEPLOYMENT_SECRET_FILE,
     DEPLOYMENT_STATE_FILE,
@@ -26,7 +27,60 @@ from .config import (  # noqa: F401
 )
 from .deployment_service import DeploymentService
 from .deployment_store import DeploymentStore, FileBackedSecretStore
+from .doctor_service import _render_doctor_report
 from .hardware_discovery import HardwareDiscoveryMixin
+from .hardware_models import (  # noqa: F401
+    DEFAULT_LAVA_BACKEND_PORT,
+    EXPECTED_PYNQ_OVERLAY_MANIFEST,
+    KNOWN_UNUSABLE_PYNQ_OVERLAYS,
+    AkidaLauncherRuntimeContract,
+    NeurochipLauncherRuntimeContract,
+    PynqLauncherRuntimeContract,
+    RuntimeRequestError,
+    _akida_hardware_runtime_ready,
+    _akida_host_state_for_status,
+    _akida_user_space_upgrade_message,
+    _default_akida_base_url,
+    _default_akida_control_url,
+    _default_pynq_remote_install_root,
+    _default_runtime_api_url,
+    _default_user_data_dir,
+    _describe_akida_preflight,
+    _describe_pynq_preflight,
+    _effective_runtime_api_url,
+    _extract_install_status_from_output,
+    _inspect_staged_pynq_overlay_package,
+    _is_benign_ssh_warning_line,
+    _lava_backend_base_url,
+    _lava_backend_reachable,
+    _load_neurochip_launcher_runtime_contract,
+    _mujoco_available,
+    _normalize_akida_capability_snapshot,
+    _normalize_akida_host,
+    _normalize_akida_host_auth_mode,
+    _normalize_akida_host_state,
+    _normalize_akida_runtime_mode,
+    _normalize_auth_mode,
+    _normalize_base_url,
+    _normalize_pynq_board,
+    _normalize_pynq_board_state,
+    _normalize_runtime_api_url_override,
+    _preflight_status_for_akida_verification,
+    _pynq_user_space_upgrade_message,
+    _resolve_pynq_agent_health_timeout,
+    _resolve_pynq_preflight_timeout,
+    _resolve_pynq_run_timeout,
+    _resolved_akida_base_url,
+    _resolved_akida_control_api_url,
+    _resolved_lava_worker_url,
+    _resolved_pynq_runtime_api_url,
+    _running_in_bundled_mode,
+    _serialize_akida_host,
+    _serialize_pynq_board,
+    _ssh_failure_message,
+    _status_name,
+    _validate_pynq_overlay_manifest,
+)
 from .http_server import LauncherControlHandler
 from .module_environment import (  # noqa: F401
     _candidate_environment_files,
@@ -57,6 +111,9 @@ from .module_environment import (  # noqa: F401
     _uvicorn_host,
     _version_matches_range,
 )
+from .module_install import ModuleInstallMixin
+from .module_lifecycle import ModuleLifecycleMixin
+from .module_registry import ModuleRegistryMixin, _resolve_remote_module_version
 from .preflight_types import PreflightResult  # noqa: F401
 from .process_supervision import (  # noqa: F401
     ManagedProcess,
@@ -65,6 +122,7 @@ from .process_supervision import (  # noqa: F401
     _message_from_probe_outcome,
     _status_for_health_response,
 )
+from .pynq_service import PynqServiceMixin
 from .runtime_shared import (  # noqa: F401
     _build_password_askpass_env,
     _module_root,
@@ -73,10 +131,7 @@ from .runtime_shared import (  # noqa: F401
     _runtime_request_error_kind,
     _write_json_file,
 )
-from .state_contracts import LauncherSettingsRecord
-from .state_protocols import DeploymentServiceProtocol
-from .workspace_service import WorkspaceStateMixin
-
+from .settings_service import SettingsServiceMixin
 from .state_contracts import (  # noqa: F401
     AKIDA_HOST_AUTH_MODES,
     AKIDA_HOST_STATES,
@@ -131,69 +186,9 @@ from .state_contracts import (  # noqa: F401
     STATUS_INDEX,
     SUPPORTED_INSTALL_STRATEGIES,
     SUPPORTED_START_STRATEGIES,
+    LauncherSettingsRecord,
 )
-
-from .hardware_models import (  # noqa: F401
-    AkidaLauncherRuntimeContract,
-    DEFAULT_LAVA_BACKEND_PORT,
-    EXPECTED_PYNQ_OVERLAY_MANIFEST,
-    KNOWN_UNUSABLE_PYNQ_OVERLAYS,
-    NeurochipLauncherRuntimeContract,
-    PynqLauncherRuntimeContract,
-    RuntimeRequestError,
-    _akida_hardware_runtime_ready,
-    _akida_host_state_for_status,
-    _akida_user_space_upgrade_message,
-    _default_akida_base_url,
-    _default_akida_control_url,
-    _default_pynq_remote_install_root,
-    _default_runtime_api_url,
-    _default_user_data_dir,
-    _describe_akida_preflight,
-    _describe_pynq_preflight,
-    _effective_runtime_api_url,
-    _extract_install_status_from_output,
-    _inspect_staged_pynq_overlay_package,
-    _is_benign_ssh_warning_line,
-    _lava_backend_base_url,
-    _lava_backend_reachable,
-    _load_neurochip_launcher_runtime_contract,
-    _mujoco_available,
-    _normalize_akida_capability_snapshot,
-    _normalize_akida_host,
-    _normalize_akida_host_auth_mode,
-    _normalize_akida_host_state,
-    _normalize_akida_runtime_mode,
-    _normalize_auth_mode,
-    _normalize_base_url,
-    _normalize_pynq_board,
-    _normalize_pynq_board_state,
-    _normalize_runtime_api_url_override,
-    _preflight_status_for_akida_verification,
-    _pynq_user_space_upgrade_message,
-    _resolve_pynq_agent_health_timeout,
-    _resolve_pynq_preflight_timeout,
-    _resolve_pynq_run_timeout,
-    _resolved_akida_base_url,
-    _resolved_akida_control_api_url,
-    _resolved_lava_worker_url,
-    _resolved_pynq_runtime_api_url,
-    _running_in_bundled_mode,
-    _serialize_akida_host,
-    _serialize_pynq_board,
-    _ssh_failure_message,
-    _status_name,
-    _validate_pynq_overlay_manifest,
-)
-
-from .akida_host_service import AkidaServiceMixin
-from .akida_runtime_update_jobs import AkidaRuntimeUpdateJobsMixin
-from .doctor_service import _render_doctor_report
-from .module_install import ModuleInstallMixin
-from .module_lifecycle import ModuleLifecycleMixin
-from .module_registry import ModuleRegistryMixin, _resolve_remote_module_version
-from .pynq_service import PynqServiceMixin
-from .settings_service import SettingsServiceMixin
+from .state_protocols import DeploymentServiceProtocol
 from .suite_api_service import (  # noqa: F401
     DEFAULT_SUITE_API_PORT,
     SUITE_API_STARTUP_TIMEOUT_SECONDS,
@@ -209,6 +204,7 @@ from .suite_api_service import (  # noqa: F401
     _suite_api_env_stamp,
     _suite_api_pythonpath,
 )
+from .workspace_service import WorkspaceStateMixin
 
 
 class LauncherControlState(
@@ -260,6 +256,8 @@ class LauncherControlState(
         )
         self._tasks: dict[str, threading.Thread] = {}
         self._settings: LauncherSettingsRecord = self._load_settings()
+        self._init_akida_components()
+        self._init_pynq_components()
         self._workspace_file = WORKSPACE_FILE
         self._workspace = self._load_workspace()
         self._deployment: DeploymentServiceProtocol = DeploymentService(
@@ -348,95 +346,6 @@ class LauncherControlState(
                 "selectedAkidaHostId": self._settings["selectedAkidaHostId"],
                 "selectedPynqBoardId": self._settings["selectedPynqBoardId"],
             }
-
-    def list_pynq_boards(self) -> list[dict[str, Any]]:
-        with self._lock:
-            boards = self._settings.get("pynqBoards", [])
-            return [_serialize_pynq_board(board) for board in boards]
-
-    def get_pynq_board(self, board_id: str) -> dict[str, Any]:
-        with self._lock:
-            board = self._get_pynq_board(board_id)
-            return _serialize_pynq_board(board)
-
-    def create_pynq_board(self, payload: dict[str, Any]) -> dict[str, Any]:
-        board = _normalize_pynq_board(payload)
-        if not board["host"]:
-            raise ValueError("PYNQ board host is required")
-        with self._lock:
-            boards = self._settings["pynqBoards"]
-            if any(existing["id"] == board["id"] for existing in boards):
-                raise ValueError(f"PYNQ board '{board['id']}' already exists")
-            if board.get("isDefault"):
-                for existing in boards:
-                    existing["isDefault"] = False
-            boards.append(board)
-            if not self._settings.get("selectedPynqBoardId"):
-                self._settings["selectedPynqBoardId"] = board["id"]
-            self._persist_settings()
-            return _serialize_pynq_board(board)
-
-    def update_pynq_board(
-        self, board_id: str, payload: dict[str, Any]
-    ) -> dict[str, Any]:
-        with self._lock:
-            board = self._get_pynq_board(board_id)
-            normalized = self._normalize_updated_pynq_board(
-                board, {"id": board_id, **payload}
-            )
-            if normalized.get("isDefault"):
-                for existing in self._settings.get("pynqBoards", []):
-                    if existing["id"] != board_id:
-                        existing["isDefault"] = False
-            board.clear()
-            board.update(normalized)
-            self._persist_settings()
-            return _serialize_pynq_board(board)
-
-    def delete_pynq_board(self, board_id: str) -> None:
-        with self._lock:
-            boards = self._settings["pynqBoards"]
-            next_boards = [board for board in boards if board["id"] != board_id]
-            if len(next_boards) == len(boards):
-                raise KeyError(f"Unknown PYNQ board '{board_id}'")
-            self._settings["pynqBoards"] = next_boards
-            if self._settings.get("selectedPynqBoardId") == board_id:
-                self._settings["selectedPynqBoardId"] = (
-                    next_boards[0]["id"] if next_boards else None
-                )
-            self._persist_settings()
-
-    def _get_pynq_board(self, board_id: str) -> dict[str, Any]:
-        for board in self._settings.get("pynqBoards", []):
-            if board["id"] == board_id:
-                return board
-        raise KeyError(f"Unknown PYNQ board '{board_id}'")
-
-    def _update_pynq_board_fields(self, board_id: str, **fields: Any) -> dict[str, Any]:
-        with self._lock:
-            board = self._get_pynq_board(board_id)
-            normalized = self._normalize_updated_pynq_board(
-                board, {"id": board_id, **fields}
-            )
-            board.clear()
-            board.update(normalized)
-            self._persist_settings()
-            return dict(board)
-
-    def _normalize_updated_pynq_board(
-        self,
-        board: dict[str, Any],
-        updates: dict[str, Any],
-    ) -> dict[str, Any]:
-        merged = dict(board)
-        merged.update(updates)
-        if (
-            "runtimeApiUrlOverride" not in updates
-            and "runtimeApiUrl" not in updates
-            and not str(board.get("runtimeApiUrlOverride") or "").strip()
-        ):
-            merged.pop("runtimeApiUrl", None)
-        return _normalize_pynq_board(merged)
 
     def list_deployment_targets(self) -> list[dict[str, Any]]:
         return self._deployment.list_targets()

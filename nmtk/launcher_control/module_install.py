@@ -14,9 +14,6 @@ from pathlib import Path
 from typing import Any
 
 from .config import REPO_ROOT
-from .preflight_types import PreflightResult
-from .process_supervision import _dedupe_messages, _message_from_probe_outcome
-from .runtime_shared import _hash_file
 from .module_environment import (
     _candidate_environment_files,
     _current_platform_key,
@@ -36,6 +33,9 @@ from .module_environment import (
     _poetry_fallback_env_root,
     _version_matches_range,
 )
+from .preflight_types import PreflightResult
+from .process_supervision import _dedupe_messages, _message_from_probe_outcome
+from .runtime_shared import _hash_file
 from .state_contracts import (
     IMPORT_PROBE_SCRIPT,
     PREFLIGHT_DEGRADED,

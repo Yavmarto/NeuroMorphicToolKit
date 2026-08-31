@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DEPLOYMENT_ASSETS = ROOT / "nmtk" / "neuro_toolkit" / "assets" / "deployment"
 

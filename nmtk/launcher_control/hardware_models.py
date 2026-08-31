@@ -7,18 +7,33 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from collections.abc import Mapping
 from http import HTTPStatus
 from pathlib import Path
-from collections.abc import Mapping
 from typing import Any, cast
 from urllib.parse import urlparse
 from uuid import uuid4
 
 from .config import MODULES_MANIFEST, REPO_ROOT
+from .pynq_status import (
+    _default_runtime_api_url as _default_runtime_api_url,
+)
+from .pynq_status import (
+    _effective_runtime_api_url as _effective_runtime_api_url,
+)
+from .pynq_status import (
+    _serialize_pynq_board as _serialize_pynq_board,
+)
 from .runtime_contracts import (
     AkidaLauncherRuntimeContract as AkidaLauncherRuntimeContract,
+)
+from .runtime_contracts import (
     NeurochipLauncherRuntimeContract as NeurochipLauncherRuntimeContract,
+)
+from .runtime_contracts import (
     PynqLauncherRuntimeContract as PynqLauncherRuntimeContract,
+)
+from .runtime_contracts import (
     load_neurochip_launcher_runtime_contract,
 )
 from .runtime_errors import RuntimeRequestError as RuntimeRequestError
@@ -261,15 +276,6 @@ def _default_akida_control_url(host: str, port: int | None = None) -> str:
     return f"http://{host}:{resolved_port}"
 
 
-def _default_runtime_api_url(host: str, port: int | None = None) -> str:
-    resolved_port = (
-        port
-        if port is not None
-        else _load_neurochip_launcher_runtime_contract().pynq.runtime_port
-    )
-    return f"http://{host}:{resolved_port}"
-
-
 def _normalize_base_url(value: Any) -> str:
     raw = str(value or "").strip()
     if not raw:
@@ -286,7 +292,7 @@ def _normalize_runtime_api_url_override(
     raw: Mapping[str, Any],
     runtime_port: int,
 ) -> str:
-    default_url = _default_runtime_api_url(host, runtime_port) if host else ""
+    default_url = f"http://{host}:{runtime_port}" if host else ""
     explicit_override = raw.get("runtimeApiUrlOverride")
     if explicit_override is not None:
         override = str(explicit_override).strip()
@@ -296,22 +302,6 @@ def _normalize_runtime_api_url_override(
     if legacy_runtime_api_url and legacy_runtime_api_url != default_url:
         return legacy_runtime_api_url
     return ""
-
-
-def _effective_runtime_api_url(
-    host: str,
-    runtime_api_url_override: str,
-    runtime_port: int,
-) -> str:
-    normalized_override = str(runtime_api_url_override or "").strip()
-    if normalized_override:
-        return normalized_override
-    normalized_host = host.strip()
-    return (
-        _default_runtime_api_url(normalized_host, runtime_port)
-        if normalized_host
-        else ""
-    )
 
 
 def _pynq_user_space_upgrade_message(username: str) -> str:
@@ -456,21 +446,6 @@ def _normalize_pynq_board(raw: Mapping[str, Any]) -> PynqBoardRecord:
         "isDefault": bool(raw.get("isDefault")),
     }
     return board
-
-
-def _serialize_pynq_board(board: Mapping[str, Any]) -> dict[str, Any]:
-    payload = dict(board)
-    payload["runtimeApiUrlOverride"] = str(
-        payload.get("runtimeApiUrlOverride") or ""
-    ).strip()
-    payload["runtimeApiUrl"] = _effective_runtime_api_url(
-        str(payload.get("host") or "").strip(),
-        str(payload.get("runtimeApiUrlOverride") or "").strip(),
-        _load_neurochip_launcher_runtime_contract().pynq.runtime_port,
-    )
-    payload.pop("password", None)
-    payload["hasPassword"] = bool(board.get("password"))
-    return payload
 
 
 def _ssh_failure_message(stdout_lines: list[str], stderr_lines: list[str]) -> str:

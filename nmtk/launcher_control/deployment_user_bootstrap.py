@@ -23,9 +23,9 @@ from .deployment_contracts import (
     encode_remote_script,
     sudo_elevation_preamble,
 )
-from .deployment_executors import build_ssh_argv
+from .deployment_executor_base import build_ssh_argv
 
-__all__ = ["ssh_root_bootstrap", "build_bootstrap_script", "generate_ed25519_keypair"]
+__all__ = ["build_bootstrap_script", "generate_ed25519_keypair", "ssh_root_bootstrap"]
 
 DEFAULT_DEPLOY_USERNAME = "nmtk"
 

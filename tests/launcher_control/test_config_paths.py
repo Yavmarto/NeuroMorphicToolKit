@@ -9,6 +9,7 @@ from unittest import mock
 class TestConfigPaths(unittest.TestCase):
     def tearDown(self):
         import importlib
+
         import nmtk.launcher_control.config as cfg
 
         # Restore module-level constants to their defaults after each test
@@ -18,8 +19,9 @@ class TestConfigPaths(unittest.TestCase):
 
     def test_default_paths_use_repo_root(self):
         """Without env vars set, all paths fall under REPO_ROOT."""
-        import nmtk.launcher_control.config as cfg
         import importlib
+
+        import nmtk.launcher_control.config as cfg
 
         # Use empty strings so mock.patch.dict can restore them properly;
         # config.py strips and checks truthiness, so "" falls through to defaults.
@@ -35,8 +37,9 @@ class TestConfigPaths(unittest.TestCase):
 
     def test_nmtk_state_dir_overrides_state_files(self):
         """NMTK_STATE_DIR redirects the 4 module/workspace/settings state files."""
-        import nmtk.launcher_control.config as cfg
         import importlib
+
+        import nmtk.launcher_control.config as cfg
 
         with tempfile.TemporaryDirectory() as state_dir:
             with mock.patch.dict(os.environ, {"NMTK_STATE_DIR": state_dir}):
@@ -48,8 +51,9 @@ class TestConfigPaths(unittest.TestCase):
 
     def test_nmtk_data_dir_overrides_secrets(self):
         """NMTK_DATA_DIR redirects deployment_secrets and suite_api_env."""
-        import nmtk.launcher_control.config as cfg
         import importlib
+
+        import nmtk.launcher_control.config as cfg
 
         with tempfile.TemporaryDirectory() as data_dir:
             with mock.patch.dict(os.environ, {"NMTK_DATA_DIR": data_dir}):

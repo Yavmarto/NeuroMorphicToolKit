@@ -1,0 +1,364 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import json
+import os
+import platform
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from http import HTTPStatus
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+CONTROL_HOST = os.getenv("NEUROCHIP_REMOTE_CONTROL_HOST", "0.0.0.0")
+CONTROL_PORT = int(os.getenv("NEUROCHIP_REMOTE_CONTROL_PORT", "8091"))
+API_KEY = os.getenv("NEUROCHIP_REMOTE_CONTROL_API_KEY", "").strip()
+LOCAL_NEUROCHIP_BASE_URL = os.getenv("LOCAL_NEUROCHIP_BASE_URL", "http://127.0.0.1:8002").rstrip("/")
+INSTALL_STATUS_PATH = Path(
+    os.getenv(
+        "NEUROCHIP_INSTALL_STATUS_PATH",
+        "/opt/neurochip-akida-host/install-status.json",
+    )
+)
+
+
+def _load_install_status() -> dict[str, object]:
+    try:
+        return json.loads(INSTALL_STATUS_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _run_probe(command: list[str]) -> str:
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+    except FileNotFoundError:
+        return ""
+    except subprocess.TimeoutExpired:
+        return "command timed out"
+    if result.returncode != 0:
+        return (result.stderr or result.stdout).strip()
+    return result.stdout.strip()
+
+
+AKIDA_PCI_VENDOR = "0x1e7c"
+AKIDA_PCI_DEVICE = "0xbca1"
+PCI_DEVICES_ROOT = Path("/sys/bus/pci/devices")
+
+
+def _sysfs_text(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+# Reports whether the AKD1000 is fitted, bound, and answering.
+#
+# Everything here is an unprivileged sysfs read. The PCI COMMAND register
+# lives at byte offset 4, inside the first 64 bytes of config space, which
+# are world-readable - so no sudo and no extra packages. lspci was already
+# being captured next to this and never parsed, which is why a missing board,
+# a missing driver, and a wedged board all reported the same thing.
+#
+# A wedged board is the case worth naming: the driver stays bound and the
+# kernel still reports enable=1/D0, but COMMAND goes to 0, clearing Memory
+# Space Enable. Every register read then times out inside the SDK and
+# surfaces as an errno the user cannot act on.
+def _probe_akida_device() -> dict[str, object]:
+    probe: dict[str, object] = {
+        "present": False,
+        "bdf": "",
+        "driver": "",
+        "memorySpaceEnabled": None,
+    }
+    try:
+        entries = sorted(PCI_DEVICES_ROOT.iterdir())
+    except OSError:
+        return probe
+    for entry in entries:
+        if _sysfs_text(entry / "vendor").lower() != AKIDA_PCI_VENDOR:
+            continue
+        if _sysfs_text(entry / "device").lower() != AKIDA_PCI_DEVICE:
+            continue
+        probe["present"] = True
+        probe["bdf"] = entry.name
+        driver_link = entry / "driver"
+        if driver_link.is_symlink() or driver_link.exists():
+            probe["driver"] = os.path.basename(os.path.realpath(driver_link))
+        try:
+            with open(entry / "config", "rb") as config:
+                header = config.read(6)
+            if len(header) >= 6:
+                command = int.from_bytes(header[4:6], "little")
+                probe["memorySpaceEnabled"] = bool(command & 0x2)
+        except OSError:
+            pass
+        break
+    return probe
+
+
+DMA_TIMEOUT_MARKER = "DMA wait completion timed out"
+ASPM_UNCONTROLLED_MARKER = "can't disable ASPM"
+
+
+# The kernel log, or "" when this account may not read it. Provisioning puts
+# the service user in systemd-journal so it usually can, but an install that
+# predates that, or a host without systemd, must degrade rather than lie.
+def _kernel_log_text() -> str:
+    for command in (
+        ["journalctl", "--dmesg", "--boot", "--no-pager"],
+        ["dmesg"],
+    ):
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=15,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+        if result.returncode == 0 and result.stdout:
+            return result.stdout
+    return ""
+
+
+# Correctable PCIe errors counted by the kernel for this device. A healthy
+# link sits at zero; a rising count means the board and the slot are not
+# talking cleanly. Unprivileged sysfs read, absent on kernels without AER.
+def _correctable_link_errors(probe: dict[str, object]) -> int | None:
+    bdf = str(probe.get("bdf") or "")
+    if not bdf:
+        return None
+    text = _sysfs_text(PCI_DEVICES_ROOT / bdf / "aer_dev_correctable")
+    for line in text.splitlines():
+        name, _, value = line.partition(" ")
+        if name.strip() == "TOTAL_ERR_COR":
+            try:
+                return int(value.strip())
+            except ValueError:
+                return None
+    return None
+
+
+# Said when the board is fitted, bound, and its registers are enabled, yet the
+# SDK still fell back to the simulator. Nothing above catches that: every cheap
+# check passes and the fault only shows up once data moves.
+def _akida_unresponsive_message(probe: dict[str, object]) -> str:
+    opening = (
+        "The Akida board is fitted and its driver is loaded, but it stops "
+        "responding as soon as data is sent to it, so the software simulator "
+        "is being used instead. Switch the host fully off and on again - a "
+        "restart is not enough."
+    )
+    kernel_log = _kernel_log_text()
+    if kernel_log and ASPM_UNCONTROLLED_MARKER in kernel_log:
+        return (
+            f"{opening} If that does not help: this machine does not let the "
+            "driver turn PCIe power saving off, which is the usual cause. Turn "
+            "PCIe power management (ASPM) off for the board's slot in the "
+            "machine's BIOS."
+        )
+    if kernel_log and DMA_TIMEOUT_MARKER in kernel_log:
+        return f"{opening} The driver reports that transfers to the board time out."
+    errors = _correctable_link_errors(probe)
+    if errors:
+        return (
+            f"{opening} The connection to the board has logged {errors} errors, "
+            "so it may also be worth reseating the card in its slot."
+        )
+    return opening
+
+
+# Plain-English remedy for a hardware fault, or "" when the board looks fine.
+# Returning "" deliberately means "not a board problem" so the caller keeps
+# whatever the SDK said - this must not mask genuine SDK faults.
+#
+# usb_text is the already-collected lsusb output. The probe only knows about
+# PCI, and BrainChip also ships USB Akida devices, so "absent from PCI" is not
+# proof of "no board" - claiming it would be a confident lie to a USB user.
+def _akida_device_message(
+    probe: dict[str, object],
+    usb_text: str = "",
+    runtime_target: str = "",
+) -> str:
+    if not probe.get("present"):
+        haystack = usb_text.lower()
+        if "brainchip" in haystack or "akida" in haystack:
+            return ""
+        return "No Akida board was found in this host."
+    if not probe.get("driver"):
+        return "An Akida board is fitted but its PCIe driver is not loaded."
+    if probe.get("memorySpaceEnabled") is False:
+        return (
+            "The Akida board has stopped responding. Switch the host fully off "
+            "and on again - a restart is not enough."
+        )
+    if runtime_target in {"akd1000_simulator", "software_fallback"}:
+        return _akida_unresponsive_message(probe)
+    return ""
+
+
+def _local_json(path: str) -> tuple[int | None, dict[str, object]]:
+    request = urllib.request.Request(
+        f"{LOCAL_NEUROCHIP_BASE_URL}{path}",
+        headers={
+            "Content-Type": "application/json",
+            **({"X-API-Key": API_KEY} if API_KEY else {}),
+        },
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=15.0) as response:
+            body = response.read().decode("utf-8")
+            decoded = json.loads(body) if body else {}
+            return response.status, decoded if isinstance(decoded, dict) else {}
+    except urllib.error.HTTPError as exc:
+        try:
+            payload = json.loads(exc.read().decode("utf-8"))
+            if isinstance(payload, dict):
+                return exc.code, payload
+        except json.JSONDecodeError:
+            pass
+        return exc.code, {"error": f"HTTP {exc.code}"}
+    except Exception as exc:
+        return None, {"error": str(exc)}
+
+
+def _doctor_payload() -> dict[str, object]:
+    install_status = _load_install_status()
+    runtime_health_status, runtime_health = _local_json("/health")
+    runtime_status_status, runtime_status = _local_json("/api/neurochip/akida/status")
+    akida_device = _probe_akida_device()
+    lspci_text = _run_probe(["lspci"])
+    lsusb_text = _run_probe(["lsusb"])
+
+    sdk_status = str(runtime_status.get("sdk_status") or "").strip().lower()
+    runtime_target = str(runtime_status.get("runtime_target") or "").strip().lower()
+    sdk_available = runtime_status.get("sdk_available") is True
+    sdk_issues = runtime_status.get("sdk_issues")
+    if not isinstance(sdk_issues, list):
+        sdk_issues = []
+    # Needs runtime_target: a board that passes every static check and still
+    # ends up on the simulator is only visible by comparing the two.
+    device_message = _akida_device_message(akida_device, lsusb_text, runtime_target)
+    if runtime_health_status != 200:
+        preflight_status = "failed"
+        preflight_message = "Neurochip runtime health check failed"
+    elif runtime_target == "hardware" and (
+        sdk_status == "deployable" or (sdk_available and not sdk_issues)
+    ):
+        preflight_status = "ok"
+        preflight_message = "Akida hardware runtime is ready."
+    elif runtime_status_status == 200:
+        preflight_status = "degraded"
+        # A hardware verdict wins over sdk_issue_detail: when the board is
+        # absent, unbound, or wedged, the SDK only knows it got an errno back
+        # and reports a register address the user cannot act on. The raw text
+        # is still carried in the payload's own sdk_issue_detail key.
+        preflight_message = device_message or str(
+            runtime_status.get("sdk_issue_detail")
+            or runtime_status.get("error")
+            or "Optional Akida capability is degraded."
+        )
+    else:
+        preflight_status = "failed"
+        preflight_message = str(
+            runtime_status.get("error") or "Akida runtime diagnostics are unavailable."
+        )
+
+    return {
+        "host": {
+            "platform": platform.platform(),
+            "pythonVersion": platform.python_version(),
+            "machine": platform.machine(),
+        },
+        "hardwareProbe": {
+            "lspci": lspci_text,
+            "lsusb": lsusb_text,
+            "akidaDevice": akida_device,
+            "correctableLinkErrors": _correctable_link_errors(akida_device),
+        },
+        "services": {
+            "runtimeHealthStatus": runtime_health_status,
+            "runtimeHealth": runtime_health,
+            "runtimeStatusHttpStatus": runtime_status_status,
+        },
+        "installStatus": install_status,
+        "runtimeStatus": runtime_status,
+        "preflight": {
+            "preflight_status": preflight_status,
+            "preflight_message": preflight_message,
+            "runtime_target": runtime_status.get("runtime_target"),
+            "sdk_status": runtime_status.get("sdk_status"),
+            "sdk_available": runtime_status.get("sdk_available"),
+            "sdk_issues": runtime_status.get("sdk_issues"),
+            "sdk_issue_detail": runtime_status.get("sdk_issue_detail"),
+            "environment_checks": runtime_status.get("environment_checks"),
+            "device_info": runtime_status.get("device_info"),
+            "physicalHardwareReady": preflight_status == "ok",
+        },
+    }
+
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = "AkidaRemoteControl/0.1"
+
+    def _send(self, status: HTTPStatus, payload: dict[str, object]) -> None:
+        encoded = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.end_headers()
+        self.wfile.write(encoded)
+
+    def _require_api_key(self) -> bool:
+        if not API_KEY:
+            return True
+        provided = self.headers.get("X-API-Key", "")
+        if provided == API_KEY:
+            return True
+        self._send(
+            HTTPStatus.UNAUTHORIZED,
+            {"detail": "Invalid or missing API Key"},
+        )
+        return False
+
+    def do_GET(self) -> None:
+        if self.path == "/health":
+            self._send(HTTPStatus.OK, {"status": "healthy"})
+            return
+        if not self._require_api_key():
+            return
+        if self.path == "/api/remote-akida/doctor":
+            self._send(HTTPStatus.OK, _doctor_payload())
+            return
+        self._send(HTTPStatus.NOT_FOUND, {"detail": "Not found"})
+
+    def log_message(self, format: str, *args: object) -> None:
+        sys.stdout.write(f"[akida-remote-control] {format % args}\n")
+        sys.stdout.flush()
+
+
+def main() -> int:
+    server = ThreadingHTTPServer((CONTROL_HOST, CONTROL_PORT), Handler)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        return 0
+    finally:
+        server.server_close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

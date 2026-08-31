@@ -7,12 +7,12 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from .state_contracts import PREFLIGHT_DEGRADED, PREFLIGHT_FAILED, PREFLIGHT_OK
 from .suite_api_service import (
     _read_suite_api_capability_warnings,
     _suite_api_env_dir,
     _suite_api_env_python,
 )
-from .state_contracts import PREFLIGHT_DEGRADED, PREFLIGHT_FAILED, PREFLIGHT_OK
 
 
 def _doctor_prefix(status: str) -> str:
