@@ -15,8 +15,15 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from suite_api.domains.jupyter.router import router as jupyter_router
+from suite_api.domains.neurobench.router import router as neurobench_router
+from suite_api.domains.neurochip.router import router as neurochip_router
 from suite_api.domains.neurocnl.lifespan import neurocnl_shutdown, neurocnl_startup
+from suite_api.domains.neurocnl.router import router as neurocnl_router
 from suite_api.domains.neurohub.lifespan import neurohub_shutdown, neurohub_startup
+from suite_api.domains.neurohub.router import router as neurohub_router
+from suite_api.domains.neurosense.router import router as neurosense_router
+from suite_api.domains.neurosim.router import router as neurosim_router
 from suite_api.errors import error_response
 from suite_api.middleware import attach_middleware
 from suite_api.routers import health
@@ -52,8 +59,14 @@ async def http_exception_handler(
     message = str(exc.detail) if isinstance(exc.detail, str) else "Request failed."
     retryable = False
     if isinstance(exc.detail, dict):
-        candidate_code = exc.detail.get("code")
+        candidate_code = exc.detail.get("code") or exc.detail.get("error")
         candidate_message = exc.detail.get("message")
+        if (
+            not candidate_message
+            and isinstance(exc.detail.get("messages"), list)
+            and exc.detail["messages"]
+        ):
+            candidate_message = exc.detail["messages"][0]
         if isinstance(candidate_code, str) and candidate_code:
             code = candidate_code
         if isinstance(candidate_message, str) and candidate_message:
@@ -96,37 +109,12 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 
 app.include_router(health.router, prefix="/api/suite", tags=["health"])
-
-from suite_api.domains.neurocnl.router import router as neurocnl_router
-
 app.include_router(neurocnl_router)
-
-from suite_api.domains.neurosim.router import router as neurosim_router
-
 app.include_router(neurosim_router)
-
-from suite_api.domains.neurochip.router import router as neurochip_router
-
 app.include_router(neurochip_router)
-
-from suite_api.domains.neurobench.router import (
-    router as neurobench_router,
-)
-
 app.include_router(neurobench_router)
-
-from suite_api.domains.neurosense.router import (
-    router as neurosense_router,
-)
-
 app.include_router(neurosense_router)
-
-from suite_api.domains.neurohub.router import router as neurohub_router
-
 app.include_router(neurohub_router)
-
-from suite_api.domains.jupyter.router import router as jupyter_router
-
 app.include_router(jupyter_router)
 
 
