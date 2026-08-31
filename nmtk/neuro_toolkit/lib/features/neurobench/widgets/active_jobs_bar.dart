@@ -129,15 +129,15 @@ class _ActiveJobsBarState extends ConsumerState<ActiveJobsBar> {
                         children: [
                           if (!job.status.isTerminal &&
                               !executionState.cancelling)
-                            TextButton.icon(
+                            ZetaButton.text(
                               onPressed: () => ref
                                   .read(benchmarkExecutionProvider.notifier)
                                   .cancelActiveJob(),
-                              icon: const Icon(ZetaIcons.stop_circle),
-                              label: const Text('Cancel'),
+                              leadingIcon: ZetaIcons.stop_circle,
+                              label: 'Cancel',
                             ),
                           const Spacer(),
-                          TextButton(
+                          ZetaButton.text(
                             onPressed: () {
                               ref
                                   .read(
@@ -145,7 +145,7 @@ class _ActiveJobsBarState extends ConsumerState<ActiveJobsBar> {
                                   )
                                   .set(job.id);
                             },
-                            child: const Text('Dismiss'),
+                            label: 'Dismiss',
                           ),
                         ],
                       ),

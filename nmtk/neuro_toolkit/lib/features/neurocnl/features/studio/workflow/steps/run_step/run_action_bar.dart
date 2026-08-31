@@ -88,18 +88,26 @@ class RunActionBar extends StatelessWidget {
                           color: colors.mainNegative,
                         ),
                       )
-                    : TextButton.icon(
+                    : ZetaButton.text(
                         onPressed: onRetry,
-                        icon: Icon(
-                          ZetaIcons.refresh,
-                          size: 18,
-                          color: colors.mainNegative,
-                        ),
-                        label: Text(
-                          'Retry',
-                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                            color: colors.mainNegative,
-                          ),
+                        label: '',
+                        semanticLabel: 'Retry',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              ZetaIcons.refresh,
+                              size: 18,
+                              color: colors.mainNegative,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Retry',
+                              style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                                color: colors.mainNegative,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
               ],

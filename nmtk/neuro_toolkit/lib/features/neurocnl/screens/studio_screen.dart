@@ -254,13 +254,13 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
           'Detailed activity and weights are fetched again when opened.',
         ),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Start Fresh'),
+            label: 'Start Fresh',
           ),
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Restore'),
+            label: 'Restore',
           ),
         ],
       ),

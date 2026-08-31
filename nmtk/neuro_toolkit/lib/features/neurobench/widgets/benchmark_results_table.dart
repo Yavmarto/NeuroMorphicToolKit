@@ -59,7 +59,7 @@ class BenchmarkResultsTable extends ConsumerWidget {
                   selected: selected,
                   cells: [
                     DataCell(
-                      Checkbox(
+                      ZetaCheckbox(
                         value: selected,
                         onChanged: (_) => ref
                             .read(compareSelectionProvider.notifier)
@@ -79,18 +79,21 @@ class BenchmarkResultsTable extends ConsumerWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          TextButton(
+                          ZetaButton.text(
                             onPressed: () => _loadResult(context, ref, result),
-                            child: const Text('Load'),
+                            label: 'Load',
+                            size: ZetaWidgetSize.small,
                           ),
-                          TextButton(
+                          ZetaButton.text(
                             onPressed: () =>
                                 _saveBaseline(context, ref, result),
-                            child: const Text('Save'),
+                            label: 'Save',
+                            size: ZetaWidgetSize.small,
                           ),
-                          TextButton(
+                          ZetaButton.text(
                             onPressed: () => _exportJson(context, result),
-                            child: const Text('Export'),
+                            label: 'Export',
+                            size: ZetaWidgetSize.small,
                           ),
                         ],
                       ),

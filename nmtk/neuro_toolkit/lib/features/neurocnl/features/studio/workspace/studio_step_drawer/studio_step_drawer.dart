@@ -143,9 +143,9 @@ class StudioStepDrawer extends ConsumerWidget {
           decoration: const InputDecoration(hintText: 'Workspace name'),
         ),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            label: 'Cancel',
           ),
           FilledButton(
             onPressed: () {

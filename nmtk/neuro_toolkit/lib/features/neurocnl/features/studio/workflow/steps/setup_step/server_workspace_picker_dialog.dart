@@ -50,9 +50,9 @@ class ServerWorkspacePickerDialog extends ConsumerWidget {
         ),
       ),
       actions: [
-        TextButton(
+        ZetaButton.text(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          label: 'Cancel',
         ),
       ],
     );

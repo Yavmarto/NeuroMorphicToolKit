@@ -468,9 +468,9 @@ class _CustomNodeSourceEditorState
           'Your edits have not been saved as a reusable custom node.',
         ),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(confirmationContext).pop(false),
-            child: const Text('Keep editing'),
+            label: 'Keep editing',
           ),
           FilledButton(
             onPressed: () => Navigator.of(confirmationContext).pop(true),
@@ -598,7 +598,7 @@ class _CustomNodeSourceEditorState
                 'Python validation is unavailable. Reconnect to the backend and retry.',
               ),
               actions: [
-                TextButton(onPressed: _validateNow, child: const Text('Retry')),
+                ZetaButton.text(onPressed: _validateNow, label: 'Retry'),
               ],
             ),
           const Divider(height: 1),
@@ -606,9 +606,9 @@ class _CustomNodeSourceEditorState
             padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
             child: Row(
               children: [
-                TextButton(
+                ZetaButton.text(
                   onPressed: _saving ? null : _requestClose,
-                  child: const Text('Cancel'),
+                  label: 'Cancel',
                 ),
                 const Spacer(),
                 if (_source?.isCustom == true) ...[

@@ -301,18 +301,18 @@ class _NotebookStepState extends ConsumerState<NotebookStep> {
           ),
         ),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: text));
               ScaffoldMessenger.of(ctx).showSnackBar(
                 const SnackBar(content: Text('Copied to clipboard')),
               );
             },
-            child: const Text('Copy'),
+            label: 'Copy',
           ),
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            label: 'Close',
           ),
         ],
       ),

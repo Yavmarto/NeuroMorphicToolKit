@@ -67,13 +67,13 @@ class _CompareTargetsDialogState extends ConsumerState<CompareTargetsDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        ZetaButton.text(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          label: 'Cancel',
         ),
-        TextButton(
+        ZetaButton.text(
           onPressed: () => Navigator.of(context).pop(_selected),
-          child: const Text('Compare'),
+          label: 'Compare',
         ),
       ],
     );

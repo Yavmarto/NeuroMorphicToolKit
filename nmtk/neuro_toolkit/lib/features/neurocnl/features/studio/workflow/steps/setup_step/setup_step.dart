@@ -358,9 +358,9 @@ class SetupStepState extends ConsumerState<SetupStep> {
               ),
             ),
             actions: [
-              TextButton(
+              ZetaButton.text(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
+                label: 'Cancel',
               ),
               FilledButton(
                 onPressed: () {
@@ -425,9 +425,9 @@ class SetupStepState extends ConsumerState<SetupStep> {
           ),
         ),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            label: 'Close',
           ),
         ],
       ),

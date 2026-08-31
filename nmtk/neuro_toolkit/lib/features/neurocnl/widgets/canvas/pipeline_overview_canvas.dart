@@ -188,11 +188,21 @@ class _PhaseCard extends StatelessWidget {
               ),
             ),
             // Open button
-            TextButton.icon(
+            ZetaButton.text(
               onPressed: onOpen,
-              icon: const Icon(ZetaIcons.open_in_new_window, size: 14),
-              label: const Text('Open'),
-              style: TextButton.styleFrom(foregroundColor: color),
+              label: '',
+              semanticLabel: 'Open',
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(ZetaIcons.open_in_new_window, size: 14, color: color),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Open',
+                    style: Zeta.of(context).textStyles.labelMedium.copyWith(color: color),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

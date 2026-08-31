@@ -191,13 +191,13 @@ class _RunStepState extends ConsumerState<RunStep> {
           'any unsaved state in it will be lost.',
         ),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            label: 'Cancel',
           ),
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Stop & Run'),
+            label: 'Stop & Run',
           ),
         ],
       ),
@@ -221,16 +221,16 @@ class _RunStepState extends ConsumerState<RunStep> {
           'pipeline config, discarding those edits.',
         ),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(
               dialogContext,
             ).pop(NotebookEditChoice.discardAndRegenerate),
-            child: const Text('Discard & Regenerate'),
+            label: 'Discard & Regenerate',
           ),
-          TextButton(
+          ZetaButton.text(
             onPressed: () =>
                 Navigator.of(dialogContext).pop(NotebookEditChoice.keepEdits),
-            child: const Text('Keep My Edits & Run'),
+            label: 'Keep My Edits & Run',
           ),
         ],
       ),
@@ -269,18 +269,18 @@ class _RunStepState extends ConsumerState<RunStep> {
           ),
         ),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: text));
               ScaffoldMessenger.of(ctx).showSnackBar(
                 const SnackBar(content: Text('Copied to clipboard')),
               );
             },
-            child: const Text('Copy'),
+            label: 'Copy',
           ),
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            label: 'Close',
           ),
         ],
       ),
@@ -405,9 +405,11 @@ class _RunStepState extends ConsumerState<RunStep> {
                         ),
                       // Acknowledging a failure must not mean re-running every
                       // platform, which is what Retry does.
-                      TextButton(
+                      ZetaButton.text(
                         key: const Key('run-error-dismiss'),
                         onPressed: _dismissRunErrors,
+                        label: '',
+                        semanticLabel: 'Dismiss',
                         child: Text(
                           'Dismiss',
                           style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: colors.mainNegative),

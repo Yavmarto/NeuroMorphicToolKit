@@ -65,9 +65,9 @@ class RunningTasksDialog extends ConsumerWidget {
               ),
       ),
       actions: [
-        TextButton(
+        ZetaButton.text(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          label: 'Close',
         ),
       ],
     );

@@ -102,13 +102,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
           'undone.',
         ),
         actions: [
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            label: 'Cancel',
           ),
-          TextButton(
+          ZetaButton.text(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Clear'),
+            label: 'Clear',
           ),
         ],
       ),

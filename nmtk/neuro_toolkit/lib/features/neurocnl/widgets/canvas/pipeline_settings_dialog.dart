@@ -65,11 +65,11 @@ Future<void> showPipelineSettingsDialog(BuildContext context, WidgetRef ref) {
         ),
       ),
       actions: [
-        TextButton(
+        ZetaButton.text(
           onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Cancel'),
+          label: 'Cancel',
         ),
-        TextButton(
+        ZetaButton.text(
           onPressed: () {
             if (!formKey.currentState!.validate()) return;
             final epochs = int.parse(epochsController.text);
@@ -79,7 +79,7 @@ Future<void> showPipelineSettingsDialog(BuildContext context, WidgetRef ref) {
                 .updatePipeline(pipeline.copyWith(epochs: epochs, seed: seed));
             Navigator.of(dialogContext).pop();
           },
-          child: const Text('Save'),
+          label: 'Save',
         ),
       ],
     ),
