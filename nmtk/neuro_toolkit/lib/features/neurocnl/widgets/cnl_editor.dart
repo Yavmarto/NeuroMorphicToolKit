@@ -1064,9 +1064,8 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
                       ? Tooltip(
                           message: _controller.errorMap[gl.logicalIndex]!,
                           preferBelow: true,
-                          textStyle: TextStyle(
+                          textStyle: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                             color: Zeta.of(context).colors.mainInverse,
-                            fontSize: 12,
                           ),
                           decoration: BoxDecoration(
                             color: AppTheme.error.withValues(alpha: 0.9),
@@ -1136,7 +1135,7 @@ class _LineCountBadge extends StatelessWidget {
             .length;
         return Text(
           '$nonEmpty ${l10n.sentences} \u00b7 $lines ${l10n.lines}',
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
         );
       },
     );
@@ -1194,9 +1193,8 @@ class _NumericLiteralDialogState extends State<_NumericLiteralDialog> {
         children: [
           Text(
             widget.linePreview,
-            style: const TextStyle(
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
               color: AppTheme.textSecondary,
-              fontSize: 12,
               height: 1.4,
             ),
           ),
@@ -1348,20 +1346,20 @@ class _AutocompleteOverlay extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Header hint
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(10, 6, 10, 4),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
                     child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           ZetaIcons.arrow_forward,
                           size: 12,
                           color: AppTheme.textSecondary,
                         ),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             'Tab / Enter to insert  \u2022  \u2191\u2193 to navigate  \u2022  Esc to dismiss',
-                            style: TextStyle(
+                            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                               fontSize: 10,
                               color: AppTheme.textSecondary,
                             ),
@@ -1436,7 +1434,7 @@ class _AutocompleteOverlay extends StatelessWidget {
                                   ),
                                   child: Text(
                                     _sourceBadgeLabel(item.source),
-                                    style: TextStyle(
+                                    style: Zeta.of(context).textStyles.labelSmall.copyWith(
                                       fontSize: 9,
                                       color: _sourceBadgeColor(item.source),
                                       fontWeight: FontWeight.w600,

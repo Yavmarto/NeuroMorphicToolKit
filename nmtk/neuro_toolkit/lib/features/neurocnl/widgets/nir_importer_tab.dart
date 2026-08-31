@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart'
     show
+        Zeta,
         ZetaIcons,
         NmtkFontFamilies,
         NmtkShellTokens,
@@ -126,13 +127,11 @@ class _NirHeader extends StatelessWidget {
             color: AppTheme.primary,
           ),
           const SizedBox(width: 8),
-          const Flexible(
+          Flexible(
             child: Text(
               'NIR Inspector',
-              style: TextStyle(
+              style: Zeta.of(context).textStyles.labelSmall.copyWith(
                 color: AppTheme.textPrimary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -218,22 +217,20 @@ class _IdlePlaceholder extends StatelessWidget {
             color: AppTheme.textSecondary.withValues(alpha: 0.28),
           ),
           const SizedBox(height: 14),
-          const Text(
+          Text(
             'No NIR graph loaded.',
-            style: TextStyle(
+            style: Zeta.of(context).textStyles.labelMedium.copyWith(
               color: AppTheme.textSecondary,
-              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Press "Load .nir" to import a NIR file, or run Generate in the pipeline\n'
             'to auto-populate this view from the current CNL spec.',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
               color: AppTheme.textSecondary,
-              fontSize: 12,
               height: 1.5,
             ),
           ),
@@ -259,11 +256,10 @@ class _ErrorView extends StatelessWidget {
           children: [
             Icon(ZetaIcons.error_outline, size: 40, color: tokens.errorColor),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Failed to parse NIR file',
-              style: TextStyle(
+              style: Zeta.of(context).textStyles.labelMedium.copyWith(
                 color: AppTheme.textPrimary,
-                fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -386,10 +382,10 @@ class _EmptyGraphEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Text(
         'No editable NIR graph nodes.',
-        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+        style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
       ),
     );
   }
@@ -481,7 +477,7 @@ class _NirNodeCardState extends ConsumerState<_NirNodeCard> {
         },
         title: Text(
           title,
-          style: const TextStyle(
+          style: Zeta.of(context).textStyles.labelMedium.copyWith(
             color: AppTheme.textPrimary,
             fontSize: 13,
             fontWeight: FontWeight.w600,
@@ -489,7 +485,10 @@ class _NirNodeCardState extends ConsumerState<_NirNodeCard> {
         ),
         subtitle: Text(
           node.nirType ?? node.componentId,
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+          style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
+            color: AppTheme.textSecondary,
+            fontSize: 11,
+          ),
         ),
         trailing: IconButton(
           tooltip: 'Delete node',
@@ -591,10 +590,10 @@ class _NirEdgeList extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Connections',
-                    style: TextStyle(
+                    style: Zeta.of(context).textStyles.labelMedium.copyWith(
                       color: AppTheme.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -655,9 +654,8 @@ class _NirEdgeRow extends ConsumerWidget {
           Expanded(
             child: Text(
               '${edge.sourceNodeId} -> ${edge.targetNodeId}',
-              style: const TextStyle(
+              style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                 color: AppTheme.textSecondary,
-                fontSize: 12,
               ),
               overflow: TextOverflow.ellipsis,
             ),

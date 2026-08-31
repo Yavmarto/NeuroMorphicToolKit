@@ -86,9 +86,12 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
               color: AppTheme.textSecondary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Run the model to inspect the compiled graph.',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              style: Zeta.of(context).textStyles.bodySmall.copyWith(
+                color: AppTheme.textSecondary,
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -167,6 +170,19 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
                                         radiusSm: NmtkShellTokens.of(context).radiusSm,
                                         radiusMd: NmtkShellTokens.of(context).radiusMd,
                                         selectedBorderColor: Zeta.of(context).colors.mainInverse,
+                                        edgeLabelBaseStyle: Zeta.of(
+                                          context,
+                                        ).textStyles.bodyXSmall.copyWith(fontSize: 9),
+                                        nodeLabelStyle: Zeta.of(context).textStyles.labelSmall
+                                            .copyWith(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.textPrimary,
+                                            ),
+                                        nodeSecondaryLabelBaseStyle: Zeta.of(context)
+                                            .textStyles
+                                            .labelSmall
+                                            .copyWith(fontSize: 9, fontWeight: FontWeight.w500),
                                       ),
                                     ),
                                   ),
@@ -429,7 +445,7 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
                           : 'Execution preview only: this graph is a normalized sanity check for the generated network, not a layout editor. Similar specs will often look alike here; use NeuroSim for detailed topology inspection.'),
                 maxLines: compact ? 2 : 3,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
+                style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                   color: AppTheme.textSecondary,
                   fontSize: compact ? 11 : 12,
                   height: 1.45,
@@ -458,20 +474,18 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Straight-through generated flow',
-            style: TextStyle(
+            style: Zeta.of(context).textStyles.bodySmall.copyWith(
               color: AppTheme.textPrimary,
-              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'This output does not branch, so the visual graph adds little beyond the generated counts below. Use the editor number picker to adjust values, then rerun Generate when you need an updated artifact preview.',
-            style: TextStyle(
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
               color: AppTheme.textSecondary,
-              fontSize: 12,
               height: 1.45,
             ),
           ),
@@ -522,9 +536,8 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(
+            style: Zeta.of(context).textStyles.labelSmall.copyWith(
               color: AppTheme.textPrimary,
-              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -562,7 +575,7 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
                   const SizedBox(width: 5),
                   Text(
                     item.$1,
-                    style: const TextStyle(
+                    style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                       color: AppTheme.textSecondary,
                       fontSize: 10,
                     ),
@@ -711,7 +724,7 @@ class _InfoPanel extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 title,
-                style: const TextStyle(
+                style: Zeta.of(context).textStyles.labelMedium.copyWith(
                   color: AppTheme.textPrimary,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
@@ -727,7 +740,7 @@ class _InfoPanel extends StatelessWidget {
                 ),
                 child: Text(
                   badge,
-                  style: TextStyle(
+                  style: Zeta.of(context).textStyles.labelSmall.copyWith(
                     color: color,
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -758,14 +771,14 @@ class _InfoPanel extends StatelessWidget {
                           children: [
                             TextSpan(
                               text: '${r.key}: ',
-                              style: const TextStyle(
+                              style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                                 color: AppTheme.textSecondary,
                                 fontSize: 11,
                               ),
                             ),
                             TextSpan(
                               text: r.value,
-                              style: const TextStyle(
+                              style: Zeta.of(context).textStyles.labelSmall.copyWith(
                                 color: AppTheme.synNumber,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -796,6 +809,9 @@ class _NetworkPainter extends CustomPainter {
   final double radiusSm;
   final double radiusMd;
   final Color selectedBorderColor;
+  final TextStyle edgeLabelBaseStyle;
+  final TextStyle nodeLabelStyle;
+  final TextStyle nodeSecondaryLabelBaseStyle;
 
   _NetworkPainter({
     required this.graph,
@@ -804,6 +820,9 @@ class _NetworkPainter extends CustomPainter {
     required this.radiusSm,
     required this.radiusMd,
     required this.selectedBorderColor,
+    required this.edgeLabelBaseStyle,
+    required this.nodeLabelStyle,
+    required this.nodeSecondaryLabelBaseStyle,
   });
 
   @override
@@ -1001,9 +1020,8 @@ class _NetworkPainter extends CustomPainter {
     final tp = TextPainter(
       text: TextSpan(
         text: text,
-        style: TextStyle(
+        style: edgeLabelBaseStyle.copyWith(
           color: isSelected ? edgeColor : AppTheme.textSecondary,
-          fontSize: 9,
           fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
         ),
       ),
@@ -1135,11 +1153,7 @@ class _NetworkPainter extends CustomPainter {
     final tp1 = TextPainter(
       text: TextSpan(
         text: nodeLabel,
-        style: const TextStyle(
-          color: AppTheme.textPrimary,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
+        style: nodeLabelStyle,
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -1157,10 +1171,8 @@ class _NetworkPainter extends CustomPainter {
         tp2 = TextPainter(
           text: TextSpan(
             text: parts.join('  '),
-            style: TextStyle(
+            style: nodeSecondaryLabelBaseStyle.copyWith(
               color: color.withValues(alpha: 0.85),
-              fontSize: 9,
-              fontWeight: FontWeight.w500,
             ),
           ),
           textDirection: TextDirection.ltr,
@@ -1210,7 +1222,10 @@ class _NetworkPainter extends CustomPainter {
       old.selectedId != selectedId ||
       old.radiusSm != radiusSm ||
       old.radiusMd != radiusMd ||
-      old.selectedBorderColor != selectedBorderColor;
+      old.selectedBorderColor != selectedBorderColor ||
+      old.edgeLabelBaseStyle != edgeLabelBaseStyle ||
+      old.nodeLabelStyle != nodeLabelStyle ||
+      old.nodeSecondaryLabelBaseStyle != nodeSecondaryLabelBaseStyle;
 }
 
 // ---------------------------------------------------------------------------

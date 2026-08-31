@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:neuro_toolkit/ui_core/widgets/adaptive_layout.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 import 'package:neuro_toolkit/features/neurocnl/models/quantization_report.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 
@@ -12,42 +12,42 @@ class QuantizationCurveChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (report.bitWidths.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No quantization data',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textSecondary),
         ),
       );
     }
     return NmtkAdaptiveLayout(
-      desktopBuilder: (_) => _buildTable(),
-      mobileBuilder: (_) => _buildList(),
+      desktopBuilder: (_) => _buildTable(context),
+      mobileBuilder: (_) => _buildList(context),
     );
   }
 
-  Widget _buildTable() {
+  Widget _buildTable(BuildContext context) {
     return DataTable(
       headingRowColor: const WidgetStatePropertyAll(AppTheme.surfaceVariant),
       dataRowColor: const WidgetStatePropertyAll(AppTheme.surface),
       border: TableBorder.all(color: AppTheme.border, width: 1),
       columnSpacing: 24,
-      columns: const [
+      columns: [
         DataColumn(
           label: Text(
             'Bit Width',
-            style: TextStyle(fontWeight: FontWeight.w600),
+            style: Zeta.of(context).textStyles.labelMedium.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         DataColumn(
           label: Text(
             'Accuracy Drop',
-            style: TextStyle(fontWeight: FontWeight.w600),
+            style: Zeta.of(context).textStyles.labelMedium.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         DataColumn(
           label: Text(
             'Sparsity',
-            style: TextStyle(fontWeight: FontWeight.w600),
+            style: Zeta.of(context).textStyles.labelMedium.copyWith(fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -60,9 +60,8 @@ class QuantizationCurveChart extends StatelessWidget {
             DataCell(
               Text(
                 '$bits-bit',
-                style: const TextStyle(
+                style: Zeta.of(context).textStyles.labelMedium.copyWith(
                   color: AppTheme.textPrimary,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
@@ -70,7 +69,7 @@ class QuantizationCurveChart extends StatelessWidget {
             DataCell(
               Text(
                 '${(sparsity * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(color: AppTheme.textPrimary),
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textPrimary),
               ),
             ),
           ],
@@ -79,7 +78,7 @@ class QuantizationCurveChart extends StatelessWidget {
     );
   }
 
-  Widget _buildList() {
+  Widget _buildList(BuildContext context) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -92,15 +91,14 @@ class QuantizationCurveChart extends StatelessWidget {
           leading: _AccuracyDropIndicator(drop: drop),
           title: Text(
             '$bits-bit',
-            style: const TextStyle(
+            style: Zeta.of(context).textStyles.labelMedium.copyWith(
               color: AppTheme.textPrimary,
-              fontWeight: FontWeight.w500,
             ),
           ),
           subtitle: Text(
             'Drop ${(drop * 100).toStringAsFixed(2)}%  ·  '
             'Sparsity ${(sparsity * 100).toStringAsFixed(1)}%',
-            style: const TextStyle(color: AppTheme.textSecondary),
+            style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textSecondary),
           ),
         );
       },
@@ -137,7 +135,10 @@ class _AccuracyDropIndicator extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           '${pct.toStringAsFixed(2)}%',
-          style: TextStyle(color: color, fontWeight: FontWeight.w600),
+          style: Zeta.of(context).textStyles.labelMedium.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );

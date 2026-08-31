@@ -94,10 +94,10 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
               color: AppTheme.errorColorOf(context),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Could not load templates.\nIs the backend running?',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 12),
             ZetaButton.outline(
@@ -121,15 +121,15 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
         }).toList();
 
         if (filtered.isEmpty) {
-          return const Center(
+          return Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(ZetaIcons.search, size: 48, color: AppTheme.textSecondary),
-                SizedBox(height: 8),
+                const Icon(ZetaIcons.search, size: 48, color: AppTheme.textSecondary),
+                const SizedBox(height: 8),
                 Text(
                   'No templates match your filters.',
-                  style: TextStyle(color: AppTheme.textSecondary),
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textSecondary),
                 ),
               ],
             ),
@@ -201,7 +201,7 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
               const SizedBox(width: 8),
               Text(
                 l10n?.templateGallery ?? 'Template Gallery',
-                style: const TextStyle(
+                style: Zeta.of(context).textStyles.titleMedium.copyWith(
                   color: AppTheme.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -221,7 +221,10 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
           const SizedBox(height: 4),
           Text(
             l10n?.chooseTemplate ?? 'Choose a template to get started.',
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            style: Zeta.of(context).textStyles.bodySmall.copyWith(
+              color: AppTheme.textSecondary,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -259,11 +262,10 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
                             setState(() => _selectedCategory = cat);
                           }
                         },
-                        labelStyle: TextStyle(
+                        labelStyle: Zeta.of(context).textStyles.labelSmall.copyWith(
                           color: isSelected
                               ? Zeta.of(context).colors.mainInverse
                               : AppTheme.textSecondary,
-                          fontSize: 12,
                           fontWeight: isSelected
                               ? FontWeight.w600
                               : FontWeight.normal,
@@ -294,7 +296,7 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
                 children: [
                   Text(
                     'The active file "${activeFile?.name}" has unsaved changes. Applying a template will overwrite these changes.',
-                    style: const TextStyle(
+                    style: Zeta.of(context).textStyles.bodySmall.copyWith(
                       color: AppTheme.textPrimary,
                       fontSize: 13,
                     ),
@@ -408,9 +410,8 @@ class _TemplateCard extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         template.name,
-                        style: const TextStyle(
+                        style: Zeta.of(context).textStyles.labelMedium.copyWith(
                           color: AppTheme.textPrimary,
-                          fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
                         maxLines: 1,
@@ -424,9 +425,8 @@ class _TemplateCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     template.description,
-                    style: const TextStyle(
+                    style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                       color: AppTheme.textSecondary,
-                      fontSize: 12,
                     ),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
@@ -451,7 +451,7 @@ class _TemplateCard extends ConsumerWidget {
                             ),
                             child: Text(
                               tag,
-                              style: const TextStyle(
+                              style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                                 color: AppTheme.textSecondary,
                                 fontSize: 10,
                               ),
@@ -478,12 +478,11 @@ class _TemplateCard extends ConsumerWidget {
                               const SizedBox(width: 2),
                               Text(
                                 'SNNTorch only',
-                                style: TextStyle(
+                                style: Zeta.of(context).textStyles.labelSmall.copyWith(
                                   color: NmtkShellTokens.of(
                                     context,
                                   ).warningColor,
                                   fontSize: 10,
-                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
@@ -559,7 +558,7 @@ class _DifficultyBadge extends StatelessWidget {
       ),
       child: Text(
         difficulty,
-        style: TextStyle(
+        style: Zeta.of(context).textStyles.labelSmall.copyWith(
           color: color,
           fontSize: 10,
           fontWeight: FontWeight.w600,

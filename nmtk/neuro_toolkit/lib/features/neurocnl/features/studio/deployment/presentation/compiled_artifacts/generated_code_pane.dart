@@ -85,7 +85,10 @@ class _GeneratedCodePaneState extends State<GeneratedCodePane> {
         style: ButtonStyle(
           visualDensity: VisualDensity.compact,
           textStyle: WidgetStateProperty.all(
-            const TextStyle(fontSize: 10, fontWeight: FontWeight.w600),
+            Zeta.of(context).textStyles.labelSmall.copyWith(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
@@ -131,7 +134,7 @@ class _GeneratedCodePaneState extends State<GeneratedCodePane> {
                   const SizedBox(width: 4),
                   Text(
                     _copied ? 'Copied' : 'Copy',
-                    style: TextStyle(
+                    style: Zeta.of(context).textStyles.labelSmall.copyWith(
                       color: _copied
                           ? AppTheme.success
                           : AppTheme.textSecondary,
@@ -163,14 +166,14 @@ class _GeneratedCodePaneState extends State<GeneratedCodePane> {
                     color: AppTheme.primaryDim.withValues(alpha: 0.35),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(ZetaIcons.download, size: 12, color: AppTheme.primary),
-                    SizedBox(width: 4),
+                    const Icon(ZetaIcons.download, size: 12, color: AppTheme.primary),
+                    const SizedBox(width: 4),
                     Text(
                       'Download .nir',
-                      style: TextStyle(
+                      style: Zeta.of(context).textStyles.labelSmall.copyWith(
                         color: AppTheme.primary,
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
@@ -214,7 +217,7 @@ class _GeneratedCodePaneState extends State<GeneratedCodePane> {
                           const SizedBox(width: 6),
                           Text(
                             _activeFilename,
-                            style: const TextStyle(
+                            style: Zeta.of(context).textStyles.labelSmall.copyWith(
                               color: AppTheme.textSecondary,
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -242,7 +245,7 @@ class _GeneratedCodePaneState extends State<GeneratedCodePane> {
                     const SizedBox(width: 6),
                     Text(
                       _activeFilename,
-                      style: const TextStyle(
+                      style: Zeta.of(context).textStyles.labelSmall.copyWith(
                         color: AppTheme.textSecondary,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -283,9 +286,8 @@ class _GeneratedCodePaneState extends State<GeneratedCodePane> {
                         Text(
                           _emptyStateLabel,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
+                          style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                             color: AppTheme.textSecondary,
-                            fontSize: 12,
                           ),
                         ),
                       ],
