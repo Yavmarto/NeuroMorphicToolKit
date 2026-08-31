@@ -115,7 +115,7 @@ class MultiPlatformCurveChart extends StatelessWidget {
                     reservedSize: 20,
                     getTitlesWidget: (v, meta) => Text(
                       v.toInt().toString(),
-                      style: const TextStyle(fontSize: 9),
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(fontSize: 9),
                     ),
                   ),
                 ),
@@ -125,7 +125,7 @@ class MultiPlatformCurveChart extends StatelessWidget {
                     reservedSize: 36,
                     getTitlesWidget: (v, meta) => Text(
                       isLoss ? v.toStringAsFixed(2) : '${(v * 100).toInt()}%',
-                      style: const TextStyle(fontSize: 9),
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(fontSize: 9),
                     ),
                   ),
                 ),

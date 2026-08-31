@@ -43,7 +43,7 @@ class StepErrorPane extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(
+                    style: Zeta.of(context).textStyles.labelMedium.copyWith(
                       color: errorColor,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -55,9 +55,8 @@ class StepErrorPane extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               message,
-              style: const TextStyle(
+              style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                 color: AppTheme.textPrimary,
-                fontSize: 12,
                 height: 1.4,
               ),
             ),
@@ -76,9 +75,8 @@ class StepErrorPane extends StatelessWidget {
                   Expanded(
                     child: Text(
                       hint!,
-                      style: const TextStyle(
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         color: AppTheme.textSecondary,
-                        fontSize: 12,
                         height: 1.4,
                       ),
                     ),

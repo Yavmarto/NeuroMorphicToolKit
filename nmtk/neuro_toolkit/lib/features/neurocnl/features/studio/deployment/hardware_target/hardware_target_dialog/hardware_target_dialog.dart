@@ -216,7 +216,7 @@ class _HardwareTargetDialogState extends State<HardwareTargetDialog> {
                   if (_currentEntries.isEmpty)
                     Text(
                       'No saved ${targetLabel(widget.data.targetType).toLowerCase()} devices yet.',
-                      style: const TextStyle(
+                      style: Zeta.of(context).textStyles.bodySmall.copyWith(
                         color: AppTheme.textSecondary,
                         fontSize: 13,
                       ),
@@ -253,9 +253,8 @@ class _HardwareTargetDialogState extends State<HardwareTargetDialog> {
                     Text(
                       _statusMessage!,
                       key: const Key('hardware-target-list-status'),
-                      style: const TextStyle(
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         color: AppTheme.textSecondary,
-                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -263,9 +262,8 @@ class _HardwareTargetDialogState extends State<HardwareTargetDialog> {
                     const SizedBox(height: 12),
                     Text(
                       _saveErrorMessage!,
-                      style: const TextStyle(
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         color: AppTheme.error,
-                        fontSize: 12,
                       ),
                     ),
                   ],

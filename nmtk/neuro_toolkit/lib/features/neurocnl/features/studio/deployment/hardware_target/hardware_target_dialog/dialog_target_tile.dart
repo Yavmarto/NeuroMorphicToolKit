@@ -63,7 +63,7 @@ class DialogTargetTile extends StatelessWidget {
                       children: [
                         Text(
                           entry.title,
-                          style: const TextStyle(
+                          style: Zeta.of(context).textStyles.labelMedium.copyWith(
                             color: AppTheme.textPrimary,
                             fontWeight: FontWeight.w700,
                           ),
@@ -78,7 +78,7 @@ class DialogTargetTile extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             '(Default)',
-                            style: TextStyle(
+                            style: Zeta.of(context).textStyles.labelSmall.copyWith(
                               color: tokens.warningColor,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -90,9 +90,8 @@ class DialogTargetTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       entry.subtitle,
-                      style: const TextStyle(
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         color: AppTheme.textSecondary,
-                        fontSize: 12,
                       ),
                     ),
                   ],

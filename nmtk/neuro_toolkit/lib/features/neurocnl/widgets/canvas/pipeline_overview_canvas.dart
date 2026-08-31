@@ -160,7 +160,7 @@ class _PhaseCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: Zeta.of(context).textStyles.labelMedium.copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -169,17 +169,17 @@ class _PhaseCard extends StatelessWidget {
                   if (isEmpty)
                     Text(
                       emptyText,
-                      style: const TextStyle(
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         fontSize: 11,
-                        color: Color(0xFF9E9E9E),
+                        color: const Color(0xFF9E9E9E),
                       ),
                     )
                   else
                     Text(
                       subtitle,
-                      style: const TextStyle(
+                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         fontSize: 11,
-                        color: Color(0xFF616161),
+                        color: const Color(0xFF616161),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

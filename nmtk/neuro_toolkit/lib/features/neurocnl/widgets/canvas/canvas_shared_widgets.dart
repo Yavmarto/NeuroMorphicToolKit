@@ -377,7 +377,7 @@ class NodeCardTitleContent extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       textAlign: centered ? TextAlign.center : TextAlign.start,
-      style: TextStyle(
+      style: Zeta.of(context).textStyles.labelSmall.copyWith(
         fontWeight: kNodeCardTitleFontWeight,
         fontSize: titleFontSize,
         color: Theme.of(context).colorScheme.onSurface,
@@ -398,7 +398,7 @@ class NodeCardTitleContent extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: centered ? TextAlign.center : TextAlign.start,
-                style: TextStyle(
+                style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                   fontSize: kNodeCardSubtitleFontSize,
                   color: subtitleColor ?? iconColor,
                 ),
@@ -627,7 +627,7 @@ class CanvasOutsideLabel extends StatelessWidget {
             textAlign: textAlign,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            style: Zeta.of(context).textStyles.labelSmall.copyWith(
               fontSize: 10,
               fontWeight: FontWeight.w600,
               color: theme.colorScheme.onSurface,
