@@ -355,6 +355,9 @@ class _AnimatedRasterPanel extends StatelessWidget {
                   duration: durationMs,
                   currentTimeMs: currentTimeMs,
                   visibleRange: (start: 0.0, end: durationMs),
+                  axisLabelStyle: Zeta.of(context).textStyles.bodyXSmall.copyWith(
+                    color: Zeta.of(context).colors.mainSubtle,
+                  ),
                 ),
               ),
             ),
@@ -408,6 +411,9 @@ class _AnimatedTracePanel extends StatelessWidget {
                         currentTimeMs: currentTimeMs,
                         duration: durationMs,
                         visibleRange: (start: 0.0, end: durationMs),
+                        axisLabelStyle: Zeta.of(context).textStyles.bodyXSmall.copyWith(
+                          color: Zeta.of(context).colors.mainSubtle,
+                        ),
                       ),
                     ),
                   ),

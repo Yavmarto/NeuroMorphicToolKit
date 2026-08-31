@@ -502,6 +502,10 @@ class _AnimatedSnnPlaybackState extends State<AnimatedSnnPlayback>
                                               currentTimeMs: _currentTimeMs,
                                               visibleRange: _visibleRange,
                                               reduceMotion: _reduceMotion,
+                                              axisLabelStyle: Zeta.of(context)
+                                                  .textStyles
+                                                  .bodyXSmall
+                                                  .copyWith(color: AppTheme.textSecondary),
                                             ),
                                           ),
                                         ),
@@ -557,6 +561,10 @@ class _AnimatedSnnPlaybackState extends State<AnimatedSnnPlayback>
                                           duration: widget.duration,
                                           visibleRange: _visibleRange,
                                           reduceMotion: _reduceMotion,
+                                          axisLabelStyle: Zeta.of(context)
+                                              .textStyles
+                                              .bodyXSmall
+                                              .copyWith(color: AppTheme.textSecondary),
                                         ),
                                       ),
                                     ),
@@ -616,7 +624,7 @@ class _ZoomIndicator extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         child: Text(
           '${zoomFactor.toStringAsFixed(1)}×',
-          style: TextStyle(
+          style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
             color: AppTheme.textSecondaryOf(context),
             fontSize: 10,
             fontWeight: FontWeight.bold,
@@ -739,6 +747,7 @@ class AnimatedRasterPainter extends CustomPainter {
   final double currentTimeMs;
   final ({double start, double end}) visibleRange;
   final bool reduceMotion;
+  final TextStyle axisLabelStyle;
 
   static const _glowWindowMs = 80.0;
   static const _studioViolet = Color(0xFF8B5CF6);
@@ -748,6 +757,7 @@ class AnimatedRasterPainter extends CustomPainter {
     required this.duration,
     required this.currentTimeMs,
     required this.visibleRange,
+    required this.axisLabelStyle,
     this.reduceMotion = false,
   });
 
@@ -789,7 +799,7 @@ class AnimatedRasterPainter extends CustomPainter {
         final tp = TextPainter(
           text: TextSpan(
             text: '$i',
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 9),
+            style: axisLabelStyle.copyWith(fontSize: 9),
           ),
           textDirection: TextDirection.ltr,
         )..layout(maxWidth: leftMargin - 4);
@@ -813,7 +823,7 @@ class AnimatedRasterPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: tLabel.toStringAsFixed(rangeMs < 10 ? 2 : 1),
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 9),
+          style: axisLabelStyle.copyWith(fontSize: 9),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -825,9 +835,9 @@ class AnimatedRasterPainter extends CustomPainter {
 
     // Axis label
     final xLabel = TextPainter(
-      text: const TextSpan(
+      text: TextSpan(
         text: 'Time (ms)',
-        style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+        style: axisLabelStyle.copyWith(fontSize: 10),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -932,6 +942,7 @@ class AnimatedRasterPainter extends CustomPainter {
 /// Voltage trace chart that draws traces only up to [currentTimeMs], with
 /// zoom-aware x-mapping and adaptive sample density based on [visibleRange].
 class AnimatedChartPainter extends CustomPainter {
+  final TextStyle axisLabelStyle;
   final List<List<double>> traces;
   final List<double> time;
   final List<Color> colors;
@@ -948,6 +959,7 @@ class AnimatedChartPainter extends CustomPainter {
     required this.duration,
     required this.visibleRange,
     this.reduceMotion = false,
+      required this.axisLabelStyle,
   });
 
   @override
@@ -1037,7 +1049,7 @@ class AnimatedChartPainter extends CustomPainter {
       final yLabel = TextPainter(
         text: TextSpan(
           text: yVal.toStringAsFixed(1),
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 9),
+          style: axisLabelStyle.copyWith(fontSize: 9),
         ),
         textDirection: TextDirection.ltr,
       )..layout(maxWidth: leftMargin - 4);
@@ -1060,7 +1072,7 @@ class AnimatedChartPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: tLabel.toStringAsFixed(rangeMs < 10 ? 2 : 1),
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 9),
+          style: axisLabelStyle.copyWith(fontSize: 9),
         ),
         textDirection: TextDirection.ltr,
       )..layout();

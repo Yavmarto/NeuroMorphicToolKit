@@ -760,7 +760,7 @@ class _NodeFields extends ConsumerWidget {
             phase == PipelinePhaseId.eval
                 ? 'Confirmed (eval phase)'
                 : 'Off (train phase)',
-            style: const TextStyle(fontSize: 13),
+            style: Zeta.of(context).textStyles.bodySmall.copyWith(fontSize: 13),
           ),
         );
 
@@ -815,16 +815,18 @@ class _DataLoaderFields extends ConsumerWidget {
                 const SizedBox(width: 6),
                 Text(
                   dataset.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF1E88E5),
+                  style: Zeta.of(context).textStyles.labelSmall.copyWith(
+                    color: const Color(0xFF1E88E5),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const Spacer(),
-                const Text(
+                Text(
                   'from setup',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF9E9E9E)),
+                  style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
+                    fontSize: 10,
+                    color: const Color(0xFF9E9E9E),
+                  ),
                 ),
               ],
             ),
@@ -935,7 +937,7 @@ class _TrainedOnIndicator extends ConsumerWidget {
       label: 'Last submitted run',
       child: Text(
         label,
-        style: const TextStyle(fontSize: 13),
+        style: Zeta.of(context).textStyles.bodySmall.copyWith(fontSize: 13),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
@@ -1290,7 +1292,7 @@ class _SwitchField extends StatelessWidget {
           width: 140,
           child: Text(
             label,
-            style: const TextStyle(
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
               color: NmtkNeurocnlTokens.textSecondary,
               fontSize: 11,
             ),
@@ -1330,7 +1332,7 @@ class _DropdownField<T> extends StatelessWidget {
           width: 140,
           child: Text(
             label,
-            style: const TextStyle(
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
               color: NmtkNeurocnlTokens.textSecondary,
               fontSize: 11,
             ),
