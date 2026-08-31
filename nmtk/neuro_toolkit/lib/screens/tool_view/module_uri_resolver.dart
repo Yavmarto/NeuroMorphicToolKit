@@ -105,9 +105,14 @@ String? nativeSurfaceServerUrl(WidgetRef ref, Module module) {
   if (module.effectivePort != 9000) {
     return null;
   }
+  // Neurobench is the one module on the monolith port with its own
+  // `/api/neurobench` mount; every other native surface here (neurocnl,
+  // and Neurochip embedded inside the neurocnl studio shell) uses
+  // `/api/neurocnl`.
+  final apiPath = module.id == 'Neurobench' ? '/api/neurobench' : '/api/neurocnl';
   return (tunnelSession(ref)?.suiteApiUri ??
           Uri(scheme: serviceScheme(ref), host: serviceHost(ref), port: 9000))
-      .replace(path: '/api/neurocnl')
+      .replace(path: apiPath)
       .toString();
 }
 

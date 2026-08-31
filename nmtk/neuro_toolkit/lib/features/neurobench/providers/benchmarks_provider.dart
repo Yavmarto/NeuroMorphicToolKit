@@ -2,11 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:neuro_toolkit/features/neurobench/models/benchmark.dart';
 import 'package:neuro_toolkit/features/neurobench/models/result.dart';
+import 'package:neuro_toolkit/features/neurobench/providers/feature_launch_provider.dart';
 import 'package:neuro_toolkit/features/neurobench/services/api_client.dart';
 
 part 'benchmarks_provider.g.dart';
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+/// Rebuilds when the root changes the selected backend.
+///
+/// [launchContext.backendUri] already resolves to Neurobench's `/api/neurobench`
+/// mount — see `nativeSurfaceServerUrl` in module_uri_resolver.dart.
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final launchContext = ref.watch(featureLaunchContextProvider);
+  return ApiClient(baseUrl: launchContext.backendUri.toString());
+});
 
 final benchmarksProvider = FutureProvider<List<BenchmarkDefinition>>((
   ref,

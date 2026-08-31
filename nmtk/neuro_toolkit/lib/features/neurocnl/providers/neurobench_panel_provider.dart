@@ -3,7 +3,6 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/admin_token_http_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/feature_launch_provider.dart';
@@ -23,12 +22,14 @@ final _authedHttpProvider = Provider<AdminTokenHttpClient>((ref) {
 });
 
 /// NeuroCNL's Studio calls Neurobench's own backend directly for the
-/// in-canvas benchmark panel, so it resolves Neurobench's API base the same
-/// way Neurobench's own client does rather than hardcoding a host/port.
-final _neurobenchBaseUrl = NmtkApiBaseUrl.resolve(
-  apiPath: '/api/neurobench',
-  defaultPort: 8003,
-);
+/// in-canvas benchmark panel. Both modules are mounted on the same
+/// root-known host (the suite_api monolith), so this swaps NeuroCNL's own
+/// `/api/neurocnl` mount for Neurobench's `/api/neurobench` mount rather
+/// than resolving a second, independent backend host.
+final _neurobenchBaseUrlProvider = Provider<String>((ref) {
+  final backendUri = ref.watch(featureLaunchContextProvider).backendUri;
+  return backendUri.replace(path: '/api/neurobench').toString();
+});
 const _requestTimeout = Duration(seconds: 10);
 
 // Minimal model — only the fields needed by the panel dropdown.
@@ -125,7 +126,7 @@ class NeurobenchPanelState {
 
 final neurobenchBenchmarksProvider =
     FutureProvider<List<NeurobenchBenchmarkSummary>>((ref) async {
-      final uri = Uri.parse('$_neurobenchBaseUrl/benchmarks');
+      final uri = Uri.parse('${ref.read(_neurobenchBaseUrlProvider)}/benchmarks');
       final response = await ref.read(_authedHttpProvider).get(uri);
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body) as List<dynamic>;
@@ -188,7 +189,7 @@ class NeurobenchPanelController extends _$NeurobenchPanelController {
     );
 
     try {
-      final uri = Uri.parse('$_neurobenchBaseUrl/run');
+      final uri = Uri.parse('${ref.read(_neurobenchBaseUrlProvider)}/run');
       final body = json.encode({
         'benchmark_id': benchmarkId,
         'network_content': networkContent,
@@ -235,7 +236,7 @@ class NeurobenchPanelController extends _$NeurobenchPanelController {
 
   Future<void> _pollJob(String jobId) async {
     try {
-      final uri = Uri.parse('$_neurobenchBaseUrl/run/$jobId');
+      final uri = Uri.parse('${ref.read(_neurobenchBaseUrlProvider)}/run/$jobId');
       final response = await ref
           .read(_authedHttpProvider)
           .get(uri)
@@ -290,7 +291,7 @@ class NeurobenchPanelController extends _$NeurobenchPanelController {
 
   Future<void> _fetchResult(String resultId) async {
     try {
-      final uri = Uri.parse('$_neurobenchBaseUrl/results/$resultId');
+      final uri = Uri.parse('${ref.read(_neurobenchBaseUrlProvider)}/results/$resultId');
       final response = await ref
           .read(_authedHttpProvider)
           .get(uri)
