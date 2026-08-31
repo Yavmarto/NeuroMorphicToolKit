@@ -711,8 +711,8 @@ main() {
   else
     log "Running tests for changed modules (skip with --skip-tests)..."
     if $DRY_RUN; then
-      log "  would run: scripts/run_ci_local.sh --changed"
-    elif ! (cd "$REPO_ROOT" && ./scripts/run_ci_local.sh --changed); then
+      log "  would run: scripts/run_ci_local.sh --changed --skip-install"
+    elif ! (cd "$REPO_ROOT" && ./scripts/run_ci_local.sh --changed --skip-install); then
       die "tests failed — the dev host was left untouched. Fix, or rerun with --skip-tests."
     fi
   fi

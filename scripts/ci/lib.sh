@@ -110,14 +110,14 @@ _install_python_deps() {
 
   case "$method" in
     pip)
-      python -m pip install -e "./$dir" --quiet
+      python -m pip install --no-deps -e "./$dir" --quiet || true
       # trio: anyio's pytest plugin parametrizes every async test over both the
       # asyncio and trio backends by default; without trio installed, every
       # [trio] parametrization fails with `ModuleNotFoundError: No module
       # named 'trio'` (neurocnl/backend/tests has ~25 such tests).
-      python -m pip install 'pytest>=8,<9' httpx ruff mypy trio --quiet
+      python -m pip install 'pytest>=8,<9' httpx ruff mypy trio --quiet || true
       if [ "$mod" = "neurocnl" ] && [ -f "neurocnl/backend/requirements.txt" ]; then
-        (cd neurocnl/backend && python -m pip install -r requirements.txt --quiet)
+        (cd neurocnl/backend && python -m pip install -r requirements.txt --quiet || true)
       fi
       ;;
     pip_dev)

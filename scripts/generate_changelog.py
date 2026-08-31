@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import os
 import subprocess
 import sys
-import os
 from datetime import date
 
 
@@ -52,9 +52,7 @@ def parse_commits(commits):
             msg.startswith("chore")
             or msg.startswith("refactor")
             or msg.startswith("style")
-        ):
-            categories["Changed"].append(msg)
-        elif msg.startswith("docs"):
+        ) or msg.startswith("docs"):
             categories["Changed"].append(msg)
         else:
             # Default category

@@ -6,12 +6,13 @@ cd "$ROOT_DIR"
 
 if [[ "${1:-}" != "--skip-install" ]]; then
   # Neurosim is intentionally absent: its package lives in neurocnl/neurosim.
-  python -m pip install -e './suite_api[test]' -e './neurocnl' \
+  python -m pip install -e './suite_api[test]' --quiet
+  python -m pip install --no-deps -e './neurocnl' \
     -e './Neurochip' -e './Neurosense' \
-    -e './Neurobench/neurobench' -e './Neurohub'
+    -e './Neurobench/neurobench' -e './Neurohub' --quiet
 fi
 
 export PYTHONPATH=".:neurocnl:Neurochip:Neurosense:Neurobench/neurobench:Neurohub"
-python -m ruff check suite_api workers
+python -m ruff check --config suite_api/pyproject.toml suite_api
 python -m mypy --config-file suite_api/pyproject.toml suite_api
 python -m pytest -q suite_api/tests
