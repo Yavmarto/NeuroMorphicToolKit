@@ -48,9 +48,9 @@ async def neurocnl_startup(app) -> None:  # type: ignore[type-arg]
     # slowapi resolves the limiter via request.app.state.limiter.  Without this
     # the @limiter.limit("10/minute") on /simulate raises AttributeError → 500.
     try:
+        from backend.app.middleware.rate_limit import limiter
         from slowapi import _rate_limit_exceeded_handler
         from slowapi.errors import RateLimitExceeded
-        from backend.app.middleware.rate_limit import limiter
 
         app.state.limiter = limiter
         app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

@@ -23,7 +23,6 @@ from neurosense.app.routers import (
     presets,
     quality,
 )
-
 from suite_api.config import settings
 from suite_api.middleware import admin_token_valid
 from suite_api.proxy import proxy_to_worker, proxy_websocket_to_worker

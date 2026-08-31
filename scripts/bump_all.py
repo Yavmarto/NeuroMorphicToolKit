@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 
+
 def find_files():
     """Find all pubspec.yaml and pyproject.toml files in the repository."""
     files = []

@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-
 # ---------------------------------------------------------------------------
 # Valid CNL specifications — these match the neurocnl grammar
 # ---------------------------------------------------------------------------
@@ -56,7 +55,9 @@ def test_energy_profile_mock_fallback_snapshot(snapshot: object) -> None:
 def test_fault_injection_low_error_rate_snapshot(snapshot: object) -> None:
     """Pin the FaultInjectionResult for a two-population CNL spec at 10% error."""
     from backend.app.schemas.prosthetic import FaultInjectionRequest
-    from backend.app.services.fault_injection_service import run_fault_injection_analysis
+    from backend.app.services.fault_injection_service import (
+        run_fault_injection_analysis,
+    )
 
     req = FaultInjectionRequest(spec=_REFLEX_ARC_SPEC, error_rate=0.1)
     result = run_fault_injection_analysis(req)
@@ -67,7 +68,9 @@ def test_fault_injection_low_error_rate_snapshot(snapshot: object) -> None:
 def test_fault_injection_high_error_rate_snapshot(snapshot: object) -> None:
     """Pin the FaultInjectionResult at 80% error — resilience_score should drop."""
     from backend.app.schemas.prosthetic import FaultInjectionRequest
-    from backend.app.services.fault_injection_service import run_fault_injection_analysis
+    from backend.app.services.fault_injection_service import (
+        run_fault_injection_analysis,
+    )
 
     req = FaultInjectionRequest(spec=_REFLEX_ARC_SPEC, error_rate=0.8)
     result = run_fault_injection_analysis(req)
@@ -78,7 +81,9 @@ def test_fault_injection_high_error_rate_snapshot(snapshot: object) -> None:
 def test_fault_injection_zero_error_rate_snapshot(snapshot: object) -> None:
     """Pin the FaultInjectionResult when error_rate=0 (no injected faults)."""
     from backend.app.schemas.prosthetic import FaultInjectionRequest
-    from backend.app.services.fault_injection_service import run_fault_injection_analysis
+    from backend.app.services.fault_injection_service import (
+        run_fault_injection_analysis,
+    )
 
     req = FaultInjectionRequest(spec=_REFLEX_ARC_SPEC, error_rate=0.0)
     result = run_fault_injection_analysis(req)

@@ -47,7 +47,7 @@ def _neurohub_engine() -> Any:
 
 
 @pytest.fixture()
-def db(  # noqa: D103
+def db(
     _neurohub_engine: Any,
 ) -> Generator[Session, None, None]:
     """Isolated session with automatic rollback after each test."""
@@ -117,8 +117,8 @@ def test_create_project_stable_fields_snapshot(
     monkeypatch.setattr(_svc, "datetime", _FakeDatetime)
     monkeypatch.setattr(_svc.uuid, "uuid4", lambda: _uuid_mod.UUID(_FIXED_UUID))
 
-    from neurohub.contracts.project_contracts import Project, ProjectLinks
     from neurohub.app.services.project_service import create_project
+    from neurohub.contracts.project_contracts import Project, ProjectLinks
 
     project = Project(
         id=_FIXED_UUID,

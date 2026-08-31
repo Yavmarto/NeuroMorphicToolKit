@@ -25,11 +25,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
-
 from neurochip.app.routers import lava
 
 logger = logging.getLogger(__name__)

@@ -11,8 +11,8 @@ Suite_api starts cleanly on machines without Akida/PYNQ/Lava/Speck installed
 (the hardware routes simply 503 when the worker is not running).
 """
 
-import logging
 import importlib
+import logging
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -27,7 +27,6 @@ from neurochip.app.routers import (
     quantization,
     targets,
 )
-
 from suite_api.config import settings
 from suite_api.proxy import proxy_to_worker
 
@@ -93,5 +92,7 @@ async def neurochip_health() -> dict[str, Any]:
         "status": "healthy",
         "service": "neurochip",
         "hardware_worker": settings.neurochip_hw_worker_url,
-        "note": "Hardware routes (akida/lava/speck/pynq/serial) proxied to hardware worker",
+        "note": (
+            "Hardware routes (akida/lava/speck/pynq/serial) proxied to hardware worker"
+        ),
     }

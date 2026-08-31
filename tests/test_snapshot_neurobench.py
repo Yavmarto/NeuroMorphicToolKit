@@ -11,8 +11,6 @@ PYTHONPATH must include NeuroMorphicToolKit/Neurobench/neurobench so that
 
 from __future__ import annotations
 
-
-
 # ---------------------------------------------------------------------------
 # Shared deterministic BenchmarkResult factories
 # ---------------------------------------------------------------------------

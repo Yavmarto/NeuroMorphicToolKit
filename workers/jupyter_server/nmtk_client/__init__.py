@@ -18,8 +18,7 @@ Quick start::
 """
 from __future__ import annotations
 
+from . import lava, suite
 from ._base import NmtkConnectionError
-from . import lava
-from . import suite
 
-__all__ = ["lava", "suite", "NmtkConnectionError"]
+__all__ = ["NmtkConnectionError", "lava", "suite"]

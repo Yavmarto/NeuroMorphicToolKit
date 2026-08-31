@@ -1,4 +1,4 @@
-from nmtk_sdk.safety import scan_imports, DANGEROUS_MODULES
+from nmtk_sdk.safety import DANGEROUS_MODULES, scan_imports
 
 SAFE_CODE = """
 import nengo

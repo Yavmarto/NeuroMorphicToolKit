@@ -1,4 +1,5 @@
 import pytest
+
 from nmtk_sdk import CustomNode, param, port
 
 

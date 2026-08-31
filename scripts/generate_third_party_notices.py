@@ -22,9 +22,10 @@ from __future__ import annotations
 import argparse
 import re
 import sys
-import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import tomllib
 
 try:
     import yaml
@@ -65,7 +66,6 @@ FIRST_PARTY = {
     "neurohub_shell_adapter",
     "neurosense_shell_adapter",
     "neurosim_shell_adapter",
-    "neurohub",
     "neurosense_frontend",
 }
 

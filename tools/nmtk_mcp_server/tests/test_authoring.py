@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from tools.nmtk_mcp_server.authoring import build_authoring_guide
 
-
 GRAMMAR = """# CNL Grammar
 
 Intro text.

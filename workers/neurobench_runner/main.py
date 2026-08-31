@@ -18,4 +18,4 @@ if str(_NB_PATH) not in sys.path:
 
 # Reuse the owning application so execution, status, results, baselines, and
 # reports all resolve against the same database and lifespan.
-from app.main import app  # noqa: E402,F401
+from app.main import app  # noqa: F401

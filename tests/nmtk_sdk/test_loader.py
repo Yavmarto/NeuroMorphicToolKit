@@ -1,9 +1,10 @@
 import pathlib
 import textwrap
-import pytest
-from nmtk_sdk.loader import load_custom_node, LoadError
-from nmtk_sdk import CustomNode
 
+import pytest
+
+from nmtk_sdk import CustomNode
+from nmtk_sdk.loader import LoadError, load_custom_node
 
 VALID_SOURCE = textwrap.dedent("""
     from nmtk_sdk import CustomNode, param, port

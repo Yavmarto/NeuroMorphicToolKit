@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import ast
 
 DANGEROUS_MODULES: frozenset[str] = frozenset({

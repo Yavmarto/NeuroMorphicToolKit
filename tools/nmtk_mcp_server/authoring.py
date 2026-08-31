@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel, Field
 
-
 DEFAULT_GRAMMAR_URI = "nmtk://cnl/grammar/current"
 DEFAULT_SUPPORT_MATRIX_URI = "nmtk://cnl/support-matrix/current"
 DEFAULT_CAVEAT = (

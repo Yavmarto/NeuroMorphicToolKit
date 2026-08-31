@@ -10,11 +10,10 @@ Neurohub's lifespan (Alembic migrations) is handled separately in
 import logging
 
 from fastapi import APIRouter
+
 from neurohub.app.routers import (
     assets,
-    config as nh_config,
     github_auth,
-    health as nh_health,
     projects,
     registry_artefacts,
     registry_auth,
@@ -23,6 +22,12 @@ from neurohub.app.routers import (
     registry_search,
     sharing,
     workspaces,
+)
+from neurohub.app.routers import (
+    config as nh_config,
+)
+from neurohub.app.routers import (
+    health as nh_health,
 )
 
 logger = logging.getLogger("suite_api.neurohub")

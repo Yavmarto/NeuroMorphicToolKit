@@ -9,8 +9,8 @@ Start with: uvicorn workers.neurocnl_physics.main:app --port 8006
 Suite_api routes /api/neurocnl/prosthetic/simulate here when the physics
 worker is running; returns 503 when it is not.
 """
-import sys
 import logging
+import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path

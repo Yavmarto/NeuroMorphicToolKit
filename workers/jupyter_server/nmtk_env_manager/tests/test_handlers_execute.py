@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-from queue import Empty
 import sys
 import types
 from pathlib import Path
+from queue import Empty
 
 import pytest
 
@@ -50,7 +50,7 @@ def _install_fake_nbformat(monkeypatch) -> None:
         return value
 
     nbformat_module = types.ModuleType("nbformat")
-    nbformat_module.read = lambda path, as_version=4: _to_namespace(  # noqa: ARG005
+    nbformat_module.read = lambda path, as_version=4: _to_namespace(
         json.loads(Path(path).read_text(encoding="utf-8"))
     )
     nbformat_module.write = lambda notebook, path: Path(path).write_text(
@@ -173,7 +173,6 @@ def test_execute_notebook_job_uses_resolved_kernel_and_collects_output(
 
         def start_kernel(self, cwd: str | None = None) -> None:
             started_with_cwd.append(cwd)
-            return None
 
         def blocking_client(self) -> FakeBlockingClient:
             return self.client

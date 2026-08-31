@@ -10,7 +10,7 @@ from suite_api.middleware import attach_middleware
 def _make_client(
     monkeypatch: pytest.MonkeyPatch, origins_env: str | None
 ) -> TestClient:
-    """Return a TestClient with middleware attached under a controlled ALLOWED_ORIGINS env."""
+    """Return a TestClient with middleware under controlled ALLOWED_ORIGINS env."""
     monkeypatch.delenv("ALLOWED_ORIGINS", raising=False)
     monkeypatch.delenv("NMTK_AUTH_REQUIRED", raising=False)
     monkeypatch.delenv("NMTK_ADMIN_TOKEN", raising=False)
@@ -38,7 +38,7 @@ def _make_client(
 def test_cors_default_does_not_reflect_arbitrary_origin(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """When ALLOWED_ORIGINS is unset the default must NOT echo back a random external origin."""
+    """When ALLOWED_ORIGINS is unset the default must NOT echo an external origin."""
     client = _make_client(monkeypatch, origins_env=None)
     response = client.get("/probe", headers={"Origin": "https://attacker.example.com"})
     assert (

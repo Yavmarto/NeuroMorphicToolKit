@@ -17,7 +17,6 @@ from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
 import suite_api.domains.neurobench  # noqa: F401 (side-effect: env isolation + sys.path)
-
 from suite_api.config import settings
 from suite_api.proxy import proxy_to_worker
 

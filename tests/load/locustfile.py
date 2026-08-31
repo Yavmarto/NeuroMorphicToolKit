@@ -1,4 +1,4 @@
-from locust import HttpUser, task, between
+from locust import HttpUser, between, task
 
 
 class NMTKUser(HttpUser):
@@ -70,4 +70,3 @@ class NMTKUser(HttpUser):
 
     def on_start(self):
         """Called when a User starts before any task is scheduled"""
-        pass

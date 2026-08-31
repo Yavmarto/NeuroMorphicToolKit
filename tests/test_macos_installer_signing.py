@@ -4,7 +4,6 @@ import os
 import subprocess
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SIGN_SCRIPT = REPO_ROOT / "nmtk" / "installer" / "macos" / "sign-and-notarize.sh"
 IMPORT_SCRIPT = REPO_ROOT / "nmtk" / "installer" / "macos" / "import-signing-cert.sh"

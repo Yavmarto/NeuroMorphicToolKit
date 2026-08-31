@@ -93,7 +93,6 @@ def test_hardware_runner_neurochip_target(tmp_path: pathlib.Path) -> None:
 
 def test_hardware_runner_timeout_raises(tmp_path: pathlib.Path) -> None:
     import httpx
-
     from app.exceptions import BenchmarkTimeoutError
     from app.services.benchmark_runner import BenchmarkRunner
 

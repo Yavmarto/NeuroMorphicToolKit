@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import numpy as np
 
-
 # ---------------------------------------------------------------------------
 # 1. PowerProfiler — pure arithmetic, no randomness
 # ---------------------------------------------------------------------------

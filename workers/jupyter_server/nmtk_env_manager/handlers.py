@@ -10,20 +10,21 @@ that security model.
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from queue import Empty
 import subprocess
 import time
-from typing import Any, Callable
 import uuid
+from collections.abc import Callable
+from pathlib import Path
+from queue import Empty
+from typing import Any
 
 from jupyter_server.base.handlers import APIHandler  # type: ignore[import-not-found]
 from jupyter_server.utils import url_path_join  # type: ignore[import-not-found]
 from tornado import web  # type: ignore[import-not-found]
 
+from .framework_envs import TARGET_TO_KERNEL
 from .jobs import JobRegistry
 from .manager import EnvironmentError_, EnvironmentManager
-from .framework_envs import TARGET_TO_KERNEL
 
 # Stall timeout, not a total-duration budget: reset every time the kernel
 # emits activity for this cell (see _drain_notebook_cell below). A single
@@ -39,7 +40,7 @@ _CELL_POLL_INTERVAL_SECONDS = 1
 class _NmtkHandler(APIHandler):
     """Shared base: injects the manager + job registry, disables XSRF."""
 
-    def initialize(self, manager: EnvironmentManager, jobs: JobRegistry) -> None:  # noqa: D401
+    def initialize(self, manager: EnvironmentManager, jobs: JobRegistry) -> None:
         self.manager = manager
         self.jobs = jobs
 
@@ -88,7 +89,7 @@ def _kernel_name_for_capability(capability: str) -> str:
 
 def _probe_kernel(kernel_name: str, imports: tuple[str, ...]) -> None:
     """Start the configured kernel and prove its imports execute there."""
-    import jupyter_client  # type: ignore[import-not-found]  # noqa: PLC0415
+    import jupyter_client  # type: ignore[import-not-found]
 
     manager = jupyter_client.KernelManager(kernel_name=kernel_name)
     manager.start_kernel()
@@ -168,7 +169,7 @@ def _doctor_report(
             )
             continue
         kernel_name = _kernel_name_for_capability(capability)
-        python = manager._python_for(kernel_name)  # noqa: SLF001
+        python = manager._python_for(kernel_name)
         import_source = "; ".join(f"import {module}" for module in imports)
         process = subprocess.run(
             [str(python), "-c", import_source],
@@ -256,7 +257,9 @@ def _drain_notebook_cell(
     cell: Any,
     on_line: Callable[[str], None] | None = None,
 ) -> None:
-    from nbformat.v4 import new_output  # type: ignore[import-not-found]  # noqa: PLC0415
+    from nbformat.v4 import (
+        new_output,  # type: ignore[import-not-found]
+    )
 
     deadline = time.monotonic() + _CELL_EXECUTION_TIMEOUT_SECONDS
     saw_idle = False
@@ -370,8 +373,8 @@ def _execute_notebook_job(
     resolved_path = _resolve_execute_path(notebook_root, notebook_path)
     resolved_kernel = _resolve_execute_kernel_name(resolved_path, kernel_name)
     output: list[str] = []
-    import jupyter_client  # type: ignore[import-not-found]  # noqa: PLC0415
-    import nbformat  # type: ignore[import-not-found]  # noqa: PLC0415
+    import jupyter_client  # type: ignore[import-not-found]
+    import nbformat  # type: ignore[import-not-found]
 
     def _record_output_line(line: str) -> None:
         output.append(line)

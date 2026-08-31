@@ -8,11 +8,12 @@ the Flutter UI polls ``GET /nmtk-envs/api/jobs/<id>`` until the state leaves
 
 from __future__ import annotations
 
-from copy import deepcopy
 import threading
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Callable
+from copy import deepcopy
+from typing import Any
 
 from .manager import EnvironmentError_
 

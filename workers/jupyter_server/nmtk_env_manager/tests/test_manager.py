@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from nmtk_env_manager.manager import (
     BASE_KERNEL,
     EnvironmentError_,

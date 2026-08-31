@@ -1,6 +1,7 @@
+from neurosim.contracts.design_contracts import ComponentBlock
+
 from nmtk_sdk import CustomNode, param, port
 from nmtk_sdk.introspect import introspect_node
-from neurosim.contracts.design_contracts import ComponentBlock
 
 
 class _SampleNode(CustomNode):
