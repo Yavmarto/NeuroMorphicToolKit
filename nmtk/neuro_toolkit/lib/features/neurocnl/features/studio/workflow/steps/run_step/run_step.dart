@@ -386,7 +386,7 @@ class _RunStepState extends ConsumerState<RunStep> {
                         child: Text(
                           _errorBannerSummary ??
                               'Run failed — please check errors and retry.',
-                          style: TextStyle(color: colors.mainNegative),
+                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: colors.mainNegative),
                         ),
                       ),
                       if (_errorBannerDetail != null)
@@ -410,7 +410,7 @@ class _RunStepState extends ConsumerState<RunStep> {
                         onPressed: _dismissRunErrors,
                         child: Text(
                           'Dismiss',
-                          style: TextStyle(color: colors.mainNegative),
+                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: colors.mainNegative),
                         ),
                       ),
                     ],
@@ -444,7 +444,7 @@ class _RunStepState extends ConsumerState<RunStep> {
                       Expanded(
                         child: Text(
                           'Training complete — preparing results.',
-                          style: TextStyle(color: colors.mainPositive),
+                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: colors.mainPositive),
                         ),
                       ),
                       IconButton(

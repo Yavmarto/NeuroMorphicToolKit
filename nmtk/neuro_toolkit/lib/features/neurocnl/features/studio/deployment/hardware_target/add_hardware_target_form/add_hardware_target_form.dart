@@ -348,7 +348,7 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
           const SizedBox(height: 12),
           Text(
             widget.errorMessage!,
-            style: const TextStyle(color: AppTheme.error, fontSize: 12),
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.error),
           ),
         ],
         if (widget.statusMessage != null) ...[
@@ -356,7 +356,7 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
           Text(
             widget.statusMessage!,
             key: const Key('hardware-target-form-status'),
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
           ),
         ],
         const SizedBox(height: 12),
@@ -471,9 +471,8 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
                   'account here; the service account is set under Advanced '
                   'settings.',
                   key: const Key('akida-service-account-as-ssh-user-warning'),
-                  style: TextStyle(
+                  style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                     color: NmtkShellTokens.of(context).degradedColor,
-                    fontSize: 12,
                   ),
                 ),
               );
@@ -920,11 +919,11 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
             Text('Toolchain not found'),
           ],
         ),
-        content: const Text(
+        content: Text(
           'The selected toolchain could not be found on the server running CNL Studio. '
           'Synthesis will fail unless it is installed before deployment.\\n\\n'
           'Are you sure you want to save this target anyway?',
-          style: TextStyle(color: AppTheme.textPrimary),
+          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textPrimary),
         ),
         actions: [
           ZetaButton.text(

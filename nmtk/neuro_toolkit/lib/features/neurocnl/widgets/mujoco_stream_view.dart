@@ -58,7 +58,7 @@ class MujocoStreamView extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     'MJPEG stream',
-                    style: TextStyle(
+                    style: Zeta.of(context).textStyles.labelSmall.copyWith(
                       color: Zeta.of(context).colors.mainInverse,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -84,19 +84,19 @@ class _LoadingView extends StatelessWidget {
         color: AppTheme.surfaceVariant,
         border: Border.all(color: AppTheme.border),
       ),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
+            const SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
               'Connecting to MuJoCo stream…',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
             ),
           ],
         ),
@@ -129,15 +129,18 @@ class _UnavailableView extends StatelessWidget {
                 color: AppTheme.textSecondary,
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Simulation stream unavailable',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: Zeta.of(context).textStyles.bodySmall.copyWith(
+                  color: AppTheme.textSecondary,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                   color: AppTheme.synComment,
                   fontSize: 11,
                 ),

@@ -41,10 +41,10 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
                     children: [
                       Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
                               'Sweep Configuration',
-                              style: TextStyle(
+                              style: Zeta.of(context).textStyles.titleMedium.copyWith(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 18,
                               ),
@@ -150,7 +150,9 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
       return Center(
         child: Text(
           'Error: ${state.error}',
-          style: TextStyle(color: Theme.of(context).colorScheme.error),
+          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+            color: Theme.of(context).colorScheme.error,
+          ),
         ),
       );
     }
@@ -169,7 +171,7 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
           child: Text(
             'Sweep Results for: ${results.parameterPath}',
             key: const Key('sweep-results-title'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: Zeta.of(context).textStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
         Expanded(
@@ -190,7 +192,7 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
                   children: [
                     Text(
                       'Value: ${step.parameterValue}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: Zeta.of(context).textStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const Divider(),
                     Expanded(

@@ -49,9 +49,9 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
+                    Text(
                       'Export Design',
-                      style: TextStyle(
+                      style: Zeta.of(context).textStyles.titleMedium.copyWith(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
                       ),
@@ -194,7 +194,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                     ? Center(
                         child: Text(
                           'Error: ${exportState.error}',
-                          style: TextStyle(
+                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
                             color: Theme.of(context).colorScheme.error,
                           ),
                         ),
@@ -224,7 +224,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
             Text(
               'Exported ${format.toUpperCase()}:',
               key: const Key('export-result-title'),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: Zeta.of(context).textStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
             ),
             ZetaButton.outline(
               onPressed: () {

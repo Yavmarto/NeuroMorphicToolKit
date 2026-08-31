@@ -13,10 +13,10 @@ class EnergyBarChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final entries = report.perEnsemblePj.entries.toList();
     if (entries.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No ensemble data',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textSecondary),
         ),
       );
     }
@@ -104,16 +104,15 @@ class _SummaryChip extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                   color: AppTheme.textSecondary,
                   fontSize: 11,
                 ),
               ),
               Text(
                 value,
-                style: TextStyle(
+                style: Zeta.of(context).textStyles.labelMedium.copyWith(
                   color: color,
-                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -146,7 +145,7 @@ class _EnergyBar extends StatelessWidget {
           children: [
             Text(
               name,
-              style: const TextStyle(
+              style: Zeta.of(context).textStyles.labelMedium.copyWith(
                 color: AppTheme.textPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -154,9 +153,8 @@ class _EnergyBar extends StatelessWidget {
             ),
             Text(
               '${valuePj.toStringAsFixed(2)} pJ',
-              style: const TextStyle(
+              style: Zeta.of(context).textStyles.labelSmall.copyWith(
                 color: AppTheme.synNumber,
-                fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
             ),
