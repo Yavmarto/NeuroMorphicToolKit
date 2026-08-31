@@ -45,16 +45,16 @@ class PythonInstallNotifier extends _$PythonInstallNotifier {
       final stdoutSub = process.stdout
           .transform(const SystemEncoding().decoder)
           .listen((data) {
-        outputBuffer.write(data);
-        state = state.copyWith(installOutput: outputBuffer.toString());
-      });
+            outputBuffer.write(data);
+            state = state.copyWith(installOutput: outputBuffer.toString());
+          });
 
       final stderrSub = process.stderr
           .transform(const SystemEncoding().decoder)
           .listen((data) {
-        outputBuffer.write(data);
-        state = state.copyWith(installOutput: outputBuffer.toString());
-      });
+            outputBuffer.write(data);
+            state = state.copyWith(installOutput: outputBuffer.toString());
+          });
 
       final exitCode = await process.exitCode;
       await stdoutSub.cancel();

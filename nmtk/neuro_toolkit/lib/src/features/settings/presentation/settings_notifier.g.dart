@@ -15,15 +15,15 @@ final settingsProvider = SettingsNotifierProvider._();
 final class SettingsNotifierProvider
     extends $AsyncNotifierProvider<SettingsNotifier, SettingsState> {
   SettingsNotifierProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'settingsProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'settingsProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$settingsNotifierHash();
@@ -41,11 +41,14 @@ abstract class _$SettingsNotifier extends $AsyncNotifier<SettingsState> {
   @override
   void runBuild() {
     final ref = this.ref as $Ref<AsyncValue<SettingsState>, SettingsState>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<SettingsState>, SettingsState>,
-        AsyncValue<SettingsState>,
-        Object?,
-        Object?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<SettingsState>, SettingsState>,
+              AsyncValue<SettingsState>,
+              Object?,
+              Object?
+            >;
     element.handleCreate(ref, build);
   }
 }

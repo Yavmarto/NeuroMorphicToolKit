@@ -21,8 +21,8 @@ class LauncherNavigationRequest {
 
 final launcherNavigationProvider =
     NotifierProvider<LauncherNavigationNotifier, LauncherNavigationRequest?>(
-  LauncherNavigationNotifier.new,
-);
+      LauncherNavigationNotifier.new,
+    );
 
 class LauncherNavigationNotifier extends Notifier<LauncherNavigationRequest?> {
   int _sequence = 0;
@@ -32,10 +32,8 @@ class LauncherNavigationNotifier extends Notifier<LauncherNavigationRequest?> {
 
   void openWorkspace() => _emit(LauncherNavigationAction.openWorkspace);
 
-  void openModule(String moduleId) => _emit(
-        LauncherNavigationAction.openModule,
-        moduleId: moduleId,
-      );
+  void openModule(String moduleId) =>
+      _emit(LauncherNavigationAction.openModule, moduleId: moduleId);
 
   void reloadWorkspace() => _emit(LauncherNavigationAction.reloadWorkspace);
 

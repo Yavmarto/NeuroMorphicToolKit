@@ -34,16 +34,20 @@ class _ImportDialogState extends State<_ImportDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Environment name',
-                style: Zeta.of(context).textStyles.labelMedium),
+            Text(
+              'Environment name',
+              style: Zeta.of(context).textStyles.labelMedium,
+            ),
             SizedBox(height: context.nmtkTokens.compactGap),
             NmtkTextInput(
               controller: _nameController,
               placeholder: 'e.g. Shared experiment',
             ),
             SizedBox(height: context.nmtkTokens.sectionGap),
-            Text('requirements.txt',
-                style: Zeta.of(context).textStyles.labelMedium),
+            Text(
+              'requirements.txt',
+              style: Zeta.of(context).textStyles.labelMedium,
+            ),
             SizedBox(height: context.nmtkTokens.compactGap),
             NmtkCodeTextArea(
               controller: _reqController,
@@ -63,10 +67,7 @@ class _ImportDialogState extends State<_ImportDialog> {
           onPressed: () {
             final name = _nameController.text.trim();
             if (name.isEmpty) return;
-            Navigator.pop(
-              context,
-              _ImportResult(name, _reqController.text),
-            );
+            Navigator.pop(context, _ImportResult(name, _reqController.text));
           },
           label: 'Import',
         ),

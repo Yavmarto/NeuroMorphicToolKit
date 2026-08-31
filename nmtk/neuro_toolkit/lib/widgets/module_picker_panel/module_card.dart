@@ -28,8 +28,8 @@ class _ModuleCard extends StatelessWidget {
     final statusTone = module.status == ModuleStatus.error
         ? NmtkTone.danger
         : module.status == ModuleStatus.degraded
-            ? NmtkTone.warning
-            : NmtkTone.info;
+        ? NmtkTone.warning
+        : NmtkTone.info;
 
     return Opacity(
       opacity: isMuJoCoUnavailable ? 0.55 : 1.0,

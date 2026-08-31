@@ -14,9 +14,9 @@ class _StatusMessageBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = resolveNmtkTonePalette(context, tone);
-    final labelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: palette.foreground,
-        );
+    final labelStyle = Theme.of(
+      context,
+    ).textTheme.labelSmall?.copyWith(color: palette.foreground);
 
     return DecoratedBox(
       decoration: BoxDecoration(

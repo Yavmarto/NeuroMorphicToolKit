@@ -16,7 +16,9 @@ class _ExportDialogContent extends StatelessWidget {
       await Clipboard.setData(ClipboardData(text: exportState.body));
       if (!context.mounted) return;
       NmtkToasts.success(
-          context, 'Copied to clipboard (file save unsupported on web).');
+        context,
+        'Copied to clipboard (file save unsupported on web).',
+      );
       return;
     }
     try {
@@ -43,8 +45,10 @@ class _ExportDialogContent extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('Contents',
-                    style: Zeta.of(context).textStyles.labelMedium),
+                Text(
+                  'Contents',
+                  style: Zeta.of(context).textStyles.labelMedium,
+                ),
                 const Spacer(),
                 if (!env.immutable)
                   SizedBox(
@@ -77,24 +81,21 @@ class _ExportDialogContent extends StatelessWidget {
                       child: ZetaProgressCircle(size: ZetaCircleSizes.s),
                     )
                   : exportState.error != null
-                      ? Text(exportState.error!)
-                      : Scrollbar(
-                          child: SingleChildScrollView(
-                            child: SelectableText(
-                              exportState.body.isEmpty
-                                  ? '(no packages)'
-                                  : exportState.body,
-                              style: Zeta.of(context)
-                                  .textStyles
-                                  .bodySmall
-                                  .copyWith(
-                                    fontFamily: NmtkFontFamilies.monospace,
-                                    package: NmtkFontFamilies.package,
-                                    fontSize: 12,
-                                  ),
-                            ),
+                  ? Text(exportState.error!)
+                  : Scrollbar(
+                      child: SingleChildScrollView(
+                        child: SelectableText(
+                          exportState.body.isEmpty
+                              ? '(no packages)'
+                              : exportState.body,
+                          style: Zeta.of(context).textStyles.bodySmall.copyWith(
+                            fontFamily: NmtkFontFamilies.monospace,
+                            package: NmtkFontFamilies.package,
+                            fontSize: 12,
                           ),
                         ),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -109,7 +110,8 @@ class _ExportDialogContent extends StatelessWidget {
               ? null
               : () async {
                   await Clipboard.setData(
-                      ClipboardData(text: exportState.body));
+                    ClipboardData(text: exportState.body),
+                  );
                   if (!context.mounted) return;
                   NmtkToasts.success(context, 'Copied to clipboard');
                 },

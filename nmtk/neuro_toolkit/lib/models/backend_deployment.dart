@@ -69,27 +69,27 @@ class DeploymentTarget {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'displayName': displayName,
-        'targetType': targetType,
-        'mode': mode,
-        'authMode': authMode,
-        'host': host,
-        'sshPort': sshPort,
-        'username': username,
-        'installRoot': installRoot,
-        'backendPort': backendPort,
-        'namespace': namespace,
-        'context': context,
-        'apiServer': apiServer,
-        'imageTag': imageTag,
-        'domain': domain,
-        'containerEngine': containerEngine,
-        'lastReadiness': lastReadiness,
-        'lastDeployedVersion': lastDeployedVersion,
-        'lastFailureReason': lastFailureReason,
-        if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
-      };
+    'id': id,
+    'displayName': displayName,
+    'targetType': targetType,
+    'mode': mode,
+    'authMode': authMode,
+    'host': host,
+    'sshPort': sshPort,
+    'username': username,
+    'installRoot': installRoot,
+    'backendPort': backendPort,
+    'namespace': namespace,
+    'context': context,
+    'apiServer': apiServer,
+    'imageTag': imageTag,
+    'domain': domain,
+    'containerEngine': containerEngine,
+    'lastReadiness': lastReadiness,
+    'lastDeployedVersion': lastDeployedVersion,
+    'lastFailureReason': lastFailureReason,
+    if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+  };
 
   DeploymentTarget copyWith({
     String? host,
@@ -204,15 +204,15 @@ class DeploymentFailureDetails {
   }
 
   Map<String, dynamic> toJson() => {
-        'code': code,
-        'phase': phase,
-        'summary': summary,
-        'recovery': recovery,
-        'technicalDetails': technicalDetails,
-        if (exitCode != null) 'exitCode': exitCode,
-        if (existingConnectionReachable != null)
-          'existingConnectionReachable': existingConnectionReachable,
-      };
+    'code': code,
+    'phase': phase,
+    'summary': summary,
+    'recovery': recovery,
+    'technicalDetails': technicalDetails,
+    if (exitCode != null) 'exitCode': exitCode,
+    if (existingConnectionReachable != null)
+      'existingConnectionReachable': existingConnectionReachable,
+  };
 
   DeploymentFailureDetails copyWithConnection(bool reachable) {
     return DeploymentFailureDetails(
@@ -243,7 +243,8 @@ class DeploymentActiveOperation {
   factory DeploymentActiveOperation.fromJson(Map<String, dynamic> json) {
     return DeploymentActiveOperation(
       label: json['label'] as String? ?? 'Preparing server',
-      startedAt: DateTime.tryParse(json['startedAt'] as String? ?? '') ??
+      startedAt:
+          DateTime.tryParse(json['startedAt'] as String? ?? '') ??
           DateTime.now(),
       timeoutSeconds: json['timeoutSeconds'] as int? ?? 0,
       automaticRecovery: json['automaticRecovery'] as bool? ?? false,
@@ -251,11 +252,11 @@ class DeploymentActiveOperation {
   }
 
   Map<String, dynamic> toJson() => {
-        'label': label,
-        'startedAt': startedAt.toIso8601String(),
-        'timeoutSeconds': timeoutSeconds,
-        'automaticRecovery': automaticRecovery,
-      };
+    'label': label,
+    'startedAt': startedAt.toIso8601String(),
+    'timeoutSeconds': timeoutSeconds,
+    'automaticRecovery': automaticRecovery,
+  };
 }
 
 class DeploymentJob {
@@ -329,8 +330,9 @@ class DeploymentJob {
       bundleManifestHash: json['bundleManifestHash'] as String? ?? '',
       imageTag: json['imageTag'] as String? ?? 'latest',
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
-      lastProgressAt:
-          DateTime.tryParse(json['lastProgressAt'] as String? ?? ''),
+      lastProgressAt: DateTime.tryParse(
+        json['lastProgressAt'] as String? ?? '',
+      ),
       failureDetails: json['failureDetails'] is Map<String, dynamic>
           ? DeploymentFailureDetails.fromJson(
               json['failureDetails'] as Map<String, dynamic>,
@@ -345,26 +347,25 @@ class DeploymentJob {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'targetId': targetId,
-        'mode': mode,
-        'stage': stage,
-        'percent': percent,
-        'stageLabel': stageLabel,
-        'logs': logs,
-        'terminalOutput': terminalOutput,
-        'requiresEphemeralAdministrator': requiresEphemeralAdministrator,
-        'error': error,
-        'bundleVersion': bundleVersion,
-        'bundleManifestHash': bundleManifestHash,
-        'imageTag': imageTag,
-        if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
-        if (lastProgressAt != null)
-          'lastProgressAt': lastProgressAt!.toIso8601String(),
-        if (failureDetails != null) 'failureDetails': failureDetails!.toJson(),
-        if (activeOperation != null)
-          'activeOperation': activeOperation!.toJson(),
-      };
+    'id': id,
+    'targetId': targetId,
+    'mode': mode,
+    'stage': stage,
+    'percent': percent,
+    'stageLabel': stageLabel,
+    'logs': logs,
+    'terminalOutput': terminalOutput,
+    'requiresEphemeralAdministrator': requiresEphemeralAdministrator,
+    'error': error,
+    'bundleVersion': bundleVersion,
+    'bundleManifestHash': bundleManifestHash,
+    'imageTag': imageTag,
+    if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+    if (lastProgressAt != null)
+      'lastProgressAt': lastProgressAt!.toIso8601String(),
+    if (failureDetails != null) 'failureDetails': failureDetails!.toJson(),
+    if (activeOperation != null) 'activeOperation': activeOperation!.toJson(),
+  };
 
   DeploymentJob copyWith({
     String? stage,
@@ -401,10 +402,12 @@ class DeploymentJob {
       imageTag: imageTag ?? this.imageTag,
       updatedAt: updatedAt ?? this.updatedAt,
       lastProgressAt: lastProgressAt ?? this.lastProgressAt,
-      failureDetails:
-          clearFailureDetails ? null : failureDetails ?? this.failureDetails,
-      activeOperation:
-          clearActiveOperation ? null : activeOperation ?? this.activeOperation,
+      failureDetails: clearFailureDetails
+          ? null
+          : failureDetails ?? this.failureDetails,
+      activeOperation: clearActiveOperation
+          ? null
+          : activeOperation ?? this.activeOperation,
     );
   }
 }

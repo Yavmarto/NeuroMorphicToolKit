@@ -18,7 +18,8 @@ class SshDeploymentService {
     final client = SSHClient(
       socket,
       username: request.username,
-      identities: request.authMethod == 'ssh_key' &&
+      identities:
+          request.authMethod == 'ssh_key' &&
               request.sshPrivateKey.trim().isNotEmpty
           ? SSHKeyPair.fromPem(request.sshPrivateKey)
           : null,
@@ -32,9 +33,9 @@ class SshDeploymentService {
       // correct credentials.
       onUserInfoRequest: request.authMethod == 'ssh_password'
           ? (info) => List.filled(
-                info.prompts.isEmpty ? 1 : info.prompts.length,
-                request.sshPassword,
-              )
+              info.prompts.isEmpty ? 1 : info.prompts.length,
+              request.sshPassword,
+            )
           : null,
       onVerifyHostKey: (_, fingerprint) async {
         try {

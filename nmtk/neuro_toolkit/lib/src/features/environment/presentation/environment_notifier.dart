@@ -40,10 +40,10 @@ class EnvironmentNotifier extends _$EnvironmentNotifier {
   }
 
   Future<void> createEnvironment(String displayName) => _runJob(
-      'Cloning environment…',
-      () => ref
-          .read(environmentApiServiceProvider)
-          .createEnvironment(displayName));
+    'Cloning environment…',
+    () =>
+        ref.read(environmentApiServiceProvider).createEnvironment(displayName),
+  );
 
   Future<void> importEnvironment(String displayName, String requirements) =>
       _runJob(
@@ -54,19 +54,21 @@ class EnvironmentNotifier extends _$EnvironmentNotifier {
       );
 
   Future<void> installPackages(String slug, List<String> specs) => _runJob(
-      'Installing packages…',
-      () =>
-          ref.read(environmentApiServiceProvider).installPackages(slug, specs));
+    'Installing packages…',
+    () => ref.read(environmentApiServiceProvider).installPackages(slug, specs),
+  );
 
   Future<void> uninstallPackages(String slug, List<String> names) => _runJob(
-      'Removing packages…',
-      () => ref
-          .read(environmentApiServiceProvider)
-          .uninstallPackages(slug, names));
+    'Removing packages…',
+    () =>
+        ref.read(environmentApiServiceProvider).uninstallPackages(slug, names),
+  );
 
   Future<void> deleteEnvironment(String slug) async {
-    await _withBusy('Deleting environment…',
-        () => ref.read(environmentApiServiceProvider).deleteEnvironment(slug));
+    await _withBusy(
+      'Deleting environment…',
+      () => ref.read(environmentApiServiceProvider).deleteEnvironment(slug),
+    );
     await refresh();
   }
 
@@ -78,10 +80,10 @@ class EnvironmentNotifier extends _$EnvironmentNotifier {
         final job = await api.pollJob(jobId);
         if (job.isError) {
           throw EnvironmentApiException(
-            [job.error, job.log]
-                .whereType<String>()
-                .where((s) => s.isNotEmpty)
-                .join('\n\n'),
+            [
+              job.error,
+              job.log,
+            ].whereType<String>().where((s) => s.isNotEmpty).join('\n\n'),
           );
         }
         if (job.isDone) return;
@@ -95,8 +97,9 @@ class EnvironmentNotifier extends _$EnvironmentNotifier {
   Future<void> _withBusy(String label, Future<void> Function() action) async {
     final currentState = state.value;
     if (currentState != null) {
-      state =
-          AsyncData(currentState.copyWith(busy: true, activeOperation: label));
+      state = AsyncData(
+        currentState.copyWith(busy: true, activeOperation: label),
+      );
     }
 
     try {

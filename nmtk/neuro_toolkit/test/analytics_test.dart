@@ -45,7 +45,8 @@ void main() {
     await analytics.recordBackendActivity(
       method: 'POST',
       uri: Uri.parse(
-          'http://127.0.0.1:9000/api/launcher/deployment/bootstrap-remote-user'),
+        'http://127.0.0.1:9000/api/launcher/deployment/bootstrap-remote-user',
+      ),
       statusCode: 200,
       requestBody:
           '{"host":"10.0.0.9","rootUsername":"root","rootPassword":"hunter2","rootPrivateKey":""}',

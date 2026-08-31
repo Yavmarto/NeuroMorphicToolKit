@@ -29,8 +29,9 @@ class AnalyticsService {
     try {
       final directory = await getApplicationSupportDirectory();
       _logFile = File(p.join(directory.path, 'crash.log'));
-      _backendActivityLogFile =
-          File(p.join(directory.path, 'launcher_backend_activity.log'));
+      _backendActivityLogFile = File(
+        p.join(directory.path, 'launcher_backend_activity.log'),
+      );
     } catch (e) {
       debugPrint('Failed to initialize analytics log file: $e');
     }
@@ -66,8 +67,10 @@ class AnalyticsService {
     }
   }
 
-  Future<void> trackEvent(String name,
-      {Map<String, dynamic>? properties}) async {
+  Future<void> trackEvent(
+    String name, {
+    Map<String, dynamic>? properties,
+  }) async {
     if (!_telemetryEnabled) return;
 
     final timestamp = DateTime.now().toIso8601String();

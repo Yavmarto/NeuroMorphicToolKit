@@ -6,13 +6,14 @@ import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 import 'package:neuro_toolkit/services/deployment/kubernetes_deployment.dart';
 
 DeploymentRequest _request(String kubeconfig) => DeploymentRequest(
-      targetType: 'kubernetes_cluster',
-      mode: 'kubernetes',
-      displayName: 'Cluster',
-      kubeconfig: kubeconfig,
-    );
+  targetType: 'kubernetes_cluster',
+  mode: 'kubernetes',
+  displayName: 'Cluster',
+  kubeconfig: kubeconfig,
+);
 
-String _configWithUser(String userYaml) => '''
+String _configWithUser(String userYaml) =>
+    '''
 apiVersion: v1
 kind: Config
 current-context: nmtk

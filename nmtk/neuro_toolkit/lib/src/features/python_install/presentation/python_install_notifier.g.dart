@@ -33,15 +33,15 @@ final class PythonInstallNotifierProvider
   /// This notifier is `autoDispose` so it resets when the setup screen is
   /// unmounted, preventing stale install state from persisting between visits.
   PythonInstallNotifierProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'pythonInstallProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'pythonInstallProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$pythonInstallNotifierHash();
@@ -75,11 +75,14 @@ abstract class _$PythonInstallNotifier extends $Notifier<PythonInstallState> {
   @override
   void runBuild() {
     final ref = this.ref as $Ref<PythonInstallState, PythonInstallState>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<PythonInstallState, PythonInstallState>,
-        PythonInstallState,
-        Object?,
-        Object?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<PythonInstallState, PythonInstallState>,
+              PythonInstallState,
+              Object?,
+              Object?
+            >;
     element.handleCreate(ref, build);
   }
 }

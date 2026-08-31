@@ -29,10 +29,10 @@ class UpdateService {
     http.Client? client,
     PackageInfoLoader? packageInfoLoader,
     Uri? launcherRepositoryUri,
-  })  : _client = client ?? http.Client(),
-        _packageInfoLoader = packageInfoLoader ?? PackageInfo.fromPlatform,
-        _launcherRepositoryUri =
-            launcherRepositoryUri ?? Uri.parse(_launcherRepositoryApiUrl);
+  }) : _client = client ?? http.Client(),
+       _packageInfoLoader = packageInfoLoader ?? PackageInfo.fromPlatform,
+       _launcherRepositoryUri =
+           launcherRepositoryUri ?? Uri.parse(_launcherRepositoryApiUrl);
 
   static const String _launcherRepositoryApiUrl =
       'https://api.github.com/repos/Completed-Spoon-6/NeuroMorphicToolKit';
@@ -300,11 +300,11 @@ _ParsedVersion? _parseVersion(String raw) {
 
   final prereleaseIdentifiers = parts.length > 1
       ? parts
-          .skip(1)
-          .join('-')
-          .split('.')
-          .where((String identifier) => identifier.isNotEmpty)
-          .toList(growable: false)
+            .skip(1)
+            .join('-')
+            .split('.')
+            .where((String identifier) => identifier.isNotEmpty)
+            .toList(growable: false)
       : const <String>[];
 
   return _ParsedVersion(
@@ -348,10 +348,12 @@ int _compareVersions(String left, String right) {
       ? leftParsed.core.length
       : rightParsed.core.length;
   for (var index = 0; index < maxLength; index++) {
-    final leftValue =
-        index < leftParsed.core.length ? leftParsed.core[index] : 0;
-    final rightValue =
-        index < rightParsed.core.length ? rightParsed.core[index] : 0;
+    final leftValue = index < leftParsed.core.length
+        ? leftParsed.core[index]
+        : 0;
+    final rightValue = index < rightParsed.core.length
+        ? rightParsed.core[index]
+        : 0;
     if (leftValue != rightValue) {
       return leftValue.compareTo(rightValue);
     }
@@ -462,7 +464,8 @@ _RepositoryRelease? _selectReleaseCandidate(
     candidates.add(
       _RepositoryRelease(
         version: version,
-        url: release['html_url'] as String? ??
+        url:
+            release['html_url'] as String? ??
             '${_repositoryHtmlUrl(repositoryApiUri)}/releases',
         releaseNotes: (release['body'] as String? ?? '').trim(),
         isPrerelease: isPrerelease,

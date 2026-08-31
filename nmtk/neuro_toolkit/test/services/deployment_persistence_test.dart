@@ -62,18 +62,17 @@ void main() {
 
     await persistence.saveTarget(target, request);
 
-    final ordinaryValues = jsonEncode(preferences
-        .getKeys()
-        .map((key) => preferences.get(key))
-        .toList(growable: false));
+    final ordinaryValues = jsonEncode(
+      preferences
+          .getKeys()
+          .map((key) => preferences.get(key))
+          .toList(growable: false),
+    );
     expect(ordinaryValues, isNot(contains(password)));
     expect(ordinaryValues, isNot(contains(privateKey)));
     expect(ordinaryValues, isNot(contains(adminToken)));
     expect(jsonEncode(secrets.values), contains(password));
-    expect(
-      (await persistence.requestForTarget(target)).adminToken,
-      adminToken,
-    );
+    expect((await persistence.requestForTarget(target)).adminToken, adminToken);
   });
 
   test('host keys use trust on first use and reject later changes', () async {

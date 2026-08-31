@@ -90,9 +90,10 @@ class DefaultBundleEnvironment implements BundleEnvironment {
       Directory(path).create(recursive: recursive);
 
   @override
-  Stream<FileSystemEntity> listDirectory(String path,
-          {bool recursive = false}) =>
-      Directory(path).list(recursive: recursive);
+  Stream<FileSystemEntity> listDirectory(
+    String path, {
+    bool recursive = false,
+  }) => Directory(path).list(recursive: recursive);
 
   @override
   Future<void> copyFile(String source, String destination) =>
@@ -189,8 +190,12 @@ class BundleManager {
       }
       // Distinguish standalone (has Resources/modules/) from debug (doesn't).
       final bundlePath = p.dirname(p.dirname(p.dirname(exe)));
-      final modulesDirPath =
-          p.join(bundlePath, 'Contents', 'Resources', 'modules');
+      final modulesDirPath = p.join(
+        bundlePath,
+        'Contents',
+        'Resources',
+        'modules',
+      );
       _isBundledCache = _env.directoryExists(modulesDirPath);
     } else if (_env.isWindows || _env.isLinux) {
       // On Windows and Linux, modules are placed next to the executable in the installer.
@@ -334,31 +339,13 @@ class BundleManager {
       final programFiles = envVars['ProgramFiles'];
       if (localAppData != null) {
         knownPaths.add(
-          p.join(
-            localAppData,
-            'Programs',
-            'Python',
-            'Python312',
-            'python.exe',
-          ),
+          p.join(localAppData, 'Programs', 'Python', 'Python312', 'python.exe'),
         );
         knownPaths.add(
-          p.join(
-            localAppData,
-            'Programs',
-            'Python',
-            'Python311',
-            'python.exe',
-          ),
+          p.join(localAppData, 'Programs', 'Python', 'Python311', 'python.exe'),
         );
         knownPaths.add(
-          p.join(
-            localAppData,
-            'Programs',
-            'Python',
-            'Python310',
-            'python.exe',
-          ),
+          p.join(localAppData, 'Programs', 'Python', 'Python310', 'python.exe'),
         );
       }
       if (programFiles != null) {
@@ -386,10 +373,9 @@ class BundleManager {
     try {
       // Use zsh (macOS default) or bash with login flag to source profile
       final shell = _env.environment['SHELL'] ?? '/bin/zsh';
-      final result = await _env.runProcess(
-        shell,
-        ['-lc', 'which $command'],
-      ).timeout(const Duration(seconds: 5));
+      final result = await _env
+          .runProcess(shell, ['-lc', 'which $command'])
+          .timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) {
         final resolved = result.stdout.toString().trim();
         if (resolved.isNotEmpty && resolved.startsWith('/')) {
@@ -439,7 +425,8 @@ class BundleManager {
   Future<bool> _isPythonWorking(String path) async {
     try {
       final result = await _env
-          .runProcess(path, ['--version']).timeout(const Duration(seconds: 5));
+          .runProcess(path, ['--version'])
+          .timeout(const Duration(seconds: 5));
       if (result.exitCode == 0) {
         debugPrint(
           'BundleManager: "$path" -> ${result.stdout.toString().trim()}',
@@ -470,8 +457,9 @@ class BundleManager {
       _cachedModulesBasePath = await _appSupportModulesDir;
     } else {
       // Dev mode: nmtk/neuro_toolkit -> ../../ = repo root
-      _cachedModulesBasePath =
-          p.normalize(p.join(_env.currentDirectory, '..', '..'));
+      _cachedModulesBasePath = p.normalize(
+        p.join(_env.currentDirectory, '..', '..'),
+      );
     }
     return _cachedModulesBasePath!;
   }
@@ -506,7 +494,8 @@ class BundleManager {
     // If version mismatch or missing marker, clean up first to avoid leftovers
     if (_env.directoryExists(targetBase)) {
       debugPrint(
-          'BundleManager: Cleaning up old modules in Application Support...');
+        'BundleManager: Cleaning up old modules in Application Support...',
+      );
       await _env.deleteDirectory(targetBase, recursive: true);
     }
     await _env.createDirectory(targetBase, recursive: true);
@@ -537,7 +526,8 @@ class BundleManager {
 
     if (!_env.directoryExists(bundledModulesPath)) {
       debugPrint(
-          'Bundle validation failed: modules directory missing at $bundledModulesPath');
+        'Bundle validation failed: modules directory missing at $bundledModulesPath',
+      );
       return false;
     }
 
@@ -582,8 +572,10 @@ class BundleManager {
   /// Recursively copy a directory tree.
   Future<void> _copyDirectory(String sourcePath, String destinationPath) async {
     await _env.createDirectory(destinationPath, recursive: true);
-    await for (final entity
-        in _env.listDirectory(sourcePath, recursive: false)) {
+    await for (final entity in _env.listDirectory(
+      sourcePath,
+      recursive: false,
+    )) {
       final newPath = p.join(destinationPath, p.basename(entity.path));
       if (entity is File) {
         await _env.copyFile(entity.path, newPath);

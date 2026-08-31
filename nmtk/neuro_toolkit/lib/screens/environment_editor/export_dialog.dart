@@ -14,9 +14,7 @@ class _ExportDialog extends ConsumerWidget {
         content: SizedBox(
           width: 420,
           height: 420,
-          child: Center(
-            child: ZetaProgressCircle(size: ZetaCircleSizes.s),
-          ),
+          child: Center(child: ZetaProgressCircle(size: ZetaCircleSizes.s)),
         ),
       ),
       error: (e, _) => NmtkContentDialog(

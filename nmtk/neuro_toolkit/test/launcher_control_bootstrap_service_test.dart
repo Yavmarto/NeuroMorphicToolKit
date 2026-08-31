@@ -8,9 +8,7 @@ import 'package:http/testing.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 class _FakeBootstrapEnvironment implements LauncherControlBootstrapEnvironment {
-  _FakeBootstrapEnvironment({
-    this.pythonPath = '/usr/bin/python3',
-  });
+  _FakeBootstrapEnvironment({this.pythonPath = '/usr/bin/python3'});
 
   @override
   final bool isWeb = false;
@@ -106,27 +104,31 @@ void main() {
       environment.startedCommands.single.join(' '),
       contains('scripts/launcher_control_service.py'),
     );
-    expect(environment.startedCommands.single.join(' '),
-        contains('--host 0.0.0.0'));
-  });
-
-  test('does not start a local process when an explicit control API is set',
-      () async {
-    final client = MockClient((request) async {
-      return http.Response(jsonEncode(<String, String>{'status': 'ok'}), 200);
-    });
-    final environment = _FakeBootstrapEnvironment();
-    final service = LauncherControlBootstrapService(
-      environment: environment,
-      client: client,
-      explicitBaseUriOverride: Uri.parse('http://192.168.1.50:8090'),
+    expect(
+      environment.startedCommands.single.join(' '),
+      contains('--host 0.0.0.0'),
     );
-
-    final state = await service.ensureReady();
-
-    expect(state.status, LauncherBootstrapStatus.ready);
-    expect(environment.startedCommands, isEmpty);
   });
+
+  test(
+    'does not start a local process when an explicit control API is set',
+    () async {
+      final client = MockClient((request) async {
+        return http.Response(jsonEncode(<String, String>{'status': 'ok'}), 200);
+      });
+      final environment = _FakeBootstrapEnvironment();
+      final service = LauncherControlBootstrapService(
+        environment: environment,
+        client: client,
+        explicitBaseUriOverride: Uri.parse('http://192.168.1.50:8090'),
+      );
+
+      final state = await service.ensureReady();
+
+      expect(state.status, LauncherBootstrapStatus.ready);
+      expect(environment.startedCommands, isEmpty);
+    },
+  );
 
   test('polls explicit control API until suite_api reports ready', () async {
     var healthChecks = 0;
@@ -168,40 +170,42 @@ void main() {
     expect(healthChecks, greaterThanOrEqualTo(3));
   });
 
-  test('surfaces suite_api failure through explicit control API polling',
-      () async {
-    final client = MockClient((request) async {
-      if (request.url.path == '/health') {
-        return http.Response(
-          jsonEncode(<String, dynamic>{
-            'status': 'ok',
-            'suiteApiStatus': 'preflight_failed',
-            'suiteApiMessage': 'suite_api venv install failed',
-          }),
-          200,
-        );
-      }
-      return http.Response('', 404);
-    });
-    final environment = _FakeBootstrapEnvironment();
-    final service = LauncherControlBootstrapService(
-      environment: environment,
-      client: client,
-      startupTimeout: const Duration(seconds: 2),
-      pollInterval: const Duration(milliseconds: 10),
-      explicitBaseUriOverride: Uri.parse('http://127.0.0.1:8090'),
-    );
+  test(
+    'surfaces suite_api failure through explicit control API polling',
+    () async {
+      final client = MockClient((request) async {
+        if (request.url.path == '/health') {
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'status': 'ok',
+              'suiteApiStatus': 'preflight_failed',
+              'suiteApiMessage': 'suite_api venv install failed',
+            }),
+            200,
+          );
+        }
+        return http.Response('', 404);
+      });
+      final environment = _FakeBootstrapEnvironment();
+      final service = LauncherControlBootstrapService(
+        environment: environment,
+        client: client,
+        startupTimeout: const Duration(seconds: 2),
+        pollInterval: const Duration(milliseconds: 10),
+        explicitBaseUriOverride: Uri.parse('http://127.0.0.1:8090'),
+      );
 
-    final state = await service.ensureReady();
+      final state = await service.ensureReady();
 
-    expect(state.status, LauncherBootstrapStatus.preflightFailed);
-    expect(state.message, contains('suite_api venv install failed'));
-    expect(environment.startedCommands, isEmpty);
-    // The control API answered /health — it's reachable even though the
-    // target (suite_api) isn't ready, so "Set up a new server" shouldn't be
-    // blocked on this.
-    expect(state.controlApiReachable, isTrue);
-  });
+      expect(state.status, LauncherBootstrapStatus.preflightFailed);
+      expect(state.message, contains('suite_api venv install failed'));
+      expect(environment.startedCommands, isEmpty);
+      // The control API answered /health — it's reachable even though the
+      // target (suite_api) isn't ready, so "Set up a new server" shouldn't be
+      // blocked on this.
+      expect(state.controlApiReachable, isTrue);
+    },
+  );
 
   test('returns preflight failure when Python is unavailable', () async {
     final client = MockClient((request) async {
@@ -264,45 +268,48 @@ void main() {
     expect(healthChecks, greaterThanOrEqualTo(2));
   });
 
-  test('surfaces suite_api preflight failure from control API health',
-      () async {
-    var healthChecks = 0;
-    final client = MockClient((request) async {
-      if (request.url.path == '/health') {
-        healthChecks += 1;
-        if (healthChecks == 1) {
-          throw const SocketException('Connection refused');
-        }
-        return http.Response(
-          jsonEncode(<String, dynamic>{
-            'status': 'ok',
-            'suiteApiStatus': 'preflight_failed',
-            'suiteApiMessage': 'suite_api runtime dependencies are missing',
-          }),
-          200,
-        );
-      }
-      return http.Response('', 404);
-    });
-    final environment = _FakeBootstrapEnvironment();
-    final service = LauncherControlBootstrapService(
-      environment: environment,
-      client: client,
-      startupTimeout: const Duration(seconds: 2),
-      pollInterval: const Duration(milliseconds: 10),
-    );
-
-    final state = await service.ensureReady();
-
-    expect(state.status, LauncherBootstrapStatus.preflightFailed);
-    expect(
-        state.message, contains('suite_api runtime dependencies are missing'));
-    expect(environment.startedCommands, hasLength(1));
-    expect(state.controlApiReachable, isTrue);
-  });
-
   test(
-      'detects a clean unprovisioned host via connection-refused, without '
+    'surfaces suite_api preflight failure from control API health',
+    () async {
+      var healthChecks = 0;
+      final client = MockClient((request) async {
+        if (request.url.path == '/health') {
+          healthChecks += 1;
+          if (healthChecks == 1) {
+            throw const SocketException('Connection refused');
+          }
+          return http.Response(
+            jsonEncode(<String, dynamic>{
+              'status': 'ok',
+              'suiteApiStatus': 'preflight_failed',
+              'suiteApiMessage': 'suite_api runtime dependencies are missing',
+            }),
+            200,
+          );
+        }
+        return http.Response('', 404);
+      });
+      final environment = _FakeBootstrapEnvironment();
+      final service = LauncherControlBootstrapService(
+        environment: environment,
+        client: client,
+        startupTimeout: const Duration(seconds: 2),
+        pollInterval: const Duration(milliseconds: 10),
+      );
+
+      final state = await service.ensureReady();
+
+      expect(state.status, LauncherBootstrapStatus.preflightFailed);
+      expect(
+        state.message,
+        contains('suite_api runtime dependencies are missing'),
+      );
+      expect(environment.startedCommands, hasLength(1));
+      expect(state.controlApiReachable, isTrue);
+    },
+  );
+
+  test('detects a clean unprovisioned host via connection-refused, without '
       'waiting out the full timeout', () async {
     var healthChecks = 0;
     final client = MockClient((request) async {

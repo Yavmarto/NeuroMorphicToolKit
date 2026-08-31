@@ -101,7 +101,9 @@ void main() {
       expect(find.byType(Dialog), findsNothing);
       expect(find.byType(BackendSetupScreen), findsOneWidget);
       expect(
-          find.text('The saved server could not be reached.'), findsOneWidget);
+        find.text('The saved server could not be reached.'),
+        findsOneWidget,
+      );
       expect(
         tester.widget<TextField>(find.byType(TextField).first).controller?.text,
         '192.168.2.90',
@@ -123,23 +125,19 @@ void main() {
       ProviderScope(
         overrides: [
           analyticsServiceProvider.overrideWithValue(AnalyticsService()),
-          launcherBootstrapProvider.overrideWith(
-            () {
-              bootstrapNotifier = _StaticBootstrapNotifier(
-                LauncherBootstrapData.ready(
-                  bootstrapState: LauncherBootstrapState.ready(baseUri),
-                  controlApiService: ControlApiService(baseUri: baseUri),
-                  launcherSettings: _readySettings,
-                ),
-              );
-              return bootstrapNotifier;
-            },
-          ),
+          launcherBootstrapProvider.overrideWith(() {
+            bootstrapNotifier = _StaticBootstrapNotifier(
+              LauncherBootstrapData.ready(
+                bootstrapState: LauncherBootstrapState.ready(baseUri),
+                controlApiService: ControlApiService(baseUri: baseUri),
+                launcherSettings: _readySettings,
+              ),
+            );
+            return bootstrapNotifier;
+          }),
           moduleProvider.overrideWith(_EmptyModuleNotifier.new),
           workspaceProvider.overrideWith(_EmptyWorkspaceNotifier.new),
-          serverConnectionProvider.overrideWith(
-            _StaticConnectionNotifier.new,
-          ),
+          serverConnectionProvider.overrideWith(_StaticConnectionNotifier.new),
           backendVersionProvider.overrideWith((ref) async => '1.2.0'),
         ],
         child: const MaterialApp(home: LauncherAppHost()),

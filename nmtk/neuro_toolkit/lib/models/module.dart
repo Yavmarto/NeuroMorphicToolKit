@@ -43,12 +43,12 @@ class AkidaRuntimeConfig {
   }
 
   Map<String, dynamic> toJson() => {
-        'supportedPlatforms': supportedPlatforms,
-        'pythonRange': pythonRange,
-        'requiredPackages': requiredPackages,
-        'docsUrl': docsUrl,
-        'localModeFallback': localModeFallback,
-      };
+    'supportedPlatforms': supportedPlatforms,
+    'pythonRange': pythonRange,
+    'requiredPackages': requiredPackages,
+    'docsUrl': docsUrl,
+    'localModeFallback': localModeFallback,
+  };
 }
 
 class AkidaRuntimeState {
@@ -71,10 +71,10 @@ class AkidaRuntimeState {
   }
 
   Map<String, dynamic> toJson() => {
-        'status': status,
-        'message': message,
-        'preparedAt': preparedAt,
-      };
+    'status': status,
+    'message': message,
+    'preparedAt': preparedAt,
+  };
 }
 
 class PynqLauncherRuntimeConfig {
@@ -121,7 +121,8 @@ class PynqLauncherRuntimeConfig {
       defaultAuthMode: json['defaultAuthMode'] as String? ?? 'password',
       legacyInstallRoot:
           json['legacyInstallRoot'] as String? ?? '/opt/neurochip-pynq-agent',
-      installRootTemplate: json['installRootTemplate'] as String? ??
+      installRootTemplate:
+          json['installRootTemplate'] as String? ??
           '/home/{username}/.local/share/neurochip-pynq-agent',
       agentVenvDirName: json['agentVenvDirName'] as String? ?? 'venv',
       runtimeVenvDirName: json['runtimeVenvDirName'] as String? ?? 'pynq-venv',
@@ -139,22 +140,22 @@ class PynqLauncherRuntimeConfig {
   }
 
   Map<String, dynamic> toJson() => {
-        'runtimePort': runtimePort,
-        'sshPort': sshPort,
-        'defaultUsername': defaultUsername,
-        'defaultState': defaultState,
-        'defaultAuthMode': defaultAuthMode,
-        'legacyInstallRoot': legacyInstallRoot,
-        'installRootTemplate': installRootTemplate,
-        'agentVenvDirName': agentVenvDirName,
-        'runtimeVenvDirName': runtimeVenvDirName,
-        'overlayDirName': overlayDirName,
-        'serviceName': serviceName,
-        'agentExecutableName': agentExecutableName,
-        'installStatusFilename': installStatusFilename,
-        'runtimeLogFilename': runtimeLogFilename,
-        'overlayStagingSubdir': overlayStagingSubdir,
-      };
+    'runtimePort': runtimePort,
+    'sshPort': sshPort,
+    'defaultUsername': defaultUsername,
+    'defaultState': defaultState,
+    'defaultAuthMode': defaultAuthMode,
+    'legacyInstallRoot': legacyInstallRoot,
+    'installRootTemplate': installRootTemplate,
+    'agentVenvDirName': agentVenvDirName,
+    'runtimeVenvDirName': runtimeVenvDirName,
+    'overlayDirName': overlayDirName,
+    'serviceName': serviceName,
+    'agentExecutableName': agentExecutableName,
+    'installStatusFilename': installStatusFilename,
+    'runtimeLogFilename': runtimeLogFilename,
+    'overlayStagingSubdir': overlayStagingSubdir,
+  };
 }
 
 class AkidaLauncherRuntimeConfig {
@@ -208,26 +209,23 @@ class AkidaLauncherRuntimeConfig {
   }
 
   Map<String, dynamic> toJson() => {
-        'runtimePort': runtimePort,
-        'controlPort': controlPort,
-        'sshPort': sshPort,
-        'defaultState': defaultState,
-        'defaultAuthMode': defaultAuthMode,
-        'installRoot': installRoot,
-        'serviceUser': serviceUser,
-        'venvDirName': venvDirName,
-        'runtimeServiceName': runtimeServiceName,
-        'controlServiceName': controlServiceName,
-        'tokenRelativePath': tokenRelativePath,
-        'installStatusRelativePath': installStatusRelativePath,
-      };
+    'runtimePort': runtimePort,
+    'controlPort': controlPort,
+    'sshPort': sshPort,
+    'defaultState': defaultState,
+    'defaultAuthMode': defaultAuthMode,
+    'installRoot': installRoot,
+    'serviceUser': serviceUser,
+    'venvDirName': venvDirName,
+    'runtimeServiceName': runtimeServiceName,
+    'controlServiceName': controlServiceName,
+    'tokenRelativePath': tokenRelativePath,
+    'installStatusRelativePath': installStatusRelativePath,
+  };
 }
 
 class LauncherRuntimeConfig {
-  const LauncherRuntimeConfig({
-    this.pynq,
-    this.akida,
-  });
+  const LauncherRuntimeConfig({this.pynq, this.akida});
 
   final PynqLauncherRuntimeConfig? pynq;
   final AkidaLauncherRuntimeConfig? akida;
@@ -248,9 +246,9 @@ class LauncherRuntimeConfig {
   }
 
   Map<String, dynamic> toJson() => {
-        'pynq': pynq?.toJson(),
-        'akida': akida?.toJson(),
-      };
+    'pynq': pynq?.toJson(),
+    'akida': akida?.toJson(),
+  };
 }
 
 class JupyterKernelConfig {
@@ -269,11 +267,7 @@ class JupyterKernelConfig {
 
 class DeploymentCapability {
   const DeploymentCapability({
-    this.supportedModes = const <String>[
-      'standalone',
-      'docker',
-      'kubernetes',
-    ],
+    this.supportedModes = const <String>['standalone', 'docker', 'kubernetes'],
     this.healthPath = '/health',
     this.requiredPorts = const <int>[],
     this.requiredEnvironment = const <String>[],
@@ -333,18 +327,18 @@ class DeploymentCapability {
   }
 
   Map<String, dynamic> toJson() => {
-        'supportedModes': supportedModes,
-        'healthPath': healthPath,
-        'requiredPorts': requiredPorts,
-        'requiredEnvironment': requiredEnvironment,
-        'secretFields': secretFields,
-        'defaultContainerImage': defaultContainerImage,
-        'composeProfile': composeProfile,
-        'chartTemplateId': chartTemplateId,
-        'startupTimeoutSeconds': startupTimeoutSeconds,
-        'readinessTimeoutSeconds': readinessTimeoutSeconds,
-        'internalProbeHost': internalProbeHost,
-      };
+    'supportedModes': supportedModes,
+    'healthPath': healthPath,
+    'requiredPorts': requiredPorts,
+    'requiredEnvironment': requiredEnvironment,
+    'secretFields': secretFields,
+    'defaultContainerImage': defaultContainerImage,
+    'composeProfile': composeProfile,
+    'chartTemplateId': chartTemplateId,
+    'startupTimeoutSeconds': startupTimeoutSeconds,
+    'readinessTimeoutSeconds': readinessTimeoutSeconds,
+    'internalProbeHost': internalProbeHost,
+  };
 }
 
 class Module {
@@ -459,10 +453,10 @@ class Module {
       startOnLaunch: json['startOnLaunch'] as bool? ?? false,
       requiredImports:
           (json['requiredImports'] as List<dynamic>?)?.cast<String>() ??
-              const [],
+          const [],
       optionalImports:
           (json['optionalImports'] as List<dynamic>?)?.cast<String>() ??
-              const [],
+          const [],
       installExtras:
           (json['installExtras'] as List<dynamic>?)?.cast<String>() ?? const [],
       installStrategy: json['installStrategy'] as String? ?? 'pip',
@@ -496,7 +490,7 @@ class Module {
       preflightMessage: json['preflightMessage'] as String?,
       capabilityWarnings:
           (json['capabilityWarnings'] as List<dynamic>?)?.cast<String>() ??
-              const [],
+          const [],
       environmentFingerprint: json['environmentFingerprint'] as String?,
       status: json['status'] != null
           ? ModuleStatus.values[json['status'] as int]
@@ -581,8 +575,9 @@ class Module {
       launcherRuntime: launcherRuntime is LauncherRuntimeConfig?
           ? launcherRuntime
           : this.launcherRuntime,
-      deployment:
-          deployment is DeploymentCapability? ? deployment : this.deployment,
+      deployment: deployment is DeploymentCapability?
+          ? deployment
+          : this.deployment,
       akidaRuntimeState: akidaRuntimeState is AkidaRuntimeState?
           ? akidaRuntimeState
           : this.akidaRuntimeState,
@@ -630,45 +625,45 @@ class Module {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'description': description,
-        'icon': icon,
-        'directory': directory,
-        'port': port,
-        'required': required,
-        'hasFrontend': hasFrontend,
-        'showInLauncherNav': showInLauncherNav,
-        'frontendStatus': frontendStatus,
-        'requiresMuJoCo': requiresMuJoCo,
-        'sourcePath': sourcePath,
-        'runPath': runPath,
-        'uvicornTarget': uvicornTarget,
-        'version': version,
-        'remoteVersion': remoteVersion,
-        'versionPinned': versionPinned,
-        'remoteUrl': remoteUrl,
-        'isEnabled': isEnabled,
-        'customPort': customPort,
-        'startOnLaunch': startOnLaunch,
-        'requiredImports': requiredImports,
-        'optionalImports': optionalImports,
-        'installExtras': installExtras,
-        'installStrategy': installStrategy,
-        'startStrategy': startStrategy,
-        'akidaRuntime': akidaRuntime?.toJson(),
-        'launcherRuntime': launcherRuntime?.toJson(),
-        'deployment': deployment?.toJson(),
-        'akidaRuntimeState': akidaRuntimeState?.toJson(),
-        'jupyterKernel': jupyterKernel?.toJson(),
-        'preflightStatus': preflightStatus,
-        'preflightMessage': preflightMessage,
-        'capabilityWarnings': capabilityWarnings,
-        'environmentFingerprint': environmentFingerprint,
-        'status': status.index,
-        'installProgress': installProgress,
-        'healthStatus': healthStatus,
-      };
+    'id': id,
+    'name': name,
+    'description': description,
+    'icon': icon,
+    'directory': directory,
+    'port': port,
+    'required': required,
+    'hasFrontend': hasFrontend,
+    'showInLauncherNav': showInLauncherNav,
+    'frontendStatus': frontendStatus,
+    'requiresMuJoCo': requiresMuJoCo,
+    'sourcePath': sourcePath,
+    'runPath': runPath,
+    'uvicornTarget': uvicornTarget,
+    'version': version,
+    'remoteVersion': remoteVersion,
+    'versionPinned': versionPinned,
+    'remoteUrl': remoteUrl,
+    'isEnabled': isEnabled,
+    'customPort': customPort,
+    'startOnLaunch': startOnLaunch,
+    'requiredImports': requiredImports,
+    'optionalImports': optionalImports,
+    'installExtras': installExtras,
+    'installStrategy': installStrategy,
+    'startStrategy': startStrategy,
+    'akidaRuntime': akidaRuntime?.toJson(),
+    'launcherRuntime': launcherRuntime?.toJson(),
+    'deployment': deployment?.toJson(),
+    'akidaRuntimeState': akidaRuntimeState?.toJson(),
+    'jupyterKernel': jupyterKernel?.toJson(),
+    'preflightStatus': preflightStatus,
+    'preflightMessage': preflightMessage,
+    'capabilityWarnings': capabilityWarnings,
+    'environmentFingerprint': environmentFingerprint,
+    'status': status.index,
+    'installProgress': installProgress,
+    'healthStatus': healthStatus,
+  };
 
   /// Equality based on the fields that change during the 3-second polling
   /// cycle. Two [Module] instances are considered equal when no UI-visible
@@ -691,15 +686,15 @@ class Module {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        status,
-        healthStatus,
-        installProgress,
-        version,
-        remoteVersion,
-        isEnabled,
-        customPort,
-        preflightStatus,
-        preflightMessage,
-      );
+    id,
+    status,
+    healthStatus,
+    installProgress,
+    version,
+    remoteVersion,
+    isEnabled,
+    customPort,
+    preflightStatus,
+    preflightMessage,
+  );
 }

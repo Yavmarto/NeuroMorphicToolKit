@@ -12,30 +12,28 @@ import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 
 part 'launcher_bootstrap_notifier.g.dart';
 
-typedef LauncherBootstrapProbe = Future<LauncherBootstrapState> Function(
-    Uri baseUri);
+typedef LauncherBootstrapProbe =
+    Future<LauncherBootstrapState> Function(Uri baseUri);
 
-typedef LauncherControlApiFactory = ControlApiService Function(
-  Uri baseUri,
-  String adminToken,
-);
-typedef LauncherSelectionSaver = Future<void> Function(
-    Uri launcherBaseUri, Uri? suiteBaseUri);
+typedef LauncherControlApiFactory =
+    ControlApiService Function(Uri baseUri, String adminToken);
+typedef LauncherSelectionSaver =
+    Future<void> Function(Uri launcherBaseUri, Uri? suiteBaseUri);
 
 final launcherBootstrapProbeProvider = Provider<LauncherBootstrapProbe>((ref) {
   return (baseUri) => LauncherControlBootstrapService(
-        explicitBaseUriOverride: baseUri,
-      ).ensureReady();
+    explicitBaseUriOverride: baseUri,
+  ).ensureReady();
 });
 
 final launcherControlApiFactoryProvider = Provider<LauncherControlApiFactory>((
   ref,
 ) {
   return (baseUri, adminToken) => ControlApiService(
-        baseUri: baseUri,
-        analyticsService: ref.read(analyticsServiceProvider),
-        adminToken: adminToken,
-      );
+    baseUri: baseUri,
+    analyticsService: ref.read(analyticsServiceProvider),
+    adminToken: adminToken,
+  );
 });
 
 final launcherSelectionSaverProvider = Provider<LauncherSelectionSaver>((ref) {
@@ -55,8 +53,10 @@ final launcherSelectionSaverProvider = Provider<LauncherSelectionSaver>((ref) {
 class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
   @override
   Future<LauncherBootstrapData> build() async {
-    final configured =
-        ref.read(settingsProvider).value?.launcherControlApiBaseUrl;
+    final configured = ref
+        .read(settingsProvider)
+        .value
+        ?.launcherControlApiBaseUrl;
     final snapshot = await ref.read(deploymentServiceProvider).load();
     final remoteTargets = snapshot.targets
         .where((target) => target.targetType == 'remote_host')
@@ -146,7 +146,8 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
       final suiteHost = suiteTarget.host.trim().isEmpty
           ? candidateBaseUri.host
           : suiteTarget.host.trim();
-      suiteUri = tunnel?.suiteApiUri ??
+      suiteUri =
+          tunnel?.suiteApiUri ??
           Uri(
             scheme: candidateBaseUri.scheme,
             host: suiteHost,
@@ -161,7 +162,9 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
     try {
       if (tunnel == null) {
         await ref.read(launcherSelectionSaverProvider)(
-            candidateBaseUri, suiteUri);
+          candidateBaseUri,
+          suiteUri,
+        );
       }
     } on Object catch (error) {
       await _recordFailure('persistence', error, candidateBaseUri);
@@ -264,7 +267,9 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
   }
 
   Future<void> _recordFailure(String stage, Object error, Uri? baseUri) async {
-    await ref.read(analyticsServiceProvider).recordBackendActivity(
+    await ref
+        .read(analyticsServiceProvider)
+        .recordBackendActivity(
           method: 'BOOTSTRAP',
           uri: baseUri ?? Uri.parse('launcher://bootstrap'),
           error: 'stage=$stage category=${_failureCategory(error)}',
@@ -292,8 +297,9 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
       'unreachable' =>
         'The launcher host could not be reached. Confirm the address and that '
             'the launcher service is running, then try again.',
-      _ => 'Preflight failed while checking this launcher host. Confirm the '
-          'address and try again.',
+      _ =>
+        'Preflight failed while checking this launcher host. Confirm the '
+            'address and try again.',
     };
   }
 
@@ -304,8 +310,9 @@ class LauncherBootstrapNotifier extends _$LauncherBootstrapNotifier {
       'invalid_response' =>
         'The launcher answered with settings this app could not read. Update '
             'the launcher service and try again.',
-      _ => 'Preflight failed while loading settings from this launcher host. '
-          'Confirm the launcher service is healthy, then try again.',
+      _ =>
+        'Preflight failed while loading settings from this launcher host. '
+            'Confirm the launcher service is healthy, then try again.',
     };
   }
 }

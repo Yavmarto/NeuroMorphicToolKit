@@ -55,8 +55,12 @@ class WorkspaceNotifier extends _$WorkspaceNotifier {
       return;
     }
 
-    if (_workspaceMatches(currentState.sessions, currentState.focusedModuleId,
-        sessions, focusedModuleId)) {
+    if (_workspaceMatches(
+      currentState.sessions,
+      currentState.focusedModuleId,
+      sessions,
+      focusedModuleId,
+    )) {
       state = state.whenData((s) => s.copyWith(defaultSessionsEnsured: true));
       return;
     }
@@ -132,8 +136,9 @@ class WorkspaceNotifier extends _$WorkspaceNotifier {
     final currentState = state.value;
     if (currentState == null) return;
 
-    final index = currentState.sessions
-        .indexWhere((session) => session.moduleId == moduleId);
+    final index = currentState.sessions.indexWhere(
+      (session) => session.moduleId == moduleId,
+    );
     if (index == -1) return;
 
     final updatedSessions = List<WorkspaceSession>.from(currentState.sessions);

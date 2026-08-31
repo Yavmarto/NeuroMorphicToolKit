@@ -11,11 +11,8 @@ part of 'launcher_bootstrap_notifier.dart';
 /// Drives the pre-app bootstrap flow: probing the launcher control API, loading
 /// launcher settings, and surfacing the combined result to the widget tree.
 ///
-/// Replaces all [setState] calls in [_LauncherBootstrapHostState] in main.dart.
-///
 /// `keepAlive: true` because this provider owns the one-time bootstrap sequence
-/// and must not reset when the widget temporarily unmounts during the transition
-/// from the setup flow to the main app shell.
+/// and must not reset during the transition from setup to the workspace.
 
 @ProviderFor(LauncherBootstrapNotifier)
 final launcherBootstrapProvider = LauncherBootstrapNotifierProvider._();
@@ -23,31 +20,29 @@ final launcherBootstrapProvider = LauncherBootstrapNotifierProvider._();
 /// Drives the pre-app bootstrap flow: probing the launcher control API, loading
 /// launcher settings, and surfacing the combined result to the widget tree.
 ///
-/// Replaces all [setState] calls in [_LauncherBootstrapHostState] in main.dart.
-///
 /// `keepAlive: true` because this provider owns the one-time bootstrap sequence
-/// and must not reset when the widget temporarily unmounts during the transition
-/// from the setup flow to the main app shell.
-final class LauncherBootstrapNotifierProvider extends $AsyncNotifierProvider<
-    LauncherBootstrapNotifier, LauncherBootstrapData> {
+/// and must not reset during the transition from setup to the workspace.
+final class LauncherBootstrapNotifierProvider
+    extends
+        $AsyncNotifierProvider<
+          LauncherBootstrapNotifier,
+          LauncherBootstrapData
+        > {
   /// Drives the pre-app bootstrap flow: probing the launcher control API, loading
   /// launcher settings, and surfacing the combined result to the widget tree.
   ///
-  /// Replaces all [setState] calls in [_LauncherBootstrapHostState] in main.dart.
-  ///
   /// `keepAlive: true` because this provider owns the one-time bootstrap sequence
-  /// and must not reset when the widget temporarily unmounts during the transition
-  /// from the setup flow to the main app shell.
+  /// and must not reset during the transition from setup to the workspace.
   LauncherBootstrapNotifierProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'launcherBootstrapProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'launcherBootstrapProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$launcherBootstrapNotifierHash();
@@ -58,16 +53,13 @@ final class LauncherBootstrapNotifierProvider extends $AsyncNotifierProvider<
 }
 
 String _$launcherBootstrapNotifierHash() =>
-    r'80a9099e5f7ed09a94f2930636f37cb2198642c3';
+    r'ade5de5c6e13ef072a8039b34d504efe7a7fc797';
 
 /// Drives the pre-app bootstrap flow: probing the launcher control API, loading
 /// launcher settings, and surfacing the combined result to the widget tree.
 ///
-/// Replaces all [setState] calls in [_LauncherBootstrapHostState] in main.dart.
-///
 /// `keepAlive: true` because this provider owns the one-time bootstrap sequence
-/// and must not reset when the widget temporarily unmounts during the transition
-/// from the setup flow to the main app shell.
+/// and must not reset during the transition from setup to the workspace.
 
 abstract class _$LauncherBootstrapNotifier
     extends $AsyncNotifier<LauncherBootstrapData> {
@@ -75,13 +67,20 @@ abstract class _$LauncherBootstrapNotifier
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref
-        as $Ref<AsyncValue<LauncherBootstrapData>, LauncherBootstrapData>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<LauncherBootstrapData>, LauncherBootstrapData>,
-        AsyncValue<LauncherBootstrapData>,
-        Object?,
-        Object?>;
+    final ref =
+        this.ref
+            as $Ref<AsyncValue<LauncherBootstrapData>, LauncherBootstrapData>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<
+                AsyncValue<LauncherBootstrapData>,
+                LauncherBootstrapData
+              >,
+              AsyncValue<LauncherBootstrapData>,
+              Object?,
+              Object?
+            >;
     element.handleCreate(ref, build);
   }
 }

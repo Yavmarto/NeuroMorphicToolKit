@@ -45,9 +45,10 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
     if (spec.isEmpty) return;
     final stateAsync = ref.read(environmentProvider);
     try {
-      await ref
-          .read(environmentProvider.notifier)
-          .installPackages(widget.env.slug, [spec]);
+      await ref.read(environmentProvider.notifier).installPackages(
+        widget.env.slug,
+        [spec],
+      );
       _addController.clear();
       if (!mounted) return;
       NmtkToasts.success(context, 'Installed $spec');
@@ -57,16 +58,19 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
     } catch (_) {
       if (!mounted) return;
       NmtkToasts.error(
-          context, stateAsync.error?.toString() ?? 'Install failed.');
+        context,
+        stateAsync.error?.toString() ?? 'Install failed.',
+      );
     }
   }
 
   Future<void> _removePackage(String name) async {
     final stateAsync = ref.read(environmentProvider);
     try {
-      await ref
-          .read(environmentProvider.notifier)
-          .uninstallPackages(widget.env.slug, [name]);
+      await ref.read(environmentProvider.notifier).uninstallPackages(
+        widget.env.slug,
+        [name],
+      );
       if (!mounted) return;
       NmtkToasts.success(context, 'Removed $name');
       await ref
@@ -75,7 +79,9 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
     } catch (_) {
       if (!mounted) return;
       NmtkToasts.error(
-          context, stateAsync.error?.toString() ?? 'Uninstall failed.');
+        context,
+        stateAsync.error?.toString() ?? 'Uninstall failed.',
+      );
     }
   }
 
@@ -113,10 +119,7 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
                 label: _expanded ? 'Hide packages' : 'Packages',
                 onPressed: _toggle,
               ),
-              ZetaButton.outline(
-                label: 'Export…',
-                onPressed: widget.onExport,
-              ),
+              ZetaButton.outline(label: 'Export…', onPressed: widget.onExport),
               if (!env.immutable)
                 ZetaButton.outline(
                   label: 'Delete',
@@ -161,9 +164,7 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
     if (pkgState.loading) {
       return Padding(
         padding: EdgeInsets.all(context.nmtkTokens.compactGap),
-        child: const Center(
-          child: ZetaProgressCircle(size: ZetaCircleSizes.s),
-        ),
+        child: const Center(child: ZetaProgressCircle(size: ZetaCircleSizes.s)),
       );
     }
     if (pkgState.error != null) {
@@ -172,10 +173,9 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
         children: [
           Text(
             pkgState.error!,
-            style: Zeta.of(context)
-                .textStyles
-                .bodySmall
-                .apply(color: zeta.colors.mainNegative),
+            style: Zeta.of(
+              context,
+            ).textStyles.bodySmall.apply(color: zeta.colors.mainNegative),
           ),
           SizedBox(height: context.nmtkTokens.compactGap),
           ZetaButton.outline(
@@ -190,10 +190,9 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
     if (pkgs.isEmpty) {
       return Text(
         'No packages found.',
-        style: Zeta.of(context)
-            .textStyles
-            .bodySmall
-            .apply(color: zeta.colors.mainSubtle),
+        style: Zeta.of(
+          context,
+        ).textStyles.bodySmall.apply(color: zeta.colors.mainSubtle),
       );
     }
     return Column(
@@ -204,14 +203,17 @@ class _EnvironmentCardState extends ConsumerState<_EnvironmentCard> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text('${pkg.name}  ${pkg.version}',
-                      style: Zeta.of(context).textStyles.bodySmall),
+                  child: Text(
+                    '${pkg.name}  ${pkg.version}',
+                    style: Zeta.of(context).textStyles.bodySmall,
+                  ),
                 ),
                 if (!env.immutable)
                   ZetaButton.text(
                     label: 'Remove',
-                    onPressed:
-                        widget.busy ? null : () => _removePackage(pkg.name),
+                    onPressed: widget.busy
+                        ? null
+                        : () => _removePackage(pkg.name),
                   ),
               ],
             ),

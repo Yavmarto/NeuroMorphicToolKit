@@ -8,12 +8,7 @@ import 'package:neuro_toolkit/providers/riverpod_providers.dart'
 import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/src/features/launcher_bootstrap/presentation/launcher_bootstrap_notifier.dart';
 
-enum ServerConnectionPhase {
-  checking,
-  connected,
-  unstable,
-  disconnected,
-}
+enum ServerConnectionPhase { checking, connected, unstable, disconnected }
 
 class ServerConnectionState {
   const ServerConnectionState({
@@ -24,10 +19,10 @@ class ServerConnectionState {
   });
 
   const ServerConnectionState.disconnected()
-      : phase = ServerConnectionPhase.disconnected,
-        baseUri = null,
-        consecutiveFailures = 0,
-        lastCheckedAt = null;
+    : phase = ServerConnectionPhase.disconnected,
+      baseUri = null,
+      consecutiveFailures = 0,
+      lastCheckedAt = null;
 
   final ServerConnectionPhase phase;
   final Uri? baseUri;
@@ -35,21 +30,18 @@ class ServerConnectionState {
   final DateTime? lastCheckedAt;
 
   String get label => switch (phase) {
-        ServerConnectionPhase.checking => 'Checking',
-        ServerConnectionPhase.connected => 'Connected',
-        ServerConnectionPhase.unstable => 'Connection unstable',
-        ServerConnectionPhase.disconnected => 'Disconnected',
-      };
+    ServerConnectionPhase.checking => 'Checking',
+    ServerConnectionPhase.connected => 'Connected',
+    ServerConnectionPhase.unstable => 'Connection unstable',
+    ServerConnectionPhase.disconnected => 'Disconnected',
+  };
 }
 
-typedef ServerHealthProbe = Future<bool> Function(
-  ControlApiService controlApi,
-);
+typedef ServerHealthProbe = Future<bool> Function(ControlApiService controlApi);
 
 final serverHealthProbeProvider = Provider<ServerHealthProbe>((ref) {
-  return (controlApi) => controlApi.isAvailable(
-        timeout: const Duration(seconds: 2),
-      );
+  return (controlApi) =>
+      controlApi.isAvailable(timeout: const Duration(seconds: 2));
 });
 
 /// Tracks liveness for exactly one launcher URI at a time.
@@ -74,8 +66,9 @@ class ServerConnectionNotifier extends Notifier<ServerConnectionState> {
   @override
   ServerConnectionState build() {
     final bootstrap = ref.watch(launcherBootstrapProvider).value;
-    final controlApi =
-        bootstrap?.isReady == true ? bootstrap?.controlApiService : null;
+    final controlApi = bootstrap?.isReady == true
+        ? bootstrap?.controlApiService
+        : null;
     final baseUri = controlApi?.baseUri;
 
     if (!_disposeRegistered) {
@@ -163,8 +156,9 @@ class ServerConnectionNotifier extends Notifier<ServerConnectionState> {
       return;
     }
 
-    final previousFailures =
-        state.baseUri == baseUri ? state.consecutiveFailures : 0;
+    final previousFailures = state.baseUri == baseUri
+        ? state.consecutiveFailures
+        : 0;
     final failures = previousFailures + 1;
     state = ServerConnectionState(
       phase: failures >= failuresBeforeDisconnect
@@ -188,7 +182,8 @@ class ServerConnectionNotifier extends Notifier<ServerConnectionState> {
       final service = ref.read(deploymentServiceProvider);
       final snapshot = await service.load();
       if (snapshot.targets.isNotEmpty) {
-        final targets = [...snapshot.targets]..sort((left, right) {
+        final targets = [...snapshot.targets]
+          ..sort((left, right) {
             final leftAt =
                 left.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
             final rightAt =
@@ -211,5 +206,5 @@ class ServerConnectionNotifier extends Notifier<ServerConnectionState> {
 
 final serverConnectionProvider =
     NotifierProvider<ServerConnectionNotifier, ServerConnectionState>(
-  ServerConnectionNotifier.new,
-);
+      ServerConnectionNotifier.new,
+    );

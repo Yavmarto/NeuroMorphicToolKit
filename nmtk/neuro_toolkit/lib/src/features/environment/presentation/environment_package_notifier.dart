@@ -45,11 +45,13 @@ class EnvironmentExportNotifier extends _$EnvironmentExportNotifier {
       final body = await ref
           .read(environmentProvider.notifier)
           .exportRequirements(slug, mode: mode);
-      state =
-          AsyncData(current.copyWith(loading: false, mode: mode, body: body));
+      state = AsyncData(
+        current.copyWith(loading: false, mode: mode, body: body),
+      );
     } catch (e) {
       state = AsyncData(
-          current.copyWith(loading: false, mode: mode, error: e.toString()));
+        current.copyWith(loading: false, mode: mode, error: e.toString()),
+      );
     }
   }
 }

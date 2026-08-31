@@ -35,8 +35,8 @@ class DeploymentPersistence {
     required SharedPreferences preferences,
     DeploymentSecretStorage secureStorage =
         const PlatformDeploymentSecretStorage(),
-  })  : _preferences = preferences,
-        _secureStorage = secureStorage;
+  }) : _preferences = preferences,
+       _secureStorage = secureStorage;
 
   static const _targetsKey = 'clientDeployment.targets.v1';
   static const _activeJobKey = 'clientDeployment.activeJob.v1';
@@ -92,8 +92,9 @@ class DeploymentPersistence {
   }) async {
     final raw = await _secureStorage.read('$_secretPrefix${target.id}') ?? '{}';
     final decoded = jsonDecode(raw);
-    final secrets =
-        decoded is Map<String, dynamic> ? decoded : <String, dynamic>{};
+    final secrets = decoded is Map<String, dynamic>
+        ? decoded
+        : <String, dynamic>{};
     return DeploymentRequest(
       targetType: target.targetType,
       mode: target.mode,

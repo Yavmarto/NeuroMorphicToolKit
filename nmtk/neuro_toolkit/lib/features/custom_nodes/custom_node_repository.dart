@@ -18,8 +18,10 @@ class CustomNodeRepository {
     return List<String>.from(jsonDecode(resp.body) as List);
   }
 
-  Future<String> save(
-      {required String filename, required String source}) async {
+  Future<String> save({
+    required String filename,
+    required String source,
+  }) async {
     final resp = await http
         .post(
           Uri.parse('$baseUrl/api/neurosim/custom-nodes/save'),
@@ -43,17 +45,17 @@ class CustomNodeRepository {
 
   Future<void> delete(String filename) async {
     final resp = await http
-        .delete(
-          Uri.parse('$baseUrl/api/neurosim/custom-nodes/$filename'),
-        )
+        .delete(Uri.parse('$baseUrl/api/neurosim/custom-nodes/$filename'))
         .timeout(_requestTimeout);
     if (resp.statusCode != 200) {
       throw Exception('delete failed: ${resp.statusCode}');
     }
   }
 
-  Future<void> install(
-      {required String downloadUrl, required String filename}) async {
+  Future<void> install({
+    required String downloadUrl,
+    required String filename,
+  }) async {
     final resp = await http
         .post(
           Uri.parse('$baseUrl/api/neurosim/custom-nodes/install'),

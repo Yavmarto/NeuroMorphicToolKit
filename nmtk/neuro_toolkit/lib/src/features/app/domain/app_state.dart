@@ -4,7 +4,5 @@ part 'app_state.freezed.dart';
 
 @freezed
 abstract class AppState with _$AppState {
-  const factory AppState({
-    @Default(false) bool developerMode,
-  }) = _AppState;
+  const factory AppState({@Default(false) bool developerMode}) = _AppState;
 }

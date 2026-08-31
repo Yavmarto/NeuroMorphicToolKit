@@ -15,15 +15,15 @@ final environmentProvider = EnvironmentNotifierProvider._();
 final class EnvironmentNotifierProvider
     extends $AsyncNotifierProvider<EnvironmentNotifier, EnvironmentState> {
   EnvironmentNotifierProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'environmentProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'environmentProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$environmentNotifierHash();
@@ -43,11 +43,14 @@ abstract class _$EnvironmentNotifier extends $AsyncNotifier<EnvironmentState> {
   void runBuild() {
     final ref =
         this.ref as $Ref<AsyncValue<EnvironmentState>, EnvironmentState>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<EnvironmentState>, EnvironmentState>,
-        AsyncValue<EnvironmentState>,
-        Object?,
-        Object?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<EnvironmentState>, EnvironmentState>,
+              AsyncValue<EnvironmentState>,
+              Object?,
+              Object?
+            >;
     element.handleCreate(ref, build);
   }
 }

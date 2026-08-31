@@ -53,9 +53,9 @@ class PackageInfo {
   final String version;
 
   factory PackageInfo.fromJson(Map<String, dynamic> json) => PackageInfo(
-        name: json['name'] as String? ?? '',
-        version: json['version'] as String? ?? '',
-      );
+    name: json['name'] as String? ?? '',
+    version: json['version'] as String? ?? '',
+  );
 }
 
 /// Status of a long-running env operation (create/import/install/uninstall).
@@ -72,11 +72,11 @@ class EnvJob {
   bool get isError => state == 'error';
 
   factory EnvJob.fromJson(Map<String, dynamic> json) => EnvJob(
-        id: json['id'] as String? ?? '',
-        state: json['state'] as String? ?? 'working',
-        error: json['error'] as String?,
-        log: json['log'] as String?,
-      );
+    id: json['id'] as String? ?? '',
+    state: json['state'] as String? ?? 'working',
+    error: json['error'] as String?,
+    log: json['log'] as String?,
+  );
 }
 
 class EnvironmentApiException implements Exception {
@@ -90,10 +90,11 @@ class EnvironmentApiException implements Exception {
 /// resolving the host the same way [ToolViewScreen] resolves module URIs so
 /// remote-endpoint settings are honoured.
 class EnvironmentApiService {
-  EnvironmentApiService(
-      {required ControlApiService controlApi, http.Client? client})
-      : _controlApi = controlApi,
-        _client = client ?? http.Client();
+  EnvironmentApiService({
+    required ControlApiService controlApi,
+    http.Client? client,
+  }) : _controlApi = controlApi,
+       _client = client ?? http.Client();
 
   final ControlApiService _controlApi;
   final http.Client _client;
@@ -104,8 +105,9 @@ class EnvironmentApiService {
   Uri _base() {
     if (kIsWeb) {
       final b = Uri.base;
-      final host =
-          (b.host.isEmpty || b.host == '0.0.0.0') ? 'localhost' : b.host;
+      final host = (b.host.isEmpty || b.host == '0.0.0.0')
+          ? 'localhost'
+          : b.host;
       final scheme = b.scheme.isEmpty ? 'http' : b.scheme;
       return Uri(scheme: scheme, host: host, port: _suiteApiPort);
     }
@@ -122,7 +124,9 @@ class EnvironmentApiService {
       final body = jsonDecode(r.body) as Map<String, dynamic>;
       final err = body['error'];
       if (err is String && err.isNotEmpty) return err;
-    } catch (_) {/* fall through */}
+    } catch (_) {
+      /* fall through */
+    }
     return 'Request failed (HTTP ${r.statusCode})';
   }
 
@@ -153,15 +157,20 @@ class EnvironmentApiService {
       _postJob('/environments', {'displayName': displayName});
 
   Future<String> importEnvironment(String displayName, String requirements) =>
-      _postJob('/environments',
-          {'displayName': displayName, 'requirements': requirements});
+      _postJob('/environments', {
+        'displayName': displayName,
+        'requirements': requirements,
+      });
 
   Future<String> installPackages(String slug, List<String> specs) => _postJob(
-      '/environments/$slug/packages', {'action': 'install', 'packages': specs});
+    '/environments/$slug/packages',
+    {'action': 'install', 'packages': specs},
+  );
 
   Future<String> uninstallPackages(String slug, List<String> names) => _postJob(
-      '/environments/$slug/packages',
-      {'action': 'uninstall', 'packages': names});
+    '/environments/$slug/packages',
+    {'action': 'uninstall', 'packages': names},
+  );
 
   Future<String> _postJob(String path, Map<String, dynamic> payload) async {
     final r = await _client
@@ -187,8 +196,10 @@ class EnvironmentApiService {
     if (r.statusCode != 204) throw EnvironmentApiException(_errorFrom(r));
   }
 
-  Future<String> exportRequirements(String slug,
-      {String mode = 'delta'}) async {
+  Future<String> exportRequirements(
+    String slug, {
+    String mode = 'delta',
+  }) async {
     final r = await _client
         .get(_uri('/environments/$slug/requirements', {'mode': mode}))
         .timeout(_requestTimeout);

@@ -20,19 +20,20 @@ class WorkspaceSession {
       deepLink: json['deepLink'] as String?,
       restoreState: json['restoreState'] is Map<String, dynamic>
           ? Map<String, dynamic>.from(
-              json['restoreState'] as Map<String, dynamic>)
+              json['restoreState'] as Map<String, dynamic>,
+            )
           : const <String, dynamic>{},
       readinessState: json['readinessState'] as String? ?? 'opening',
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'moduleId': moduleId,
-        'surfaceMode': surfaceMode,
-        'deepLink': deepLink,
-        'restoreState': restoreState,
-        'readinessState': readinessState,
-      };
+    'moduleId': moduleId,
+    'surfaceMode': surfaceMode,
+    'deepLink': deepLink,
+    'restoreState': restoreState,
+    'readinessState': readinessState,
+  };
 
   WorkspaceSession copyWith({
     String? moduleId,

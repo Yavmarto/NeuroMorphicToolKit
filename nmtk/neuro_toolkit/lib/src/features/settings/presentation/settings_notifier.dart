@@ -35,8 +35,9 @@ class SettingsNotifier extends _$SettingsNotifier {
     final isHighContrast = _prefs.getBool(_highContrastKey) ?? false;
     final fontSizeFactor = _prefs.getDouble(_fontSizeFactorKey) ?? 1.0;
     final logLevel = LogLevel.values[_prefs.getInt(_logLevelKey) ?? 0];
-    final launcherControlApiBaseUrl =
-        _prefs.getString(_launcherControlApiBaseUrlKey);
+    final launcherControlApiBaseUrl = _prefs.getString(
+      _launcherControlApiBaseUrlKey,
+    );
     final suiteApiBaseUrl = _prefs.getString(_suiteApiBaseUrlKey);
 
     Map<String, Map<String, dynamic>> moduleSettings = {};
@@ -45,8 +46,9 @@ class SettingsNotifier extends _$SettingsNotifier {
       try {
         final Map<String, dynamic> decoded =
             jsonDecode(moduleSettingsJson) as Map<String, dynamic>;
-        moduleSettings = decoded
-            .map((key, value) => MapEntry(key, value as Map<String, dynamic>));
+        moduleSettings = decoded.map(
+          (key, value) => MapEntry(key, value as Map<String, dynamic>),
+        );
       } catch (e) {
         debugPrint('Error decoding module settings: $e');
       }
@@ -148,7 +150,9 @@ class SettingsNotifier extends _$SettingsNotifier {
   }
 
   Future<void> updateModuleSettings(
-      String moduleId, Map<String, dynamic> settings) async {
+    String moduleId,
+    Map<String, dynamic> settings,
+  ) async {
     final currentState = state.value;
     if (currentState == null) return;
 
@@ -156,14 +160,18 @@ class SettingsNotifier extends _$SettingsNotifier {
     final newSettings = Map<String, dynamic>.from(currentSettings)
       ..addAll(settings);
 
-    final updatedModuleSettings =
-        Map<String, Map<String, dynamic>>.from(currentState.moduleSettings);
+    final updatedModuleSettings = Map<String, Map<String, dynamic>>.from(
+      currentState.moduleSettings,
+    );
     updatedModuleSettings[moduleId] = newSettings;
 
     await _prefs.setString(
-        _moduleSettingsKey, jsonEncode(updatedModuleSettings));
+      _moduleSettingsKey,
+      jsonEncode(updatedModuleSettings),
+    );
 
-    state = state
-        .whenData((s) => s.copyWith(moduleSettings: updatedModuleSettings));
+    state = state.whenData(
+      (s) => s.copyWith(moduleSettings: updatedModuleSettings),
+    );
   }
 }

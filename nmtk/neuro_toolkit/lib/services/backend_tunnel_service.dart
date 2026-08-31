@@ -24,9 +24,9 @@ class BackendTunnelSession {
 
 /// Owns session-only loopback listeners backed by the selected SSH target.
 class BackendTunnelService {
-  BackendTunnelService(
-      {SshDeploymentService ssh = const SshDeploymentService()})
-      : _ssh = ssh;
+  BackendTunnelService({
+    SshDeploymentService ssh = const SshDeploymentService(),
+  }) : _ssh = ssh;
 
   final SshDeploymentService _ssh;
   final List<ServerSocket> _listeners = [];
@@ -67,9 +67,11 @@ class BackendTunnelService {
   Future<ServerSocket> _listen(int remotePort) async {
     final listener = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
     _listeners.add(listener);
-    _subscriptions.add(listener.listen((socket) {
-      unawaited(_forward(socket, remotePort));
-    }));
+    _subscriptions.add(
+      listener.listen((socket) {
+        unawaited(_forward(socket, remotePort));
+      }),
+    );
     return listener;
   }
 
@@ -130,7 +132,8 @@ class BackendTunnelService {
       }
     }
     throw StateError(
-        'Could not establish the secure backend tunnel: $lastError');
+      'Could not establish the secure backend tunnel: $lastError',
+    );
   }
 
   Future<void> close() async {

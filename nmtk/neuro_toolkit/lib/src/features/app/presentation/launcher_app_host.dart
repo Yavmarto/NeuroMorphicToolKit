@@ -62,12 +62,15 @@ class _LauncherAppHostState extends ConsumerState<LauncherAppHost> {
         _startupSetupPromptQueued = false;
         return;
       }
-      final savedHost =
-          ref.read(settingsProvider).value?.launcherControlApiBaseUrl;
+      final savedHost = ref
+          .read(settingsProvider)
+          .value
+          ?.launcherControlApiBaseUrl;
       await showAdaptiveServerSetupPopup(
         context,
         initialHost: latestData?.suggestedInstallHost ?? savedHost,
-        message: latestData?.setupMessage ??
+        message:
+            latestData?.setupMessage ??
             'Preflight failed while checking the launcher host. Confirm the '
                 'address and try again.',
       );
@@ -105,7 +108,8 @@ class _LauncherAppHostState extends ConsumerState<LauncherAppHost> {
       barrierDismissible: false,
       builder: (dialogContext) => ZetaDialog(
         title: 'Launcher Update Available',
-        message: 'A new version of NeuroToolkit (${update.version}) is '
+        message:
+            'A new version of NeuroToolkit (${update.version}) is '
             'available.\n\nRelease Notes:\n$releaseNotes',
         primaryButtonLabel: 'Download Now',
         onPrimaryButtonPressed: () async {

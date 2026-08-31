@@ -134,10 +134,7 @@ class ModuleNotifier extends _$ModuleNotifier {
 
   Future<void> _pollCurrentServer() {
     final controlApi = ref.read(controlApiServiceProvider);
-    return _pollUpdates(
-      generation: _serverGeneration,
-      controlApi: controlApi,
-    );
+    return _pollUpdates(generation: _serverGeneration, controlApi: controlApi);
   }
 
   Future<void> _pollUpdates({
@@ -148,8 +145,9 @@ class ModuleNotifier extends _$ModuleNotifier {
     _pollInFlightGeneration = generation;
     try {
       final settings = await controlApi.fetchSettings();
-      final fetchedModules =
-          await controlApi.fetchModules(refreshUpdates: false);
+      final fetchedModules = await controlApi.fetchModules(
+        refreshUpdates: false,
+      );
       if (!_isCurrentServer(generation, controlApi.baseUri)) {
         return;
       }
@@ -161,13 +159,15 @@ class ModuleNotifier extends _$ModuleNotifier {
       var nextState = currentState;
 
       if (settings.pythonAvailable != nextState.pythonAvailable) {
-        nextState =
-            nextState.copyWith(pythonAvailable: settings.pythonAvailable);
+        nextState = nextState.copyWith(
+          pythonAvailable: settings.pythonAvailable,
+        );
         changed = true;
       }
       if (settings.mujocoAvailable != nextState.mujocoAvailable) {
-        nextState =
-            nextState.copyWith(mujocoAvailable: settings.mujocoAvailable);
+        nextState = nextState.copyWith(
+          mujocoAvailable: settings.mujocoAvailable,
+        );
         changed = true;
       }
 
@@ -199,14 +199,16 @@ class ModuleNotifier extends _$ModuleNotifier {
 
       final currentState = state.value;
       if (currentState == null) return;
-      final updatedModules = currentState.modules.map((module) {
-        if (module.status != ModuleStatus.starting) return module;
-        return module.copyWith(
-          status: ModuleStatus.error,
-          healthStatus:
-              'Connection to the backend was lost. Retry or change server.',
-        );
-      }).toList(growable: false);
+      final updatedModules = currentState.modules
+          .map((module) {
+            if (module.status != ModuleStatus.starting) return module;
+            return module.copyWith(
+              status: ModuleStatus.error,
+              healthStatus:
+                  'Connection to the backend was lost. Retry or change server.',
+            );
+          })
+          .toList(growable: false);
       state = AsyncData(currentState.copyWith(modules: updatedModules));
     } finally {
       if (_pollInFlightGeneration == generation) {
@@ -263,8 +265,9 @@ class ModuleNotifier extends _$ModuleNotifier {
     final currentState = state.value;
     if (currentState == null) return;
 
-    final index =
-        currentState.modules.indexWhere((module) => module.id == moduleId);
+    final index = currentState.modules.indexWhere(
+      (module) => module.id == moduleId,
+    );
     if (index == -1) return;
 
     final updatedModules = List<Module>.from(currentState.modules);
@@ -399,10 +402,12 @@ class ModuleNotifier extends _$ModuleNotifier {
       healthStatus: null,
     );
 
-    state = AsyncData(currentState.copyWith(
-      modules: updatedModules,
-      activeModuleIds: updatedActiveIds,
-    ));
+    state = AsyncData(
+      currentState.copyWith(
+        modules: updatedModules,
+        activeModuleIds: updatedActiveIds,
+      ),
+    );
 
     try {
       final controlApi = ref.read(controlApiServiceProvider);
@@ -432,16 +437,19 @@ class ModuleNotifier extends _$ModuleNotifier {
     if (index == -1) return;
 
     final updatedModules = List<Module>.from(currentState.modules);
-    updatedModules[index] =
-        updatedModules[index].copyWith(status: ModuleStatus.stopping);
+    updatedModules[index] = updatedModules[index].copyWith(
+      status: ModuleStatus.stopping,
+    );
 
     final updatedActiveIds = List<String>.from(currentState.activeModuleIds)
       ..remove(moduleId);
 
-    state = AsyncData(currentState.copyWith(
-      modules: updatedModules,
-      activeModuleIds: updatedActiveIds,
-    ));
+    state = AsyncData(
+      currentState.copyWith(
+        modules: updatedModules,
+        activeModuleIds: updatedActiveIds,
+      ),
+    );
 
     try {
       final controlApi = ref.read(controlApiServiceProvider);
@@ -521,10 +529,12 @@ class ModuleNotifier extends _$ModuleNotifier {
     final updatedActiveIds = List<String>.from(currentState.activeModuleIds)
       ..remove(moduleId);
 
-    state = AsyncData(currentState.copyWith(
-      modules: updatedModules,
-      activeModuleIds: updatedActiveIds,
-    ));
+    state = AsyncData(
+      currentState.copyWith(
+        modules: updatedModules,
+        activeModuleIds: updatedActiveIds,
+      ),
+    );
 
     try {
       final controlApi = ref.read(controlApiServiceProvider);

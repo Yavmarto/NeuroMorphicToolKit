@@ -21,6 +21,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeDeploymentService implements DeploymentService {
   @override
+  Future<SystemHealthReport> diagnoseHost(
+    String host, {
+    int backendPort = 9000,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<SystemHealthReport> diagnoseTarget(String targetId) {
     throw UnimplementedError();
   }

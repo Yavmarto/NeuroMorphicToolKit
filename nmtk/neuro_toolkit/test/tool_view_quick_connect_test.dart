@@ -47,8 +47,9 @@ void main() {
               analyticsService: AnalyticsService(),
             ),
           ),
-          launcherBootstrapProvider
-              .overrideWith(() => MockLauncherBootstrapNotifier()),
+          launcherBootstrapProvider.overrideWith(
+            () => MockLauncherBootstrapNotifier(),
+          ),
           moduleProvider.overrideWith(() => _FakeModuleNotifier()),
           workspaceProvider.overrideWith(() => _FakeWorkspaceNotifier()),
           backendVersionProvider.overrideWith((_) async => 'dev'),

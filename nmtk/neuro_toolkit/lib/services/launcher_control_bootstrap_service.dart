@@ -99,7 +99,7 @@ abstract class LauncherControlBootstrapEnvironment {
 class DefaultLauncherControlBootstrapEnvironment
     implements LauncherControlBootstrapEnvironment {
   DefaultLauncherControlBootstrapEnvironment({BundleManager? bundleManager})
-      : _bundleManager = bundleManager ?? BundleManager();
+    : _bundleManager = bundleManager ?? BundleManager();
 
   final BundleManager _bundleManager;
 
@@ -114,8 +114,7 @@ class DefaultLauncherControlBootstrapEnvironment
     return switch (defaultTargetPlatform) {
       TargetPlatform.macOS ||
       TargetPlatform.windows ||
-      TargetPlatform.linux =>
-        true,
+      TargetPlatform.linux => true,
       _ => false,
     };
   }
@@ -169,10 +168,10 @@ class LauncherControlBootstrapService {
     this.startupTimeout = const Duration(seconds: 20),
     this.pollInterval = const Duration(milliseconds: 300),
     Uri? explicitBaseUriOverride,
-  })  : _environment =
-            environment ?? DefaultLauncherControlBootstrapEnvironment(),
-        _client = client ?? http.Client(),
-        _explicitBaseUriOverride = explicitBaseUriOverride;
+  }) : _environment =
+           environment ?? DefaultLauncherControlBootstrapEnvironment(),
+       _client = client ?? http.Client(),
+       _explicitBaseUriOverride = explicitBaseUriOverride;
 
   final LauncherControlBootstrapEnvironment _environment;
   final http.Client _client;
@@ -232,9 +231,9 @@ class LauncherControlBootstrapService {
         explicitBaseUri,
         lastHostReachableNoServer
             ? 'No launcher server found at $explicitBaseUri. The host is '
-                'reachable, but nothing is installed there yet.'
+                  'reachable, but nothing is installed there yet.'
             : 'Preflight failed: configured launcher control API did not become ready at '
-                '$explicitBaseUri within ${startupTimeout.inSeconds}s.',
+                  '$explicitBaseUri within ${startupTimeout.inSeconds}s.',
         controlApiReachable: lastControlApiReachable,
         hostReachableNoServer: lastHostReachableNoServer,
       );
@@ -487,20 +486,19 @@ class _HealthProbeResult {
   });
 
   const _HealthProbeResult.ready()
-      : this._(ready: true, controlApiReachable: true);
+    : this._(ready: true, controlApiReachable: true);
 
   const _HealthProbeResult.notReady({
     bool controlApiReachable = false,
     bool hostReachableNoServer = false,
   }) : this._(
-          ready: false,
-          controlApiReachable: controlApiReachable,
-          hostReachableNoServer: hostReachableNoServer,
-        );
+         ready: false,
+         controlApiReachable: controlApiReachable,
+         hostReachableNoServer: hostReachableNoServer,
+       );
 
   const _HealthProbeResult.failed(String message)
-      : this._(
-            ready: false, failureMessage: message, controlApiReachable: true);
+    : this._(ready: false, failureMessage: message, controlApiReachable: true);
 
   final bool ready;
   final String? failureMessage;

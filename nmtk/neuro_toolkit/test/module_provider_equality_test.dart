@@ -4,15 +4,15 @@ import 'package:neuro_toolkit/models/module.dart';
 void main() {
   group('Module equality', () {
     Module base() => Module(
-          id: 'neurocnl',
-          name: 'NeuroCNL',
-          description: 'CNL Studio',
-          directory: '/opt/modules/neurocnl',
-          status: ModuleStatus.installed,
-          installProgress: 1.0,
-          version: '1.0.0',
-          remoteVersion: '1.0.0',
-        );
+      id: 'neurocnl',
+      name: 'NeuroCNL',
+      description: 'CNL Studio',
+      directory: '/opt/modules/neurocnl',
+      status: ModuleStatus.installed,
+      installProgress: 1.0,
+      version: '1.0.0',
+      remoteVersion: '1.0.0',
+    );
 
     test('two modules with identical state are equal', () {
       final a = base();
