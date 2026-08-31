@@ -1251,6 +1251,119 @@ is much cheaper to do during a migration than after.
 The mirror backups mean step 5 is safe even if something is wrong, but the ordering still matters —
 deleting last costs nothing and removes the failure mode entirely.
 
+## 13. EU bodies: JRC, Chips JU, EIC, EPO, ESA (2026-08-25)
+
+Assessed against your CV and your hard constraint of staying in the Netherlands.
+
+### 13.1 The short version
+
+| Body | Location relevant to you | Kind of work | Your realistic chance |
+|---|---|---|---|
+| **EPO** | **The Hague / Rijswijk** ✅ | Patent examination | **Genuinely realistic**, gated on degree field + languages |
+| **ESA** | **ESTEC, Noordwijk** ✅ | Space engineering & research | **Contractor route realistic**; direct staff hard; neuromorphic roles want a PhD |
+| **JRC** | Petten is NL, but does energy — AI/digital sits in Ispra (IT) and Seville (ES) ❌ | Policy-supporting research | Low, and geographically wrong |
+| **Chips JU** | Brussels ❌ | Programme management | Low |
+| **EIC** | Brussels ❌ | Programme management | Very low |
+
+Three of the five fail your location constraint before anything else is considered.
+
+### 13.2 EPO — the one worth taking seriously
+
+The European Patent Office's second-largest site is in Rijswijk, about ninety minutes from
+Etten-Leur. Average EPO salary in the Netherlands sits around **€99k–112k**, with the tax treatment
+international organisations get. Against your current €65k that is the largest single jump available
+anywhere in this document, and it is permanent, pensioned and in the Netherlands. They are recruiting
+for October 2026 starts and building a 2027 talent pool now.
+
+**What qualifies you:** EPC member-state nationality ✅, eight years of technical work ✅, and a
+completed Master's — which is the first gate.
+
+**Two real obstacles.**
+
+*Degree field.* Their stated requirement is a Master's in **physics, chemistry, engineering or
+natural sciences**. Computer science is not explicitly on that list, and your completed Master's is
+in Applied Cognitive Psychology, which will not qualify. Whether the JKU **MSc Applied AI** counts
+depends on how the diploma is worded and how EPO's recruiters classify it. **Ask them directly
+before investing any effort** — a single email to EPO recruitment answers it, and the answer
+determines whether this path exists for you at all.
+
+*Languages.* You need C1 in one of English, French or German plus comprehension of the other two —
+or C1 English plus a commitment to reach **B2 in both French and German** within a set period. Your
+English is fine. The other two are a genuine multi-year commitment, and it is the thing most people
+underestimate.
+
+**What you would be giving up.** Patent examination is reading, searching prior art and writing
+reasoned assessments. It is analytical, well paid, secure, and it is not building software. If you
+land in the G06N classifications you would be reading neural-network patents all day, which is
+adjacent to your interests but is emphatically not the same as working in the field. Go in with your
+eyes open: this is a career-shape decision, not just a change of employer.
+
+### 13.3 ESA — right place, right topic, wrong door
+
+ESTEC in Noordwijk is ESA's technical heart and the largest ESA site, and the Advanced Concepts Team
+genuinely works on your subject: spiking neural networks for onboard processing, retinomorphic
+vision, and the fault tolerance of neuromorphic processors under radiation. On paper this is the best
+topical fit of the five.
+
+The problem is the entry routes:
+
+- **Internal Research Fellow (PostDoc)** — the neuromorphic and bio-inspired positions at ESTEC are
+  postdoctoral. They require a PhD. Closed to you.
+- **Young Graduate Trainee** — e.g. the ACT's Graduate Trainee in Computational Neuroscience. You
+  would technically qualify once the JKU MSc is finished, but it is a one-to-two-year traineeship
+  aimed at people in their twenties, paying roughly €3.1k/month. That is a large pay cut and a
+  step backwards at 34 with eight years behind you.
+- **Staff engineer** — competitive, and normally wants space-domain experience you do not have.
+- **Contractor at ESTEC** — this is the realistic door. A large share of the work at ESTEC is done by
+  people employed by Terma, RHEA, Serco, Telespazio and similar, working on site. Pay is decent,
+  the bar is engineering competence rather than a PhD, and it puts you physically inside the
+  building. If ESA appeals, this is the route to research, not the careers page.
+
+### 13.4 JRC, Chips JU, EIC — why these are not for you
+
+**JRC** has a Dutch site at Petten, but it does energy and nuclear research; the AI and digital work
+sits at Ispra in Italy and Seville in Spain. Right country, wrong topic; right topic, wrong country.
+Research posts also lean heavily on doctorates.
+
+**Chips JU** is a funding body in Brussels with a small staff who manage calls, evaluate proposals
+and monitor consortia. The work is programme management, and the profile they hire wants EU-funding
+literacy and deep semiconductor-programme experience.
+
+**EIC** Programme Manager posts are marquee appointments on a DARPA-style model — former professors,
+serial founders, people with a substantial public track record. The supporting project-officer roles
+at EISMEA are administrative and in Brussels.
+
+None of these three are building jobs, and none are in the Netherlands.
+
+### 13.5 The thing that matters most here
+
+**Everything we built this week is worth almost nothing to these five organisations.** EU bodies hire
+on formal criteria: nationality, degree field, language certificates, structured selection
+procedures. EPO runs an examination. A GitHub repository, a demo video and a Zenodo DOI barely
+register. The portfolio-first strategy in sections 1 through 6 is optimised for startups, scale-ups
+and research groups — people who can look at what you made and decide. Institutions cannot decide
+that way; they decide on paperwork.
+
+So treat this as a genuinely separate track with a separate CV, not as an extension of the same
+campaign.
+
+Two further practical points. **Both viable options are gated on finishing the JKU degree** — EPO
+requires a completed Master's, and ESA's routes need it too. That is now a concrete financial reason
+to finish. And **the timelines are long**: EPO cycles run six to twelve months, ESA similar. Neither
+is an answer to a salary problem you want solved this year.
+
+### 13.6 The better EU angle
+
+If what appeals is working in the European deep-tech ecosystem rather than working *for* an EU
+institution, the practical version is to be employed by a **Dutch organisation running EU-funded
+work**. TNO, SURF, imec NL and the universities all run Horizon Europe and Chips JU projects. You
+would be paid Dutch rates, live where you live, and sit inside the same programmes — without a
+language requirement, a relocation, or a doctorate.
+
+That is also exactly what NC-NL is trying to build. Their entire purpose is to assemble consortia
+that can win national and European funding. Being known to them, which is what your email is for, is
+a far more realistic route into EU-funded neuromorphic work than any of the five careers pages above.
+
 ---
 
 ## Sources
