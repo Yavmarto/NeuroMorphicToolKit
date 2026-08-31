@@ -30,6 +30,8 @@ class PreviewGraph {
           rect,
           nodeType != null
               ? nirCategoryColor(context, nodeType.category)
+              // Falls back alongside nirCategoryColor, which is itself exempt from
+              // the Zeta-only color rule (see nir_node_styles.dart).
               : Colors.grey,
         ),
       );

@@ -77,8 +77,8 @@ class ActivityHeatmap extends StatelessWidget {
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: data.matrix[r][c] > 0.6
-                                ? Colors.white
-                                : Colors.black87,
+                                ? Zeta.of(context).colors.mainInverse
+                                : Zeta.of(context).colors.mainDefault,
                           ),
                         ),
                       ),

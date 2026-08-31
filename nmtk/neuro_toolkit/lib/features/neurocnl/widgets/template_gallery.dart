@@ -261,7 +261,7 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
                         },
                         labelStyle: TextStyle(
                           color: isSelected
-                              ? Colors.white
+                              ? Zeta.of(context).colors.mainInverse
                               : AppTheme.textSecondary,
                           fontSize: 12,
                           fontWeight: isSelected

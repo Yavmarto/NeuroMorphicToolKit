@@ -140,7 +140,7 @@ class MultiPlatformCurveChart extends StatelessWidget {
                               ? s.y.toStringAsFixed(4)
                               : '${(s.y * 100).toStringAsFixed(1)}%',
                           TextStyle(
-                            color: s.bar.color ?? Colors.white,
+                            color: s.bar.color ?? Zeta.of(context).colors.mainInverse,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),

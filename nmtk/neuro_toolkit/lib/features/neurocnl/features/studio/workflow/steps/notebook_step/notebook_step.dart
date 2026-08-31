@@ -453,10 +453,10 @@ class _NotebookStepState extends ConsumerState<NotebookStep> {
               color: Colors.transparent,
               child: IconButton(
                 tooltip: 'Reload notebook',
-                icon: const Icon(
+                icon: Icon(
                   ZetaIcons.refresh,
                   size: 18,
-                  color: Colors.white,
+                  color: Zeta.of(context).colors.mainDefault,
                 ),
                 style: IconButton.styleFrom(
                   backgroundColor: AppTheme.surface,

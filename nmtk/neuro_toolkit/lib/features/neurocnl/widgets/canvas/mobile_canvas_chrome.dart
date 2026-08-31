@@ -80,7 +80,7 @@ class MobileCanvasChrome extends StatelessWidget {
               children: [
                 if (extraLeftActions != null) ...[
                   ...extraLeftActions!,
-                  _barDivider(),
+                  _barDivider(context),
                 ],
                 CanvasChromeIconButton(
                   icon: ZetaIcons.undo,
@@ -94,7 +94,7 @@ class MobileCanvasChrome extends StatelessWidget {
                   enabled: canRedo,
                   onPressed: onRedo,
                 ),
-                _barDivider(),
+                _barDivider(context),
                 CanvasChromeIconButton(
                   icon: Icons
                       .auto_awesome, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
@@ -104,7 +104,7 @@ class MobileCanvasChrome extends StatelessWidget {
                   tint: const Color(0xFF7B61FF),
                 ),
                 if (onAddPrimitive != null) ...[
-                  _barDivider(),
+                  _barDivider(context),
                   CanvasChromeIconButton(
                     icon: ZetaIcons.add,
                     tooltip: 'Add',
@@ -113,7 +113,7 @@ class MobileCanvasChrome extends StatelessWidget {
                   ),
                 ],
                 if (onClearCanvas != null) ...[
-                  _barDivider(),
+                  _barDivider(context),
                   CanvasChromeIconButton(
                     icon: ZetaIcons.delete,
                     tooltip: 'Clear Canvas',
@@ -123,7 +123,7 @@ class MobileCanvasChrome extends StatelessWidget {
                   ),
                 ],
                 if (extraRightActions != null) ...[
-                  _barDivider(),
+                  _barDivider(context),
                   ...extraRightActions!,
                 ],
               ],
@@ -151,9 +151,13 @@ class MobileCanvasChrome extends StatelessWidget {
     );
   }
 
-  Widget _barDivider() => const SizedBox(
+  Widget _barDivider(BuildContext context) => SizedBox(
     height: 24,
-    child: VerticalDivider(color: Colors.white24, width: 16, thickness: 1),
+    child: VerticalDivider(
+      color: Zeta.of(context).colors.mainInverse.withValues(alpha: 0.24),
+      width: 16,
+      thickness: 1,
+    ),
   );
 }
 
@@ -175,7 +179,9 @@ class CanvasChromeIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = enabled ? (tint ?? Colors.white) : Colors.white38;
+    final color = enabled
+        ? (tint ?? Zeta.of(context).colors.mainInverse)
+        : Zeta.of(context).colors.mainInverse.withValues(alpha: 0.38);
     return Tooltip(
       message: tooltip,
       child: InkWell(

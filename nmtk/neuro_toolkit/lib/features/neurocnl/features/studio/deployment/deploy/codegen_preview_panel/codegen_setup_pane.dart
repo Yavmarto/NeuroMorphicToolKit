@@ -84,7 +84,10 @@ class CodegenSetupPane extends ConsumerWidget {
           ),
           error: (error, _) => Text(
             'Preview failed: $error',
-            style: const TextStyle(color: Colors.red, fontSize: 12),
+            style: TextStyle(
+              color: NmtkShellTokens.of(context).errorColor,
+              fontSize: 12,
+            ),
           ),
         ),
       ],

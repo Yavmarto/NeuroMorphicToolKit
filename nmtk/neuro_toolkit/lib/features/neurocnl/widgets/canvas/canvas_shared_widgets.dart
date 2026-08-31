@@ -572,7 +572,7 @@ class NodeDeleteBadge extends StatelessWidget {
             decoration: BoxDecoration(
               color: tokens.errorColor,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 1.5),
+              border: Border.all(color: Zeta.of(context).colors.mainInverse, width: 1.5),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.25),
@@ -581,7 +581,7 @@ class NodeDeleteBadge extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(ZetaIcons.delete, size: 14, color: Colors.white),
+            child: Icon(ZetaIcons.delete, size: 14, color: Zeta.of(context).colors.mainInverse),
           ),
         ),
       ),

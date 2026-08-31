@@ -73,7 +73,7 @@ class RunActionBar extends StatelessWidget {
                 tooltip: notebookAvailable
                     ? 'Open notebook'
                     : 'Notebook (desktop app only)',
-                icon: const Icon(ZetaIcons.note, color: Colors.white),
+                icon: Icon(ZetaIcons.note, color: Zeta.of(context).colors.mainDefault),
                 onPressed: notebookAvailable ? onOpenNotebook : null,
               ),
               if (hasErrors) ...[

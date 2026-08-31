@@ -166,6 +166,7 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
                                         selectedId: _selectedId,
                                         radiusSm: NmtkShellTokens.of(context).radiusSm,
                                         radiusMd: NmtkShellTokens.of(context).radiusMd,
+                                        selectedBorderColor: Zeta.of(context).colors.mainInverse,
                                       ),
                                     ),
                                   ),
@@ -794,6 +795,7 @@ class _NetworkPainter extends CustomPainter {
   final String? selectedId;
   final double radiusSm;
   final double radiusMd;
+  final Color selectedBorderColor;
 
   _NetworkPainter({
     required this.graph,
@@ -801,6 +803,7 @@ class _NetworkPainter extends CustomPainter {
     this.selectedId,
     required this.radiusSm,
     required this.radiusMd,
+    required this.selectedBorderColor,
   });
 
   @override
@@ -1085,7 +1088,7 @@ class _NetworkPainter extends CustomPainter {
       final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.28);
       final fillPaint = Paint()..color = color.withValues(alpha: 0.30);
       final borderPaint = Paint()
-        ..color = isSelected ? Colors.white : color
+        ..color = isSelected ? selectedBorderColor : color
         ..strokeWidth = isSelected ? 3.0 : 2.2
         ..style = PaintingStyle.stroke;
 
@@ -1206,7 +1209,8 @@ class _NetworkPainter extends CustomPainter {
       old.positions != positions ||
       old.selectedId != selectedId ||
       old.radiusSm != radiusSm ||
-      old.radiusMd != radiusMd;
+      old.radiusMd != radiusMd ||
+      old.selectedBorderColor != selectedBorderColor;
 }
 
 // ---------------------------------------------------------------------------

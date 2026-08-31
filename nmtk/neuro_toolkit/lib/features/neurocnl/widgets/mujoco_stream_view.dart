@@ -47,19 +47,19 @@ class MujocoStreamView extends StatelessWidget {
                 color: Colors.black.withValues(alpha: 0.55),
                 borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusChip),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.stream,
                     size: 14,
-                    color: Colors.white,
+                    color: Zeta.of(context).colors.mainInverse,
                   ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                  SizedBox(width: 6),
+                  const SizedBox(width: 6),
                   Text(
                     'MJPEG stream',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Zeta.of(context).colors.mainInverse,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),

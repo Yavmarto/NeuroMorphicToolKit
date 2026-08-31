@@ -1064,8 +1064,8 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
                       ? Tooltip(
                           message: _controller.errorMap[gl.logicalIndex]!,
                           preferBelow: true,
-                          textStyle: const TextStyle(
-                            color: Colors.white,
+                          textStyle: TextStyle(
+                            color: Zeta.of(context).colors.mainInverse,
                             fontSize: 12,
                           ),
                           decoration: BoxDecoration(
