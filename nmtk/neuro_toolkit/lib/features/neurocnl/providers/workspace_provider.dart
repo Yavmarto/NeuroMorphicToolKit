@@ -949,9 +949,6 @@ class WorkspaceController extends _$WorkspaceController {
   }
 
   Future<void> _syncToServer() async {
-    // TEMP DIAGNOSTIC (invalid-root-context investigation, round 2).
-    // ignore: avoid_print
-    print('>>> [_syncToServer] called');
     if (!ref.mounted) return;
     final name = state.workspaceName;
     final slug = slugifyWorkspaceName(name);
@@ -974,12 +971,6 @@ class WorkspaceController extends _$WorkspaceController {
     }
     try {
       final client = ref.read(apiClientProvider);
-      // TEMP DIAGNOSTIC (invalid-root-context investigation, round 2).
-      // ignore: avoid_print
-      print(
-        '>>> [_syncToServer] using ApiClient#${identityHashCode(client)} '
-        'baseUrl=${client.baseUrl}',
-      );
       await client.syncWorkspace(slug: slug, name: name, config: config);
     } catch (e) {
       debugPrint('Failed to sync workspace to server: $e');
