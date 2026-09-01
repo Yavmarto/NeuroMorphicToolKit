@@ -209,7 +209,7 @@ return $default(_that.sessions,_that.focusedModuleId,_that.defaultSessionsEnsure
 
 class _WorkspaceState extends WorkspaceState {
   const _WorkspaceState({final  List<WorkspaceSession> sessions = const [], this.focusedModuleId, this.defaultSessionsEnsured = false}): _sessions = sessions,super._();
-  
+
 
  final  List<WorkspaceSession> _sessions;
 @override@JsonKey() List<WorkspaceSession> get sessions {

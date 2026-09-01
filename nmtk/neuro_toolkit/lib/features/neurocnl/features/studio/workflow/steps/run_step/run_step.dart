@@ -37,12 +37,19 @@ class _RunStepState extends ConsumerState<RunStep> {
   // Saved in initState so dispose() can clear without going through ref (unsafe after unmount).
   late TrainingMode _trainingModeNotifier;
 
-  /// The not-applicable and success banners have no backing provider state
-  /// for "the user already saw this" — unlike the error banner's
-  /// `dismissedErrors` set (which must survive platform-tab switches), these
-  /// two only need to disappear until the next run, so local state is enough.
-  /// Reset in `_startTraining` so a fresh run re-shows them.
+  /// The success toast has no backing provider state for "the user already
+  /// saw this" — unlike the error toast's `dismissedErrors` set (which must
+  /// survive platform-tab switches), it only needs to disappear until the
+  /// next run, so local state is enough. Reset in `_startTraining` so a
+  /// fresh run re-shows it.
   bool _successDismissed = false;
+
+  /// Guards against re-showing the error/success toast on every session
+  /// update while the underlying condition is still true — `ref.listen`
+  /// fires on every provider change, not just the edge where errors/success
+  /// first appear.
+  bool _errorSnackbarActive = false;
+  bool _successSnackbarActive = false;
 
   StudioResultSessionState get _session =>
       ref.read(studioResultSessionProvider);
@@ -153,9 +160,74 @@ class _RunStepState extends ConsumerState<RunStep> {
     super.dispose();
   }
 
+  void _handleSessionChange(
+    StudioResultSessionState? previous,
+    StudioResultSessionState next,
+  ) {
+    if (!mounted) return;
+    if (_hasRunErrors) {
+      if (!_errorSnackbarActive) {
+        _errorSnackbarActive = true;
+        _showErrorSnackbar();
+      }
+    } else {
+      _errorSnackbarActive = false;
+    }
+    if (_isAllSucceeded && !_successDismissed) {
+      if (!_successSnackbarActive) {
+        _successSnackbarActive = true;
+        _showSuccessSnackbar();
+      }
+    } else {
+      _successSnackbarActive = false;
+    }
+  }
+
+  void _showErrorSnackbar() {
+    final colors = Zeta.of(context).colors;
+    final detail = _errorBannerDetail;
+    final controller = ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _errorBannerSummary ?? 'Run failed — please check errors and retry.',
+        ),
+        backgroundColor: colors.surfaceNegativeSubtle,
+        duration: const Duration(days: 1),
+        showCloseIcon: true,
+        closeIconColor: colors.mainNegative,
+        action: detail == null
+            ? null
+            : SnackBarAction(
+                label: 'Details',
+                textColor: colors.mainNegative,
+                onPressed: () => _showErrorDetails(context),
+              ),
+      ),
+    );
+    controller.closed.then((reason) {
+      if (reason != SnackBarClosedReason.action) _dismissRunErrors();
+    });
+  }
+
+  void _showSuccessSnackbar() {
+    final colors = Zeta.of(context).colors;
+    final controller = ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Training complete — preparing results.'),
+        backgroundColor: colors.surfacePositiveSubtle,
+        showCloseIcon: true,
+        closeIconColor: colors.mainPositive,
+      ),
+    );
+    controller.closed.then((_) {
+      if (mounted) setState(() => _successDismissed = true);
+    });
+  }
+
   Future<void> _startTraining() async {
     setState(() {
       _successDismissed = false;
+      _successSnackbarActive = false;
     });
     final platforms = await ref
         .read(trainingRunControllerProvider.notifier)
@@ -284,11 +356,19 @@ class _RunStepState extends ConsumerState<RunStep> {
           ),
         ],
       ),
-    );
+    ).then((_) {
+      // Details view auto-closes the toast (SnackBarAction always does);
+      // bring it back if the error is still live.
+      if (mounted && _hasRunErrors) _showErrorSnackbar();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<StudioResultSessionState>(
+      studioResultSessionProvider,
+      _handleSessionChange,
+    );
     final workspace = ref.watch(workspaceProvider);
     final resultSession = ref.watch(studioResultSessionProvider);
     final overlayMetrics = StudioOverlayMetrics.maybeOf(context);
@@ -356,123 +436,6 @@ class _RunStepState extends ConsumerState<RunStep> {
         final double bottomSafeInset =
             12 + MediaQuery.viewPaddingOf(context).bottom;
 
-        final banners = Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (_hasRunErrors)
-              Material(
-                elevation: 4,
-                borderRadius: BorderRadius.circular(
-                  NmtkShellTokens.of(context).radiusSm,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Container(
-                  width: double.infinity,
-                  color: colors.surfaceNegativeSubtle,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        ZetaIcons.error,
-                        color: colors.mainNegative,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorBannerSummary ??
-                              'Run failed — please check errors and retry.',
-                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: colors.mainNegative),
-                        ),
-                      ),
-                      if (_errorBannerDetail != null)
-                        IconButton(
-                          constraints: const BoxConstraints.tightFor(
-                            width: 40,
-                            height: 40,
-                          ),
-                          icon: Icon(
-                            ZetaIcons.info,
-                            color: colors.mainNegative,
-                            size: 20,
-                          ),
-                          tooltip: 'Error details',
-                          onPressed: () => _showErrorDetails(context),
-                        ),
-                      // Acknowledging a failure must not mean re-running every
-                      // platform, which is what Retry does.
-                      ZetaButton.text(
-                        key: const Key('run-error-dismiss'),
-                        onPressed: _dismissRunErrors,
-                        label: '',
-                        semanticLabel: 'Dismiss',
-                        child: Text(
-                          'Dismiss',
-                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: colors.mainNegative),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (_hasRunErrors) const SizedBox(height: 8),
-
-            if (_isAllSucceeded && !_successDismissed)
-              Material(
-                elevation: 4,
-                borderRadius: BorderRadius.circular(
-                  NmtkShellTokens.of(context).radiusSm,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: Container(
-                  width: double.infinity,
-                  color: colors.surfacePositiveSubtle,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        ZetaIcons.check_circle,
-                        color: colors.mainPositive,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Training complete — preparing results.',
-                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: colors.mainPositive),
-                        ),
-                      ),
-                      IconButton(
-                        key: const Key('run-success-dismiss'),
-                        constraints: const BoxConstraints.tightFor(
-                          width: 40,
-                          height: 40,
-                        ),
-                        icon: Icon(
-                          ZetaIcons.close,
-                          color: colors.mainPositive,
-                          size: 18,
-                        ),
-                        tooltip: 'Dismiss',
-                        onPressed: () =>
-                            setState(() => _successDismissed = true),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            if (_isAllSucceeded && !_successDismissed)
-              const SizedBox(height: 8),
-          ],
-        );
-
         return Stack(
           children: [
             // ── Canvas Background ──────────────────────────────────────
@@ -516,10 +479,9 @@ class _RunStepState extends ConsumerState<RunStep> {
               ),
             ),
 
-            // ── Bottom overlays: banners, compact metrics strip, action bar.
-            // Collapsed into one Column so there's a single source of truth
-            // for their stacking order and spacing, instead of three
-            // independently-positioned magic bottom offsets.
+            // ── Bottom overlays: compact metrics strip, action bar. Errors
+            // and success are reported via toast (see _showErrorSnackbar /
+            // _showSuccessSnackbar), not banners stacked here.
             Positioned(
               left: 12,
               right: isCompact ? 12 : kMetricsDockInset + 12,
@@ -528,7 +490,6 @@ class _RunStepState extends ConsumerState<RunStep> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(width: double.infinity, child: banners),
                   if (isCompact) ...[
                     SizedBox(
                       width: double.infinity,

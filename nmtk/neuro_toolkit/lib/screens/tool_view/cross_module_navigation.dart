@@ -142,6 +142,8 @@ Future<void> reportHostedFeatureError(
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
       content: Text(event.message),
+      duration: const Duration(days: 1),
+      showCloseIcon: true,
       action: requiresBackendSetup
           ? SnackBarAction(
               label: 'Backend Setup',

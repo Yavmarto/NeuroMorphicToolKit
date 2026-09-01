@@ -211,7 +211,7 @@ return $default(_that.modules,_that.activeModuleIds,_that.pythonAvailable,_that.
 
 class _ModuleState extends ModuleState {
   const _ModuleState({final  List<Module> modules = const [], final  List<String> activeModuleIds = const [], this.pythonAvailable = true, this.mujocoAvailable = true, this.pendingLauncherUpdate}): _modules = modules,_activeModuleIds = activeModuleIds,super._();
-  
+
 
  final  List<Module> _modules;
 @override@JsonKey() List<Module> get modules {

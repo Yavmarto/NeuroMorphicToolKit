@@ -209,7 +209,7 @@ return $default(_that.loading,_that.packages,_that.error);case _:
 
 class _EnvironmentPackageState implements EnvironmentPackageState {
   const _EnvironmentPackageState({this.loading = false, final  List<PackageInfo> packages = const [], this.error}): _packages = packages;
-  
+
 
 @override@JsonKey() final  bool loading;
  final  List<PackageInfo> _packages;
@@ -479,7 +479,7 @@ return $default(_that.loading,_that.body,_that.mode,_that.error);case _:
 
 class _EnvironmentExportState implements EnvironmentExportState {
   const _EnvironmentExportState({this.loading = true, this.body = '', this.mode = 'delta', this.error});
-  
+
 
 @override@JsonKey() final  bool loading;
 @override@JsonKey() final  String body;

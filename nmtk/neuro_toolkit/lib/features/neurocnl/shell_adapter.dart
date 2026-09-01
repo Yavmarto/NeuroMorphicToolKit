@@ -31,6 +31,43 @@ class NeurocnlShellAdapter extends StatefulWidget {
 class _NeurocnlShellAdapterState extends State<NeurocnlShellAdapter> {
   late final Future<void> _initialization = _initialize();
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _publishLaunchContext();
+  }
+
+  @override
+  void didUpdateWidget(NeurocnlShellAdapter oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.launchContext, widget.launchContext)) {
+      _publishLaunchContext();
+    }
+  }
+
+  /// Publishes [widget.launchContext] onto the app's single root
+  /// [featureLaunchContextProvider] instance.
+  ///
+  /// This mutates the existing (root-scoped) provider in place rather than
+  /// overriding it on a nested `ProviderScope`: most Studio Notifiers read
+  /// the derived `apiClientProvider` lazily from inside their own methods,
+  /// which resolves against the root container regardless of any override
+  /// declared on a child scope further down the tree. Mutating the root
+  /// value directly is what actually reaches every consumer.
+  ///
+  /// Deferred to a post-frame callback: Riverpod forbids modifying a
+  /// provider synchronously from within a widget lifecycle method
+  /// (`didChangeDependencies`/`didUpdateWidget`/etc.) — doing so throws
+  /// "Tried to modify a provider while the widget tree was building."
+  void _publishLaunchContext() {
+    final launchContext = widget.launchContext;
+    final container = ProviderScope.containerOf(context, listen: false);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      container.read(featureLaunchContextProvider.notifier).publish(launchContext);
+    });
+  }
+
   Future<void> _initialize() async {
     try {
       await (widget.initializeFeature ?? ServerConfigService.initialize)();
@@ -67,9 +104,6 @@ class _NeurocnlShellAdapterState extends State<NeurocnlShellAdapter> {
         }
         return ProviderScope(
           overrides: [
-            featureLaunchContextProvider.overrideWithValue(
-              widget.launchContext,
-            ),
             workspaceBootstrapProvider.overrideWithValue(
               WorkspaceBootstrap(
                 initialLocation: widget.launchContext.initialLocation,

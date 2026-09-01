@@ -207,7 +207,7 @@ return $default(_that.developerMode);case _:
 
 class _AppState implements AppState {
   const _AppState({this.developerMode = false});
-  
+
 
 @override@JsonKey() final  bool developerMode;
 

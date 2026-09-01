@@ -23,13 +23,13 @@ DeployReadinessResult _$DeployReadinessResultFromJson(
           return DeployReadinessError.fromJson(
             json
           );
-        
+
           default:
             return DeployReadinessOk.fromJson(
   json
 );
         }
-      
+
 }
 
 /// @nodoc

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:neuro_toolkit/features/neurocnl/app.dart';
@@ -33,13 +34,15 @@ void main() {
     final ready = Completer<void>();
     var initialized = false;
     await tester.pumpWidget(
-      MaterialApp(
-        home: NeurocnlShellAdapter(
-          launchContext: _launchContext(onReportError: (_) async {}),
-          initializeFeature: () async {
-            initialized = true;
-            await ready.future;
-          },
+      ProviderScope(
+        child: MaterialApp(
+          home: NeurocnlShellAdapter(
+            launchContext: _launchContext(onReportError: (_) async {}),
+            initializeFeature: () async {
+              initialized = true;
+              await ready.future;
+            },
+          ),
         ),
       ),
     );
@@ -62,16 +65,18 @@ void main() {
     final events = <NmtkFeatureErrorEvent>[];
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: NeurocnlShellAdapter(
-          launchContext: _launchContext(
-            onReportError: (event) async {
-              events.add(event);
+      ProviderScope(
+        child: MaterialApp(
+          home: NeurocnlShellAdapter(
+            launchContext: _launchContext(
+              onReportError: (event) async {
+                events.add(event);
+              },
+            ),
+            initializeFeature: () async {
+              throw StateError('storage unavailable');
             },
           ),
-          initializeFeature: () async {
-            throw StateError('storage unavailable');
-          },
         ),
       ),
     );
@@ -98,15 +103,17 @@ void main() {
     final events = <NmtkFeatureErrorEvent>[];
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: NeurocnlShellAdapter(
-          launchContext: _launchContext(
-            initialLocation: '/missing-route',
-            onReportError: (event) async {
-              events.add(event);
-            },
+      ProviderScope(
+        child: MaterialApp(
+          home: NeurocnlShellAdapter(
+            launchContext: _launchContext(
+              initialLocation: '/missing-route',
+              onReportError: (event) async {
+                events.add(event);
+              },
+            ),
+            initializeFeature: () async {},
           ),
-          initializeFeature: () async {},
         ),
       ),
     );

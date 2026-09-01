@@ -188,7 +188,7 @@ return error(_that.message,_that.details,_that.statusCode);case _:
 
 class SimulatorRunIdle implements SimulatorRunState {
   const SimulatorRunIdle();
-  
+
 
 
 
@@ -220,7 +220,7 @@ String toString() {
 
 class SimulatorRunLoading implements SimulatorRunState {
   const SimulatorRunLoading();
-  
+
 
 
 
@@ -252,7 +252,7 @@ String toString() {
 
 class SimulatorRunSuccess implements SimulatorRunState {
   const SimulatorRunSuccess(this.result);
-  
+
 
  final  SimulatorRunResult result;
 
@@ -318,7 +318,7 @@ as SimulatorRunResult,
 
 class SimulatorRunError implements SimulatorRunState {
   const SimulatorRunError(this.message, {final  List<String> details = const [], this.statusCode}): _details = details;
-  
+
 
  final  String message;
  final  List<String> _details;

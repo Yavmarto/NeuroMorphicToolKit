@@ -210,7 +210,7 @@ return $default(_that.isInstalling,_that.isChecking,_that.installOutput,_that.er
 
 class _PythonInstallState implements PythonInstallState {
   const _PythonInstallState({this.isInstalling = false, this.isChecking = false, this.installOutput, this.errorMessage});
-  
+
 
 @override@JsonKey() final  bool isInstalling;
 @override@JsonKey() final  bool isChecking;

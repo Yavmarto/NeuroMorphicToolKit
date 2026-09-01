@@ -215,7 +215,7 @@ return $default(_that.telemetryEnabled,_that.remoteEndpoint,_that.themeMode,_tha
 
 class _SettingsState implements SettingsState {
   const _SettingsState({this.telemetryEnabled = false, this.remoteEndpoint, this.themeMode = ThemeMode.system, this.isHighContrast = false, this.fontSizeFactor = 1.0, this.logLevel = LogLevel.info, final  Map<String, Map<String, dynamic>> moduleSettings = const {}, this.launcherControlApiBaseUrl, this.suiteApiBaseUrl}): _moduleSettings = moduleSettings;
-  
+
 
 @override@JsonKey() final  bool telemetryEnabled;
 @override final  String? remoteEndpoint;

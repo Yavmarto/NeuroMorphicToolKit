@@ -27,13 +27,13 @@ NirImportState _$NirImportStateFromJson(
           return NirImportError.fromJson(
             json
           );
-        
+
           default:
             return NirImportIdle.fromJson(
   json
 );
         }
-      
+
 }
 
 /// @nodoc

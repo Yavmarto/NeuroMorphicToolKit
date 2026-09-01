@@ -209,7 +209,7 @@ return $default(_that.environments,_that.busy,_that.activeOperation);case _:
 
 class _EnvironmentState implements EnvironmentState {
   const _EnvironmentState({final  List<EnvironmentInfo> environments = const [], this.busy = false, this.activeOperation}): _environments = environments;
-  
+
 
  final  List<EnvironmentInfo> _environments;
 @override@JsonKey() List<EnvironmentInfo> get environments {

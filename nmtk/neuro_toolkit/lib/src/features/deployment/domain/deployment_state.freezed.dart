@@ -214,7 +214,7 @@ return $default(_that.targets,_that.activeJob,_that.isReady,_that.connectionLost
 
 class _DeploymentState implements DeploymentState {
   const _DeploymentState({final  List<DeploymentTarget> targets = const [], this.activeJob, this.isReady = false, this.connectionLostReason}): _targets = targets;
-  
+
 
  final  List<DeploymentTarget> _targets;
 @override@JsonKey() List<DeploymentTarget> get targets {
