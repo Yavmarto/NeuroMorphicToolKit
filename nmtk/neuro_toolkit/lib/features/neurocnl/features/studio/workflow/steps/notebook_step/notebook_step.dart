@@ -454,6 +454,7 @@ class _NotebookStepState extends ConsumerState<NotebookStep> {
             top: 8,
             right: 8,
             child: Material(
+              // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
               color: Colors.transparent,
               child: Tooltip(
                 message: 'Reload notebook',

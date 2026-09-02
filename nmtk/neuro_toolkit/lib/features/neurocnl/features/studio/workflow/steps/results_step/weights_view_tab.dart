@@ -5,7 +5,8 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/workflow_feature.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_step/neuron_detail_sheet.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_step/support.dart' show rdbuColor;
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_step/support.dart'
+    show rdbuColor;
 
 class WeightsViewTab extends ConsumerStatefulWidget {
   const WeightsViewTab({
@@ -92,6 +93,7 @@ class _WeightsViewTabState extends ConsumerState<WeightsViewTab> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       backgroundColor: Colors.transparent,
       builder: (_) => NeuronDetailSheet(
         neuronIndex: neuronIndex,

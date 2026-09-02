@@ -130,16 +130,19 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
       onTap = null;
     } else if (isLocked) {
       chipColor = colors.mainDefault;
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       bgColor = Colors.transparent;
       onTap = null;
     } else if (isCompleted) {
       chipColor = colors.mainPrimary;
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       bgColor = Colors.transparent;
       onTap = onPhaseSelected != null
           ? () => onPhaseSelected!(unlocked.last)
           : null;
     } else {
       chipColor = colors.mainSubtle;
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       bgColor = Colors.transparent;
       onTap = onPhaseSelected != null
           ? () => onPhaseSelected!(unlocked.first)

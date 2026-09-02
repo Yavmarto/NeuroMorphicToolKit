@@ -169,7 +169,8 @@ class SpikePlaybackTransport extends StatelessWidget {
                             ? AppTheme.textSecondaryOf(
                                 context,
                               ).withValues(alpha: 0.15)
-                            : Colors.transparent,
+                            : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+                              Colors.transparent,
                         borderRadius: BorderRadius.circular(
                           NmtkShellTokens.of(context).radiusSm,
                         ),

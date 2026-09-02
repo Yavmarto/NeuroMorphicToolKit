@@ -384,9 +384,12 @@ class _SelectableContainer extends StatelessWidget {
           border: Border.all(
             color: selected
                 ? Theme.of(context).colorScheme.primary
-                : Colors.transparent,
+                : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+                  Colors.transparent,
           ),
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusMd),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusMd,
+          ),
         ),
         child: child,
       ),

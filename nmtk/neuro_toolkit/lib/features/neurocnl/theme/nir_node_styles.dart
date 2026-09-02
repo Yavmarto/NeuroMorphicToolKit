@@ -15,23 +15,39 @@ import 'package:neuro_toolkit/features/neurocnl/models/canvas/pipeline_dag.dart'
 // utility/scheduler) intentionally share a color; everything else has its
 // own distinct value.
 const Map<String, Color> _canvasCategoryColors = {
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'io': Color(0xFF1E88E5),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'data': Color(0xFF1E88E5),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'neuron': Color(0xFF43A047),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'network': Color(0xFF43A047),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'transform': Color(0xFF8E24AA),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'timeControl': Color(0xFFD81B60),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'pooling': Color(0xFF00897B),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'utility': Color(0xFF546E7A),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'scheduler': Color(0xFF546E7A),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'loss': Color(0xFFE53935),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'backward': Color(0xFFFF6F00),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'optimiser': Color(0xFFFFB300),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'metrics': Color(0xFF3949AB),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'export': Color(0xFF6D4C41),
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   'lava': Color(0xFFD84315),
 };
 
+// ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
 const Color _canvasCategoryFallbackColor = Color(0xFF546E7A);
 
 /// Accent color for a node category, without needing a [BuildContext] — the
@@ -62,12 +78,19 @@ Color pipelineCategoryColor(PipelineDagCategory cat) =>
 /// source node's category accent via [nirCategoryColor] instead of a table
 /// here.
 Color canvasPortTypeColor(PortType type) => switch (type) {
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   PortType.spikes => const Color(0xFFFFA000), // amber
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   PortType.loss => const Color(0xFFE53935), // red
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   PortType.gradients => const Color(0xFF1E88E5), // blue
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   PortType.model => const Color(0xFF43A047), // green
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   PortType.metrics => const Color(0xFF8E24AA), // purple
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   PortType.membrane => const Color(0xFF00ACC1), // cyan
+  // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta equivalent for N-way distinct hues
   _ => const Color(0xFF9E9E9E), // grey
 };
 

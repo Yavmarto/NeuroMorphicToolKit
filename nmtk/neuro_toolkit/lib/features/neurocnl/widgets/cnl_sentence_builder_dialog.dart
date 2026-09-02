@@ -474,7 +474,8 @@ class _CnlSentenceBuilderDialogState extends State<CnlSentenceBuilderDialog> {
                     ? Zeta.of(
                         context,
                       ).colors.mainPrimary.withValues(alpha: 0.12)
-                    : const Color(0x00000000),
+                    // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+                    : Colors.transparent,
                 border: null,
               ),
               child: Row(

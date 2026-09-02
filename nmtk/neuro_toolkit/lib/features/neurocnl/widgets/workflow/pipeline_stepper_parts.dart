@@ -126,11 +126,13 @@ class _PipelineStepState extends State<_PipelineStep>
           // here on top of it produced a "double pill". Selection here is
           // conveyed by the label's color/weight (see labelStyle) instead.
           color: destinationStyle
+              // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
               ? Colors.transparent
               : _getBgColor(context, theme, tokens),
           borderRadius: BorderRadius.circular(tokens.radiusSm),
           border: Border.all(
             color: destinationStyle
+                // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
                 ? Colors.transparent
                 : _getBorderColor(context, theme, tokens),
             width: borderWidth,

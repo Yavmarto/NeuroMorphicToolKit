@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/spike_playback_transport.dart';
-import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/time_series_chart.dart' show traceColorPalette;
+import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/time_series_chart.dart'
+    show traceColorPalette;
 
 // ---------------------------------------------------------------------------
 // Public widget
@@ -502,10 +503,16 @@ class _AnimatedSnnPlaybackState extends State<AnimatedSnnPlayback>
                                               currentTimeMs: _currentTimeMs,
                                               visibleRange: _visibleRange,
                                               reduceMotion: _reduceMotion,
+                                              glowColor: NmtkShellTokens.of(
+                                                context,
+                                              ).studioPalette.accent,
                                               axisLabelStyle: Zeta.of(context)
                                                   .textStyles
                                                   .bodyXSmall
-                                                  .copyWith(color: AppTheme.textSecondary),
+                                                  .copyWith(
+                                                    color:
+                                                        AppTheme.textSecondary,
+                                                  ),
                                             ),
                                           ),
                                         ),
@@ -564,7 +571,9 @@ class _AnimatedSnnPlaybackState extends State<AnimatedSnnPlayback>
                                           axisLabelStyle: Zeta.of(context)
                                               .textStyles
                                               .bodyXSmall
-                                              .copyWith(color: AppTheme.textSecondary),
+                                              .copyWith(
+                                                color: AppTheme.textSecondary,
+                                              ),
                                         ),
                                       ),
                                     ),
@@ -617,7 +626,9 @@ class _ZoomIndicator extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppTheme.surfaceOf(context).withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusSm,
+        ),
         border: Border.all(color: AppTheme.borderOf(context)),
       ),
       child: Padding(
@@ -749,8 +760,12 @@ class AnimatedRasterPainter extends CustomPainter {
   final bool reduceMotion;
   final TextStyle axisLabelStyle;
 
+  /// Studio-violet glow accent resolved from the active theme by the caller
+  /// (paint() has no BuildContext) — sourced from NmtkShellTokens'
+  /// studioPalette.accent, the same brand token the canvas chrome uses.
+  final Color glowColor;
+
   static const _glowWindowMs = 80.0;
-  static const _studioViolet = Color(0xFF8B5CF6);
 
   const AnimatedRasterPainter({
     required this.spikes,
@@ -758,6 +773,7 @@ class AnimatedRasterPainter extends CustomPainter {
     required this.currentTimeMs,
     required this.visibleRange,
     required this.axisLabelStyle,
+    required this.glowColor,
     this.reduceMotion = false,
   });
 
@@ -870,7 +886,7 @@ class AnimatedRasterPainter extends CustomPainter {
         } else if (age < _glowWindowMs) {
           final fade = 1.0 - (age / _glowWindowMs);
           // Outer glow — decays in radius and opacity.
-          glowPaint.color = _studioViolet.withValues(
+          glowPaint.color = glowColor.withValues(
             alpha: (fade * 0.55).clamp(0.0, 1.0),
           );
           canvas.drawCircle(Offset(x, y), 1.2 + 2.8 * fade, glowPaint);
@@ -905,8 +921,8 @@ class AnimatedRasterPainter extends CustomPainter {
         final shadowPaint = Paint()
           ..shader = LinearGradient(
             colors: [
-              _studioViolet.withValues(alpha: 0.0),
-              _studioViolet.withValues(alpha: 0.12),
+              glowColor.withValues(alpha: 0.0),
+              glowColor.withValues(alpha: 0.12),
             ],
           ).createShader(shadowRect);
         canvas.drawRect(shadowRect, shadowPaint);
@@ -959,7 +975,7 @@ class AnimatedChartPainter extends CustomPainter {
     required this.duration,
     required this.visibleRange,
     this.reduceMotion = false,
-      required this.axisLabelStyle,
+    required this.axisLabelStyle,
   });
 
   @override

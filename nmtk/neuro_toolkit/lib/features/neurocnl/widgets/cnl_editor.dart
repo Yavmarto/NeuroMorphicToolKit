@@ -1405,7 +1405,8 @@ class _AutocompleteOverlay extends StatelessWidget {
                             ),
                             color: isSelected
                                 ? AppTheme.primary.withValues(alpha: 0.12)
-                                : Colors.transparent,
+                                : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+                                  Colors.transparent,
                             child: Row(
                               children: [
                                 // Completion text

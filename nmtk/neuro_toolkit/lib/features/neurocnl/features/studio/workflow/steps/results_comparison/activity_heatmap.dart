@@ -66,20 +66,21 @@ class ActivityHeatmap extends StatelessWidget {
                       child: Container(
                         margin: const EdgeInsets.all(1),
                         color: Color.lerp(
-                          Colors.white,
+                          colors.borderPure,
                           colors.mainPrimary,
                           data.matrix[r][c].clamp(0.0, 1.0),
                         ),
                         alignment: Alignment.center,
                         child: Text(
                           data.matrix[r][c].toStringAsFixed(2),
-                          style: Zeta.of(context).textStyles.labelSmall.copyWith(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            color: data.matrix[r][c] > 0.6
-                                ? Zeta.of(context).colors.mainInverse
-                                : Zeta.of(context).colors.mainDefault,
-                          ),
+                          style: Zeta.of(context).textStyles.labelSmall
+                              .copyWith(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: data.matrix[r][c] > 0.6
+                                    ? Zeta.of(context).colors.mainInverse
+                                    : Zeta.of(context).colors.mainDefault,
+                              ),
                         ),
                       ),
                     ),

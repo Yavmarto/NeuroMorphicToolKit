@@ -39,7 +39,7 @@ class MobileCanvasChrome extends StatelessWidget {
   final bool canRedo;
 
   /// Override for the floating bar background colour.
-  /// Defaults to [ZetaColors.surfaceDefault] when null.
+  /// Defaults to [Zeta.of(context).colors.surfaceDefault] when null.
   final Color? barColor;
 
   /// Optional translucent tint applied over the canvas body.
@@ -56,9 +56,12 @@ class MobileCanvasChrome extends StatelessWidget {
     final bar = Container(
       decoration: BoxDecoration(
         color: barBg,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusLg,
+        ),
         boxShadow: [
           BoxShadow(
+            // ZETA-MIGRATION-EXEMPT: drop-shadow cast color — no Zeta semantic role for shadows
             color: Colors.black.withValues(alpha: 0.22),
             blurRadius: 16,
             offset: const Offset(0, 4),
@@ -101,7 +104,7 @@ class MobileCanvasChrome extends StatelessWidget {
                   tooltip: 'Auto Layout',
                   enabled: true,
                   onPressed: onAutoLayout,
-                  tint: const Color(0xFF7B61FF),
+                  tint: NmtkShellTokens.of(context).studioPalette.accent,
                 ),
                 if (onAddPrimitive != null) ...[
                   _barDivider(context),
@@ -186,7 +189,9 @@ class CanvasChromeIconButton extends StatelessWidget {
       message: tooltip,
       child: InkWell(
         onTap: enabled ? onPressed : null,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusLg,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Icon(icon, color: color, size: 20),

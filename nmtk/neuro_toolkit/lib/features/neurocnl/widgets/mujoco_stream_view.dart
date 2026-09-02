@@ -44,8 +44,12 @@ class MujocoStreamView extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
+                // ZETA-MIGRATION-EXEMPT: fixed dark media-overlay chip for
+                // legibility over an arbitrary video stream — theme-independent.
                 color: Colors.black.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusChip),
+                borderRadius: BorderRadius.circular(
+                  NmtkShellTokens.of(context).radiusChip,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -96,7 +100,9 @@ class _LoadingView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'Connecting to MuJoCo stream…',
-              style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
+              style: Zeta.of(
+                context,
+              ).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
             ),
           ],
         ),

@@ -383,7 +383,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                                             ),
                                       ),
                                     ],
-                                    barColor: const Color(0xFF0B1F3A),
+                                    barColor:
+                                        // ZETA-MIGRATION-EXEMPT: fixed "Obsidian
+                                        // Flow" branded dark canvas chrome (same
+                                        // rationale as the workspace_open_overlay
+                                        // loading card) — intentionally independent
+                                        // of the app's light/dark theme.
+                                        const Color(0xFF0B1F3A),
                                     canvasTint: tokens.commandPalette.frameTint,
                                     onAutoLayout: () => _runAutoLayout(
                                       CanvasTab.pipelineTrain,
@@ -435,7 +441,13 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                                   if (widget.disableEditingChrome) return body;
                                   return MobileCanvasChrome(
                                     body: body,
-                                    barColor: const Color(0xFF0B2116),
+                                    barColor:
+                                        // ZETA-MIGRATION-EXEMPT: fixed "Obsidian
+                                        // Flow" branded dark canvas chrome (same
+                                        // rationale as the workspace_open_overlay
+                                        // loading card) — intentionally independent
+                                        // of the app's light/dark theme.
+                                        const Color(0xFF0B2116),
                                     canvasTint: tokens.healthyColor.withValues(
                                       alpha: 0.08,
                                     ),
@@ -502,7 +514,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                                         tooltip: 'CNL Editor',
                                         enabled: true,
                                         tint: _showCnl
-                                            ? const Color(0xFF7B61FF)
+                                            ? tokens.studioPalette.accent
                                             : null,
                                         onPressed: () {
                                           setState(() {
@@ -517,7 +529,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                                         tooltip: 'Inspector',
                                         enabled: true,
                                         tint: _showProperties
-                                            ? const Color(0xFF7B61FF)
+                                            ? tokens.studioPalette.accent
                                             : null,
                                         onPressed: _toggleInspector,
                                       ),
@@ -526,7 +538,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                                         tooltip: 'NIR Importer',
                                         enabled: true,
                                         tint: _showNir
-                                            ? const Color(0xFF7B61FF)
+                                            ? tokens.studioPalette.accent
                                             : null,
                                         onPressed: () {
                                           setState(() {
@@ -748,7 +760,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
               source: ImportedCnlSource.studioImport,
             ),
           );
-      unawaited(ref.read(specTextProvider.notifier).set(importContract.cnlSpec));
+      unawaited(
+        ref.read(specTextProvider.notifier).set(importContract.cnlSpec),
+      );
       ref.read(canvasProvider.notifier).setGraph(importContract.graph);
       await ref
           .read(validationProvider.notifier)
@@ -799,6 +813,7 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
     final theme = Theme.of(context);
 
     return Material(
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       color: Colors.transparent,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -979,7 +994,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                           Navigator.of(popupContext).pop();
                           addType(type);
                         },
-                        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                        borderRadius: BorderRadius.circular(
+                          NmtkShellTokens.of(context).radiusSm,
+                        ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -1016,7 +1033,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
             context: context,
             isScrollControlled: true,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(NmtkShellTokens.of(context).radiusLg)),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(NmtkShellTokens.of(context).radiusLg),
+              ),
             ),
             builder: (BuildContext sheetContext) {
               return SafeArea(
@@ -1036,7 +1055,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
             builder: (BuildContext dialogContext) {
               return Dialog(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
+                  borderRadius: BorderRadius.circular(
+                    NmtkShellTokens.of(context).radiusLg,
+                  ),
                 ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(
@@ -1163,7 +1184,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                           Navigator.of(popupContext).pop();
                           addNodeType(item);
                         },
-                        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                        borderRadius: BorderRadius.circular(
+                          NmtkShellTokens.of(context).radiusSm,
+                        ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -1200,7 +1223,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
             context: context,
             isScrollControlled: true,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(NmtkShellTokens.of(context).radiusLg)),
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(NmtkShellTokens.of(context).radiusLg),
+              ),
             ),
             builder: (BuildContext sheetContext) {
               return SafeArea(
@@ -1220,7 +1245,9 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
             builder: (BuildContext dialogContext) {
               return Dialog(
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
+                  borderRadius: BorderRadius.circular(
+                    NmtkShellTokens.of(context).radiusLg,
+                  ),
                 ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(

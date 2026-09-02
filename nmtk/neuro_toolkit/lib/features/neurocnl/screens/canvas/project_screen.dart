@@ -72,6 +72,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
     final currentProject = ref.watch(currentProjectProvider);
 
     return Material(
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       color: Colors.transparent,
       child: Padding(
         padding: const EdgeInsets.all(24),

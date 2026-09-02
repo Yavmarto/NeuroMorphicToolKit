@@ -170,6 +170,9 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
                                         radiusSm: NmtkShellTokens.of(context).radiusSm,
                                         radiusMd: NmtkShellTokens.of(context).radiusMd,
                                         selectedBorderColor: Zeta.of(context).colors.mainInverse,
+                                        gridLineColor: Zeta.of(context).colors.borderSubtle,
+                                        selectionRingColor: Zeta.of(context).colors.mainInverse,
+                                        centerDotColor: Zeta.of(context).colors.mainInverse,
                                         edgeLabelBaseStyle: Zeta.of(
                                           context,
                                         ).textStyles.bodyXSmall.copyWith(fontSize: 9),
@@ -809,6 +812,9 @@ class _NetworkPainter extends CustomPainter {
   final double radiusSm;
   final double radiusMd;
   final Color selectedBorderColor;
+  final Color gridLineColor;
+  final Color selectionRingColor;
+  final Color centerDotColor;
   final TextStyle edgeLabelBaseStyle;
   final TextStyle nodeLabelStyle;
   final TextStyle nodeSecondaryLabelBaseStyle;
@@ -820,6 +826,9 @@ class _NetworkPainter extends CustomPainter {
     required this.radiusSm,
     required this.radiusMd,
     required this.selectedBorderColor,
+    required this.gridLineColor,
+    required this.selectionRingColor,
+    required this.centerDotColor,
     required this.edgeLabelBaseStyle,
     required this.nodeLabelStyle,
     required this.nodeSecondaryLabelBaseStyle,
@@ -847,7 +856,7 @@ class _NetworkPainter extends CustomPainter {
     );
 
     final gridPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.04)
+      ..color = gridLineColor.withValues(alpha: 0.04)
       ..strokeWidth = 1;
     const spacing = 32.0;
     for (double x = 0; x <= size.width; x += spacing) {
@@ -1080,7 +1089,7 @@ class _NetworkPainter extends CustomPainter {
             pos,
             radius + 6,
             Paint()
-              ..color = Colors.white.withValues(alpha: 0.25)
+              ..color = selectionRingColor.withValues(alpha: 0.25)
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2,
           );
@@ -1095,7 +1104,7 @@ class _NetworkPainter extends CustomPainter {
               Radius.circular(radiusMd),
             ),
             Paint()
-              ..color = Colors.white.withValues(alpha: 0.25)
+              ..color = selectionRingColor.withValues(alpha: 0.25)
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2,
           );
@@ -1103,6 +1112,7 @@ class _NetworkPainter extends CustomPainter {
       }
 
       // Shadow
+      // ZETA-MIGRATION-EXEMPT: drop-shadow cast color, no Zeta semantic role for shadows
       final shadowPaint = Paint()..color = Colors.black.withValues(alpha: 0.28);
       final fillPaint = Paint()..color = color.withValues(alpha: 0.30);
       final borderPaint = Paint()
@@ -1132,7 +1142,7 @@ class _NetworkPainter extends CustomPainter {
       canvas.drawCircle(
         pos,
         4,
-        Paint()..color = Colors.white.withValues(alpha: 0.95),
+        Paint()..color = centerDotColor.withValues(alpha: 0.95),
       );
 
       // Label line 1: node name
@@ -1223,6 +1233,9 @@ class _NetworkPainter extends CustomPainter {
       old.radiusSm != radiusSm ||
       old.radiusMd != radiusMd ||
       old.selectedBorderColor != selectedBorderColor ||
+      old.gridLineColor != gridLineColor ||
+      old.selectionRingColor != selectionRingColor ||
+      old.centerDotColor != centerDotColor ||
       old.edgeLabelBaseStyle != edgeLabelBaseStyle ||
       old.nodeLabelStyle != nodeLabelStyle ||
       old.nodeSecondaryLabelBaseStyle != nodeSecondaryLabelBaseStyle;

@@ -441,11 +441,17 @@ class _StageCell extends StatelessWidget {
       excludeSemantics: true,
       child: Material(
         key: ValueKey<String>('workflow-stage-$number'),
-        color: selected ? colors.surfacePrimarySubtle : Colors.transparent,
+        color: selected
+            ? colors.surfacePrimarySubtle
+            : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+              Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(tokens.radiusSm),
           side: BorderSide(
-            color: selected ? colors.borderPrimary : Colors.transparent,
+            color: selected
+                ? colors.borderPrimary
+                : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+                  Colors.transparent,
           ),
         ),
         child: InkWell(

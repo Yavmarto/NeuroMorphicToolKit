@@ -38,6 +38,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     final canvasState = ref.watch(canvasProvider);
 
     return Material(
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       color: Colors.transparent,
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -197,9 +198,10 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                     ? Center(
                         child: Text(
                           'Error: ${exportState.error}',
-                          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
+                          style: Zeta.of(context).textStyles.bodyMedium
+                              .copyWith(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
                         ),
                       )
                     : exportState.data != null
@@ -227,7 +229,9 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
             Text(
               'Exported ${format.toUpperCase()}:',
               key: const Key('export-result-title'),
-              style: Zeta.of(context).textStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+              style: Zeta.of(
+                context,
+              ).textStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
             ),
             ZetaButton.outline(
               onPressed: () {

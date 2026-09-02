@@ -34,7 +34,7 @@ class SensorTimeSeriesChart extends StatelessWidget {
         ? frames.sublist(frames.length - maxPoints)
         : frames;
     final channelCount = recent.first.emgChannels.length;
-    final channelColors = NmtkShellTokens.instrumentChannelPalette;
+    final channelPalette = NmtkShellTokens.instrumentChannelPalette;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,7 +51,7 @@ class SensorTimeSeriesChart extends StatelessWidget {
               size: const Size(double.infinity, 48),
               painter: _SparklinePainter(
                 values: recent.map((f) => f.emgChannels[ch]).toList(),
-                color: channelColors[ch % channelColors.length],
+                color: channelPalette[ch % channelPalette.length],
               ),
             ),
           ),

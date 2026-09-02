@@ -70,7 +70,9 @@ class _PlayStopButtonState extends State<PlayStopButton>
         message: widget.l10n.stopSimulation,
         child: InkWell(
           onTap: widget.onStop,
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusLg,
+          ),
           child: AnimatedBuilder(
             animation: _pulseAnim,
             builder: (_, _) => Stack(
@@ -106,7 +108,9 @@ class _PlayStopButtonState extends State<PlayStopButton>
           : widget.l10n.fixErrorsFirst,
       child: InkWell(
         onTap: widget.enabled ? widget.onPlay : null,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusLg,
+        ),
         child: Container(
           width: 36,
           height: 36,
@@ -114,7 +118,8 @@ class _PlayStopButtonState extends State<PlayStopButton>
             shape: BoxShape.circle,
             color: widget.enabled
                 ? healthyColor.withValues(alpha: 0.12)
-                : Colors.transparent,
+                : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+                  Colors.transparent,
             border: Border.all(color: color.withValues(alpha: 0.5)),
           ),
           alignment: Alignment.center,

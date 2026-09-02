@@ -26,6 +26,7 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
     final sweepState = ref.watch(sweepProvider);
 
     return Material(
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       color: Colors.transparent,
       child: Padding(
         padding: const EdgeInsets.all(24),

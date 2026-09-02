@@ -5,6 +5,7 @@ import 'package:neuro_toolkit/features/neurocnl/models/canvas/pipeline_dag.dart'
 import 'package:neuro_toolkit/features/neurocnl/models/nir_node_type.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/nir_node_styles.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_minimap.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Render-ready canvas geometry for the workspace overview.
 class PreviewGraph {
@@ -30,9 +31,10 @@ class PreviewGraph {
           rect,
           nodeType != null
               ? nirCategoryColor(context, nodeType.category)
-              // Falls back alongside nirCategoryColor, which is itself exempt from
-              // the Zeta-only color rule (see nir_node_styles.dart).
-              : Colors.grey,
+              // Neutral fallback alongside nirCategoryColor (see
+              // nir_node_styles.dart) — resolved from the Zeta theme's
+              // main/subtle grey rather than a raw palette grey.
+              : Zeta.of(context).colors.mainSubtle,
         ),
       );
       centers[node.id] = rect.center;

@@ -166,7 +166,7 @@ class _CnlEditorValidationChipState
 /// Colored info-icon that sits in the CNL/NIR/Canvas picker row.
 ///
 /// Hidden when the spec is valid. Shows [Icons.info_outline_rounded] in
-/// [ZetaColors.mainNegative] (red) when there are errors, or a subtle warning
+/// the Zeta main-negative (red) when there are errors, or a subtle warning
 /// tint while validation is running. Tapping opens a floating [ValidationPopup]
 /// anchored above-right of the icon.
 class ValidationStatusIcon extends ConsumerStatefulWidget {
@@ -329,6 +329,7 @@ class _ValidationCircleBadge extends StatelessWidget {
         color: colors.surfaceWarning,
         shape: const CircleBorder(),
         elevation: 3,
+        // ZETA-MIGRATION-EXEMPT: drop-shadow cast color — no Zeta semantic role for shadows
         shadowColor: Colors.black38,
         child: InkWell(
           onTap: onTap,
@@ -387,6 +388,7 @@ class _ValidationBadge extends StatelessWidget {
         : 'Valid';
 
     return Material(
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
@@ -404,6 +406,7 @@ class _ValidationBadge extends StatelessWidget {
             border: Border.all(color: AppTheme.border),
             boxShadow: [
               BoxShadow(
+                // ZETA-MIGRATION-EXEMPT: drop-shadow cast color — no Zeta semantic role for shadows
                 color: Colors.black.withValues(alpha: 0.12),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
@@ -458,6 +461,7 @@ class ValidationPopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       color: Colors.transparent,
       child: Container(
         width: 340,
@@ -470,6 +474,7 @@ class ValidationPopup extends StatelessWidget {
           border: Border.all(color: AppTheme.border),
           boxShadow: [
             BoxShadow(
+              // ZETA-MIGRATION-EXEMPT: drop-shadow cast color — no Zeta semantic role for shadows
               color: Colors.black.withValues(alpha: 0.16),
               blurRadius: 16,
               offset: const Offset(0, 4),

@@ -53,6 +53,7 @@ Future<void> showAdaptiveServerSetupPopup(
       useSafeArea: true,
       isDismissible: true,
       enableDrag: true,
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       backgroundColor: Colors.transparent,
       builder: (modalContext) => SizedBox(
         height: MediaQuery.sizeOf(modalContext).height * 0.94,

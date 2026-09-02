@@ -801,24 +801,26 @@ class _DataLoaderFields extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E88E5).withValues(alpha: 0.08),
+              color: Zeta.of(
+                context,
+              ).colors.mainPrimary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(
                 NmtkShellTokens.of(context).radiusSm,
               ),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons
                       .dataset_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                   size: 14,
-                  color: Color(0xFF1E88E5),
+                  color: Zeta.of(context).colors.mainPrimary,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   dataset.toUpperCase(),
                   style: Zeta.of(context).textStyles.labelSmall.copyWith(
-                    color: const Color(0xFF1E88E5),
+                    color: Zeta.of(context).colors.mainPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -827,7 +829,7 @@ class _DataLoaderFields extends ConsumerWidget {
                   'from setup',
                   style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                     fontSize: 10,
-                    color: const Color(0xFF9E9E9E),
+                    color: Zeta.of(context).colors.mainSubtle,
                   ),
                 ),
               ],

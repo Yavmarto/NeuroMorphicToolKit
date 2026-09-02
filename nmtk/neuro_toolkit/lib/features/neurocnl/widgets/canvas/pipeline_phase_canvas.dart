@@ -422,6 +422,9 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
                                             selectionColor: NmtkShellTokens.of(
                                               context,
                                             ).studioPalette.accent,
+                                            previewWireColor: Zeta.of(
+                                              context,
+                                            ).colors.mainSubtle,
                                             isVertical: widget.isVertical,
                                             sceneOrigin: _pipelineWorld.origin,
                                           ),
@@ -1275,6 +1278,7 @@ class _PipelineEdgePainter extends CustomPainter {
     this.connectingFromOffset,
     this.selectedEdgeId,
     required this.selectionColor,
+    required this.previewWireColor,
     this.isVertical = false,
     this.sceneOrigin = Offset.zero,
   });
@@ -1286,6 +1290,10 @@ class _PipelineEdgePainter extends CustomPainter {
   final String? selectedEdgeId;
 
   final Color selectionColor;
+
+  /// Neutral grey for the live-wire preview (dragged port). Resolved from the
+  /// active Zeta theme by the caller — paint() has no BuildContext.
+  final Color previewWireColor;
 
   /// Scene-space pointer position for the live-wire preview. Null when idle.
   final Offset? connectingPoint;
@@ -1322,7 +1330,7 @@ class _PipelineEdgePainter extends CustomPainter {
         canvas,
         connectingFromOffset!,
         connectingPoint!,
-        const Color(0xFF9E9E9E),
+        previewWireColor,
         isVertical: isVertical,
       );
     }
@@ -1336,6 +1344,7 @@ class _PipelineEdgePainter extends CustomPainter {
       old.connectingFromOffset != connectingFromOffset ||
       old.selectedEdgeId != selectedEdgeId ||
       old.selectionColor != selectionColor ||
+      old.previewWireColor != previewWireColor ||
       old.sceneOrigin != sceneOrigin ||
       old.isVertical != isVertical;
 }

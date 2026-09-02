@@ -27,7 +27,7 @@ class _WorkspaceOpenOverlayState extends State<WorkspaceOpenOverlay>
     final tokens = NmtkShellTokens.of(context);
     final runningColor = tokens.runningColor;
     return ColoredBox(
-      color: Colors.black.withValues(alpha: 0.7),
+      color: Zeta.of(context).colors.mainDefault.withValues(alpha: 0.7),
       child: Center(
         child: AnimatedBuilder(
           animation: _controller,
@@ -38,15 +38,28 @@ class _WorkspaceOpenOverlayState extends State<WorkspaceOpenOverlay>
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 borderRadius: NmtkDesignTokens.dialogShape,
+                // ZETA-MIGRATION-EXEMPT: "Obsidian Flow" branded loading card —
+                // a fixed dark panel by design (matches the dark canvas/studio
+                // chrome elsewhere, e.g. NmtkShellTokens.terminalBackground),
+                // intentionally independent of the app's light/dark theme.
                 border: Border.all(color: const Color(0xFF2B3138)),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF101215), Color(0xFF1A1E24)],
+                  colors: [
+                    Color(
+                      0xFF101215,
+                    ), // ZETA-MIGRATION-EXEMPT: see border above
+                    Color(
+                      0xFF1A1E24,
+                    ), // ZETA-MIGRATION-EXEMPT: see border above
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x44000000),
+                    color: Color(
+                      0x44000000,
+                    ), // ZETA-MIGRATION-EXEMPT: see border above
                     blurRadius: 24,
                     offset: Offset(0, 12),
                   ),
@@ -79,7 +92,11 @@ class _WorkspaceOpenOverlayState extends State<WorkspaceOpenOverlay>
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          Container(color: const Color(0xFF21262D)),
+                          Container(
+                            // ZETA-MIGRATION-EXEMPT: see border comment above —
+                            // same fixed dark Obsidian Flow card.
+                            color: const Color(0xFF21262D),
+                          ),
                           FractionallySizedBox(
                             alignment: Alignment(-1 + (t * 2), 0),
                             widthFactor: 0.45,
@@ -114,6 +131,8 @@ class _WorkspaceOpenOverlayState extends State<WorkspaceOpenOverlay>
                               tokens.radiusSm,
                             ),
                             color: Color.lerp(
+                              // ZETA-MIGRATION-EXEMPT: same branded Obsidian Flow
+                              // card as the border above — fixed dark panel.
                               const Color(0xFF1B2027),
                               const Color(0xFF233843),
                               opacity,

@@ -25,7 +25,8 @@ class SidebarTab extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? colors.mainPrimary.withValues(alpha: 0.1)
-              : Colors.transparent,
+              : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+                Colors.transparent,
           borderRadius: BorderRadius.circular(
             NmtkShellTokens.of(context).radiusMd,
           ),

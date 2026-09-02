@@ -85,7 +85,7 @@ const Curve _kBackButtonAnimCurve = NmtkMotionTokens.easeEnter;
 /// ## Colour contract
 ///
 /// All colours come from [Theme.of(context).colorScheme] — no
-/// `Colors.*` references appear in this file.
+/// raw Material palette references appear in this file.
 ///
 /// | Surface                | Token                  |
 /// |------------------------|------------------------|

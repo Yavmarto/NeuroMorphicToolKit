@@ -27,7 +27,9 @@ class ZetaStyledTab extends StatelessWidget {
     final activeColor = colors.mainPrimary;
     final inactiveColor = isHeader ? colors.mainDefault : colors.mainSubtle;
     final foreground = isActive ? activeColor : inactiveColor;
-    final indicatorColor = isActive ? activeColor : Colors.transparent;
+    final indicatorColor =
+        // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+        isActive ? activeColor : Colors.transparent;
 
     final content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),

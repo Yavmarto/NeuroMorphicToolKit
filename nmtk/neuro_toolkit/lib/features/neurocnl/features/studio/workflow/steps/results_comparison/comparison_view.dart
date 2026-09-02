@@ -32,7 +32,7 @@ class ComparisonView extends StatelessWidget {
         Positioned.fill(
           child: ColorFiltered(
             colorFilter: ColorFilter.mode(
-              Colors.black.withValues(alpha: 0.35),
+              colors.mainDefault.withValues(alpha: 0.35),
               BlendMode.darken,
             ),
             child: const CanvasScreen(
@@ -51,7 +51,9 @@ class ComparisonView extends StatelessWidget {
           bottom: 16,
           child: Material(
             elevation: 4,
-            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+            borderRadius: BorderRadius.circular(
+              NmtkShellTokens.of(context).radiusSm,
+            ),
             color: AppTheme.surface.withValues(alpha: 0.97),
             clipBehavior: Clip.antiAlias,
             child: Padding(
@@ -133,7 +135,9 @@ class ComparisonView extends StatelessWidget {
           width: 240,
           child: Material(
             elevation: 4,
-            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+            borderRadius: BorderRadius.circular(
+              NmtkShellTokens.of(context).radiusSm,
+            ),
             clipBehavior: Clip.antiAlias,
             child: ComparisonSidebar(
               summaries: summaries,

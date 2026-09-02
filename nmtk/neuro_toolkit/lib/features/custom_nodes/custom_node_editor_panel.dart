@@ -131,7 +131,8 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
 
   void _showSnackBar(String message, {bool isError = false}) {
     final colorToken = isError
-        // P0-1 fix: NmtkShellTokens.errorColor replaces Colors.red.shade700
+        // P0-1 fix: NmtkShellTokens.errorColor replaces the raw red palette
+        // entry that previously stood in here.
         ? NmtkShellTokens.of(context).errorColor
         : null;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -163,6 +164,8 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
         // rationale nmtk_ui_core's own mobile scaffold uses for its
         // hamburger/title bar (see studio_screen.dart).
         backgroundColor: scheme.surfaceContainer,
+        // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no
+        // transparent token; this is inside the exempted raw AppBar above.
         surfaceTintColor: Colors.transparent,
         title: Text(
           'Custom Node Editor',

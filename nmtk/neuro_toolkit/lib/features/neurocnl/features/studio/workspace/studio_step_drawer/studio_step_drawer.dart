@@ -187,7 +187,10 @@ class StudioStepDrawer extends ConsumerWidget {
     return ZetaListItem(
       leading: CircleAvatar(
         radius: 12,
-        backgroundColor: isCurrent ? colors.mainPrimary : Colors.transparent,
+        backgroundColor: isCurrent
+            ? colors.mainPrimary
+            : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+              Colors.transparent,
         child: Text(
           '${phase.index + 1}',
           style: Zeta.of(context).textStyles.bodySmall.copyWith(

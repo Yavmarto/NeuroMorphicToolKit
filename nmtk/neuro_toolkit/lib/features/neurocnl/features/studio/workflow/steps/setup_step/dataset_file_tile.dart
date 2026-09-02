@@ -23,10 +23,12 @@ class DatasetFileTile extends StatelessWidget {
     final colors = Zeta.of(context).colors;
     final bgColor = selected
         ? colors.mainPrimary.withValues(alpha: 0.06)
-        : Colors.transparent;
+        : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+          Colors.transparent;
     final borderColor = selected
         ? colors.mainPrimary.withValues(alpha: 0.30)
-        : Colors.transparent;
+        : // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+          Colors.transparent;
 
     return InkWell(
       onTap: onTap,

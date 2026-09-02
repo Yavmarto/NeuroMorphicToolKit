@@ -305,6 +305,7 @@ class NodeCardChrome extends StatelessWidget {
         border: Border.all(color: resolvedBorder, width: resolvedWidth),
         boxShadow: [
           BoxShadow(
+            // ZETA-MIGRATION-EXEMPT: drop-shadow cast color — no Zeta semantic role for shadows
             color: Colors.black.withValues(alpha: 0.10),
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -463,7 +464,9 @@ class NodeCardHeaderBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Radius topRadius = Radius.circular(NmtkShellTokens.of(context).radiusSm);
+    final Radius topRadius = Radius.circular(
+      NmtkShellTokens.of(context).radiusSm,
+    );
     final Radius bottomRadius = roundBottomCorners ? topRadius : Radius.zero;
     return Container(
       height: height,
@@ -572,16 +575,24 @@ class NodeDeleteBadge extends StatelessWidget {
             decoration: BoxDecoration(
               color: tokens.errorColor,
               shape: BoxShape.circle,
-              border: Border.all(color: Zeta.of(context).colors.mainInverse, width: 1.5),
+              border: Border.all(
+                color: Zeta.of(context).colors.mainInverse,
+                width: 1.5,
+              ),
               boxShadow: [
                 BoxShadow(
+                  // ZETA-MIGRATION-EXEMPT: drop-shadow cast color — no Zeta semantic role for shadows
                   color: Colors.black.withValues(alpha: 0.25),
                   blurRadius: 3,
                   offset: const Offset(0, 1),
                 ),
               ],
             ),
-            child: Icon(ZetaIcons.delete, size: 14, color: Zeta.of(context).colors.mainInverse),
+            child: Icon(
+              ZetaIcons.delete,
+              size: 14,
+              color: Zeta.of(context).colors.mainInverse,
+            ),
           ),
         ),
       ),
@@ -941,6 +952,9 @@ class GridPainter extends CustomPainter {
   GridPainter({
     required this.transform,
     this.sceneOrigin = Offset.zero,
+    // ZETA-MIGRATION-EXEMPT: default faint-white canvas grid line for the
+    // always-dark canvas surface (no Zeta equivalent; same fixed dark canvas
+    // chrome rationale as the "Obsidian Flow" branded cards).
     this.lineColor = const Color(0x14FFFFFF),
   });
 
