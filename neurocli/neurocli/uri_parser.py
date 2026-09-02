@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 SCHEME = "neurohub"
 _SCHEME_PREFIX = f"{SCHEME}://"
@@ -32,7 +32,7 @@ _IDENTIFIER_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,63}\Z")
 _SEMVER_RE = re.compile(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)\Z")
 
 
-class ArtefactType(str, Enum):
+class ArtefactType(StrEnum):
     """The nine canonical artefact type keys for the registry."""
 
     cnl_template = "cnl_template"

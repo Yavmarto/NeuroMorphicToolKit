@@ -58,7 +58,7 @@ def introspect_node(cls: type[CustomNode], source_path: str | None = None) -> ob
                         or None,  # normalise [] → None for Pydantic ParameterDef
                     )
                 )
-            except (KeyError, Exception) as exc:
+            except Exception as exc:  # noqa: BLE001 - malformed metadata is logged and skipped
                 import logging as _logging
 
                 _logging.getLogger(__name__).warning(

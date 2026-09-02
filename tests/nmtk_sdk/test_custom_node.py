@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import pytest
 
 from nmtk_sdk import CustomNode, param, port
@@ -6,8 +8,8 @@ from nmtk_sdk import CustomNode, param, port
 class _ValidNode(CustomNode):
     name = "Valid Neuron"
     category = "neurons"
-    canvases = ["model", "training"]
-    frameworks = ["nengo"]
+    canvases: ClassVar[list[str]] = ["model", "training"]
+    frameworks: ClassVar[list[str]] = ["nengo"]
 
     @param(type="float", default=0.02, unit="s", label="Tau m")
     def tau_m(self): ...
@@ -47,8 +49,8 @@ def test_missing_name_raises():
 
         class BadNode(CustomNode):
             category = "neurons"
-            canvases = ["model"]
-            frameworks = ["nengo"]
+            canvases: ClassVar[list[str]] = ["model"]
+            frameworks: ClassVar[list[str]] = ["nengo"]
 
 
 def test_missing_canvases_raises():
@@ -57,7 +59,7 @@ def test_missing_canvases_raises():
         class BadNode(CustomNode):
             name = "Bad"
             category = "neurons"
-            frameworks = ["nengo"]
+            frameworks: ClassVar[list[str]] = ["nengo"]
 
 
 def test_to_framework_not_implemented_raises():

@@ -26,9 +26,8 @@ def scan_imports(source: str) -> list[str]:
                 root = alias.name.split(".")[0]
                 if root in DANGEROUS_MODULES:
                     found.append(root)
-        elif isinstance(node, ast.ImportFrom):
-            if node.module:
-                root = node.module.split(".")[0]
-                if root in DANGEROUS_MODULES:
-                    found.append(root)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            root = node.module.split(".")[0]
+            if root in DANGEROUS_MODULES:
+                found.append(root)
     return found

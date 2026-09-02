@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from neurosim.contracts.design_contracts import ComponentBlock
 
 from nmtk_sdk import CustomNode, param, port
@@ -7,8 +9,8 @@ from nmtk_sdk.introspect import introspect_node
 class _SampleNode(CustomNode):
     name = "Sample Neuron"
     category = "neurons"
-    canvases = ["model", "training"]
-    frameworks = ["nengo"]
+    canvases: ClassVar[list[str]] = ["model", "training"]
+    frameworks: ClassVar[list[str]] = ["nengo"]
     description = "A test neuron"
     author = "test_user"
     version = "1.2.0"
