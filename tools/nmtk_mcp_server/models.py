@@ -39,7 +39,7 @@ class InvariantResultModel(BaseModel):
     severity: str | None = None
 
     @model_validator(mode="after")
-    def sync_legacy_fields(self) -> "InvariantResultModel":
+    def sync_legacy_fields(self) -> InvariantResultModel:
         if self.description is None and self.reason is not None:
             self.description = self.reason
         if self.reason is None and self.description is not None:

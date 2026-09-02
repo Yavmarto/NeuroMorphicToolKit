@@ -70,7 +70,7 @@ def load_modules_manifest(paths: CanonicalPaths) -> list[dict[str, Any]]:
             f"Invalid JSON in modules manifest: {paths.modules_manifest_path}"
         ) from exc
     if not isinstance(payload, list):
-        raise ValueError(
+        raise TypeError(
             f"Expected modules manifest to be a list, got {type(payload).__name__}"
         )
     return payload

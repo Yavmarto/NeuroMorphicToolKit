@@ -24,7 +24,7 @@ class RuntimeConfig(BaseModel):
         return self.repo_root / ".nmtk" / "mcp" / "state.json"
 
     @classmethod
-    def from_env(cls) -> "RuntimeConfig":
+    def from_env(cls) -> RuntimeConfig:
         repo_root = (
             Path(os.environ["NMTK_REPO_ROOT"])
             if "NMTK_REPO_ROOT" in os.environ
