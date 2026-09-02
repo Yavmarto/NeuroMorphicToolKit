@@ -24,15 +24,15 @@ DEFAULT_HOST = os.environ.get("NMTK_BACKEND_HOST", "127.0.0.1").strip() or "127.
 DEFAULT_TIMEOUT_SECONDS = 5.0
 STARTUP_TIMEOUT_SECONDS = 20.0
 
-NEUROCNL_SMOKE_SPEC = (
-    "Define a network named endpoint_smoke.\n"
-    "Define an input port named input with shape (1,).\n"
-    "Define a LIF neuron named relay with time constant 0.02, resistance 1.0, "
-    "leak voltage 0.0, and firing threshold 1.0.\n"
-    "Define an output port named output with shape (1,).\n"
-    "input connects to relay.\n"
-    "relay connects to output."
-)
+
+def _load_neurocnl_smoke_spec() -> str:
+    """Load the NeuroCNL smoke spec from the owning module's test fixtures."""
+    module_root = REPO_ROOT / "neurocnl"
+    if str(module_root) not in sys.path:
+        sys.path.insert(0, str(module_root))
+    from neurocnl.tests.smoke_fixtures import ENDPOINT_SMOKE_SPEC
+
+    return ENDPOINT_SMOKE_SPEC
 
 
 class SmokeError(RuntimeError):
@@ -493,9 +493,10 @@ def wait_for_health(
 
 def run_neurocnl_examples(module: ModuleSpec) -> None:
     prefix = "/api/neurocnl" if module.suite_managed else "/api"
+    smoke_spec = _load_neurocnl_smoke_spec()
     parse_url = f"{module_base_url(module)}{prefix}/parse"
     parse_response = http_request(
-        parse_url, method="POST", payload={"spec": NEUROCNL_SMOKE_SPEC}
+        parse_url, method="POST", payload={"spec": smoke_spec}
     )
     require_success(parse_response, parse_url)
     parse_payload = parse_response.json()
@@ -507,7 +508,7 @@ def run_neurocnl_examples(module: ModuleSpec) -> None:
     validate_response = http_request(
         validate_url,
         method="POST",
-        payload={"spec": NEUROCNL_SMOKE_SPEC},
+        payload={"spec": smoke_spec},
     )
     require_success(validate_response, validate_url)
     validate_payload = validate_response.json()

@@ -23,6 +23,12 @@ markers = [
 # neurosense_hw/main.py appends a runtime path to sys.path before importing the
 # neurosense package — the import cannot precede the path setup.
 "workers/neurosense_hw/main.py" = ["E402"]
+# verify_akida_package_manifest.py inserts the repo root on sys.path before
+# importing nmtk.launcher_control — the import cannot precede the path setup.
+"scripts/verify_akida_package_manifest.py" = ["E402"]
+# neurobench_runner/main.py appends the Neurobench package to sys.path before
+# importing the owning 'app' — reuse of the sibling application instance.
+"workers/neurobench_runner/main.py" = ["E402"]
 # cli.py reconfigures stdout/stderr encoding (for Windows cp1252 compat) before
 # any code prints — that initialisation must precede all other imports.
 ".agents/skills/caveman-compress/scripts/cli.py" = ["E402"]
