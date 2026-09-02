@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,7 +59,9 @@ class NeurosimWorkspaceController extends _$NeurosimWorkspaceController {
     if (snapshot != null && snapshot.isNotEmpty) {
       try {
         return NeurosimRestorationSnapshot.fromEncoded(snapshot).toRouteState();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Neurosim: discarding malformed launch snapshot: $e');
+      }
     }
 
     if (location.isNotEmpty && location != '/') {
@@ -73,7 +76,11 @@ class NeurosimWorkspaceController extends _$NeurosimWorkspaceController {
           return NeurosimRestorationSnapshot.fromEncoded(
             encoded,
           ).toRouteState();
-        } catch (_) {}
+        } catch (e) {
+          debugPrint(
+            'Neurosim: ignoring malformed stored restoration snapshot: $e',
+          );
+        }
       }
     } catch (_) {
       return const NeurosimRouteState(target: NeurosimRouteTarget.canvas);
@@ -206,7 +213,9 @@ class NeurosimWorkspaceController extends _$NeurosimWorkspaceController {
         snapshotStorageKey,
         NeurosimRestorationSnapshot.fromRouteState(routeState).encode(),
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Neurosim: failed to persist restoration snapshot: $e');
+    }
   }
 }
 
