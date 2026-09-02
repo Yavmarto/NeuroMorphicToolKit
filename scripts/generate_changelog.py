@@ -2,7 +2,7 @@
 import os
 import subprocess
 import sys
-from datetime import date
+from datetime import UTC, datetime
 
 
 def get_commits(since_tag=None):
@@ -48,11 +48,7 @@ def parse_commits(commits):
             categories["Added"].append(msg)
         elif msg.startswith("fix"):
             categories["Fixed"].append(msg)
-        elif (
-            msg.startswith("chore")
-            or msg.startswith("refactor")
-            or msg.startswith("style")
-        ) or msg.startswith("docs"):
+        elif msg.startswith(("chore", "refactor", "style", "docs")):
             categories["Changed"].append(msg)
         else:
             # Default category
@@ -62,7 +58,7 @@ def parse_commits(commits):
 
 
 def format_changelog(version, categories):
-    today = date.today().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     lines = [f"## [{version}] - {today}", ""]
 
     empty = True

@@ -128,7 +128,7 @@ def _extract_mfcc_features(
     sample_rate: int,
     transform,  # torchaudio.transforms.MFCC
     expected_sr: int,
-) -> "torch.Tensor":  # noqa: F821 — torch imported at runtime
+) -> torch.Tensor:  # noqa: F821 — torch imported at runtime
     """Return a 1-D mean-pooled MFCC feature vector of shape (n_mfcc,)."""
     import torch
     import torchaudio
@@ -218,7 +218,7 @@ def _process_split(
     transform,
     expected_sr: int,
     dry_run: bool,
-) -> "tuple[list, list]":  # (feature_tensors, labels)
+) -> tuple[list, list]:  # (feature_tensors, labels)
     try:
         import torchaudio
     except ImportError:

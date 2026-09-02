@@ -342,7 +342,7 @@ def collect_python(deps: dict[str, Dependency]) -> None:
         # PEP 621 dependencies
         for req in project.get("dependencies", []) or []:
             _add_python(deps, req, rel, optional=False)
-        for _extra, reqs in (project.get("optional-dependencies", {}) or {}).items():
+        for reqs in (project.get("optional-dependencies", {}) or {}).values():
             for req in reqs or []:
                 _add_python(deps, req, rel, optional=True)
 

@@ -19,7 +19,7 @@ sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../neurocnl"))
 )
 
-from neurocnl.converter.akida_adapter import (  # noqa: E402
+from neurocnl.converter.akida_adapter import (
     calibrate_act_steps,
     nir_to_akida,
     quantize_inputs,

@@ -38,7 +38,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from nmtk.launcher_control.module_environment import (  # noqa: E402
+from nmtk.launcher_control.module_environment import (
     _version_matches_range,
 )
 
@@ -161,6 +161,7 @@ def _resolve(python_version: str, packages: list[str]) -> tuple[bool, str]:
             capture_output=True,
             text=True,
             timeout=RESOLVE_TIMEOUT_SECONDS,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         return False, f"pip did not finish within {RESOLVE_TIMEOUT_SECONDS}s"
@@ -225,6 +226,7 @@ def main() -> int:
         ["docker", "info", "--format", "{{.ServerVersion}}"],
         capture_output=True,
         text=True,
+        check=False,
     )
     if daemon.returncode != 0:
         print(
