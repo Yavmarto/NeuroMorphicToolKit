@@ -269,19 +269,25 @@ class SetupStepState extends ConsumerState<SetupStep> {
               children: [
                 if (_isHardwareTargetWithManageFlow(id) &&
                     widget.onManageHardwareTarget != null)
-                  IconButton(
-                    icon: const Icon(
-                      Icons
+                  Tooltip(
+                    message: 'Manage Targets',
+                    child: ZetaIconButton.text(
+                      icon: Icons
                           .settings_ethernet_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                      size: 16,
+                      size: ZetaWidgetSize.small,
+                      semanticLabel: 'Manage Targets',
+                      onPressed: () => widget.onManageHardwareTarget!(id),
                     ),
-                    tooltip: 'Manage Targets',
-                    onPressed: () => widget.onManageHardwareTarget!(id),
                   ),
-                IconButton(
-                  icon: const Icon(ZetaIcons.close, size: 16),
-                  onPressed: () =>
-                      ref.read(workspaceProvider.notifier).togglePlatform(id),
+                Tooltip(
+                  message: 'Remove target',
+                  child: ZetaIconButton.text(
+                    icon: ZetaIcons.close,
+                    size: ZetaWidgetSize.small,
+                    semanticLabel: 'Remove target',
+                    onPressed: () =>
+                        ref.read(workspaceProvider.notifier).togglePlatform(id),
+                  ),
                 ),
               ],
             ),

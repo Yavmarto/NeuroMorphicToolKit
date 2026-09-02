@@ -26,12 +26,14 @@ void showCompiledArtifactsDialog(BuildContext context) {
                       ),
                     ),
                   ),
-                  // Material's default 48×48 tap target: this is the dialog's
-                  // only dismissal control, and 36×36 was under the minimum.
-                  IconButton(
-                    icon: const Icon(ZetaIcons.close, size: 18),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    tooltip: 'Close',
+                  Tooltip(
+                    message: 'Close',
+                    child: ZetaIconButton.text(
+                      icon: ZetaIcons.close,
+                      size: ZetaWidgetSize.small,
+                      semanticLabel: 'Close',
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
                   ),
                 ],
               ),

@@ -112,43 +112,39 @@ class SimulatorTargetsTable extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  SimulatorRunError() => IconButton(
-                    key: Key('simulator-target-run-$backend'),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      ZetaIcons.cancel_outline,
-                      size: 18,
-                      color: colors.mainNegative,
+                  SimulatorRunError() => Tooltip(
+                    message: 'Run failed — tap to retry',
+                    child: ZetaIconButton.negative(
+                      key: Key('simulator-target-run-$backend'),
+                      size: ZetaWidgetSize.small,
+                      icon: ZetaIcons.cancel_outline,
+                      semanticLabel: 'Run failed — tap to retry',
+                      onPressed: () => runSimulatorBackend(ref, backend),
                     ),
-                    tooltip: 'Run failed — tap to retry',
-                    onPressed: () => runSimulatorBackend(ref, backend),
                   ),
-                  SimulatorRunSuccess() when !isStale => IconButton(
-                    key: Key('simulator-target-run-$backend'),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      ZetaIcons.check_circle_outline,
-                      size: 18,
-                      color: colors.mainPositive,
+                  SimulatorRunSuccess() when !isStale => Tooltip(
+                    message: 'Done — tap to run again',
+                    child: ZetaIconButton.positive(
+                      key: Key('simulator-target-run-$backend'),
+                      size: ZetaWidgetSize.small,
+                      icon: ZetaIcons.check_circle_outline,
+                      semanticLabel: 'Done — tap to run again',
+                      onPressed: () => runSimulatorBackend(ref, backend),
                     ),
-                    tooltip: 'Done — tap to run again',
-                    onPressed: () => runSimulatorBackend(ref, backend),
                   ),
-                  _ => IconButton(
-                    key: Key('simulator-target-run-$backend'),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: Icon(
-                      ZetaIcons.play,
-                      size: 18,
-                      color: colors.mainDefault,
-                    ),
-                    tooltip: isStale
+                  _ => Tooltip(
+                    message: isStale
                         ? 'Settings changed — tap to run'
                         : 'Run ${target.label}',
-                    onPressed: () => runSimulatorBackend(ref, backend),
+                    child: ZetaIconButton.text(
+                      key: Key('simulator-target-run-$backend'),
+                      size: ZetaWidgetSize.small,
+                      icon: ZetaIcons.play,
+                      semanticLabel: isStale
+                          ? 'Settings changed — tap to run'
+                          : 'Run ${target.label}',
+                      onPressed: () => runSimulatorBackend(ref, backend),
+                    ),
                   ),
                 },
               ),
@@ -156,18 +152,16 @@ class SimulatorTargetsTable extends ConsumerWidget {
               SizedBox(
                 width: 20,
                 height: 20,
-                child: IconButton(
-                  key: Key('simulator-target-settings-$backend'),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  icon: Icon(
-                    ZetaIcons.settings,
-                    size: 18,
-                    color: colors.mainDefault,
+                child: Tooltip(
+                  message: '${target.label} settings',
+                  child: ZetaIconButton.text(
+                    key: Key('simulator-target-settings-$backend'),
+                    size: ZetaWidgetSize.small,
+                    icon: ZetaIcons.settings,
+                    semanticLabel: '${target.label} settings',
+                    onPressed: () =>
+                        showSimulatorTargetSettings(context, backend),
                   ),
-                  tooltip: '${target.label} settings',
-                  onPressed: () =>
-                      showSimulatorTargetSettings(context, backend),
                 ),
               ),
             ],

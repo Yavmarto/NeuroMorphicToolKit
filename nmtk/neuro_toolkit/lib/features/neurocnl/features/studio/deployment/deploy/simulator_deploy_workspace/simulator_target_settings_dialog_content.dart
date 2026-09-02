@@ -37,10 +37,13 @@ class SimulatorTargetSettingsDialogContent extends ConsumerWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: Icon(ZetaIcons.close, color: colors.mainDefault),
-              tooltip: 'Close',
-              onPressed: () => Navigator.of(context).pop(),
+            Tooltip(
+              message: 'Close',
+              child: ZetaIconButton.text(
+                icon: ZetaIcons.close,
+                semanticLabel: 'Close',
+                onPressed: () => Navigator.of(context).pop(),
+              ),
             ),
           ],
         ),

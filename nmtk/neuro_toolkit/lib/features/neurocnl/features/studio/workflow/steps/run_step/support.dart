@@ -12,10 +12,13 @@ void openStudioNotebook(BuildContext context) {
           title: const Text('Notebook'),
           automaticallyImplyLeading: false,
           actions: [
-            IconButton(
-              icon: const Icon(ZetaIcons.close),
-              tooltip: 'Close',
-              onPressed: () => Navigator.of(ctx).pop(),
+            Tooltip(
+              message: 'Close',
+              child: ZetaIconButton.text(
+                icon: ZetaIcons.close,
+                semanticLabel: 'Close',
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
             ),
           ],
         ),

@@ -63,13 +63,13 @@ void showHardwareTargetDialog(
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(
-                      ZetaIcons.close,
-                      color: Zeta.of(dialogContext).colors.mainDefault,
+                  Tooltip(
+                    message: 'Close',
+                    child: ZetaIconButton.text(
+                      icon: ZetaIcons.close,
+                      semanticLabel: 'Close',
+                      onPressed: () => Navigator.of(dialogContext).pop(),
                     ),
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.of(dialogContext).pop(),
                   ),
                 ],
               ),
@@ -132,13 +132,13 @@ void showCodegenTargetDialog(BuildContext context, String targetId) {
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(
-                      ZetaIcons.close,
-                      color: Zeta.of(dialogContext).colors.mainDefault,
+                  Tooltip(
+                    message: 'Close',
+                    child: ZetaIconButton.text(
+                      icon: ZetaIcons.close,
+                      semanticLabel: 'Close',
+                      onPressed: () => Navigator.of(dialogContext).pop(),
                     ),
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.of(dialogContext).pop(),
                   ),
                 ],
               ),

@@ -7,7 +7,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart'
-    show ZetaIcons, ZetaListItem, ZetaSegmentedControl;
+    show
+        ZetaIcons,
+        ZetaListItem,
+        ZetaSegmentedControl,
+        ZetaIconButton;
 import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/studio_result_session.dart';
@@ -468,8 +472,8 @@ void main() {
         // being present on mobile at all.
         expect(find.byKey(const Key('reachability-dot-akida')), findsOneWidget);
 
-        final manageButton = tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.settings_ethernet_outlined),
+        final manageButton = tester.widget<ZetaIconButton>(
+          find.widgetWithIcon(ZetaIconButton, Icons.settings_ethernet_outlined),
         );
         manageButton.onPressed!();
         await tester.pumpAndSettle();
@@ -480,10 +484,10 @@ void main() {
         Navigator.of(tester.element(find.byType(Dialog).first)).pop();
         await tester.pumpAndSettle();
 
-        // Quick-remove: the close IconButton clears the target without
+        // Quick-remove: the close ZetaIconButton clears the target without
         // reopening the bulk checkbox sheet.
-        final closeButton = tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, ZetaIcons.close).last,
+        final closeButton = tester.widget<ZetaIconButton>(
+          find.widgetWithIcon(ZetaIconButton, ZetaIcons.close).last,
         );
         closeButton.onPressed!();
         await tester.pumpAndSettle();

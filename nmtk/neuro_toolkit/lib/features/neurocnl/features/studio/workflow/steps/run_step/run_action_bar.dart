@@ -69,23 +69,26 @@ class RunActionBar extends StatelessWidget {
                 l10n: l10n,
               ),
               divider,
-              IconButton(
-                tooltip: notebookAvailable
+              Tooltip(
+                message: notebookAvailable
                     ? 'Open notebook'
                     : 'Notebook (desktop app only)',
-                icon: Icon(ZetaIcons.note, color: Zeta.of(context).colors.mainDefault),
-                onPressed: notebookAvailable ? onOpenNotebook : null,
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.note,
+                  semanticLabel: 'Open notebook',
+                  onPressed: notebookAvailable ? onOpenNotebook : null,
+                ),
               ),
               if (hasErrors) ...[
                 divider,
                 isCompact
-                    ? IconButton(
-                        tooltip: 'Retry',
-                        onPressed: onRetry,
-                        icon: Icon(
-                          ZetaIcons.refresh,
-                          size: 18,
-                          color: colors.mainNegative,
+                    ? Tooltip(
+                        message: 'Retry',
+                        child: ZetaIconButton.negative(
+                          icon: ZetaIcons.refresh,
+                          size: ZetaWidgetSize.small,
+                          semanticLabel: 'Retry',
+                          onPressed: onRetry,
                         ),
                       )
                     : ZetaButton.text(
@@ -103,9 +106,8 @@ class RunActionBar extends StatelessWidget {
                             const SizedBox(width: 4),
                             Text(
                               'Retry',
-                              style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                                color: colors.mainNegative,
-                              ),
+                              style: Zeta.of(context).textStyles.bodyMedium
+                                  .copyWith(color: colors.mainNegative),
                             ),
                           ],
                         ),

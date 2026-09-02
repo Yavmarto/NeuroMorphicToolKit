@@ -63,10 +63,11 @@ class DialogTargetTile extends StatelessWidget {
                       children: [
                         Text(
                           entry.title,
-                          style: Zeta.of(context).textStyles.labelMedium.copyWith(
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: Zeta.of(context).textStyles.labelMedium
+                              .copyWith(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
                         if (entry.isDefault) ...[
                           const SizedBox(width: 8),
@@ -78,11 +79,12 @@ class DialogTargetTile extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             '(Default)',
-                            style: Zeta.of(context).textStyles.labelSmall.copyWith(
-                              color: tokens.warningColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Zeta.of(context).textStyles.labelSmall
+                                .copyWith(
+                                  color: tokens.warningColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           ),
                         ],
                       ],
@@ -107,18 +109,24 @@ class DialogTargetTile extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    : IconButton(
-                        key: Key('hardware-target-test-${entry.id}'),
-                        tooltip: 'Test connection',
-                        onPressed: onTest,
-                        icon: const Icon(ZetaIcons.refresh),
-                        color: AppTheme.textSecondary,
+                    : Tooltip(
+                        message: 'Test connection',
+                        child: ZetaIconButton.text(
+                          key: Key('hardware-target-test-${entry.id}'),
+                          icon: ZetaIcons.refresh,
+                          size: ZetaWidgetSize.small,
+                          semanticLabel: 'Test connection',
+                          onPressed: onTest,
+                        ),
                       ),
-              IconButton(
-                tooltip: 'Edit target',
-                onPressed: onEdit,
-                icon: const Icon(ZetaIcons.edit),
-                color: AppTheme.textSecondary,
+              Tooltip(
+                message: 'Edit target',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.edit,
+                  size: ZetaWidgetSize.small,
+                  semanticLabel: 'Edit target',
+                  onPressed: onEdit,
+                ),
               ),
             ],
           ),

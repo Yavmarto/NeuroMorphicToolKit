@@ -113,11 +113,14 @@ class _MetricsSidebarState extends State<MetricsSidebar> {
                   child: CircularProgressIndicator(strokeWidth: 2.5),
                 ),
               ),
-            IconButton(
-              tooltip: 'Spike rates',
-              constraints: const BoxConstraints.tightFor(width: 40, height: 40),
-              icon: const Icon(ZetaIcons.expand_less, size: 20),
-              onPressed: () => _openSpikesSheet(context),
+            Tooltip(
+              message: 'Spike rates',
+              child: ZetaIconButton.text(
+                icon: ZetaIcons.expand_less,
+                size: ZetaWidgetSize.small,
+                semanticLabel: 'Spike rates',
+                onPressed: () => _openSpikesSheet(context),
+              ),
             ),
           ],
         ),
