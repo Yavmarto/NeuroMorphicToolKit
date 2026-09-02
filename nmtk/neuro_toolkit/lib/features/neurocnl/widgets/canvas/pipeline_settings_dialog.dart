@@ -13,16 +13,44 @@ import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider
 /// node's property panel deliberately does not expose epochs, to avoid two
 /// divergent knobs for the same setting.
 Future<void> showPipelineSettingsDialog(BuildContext context, WidgetRef ref) {
-  final pipeline = ref.read(canvasProvider).pipeline;
-  final formKey = GlobalKey<FormState>();
-  final epochsController = TextEditingController(
-    text: pipeline.epochs.toString(),
-  );
-  final seedController = TextEditingController(text: pipeline.seed.toString());
-
   return showDialog<void>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
+    builder: (_) => const _PipelineSettingsDialog(),
+  );
+}
+
+class _PipelineSettingsDialog extends ConsumerStatefulWidget {
+  const _PipelineSettingsDialog();
+
+  @override
+  ConsumerState<_PipelineSettingsDialog> createState() =>
+      _PipelineSettingsDialogState();
+}
+
+class _PipelineSettingsDialogState
+    extends ConsumerState<_PipelineSettingsDialog> {
+  final formKey = GlobalKey<FormState>();
+  late final TextEditingController epochsController;
+  late final TextEditingController seedController;
+
+  @override
+  void initState() {
+    super.initState();
+    final pipeline = ref.read(canvasProvider).pipeline;
+    epochsController = TextEditingController(text: pipeline.epochs.toString());
+    seedController = TextEditingController(text: pipeline.seed.toString());
+  }
+
+  @override
+  void dispose() {
+    epochsController.dispose();
+    seedController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
       title: const Text('Pipeline Settings'),
       content: Form(
@@ -66,7 +94,7 @@ Future<void> showPipelineSettingsDialog(BuildContext context, WidgetRef ref) {
       ),
       actions: [
         ZetaButton.text(
-          onPressed: () => Navigator.of(dialogContext).pop(),
+          onPressed: () => Navigator.of(context).pop(),
           label: 'Cancel',
         ),
         ZetaButton.text(
@@ -74,14 +102,15 @@ Future<void> showPipelineSettingsDialog(BuildContext context, WidgetRef ref) {
             if (!formKey.currentState!.validate()) return;
             final epochs = int.parse(epochsController.text);
             final seed = int.parse(seedController.text);
+            final pipeline = ref.read(canvasProvider).pipeline;
             ref
                 .read(canvasProvider.notifier)
                 .updatePipeline(pipeline.copyWith(epochs: epochs, seed: seed));
-            Navigator.of(dialogContext).pop();
+            Navigator.of(context).pop();
           },
           label: 'Save',
         ),
       ],
-    ),
-  );
+    );
+  }
 }
