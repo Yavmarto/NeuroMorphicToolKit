@@ -4,6 +4,8 @@ neuro_toolkit/.dart_tool/
 .cache
 .hypothesis/
 **/venv/
+**/.venv/
+.claude/settings.local.json
 __pycache__/
 *.pyc
 *.egg-info/
