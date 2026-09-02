@@ -159,6 +159,9 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
     return Scaffold(
       // P0-2 fix: style the AppBar using colorScheme tokens (no raw Material defaults)
       appBar: AppBar(
+        // ZETA-MIGRATION-EXEMPT: no Zeta app bar exists; this is the same
+        // rationale nmtk_ui_core's own mobile scaffold uses for its
+        // hamburger/title bar (see studio_screen.dart).
         backgroundColor: scheme.surfaceContainer,
         surfaceTintColor: Colors.transparent,
         title: Text(

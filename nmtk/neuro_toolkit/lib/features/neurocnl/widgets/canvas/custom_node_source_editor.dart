@@ -507,6 +507,9 @@ class _CustomNodeSourceEditorState
       onPopInvokedWithResult: _handleBack,
       child: Scaffold(
         appBar: AppBar(
+          // ZETA-MIGRATION-EXEMPT: no Zeta app bar exists; this is the same
+          // rationale nmtk_ui_core's own mobile scaffold uses for its
+          // hamburger/title bar (see studio_screen.dart).
           automaticallyImplyLeading: false,
           titleSpacing: 20,
           title: Row(

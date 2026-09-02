@@ -15,6 +15,9 @@ class ComparisonScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        // ZETA-MIGRATION-EXEMPT: no Zeta app bar exists; this is the same
+        // rationale nmtk_ui_core's own mobile scaffold uses for its
+        // hamburger/title bar (see studio_screen.dart).
         leadingWidth: 190,
         leading: ZetaButton.text(
           onPressed: () {
