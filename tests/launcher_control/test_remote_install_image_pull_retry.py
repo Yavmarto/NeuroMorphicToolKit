@@ -110,6 +110,7 @@ def _run_install(
             "HOME": str(home),
         },
         timeout=300,
+        check=False,
     )
     return (
         result,

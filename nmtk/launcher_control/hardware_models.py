@@ -15,28 +15,20 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 from .config import MODULES_MANIFEST, REPO_ROOT
-from .pynq_status import (
-    _default_runtime_api_url as _default_runtime_api_url,
+from .pynq_status import (  # noqa: F401 - re-exported for launcher patch points
+    _default_runtime_api_url,
+    _effective_runtime_api_url,
+    _serialize_pynq_board,
 )
-from .pynq_status import (
-    _effective_runtime_api_url as _effective_runtime_api_url,
-)
-from .pynq_status import (
-    _serialize_pynq_board as _serialize_pynq_board,
-)
-from .runtime_contracts import (
-    AkidaLauncherRuntimeContract as AkidaLauncherRuntimeContract,
-)
-from .runtime_contracts import (
-    NeurochipLauncherRuntimeContract as NeurochipLauncherRuntimeContract,
-)
-from .runtime_contracts import (
-    PynqLauncherRuntimeContract as PynqLauncherRuntimeContract,
-)
-from .runtime_contracts import (
+from .runtime_contracts import (  # noqa: F401 - re-exported for launcher patch points
+    AkidaLauncherRuntimeContract,
+    NeurochipLauncherRuntimeContract,
+    PynqLauncherRuntimeContract,
     load_neurochip_launcher_runtime_contract,
 )
-from .runtime_errors import RuntimeRequestError as RuntimeRequestError
+from .runtime_errors import (  # noqa: F401 - re-exported for launcher patch points
+    RuntimeRequestError,
+)
 from .state_contracts import (
     AKIDA_HOST_AUTH_MODES,
     AKIDA_HOST_STATES,

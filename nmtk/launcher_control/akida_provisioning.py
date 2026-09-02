@@ -319,7 +319,7 @@ class AkidaProvisioningCoordinator:
                 f"Remote Akida install status is not valid JSON: {raw}"
             ) from exc
         if not isinstance(decoded, dict):
-            raise RuntimeError("Remote Akida install status must decode to an object")
+            raise TypeError("Remote Akida install status must decode to an object")
         return decoded
 
     def _read_remote_akida_token(

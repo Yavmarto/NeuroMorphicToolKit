@@ -260,7 +260,7 @@ class PynqProvisioningCoordinator:
                 f"Remote install status is not valid JSON: {raw}"
             ) from exc
         if not isinstance(decoded, dict):
-            raise RuntimeError("Remote install status must decode to an object")
+            raise TypeError("Remote install status must decode to an object")
         return decoded
 
     def _wait_for_board_agent_health(
@@ -289,7 +289,7 @@ class PynqProvisioningCoordinator:
                             board, "agent health check passed"
                         )
                         return
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - capture last error across retries
                 last_exc = exc
             elapsed = time.monotonic() - start
             if (
@@ -1062,7 +1062,7 @@ class PynqProvisioningCoordinator:
         )
         try:
             install_status = self._owner._read_remote_pynq_install_status(board)
-        except Exception:
+        except Exception:  # noqa: BLE001 - install status read is best-effort
             install_status = {}
         install_mode = str(install_status.get("installMode") or "unknown").strip()
         restart_warning: str | None = None

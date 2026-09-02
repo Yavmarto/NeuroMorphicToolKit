@@ -928,9 +928,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
                 "_collect_remote_readiness_diagnostics",
                 diagnostics,
             ),
+            self.assertRaises(RuntimeError) as context,
         ):
-            with self.assertRaises(RuntimeError) as context:
-                executor._deploy_remote(target, lambda *_args: None)
+            executor._deploy_remote(target, lambda *_args: None)
 
         diagnostics.assert_called_once_with(target, "/home/nmtk/nmtk-deploy")
         assert "readiness diagnostics were collected" in str(context.exception)
@@ -1240,9 +1240,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             ),
             mock.patch.object(executor, "_health_check"),
             mock.patch.object(executor, "_jupyter_health_check"),
+            self.assertRaises(RuntimeError) as context,
         ):
-            with self.assertRaises(RuntimeError) as context:
-                executor._deploy_remote(target, lambda *_args: None)
+            executor._deploy_remote(target, lambda *_args: None)
 
         assert "could not be reconciled safely" in str(context.exception)
 
@@ -1912,9 +1912,9 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
                 ),
             ),
             mock.patch.object(executor, "_copy_manifests_to_remote") as mock_copy,
+            self.assertRaises(RuntimeError) as ctx,
         ):
-            with self.assertRaises(RuntimeError) as ctx:
-                executor._deploy_remote(target, emit)
+            executor._deploy_remote(target, emit)
 
         assert "apt-get not found" in str(ctx.exception)
         mock_copy.assert_not_called()

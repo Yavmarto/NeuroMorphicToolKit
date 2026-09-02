@@ -13,7 +13,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
-from typing import Literal, Protocol, cast
+from typing import Literal, Protocol, Self, cast
 
 from .config import REPO_ROOT
 from .deployment_contracts import DeploymentTarget, redact_text
@@ -76,7 +76,7 @@ class HttpResponseProtocol(Protocol):
 
     def read(self) -> bytes: ...
 
-    def __enter__(self) -> HttpResponseProtocol: ...
+    def __enter__(self) -> Self: ...
 
     def __exit__(
         self,

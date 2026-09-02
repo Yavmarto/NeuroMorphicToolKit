@@ -298,7 +298,7 @@ class DeploymentCapability:
     readiness_timeout_seconds: float = 120.0
 
     @classmethod
-    def from_json(cls, payload: Any) -> "DeploymentCapability":
+    def from_json(cls, payload: Any) -> DeploymentCapability:
         if not isinstance(payload, dict):
             return cls()
         supported_modes = tuple(
@@ -379,7 +379,7 @@ class DeploymentTarget:
     updated_at: str = field(default_factory=utc_now_iso)
 
     @classmethod
-    def from_json(cls, payload: dict[str, Any]) -> "DeploymentTarget":
+    def from_json(cls, payload: dict[str, Any]) -> DeploymentTarget:
         display_name = str(
             payload.get("displayName") or payload.get("display_name") or ""
         )
@@ -533,7 +533,7 @@ class DeploymentJob:
     events: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
-    def from_json(cls, payload: dict[str, Any]) -> "DeploymentJob":
+    def from_json(cls, payload: dict[str, Any]) -> DeploymentJob:
         return cls(
             id=str(payload.get("id") or uuid4()),
             target_id=str(payload.get("targetId") or payload.get("target_id") or ""),

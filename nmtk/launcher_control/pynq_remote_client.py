@@ -295,7 +295,7 @@ class PynqRemoteClient:
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 decoded = json.loads(response.read().decode("utf-8"))
                 if not isinstance(decoded, dict):
-                    raise RuntimeError("Runtime response must be a JSON object")
+                    raise TypeError("Runtime response must be a JSON object")
                 return decoded
         except urllib.error.HTTPError as exc:
             raw_body = exc.read().decode("utf-8", errors="replace").strip()

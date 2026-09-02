@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import io
 import urllib.error
-from typing import Any
+from typing import Any, Self
 from unittest import mock
 
 from base import LauncherControlServiceTestBase
@@ -37,7 +37,7 @@ class _Response(io.BytesIO):
 
     status = 200
 
-    def __enter__(self) -> _Response:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_exc: object) -> None:
@@ -111,13 +111,13 @@ class TestLauncherAkidaCredentialRecovery(LauncherControlServiceTestBase):
                 self.state, "_read_remote_akida_token", return_value="stale-token"
             ),
             mock.patch("urllib.request.urlopen", side_effect=always_unauthorized),
+            self.assertRaises(RuntimeRequestError) as caught,
         ):
-            with self.assertRaises(RuntimeRequestError) as caught:
-                self.state._akida_json_request(
-                    self.state._get_akida_host(host_id),
-                    "GET",
-                    "/api/neurochip/akida/status",
-                )
+            self.state._akida_json_request(
+                self.state._get_akida_host(host_id),
+                "GET",
+                "/api/neurochip/akida/status",
+            )
 
         self.assertEqual(attempts, 2, "one recovery attempt, then stop")
         self.assertEqual(caught.exception.status_code, 401)
@@ -136,13 +136,13 @@ class TestLauncherAkidaCredentialRecovery(LauncherControlServiceTestBase):
         with (
             mock.patch.object(self.state, "_read_remote_akida_token") as read_token,
             mock.patch("urllib.request.urlopen", side_effect=always_unauthorized),
+            self.assertRaises(RuntimeRequestError) as caught,
         ):
-            with self.assertRaises(RuntimeRequestError) as caught:
-                self.state._akida_json_request(
-                    self.state._get_akida_host(host_id),
-                    "GET",
-                    "/api/neurochip/akida/status",
-                )
+            self.state._akida_json_request(
+                self.state._get_akida_host(host_id),
+                "GET",
+                "/api/neurochip/akida/status",
+            )
 
         self.assertEqual(attempts, 1)
         read_token.assert_not_called()

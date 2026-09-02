@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import collections
 import os
-import socket
 import subprocess
 import sys
 import threading
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from .module_environment import (
     _effective_port,
@@ -242,7 +242,7 @@ class ProcessSupervisionMixin:
             if exc.code in (HTTPStatus.NOT_FOUND, HTTPStatus.SERVICE_UNAVAILABLE):
                 return True, int(exc.code), body
             return False, int(exc.code), body
-        except (urllib.error.URLError, TimeoutError, socket.timeout):
+        except (urllib.error.URLError, TimeoutError):
             return False, 0, None
 
     def _run_command(self, command: list[str], cwd: Path, module_id: str) -> None:

@@ -6,7 +6,7 @@ import argparse
 import collections
 import json
 import os
-import shutil as shutil
+import shutil  # noqa: F401 - one-release monkeypatch compatibility
 import subprocess
 import threading
 from collections.abc import Callable

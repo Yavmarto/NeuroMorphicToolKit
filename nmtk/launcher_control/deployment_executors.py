@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import shutil as shutil
-import subprocess as subprocess
+import shutil  # noqa: F401 - one-release monkeypatch compatibility
+import subprocess  # noqa: F401 - one-release monkeypatch compatibility
 import urllib.request  # noqa: F401 - one-release monkeypatch compatibility
 
 from .deployment_executor_base import (

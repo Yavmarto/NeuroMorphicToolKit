@@ -41,8 +41,9 @@ class TestConfigPaths(unittest.TestCase):
 
         import nmtk.launcher_control.config as cfg
 
-        with tempfile.TemporaryDirectory() as state_dir:
-            with mock.patch.dict(os.environ, {"NMTK_STATE_DIR": state_dir}):
+        with tempfile.TemporaryDirectory() as state_dir, mock.patch.dict(
+            os.environ, {"NMTK_STATE_DIR": state_dir}
+        ):
                 importlib.reload(cfg)
                 assert str(cfg.STATE_FILE).startswith(state_dir)
                 assert str(cfg.SETTINGS_FILE).startswith(state_dir)
@@ -55,8 +56,9 @@ class TestConfigPaths(unittest.TestCase):
 
         import nmtk.launcher_control.config as cfg
 
-        with tempfile.TemporaryDirectory() as data_dir:
-            with mock.patch.dict(os.environ, {"NMTK_DATA_DIR": data_dir}):
+        with tempfile.TemporaryDirectory() as data_dir, mock.patch.dict(
+            os.environ, {"NMTK_DATA_DIR": data_dir}
+        ):
                 importlib.reload(cfg)
                 assert str(cfg.DEPLOYMENT_SECRET_FILE).startswith(data_dir)
                 assert str(cfg.SUITE_API_ENV_ROOT).startswith(data_dir)

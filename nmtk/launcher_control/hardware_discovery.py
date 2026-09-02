@@ -64,7 +64,7 @@ class HardwareDiscoveryMixin:
 
         try:
             self._auto_discover_local_hardware_impl()
-        except Exception:  # noqa: BLE001
+        except Exception:
             LOGGER.exception(
                 "hardware_discovery_failed external_probe_host=%s",
                 self._external_probe_host,

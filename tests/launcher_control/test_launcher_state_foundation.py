@@ -9,9 +9,8 @@ import sys
 
 from base import PROJECT_ROOT, LauncherControlServiceTestBase
 
-import nmtk.launcher_control.hardware_models as hardware_models
 import nmtk.launcher_control.server as launcher_server
-import nmtk.launcher_control.state_contracts as state_contracts
+from nmtk.launcher_control import hardware_models, state_contracts
 
 
 class TestLauncherStateFoundation(LauncherControlServiceTestBase):

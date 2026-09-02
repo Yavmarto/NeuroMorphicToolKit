@@ -1181,7 +1181,10 @@ class TestLauncherHardwareSettings(LauncherControlServiceTestBase):
         self,
     ) -> None:
         namespace: dict[str, Any] = {}
-        exec(provisioning_helpers._remote_control_script_text(), namespace)
+        # exec is intentional: exercise the generated remote-control script
+        # verbatim, isolated in a fresh namespace. The source is repo-owned
+        # template text, not user input.
+        exec(provisioning_helpers._remote_control_script_text(), namespace)  # noqa: S102
 
         def fake_local_json(path: str) -> tuple[int, dict[str, Any]]:
             if path == "/health":

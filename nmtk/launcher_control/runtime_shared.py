@@ -58,7 +58,10 @@ def _build_password_askpass_env(
     env_key: str,
     prefix: str,
 ) -> tuple[dict[str, str], Callable[[], None]]:
-    askpass_handle = tempfile.NamedTemporaryFile(
+    # delete=False: the askpass script must outlive this frame — it is read by
+    # SSH subprocesses later and unlinked by the returned _cleanup_askpass()
+    # callback, so it cannot be scoped to a `with` block.
+    askpass_handle = tempfile.NamedTemporaryFile(  # noqa: SIM115
         mode="w",
         encoding="utf-8",
         prefix=prefix,
@@ -79,7 +82,7 @@ def _build_password_askpass_env(
         try:
             os.unlink(askpass_handle.name)
         except FileNotFoundError:
-            return None
+            return
 
     return env, _cleanup_askpass
 

@@ -14,10 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .pynq_board_repository import PynqBoardRepository
-from .pynq_provisioning import (
-    PYNQ_DEVICE_GROUPS as PYNQ_DEVICE_GROUPS,
-)
-from .pynq_provisioning import PynqProvisioningCoordinator
+from .pynq_provisioning import PYNQ_DEVICE_GROUPS, PynqProvisioningCoordinator
 from .pynq_remote_client import PynqRemoteClient
 from .pynq_runtime_proxy import PynqRuntimeProxyService
 from .state_contracts import (

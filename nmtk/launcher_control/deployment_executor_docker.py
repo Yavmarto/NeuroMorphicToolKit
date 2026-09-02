@@ -550,7 +550,7 @@ done"""
 done"""
         try:
             self._ssh_run(target, probe_script, timeout=60)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - probe is best-effort; logged below
             self._log(f"Remote port ownership probe skipped: {exc}")
 
     def _collect_remote_startup_diagnostics(
@@ -583,7 +583,7 @@ done"""
                     self._remote_compose_cmd(deploy_dir, target, command),
                     timeout=120,
                 )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - diagnostic remains best-effort
                 self._log(f"[diagnostic] {label} unavailable: {exc}")
         self._remote_lava_capability_report(target, deploy_dir, degraded=True)
 
@@ -606,7 +606,7 @@ done"""
                     self._remote_compose_cmd(deploy_dir, target, command),
                     timeout=120,
                 )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - diagnostics remain best-effort
                 self._log(f"[nmtk-suite-api] {label} unavailable: {exc}")
 
         inspect_format = (
@@ -647,7 +647,7 @@ python3 -c {shlex.quote(probe_code)} 2>&1 || true
 """
         try:
             self._ssh_run(target, probe_script, timeout=120)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - probe is best-effort; logged below
             self._log(f"[nmtk-suite-api] direct probes unavailable: {exc}")
 
     def _collect_remote_jupyter_diagnostics(
@@ -670,7 +670,7 @@ python3 -c {shlex.quote(probe_code)} 2>&1 || true
                     self._remote_compose_cmd(deploy_dir, target, command),
                     timeout=120,
                 )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - diagnostics remain best-effort
                 self._log(f"[nmtk-jupyter] {label} unavailable: {exc}")
 
         inspect_format = (
@@ -703,7 +703,7 @@ done
 """
         try:
             self._ssh_run(target, probe_script, timeout=120)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - probe is best-effort; logged below
             self._log(f"[nmtk-jupyter] direct probes unavailable: {exc}")
 
     def _remote_lava_capability_report(
@@ -752,7 +752,7 @@ done"""
         )
         try:
             self._ssh_run(target, report_script, timeout=120)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - capability report remains best-effort
             self._log(f"{prefix} Lava capability diagnostics unavailable: {exc}")
 
     def _remote_compose_cmd(
@@ -976,7 +976,7 @@ done"""
                 continue
             try:
                 secret = self._resolve_secret(secret_ref)
-            except Exception:  # noqa: BLE001 - redaction must never block setup
+            except Exception:  # noqa: BLE001, S112 - redaction must never block setup
                 continue
             if secret:
                 sensitive_values.append(secret)
@@ -1091,7 +1091,7 @@ done"""
                     if resp.status == 200:
                         return
                     last_err = f"HTTP {resp.status}"
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - capture last error across retries
                 last_err = str(exc)
             time.sleep(5.0)
         raise RuntimeError(f"Backend health check timed out at {url}: {last_err}")

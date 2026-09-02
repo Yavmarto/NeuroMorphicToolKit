@@ -227,7 +227,7 @@ class ModuleInstallMixin:
                 text=True,
                 check=False,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 - cleanup is best-effort
             pass
 
     def _run_import_probe(self, module: dict[str, Any]) -> PreflightResult:
@@ -594,7 +594,7 @@ class ModuleInstallMixin:
                 check=False,
                 timeout=120,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 - non-fatal: build proceeds regardless
             pass  # Non-fatal: build proceeds regardless; worst case is a stale cache
 
     def _update_sync(self, module_id: str) -> None:

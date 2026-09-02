@@ -179,7 +179,7 @@ class KubernetesDeploymentExecutor(DeploymentExecutor):
                 with self._open_url(url, timeout=5.0) as response:
                     if response.status == 200:
                         return
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - capture last error across retries
                 last_err = str(exc)
             time.sleep(5.0)
         raise RuntimeError(f"Backend health check failed: {last_err}")

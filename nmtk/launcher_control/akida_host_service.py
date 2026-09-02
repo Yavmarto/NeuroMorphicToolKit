@@ -8,9 +8,9 @@ remain stable while internal ownership moves to injected components.
 
 from __future__ import annotations
 
-import shutil as shutil
-import subprocess as subprocess
-import urllib as urllib
+import shutil
+import subprocess
+import urllib
 from collections.abc import Callable
 from contextlib import AbstractContextManager
 from pathlib import Path

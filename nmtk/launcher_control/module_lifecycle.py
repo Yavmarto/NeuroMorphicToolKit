@@ -559,7 +559,7 @@ class ModuleLifecycleMixin:
                 )
             elif _is_externally_managed_service(module):
                 # Probe the external service's own health endpoint.
-                ok, status_code, health_text = self._probe_health(module)
+                ok, _status_code, health_text = self._probe_health(module)
                 if ok:
                     result = PreflightResult(
                         status=PREFLIGHT_OK,

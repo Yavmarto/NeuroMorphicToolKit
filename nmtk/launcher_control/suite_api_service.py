@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import socket
 import subprocess
 import sys
 import threading
@@ -212,7 +211,7 @@ def _suite_api_health_probe() -> tuple[bool, str | None]:
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         return False, body or f"HTTP {exc.code}"
-    except (urllib.error.URLError, TimeoutError, socket.timeout) as exc:
+    except (urllib.error.URLError, TimeoutError) as exc:
         return False, str(exc)
 
 

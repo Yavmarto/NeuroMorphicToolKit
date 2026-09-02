@@ -226,17 +226,13 @@ class LauncherControlServiceTestBase(unittest.TestCase):
     def _write_poetry_pyproject(self) -> None:
         pyproject = self.repo_root / "dummy_module" / "pyproject.toml"
         pyproject.write_text(
-            "\n".join(
-                [
-                    "[tool.poetry]",
-                    'name = "dummy"',
-                    'version = "0.1.0"',
-                    "",
-                    "[build-system]",
-                    'requires = ["poetry-core>=1.0.0"]',
-                    'build-backend = "poetry.core.masonry.api"',
-                ]
-            ),
+            "[tool.poetry]\n"
+            'name = "dummy"\n'
+            'version = "0.1.0"\n'
+            "\n"
+            "[build-system]\n"
+            'requires = ["poetry-core>=1.0.0"]\n'
+            'build-backend = "poetry.core.masonry.api"',
             encoding="utf-8",
         )
 

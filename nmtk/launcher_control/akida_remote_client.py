@@ -408,7 +408,7 @@ class AkidaRemoteClient:
                 body = response.read().decode("utf-8")
                 decoded = json.loads(body) if body else {}
                 if not isinstance(decoded, dict):
-                    raise RuntimeError(
+                    raise TypeError(
                         f"Unexpected {label.lower()} response from {url}"
                     )
                 return decoded
