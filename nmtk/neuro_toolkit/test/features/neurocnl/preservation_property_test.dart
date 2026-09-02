@@ -34,7 +34,11 @@ import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/cnl_editor.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart'
-    show NmtkNeurocnlTokens, NmtkDesktopScaffold, NmtkSidebarItem;
+    show
+        NmtkNeurocnlTokens,
+        NmtkDesktopScaffold,
+        NmtkSidebarItem,
+        ZetaIconButton;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
 
@@ -595,10 +599,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // Toolbar action buttons (undo/redo, templates, add sentence) are
-        // IconButton — ZetaButton is only used conditionally for the
+        // ZetaIconButton — ZetaButton is only used conditionally for the
         // "Edit selected number" action when a numeric literal is selected.
         expect(
-          find.byType(IconButton),
+          find.byType(ZetaIconButton),
           findsWidgets,
           reason:
               'P15 preservation: CnlEditor toolbar must always render with '

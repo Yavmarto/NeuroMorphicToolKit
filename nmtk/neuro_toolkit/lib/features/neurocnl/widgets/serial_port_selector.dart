@@ -51,17 +51,20 @@ class SerialPortSelector extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        IconButton(
-          icon: isRefreshing
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(ZetaIcons.refresh),
-          tooltip: 'Refresh ports',
-          onPressed: isRefreshing ? null : onRefresh,
-        ),
+        isRefreshing
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Tooltip(
+                message: 'Refresh ports',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.refresh,
+                  semanticLabel: 'Refresh ports',
+                  onPressed: onRefresh,
+                ),
+              ),
       ],
     );
   }

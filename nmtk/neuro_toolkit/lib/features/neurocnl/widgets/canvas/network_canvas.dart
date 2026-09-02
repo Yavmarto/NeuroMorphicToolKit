@@ -2055,13 +2055,9 @@ class _HandwritingOverlayState extends ConsumerState<_HandwritingOverlay> {
                       border: InputBorder.none,
                       hintText: 'Node type…',
                       suffixIcon: widget.controller.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 16),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                minWidth: 24,
-                                minHeight: 24,
-                              ),
+                          ? ZetaIconButton.text(
+                              icon: Icons.clear,
+                              size: ZetaWidgetSize.small,
                               onPressed: () {
                                 widget.controller.clear();
                               },

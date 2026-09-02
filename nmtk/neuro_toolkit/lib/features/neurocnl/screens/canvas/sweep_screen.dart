@@ -46,17 +46,21 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
                           Expanded(
                             child: Text(
                               'Sweep Configuration',
-                              style: Zeta.of(context).textStyles.titleMedium.copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
+                              style: Zeta.of(context).textStyles.titleMedium
+                                  .copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
                             ),
                           ),
-                          IconButton(
-                            tooltip: 'Reset configuration',
-                            icon: const Icon(ZetaIcons.refresh),
-                            onPressed: () =>
-                                ref.read(sweepProvider.notifier).reset(),
+                          Tooltip(
+                            message: 'Reset configuration',
+                            child: ZetaIconButton.text(
+                              icon: ZetaIcons.refresh,
+                              semanticLabel: 'Reset configuration',
+                              onPressed: () =>
+                                  ref.read(sweepProvider.notifier).reset(),
+                            ),
                           ),
                         ],
                       ),
@@ -179,7 +183,9 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
           child: Text(
             'Sweep Results for: ${results.parameterPath}',
             key: const Key('sweep-results-title'),
-            style: Zeta.of(context).textStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
+            style: Zeta.of(
+              context,
+            ).textStyles.titleMedium.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
         Expanded(
@@ -209,7 +215,9 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
                   children: [
                     Text(
                       'Value: ${step.parameterValue}',
-                      style: Zeta.of(context).textStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
+                      style: Zeta.of(context).textStyles.labelMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const Divider(),
                     Expanded(

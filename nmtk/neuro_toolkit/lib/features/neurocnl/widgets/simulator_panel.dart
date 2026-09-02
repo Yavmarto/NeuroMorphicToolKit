@@ -379,12 +379,14 @@ class _PanelHeader extends StatelessWidget {
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(ZetaIcons.refresh, size: 14),
-                  onPressed: onRefreshCapabilities,
-                  tooltip: 'Retry',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                Tooltip(
+                  message: 'Retry',
+                  child: ZetaIconButton.text(
+                    icon: ZetaIcons.refresh,
+                    size: ZetaWidgetSize.small,
+                    semanticLabel: 'Retry',
+                    onPressed: onRefreshCapabilities,
+                  ),
                 ),
               ],
             ),
@@ -579,17 +581,15 @@ class SimulatorParametersSection extends ConsumerWidget {
         height: 14,
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
-      error: (_, _) => IconButton(
-        icon: Icon(
-          ZetaIcons.warning_outline,
-          size: 14,
-          color: NmtkShellTokens.of(context).warningColor,
+      error: (_, _) => Tooltip(
+        message: 'Could not load capabilities — tap to retry',
+        child: ZetaIconButton.text(
+          icon: ZetaIcons.warning_outline,
+          size: ZetaWidgetSize.small,
+          semanticLabel: 'Could not load capabilities — tap to retry',
+          onPressed: () =>
+              ref.read(simulatorCapabilitiesProvider.notifier).refresh(),
         ),
-        onPressed: () =>
-            ref.read(simulatorCapabilitiesProvider.notifier).refresh(),
-        tooltip: 'Could not load capabilities — tap to retry',
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
       ),
       data: (caps) {
         final cap = caps.where((c) => c.backendName == backend).firstOrNull;
@@ -1913,16 +1913,14 @@ class _CompactToolbar extends ConsumerWidget {
         height: 14,
         child: CircularProgressIndicator(strokeWidth: 2),
       ),
-      error: (_, _) => IconButton(
-        icon: Icon(
-          ZetaIcons.warning_outline,
-          size: 14,
-          color: NmtkShellTokens.of(context).warningColor,
+      error: (_, _) => Tooltip(
+        message: 'Could not load capabilities — tap to retry',
+        child: ZetaIconButton.text(
+          icon: ZetaIcons.warning_outline,
+          size: ZetaWidgetSize.small,
+          semanticLabel: 'Could not load capabilities — tap to retry',
+          onPressed: onRefreshCapabilities,
         ),
-        onPressed: onRefreshCapabilities,
-        tooltip: 'Could not load capabilities — tap to retry',
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
       ),
       data: (caps) {
         final cap = caps
@@ -2450,7 +2448,9 @@ class _OverrideToggle extends StatelessWidget {
         border: Border.all(color: tokens.warningColor.withValues(alpha: 0.30)),
         // radiusSm (12) is the sanctioned value for inline/compact containers
         // per CODING_STYLE_GUIDE.md § Border radius.
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusSm,
+        ),
       ),
       child: Row(
         children: [

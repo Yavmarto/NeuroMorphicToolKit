@@ -390,13 +390,17 @@ class _ValidationBadge extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusLg,
+        ),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
             color: bgColor,
-            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
+            borderRadius: BorderRadius.circular(
+              NmtkShellTokens.of(context).radiusLg,
+            ),
             border: Border.all(color: AppTheme.border),
             boxShadow: [
               BoxShadow(
@@ -460,7 +464,9 @@ class ValidationPopup extends StatelessWidget {
         constraints: const BoxConstraints(maxHeight: 400),
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
           border: Border.all(color: AppTheme.border),
           boxShadow: [
             BoxShadow(
@@ -549,12 +555,14 @@ class _PopupHeader extends StatelessWidget {
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
           ),
           const Spacer(),
-          IconButton(
-            onPressed: onClose,
-            icon: const Icon(ZetaIcons.close, size: 16),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-            tooltip: 'Dismiss',
+          Tooltip(
+            message: 'Dismiss',
+            child: ZetaIconButton.text(
+              onPressed: onClose,
+              icon: ZetaIcons.close,
+              size: ZetaWidgetSize.small,
+              semanticLabel: 'Dismiss',
+            ),
           ),
         ],
       ),

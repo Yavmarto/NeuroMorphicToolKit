@@ -520,10 +520,13 @@ class _CustomNodeSourceEditorState
             ],
           ),
           actions: [
-            IconButton(
-              tooltip: 'Close editor',
-              onPressed: _requestClose,
-              icon: const Icon(Icons.close),
+            Tooltip(
+              message: 'Close editor',
+              child: ZetaIconButton.text(
+                icon: Icons.close,
+                semanticLabel: 'Close editor',
+                onPressed: _requestClose,
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -873,20 +876,29 @@ class _FindPanel extends StatelessWidget implements PreferredSizeWidget {
                       ),
                     ),
                   ),
-                  IconButton(
-                    tooltip: 'Previous match',
-                    onPressed: controller.previousMatch,
-                    icon: const Icon(Icons.keyboard_arrow_up),
+                  Tooltip(
+                    message: 'Previous match',
+                    child: ZetaIconButton.text(
+                      icon: Icons.keyboard_arrow_up,
+                      semanticLabel: 'Previous match',
+                      onPressed: controller.previousMatch,
+                    ),
                   ),
-                  IconButton(
-                    tooltip: 'Next match',
-                    onPressed: controller.nextMatch,
-                    icon: const Icon(Icons.keyboard_arrow_down),
+                  Tooltip(
+                    message: 'Next match',
+                    child: ZetaIconButton.text(
+                      icon: Icons.keyboard_arrow_down,
+                      semanticLabel: 'Next match',
+                      onPressed: controller.nextMatch,
+                    ),
                   ),
-                  IconButton(
-                    tooltip: 'Close search',
-                    onPressed: controller.close,
-                    icon: const Icon(Icons.close),
+                  Tooltip(
+                    message: 'Close search',
+                    child: ZetaIconButton.text(
+                      icon: Icons.close,
+                      semanticLabel: 'Close search',
+                      onPressed: controller.close,
+                    ),
                   ),
                 ],
               ),

@@ -783,11 +783,6 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
 
   Widget _buildToolbar(BuildContext context) {
     final selectedNumeric = _selectedNumericLiteral();
-    // Unify all editor-toolbar icon colors with the surrounding workspace
-    // strip (file_tab_strip.dart) so the entire CNL editor pane uses one
-    // accent — Zeta's mainPrimary — instead of mixing Sky-400 (legacy
-    // AppTheme.primary) with Zeta tokens.
-    final iconColor = Zeta.of(context).colors.mainPrimary;
     final undoButtons = ValueListenableBuilder<UndoHistoryValue>(
       valueListenable: _undoHistoryController,
       builder: (context, historyValue, _) {
@@ -796,11 +791,10 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
           children: [
             Tooltip(
               message: 'Undo (Ctrl/Cmd+Z)',
-              child: IconButton(
-                icon: const Icon(ZetaIcons.undo, size: 18),
-                color: iconColor,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              child: ZetaIconButton.text(
+                icon: ZetaIcons.undo,
+                size: ZetaWidgetSize.small,
+                semanticLabel: 'Undo (Ctrl/Cmd+Z)',
                 onPressed: historyValue.canUndo
                     ? _undoHistoryController.undo
                     : null,
@@ -809,11 +803,10 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
             const SizedBox(width: 8),
             Tooltip(
               message: 'Redo (Ctrl/Cmd+Shift+Z)',
-              child: IconButton(
-                icon: const Icon(ZetaIcons.redo, size: 18),
-                color: iconColor,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+              child: ZetaIconButton.text(
+                icon: ZetaIcons.redo,
+                size: ZetaWidgetSize.small,
+                semanticLabel: 'Redo (Ctrl/Cmd+Shift+Z)',
                 onPressed: historyValue.canRedo
                     ? _undoHistoryController.redo
                     : null,
@@ -841,36 +834,37 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
           ],
           undoButtons,
           const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(
-              Icons.auto_awesome,
-              size: 18,
-            ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-            color: iconColor,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            onPressed: () => TemplateGallery.show(context),
-            tooltip: 'Show templates',
+          Tooltip(
+            message: 'Show templates',
+            child: ZetaIconButton.text(
+              icon: Icons
+                  .auto_awesome, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+              size: ZetaWidgetSize.small,
+              semanticLabel: 'Show templates',
+              onPressed: () => TemplateGallery.show(context),
+            ),
           ),
           const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(ZetaIcons.upload_file, size: 18),
-            color: iconColor,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            onPressed: _isImporting ? null : _importFile,
-            tooltip: 'Load CNL file',
+          Tooltip(
+            message: 'Load CNL file',
+            child: ZetaIconButton.text(
+              icon: ZetaIcons.upload_file,
+              size: ZetaWidgetSize.small,
+              semanticLabel: 'Load CNL file',
+              onPressed: _isImporting ? null : _importFile,
+            ),
           ),
           const SizedBox(width: 8),
           _LineCountBadge(controller: _controller),
           const SizedBox(width: 8),
-          IconButton(
-            tooltip: 'Add CNL sentence',
-            icon: const Icon(ZetaIcons.add_circle_outline, size: 18),
-            color: iconColor,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-            onPressed: _openSentenceBuilder,
+          Tooltip(
+            message: 'Add CNL sentence',
+            child: ZetaIconButton.text(
+              icon: ZetaIcons.add_circle_outline,
+              size: ZetaWidgetSize.small,
+              semanticLabel: 'Add CNL sentence',
+              onPressed: _openSentenceBuilder,
+            ),
           ),
         ],
       ),

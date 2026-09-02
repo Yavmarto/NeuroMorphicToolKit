@@ -97,7 +97,9 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
             Text(
               'Could not load templates.\nIs the backend running?',
               textAlign: TextAlign.center,
-              style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textSecondary),
+              style: Zeta.of(
+                context,
+              ).textStyles.bodyMedium.copyWith(color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 12),
             ZetaButton.outline(
@@ -125,11 +127,17 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(ZetaIcons.search, size: 48, color: AppTheme.textSecondary),
+                const Icon(
+                  ZetaIcons.search,
+                  size: 48,
+                  color: AppTheme.textSecondary,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   'No templates match your filters.',
-                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textSecondary),
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -170,13 +178,13 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
                 l10n?.chooseTemplate ?? 'Choose a template to get started.',
             trailing: widget.onClose == null
                 ? null
-                : IconButton(
-                    icon: const Icon(
-                      ZetaIcons.close,
-                      color: AppTheme.textSecondary,
+                : Tooltip(
+                    message: l10n?.close ?? 'Close',
+                    child: ZetaIconButton.text(
+                      icon: ZetaIcons.close,
+                      semanticLabel: l10n?.close ?? 'Close',
+                      onPressed: widget.onClose,
                     ),
-                    tooltip: l10n?.close ?? 'Close',
-                    onPressed: widget.onClose,
                   ),
           ),
           const SizedBox(height: 12),
@@ -208,13 +216,13 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
                 ),
               ),
               const Spacer(),
-              IconButton(
-                icon: const Icon(
-                  ZetaIcons.close,
-                  color: AppTheme.textSecondary,
+              Tooltip(
+                message: l10n?.close ?? 'Close',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.close,
+                  semanticLabel: l10n?.close ?? 'Close',
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-                tooltip: l10n?.close ?? 'Close',
-                onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
@@ -262,19 +270,22 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
                             setState(() => _selectedCategory = cat);
                           }
                         },
-                        labelStyle: Zeta.of(context).textStyles.labelSmall.copyWith(
-                          color: isSelected
-                              ? Zeta.of(context).colors.mainInverse
-                              : AppTheme.textSecondary,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
+                        labelStyle: Zeta.of(context).textStyles.labelSmall
+                            .copyWith(
+                              color: isSelected
+                                  ? Zeta.of(context).colors.mainInverse
+                                  : AppTheme.textSecondary,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
                         selectedColor: AppTheme.primary,
                         backgroundColor: AppTheme.surfaceVariant,
                         side: BorderSide.none,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg),
+                          borderRadius: BorderRadius.circular(
+                            NmtkShellTokens.of(context).radiusLg,
+                          ),
                         ),
                         showCheckmark: false,
                       ),
@@ -394,11 +405,15 @@ class _TemplateCard extends ConsumerWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
           border: Border.all(color: AppTheme.border),
         ),
         child: InkWell(
-          borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusSm,
+          ),
           onTap: () => _loadTemplate(context, ref),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -447,14 +462,17 @@ class _TemplateCard extends ConsumerWidget {
                             ),
                             decoration: BoxDecoration(
                               color: AppTheme.surfaceVariant,
-                              borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                              borderRadius: BorderRadius.circular(
+                                NmtkShellTokens.of(context).radiusSm,
+                              ),
                             ),
                             child: Text(
                               tag,
-                              style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
-                                color: AppTheme.textSecondary,
-                                fontSize: 10,
-                              ),
+                              style: Zeta.of(context).textStyles.bodyXSmall
+                                  .copyWith(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 10,
+                                  ),
                             ),
                           );
                         }).toList(),
@@ -478,12 +496,13 @@ class _TemplateCard extends ConsumerWidget {
                               const SizedBox(width: 2),
                               Text(
                                 'SNNTorch only',
-                                style: Zeta.of(context).textStyles.labelSmall.copyWith(
-                                  color: NmtkShellTokens.of(
-                                    context,
-                                  ).warningColor,
-                                  fontSize: 10,
-                                ),
+                                style: Zeta.of(context).textStyles.labelSmall
+                                    .copyWith(
+                                      color: NmtkShellTokens.of(
+                                        context,
+                                      ).warningColor,
+                                      fontSize: 10,
+                                    ),
                               ),
                             ],
                           ),
@@ -553,7 +572,9 @@ class _DifficultyBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusSm,
+        ),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(

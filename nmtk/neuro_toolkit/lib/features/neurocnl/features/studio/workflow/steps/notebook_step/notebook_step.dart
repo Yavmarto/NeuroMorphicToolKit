@@ -19,7 +19,6 @@ import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/dataset_generation_preparer.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/notebook_generate_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/open_external_url.dart';
-import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/workspace_feature.dart';
 
 class NotebookStep extends ConsumerStatefulWidget {
@@ -422,14 +421,14 @@ class _NotebookStepState extends ConsumerState<NotebookStep> {
                 ),
                 if (_rawError != null) ...[
                   const SizedBox(width: 4),
-                  IconButton(
-                    tooltip: 'Show error details',
-                    icon: Icon(
-                      ZetaIcons.info,
-                      size: 16,
-                      color: Zeta.of(context).colors.mainNegative,
+                  Tooltip(
+                    message: 'Show error details',
+                    child: ZetaIconButton.negative(
+                      icon: ZetaIcons.info,
+                      size: ZetaWidgetSize.small,
+                      semanticLabel: 'Show error details',
+                      onPressed: () => _showErrorDetails(context),
                     ),
-                    onPressed: () => _showErrorDetails(context),
                   ),
                 ],
               ],
@@ -454,18 +453,14 @@ class _NotebookStepState extends ConsumerState<NotebookStep> {
             right: 8,
             child: Material(
               color: Colors.transparent,
-              child: IconButton(
-                tooltip: 'Reload notebook',
-                icon: Icon(
-                  ZetaIcons.refresh,
-                  size: 18,
-                  color: Zeta.of(context).colors.mainDefault,
+              child: Tooltip(
+                message: 'Reload notebook',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.refresh,
+                  size: ZetaWidgetSize.small,
+                  semanticLabel: 'Reload notebook',
+                  onPressed: _generateAndLoad,
                 ),
-                style: IconButton.styleFrom(
-                  backgroundColor: AppTheme.surface,
-                  shape: const CircleBorder(),
-                ),
-                onPressed: _generateAndLoad,
               ),
             ),
           ),

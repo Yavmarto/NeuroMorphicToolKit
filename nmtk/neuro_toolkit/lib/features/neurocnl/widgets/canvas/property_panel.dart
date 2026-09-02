@@ -85,25 +85,25 @@ class PropertyPanel extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              IconButton(
-                icon: Icon(
-                  ZetaIcons.delete_outline,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.onSurface,
+              Tooltip(
+                message: 'Delete node',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.delete_outline,
+                  size: ZetaWidgetSize.small,
+                  semanticLabel: 'Delete node',
+                  onPressed: () =>
+                      ref.read(canvasProvider.notifier).deleteSelection(),
                 ),
-                tooltip: 'Delete node',
-                onPressed: () =>
-                    ref.read(canvasProvider.notifier).deleteSelection(),
               ),
-              IconButton(
-                icon: Icon(
-                  ZetaIcons.close,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.onSurface,
+              Tooltip(
+                message: 'Close inspector',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.close,
+                  size: ZetaWidgetSize.small,
+                  semanticLabel: 'Close inspector',
+                  onPressed: () =>
+                      ref.read(canvasProvider.notifier).selectNode(null),
                 ),
-                tooltip: 'Close inspector',
-                onPressed: () =>
-                    ref.read(canvasProvider.notifier).selectNode(null),
               ),
             ],
           ),
@@ -472,15 +472,15 @@ class _EdgePropertyPanel extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              IconButton(
-                icon: Icon(
-                  ZetaIcons.delete_outline,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.onSurface,
+              Tooltip(
+                message: 'Delete connection',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.delete_outline,
+                  size: ZetaWidgetSize.small,
+                  semanticLabel: 'Delete connection',
+                  onPressed: () =>
+                      ref.read(canvasProvider.notifier).removeEdge(edgeId),
                 ),
-                tooltip: 'Delete connection',
-                onPressed: () =>
-                    ref.read(canvasProvider.notifier).removeEdge(edgeId),
               ),
             ],
           ),

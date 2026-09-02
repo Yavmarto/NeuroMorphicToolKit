@@ -83,26 +83,26 @@ class PipelineNodePropertyPanel extends ConsumerWidget {
               Expanded(
                 child: Text(node.type.label, style: textStyles.labelLarge),
               ),
-              IconButton(
-                icon: Icon(
-                  ZetaIcons.delete_outline,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.onSurface,
+              Tooltip(
+                message: 'Delete node',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.delete_outline,
+                  size: ZetaWidgetSize.small,
+                  semanticLabel: 'Delete node',
+                  onPressed: () => ref
+                      .read(canvasProvider.notifier)
+                      .removePipelineDagNode(phase, node.id),
                 ),
-                tooltip: 'Delete node',
-                onPressed: () => ref
-                    .read(canvasProvider.notifier)
-                    .removePipelineDagNode(phase, node.id),
               ),
-              IconButton(
-                icon: Icon(
-                  ZetaIcons.close,
-                  size: 20,
-                  color: Theme.of(context).colorScheme.onSurface,
+              Tooltip(
+                message: 'Close inspector',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.close,
+                  size: ZetaWidgetSize.small,
+                  semanticLabel: 'Close inspector',
+                  onPressed: () =>
+                      ref.read(canvasProvider.notifier).selectNode(null),
                 ),
-                onPressed: () =>
-                    ref.read(canvasProvider.notifier).selectNode(null),
-                tooltip: 'Close inspector',
               ),
             ],
           ),
@@ -1234,14 +1234,14 @@ class _DatasetPathFieldState extends ConsumerState<DatasetPathField> {
                 hintText: 'e.g. data/ds_train.pt',
                 suffix: kIsWeb
                     ? null
-                    : IconButton(
-                        icon: Icon(
-                          ZetaIcons.folder_outline,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    : Tooltip(
+                        message: 'Browse for dataset file',
+                        child: ZetaIconButton.text(
+                          icon: ZetaIcons.folder_outline,
+                          size: ZetaWidgetSize.small,
+                          semanticLabel: 'Browse for dataset file',
+                          onPressed: () => _browse(context, ref),
                         ),
-                        tooltip: 'Browse for dataset file',
-                        onPressed: () => _browse(context, ref),
                       ),
               ),
             ),

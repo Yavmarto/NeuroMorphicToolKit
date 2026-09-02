@@ -56,11 +56,10 @@ class CanvasPaletteSearchField extends StatelessWidget {
         ),
         suffixIcon: controller.text.isEmpty
             ? null
-            : IconButton(
-                icon: const Icon(ZetaIcons.close, size: 16),
-                tooltip: 'Clear search',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            : ZetaIconButton.text(
+                icon: ZetaIcons.close,
+                size: ZetaWidgetSize.small,
+                semanticLabel: 'Clear search',
                 onPressed: () {
                   controller.clear();
                   onChanged('');

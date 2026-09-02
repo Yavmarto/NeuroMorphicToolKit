@@ -83,32 +83,36 @@ class ResultsSummaryCard extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const SizedBox.shrink(),
-                  IconButton(
-                    tooltip: 'How to read these metrics',
-                    icon: const Icon(ZetaIcons.help_outline, size: 20),
-                    onPressed: () {
-                      showDialog<void>(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Result Interpretation Guide'),
-                          content: const SingleChildScrollView(
-                            child: Text(
-                              'NeuroBench metrics provide insights into the efficiency and accuracy of your SNN.\n\n'
-                              '• Primary Metrics: The main focus of the benchmark (e.g., accuracy for classification).\n'
-                              '• Latency: Lower is better for real-time applications.\n'
-                              '• Power/Memory: Crucial for edge deployment.\n'
-                              '• Assertions: Validate functional correctness of the neural dynamics.',
+                  Tooltip(
+                    message: 'How to read these metrics',
+                    child: ZetaIconButton(
+                      icon: ZetaIcons.help_outline,
+                      size: ZetaWidgetSize.small,
+                      semanticLabel: 'How to read these metrics',
+                      onPressed: () {
+                        showDialog<void>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Result Interpretation Guide'),
+                            content: const SingleChildScrollView(
+                              child: Text(
+                                'NeuroBench metrics provide insights into the efficiency and accuracy of your SNN.\n\n'
+                                '• Primary Metrics: The main focus of the benchmark (e.g., accuracy for classification).\n'
+                                '• Latency: Lower is better for real-time applications.\n'
+                                '• Power/Memory: Crucial for edge deployment.\n'
+                                '• Assertions: Validate functional correctness of the neural dynamics.',
+                              ),
                             ),
+                            actions: [
+                              ZetaButton.text(
+                                onPressed: () => Navigator.pop(context),
+                                label: 'Close',
+                              ),
+                            ],
                           ),
-                          actions: [
-                            ZetaButton.text(
-                              onPressed: () => Navigator.pop(context),
-                              label: 'Close',
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -123,17 +127,17 @@ class ResultsSummaryCard extends ConsumerWidget {
                     Text(
                       '$primaryMetric: ',
                       style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       primaryValue?.toStringAsFixed(2) ?? 'N/A',
                       style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(width: 4),
                     Icon(
@@ -150,31 +154,29 @@ class ResultsSummaryCard extends ConsumerWidget {
               ...latestResult.metrics.entries
                   .where((e) => e.key != primaryMetric)
                   .map((entry) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2.0),
-                  child: Tooltip(
-                    message: _getMetricTooltip(entry.key),
-                    child: Row(
-                      children: [
-                        Text(
-                          '${entry.key}: ',
-                          style: Zeta.of(context)
-                              .textStyles
-                              .bodyMedium
-                              .copyWith(fontWeight: FontWeight.w500),
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Tooltip(
+                        message: _getMetricTooltip(entry.key),
+                        child: Row(
+                          children: [
+                            Text(
+                              '${entry.key}: ',
+                              style: Zeta.of(context).textStyles.bodyMedium
+                                  .copyWith(fontWeight: FontWeight.w500),
+                            ),
+                            Text(entry.value.toStringAsFixed(2)),
+                            const SizedBox(width: 4),
+                            Icon(
+                              ZetaIcons.info,
+                              size: 14,
+                              color: tokens.metadataForeground,
+                            ),
+                          ],
                         ),
-                        Text(entry.value.toStringAsFixed(2)),
-                        const SizedBox(width: 4),
-                        Icon(
-                          ZetaIcons.info,
-                          size: 14,
-                          color: tokens.metadataForeground,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
+                      ),
+                    );
+                  }),
             ],
           ),
         );

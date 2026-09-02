@@ -47,11 +47,13 @@ class StudioUtilityPill extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                tooltip: 'Save workspace',
-                icon: const Icon(ZetaIcons.save),
-                color: Zeta.of(context).colors.mainSubtle,
-                onPressed: onSaveActiveFile,
+              Tooltip(
+                message: 'Save workspace',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.save,
+                  semanticLabel: 'Save workspace',
+                  onPressed: onSaveActiveFile,
+                ),
               ),
               const SizedBox(width: 8),
               const AutosaveStatusIndicator(),
@@ -122,19 +124,14 @@ class StudioUtilityPill extends StatelessWidget {
                   label: label,
                   isActive: isActive,
                   onTap: () => onSelected(file.id),
-                  trailing: IconButton(
-                    tooltip: 'Close',
-                    onPressed: () => onClosed(file.id),
-                    icon: const Icon(ZetaIcons.close, size: 14),
-                    iconSize: 14,
-                    color: Zeta.of(context).colors.mainSubtle,
-                    splashRadius: 16,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints.tightFor(
-                      width: 24,
-                      height: 24,
+                  trailing: Tooltip(
+                    message: 'Close',
+                    child: ZetaIconButton.text(
+                      icon: ZetaIcons.close,
+                      size: ZetaWidgetSize.small,
+                      semanticLabel: 'Close',
+                      onPressed: () => onClosed(file.id),
                     ),
-                    visualDensity: VisualDensity.compact,
                   ),
                 );
               },

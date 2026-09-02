@@ -11,7 +11,9 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart'
         NmtkStatusBanner,
         NmtkTone,
         ZetaAssistChip,
-        ZetaButton;
+        ZetaButton,
+        ZetaIconButton,
+        ZetaWidgetSize;
 
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/nir_hdf5_tree.dart';
@@ -130,9 +132,9 @@ class _NirHeader extends StatelessWidget {
           Flexible(
             child: Text(
               'NIR Inspector',
-              style: Zeta.of(context).textStyles.labelSmall.copyWith(
-                color: AppTheme.textPrimary,
-              ),
+              style: Zeta.of(
+                context,
+              ).textStyles.labelSmall.copyWith(color: AppTheme.textPrimary),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -385,7 +387,9 @@ class _EmptyGraphEditor extends StatelessWidget {
     return Center(
       child: Text(
         'No editable NIR graph nodes.',
-        style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
+        style: Zeta.of(
+          context,
+        ).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
       ),
     );
   }
@@ -490,12 +494,16 @@ class _NirNodeCardState extends ConsumerState<_NirNodeCard> {
             fontSize: 11,
           ),
         ),
-        trailing: IconButton(
-          tooltip: 'Delete node',
-          icon: const Icon(ZetaIcons.delete_outline, size: 18),
-          onPressed: () {
-            ref.read(canvasProvider.notifier).removeNode(node.id);
-          },
+        trailing: Tooltip(
+          message: 'Delete node',
+          child: ZetaIconButton.text(
+            icon: ZetaIcons.delete_outline,
+            size: ZetaWidgetSize.small,
+            semanticLabel: 'Delete node',
+            onPressed: () {
+              ref.read(canvasProvider.notifier).removeNode(node.id);
+            },
+          ),
         ),
         children: [
           Padding(
@@ -586,22 +594,27 @@ class _NirEdgeList extends ConsumerWidget {
         borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Connections',
-                    style: Zeta.of(context).textStyles.labelMedium.copyWith(
-                      color: AppTheme.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Connections',
+                  style: Zeta.of(context).textStyles.labelMedium.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Add connection',
+              ),
+              Tooltip(
+                message: 'Add connection',
+                child: ZetaIconButton.text(
+                  semanticLabel: 'Add connection',
+                  icon: Icons
+                      .add_link, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                  size: ZetaWidgetSize.small,
                   onPressed: canConnect
                       ? () {
                           final source = graph.nodes.first;
@@ -625,16 +638,13 @@ class _NirEdgeList extends ConsumerWidget {
                           ref.read(canvasProvider.notifier).addEdge(edge);
                         }
                       : null,
-                  icon: const Icon(
-                    Icons.add_link,
-                    size: 18,
-                  ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 ),
-              ],
-            ),
-            for (final edge in graph.edges) _NirEdgeRow(edge: edge),
-          ],
-        ),
+              ),
+            ],
+          ),
+          for (final edge in graph.edges) _NirEdgeRow(edge: edge),
+        ],
+      ),
     );
   }
 }
@@ -653,18 +663,22 @@ class _NirEdgeRow extends ConsumerWidget {
           Expanded(
             child: Text(
               '${edge.sourceNodeId} -> ${edge.targetNodeId}',
-              style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
-                color: AppTheme.textSecondary,
-              ),
+              style: Zeta.of(
+                context,
+              ).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          IconButton(
-            tooltip: 'Delete connection',
-            icon: const Icon(ZetaIcons.delete_outline, size: 18),
-            onPressed: () {
-              ref.read(canvasProvider.notifier).removeEdge(edge.id);
-            },
+          Tooltip(
+            message: 'Delete connection',
+            child: ZetaIconButton.text(
+              icon: ZetaIcons.delete_outline,
+              size: ZetaWidgetSize.small,
+              semanticLabel: 'Delete connection',
+              onPressed: () {
+                ref.read(canvasProvider.notifier).removeEdge(edge.id);
+              },
+            ),
           ),
         ],
       ),

@@ -390,7 +390,11 @@ class _CnlSentenceBuilderDialogState extends State<CnlSentenceBuilderDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Zeta.of(context).colors.surfaceDefault,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusSm,
+        ),
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 700, maxHeight: 540),
         child: Column(
@@ -437,16 +441,14 @@ class _CnlSentenceBuilderDialogState extends State<CnlSentenceBuilderDialog> {
             ),
           ),
           const Spacer(),
-          IconButton(
-            icon: Icon(
-              ZetaIcons.close,
-              size: 18,
-              color: Zeta.of(context).colors.mainSubtle,
+          Tooltip(
+            message: 'Close sentence builder',
+            child: ZetaIconButton.text(
+              icon: ZetaIcons.close,
+              size: ZetaWidgetSize.small,
+              semanticLabel: 'Close sentence builder',
+              onPressed: () => Navigator.pop(context),
             ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            tooltip: 'Close sentence builder',
-            onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
@@ -620,7 +622,9 @@ class _CnlSentenceBuilderDialogState extends State<CnlSentenceBuilderDialog> {
           decoration: BoxDecoration(
             color: Zeta.of(context).colors.surfaceDefault,
             border: Border.all(color: Zeta.of(context).colors.borderDefault),
-            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+            borderRadius: BorderRadius.circular(
+              NmtkShellTokens.of(context).radiusSm,
+            ),
           ),
           child: Text(
             sentence.isEmpty ? '-' : sentence,

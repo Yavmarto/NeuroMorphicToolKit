@@ -49,14 +49,14 @@ class RunningTasksDialog extends ConsumerWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          IconButton(
-                            tooltip: 'Stop',
-                            icon: Icon(
-                              ZetaIcons.stop,
-                              size: 18,
-                              color: colors.mainNegative,
+                          Tooltip(
+                            message: 'Stop',
+                            child: ZetaIconButton.negative(
+                              icon: ZetaIcons.stop,
+                              size: ZetaWidgetSize.small,
+                              semanticLabel: 'Stop',
+                              onPressed: () => onCancel(task),
                             ),
-                            onPressed: () => onCancel(task),
                           ),
                         ],
                       ),

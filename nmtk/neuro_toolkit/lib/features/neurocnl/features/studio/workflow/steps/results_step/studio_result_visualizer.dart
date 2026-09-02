@@ -7,19 +7,23 @@ import 'package:neuro_toolkit/features/neurocnl/models/studio_result_visualizati
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider.dart'
     show CanvasTab, canvasProvider;
-import 'package:neuro_toolkit/features/neurocnl/providers/canvas/simulation_provider.dart' as canvas_sim;
+import 'package:neuro_toolkit/features/neurocnl/providers/canvas/simulation_provider.dart'
+    as canvas_sim;
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_result_session_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/training_mode_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/canvas/canvas_screen.dart';
-import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart' show ActivityFetchException;
+import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart'
+    show ActivityFetchException;
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/canvas_projection_utils.dart'
     show matchSpikeRatesToNodeIds, resolveActivityLayerLabels;
 import 'package:neuro_toolkit/features/neurocnl/utils/npy_parser.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/spike_playback_transport.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/studio_overlay_metrics.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deployment_feature.dart' show targetLabel;
-import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/studio_shared.dart' show KeepAliveWrapper;
+import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deployment_feature.dart'
+    show targetLabel;
+import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/studio_shared.dart'
+    show KeepAliveWrapper;
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/workflow_feature.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/activity_comparison_data.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/platform_summary.dart';
@@ -356,15 +360,15 @@ class _StudioResultVisualizerState extends ConsumerState<StudioResultVisualizer>
           style: labelStyle,
         ),
         const SizedBox(width: 4),
-        IconButton(
-          tooltip: 'Loop',
-          icon: Icon(
-            ZetaIcons.repeat,
-            size: 18,
-            color: _loopEpochPlayback ? colors.mainPrimary : colors.mainSubtle,
+        Tooltip(
+          message: 'Loop',
+          child: ZetaIconButton.text(
+            icon: ZetaIcons.repeat,
+            size: ZetaWidgetSize.small,
+            semanticLabel: 'Loop',
+            onPressed: () =>
+                setState(() => _loopEpochPlayback = !_loopEpochPlayback),
           ),
-          onPressed: () =>
-              setState(() => _loopEpochPlayback = !_loopEpochPlayback),
         ),
       ],
     );

@@ -138,16 +138,14 @@ class SpikePlaybackTransport extends StatelessWidget {
       children: [
         Row(
           children: [
-            IconButton(
-              icon: Icon(
-                isPlaying ? ZetaIcons.pause : ZetaIcons.play,
-                size: 20,
-                color: AppTheme.textSecondaryOf(context),
+            Tooltip(
+              message: isPlaying ? 'Pause' : 'Play',
+              child: ZetaIconButton.text(
+                icon: isPlaying ? ZetaIcons.pause : ZetaIcons.play,
+                size: ZetaWidgetSize.small,
+                semanticLabel: isPlaying ? 'Pause' : 'Play',
+                onPressed: onTogglePlay,
               ),
-              onPressed: onTogglePlay,
-              tooltip: isPlaying ? 'Pause' : 'Play',
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              constraints: const BoxConstraints(),
             ),
             const SizedBox(width: 6),
             for (final s in kSpikePlaybackSpeeds)
@@ -157,7 +155,9 @@ class SpikePlaybackTransport extends StatelessWidget {
                   message: 'Play at ${_speedLabel(s)} speed',
                   child: InkWell(
                     onTap: () => onSpeedChanged(s),
-                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                    borderRadius: BorderRadius.circular(
+                      NmtkShellTokens.of(context).radiusSm,
+                    ),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 120),
                       padding: const EdgeInsets.symmetric(
@@ -170,7 +170,9 @@ class SpikePlaybackTransport extends StatelessWidget {
                                 context,
                               ).withValues(alpha: 0.15)
                             : Colors.transparent,
-                        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                        borderRadius: BorderRadius.circular(
+                          NmtkShellTokens.of(context).radiusSm,
+                        ),
                         border: Border.all(
                           color: speed == s
                               ? AppTheme.textSecondaryOf(context)

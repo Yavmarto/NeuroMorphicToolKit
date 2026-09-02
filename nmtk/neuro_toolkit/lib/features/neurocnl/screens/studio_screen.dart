@@ -20,7 +20,8 @@ import 'package:neuro_toolkit/features/neurocnl/widgets/workflow/snn_workflow_st
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canonical_doc_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider.dart';
-import 'package:neuro_toolkit/features/neurocnl/providers/canvas/simulation_provider.dart' as canvas_sim;
+import 'package:neuro_toolkit/features/neurocnl/providers/canvas/simulation_provider.dart'
+    as canvas_sim;
 import 'package:neuro_toolkit/features/neurocnl/providers/nir_import_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/pipeline_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/simulator_preflight_provider.dart';
@@ -35,7 +36,8 @@ import 'package:neuro_toolkit/features/neurocnl/services/deploy_error_formatter.
 import 'package:neuro_toolkit/features/neurocnl/services/host_module_navigation.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurosim_handoff.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurosim_handoff_coordinator.dart';
-import 'package:neuro_toolkit/features/neurocnl/services/platform_helper.dart' as platform;
+import 'package:neuro_toolkit/features/neurocnl/services/platform_helper.dart'
+    as platform;
 import 'package:neuro_toolkit/features/neurocnl/services/sc_neurocore_target_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/template_load_guard.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
@@ -961,28 +963,37 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
                       style: Zeta.of(context).textStyles.titleLarge,
                     ),
                     actions: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        tooltip: prevPhase != null
+                      Tooltip(
+                        message: prevPhase != null
                             ? 'Previous step'
                             : 'No previous step',
-                        onPressed: prevPhase != null
-                            ? () => handleStepSelected(prevPhase)
-                            : null,
+                        child: ZetaIconButton.text(
+                          icon: Icons.arrow_back,
+                          semanticLabel: 'Previous step',
+                          onPressed: prevPhase != null
+                              ? () => handleStepSelected(prevPhase)
+                              : null,
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward),
-                        tooltip: nextPhase != null
+                      Tooltip(
+                        message: nextPhase != null
                             ? 'Next step'
                             : 'No next step',
-                        onPressed: nextPhase != null
-                            ? () => handleStepSelected(nextPhase)
-                            : null,
+                        child: ZetaIconButton.text(
+                          icon: Icons.arrow_forward,
+                          semanticLabel: 'Next step',
+                          onPressed: nextPhase != null
+                              ? () => handleStepSelected(nextPhase)
+                              : null,
+                        ),
                       ),
-                      IconButton(
-                        icon: const Icon(ZetaIcons.save),
-                        tooltip: 'Save workspace',
-                        onPressed: () => unawaited(_fileIo.saveWorkspace()),
+                      Tooltip(
+                        message: 'Save workspace',
+                        child: ZetaIconButton.text(
+                          icon: ZetaIcons.save,
+                          semanticLabel: 'Save workspace',
+                          onPressed: () => unawaited(_fileIo.saveWorkspace()),
+                        ),
                       ),
                     ],
                   ),

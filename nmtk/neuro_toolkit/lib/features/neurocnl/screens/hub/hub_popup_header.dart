@@ -29,11 +29,13 @@ class HubPopupHeader extends StatelessWidget {
         else
           Expanded(child: navigation),
         const Spacer(),
-        IconButton(
-          tooltip: 'Close NeuroHub',
-          icon: const Icon(ZetaIcons.close),
-          color: Theme.of(context).colorScheme.onSurface,
-          onPressed: onClose,
+        Tooltip(
+          message: 'Close NeuroHub',
+          child: ZetaIconButton.text(
+            icon: ZetaIcons.close,
+            semanticLabel: 'Close NeuroHub',
+            onPressed: onClose,
+          ),
         ),
       ],
     ),

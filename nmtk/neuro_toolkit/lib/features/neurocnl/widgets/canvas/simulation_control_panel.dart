@@ -65,13 +65,13 @@ class SimulationControlPanel extends ConsumerWidget {
               ),
               const SizedBox(width: 4),
             ],
-            IconButton(
-              icon: Icon(
-                ZetaIcons.refresh,
-                color: Zeta.of(context).colors.mainSubtle,
+            Tooltip(
+              message: 'Reset Visual Simulation State',
+              child: ZetaIconButton.text(
+                icon: ZetaIcons.refresh,
+                semanticLabel: 'Reset Visual Simulation State',
+                onPressed: notifier.reset,
               ),
-              onPressed: notifier.reset,
-              tooltip: 'Reset Visual Simulation State',
             ),
           ];
 

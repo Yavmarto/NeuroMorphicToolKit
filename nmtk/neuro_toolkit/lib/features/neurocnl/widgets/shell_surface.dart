@@ -74,40 +74,37 @@ class NeurocnlInfoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      visualDensity: VisualDensity.compact,
-      constraints: const BoxConstraints.tightFor(width: 32, height: 32),
-      padding: EdgeInsets.zero,
-      icon: Icon(
-        ZetaIcons.info,
-        size: 18,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-      onPressed: () => showDialog<void>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: NmtkDesignTokens.dialogShape,
-          ),
-          title: Text(title),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: SingleChildScrollView(
-              child: Text(
-                message,
-                style: Theme.of(
-                  dialogContext,
-                ).textTheme.bodyMedium?.copyWith(height: 1.5),
+    return Tooltip(
+      message: tooltip,
+      child: ZetaIconButton.text(
+        icon: ZetaIcons.info,
+        size: ZetaWidgetSize.small,
+        semanticLabel: tooltip,
+        onPressed: () => showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: NmtkDesignTokens.dialogShape,
+            ),
+            title: Text(title),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: SingleChildScrollView(
+                child: Text(
+                  message,
+                  style: Theme.of(
+                    dialogContext,
+                  ).textTheme.bodyMedium?.copyWith(height: 1.5),
+                ),
               ),
             ),
+            actions: [
+              ZetaButton.text(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                label: 'Close',
+              ),
+            ],
           ),
-          actions: [
-            ZetaButton.text(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              label: 'Close',
-            ),
-          ],
         ),
       ),
     );

@@ -119,10 +119,14 @@ class _HubExploreViewState extends State<HubExploreView> {
                 prefix: const Icon(ZetaIcons.search),
                 suffix: widget.query.isEmpty
                     ? null
-                    : IconButton(
-                        tooltip: 'Clear search',
-                        icon: const Icon(ZetaIcons.close),
-                        onPressed: _clearSearch,
+                    : Tooltip(
+                        message: 'Clear search',
+                        child: ZetaIconButton.text(
+                          icon: ZetaIcons.close,
+                          size: ZetaWidgetSize.small,
+                          semanticLabel: 'Clear search',
+                          onPressed: _clearSearch,
+                        ),
                       ),
                 onChange: (value) => widget.onQueryChanged(value ?? ''),
               ),
