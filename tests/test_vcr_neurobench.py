@@ -101,11 +101,12 @@ def test_hardware_runner_timeout_raises(tmp_path: pathlib.Path) -> None:
 
     runner = BenchmarkRunner()
 
-    with patch("httpx.Client.post", side_effect=httpx.TimeoutException("timed out")):
-        with pytest.raises(BenchmarkTimeoutError, match="timed out"):
-            runner._run_hardware_target(
-                url="http://neurosim-backend:8001/execute",
-                target_name="neurosim",
-                spec_path=str(spec_file),
-                params={},
-            )
+    with patch("httpx.Client.post", side_effect=httpx.TimeoutException("timed out")), pytest.raises(
+        BenchmarkTimeoutError, match="timed out"
+    ):
+        runner._run_hardware_target(
+            url="http://neurosim-backend:8001/execute",
+            target_name="neurosim",
+            spec_path=str(spec_file),
+            params={},
+        )

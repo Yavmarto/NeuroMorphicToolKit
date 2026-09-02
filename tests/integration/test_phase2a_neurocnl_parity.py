@@ -33,7 +33,7 @@ def test_openapi_routes_present() -> None:
         if path in SKIP_PATHS:
             continue
         # Strip leading /api to get the bare path, then prepend /api/neurocnl
-        bare = path[len("/api"):] if path.startswith("/api") else path
+        bare = path.removeprefix("/api")
         expected = f"/api/neurocnl{bare}"
         assert expected in suite_paths, (
             f"Missing route {path} (expected as {expected} in suite_api)"

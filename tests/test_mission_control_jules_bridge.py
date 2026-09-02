@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 import requests
-
-import scripts.jules_api as jules_api
 import scripts.mission_control_create_task as mc_create
 import scripts.mission_control_jules_work as mc_jules
+
+from scripts import jules_api
 
 
 class FakeResponse:
@@ -126,8 +126,7 @@ class FakeMissionControlSession:
         update = dict(kwargs["json"])
         metadata = update.get("metadata")
         if isinstance(metadata, dict):
-            current_metadata = current.get("metadata")
-            current["metadata"] = metadata if not isinstance(current_metadata, dict) else metadata
+            current["metadata"] = metadata
         current.update({key: value for key, value in update.items() if key != "metadata"})
         self.tasks[task_id] = current
         return FakeResponse({"task": current})
@@ -225,23 +224,19 @@ class FakeJulesClient:
 def write_guide(tmp_path: Path) -> Path:
     guide_path = tmp_path / "JULES_WORKSPACE_GUIDE.md"
     guide_path.write_text(
-        "\n".join(
-            [
-                "### Single-repo task",
-                "```text",
-                "Work only in the <repo-name> repository.",
-                "Task: <task details>",
-                "Success criteria: <expected behavior>",
-                "```",
-                "",
-                "### Launcher / control-plane task",
-                "```text",
-                "Work only in the NeuroMorphicToolKit root repository.",
-                "Task: <task details>",
-                "Success criteria: <expected behavior>",
-                "```",
-            ]
-        ),
+        "### Single-repo task\n"
+        "```text\n"
+        "Work only in the <repo-name> repository.\n"
+        "Task: <task details>\n"
+        "Success criteria: <expected behavior>\n"
+        "```\n"
+        "\n"
+        "### Launcher / control-plane task\n"
+        "```text\n"
+        "Work only in the NeuroMorphicToolKit root repository.\n"
+        "Task: <task details>\n"
+        "Success criteria: <expected behavior>\n"
+        "```",
         encoding="utf-8",
     )
     return guide_path

@@ -19,15 +19,14 @@ NEUROSIM_URL = os.getenv("NEUROSIM_URL", "http://neurocnl:8000")
 NEUROBENCH_URL = os.getenv("NEUROBENCH_URL", "http://neurobench:8000")
 
 # Minimal valid NIR-native spec: one sensory neuron → one motor neuron.
-_REFLEX_ARC_SPEC = "\n".join([
-    "Define an input port named sensory with shape (1,).",
-    "Define a leaky integrate-and-fire neuron named relay"
-    " with time constant 0.02, resistance 1.0, leak voltage 0.0,"
-    " and firing threshold 1.0.",
-    "Define an output port named motor with shape (1,).",
-    "sensory connects to relay.",
-    "relay connects to motor.",
-])
+_REFLEX_ARC_SPEC = (
+    "Define an input port named sensory with shape (1,).\n"
+    "Define a leaky integrate-and-fire neuron named relay with time constant 0.02, "
+    "resistance 1.0, leak voltage 0.0, and firing threshold 1.0.\n"
+    "Define an output port named motor with shape (1,).\n"
+    "sensory connects to relay.\n"
+    "relay connects to motor."
+)
 
 
 def _service_label(url: str) -> str:

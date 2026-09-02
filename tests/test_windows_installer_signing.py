@@ -22,7 +22,7 @@ class TestWindowsSigningScript:
     def test_sign_script_check_mode_fails_gracefully_without_cert(self):
         result = subprocess.run(
             ["powershell.exe", "-File", str(SIGN_SCRIPT), "-Check"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, check=False,
         )
         output = result.stdout + result.stderr
         assert (
@@ -35,7 +35,7 @@ class TestWindowsSigningScript:
         result = subprocess.run(
             ["powershell.exe", "-File", str(SIGN_SCRIPT),
              "-InstallerPath", "nonexistent.exe", "-Thumbprint", "AABBCC", "-DryRun"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, check=False,
         )
         assert result.returncode != 0
         assert "not found" in (result.stdout + result.stderr).lower()
@@ -47,7 +47,7 @@ class TestWindowsSigningScript:
         result = subprocess.run(
             ["powershell.exe", "-File", str(SIGN_SCRIPT),
              "-InstallerPath", str(SIGN_SCRIPT)],
-            capture_output=True, text=True, env=env,
+            capture_output=True, text=True, env=env, check=False,
         )
         assert result.returncode != 0
         output = result.stdout + result.stderr

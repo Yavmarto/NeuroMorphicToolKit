@@ -404,8 +404,8 @@ def test_pynq_sitl_verify_on_real_hardware() -> None:
         for step in verify_data.get("steps", []):
             print(
                 f"  {step['label']:<20} "
-                f"{str(step['input_spikes']):<12} "
-                f"{str(step['output_spikes']):<20} "
+                f"{step['input_spikes']!s:<12} "
+                f"{step['output_spikes']!s:<20} "
                 f"{step['execution_time_us']:.1f}"
             )
         print(f"{'═'*60}")

@@ -14,25 +14,25 @@ from __future__ import annotations
 # ---------------------------------------------------------------------------
 # Shared network fixture — small, well-under-capacity LIF network
 # ---------------------------------------------------------------------------
-_SMALL_NETWORK_KWARGS = dict(
-    num_neurons=128,
-    num_synapses=512,
-    neuron_model="LIF",
-    populations=[{"name": "sensory", "size": 64}, {"name": "motor", "size": 64}],
-    connections=[{"pre": "sensory", "post": "motor", "weight_count": 512}],
-    weight_bit_width=8,
-    network_depth=3,
-)
+_SMALL_NETWORK_KWARGS = {
+    "num_neurons": 128,
+    "num_synapses": 512,
+    "neuron_model": "LIF",
+    "populations": [{"name": "sensory", "size": 64}, {"name": "motor", "size": 64}],
+    "connections": [{"pre": "sensory", "post": "motor", "weight_count": 512}],
+    "weight_bit_width": 8,
+    "network_depth": 3,
+}
 
-_LARGE_NETWORK_KWARGS = dict(
-    num_neurons=3500,
-    num_synapses=8192,
-    neuron_model="LIF",
-    populations=[{"name": "enc", "size": 1750}, {"name": "dec", "size": 1750}],
-    connections=[{"pre": "enc", "post": "dec", "weight_count": 8192}],
-    weight_bit_width=32,
-    network_depth=5,
-)
+_LARGE_NETWORK_KWARGS = {
+    "num_neurons": 3500,
+    "num_synapses": 8192,
+    "neuron_model": "LIF",
+    "populations": [{"name": "enc", "size": 1750}, {"name": "dec", "size": 1750}],
+    "connections": [{"pre": "enc", "post": "dec", "weight_count": 8192}],
+    "weight_bit_width": 32,
+    "network_depth": 5,
+}
 
 _TARGET = "teensy41"
 

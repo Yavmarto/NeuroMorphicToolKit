@@ -2,7 +2,7 @@ from importlib.machinery import ModuleSpec
 
 import pytest
 
-import suite_api.bootstrap as bootstrap
+from suite_api import bootstrap
 
 
 def test_validate_runtime_dependencies_reports_full_missing_set() -> None:

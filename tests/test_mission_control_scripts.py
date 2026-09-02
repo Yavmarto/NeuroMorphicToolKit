@@ -8,7 +8,6 @@ from typing import Any
 
 import pytest
 import requests
-
 import scripts.mission_control_create_task as mc_create
 import scripts.mission_control_work as mc_work
 

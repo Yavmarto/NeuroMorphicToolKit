@@ -46,7 +46,6 @@ def test_akida_remote_server_dispatch_success() -> None:
 
 def test_akida_remote_server_dispatch_missing_url_raises_422() -> None:
     from fastapi import HTTPException
-
     from neurochip.app.routers.akida import _dispatch_package
 
     stub_backend = MagicMock()
@@ -65,7 +64,6 @@ def test_akida_remote_server_dispatch_missing_url_raises_422() -> None:
 
 def test_akida_remote_server_dispatch_invalid_scheme_raises_422() -> None:
     from fastapi import HTTPException
-
     from neurochip.app.routers.akida import _dispatch_package
 
     stub_backend = MagicMock()
