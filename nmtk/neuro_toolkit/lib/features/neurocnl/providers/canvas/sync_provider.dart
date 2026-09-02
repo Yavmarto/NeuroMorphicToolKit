@@ -1,11 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/canvas_api_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/admin_token_http_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/feature_launch_provider.dart';
-import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider.dart';
 
 part 'sync_provider.g.dart';
 
@@ -39,7 +37,3 @@ class CanvasSyncIssueController extends _$CanvasSyncIssueController {
 }
 
 final canvasSyncIssueProvider = canvasSyncIssueControllerProvider;
-
-final canvasGraphProvider = Provider<CanvasGraph>((ref) {
-  return ref.watch(canvasProvider).graph;
-});

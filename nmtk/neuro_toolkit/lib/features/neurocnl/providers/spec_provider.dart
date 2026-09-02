@@ -48,10 +48,3 @@ class SpecTextController extends _$SpecTextController {
 
 /// Backward-compat alias.
 final specTextProvider = specTextControllerProvider;
-
-/// Backward-compat alias — previously a narrow selector over the workspace
-/// file's raw `content` field; now just mirrors [specTextProvider] since
-/// content has one owner.
-final activeWorkspaceSpecProvider = Provider<String>(
-  (ref) => ref.watch(specTextProvider),
-);

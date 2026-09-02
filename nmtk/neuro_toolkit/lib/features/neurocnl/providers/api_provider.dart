@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/server_workspace_summary.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart';
@@ -91,16 +90,4 @@ final serverWorkspacesProvider = FutureProvider<List<ServerWorkspaceSummary>>((
   ref,
 ) async {
   return ref.read(apiClientProvider).listServerWorkspaces();
-});
-
-/// Whether MuJoCo is available on the backend (cached per session).
-final mujocoAvailableProvider = FutureProvider<bool>((ref) async {
-  final client = ref.read(apiClientProvider);
-  try {
-    final result = await client.health();
-    return result.mujocoAvailable;
-  } catch (e) {
-    debugPrint('MuJoCo health check failed: $e');
-    return false;
-  }
 });

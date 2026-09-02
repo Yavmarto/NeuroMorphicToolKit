@@ -15,7 +15,3 @@ class ImportedCnlSpecController extends _$ImportedCnlSpecController {
 }
 
 final importedCnlSpecProvider = importedCnlSpecControllerProvider;
-
-final hasImportedCnlSpecProvider = Provider<bool>((ref) {
-  return ref.watch(importedCnlSpecProvider) != null;
-});
