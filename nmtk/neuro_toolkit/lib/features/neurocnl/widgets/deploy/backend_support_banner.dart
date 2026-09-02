@@ -73,6 +73,9 @@ class NmtkBackendSupportBanner extends StatelessWidget {
         border: Border.all(color: palette.border),
       ),
       child: DefaultTextStyle(
+        // ZETA-MIGRATION-EXEMPT: DefaultTextStyle is a framework widget (not
+        // a TextStyle constructor) with no Zeta component; typography inherits
+        // the ambient Material theme.
         style: theme.textTheme.bodyMedium!.copyWith(color: fg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -175,11 +175,15 @@ class _JobDetailRow extends StatelessWidget {
         children: [
           TextSpan(
             text: '$label: ',
-            style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+            style: Zeta.of(context).textStyles.bodySmall.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
           TextSpan(
             text: value,
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            style: Zeta.of(context).textStyles.bodySmall.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

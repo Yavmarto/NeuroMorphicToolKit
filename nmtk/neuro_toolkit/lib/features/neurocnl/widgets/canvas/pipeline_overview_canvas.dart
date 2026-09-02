@@ -59,6 +59,10 @@ class PipelineOverviewCanvas extends ConsumerWidget {
                 title: 'Architecture',
                 subtitle:
                     '${graph.nodes.length} nodes · ${graph.edges.length} edges',
+                // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta
+                // equivalent for the 3-way distinct phase hues below (this
+                // pipeline-phase color code mirrors the node-category table
+                // in theme/nir_node_styles.dart).
                 color: const Color(0xFF5C6BC0),
                 emptyText: 'No architecture drawn yet',
                 isEmpty: graph.nodes.isEmpty,
@@ -75,6 +79,9 @@ class PipelineOverviewCanvas extends ConsumerWidget {
                     .model_training_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 title: 'Train',
                 subtitle: _phaseSummary(phases.train),
+                // ZETA-MIGRATION-EXEMPT: categorical data-viz color, part of
+                // the 3-way pipeline-phase color code (see Architecture card
+                // above).
                 color: const Color(0xFF43A047),
                 emptyText: 'Open Train canvas to build training pipeline',
                 isEmpty: phases.train.nodes.isEmpty,
@@ -88,6 +95,9 @@ class PipelineOverviewCanvas extends ConsumerWidget {
                 icon: ZetaIcons.chart_bar,
                 title: 'Evaluate',
                 subtitle: _phaseSummary(phases.eval),
+                // ZETA-MIGRATION-EXEMPT: categorical data-viz color, part of
+                // the 3-way pipeline-phase color code (see Architecture card
+                // above).
                 color: const Color(0xFF8E24AA),
                 emptyText: 'Open Eval canvas to build evaluation pipeline',
                 isEmpty: phases.eval.nodes.isEmpty,
@@ -166,7 +176,7 @@ class _PhaseCard extends StatelessWidget {
                       emptyText,
                       style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         fontSize: 11,
-                        color: const Color(0xFF9E9E9E),
+                        color: Zeta.of(context).colors.mainSubtle,
                       ),
                     )
                   else
@@ -174,7 +184,7 @@ class _PhaseCard extends StatelessWidget {
                       subtitle,
                       style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
                         fontSize: 11,
-                        color: const Color(0xFF616161),
+                        color: Zeta.of(context).colors.mainSubtle,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -212,15 +222,29 @@ class _Arrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(height: 32, child: CustomPaint(painter: _ArrowPainter()));
+    return SizedBox(
+      height: 32,
+      child: CustomPaint(
+        painter: _ArrowPainter(
+          color: Zeta.of(context).colors.borderSubtle,
+        ),
+      ),
+    );
   }
 }
 
 class _ArrowPainter extends CustomPainter {
+  _ArrowPainter({required this.color});
+
+  // Resolved from the active Zeta theme by _Arrow.build (paint() has no
+  // BuildContext), the same pattern TileGridNeuronRenderer uses to thread
+  // theme colors into its painter.
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFBDBDBD)
+      ..color = color
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -240,7 +264,7 @@ class _ArrowPainter extends CustomPainter {
     }
     // Arrowhead
     final arrowPaint = Paint()
-      ..color = const Color(0xFFBDBDBD)
+      ..color = color
       ..style = PaintingStyle.fill;
     canvas.drawPath(
       Path()
@@ -253,5 +277,5 @@ class _ArrowPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ArrowPainter old) => false;
+  bool shouldRepaint(_ArrowPainter old) => old.color != color;
 }

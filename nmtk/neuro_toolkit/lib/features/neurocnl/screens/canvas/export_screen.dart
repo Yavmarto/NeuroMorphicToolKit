@@ -247,6 +247,8 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
             child: SingleChildScrollView(
               child: Text(
                 data,
+                // ZETA-MIGRATION-EXEMPT: exported payload is monospace (JetBrains
+                // Mono) — Zeta (IBM Plex Sans) has no monospace text style.
                 style: const TextStyle(
                   fontFamily: NmtkFontFamilies.monospace,
                   package: NmtkFontFamilies.package,

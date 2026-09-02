@@ -535,6 +535,9 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
                                             outlineColor: Theme.of(
                                               context,
                                             ).colorScheme.outline,
+                                            badgeAccentColor: Zeta.of(
+                                              context,
+                                            ).colors.mainInverse,
                                             isVertical: isVertical,
                                             sceneOrigin: _networkWorld.origin,
                                           ),
@@ -749,7 +752,7 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
                           ),
                           nodeType != null
                               ? nirCategoryColor(context, nodeType.category)
-                              : Colors.grey,
+                              : Zeta.of(context).colors.mainSubtle,
                         );
                       }).toList(),
                       edgeLines: graph.edges
@@ -1921,7 +1924,7 @@ class _CanvasNodeWidget extends ConsumerWidget {
                     child: Text(
                       '${(spikeRate * 100).round()}%',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: Colors.white,
+                        color: Zeta.of(context).colors.mainInverse,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -2087,7 +2090,8 @@ class _HandwritingOverlayState extends ConsumerState<_HandwritingOverlay> {
                               visualDensity: VisualDensity.compact,
                               label: Text(
                                 type.displayName,
-                                style: const TextStyle(fontSize: 11),
+                                style: Zeta.of(context).textStyles.labelSmall
+                                    .copyWith(fontSize: 11),
                               ),
                               onPressed: () =>
                                   widget.onSubmitted(type.displayName),
@@ -2120,6 +2124,7 @@ class ConnectionPainter extends CustomPainter {
     required this.outlineColor,
     this.isVertical = false,
     this.sceneOrigin = Offset.zero,
+    required this.badgeAccentColor,
   });
 
   final CanvasGraph graph;
@@ -2137,6 +2142,12 @@ class ConnectionPainter extends CustomPainter {
   final Color outlineColor;
   final bool isVertical;
   final Offset sceneOrigin;
+
+  /// Border/text color for the learning-rule badge, resolved from the
+  /// active Zeta theme by the caller (paint() has no BuildContext). Reads as
+  /// white-on-colored-circle in both themes -- same `mainInverse` pairing
+  /// [TileGridNeuronRenderer] uses for its dark-card popup.
+  final Color badgeAccentColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -2188,6 +2199,8 @@ class ConnectionPainter extends CustomPainter {
       final String? learningRule = edge.parameters['learningRuleKind']
           ?.toString();
       if (learningRule != null) {
+        // ZETA-MIGRATION-EXEMPT: categorical data-viz color, no Zeta
+        // equivalent for N-way distinct hues (one per learning-rule kind).
         final Color badgeColor = switch (learningRule) {
           'stdp' => const Color(0xFFFFC107),
           'surrogate_gradient' => const Color(0xFF2196F3),
@@ -2203,21 +2216,24 @@ class ConnectionPainter extends CustomPainter {
         final Offset mid = canvasEdgeMidpoint(source, target);
         // Circle background
         canvas.drawCircle(mid, 10, Paint()..color = badgeColor);
-        // White border so the badge stands out on any background
+        // Border so the badge stands out on any background
         canvas.drawCircle(
           mid,
           10,
           Paint()
-            ..color = const Color(0x33FFFFFF)
+            ..color = badgeAccentColor.withValues(alpha: 0.2)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1.5,
         );
         // Abbreviation text
+        // ZETA-MIGRATION-EXEMPT: drawn inside CustomPainter.paint, which has
+        // no BuildContext to reach Zeta.of(context); badge also needs an
+        // 8px size below Zeta's smallest text preset (12px) to fit the dot.
         final TextPainter tp = TextPainter(
           text: TextSpan(
             text: abbr,
-            style: const TextStyle(
-              color: Color(0xFFFFFFFF),
+            style: TextStyle(
+              color: badgeAccentColor,
               fontSize: 8,
               fontWeight: FontWeight.bold,
             ),

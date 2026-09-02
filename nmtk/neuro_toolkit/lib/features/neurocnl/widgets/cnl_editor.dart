@@ -21,6 +21,10 @@ const EdgeInsets _kEditorContentPadding = EdgeInsets.symmetric(
   horizontal: 12,
   vertical: 12,
 );
+// ZETA-MIGRATION-EXEMPT: CNL is a monospace code editor — Zeta (IBM Plex
+// Sans) ships no monospace text style, so the editor, its syntax-highlight
+// TextSpans, line-number gutter, hint, and autocomplete overlay all inherit
+// this JetBrains Mono base by design.
 const TextStyle _kEditorStyle = TextStyle(
   fontFamily: AppTheme.monospaceFontFamily,
   package: AppTheme.fontPackage,
@@ -105,6 +109,7 @@ class _CnlController extends TextEditingController {
       return [
         TextSpan(
           text: line,
+          // ZETA-MIGRATION-EXEMPT: inherits _kEditorStyle monospace base (see above)
           style: TextStyle(
             color: AppTheme.synComment,
             decoration: decoration,
@@ -138,6 +143,7 @@ class _CnlController extends TextEditingController {
       spans.add(
         TextSpan(
           text: token,
+          // ZETA-MIGRATION-EXEMPT: inherits _kEditorStyle monospace base (see above)
           style: TextStyle(
             color: color,
             decoration: decoration,
@@ -152,6 +158,7 @@ class _CnlController extends TextEditingController {
       spans.add(
         TextSpan(
           text: line,
+          // ZETA-MIGRATION-EXEMPT: inherits _kEditorStyle monospace base (see above)
           style: TextStyle(
             decoration: decoration,
             decorationStyle: decorationStyle,
@@ -957,6 +964,7 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
                               isDense: true,
                               hintText:
                                   '# Type your CNL spec here or load a template\u2026',
+                              // ZETA-MIGRATION-EXEMPT: monospace editor hint, mirrors _kEditorStyle
                               hintStyle: TextStyle(
                                 fontFamily: AppTheme.monospaceFontFamily,
                                 package: AppTheme.fontPackage,
@@ -1041,6 +1049,7 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
                       child: Text(
                         key: ValueKey('cnl-line-${gl.logicalIndex + 1}'),
                         '${gl.logicalIndex + 1}',
+                        // ZETA-MIGRATION-EXEMPT: monospace gutter line number, mirrors _kEditorStyle
                         style: TextStyle(
                           fontFamily: AppTheme.monospaceFontFamily,
                           package: AppTheme.fontPackage,
@@ -1247,6 +1256,7 @@ List<TextSpan> _buildTemplateSpans(String template, bool isSelected) {
       spans.add(
         TextSpan(
           text: template.substring(last, m.start),
+          // ZETA-MIGRATION-EXEMPT: completion overlay inherits the monospace base set by its parent TextSpan
           style: TextStyle(
             color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
           ),
@@ -1258,6 +1268,7 @@ List<TextSpan> _buildTemplateSpans(String template, bool isSelected) {
     spans.add(
       TextSpan(
         text: token,
+        // ZETA-MIGRATION-EXEMPT: completion overlay inherits the monospace base set by its parent TextSpan
         style: TextStyle(
           color: isSlot ? AppTheme.synNumber : AppTheme.synKeyword,
           fontStyle: isSlot ? FontStyle.italic : FontStyle.normal,
@@ -1271,6 +1282,7 @@ List<TextSpan> _buildTemplateSpans(String template, bool isSelected) {
     spans.add(
       TextSpan(
         text: template.substring(last),
+        // ZETA-MIGRATION-EXEMPT: completion overlay inherits the monospace base set by its parent TextSpan
         style: TextStyle(
           color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
         ),
@@ -1400,6 +1412,7 @@ class _AutocompleteOverlay extends StatelessWidget {
                                 Expanded(
                                   child: RichText(
                                     text: TextSpan(
+                                      // ZETA-MIGRATION-EXEMPT: monospace completion snippet, mirrors _kEditorStyle
                                       style: const TextStyle(
                                         fontFamily:
                                             AppTheme.monospaceFontFamily,
@@ -1416,6 +1429,7 @@ class _AutocompleteOverlay extends StatelessWidget {
                                           : [
                                               TextSpan(
                                                 text: item.text,
+                                                // ZETA-MIGRATION-EXEMPT: inherits the monospace completion base above
                                                 style: TextStyle(
                                                   color: isSelected
                                                       ? AppTheme.primary

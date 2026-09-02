@@ -279,6 +279,9 @@ class _ErrorView extends StatelessWidget {
               ),
               child: Text(
                 message,
+                // ZETA-MIGRATION-EXEMPT: NIR parse error detail is monospace
+                // (JetBrains Mono) — Zeta (IBM Plex Sans) has no monospace
+                // text style.
                 style: TextStyle(
                   color: tokens.errorColor,
                   fontSize: 11,

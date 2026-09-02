@@ -297,6 +297,8 @@ class _GeneratedCodePaneState extends State<GeneratedCodePane> {
                     padding: const EdgeInsets.all(12),
                     child: Text(
                       code,
+                      // ZETA-MIGRATION-EXEMPT: generated code is monospace (JetBrains
+                      // Mono) — Zeta (IBM Plex Sans) has no monospace text style.
                       style: const TextStyle(
                         color: AppTheme.textPrimary,
                         fontSize: 11,

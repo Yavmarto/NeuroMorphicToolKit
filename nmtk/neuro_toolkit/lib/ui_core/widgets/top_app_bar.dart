@@ -55,6 +55,11 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
               Flexible(
                 fit: FlexFit.loose,
                 child: DefaultTextStyle(
+                  // ZETA-MIGRATION-EXEMPT: DefaultTextStyle is a framework
+                  // widget (not a TextStyle constructor) with no Zeta
+                  // component; typography inherits the ambient Material theme
+                  // so NmtkTopAppBar works without a ZetaProvider (ui_core
+                  // shell tests render it bare).
                   style: theme.textTheme.titleMedium!.copyWith(
                     fontWeight: FontWeight.w700,
                   ),

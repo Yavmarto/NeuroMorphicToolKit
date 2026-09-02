@@ -336,6 +336,8 @@ class _RunStepState extends ConsumerState<RunStep> {
           child: SingleChildScrollView(
             child: Text(
               text,
+              // ZETA-MIGRATION-EXEMPT: error trace is monospace — Zeta (IBM Plex
+              // Sans) has no monospace text style.
               style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
             ),
           ),

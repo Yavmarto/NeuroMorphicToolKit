@@ -70,6 +70,8 @@ class CodegenSetupPane extends ConsumerWidget {
                 ),
                 child: SelectableText(
                   preview.code,
+                  // ZETA-MIGRATION-EXEMPT: generated code is monospace (JetBrains
+                  // Mono) — Zeta (IBM Plex Sans) has no monospace text style.
                   style: const TextStyle(
                     fontFamily: AppTheme.monospaceFontFamily,
                     fontSize: 11,

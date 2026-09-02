@@ -27,6 +27,8 @@ class NengoParamChip extends StatelessWidget {
         children: [
           Text(
             label,
+            // ZETA-MIGRATION-EXEMPT: Nengo param text is monospace (JetBrains
+            // Mono) — Zeta (IBM Plex Sans) has no monospace text style.
             style: const TextStyle(
               color: AppTheme.textSecondary,
               fontSize: 10,
@@ -37,6 +39,7 @@ class NengoParamChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             value,
+            // ZETA-MIGRATION-EXEMPT: Nengo param text is monospace — no Zeta equivalent (see label above)
             style: const TextStyle(
               color: AppTheme.primary,
               fontSize: 10,
