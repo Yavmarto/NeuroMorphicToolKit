@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
+import 'package:zeta_flutter/zeta_flutter.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/project.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider.dart';
@@ -52,7 +53,17 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
       await ref
           .read(currentProjectProvider.notifier)
           .loadProject(selectedProjectId);
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          ZetaSnackBar(
+            context: context,
+            content: Text('Failed to load project: $e'),
+            type: ZetaSnackBarType.error,
+          ),
+        );
+      }
+    }
   }
 
   @override
