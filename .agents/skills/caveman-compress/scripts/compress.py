@@ -10,7 +10,6 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import List
 
 from .detect import should_compress
 from .validate import validate
@@ -121,7 +120,7 @@ TEXT:
 """
 
 
-def build_fix_prompt(original: str, compressed: str, errors: List[str]) -> str:
+def build_fix_prompt(original: str, compressed: str, errors: list[str]) -> str:
     errors_str = "\n".join(f"- {e}" for e in errors)
     return f"""You are fixing a caveman-compressed markdown file. Specific validation errors were found.
 

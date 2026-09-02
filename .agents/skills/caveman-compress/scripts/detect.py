@@ -48,11 +48,7 @@ def _is_yaml_content(lines: list[str]) -> bool:
     yaml_indicators = 0
     for line in lines[:30]:
         stripped = line.strip()
-        if stripped.startswith("---"):
-            yaml_indicators += 1
-        elif re.match(r"^\w[\w\s]*:\s", stripped):
-            yaml_indicators += 1
-        elif stripped.startswith("- ") and ":" in stripped:
+        if stripped.startswith("---") or re.match(r"^\w[\w\s]*:\s", stripped) or stripped.startswith("- ") and ":" in stripped:
             yaml_indicators += 1
     # If most non-empty lines look like YAML
     non_empty = sum(1 for ln in lines[:30] if ln.strip())

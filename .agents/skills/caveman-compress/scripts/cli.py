@@ -16,7 +16,7 @@ for _stream in (sys.stdout, sys.stderr):
     if callable(reconfigure):
         try:
             reconfigure(encoding="utf-8", errors="replace")
-        except Exception:
+        except Exception:  # noqa: BLE001, S110 - best-effort startup; streams stay as-is
             pass
 
 from pathlib import Path
@@ -76,7 +76,7 @@ def main():
         print("\nInterrupted by user")
         sys.exit(130)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - top-level CLI error handler prints and exits
         print(f"\n❌ Error: {e}")
         sys.exit(1)
 
