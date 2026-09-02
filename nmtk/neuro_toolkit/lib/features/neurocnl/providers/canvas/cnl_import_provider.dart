@@ -1,5 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/imported_cnl_spec.dart';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
