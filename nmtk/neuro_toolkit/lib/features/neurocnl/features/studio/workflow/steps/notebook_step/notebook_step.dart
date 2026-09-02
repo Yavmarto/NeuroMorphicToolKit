@@ -305,7 +305,10 @@ class _NotebookStepState extends ConsumerState<NotebookStep> {
             onPressed: () {
               Clipboard.setData(ClipboardData(text: text));
               ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(content: Text('Copied to clipboard')),
+                const SnackBar(
+                  content: Text('Copied to clipboard'),
+                  showCloseIcon: true,
+                ),
               );
             },
             label: 'Copy',

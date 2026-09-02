@@ -64,6 +64,7 @@ abstract final class NotebookGenerateService {
             'No architecture to generate from.\n'
             'Define and validate a network on the Architecture tab first.',
           ),
+          showCloseIcon: true,
         ),
       );
       return;
@@ -214,6 +215,7 @@ abstract final class NotebookGenerateService {
             : null,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 6),
+        showCloseIcon: true,
       ),
     );
   }

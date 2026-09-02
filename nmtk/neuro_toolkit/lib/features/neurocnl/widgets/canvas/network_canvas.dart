@@ -1160,7 +1160,10 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
     if (type == null) {
       if (text.trim().isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("No matching node type for '$text'.")),
+          SnackBar(
+            content: Text("No matching node type for '$text'."),
+            showCloseIcon: true,
+          ),
         );
       }
       return;
@@ -1612,6 +1615,7 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
           content: Text(
             'Drop on another node input, or click an input port to finish the connection.',
           ),
+          showCloseIcon: true,
         ),
       );
       ref.read(canvasProvider.notifier).cancelConnecting();
@@ -1630,6 +1634,7 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Connections must end on a different node.'),
+          showCloseIcon: true,
         ),
       );
       ref.read(canvasProvider.notifier).cancelConnecting();
@@ -1650,7 +1655,10 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
       ref.read(canvasProvider.notifier).selectEdge(existingEdge.first.id);
       ref.read(canvasProvider.notifier).cancelConnecting();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('That connection already exists.')),
+        const SnackBar(
+          content: Text('That connection already exists.'),
+          showCloseIcon: true,
+        ),
       );
       return false;
     }
@@ -1674,7 +1682,10 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
           tgtType != null &&
           !srcType.isCompatibleWith(tgtType)) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Type mismatch: $srcType → $tgtType')),
+          SnackBar(
+            content: Text('Type mismatch: $srcType → $tgtType'),
+            showCloseIcon: true,
+          ),
         );
         ref.read(canvasProvider.notifier).cancelConnecting();
         return false;

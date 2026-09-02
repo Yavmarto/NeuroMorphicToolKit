@@ -62,9 +62,12 @@ class _NmtkLogViewerDialogState extends State<NmtkLogViewerDialog> {
   Future<void> _copyOutput() async {
     await Clipboard.setData(ClipboardData(text: widget.lines.join('\n')));
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(
-      context,
-    )?.showSnackBar(const SnackBar(content: Text('Raw SSH output copied')));
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      const SnackBar(
+        content: Text('Raw SSH output copied'),
+        showCloseIcon: true,
+      ),
+    );
   }
 
   @override

@@ -135,7 +135,11 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
         ? NmtkShellTokens.of(context).errorColor
         : null;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: colorToken),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: colorToken,
+        showCloseIcon: true,
+      ),
     );
   }
 

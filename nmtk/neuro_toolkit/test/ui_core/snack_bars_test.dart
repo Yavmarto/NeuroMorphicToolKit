@@ -22,6 +22,7 @@ void main() {
     final tokens = NmtkShellTokens.of(context);
 
     expect(snackBar.backgroundColor, tokens.healthyColor);
+    expect(snackBar.showCloseIcon, isTrue);
   });
 
   testWidgets('NmtkSnackBars.error uses errorColor', (tester) async {
@@ -43,5 +44,6 @@ void main() {
     final tokens = NmtkShellTokens.of(context);
 
     expect(snackBar.backgroundColor, tokens.errorColor);
+    expect(snackBar.showCloseIcon, isTrue);
   });
 }

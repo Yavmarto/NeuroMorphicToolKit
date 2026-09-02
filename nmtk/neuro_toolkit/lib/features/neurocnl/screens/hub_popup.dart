@@ -108,6 +108,7 @@ class _HubPopupState extends ConsumerState<HubPopup> {
         content: Text(
           'Workspace opening will be connected to the registry next.',
         ),
+        showCloseIcon: true,
       ),
     );
   }
@@ -116,6 +117,7 @@ class _HubPopupState extends ConsumerState<HubPopup> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Benchmark run is ready to open in Results.'),
+        showCloseIcon: true,
       ),
     );
   }
@@ -124,6 +126,7 @@ class _HubPopupState extends ConsumerState<HubPopup> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Node download is ready for the local Hub preview.'),
+        showCloseIcon: true,
       ),
     );
   }

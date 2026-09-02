@@ -447,6 +447,7 @@ class _CustomNodeSourceEditorState
         SnackBar(
           content: Text(error.toString()),
           backgroundColor: Theme.of(context).colorScheme.error,
+          showCloseIcon: true,
         ),
       );
     } finally {
@@ -910,7 +911,9 @@ class _SourceKindBadge extends StatelessWidget {
         color: isCustom
             ? scheme.primaryContainer
             : scheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusChip),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusChip,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

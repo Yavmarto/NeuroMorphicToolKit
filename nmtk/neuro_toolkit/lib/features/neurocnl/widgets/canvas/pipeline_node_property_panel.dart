@@ -134,9 +134,9 @@ class PipelineNodePropertyPanel extends ConsumerWidget {
                       final message = outcome.replacedSelectedNode
                           ? 'Custom node saved and selected on the canvas.'
                           : 'Custom node saved to the reusable component palette.';
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(message)));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(message), showCloseIcon: true),
+                      );
                     },
                   ),
                 ),
@@ -802,7 +802,9 @@ class _DataLoaderFields extends ConsumerWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: const Color(0xFF1E88E5).withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+              borderRadius: BorderRadius.circular(
+                NmtkShellTokens.of(context).radiusSm,
+              ),
             ),
             child: Row(
               children: [
@@ -1195,6 +1197,7 @@ class _DatasetPathFieldState extends ConsumerState<DatasetPathField> {
             'Could not select the dataset file. '
             'Check its permissions and try Browse again.',
           ),
+          showCloseIcon: true,
         ),
       );
     }

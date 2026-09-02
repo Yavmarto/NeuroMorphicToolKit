@@ -663,9 +663,12 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
           .set(importedFile.text);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('CNL file load failed: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('CNL file load failed: $error'),
+            showCloseIcon: true,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isImporting = false);
@@ -1064,12 +1067,15 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
                       ? Tooltip(
                           message: _controller.errorMap[gl.logicalIndex]!,
                           preferBelow: true,
-                          textStyle: Zeta.of(context).textStyles.bodyXSmall.copyWith(
-                            color: Zeta.of(context).colors.mainInverse,
-                          ),
+                          textStyle: Zeta.of(context).textStyles.bodyXSmall
+                              .copyWith(
+                                color: Zeta.of(context).colors.mainInverse,
+                              ),
                           decoration: BoxDecoration(
                             color: AppTheme.error.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                            borderRadius: BorderRadius.circular(
+                              NmtkShellTokens.of(context).radiusSm,
+                            ),
                           ),
                           child: lineNumWidget,
                         )
@@ -1135,7 +1141,9 @@ class _LineCountBadge extends StatelessWidget {
             .length;
         return Text(
           '$nonEmpty ${l10n.sentences} \u00b7 $lines ${l10n.lines}',
-          style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
+          style: Zeta.of(
+            context,
+          ).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
         );
       },
     );
@@ -1185,7 +1193,11 @@ class _NumericLiteralDialogState extends State<_NumericLiteralDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusMd)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusMd,
+        ),
+      ),
       title: const Text('Edit number'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1359,10 +1371,11 @@ class _AutocompleteOverlay extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Tab / Enter to insert  \u2022  \u2191\u2193 to navigate  \u2022  Esc to dismiss',
-                            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
-                              fontSize: 10,
-                              color: AppTheme.textSecondary,
-                            ),
+                            style: Zeta.of(context).textStyles.bodyXSmall
+                                .copyWith(
+                                  fontSize: 10,
+                                  color: AppTheme.textSecondary,
+                                ),
                           ),
                         ),
                       ],
@@ -1430,15 +1443,20 @@ class _AutocompleteOverlay extends StatelessWidget {
                                     color: _sourceBadgeColor(
                                       item.source,
                                     ).withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                                    borderRadius: BorderRadius.circular(
+                                      NmtkShellTokens.of(context).radiusSm,
+                                    ),
                                   ),
                                   child: Text(
                                     _sourceBadgeLabel(item.source),
-                                    style: Zeta.of(context).textStyles.labelSmall.copyWith(
-                                      fontSize: 9,
-                                      color: _sourceBadgeColor(item.source),
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: Zeta.of(context)
+                                        .textStyles
+                                        .labelSmall
+                                        .copyWith(
+                                          fontSize: 9,
+                                          color: _sourceBadgeColor(item.source),
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                   ),
                                 ),
                               ],

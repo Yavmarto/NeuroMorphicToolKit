@@ -345,7 +345,10 @@ class _RunStepState extends ConsumerState<RunStep> {
             onPressed: () {
               Clipboard.setData(ClipboardData(text: text));
               ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(content: Text('Copied to clipboard')),
+                const SnackBar(
+                  content: Text('Copied to clipboard'),
+                  showCloseIcon: true,
+                ),
               );
             },
             label: 'Copy',

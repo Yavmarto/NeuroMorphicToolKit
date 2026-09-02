@@ -799,6 +799,7 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
                 content: Text(
                   'Type mismatch: ${srcPort.type.name} → ${dstPort.type.name}',
                 ),
+                showCloseIcon: true,
               ),
             );
           }
@@ -957,6 +958,7 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
           content: Text(
             'Type mismatch: ${srcPort.type.name} → ${dstPort.type.name}',
           ),
+          showCloseIcon: true,
         ),
       );
       ref.read(canvasProvider.notifier).cancelConnecting();
@@ -1060,6 +1062,7 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
                 ? 'No node type in this phase accepts an input.'
                 : 'No node type in this phase produces an output.',
           ),
+          showCloseIcon: true,
         ),
       );
       return;
@@ -1235,7 +1238,10 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
     if (type == null) {
       if (text.trim().isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("No matching node type for '$text'.")),
+          SnackBar(
+            content: Text("No matching node type for '$text'."),
+            showCloseIcon: true,
+          ),
         );
       }
       return;

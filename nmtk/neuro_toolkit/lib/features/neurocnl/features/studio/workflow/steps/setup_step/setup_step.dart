@@ -1002,6 +1002,7 @@ class SetupStepState extends ConsumerState<SetupStep> {
                 ? 'Imported ${entry.label}'
                 : 'Imported ${entry.label} ($formatLabel)',
           ),
+          showCloseIcon: true,
         ),
       );
     } catch (e) {

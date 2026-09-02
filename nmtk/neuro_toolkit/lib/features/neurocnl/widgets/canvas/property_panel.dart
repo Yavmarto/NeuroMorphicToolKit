@@ -135,9 +135,9 @@ class PropertyPanel extends ConsumerWidget {
                     final message = outcome.replacedSelectedNode
                         ? 'Custom node saved and selected on the canvas.'
                         : 'Custom node saved to the reusable component palette.';
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(message)));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(message), showCloseIcon: true),
+                    );
                   },
                 ),
               ),

@@ -10,11 +10,16 @@ class NmtkSnackBars {
     return SnackBar(
       content: Text(message),
       backgroundColor: tokens.healthyColor,
+      showCloseIcon: true,
     );
   }
 
   static SnackBar error(BuildContext context, String message) {
     final tokens = NmtkShellTokens.of(context);
-    return SnackBar(content: Text(message), backgroundColor: tokens.errorColor);
+    return SnackBar(
+      content: Text(message),
+      backgroundColor: tokens.errorColor,
+      showCloseIcon: true,
+    );
   }
 }
