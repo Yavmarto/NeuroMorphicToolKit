@@ -80,7 +80,7 @@ class JobRegistry:
         if kernel_manager is not None:
             try:
                 kernel_manager.shutdown_kernel(now=True)
-            except Exception:  # noqa: BLE001 — kernel may already be gone
+            except Exception:  # noqa: BLE001, S110 — kernel may already be gone
                 pass
         return True
 

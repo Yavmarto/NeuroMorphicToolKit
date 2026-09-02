@@ -30,7 +30,7 @@ def _load_jupyter_server_extension(server_app) -> None:
         server_app.log.info(
             "[nmtk_env_manager] Framework environments provisioned."
         )
-    except Exception as exc:  # never block Jupyter startup
+    except Exception as exc:  # noqa: BLE001 - never block Jupyter startup
         server_app.log.warning(
             "[nmtk_env_manager] Framework env provisioning failed (non-fatal): %s", exc
         )

@@ -247,7 +247,7 @@ def _resolve_execute_kernel_name(
         notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
         kernelspec = notebook.get("metadata", {}).get("kernelspec", {}).get("name", "")
         return kernelspec or requested
-    except Exception:
+    except Exception:  # noqa: BLE001 - invalid notebook falls back to requested kernel
         return requested
 
 

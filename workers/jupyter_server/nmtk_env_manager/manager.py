@@ -355,5 +355,5 @@ class EnvironmentManager:
                 pkgs = env.get("packages", [])
                 if pkgs:
                     self.install_packages(slug, pkgs)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - provisioning failure is logged
                 _log.warning("Failed to provision framework env %r: %s", slug, exc)

@@ -39,10 +39,17 @@ def _build_and_run(tmp_path: Path, layers: list[object], input_values: list[floa
         capture_output=True,
         text=True,
         timeout=30,
+        check=False,
     )
     assert compile_proc.returncode == 0, compile_proc.stderr
 
-    run_proc = subprocess.run([str(binary_path)], capture_output=True, text=True, timeout=10)
+    run_proc = subprocess.run(
+        [str(binary_path)],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
     assert run_proc.returncode == 0, run_proc.stderr
     return run_proc.stdout
 

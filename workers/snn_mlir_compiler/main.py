@@ -11,6 +11,7 @@ Isolated from suite_api because it depends on a from-source LLVM/MLIR build
 dev loop should never have to pay for.
 """
 
+import asyncio
 import base64
 import logging
 import os
@@ -89,11 +90,13 @@ async def compile_nir(request: CompileRequest) -> CompileResponse:
         mlir_path.write_text(mlir_text)
 
         lowered_path = tmp_path / "lowered.mlir"
-        proc = subprocess.run(
+        proc = await asyncio.to_thread(
+            subprocess.run,
             [SNN_OPT_PATH, str(mlir_path), "-o", str(lowered_path)],
             capture_output=True,
             text=True,
             timeout=60,
+            check=False,
         )
         if proc.returncode != 0:
             raise HTTPException(
@@ -136,6 +139,7 @@ def _compile_c_to_binary(tmp_path: Path, artifacts: Any, layers: list[object]) -
         capture_output=True,
         text=True,
         timeout=60,
+        check=False,
     )
     if proc.returncode != 0:
         raise HTTPException(
