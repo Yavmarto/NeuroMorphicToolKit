@@ -18,6 +18,8 @@ class NmtkDesignTokens {
   // diverged from NmtkDesignTokens.dialogShape's documented contract.
   static final BorderRadius dialogShape = BorderRadius.circular(28.0);
   static final BorderRadius inputShape = BorderRadius.circular(12.0);
+  static final BorderRadius smallShape = BorderRadius.circular(8.0);
+  static final BorderRadius chipShape = BorderRadius.circular(6.0);
 }
 
 class NmtkFontFamilies {

@@ -1916,7 +1916,7 @@ class _CanvasNodeWidget extends ConsumerWidget {
                     ),
                     decoration: BoxDecoration(
                       color: spikeColor.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: NmtkDesignTokens.chipShape,
                     ),
                     child: Text(
                       '${(spikeRate * 100).round()}%',

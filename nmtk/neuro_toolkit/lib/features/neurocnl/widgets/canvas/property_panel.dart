@@ -246,11 +246,11 @@ class PropertyPanel extends ConsumerWidget {
         label: parameter.label,
         child: Align(
           alignment: Alignment.centerLeft,
-          child: Switch(
+          child: ZetaSwitch(
             value: currentValue as bool? ?? false,
-            onChanged: (bool value) {
+            onChanged: (bool? value) {
               ref.read(canvasProvider.notifier).updateNodeParameters(node.id, {
-                parameter.name: value,
+                parameter.name: value ?? false,
               });
             },
           ),

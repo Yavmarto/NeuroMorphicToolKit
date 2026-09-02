@@ -2476,10 +2476,9 @@ class _OverrideToggle extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          ZetaSwitch(
             value: active,
-            onChanged: onChanged,
-            activeThumbColor: tokens.warningColor,
+            onChanged: (bool? v) => onChanged(v ?? false),
           ),
         ],
       ),

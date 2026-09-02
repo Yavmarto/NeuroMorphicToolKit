@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:neuro_toolkit/ui_core/app_theme.dart';
 import 'package:neuro_toolkit/ui_core/zeta_theme.dart';
 
 /// State-management-independent live command transcript dialog.
@@ -108,7 +109,7 @@ class _NmtkLogViewerDialogState extends State<NmtkLogViewerDialog> {
             decoration: BoxDecoration(
               color: colors.surfaceContainerLowest,
               border: Border.all(color: colors.outlineVariant),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: NmtkDesignTokens.smallShape,
             ),
             child: SingleChildScrollView(
               key: const Key('nmtk-log-viewer-scroll'),
