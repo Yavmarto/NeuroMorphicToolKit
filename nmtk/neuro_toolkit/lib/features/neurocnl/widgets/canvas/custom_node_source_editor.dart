@@ -619,10 +619,10 @@ class _CustomNodeSourceEditorState
                 ),
                 const Spacer(),
                 if (_source?.isCustom == true) ...[
-                  OutlinedButton.icon(
+                  NmtkOutlinedButton(
                     onPressed: canSave ? () => _save(saveAs: true) : null,
-                    icon: const Icon(Icons.copy, size: 18),
-                    label: const Text('Save as custom'),
+                    icon: Icons.copy,
+                    label: 'Save as custom',
                   ),
                   const SizedBox(width: 8),
                   FilledButton.icon(

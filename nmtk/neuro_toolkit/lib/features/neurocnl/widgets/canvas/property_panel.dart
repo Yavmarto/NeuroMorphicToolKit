@@ -118,13 +118,11 @@ class PropertyPanel extends ConsumerWidget {
               // button.
               Align(
                 alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.code, size: 18),
-                  label: Text(
-                    node.componentId.startsWith('custom_')
-                        ? 'Edit Python'
-                        : 'View Python',
-                  ),
+                child: NmtkOutlinedButton(
+                  icon: Icons.code,
+                  label: node.componentId.startsWith('custom_')
+                      ? 'Edit Python'
+                      : 'View Python',
                   onPressed: () async {
                     final outcome = await showCustomNodeSourceEditor(
                       context: context,

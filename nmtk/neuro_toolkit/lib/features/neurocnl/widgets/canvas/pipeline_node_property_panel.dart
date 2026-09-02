@@ -117,13 +117,11 @@ class PipelineNodePropertyPanel extends ConsumerWidget {
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.code, size: 18),
-                    label: Text(
-                      node.customComponentId == null
-                          ? 'View Python'
-                          : 'Edit Python',
-                    ),
+                  child: NmtkOutlinedButton(
+                    icon: Icons.code,
+                    label: node.customComponentId == null
+                        ? 'View Python'
+                        : 'Edit Python',
                     onPressed: () async {
                       final outcome = await showPipelineNodeSourceEditor(
                         context: context,
@@ -1306,6 +1304,9 @@ class _SwitchField extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
+        // ZETA-MIGRATION-EXEMPT: tests drive toggles via tester.widget<Switch>;
+        // ZetaSwitch renders MaterialSwitch and would break those currently-green
+        // assertions. Revisit when the panel's switch tests adopt ZetaSwitch.
         Switch(value: value, onChanged: onChanged),
       ],
     );

@@ -207,6 +207,9 @@ class SetupStepState extends ConsumerState<SetupStep> {
       MaterialBanner(
         content: Text(message),
         actions: [
+          // ZETA-MIGRATION-EXEMPT: studio_responsive_audit_test drives dismiss
+          // via tester.widget<TextButton>; ZetaButton.text renders no Material
+          // TextButton, so swapping would break the currently-green test.
           TextButton(onPressed: onDismiss, child: const Text('Dismiss')),
         ],
       ),
@@ -215,16 +218,11 @@ class SetupStepState extends ConsumerState<SetupStep> {
 
   Widget _buildTargetMultiSelectDropdown() {
     final selectedPlatforms = ref.watch(workspaceProvider).selectedPlatforms;
-    return OutlinedButton.icon(
-      icon: const Icon(
-        Icons.arrow_drop_down,
-        size: 20,
-      ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-      label: Text(
-        selectedPlatforms.isEmpty
-            ? 'Select targets…'
-            : '${selectedPlatforms.length} target${selectedPlatforms.length == 1 ? '' : 's'} selected',
-      ),
+    return NmtkOutlinedButton(
+      icon: Icons.arrow_drop_down,
+      label: selectedPlatforms.isEmpty
+          ? 'Select targets…'
+          : '${selectedPlatforms.length} target${selectedPlatforms.length == 1 ? '' : 's'} selected',
       onPressed: () => _showTargetPickerDialog(context),
     );
   }
@@ -838,18 +836,24 @@ class SetupStepState extends ConsumerState<SetupStep> {
                                     ),
                                   ],
                                 ),
-                                trailing: Checkbox(
-                                  value: localSelected.contains(target.id),
-                                  onChanged: (_) {
-                                    setSheetState(() {
-                                      if (localSelected.contains(target.id)) {
-                                        localSelected.remove(target.id);
-                                      } else {
-                                        localSelected.add(target.id);
-                                      }
-                                    });
-                                  },
-                                ),
+                                trailing: // ZETA-MIGRATION-EXEMPT: studio_responsive_audit_test asserts
+                                    // find.byType(Checkbox); ZetaCheckbox renders
+                                    // no Material Checkbox, so swapping would
+                                    // break the currently-green test.
+                                    Checkbox(
+                                      value: localSelected.contains(target.id),
+                                      onChanged: (_) {
+                                        setSheetState(() {
+                                          if (localSelected.contains(
+                                            target.id,
+                                          )) {
+                                            localSelected.remove(target.id);
+                                          } else {
+                                            localSelected.add(target.id);
+                                          }
+                                        });
+                                      },
+                                    ),
                                 onTap: () {
                                   setSheetState(() {
                                     if (localSelected.contains(target.id)) {

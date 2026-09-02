@@ -102,20 +102,20 @@ class AkidaAdvancedScaffoldPane extends ConsumerWidget {
           spacing: 8,
           runSpacing: 8,
           children: [
-            OutlinedButton.icon(
+            NmtkOutlinedButton(
               onPressed: provider.isBusy
                   ? null
                   : () => notifier.checkReadiness(ref.read(specTextProvider)),
-              icon: const Icon(Icons.fact_check_outlined, size: 18),
-              label: const Text('Check topology'),
+              icon: Icons.fact_check_outlined,
+              label: 'Check topology',
             ),
-            OutlinedButton.icon(
+            NmtkOutlinedButton(
               onPressed: canGenerate
                   ? () =>
                         notifier.deploySelectedHost(ref.read(specTextProvider))
                   : null,
-              icon: const Icon(ZetaIcons.document, size: 18),
-              label: const Text('Generate scaffold package'),
+              icon: ZetaIcons.document,
+              label: 'Generate scaffold package',
             ),
             FilledButton.icon(
               onPressed: canMap
@@ -124,10 +124,10 @@ class AkidaAdvancedScaffoldPane extends ConsumerWidget {
               icon: const Icon(ZetaIcons.memory, size: 18),
               label: const Text('Map runtime'),
             ),
-            OutlinedButton.icon(
+            NmtkOutlinedButton(
               onPressed: canRun ? notifier.runSelectedHost : null,
-              icon: const Icon(ZetaIcons.play, size: 18),
-              label: const Text('Run placeholder inference'),
+              icon: ZetaIcons.play,
+              label: 'Run placeholder inference',
             ),
           ],
         ),

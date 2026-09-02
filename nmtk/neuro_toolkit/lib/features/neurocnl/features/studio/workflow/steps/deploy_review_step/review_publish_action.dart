@@ -2,8 +2,8 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
 
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/deploy_results_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/hub/publish_results_dialog/support.dart';
 
@@ -23,10 +23,10 @@ class ReviewPublishAction extends ConsumerWidget {
       message: hasResults
           ? 'Publish this workspace and its latest result to Hub'
           : 'Run the workspace before publishing results',
-      child: OutlinedButton.icon(
+      child: NmtkOutlinedButton(
         onPressed: hasResults ? () => showPublishResultsDialog(context) : null,
-        icon: const Icon(ZetaIcons.cloud_upload, size: 18),
-        label: const Text('Publish'),
+        icon: ZetaIcons.cloud_upload,
+        label: 'Publish',
       ),
     );
     if (hasResults || !showDisabledReason) return button;
