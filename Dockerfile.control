@@ -6,6 +6,10 @@ RUN pip install --no-cache-dir build poetry-core
 
 WORKDIR /build
 COPY Neurochip/ /build/Neurochip/
+# Neurochip's pyproject declares nmtk_contracts as a ../nmtk_contracts path
+# dependency; copying it keeps the wheel build warning-free instead of logging
+# "Path /build/nmtk_contracts for nmtk_contracts does not exist".
+COPY nmtk_contracts/ /build/nmtk_contracts/
 COPY nmtk/launcher_control/runtime_artifact.py /build/runtime_artifact.py
 RUN python -m build --wheel --no-isolation --outdir /artifacts /build/Neurochip \
  && python /build/runtime_artifact.py /artifacts

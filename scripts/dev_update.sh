@@ -607,6 +607,14 @@ classify_path() {
     workers/neurocnl_physics/*)              PATH_ACTIONS+=("REBUILD:neurocnl-physics-worker") ;;
     workers/snn_mlir_compiler/*)             PATH_ACTIONS+=("REBUILD:snn-mlir-compiler") ;;
     workers/jupyter_server/*)                PATH_ACTIONS+=("REBUILD:jupyter-server") ;;
+    # The lava worker's vendored requirements are baked into the image
+    # (Dockerfile.lava:11-12), so a change needs a rebuild like worker source.
+    workers/lava_backend/*)                  PATH_ACTIONS+=("REBUILD:lava-backend") ;;
+
+    # Shared contracts package. Copied into the build context of Dockerfile.lava
+    # (lava-backend), workers/neurochip_hw/Dockerfile (neurochip-hw-worker), and
+    # Dockerfile.control (launcher-control), so an edit needs all three rebuilt.
+    nmtk_contracts/*)                        PATH_ACTIONS+=("REBUILD:lava-backend" "REBUILD:neurochip-hw-worker" "REBUILD:launcher-control") ;;
 
     *)                                       PATH_ACTIONS+=("NOOP:$path") ;;
   esac

@@ -76,8 +76,13 @@
 + /nmtk_sdk/***
 # suite_api/Dockerfile:34,50; workers/neurocnl_physics/Dockerfile:26.
 + /neurocnl/***
-# suite_api/Dockerfile:44; Dockerfile.lava:7,12; workers/neurochip_hw/Dockerfile:16.
+# suite_api/Dockerfile:44; Dockerfile.lava; workers/neurochip_hw/Dockerfile:16.
 + /Neurochip/***
+# Shared contracts package. Neurochip's pyproject declares it as a
+# ../nmtk_contracts path dependency and Dockerfile.lava,
+# workers/neurochip_hw/Dockerfile, and Dockerfile.control all COPY it into
+# their build contexts — without a rule here those COPYs fail on the host.
++ /nmtk_contracts/***
 # suite_api/Dockerfile:34; alembic.ini is read from /repo/Neurohub on every
 # suite_api startup (suite_api/domains/neurohub/lifespan.py:25-27).
 + /Neurohub/***
@@ -103,9 +108,11 @@
 # Makefile, AGENTS.md and the other root docs, pyproject.toml, tests/, tools/,
 # neurodocs/, .github/, nmtk_module_contracts/, the
 # Flutter app itself (nmtk_ui_core now lives inside it), Neurosim/ (neurosim ships inside neurocnl/),
-# Neuro-Dream-Hand/, rust/, neurocli/, monitoring/ (the copy the app deploys
-# lives under nmtk/neuro_toolkit/assets/), skills/, paper/, reports/, output/,
-# recordings/, every .<tool>/ dir, and all of scripts/ bar the one file above.
+# Neuro-Dream-Hand/, rust/, neurocli/,
+# monitoring/ (the copy the app deploys lives under nmtk/neuro_toolkit/assets/),
+# skills/, paper/, reports/, output/, recordings/, every .<tool>/ dir, and all of
+# scripts/ bar the one file above. nmtk_contracts is NOT in this list — it is
+# synced on purpose (see the + rule above).
 #
 # Note what NOT syncing also buys: unlisted paths are protected from
 # `rsync --delete`, so host-owned state survives. shared_assets/ used to be

@@ -14,6 +14,10 @@ RUN pip install --no-cache-dir \
 
 COPY workers/neurochip_hw/ /app/
 COPY Neurochip/ /repo/Neurochip/
+# Neurochip's pyproject declares nmtk_contracts as a ../nmtk_contracts path
+# dependency; without it present in the build context `pip install /repo/Neurochip`
+# fails to resolve the dependency.
+COPY nmtk_contracts/ /repo/nmtk_contracts/
 RUN pip install --no-cache-dir /repo/Neurochip
 
 RUN groupadd --system appgroup && useradd --system --gid appgroup appuser \

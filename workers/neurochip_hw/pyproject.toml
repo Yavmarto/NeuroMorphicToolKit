@@ -14,4 +14,3 @@ dependencies = [
 [project.optional-dependencies]
 akida = ["akida>=2.0.0", "tensorflow==2.19.*", "cnn2snn==2.19.1"]
 pynq = ["pynq>=2.7"]
-lava = ["lava-nc"]
