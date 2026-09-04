@@ -33,6 +33,8 @@ neurocli/
     new.py          # neuro new command
     lifecycle.py    # neuro status / install / run commands
     hub.py          # neuro hub sub-commands (login/push/pull/search)
+    session.py      # backend session: target discovery, keychain, SSH tunnel
+    backend.py      # neuro backend ... — one command per app-reachable endpoint
     studio.py       # neuro studio run — workspace file -> generate notebook -> run it
     templates/      # template bundles (package data)
       nir_snntorch/
@@ -47,6 +49,7 @@ neurocli/
     test_new.py
     test_lifecycle.py
     test_hub.py
+    test_backend.py
     test_studio.py
     test_integration.py
 ```
@@ -64,6 +67,13 @@ neurocli/
 - `--json` flag must work on every command including error paths.
 - The `neuro hub` sub-commands implement the CLI surface defined in
   `.kiro/specs/neurohub-global-registry/design.md`.
+- CLI/app parity lives in `backend.ROUTES`: one entry per backend endpoint the
+  launcher app calls. Adding an endpoint to the app means adding one line
+  there. `tests/test_backend.py` fails when the app calls something the CLI
+  cannot.
+- The CLI must never write a credential to a plain file. SSH passwords go to
+  the OS keychain and reach `ssh` via `SSH_ASKPASS`; the launcher admin token
+  is read live over SSH and never persisted.
 
 ## Do NOT
 

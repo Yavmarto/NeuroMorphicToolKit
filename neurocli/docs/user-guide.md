@@ -29,6 +29,48 @@ The core services are `suite_api`, `launcher-control`, and `jupyter-server`.
 Set `NMTK_ROOT` to select a checkout and `NMTK_SUITE_API_URL` to change the
 default API URL.
 
+## Connecting to a running backend
+
+`neuro backend` gives the CLI the same reach as the desktop app: every action
+the app can perform against a running backend has a matching command.
+
+The CLI reuses what the app already knows. `neuro backend targets` lists the
+backends configured in the app, and every `neuro backend` command accepts
+`--target ID` to pick one (it is optional when only one is configured).
+
+Credentials are handled the way the app handles them, and nothing secret is
+written to a file:
+
+- Host, user, and port come from the app's own target list.
+- If the target needs an SSH password, run `neuro login` once. It stores the
+  password in the OS keychain (macOS Keychain, or `secret-tool` on Linux) and
+  hands it to `ssh` through `SSH_ASKPASS`, never on a command line. SSH keys
+  and a running agent work with no login step at all. `neuro logout` forgets it.
+- The backend's administrator token is never stored. It is read live over the
+  authenticated SSH connection, exactly as the app does.
+
+Remote backends are reached over an SSH tunnel to loopback ports, matching the
+app's policy that non-loopback traffic never leaves the tunnel.
+
+```bash
+neuro login --target remote-192-168-2-90   # once, saves to the keychain
+neuro backend connect                      # confirm the session works
+neuro backend modules list --json
+neuro backend modules start neurocnl
+neuro backend deployment watch JOB_ID      # live deployment progress
+```
+
+Command groups: `modules`, `launcher`, `workspace`, `deployment`, `akida`,
+`pynq`, `suite`, and `jupyter`. Run `neuro backend GROUP --help` for the
+actions in each. Anything not yet given a name is still reachable:
+
+```bash
+neuro backend api POST /api/neurochip/akida/inference --service suite --data '{...}'
+```
+
+In CI, set `NMTK_LAUNCHER_URL` and `NMTK_ADMIN_TOKEN` to skip target discovery
+and the tunnel entirely.
+
 ## Offline PYNQ packaging
 
 ```bash

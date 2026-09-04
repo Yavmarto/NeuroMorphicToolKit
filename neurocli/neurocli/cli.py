@@ -13,6 +13,7 @@ app = typer.Typer(
 
 
 def _register_subcommands() -> None:
+    from neurocli.backend import backend_app, login_command, logout_command  # noqa: PLC0415
     from neurocli.deploy import deploy_command  # noqa: PLC0415
     from neurocli.hub import hub_app  # noqa: PLC0415
     from neurocli.lifecycle import install_command, run_command, status_command  # noqa: PLC0415
@@ -24,6 +25,9 @@ def _register_subcommands() -> None:
     app.command("status")(status_command)
     app.command("install")(install_command)
     app.command("run")(run_command)
+    app.command("login")(login_command)
+    app.command("logout")(logout_command)
+    app.add_typer(backend_app, name="backend")
     app.add_typer(hub_app, name="hub")
     app.add_typer(studio_app, name="studio")
 

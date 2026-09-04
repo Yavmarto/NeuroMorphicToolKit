@@ -40,6 +40,9 @@ The other template bundles remain available for exploration with
 - `neuro status` reads `/api/suite/health` and `/api/suite/health/modules`.
 - `neuro studio run FILE.nmtk` generates, runs, and follows a Studio notebook.
 - `neuro hub login|push|pull|search` uses Neurohub's `/api/v1` registry.
+- `neuro backend ...` runs every backend action the desktop app can run,
+  over the same SSH tunnel and admin token. `neuro login` stores the SSH
+  password in the OS keychain; the admin token is never stored.
 
 Set `NMTK_ROOT` when the CLI cannot locate this checkout,
 `NMTK_SUITE_API_URL` when Suite API is not at `http://127.0.0.1:9000`, and
