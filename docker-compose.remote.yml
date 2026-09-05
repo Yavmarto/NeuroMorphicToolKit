@@ -6,12 +6,19 @@ services:
   suite_api:
     ports: !override
       - "127.0.0.1:${SUITE_API_PORT:-9000}:9000"
-    user: "0:0"
+    # No `user: "0:0"` here, and the token comes from a mounted file rather
+    # than a compose secret, for the same reason as launcher-control below.
+    # `suite_api/Dockerfile` ends on `USER app` and gives that account
+    # /home/app, which is where the data volume lands; running as root with
+    # `cap_drop: ALL` means no CAP_DAC_OVERRIDE, so root could authenticate
+    # but could not write its own data directory — surfacing in System Health
+    # as "the server data directory is not writable" and a failed database
+    # check for datasets.db and jobs.db.
+    volumes:
+      - ./credentials/admin-token:/app/credentials/admin-token:ro
     environment:
       - NMTK_AUTH_REQUIRED=1
-      - NMTK_ADMIN_TOKEN_FILE=/run/secrets/nmtk_admin_token
-    secrets:
-      - nmtk_admin_token
+      - NMTK_ADMIN_TOKEN_FILE=/app/credentials/admin-token
 
   neurosense-hw-worker:
     ports: !reset []
@@ -37,16 +44,37 @@ services:
   launcher-control:
     ports: !override
       - "127.0.0.1:${LAUNCHER_CONTROL_PORT:-8090}:8091"
+    # Compose mounts secrets 0400 root:root, and Dockerfile.control ends on
+    # `USER appuser`, so this service cannot read a compose secret at all: the
+    # launcher's _is_authorized() swallows the OSError and answers 401 to
+    # whichever token the app sends, which reads in the UI as a broken backend
+    # and pushes the user into a reinstall they do not need. suite_api runs as
+    # `user: "0:0"` and so can read the secret; launcher-control cannot follow
+    # it, because its state volume is owned by appuser and `cap_drop: ALL`
+    # leaves root without CAP_DAC_OVERRIDE — as root it authenticates but can
+    # no longer write module_states.json, which kills the health-poll thread
+    # and freezes every module on "starting". Mounting the credentials
+    # directory read-only keeps appuser, who owns that volume, and gives it a
+    # token file it can actually read.
+    #
+    # The file, not the directory: `credentials/` is 0750 and owned by the
+    # deployment account, which rootless Podman maps to container root, so a
+    # directory mount shows up inside as `rwxr-x---` root:root and appuser
+    # cannot even traverse it. Mounting the single file lands it under a
+    # directory Podman creates itself (root:root 0755), so the file's own 0644
+    # is what decides — and the host directory stays 0750.
+    # users.json is mounted read-write (not :ro like admin-token) because
+    # install.sh mints new entries into it via `compose run` against this
+    # same service definition, using --user 0:0 the same way as the
+    # workspace-storage chown step above.
+    volumes:
+      - ./credentials/admin-token:/app/credentials/admin-token:ro
+      - ./credentials/users.json:/app/credentials/users.json
     environment:
       - NMTK_AUTH_REQUIRED=1
-      - NMTK_ADMIN_TOKEN_FILE=/run/secrets/nmtk_admin_token
-    secrets:
-      - nmtk_admin_token
+      - NMTK_ADMIN_TOKEN_FILE=/app/credentials/admin-token
+      - NMTK_APP_USERS_FILE=/app/credentials/users.json
 
   jupyter-server:
     ports: !override
       - "127.0.0.1:${JUPYTER_PORT:-8008}:8008"
-
-secrets:
-  nmtk_admin_token:
-    file: ${NMTK_ADMIN_TOKEN_PATH:-./credentials/admin-token}

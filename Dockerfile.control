@@ -27,7 +27,8 @@ RUN apt-get update \
 WORKDIR /app
 
 # packaging is used for version comparison in server.py.
-RUN pip install --no-cache-dir packaging
+# bcrypt is used to check app-credential logins in launcher_auth.py.
+RUN pip install --no-cache-dir packaging bcrypt
 
 # Copy the launcher control package and its entry-point script.
 COPY nmtk/launcher_control/ nmtk/launcher_control/

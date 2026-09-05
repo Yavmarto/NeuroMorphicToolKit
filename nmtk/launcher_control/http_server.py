@@ -20,6 +20,7 @@ from .http_transport import (
     send_json,
     stream_deployment_sse,
 )
+from .launcher_auth import InvalidCredentialsError
 from .runtime_errors import RuntimeRequestError
 
 LOGGER = logging.getLogger(__name__)
@@ -56,7 +57,10 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         path = parsed.path.rstrip("/") or "/"
         query = parse_qs(parsed.query)
         try:
-            if path != "/health" and not self._is_authorized():
+            if (
+                path not in {"/health", "/api/launcher/auth/login"}
+                and not self._is_authorized()
+            ):
                 self._send_error(
                     HTTPStatus.UNAUTHORIZED,
                     code="unauthorized",
@@ -84,6 +88,13 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     self.server.state.serialize_modules(
                         refresh_updates=refresh_updates,
                     ),
+                )
+                return
+
+            if method == "POST" and path == "/api/launcher/auth/login":
+                self._send_json(
+                    HTTPStatus.OK,
+                    self.server.state.login(body or {}),
                 )
                 return
 
@@ -668,6 +679,12 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
             self._send_error(
                 HTTPStatus.BAD_REQUEST,
                 code="invalid_request",
+                message=str(exc),
+            )
+        except InvalidCredentialsError as exc:
+            self._send_error(
+                HTTPStatus.UNAUTHORIZED,
+                code="invalid_credentials",
                 message=str(exc),
             )
         except RuntimeRequestError as exc:

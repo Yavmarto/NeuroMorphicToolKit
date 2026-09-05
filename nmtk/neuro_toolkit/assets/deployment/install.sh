@@ -8,6 +8,29 @@ CLEAN_INSTALL="${4:-false}"
 PUBLIC_HOST="${5:-127.0.0.1}"
 STATUS_FILE="${6:-deployment.status}"
 LOG_FILE="${7:-deployment.log}"
+shift "$(($# < 7 ? $# : 7))"
+
+# Optional, additive to the positional args above: mints an app-credential
+# login (see launcher_auth.py) alongside the existing admin-token mechanism.
+# Neither flag is required -- an already-provisioned host with no flags
+# passed just leaves credentials/users.json untouched.
+APP_USERNAME=""
+APP_PASSWORD=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --app-username)
+      APP_USERNAME="${2:-}"
+      shift 2
+      ;;
+    --app-password)
+      APP_PASSWORD="${2:-}"
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
 
 CURRENT_STAGE=""
 
@@ -136,15 +159,30 @@ cleanup_runtime() {
 trap handle_failure ERR
 
 mkdir -p credentials
+chmod 750 credentials 2>/dev/null || true
 if [ ! -s credentials/admin-token ]; then
-  umask 077
+  umask 027
   if command -v openssl >/dev/null 2>&1; then
     openssl rand -hex 32 >credentials/admin-token
   else
     head -c 48 /dev/urandom | base64 | tr -d '\n=' >credentials/admin-token
   fi
 fi
-chmod 600 credentials/admin-token
+# 0644, not 0640: launcher-control reads this file as its unprivileged
+# appuser, which lands on the "other" permission bits inside the
+# container. The 0750 directory above and the deployment account's own
+# home keep it private to this account on the host.
+chmod 644 credentials/admin-token
+
+# App-credential logins (launcher_auth.py), additive to admin-token above.
+# The file always exists once the stack is up, whether or not
+# --app-username/--app-password was passed, because docker-compose.remote.yml
+# bind-mounts it unconditionally.
+if [ ! -s credentials/users.json ]; then
+  umask 027
+  printf '{}' >credentials/users.json
+fi
+chmod 644 credentials/users.json
 
 export SUITE_API_PORT="$BACKEND_PORT"
 export LAUNCHER_CONTROL_PORT=8090
@@ -251,6 +289,40 @@ if ! compose run --rm --no-deps --user 0:0 \
     >>"$LOG_FILE"
 fi
 
+if [ -n "$APP_USERNAME" ] && [ -n "$APP_PASSWORD" ]; then
+  write_status starting_containers 72 "Provisioning app credentials"
+  # Hashing happens inside the already-pulled launcher-control image, which
+  # already depends on bcrypt for launcher_auth.py, rather than requiring
+  # bcrypt on the host. --user 0:0 mirrors the workspace-storage step above:
+  # the users.json bind mount is owned by the deployment account (or real
+  # root under plain Docker), and container root can write it either way.
+  if ! NMTK_PROVISION_APP_USERNAME="$APP_USERNAME" \
+    NMTK_PROVISION_APP_PASSWORD="$APP_PASSWORD" \
+    compose run --rm --no-deps --user 0:0 \
+    --entrypoint python3 launcher-control -c '
+import bcrypt, json, os
+
+path = "/app/credentials/users.json"
+try:
+    with open(path, encoding="utf-8") as f:
+        users = json.load(f)
+except (OSError, ValueError):
+    users = {}
+if not isinstance(users, dict):
+    users = {}
+
+username = os.environ["NMTK_PROVISION_APP_USERNAME"]
+password = os.environ["NMTK_PROVISION_APP_PASSWORD"].encode("utf-8")
+users[username] = bcrypt.hashpw(password, bcrypt.gensalt()).decode("utf-8")
+
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(users, f)
+os.chmod(path, 0o644)
+' >>"$LOG_FILE" 2>&1; then
+    fail_stage "The app-credential login could not be provisioned; diagnostics were captured in the deployment log."
+  fi
+fi
+
 write_status starting_containers 80 "Starting backend containers"
 if ! bash ./nmtk-stack.sh install "$ENGINE" >>"$LOG_FILE" 2>&1; then
   fail_stage "The NMTK backend could not be registered to start automatically after a server reboot."
@@ -326,6 +398,26 @@ for _attempt in $(seq 1 60); do
 done
 curl --silent --show-error --fail \
   "http://127.0.0.1:8090/health" >>"$LOG_FILE" 2>&1
+
+# /health is public. Every other launcher endpoint needs the administrator
+# token, and launcher-control reads it from a file mounted into the container:
+# if that file is unreadable there, it answers 401 to a perfectly correct
+# token and the stack looks healthy while the app cannot use it at all. Prove
+# the credential works here rather than letting the client discover it as
+# "the backend is unreachable".
+launcher_auth_code="$(curl --silent --output /dev/null --max-time 10 \
+  --write-out '%{http_code}' \
+  --header "X-NMTK-Admin-Token: $(cat credentials/admin-token)" \
+  "http://127.0.0.1:8090/api/launcher/settings" 2>>"$LOG_FILE")"
+case "$launcher_auth_code" in
+  2*) ;;
+  401 | 403)
+    fail_stage "Launcher control rejected its own administrator token, so it cannot read the mounted credential file. Check that credentials/admin-token is world-readable and mounted into the launcher-control container."
+    ;;
+  *)
+    fail_stage "Launcher control did not answer an authenticated request (HTTP $launcher_auth_code)."
+    ;;
+esac
 
 write_status verifying_optional_capabilities 98 "Checking optional capabilities"
 if ! curl --silent --show-error --fail \

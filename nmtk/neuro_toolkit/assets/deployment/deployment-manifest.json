@@ -1,10 +1,10 @@
 {
-  "bundleVersion": 10,
+  "bundleVersion": 15,
   "files": {
     "docker-compose.prod.yml": "f199fe7232659a2e7d916358775872d5fc335473abd17644469a94c98f3622cc",
-    "docker-compose.remote.yml": "1af42da796c985b55e11ca0f8fb68e0098874ec1fe70fc4500c8430b194df44e",
+    "docker-compose.remote.yml": "e07a1e230180d11565a3f470b5733dd11d5baf23d005e00c4e6c45c7d3392daf",
     "docker-compose.yml": "bc20387c34b9e7274a2e4a1bd5d01018db600df4be23c8f1b9bdd1bdd1a541b4",
-    "install.sh": "021e1d0b09b9c0afb6da4edc5914d5827d0044f05f039b43731e85f435e81b3b",
+    "install.sh": "5cee7505573c4d231b88f4b2836913fb7e2194c95102741dcbe399a1b9cfd174",
     "migrate_legacy.py": "72bdf5f04fc5b85ef76d24956873bab54c617c478d901efb03c342bb59df6a3b",
     "monitoring/alertmanager/alertmanager.yml": "5e37524bbb610300cc965e41488b3c9d11fa5886f55d1196e5949ccf21da9d0e",
     "monitoring/loki/loki-config.yml": "414e3dadeb587963c52740adc3097af79710eb6d8bf7b5e7da648008469cd8c6",
