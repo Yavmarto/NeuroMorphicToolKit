@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import time
 from typing import Any
@@ -54,6 +55,9 @@ from .suite_api_service import (
     SUITE_API_STATUS_READY,
     _suite_api_health_probe,
 )
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ModuleLifecycleMixin:
@@ -410,117 +414,127 @@ class ModuleLifecycleMixin:
 
     def _health_poll_loop(self) -> None:
         while not self._shutdown.wait(HEALTH_POLL_SECONDS):
-            if self._manage_suite_api:
-                ok, message = _suite_api_health_probe()
-                if ok:
-                    self._set_suite_api_state(
-                        SUITE_API_STATUS_READY, "Managed by suite_api"
-                    )
-                elif self._suite_api_status == SUITE_API_STATUS_READY:
-                    self._set_suite_api_state(
-                        SUITE_API_STATUS_PREFLIGHT_FAILED,
-                        message or "suite_api health probe failed",
-                    )
-            # Monolithic modules have no dedicated process for the launcher
-            # to supervise.  Reconcile their transitional state explicitly so
-            # a restart or failed in-container connection cannot strand a
-            # workspace on an infinite "starting" screen.
-            with self._lock:
-                monolith_starting_ids = [
-                    module_id
-                    for module_id, module in self._modules.items()
-                    if module.get("status") == STATUS_INDEX["starting"]
-                    and _module_start_strategy(module) == "none"
-                    and not _is_externally_managed_service(module)
-                ]
-            if monolith_starting_ids:
-                suite_ready, _message = _suite_api_health_probe()
-                for module_id in monolith_starting_ids:
-                    if suite_ready:
-                        self._update_module_fields(
-                            module_id,
-                            status=STATUS_INDEX["running"],
-                            healthStatus="Managed by suite_api",
-                        )
-                    else:
-                        self._update_module_fields(
-                            module_id,
-                            status=STATUS_INDEX["error"],
-                            healthStatus=(
-                                "Suite API is not reachable from launcher "
-                                "control. Retry after the backend starts."
-                            ),
-                        )
-            with self._lock:
-                module_ids = list(self._processes.keys())
-            for module_id in module_ids:
-                with self._lock:
-                    module = dict(self._get_module(module_id))
-                ok, status_code, health_text = self._probe_health(module)
-                if ok:
-                    next_status = _status_for_health_response(
-                        status_code,
-                        str(module.get("preflightStatus", PREFLIGHT_OK)),
-                    )
-                    self._update_module_fields(
-                        module_id,
-                        status=next_status,
-                        healthStatus=health_text
-                        if health_text
-                        else (
-                            "No /health endpoint (server is up)"
-                            if status_code == 404
-                            else None
-                        ),
-                    )
-                elif module_id in self._processes:
-                    self._update_module_fields(
-                        module_id,
-                        status=STATUS_INDEX["error"],
-                        healthStatus="Health probe failed",
-                    )
+            try:
+                self._health_poll_once()
+            except Exception:  # noqa: BLE001
+                # This thread is the only thing that moves a module out of
+                # a transitional status. An uncaught error here used to end
+                # it silently and leave the workspace waiting on a module
+                # forever, so log it and keep polling.
+                LOGGER.warning("Health poll iteration failed", exc_info=True)
 
-            # Also poll externally managed services (those not in _processes).
-            # These are started outside the launcher (e.g. via Docker) and need
-            # their own health tracking so the UI can recover when the service
-            # comes back up or detect when it goes away.
-            with self._lock:
-                external_snapshots = [
-                    (mid, dict(m))
-                    for mid, m in self._modules.items()
-                    if _is_externally_managed_service(m)
-                    and mid not in self._processes
-                    and int(m.get("status", STATUS_INDEX["notInstalled"]))
-                    in (
-                        STATUS_INDEX["running"],
-                        STATUS_INDEX["degraded"],
-                        STATUS_INDEX["error"],
-                        STATUS_INDEX["starting"],
-                    )
-                ]
-            for module_id, module in external_snapshots:
-                ok, status_code, health_text = self._probe_health(module)
-                if ok:
-                    next_status = _status_for_health_response(
-                        status_code, str(module.get("preflightStatus", PREFLIGHT_OK))
-                    )
+    def _health_poll_once(self) -> None:
+        if self._manage_suite_api:
+            ok, message = _suite_api_health_probe()
+            if ok:
+                self._set_suite_api_state(
+                    SUITE_API_STATUS_READY, "Managed by suite_api"
+                )
+            elif self._suite_api_status == SUITE_API_STATUS_READY:
+                self._set_suite_api_state(
+                    SUITE_API_STATUS_PREFLIGHT_FAILED,
+                    message or "suite_api health probe failed",
+                )
+        # Monolithic modules have no dedicated process for the launcher
+        # to supervise.  Reconcile their transitional state explicitly so
+        # a restart or failed in-container connection cannot strand a
+        # workspace on an infinite "starting" screen.
+        with self._lock:
+            monolith_starting_ids = [
+                module_id
+                for module_id, module in self._modules.items()
+                if module.get("status") == STATUS_INDEX["starting"]
+                and _module_start_strategy(module) == "none"
+                and not _is_externally_managed_service(module)
+            ]
+        if monolith_starting_ids:
+            suite_ready, _message = _suite_api_health_probe()
+            for module_id in monolith_starting_ids:
+                if suite_ready:
                     self._update_module_fields(
                         module_id,
-                        status=next_status,
-                        healthStatus=health_text
-                        if health_text
-                        else (
-                            "No /health endpoint (server is up)"
-                            if status_code == 404
-                            else None
-                        ),
+                        status=STATUS_INDEX["running"],
+                        healthStatus="Managed by suite_api",
                     )
                 else:
                     self._update_module_fields(
                         module_id,
                         status=STATUS_INDEX["error"],
-                        healthStatus="External service is not reachable",
+                        healthStatus=(
+                            "Suite API is not reachable from launcher "
+                            "control. Retry after the backend starts."
+                        ),
                     )
+        with self._lock:
+            module_ids = list(self._processes.keys())
+        for module_id in module_ids:
+            with self._lock:
+                module = dict(self._get_module(module_id))
+            ok, status_code, health_text = self._probe_health(module)
+            if ok:
+                next_status = _status_for_health_response(
+                    status_code,
+                    str(module.get("preflightStatus", PREFLIGHT_OK)),
+                )
+                self._update_module_fields(
+                    module_id,
+                    status=next_status,
+                    healthStatus=health_text
+                    if health_text
+                    else (
+                        "No /health endpoint (server is up)"
+                        if status_code == 404
+                        else None
+                    ),
+                )
+            elif module_id in self._processes:
+                self._update_module_fields(
+                    module_id,
+                    status=STATUS_INDEX["error"],
+                    healthStatus="Health probe failed",
+                )
+
+        # Also poll externally managed services (those not in _processes).
+        # These are started outside the launcher (e.g. via Docker) and need
+        # their own health tracking so the UI can recover when the service
+        # comes back up or detect when it goes away.
+        with self._lock:
+            external_snapshots = [
+                (mid, dict(m))
+                for mid, m in self._modules.items()
+                if _is_externally_managed_service(m)
+                and mid not in self._processes
+                and int(m.get("status", STATUS_INDEX["notInstalled"]))
+                in (
+                    STATUS_INDEX["running"],
+                    STATUS_INDEX["degraded"],
+                    STATUS_INDEX["error"],
+                    STATUS_INDEX["starting"],
+                )
+            ]
+        for module_id, module in external_snapshots:
+            ok, status_code, health_text = self._probe_health(module)
+            if ok:
+                next_status = _status_for_health_response(
+                    status_code, str(module.get("preflightStatus", PREFLIGHT_OK))
+                )
+                self._update_module_fields(
+                    module_id,
+                    status=next_status,
+                    healthStatus=health_text
+                    if health_text
+                    else (
+                        "No /health endpoint (server is up)"
+                        if status_code == 404
+                        else None
+                    ),
+                )
+            else:
+                self._update_module_fields(
+                    module_id,
+                    status=STATUS_INDEX["error"],
+                    healthStatus="External service is not reachable",
+                )
 
     def doctor_report(self) -> dict[str, Any]:
         modules: list[dict[str, Any]] = []
@@ -782,4 +796,15 @@ class ModuleLifecycleMixin:
             }
             for module_id, module in self._modules.items()
         }
-        _write_json_file(STATE_FILE, payload)
+        try:
+            _write_json_file(STATE_FILE, payload)
+        except OSError:
+            # Module status is authoritative in memory; this file only carries
+            # it across a restart. Raising here used to kill the health-poll
+            # thread on its first reconciliation, which froze every module on
+            # "starting" for the life of the container.
+            LOGGER.warning(
+                "Module state could not be persisted; continuing with the "
+                "in-memory module state.",
+                exc_info=True,
+            )

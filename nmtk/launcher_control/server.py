@@ -29,6 +29,7 @@ from .deployment_service import DeploymentService
 from .deployment_store import DeploymentStore, FileBackedSecretStore
 from .doctor_service import _render_doctor_report
 from .hardware_discovery import HardwareDiscoveryMixin
+from .launcher_auth import LauncherAuthMixin
 from .hardware_models import (  # noqa: F401
     DEFAULT_LAVA_BACKEND_PORT,
     EXPECTED_PYNQ_OVERLAY_MANIFEST,
@@ -211,6 +212,7 @@ class LauncherControlState(
     HardwareDiscoveryMixin,
     AkidaRuntimeUpdateJobsMixin,
     AkidaServiceMixin,
+    LauncherAuthMixin,
     ModuleInstallMixin,
     ModuleLifecycleMixin,
     ModuleRegistryMixin,
@@ -232,6 +234,8 @@ class LauncherControlState(
     ) -> None:
         self._lock = threading.RLock()
         self._terminal_lock = threading.Lock()
+        self._sessions: dict[str, dict[str, Any]] = {}
+        self._sessions_lock = threading.Lock()
         self._remote_version_resolver = (
             remote_version_resolver or _resolve_remote_module_version
         )
