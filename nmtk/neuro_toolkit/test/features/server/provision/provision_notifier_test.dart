@@ -1,0 +1,118 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:neuro_toolkit/features/server/provision/provision_notifier.dart';
+import 'package:neuro_toolkit/features/server/provision/provision_service.dart';
+import 'package:neuro_toolkit/models/backend_deployment.dart';
+import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
+import 'package:neuro_toolkit/services/deployment/job_registry.dart';
+
+class _SucceedingProvisionService extends ProvisionService {
+  @override
+  Future<ProvisionResult> run({
+    required String host,
+    required int sshPort,
+    required String sudoUsername,
+    String sudoPassword = '',
+    String sudoPrivateKey = '',
+    required String containerEngine,
+    RemoteReinstallMode reinstallMode = RemoteReinstallMode.preserveData,
+    void Function(DeploymentJob job)? onProgress,
+    JobRegistry? registry,
+  }) async {
+    onProgress?.call(
+      DeploymentJob(
+        id: 'job-1',
+        targetId: 'remote-192-168-2-90',
+        mode: 'docker',
+        stage: DeploymentPhase.bootstrappingAccess.wireName,
+        percent: 5,
+        stageLabel: 'Checking administrator access',
+        logs: const [],
+        terminalOutput: const [],
+      ),
+    );
+    return ProvisionResult(host: host);
+  }
+}
+
+class _FailingProvisionService extends ProvisionService {
+  @override
+  Future<ProvisionResult> run({
+    required String host,
+    required int sshPort,
+    required String sudoUsername,
+    String sudoPassword = '',
+    String sudoPrivateKey = '',
+    required String containerEngine,
+    RemoteReinstallMode reinstallMode = RemoteReinstallMode.preserveData,
+    void Function(DeploymentJob job)? onProgress,
+    JobRegistry? registry,
+  }) async {
+    throw const RemoteSetupException(
+      DeploymentFailureDetails(
+        code: 'admin_authentication_failed',
+        phase: 'bootstrapping_access',
+        summary: 'Administrator authentication failed',
+        recovery: 'Check the username and credentials.',
+      ),
+    );
+  }
+}
+
+void main() {
+  test('provision() streams progress then reports success', () async {
+    final container = ProviderContainer(
+      overrides: [
+        provisionServiceProvider.overrideWithValue(_SucceedingProvisionService()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final states = <ProvisionState>[];
+    container.listen(
+      provisionNotifierProvider,
+      (previous, next) => states.add(next),
+      fireImmediately: true,
+    );
+
+    await container
+        .read(provisionNotifierProvider.notifier)
+        .provision(
+          host: '192.168.2.90',
+          sshPort: 22,
+          sudoUsername: 'moosebun2',
+          sudoPassword: 'secret',
+          containerEngine: 'docker',
+        );
+
+    expect(states.first, isA<ProvisionIdle>());
+    expect(states.any((s) => s is ProvisionRunning), isTrue);
+    expect(container.read(provisionNotifierProvider), isA<ProvisionSuccess>());
+  });
+
+  test('provision() reports failure details on RemoteSetupException', () async {
+    final container = ProviderContainer(
+      overrides: [
+        provisionServiceProvider.overrideWithValue(_FailingProvisionService()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(provisionNotifierProvider.notifier)
+        .provision(
+          host: '192.168.2.90',
+          sshPort: 22,
+          sudoUsername: 'moosebun2',
+          sudoPassword: 'wrong',
+          containerEngine: 'docker',
+        );
+
+    final state = container.read(provisionNotifierProvider);
+    expect(state, isA<ProvisionFailure>());
+    expect(
+      (state as ProvisionFailure).details.code,
+      'admin_authentication_failed',
+    );
+  });
+}
