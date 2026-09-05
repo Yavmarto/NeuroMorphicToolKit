@@ -1,36 +1,62 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:neuro_toolkit/models/backend_deployment.dart';
 import 'package:neuro_toolkit/features/server/provision/provision_service.dart';
 
+/// Either half of the admin credential a sudo-capable login accepts: a
+/// password or a private key, never both populated.
+class ProvisionCredential {
+  const ProvisionCredential.password(this.password) : privateKey = '';
+
+  const ProvisionCredential.privateKey(this.privateKey) : password = '';
+
+  final String password;
+  final String privateKey;
+}
+
+/// What the setup form submits to [ProvisionNotifier.provision].
+class ProvisionRequest {
+  const ProvisionRequest({
+    required this.host,
+    required this.sudoUser,
+    required this.credential,
+    required this.engine,
+    this.sshPort = 22,
+    this.reinstallMode = RemoteReinstallMode.preserveData,
+  });
+
+  final String host;
+  final String sudoUser;
+  final ProvisionCredential credential;
+  final String engine;
+  final int sshPort;
+  final RemoteReinstallMode reinstallMode;
+}
+
+/// A plain-English provisioning failure — never a stack trace. [retryable]
+/// tells the form whether to offer "Retry" with re-entered credentials.
+class ProvisionFailure {
+  const ProvisionFailure({required this.cause, this.retryable = true});
+
+  final String cause;
+  final bool retryable;
+}
+
 /// Backs the one setup form: drives [ProvisionService.run] and exposes its
-/// progress as a simple idle → running → success/failure state, so the form
-/// widget only has to render whichever case is current.
-sealed class ProvisionState {
-  const ProvisionState();
-}
+/// progress as a single flat state, so the form only ever reads one value.
+class ProvisionState {
+  const ProvisionState({
+    this.isRunning = false,
+    this.phaseLabel,
+    this.progress,
+    this.failure,
+    this.result,
+  });
 
-class ProvisionIdle extends ProvisionState {
-  const ProvisionIdle();
-}
-
-class ProvisionRunning extends ProvisionState {
-  const ProvisionRunning({required this.jobId, required this.job});
-
-  final String jobId;
-  final DeploymentJob job;
-}
-
-class ProvisionSuccess extends ProvisionState {
-  const ProvisionSuccess(this.result);
-
-  final ProvisionResult result;
-}
-
-class ProvisionFailure extends ProvisionState {
-  const ProvisionFailure(this.details);
-
-  final DeploymentFailureDetails details;
+  final bool isRunning;
+  final String? phaseLabel;
+  final double? progress;
+  final ProvisionFailure? failure;
+  final ProvisionResult? result;
 }
 
 final provisionServiceProvider = Provider<ProvisionService>(
@@ -41,54 +67,59 @@ final provisionNotifierProvider =
     NotifierProvider<ProvisionNotifier, ProvisionState>(ProvisionNotifier.new);
 
 class ProvisionNotifier extends Notifier<ProvisionState> {
-  @override
-  ProvisionState build() => const ProvisionIdle();
+  String? _activeJobId;
 
-  /// Runs (or re-runs) provisioning against [host]. Re-provisioning an
+  @override
+  ProvisionState build() => const ProvisionState();
+
+  /// Runs (or re-runs) provisioning for [request]. Re-provisioning an
   /// already-set-up server is expected and safe — the underlying script is
-  /// idempotent — so this is also the "Re-provision this server" action.
-  Future<void> provision({
-    required String host,
-    required int sshPort,
-    required String sudoUsername,
-    String sudoPassword = '',
-    String sudoPrivateKey = '',
-    required String containerEngine,
-    RemoteReinstallMode reinstallMode = RemoteReinstallMode.preserveData,
-  }) async {
-    final service = ref.read(provisionServiceProvider);
+  /// idempotent — so this also backs the "Re-provision this server" action
+  /// and, on failure, a retry with re-entered credentials.
+  Future<void> provision(ProvisionRequest request) async {
+    _activeJobId = null;
+    state = const ProvisionState(isRunning: true, phaseLabel: 'Connecting…');
     try {
-      final result = await service.run(
-        host: host,
-        sshPort: sshPort,
-        sudoUsername: sudoUsername,
-        sudoPassword: sudoPassword,
-        sudoPrivateKey: sudoPrivateKey,
-        containerEngine: containerEngine,
-        reinstallMode: reinstallMode,
-        onProgress: (job) => state = ProvisionRunning(jobId: job.id, job: job),
-      );
-      state = ProvisionSuccess(result);
+      final result = await ref
+          .read(provisionServiceProvider)
+          .run(
+            host: request.host,
+            sshPort: request.sshPort,
+            sudoUsername: request.sudoUser,
+            sudoPassword: request.credential.password,
+            sudoPrivateKey: request.credential.privateKey,
+            containerEngine: request.engine,
+            reinstallMode: request.reinstallMode,
+            onProgress: (job) {
+              _activeJobId = job.id;
+              state = ProvisionState(
+                isRunning: true,
+                phaseLabel: job.stageLabel,
+                progress: job.percent / 100,
+              );
+            },
+          );
+      _activeJobId = null;
+      state = ProvisionState(result: result);
     } on RemoteSetupException catch (error) {
-      state = ProvisionFailure(error.details);
+      _activeJobId = null;
+      state = ProvisionState(
+        failure: ProvisionFailure(cause: error.details.recovery),
+      );
     } catch (error) {
-      state = ProvisionFailure(
-        DeploymentFailureDetails(
-          code: 'provision_failed',
-          phase: 'failed',
-          summary: 'Server setup failed',
-          recovery: error.toString(),
-        ),
+      _activeJobId = null;
+      state = ProvisionState(
+        failure: ProvisionFailure(cause: 'Server setup failed: $error'),
       );
     }
   }
 
   /// Cancels an in-progress provision run, if any.
   void cancel() {
-    final current = state;
-    if (current is! ProvisionRunning) return;
-    ref.read(provisionServiceProvider).cancelAdministratorSession(current.jobId);
+    final jobId = _activeJobId;
+    if (jobId == null) return;
+    ref.read(provisionServiceProvider).cancelAdministratorSession(jobId);
   }
 
-  void reset() => state = const ProvisionIdle();
+  void reset() => state = const ProvisionState();
 }

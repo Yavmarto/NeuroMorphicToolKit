@@ -31,7 +31,7 @@ class _SucceedingProvisionService extends ProvisionService {
         terminalOutput: const [],
       ),
     );
-    return ProvisionResult(host: host);
+    return ProvisionResult(host: host, appUsername: 'admin');
   }
 }
 
@@ -60,7 +60,7 @@ class _FailingProvisionService extends ProvisionService {
 }
 
 void main() {
-  test('provision() streams progress then reports success', () async {
+  test('provision() streams progress then reports a result', () async {
     final container = ProviderContainer(
       overrides: [
         provisionServiceProvider.overrideWithValue(_SucceedingProvisionService()),
@@ -78,19 +78,26 @@ void main() {
     await container
         .read(provisionNotifierProvider.notifier)
         .provision(
-          host: '192.168.2.90',
-          sshPort: 22,
-          sudoUsername: 'moosebun2',
-          sudoPassword: 'secret',
-          containerEngine: 'docker',
+          const ProvisionRequest(
+            host: '192.168.2.90',
+            sudoUser: 'moosebun2',
+            credential: ProvisionCredential.password('secret'),
+            engine: 'docker',
+          ),
         );
 
-    expect(states.first, isA<ProvisionIdle>());
-    expect(states.any((s) => s is ProvisionRunning), isTrue);
-    expect(container.read(provisionNotifierProvider), isA<ProvisionSuccess>());
+    expect(states.first.isRunning, isFalse);
+    expect(states.any((s) => s.isRunning && s.phaseLabel != null), isTrue);
+    expect(states.any((s) => s.progress != null), isTrue);
+
+    final finalState = container.read(provisionNotifierProvider);
+    expect(finalState.isRunning, isFalse);
+    expect(finalState.failure, isNull);
+    expect(finalState.result?.host, '192.168.2.90');
+    expect(finalState.result?.appUsername, 'admin');
   });
 
-  test('provision() reports failure details on RemoteSetupException', () async {
+  test('provision() reports a plain-English, retryable failure', () async {
     final container = ProviderContainer(
       overrides: [
         provisionServiceProvider.overrideWithValue(_FailingProvisionService()),
@@ -101,18 +108,19 @@ void main() {
     await container
         .read(provisionNotifierProvider.notifier)
         .provision(
-          host: '192.168.2.90',
-          sshPort: 22,
-          sudoUsername: 'moosebun2',
-          sudoPassword: 'wrong',
-          containerEngine: 'docker',
+          const ProvisionRequest(
+            host: '192.168.2.90',
+            sudoUser: 'moosebun2',
+            credential: ProvisionCredential.password('wrong'),
+            engine: 'docker',
+          ),
         );
 
     final state = container.read(provisionNotifierProvider);
-    expect(state, isA<ProvisionFailure>());
-    expect(
-      (state as ProvisionFailure).details.code,
-      'admin_authentication_failed',
-    );
+    expect(state.isRunning, isFalse);
+    expect(state.result, isNull);
+    expect(state.failure, isNotNull);
+    expect(state.failure!.cause, 'Check the username and credentials.');
+    expect(state.failure!.retryable, isTrue);
   });
 }
