@@ -84,6 +84,13 @@ class TestInstallScriptForwardsProvisionEnv(unittest.TestCase):
         # not root) -- needs this restored the same way --cap-add CHOWN
         # restores it for the workspace-storage step above.
         self.assertIn("--cap-add DAC_OVERRIDE", compose_run_call)
+        # chmod needs CAP_FOWNER to re-mode a file it doesn't own, also
+        # stripped by cap_drop: ALL, and it's redundant besides -- install.sh
+        # already leaves the file at 0644 before this container ever runs, and
+        # writing to an existing file never changes its mode bits. Confirmed
+        # on the live dev host: the write itself succeeded, only the trailing
+        # os.chmod() call failed with EPERM.
+        self.assertNotIn("os.chmod", compose_run_call)
 
     def test_users_json_bind_mount_uses_its_own_source_directory(self) -> None:
         # Compose collapses two file bind mounts that share a source

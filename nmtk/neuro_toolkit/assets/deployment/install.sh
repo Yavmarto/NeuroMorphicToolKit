@@ -306,7 +306,11 @@ if [ -n "$APP_USERNAME" ] && [ -n "$APP_PASSWORD" ]; then
   # but launcher-control's cap_drop: ALL also strips CAP_DAC_OVERRIDE, so
   # root alone still can't write a file it doesn't own by permission bits --
   # --cap-add DAC_OVERRIDE restores that for this one-off run, the same way
-  # --cap-add CHOWN does above.
+  # --cap-add CHOWN does above. There is deliberately no re-chmod of the file
+  # after the write below: that would need CAP_FOWNER, also stripped by
+  # cap_drop: ALL, and is unnecessary anyway -- install.sh already left the
+  # file at 0644 above, and writing to an existing file never changes its
+  # mode bits.
   if ! NMTK_PROVISION_APP_USERNAME="$APP_USERNAME" \
     NMTK_PROVISION_APP_PASSWORD="$APP_PASSWORD" \
     compose run --rm --no-deps --user 0:0 \
@@ -330,7 +334,6 @@ users[username] = bcrypt.hashpw(password, bcrypt.gensalt()).decode("utf-8")
 
 with open(path, "w", encoding="utf-8") as f:
     json.dump(users, f)
-os.chmod(path, 0o644)
 ' >>"$LOG_FILE" 2>&1; then
     fail_stage "The app-credential login could not be provisioned; diagnostics were captured in the deployment log."
   fi
