@@ -299,6 +299,7 @@ if [ -n "$APP_USERNAME" ] && [ -n "$APP_PASSWORD" ]; then
   if ! NMTK_PROVISION_APP_USERNAME="$APP_USERNAME" \
     NMTK_PROVISION_APP_PASSWORD="$APP_PASSWORD" \
     compose run --rm --no-deps --user 0:0 \
+    -e NMTK_PROVISION_APP_USERNAME -e NMTK_PROVISION_APP_PASSWORD \
     --entrypoint python3 launcher-control -c '
 import bcrypt, json, os
 
