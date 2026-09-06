@@ -9,6 +9,7 @@ Start with: uvicorn workers.neurocnl_physics.main:app --port 8006
 Suite_api routes /api/neurocnl/prosthetic/simulate here when the physics
 worker is running; returns 503 when it is not.
 """
+
 import logging
 import sys
 from collections.abc import AsyncGenerator
@@ -48,6 +49,7 @@ app = FastAPI(
 # Mount the prosthetic simulate router (the only one that needs MuJoCo)
 try:
     from backend.app.routers.prosthetic import simulate as prosthetic_sim
+
     app.include_router(prosthetic_sim.router, prefix="/api/neurocnl/prosthetic")
     logger.info("neurocnl_physics: prosthetic simulate router loaded")
 except ImportError as exc:
@@ -63,6 +65,7 @@ async def health() -> dict[str, Any]:
     """Health check — also verifies MuJoCo is importable."""
     try:
         import mujoco  # type: ignore[import-untyped]
+
         mujoco_version = getattr(mujoco, "__version__", "unknown")
         mujoco_ok = True
     except ImportError:

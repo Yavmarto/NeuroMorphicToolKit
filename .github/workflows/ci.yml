@@ -38,6 +38,7 @@ jobs:
       macos_installer: ${{ steps.filter.outputs.macos_installer }}
       windows_installer: ${{ steps.filter.outputs.windows_installer }}
       suite_api: ${{ steps.filter.outputs.suite_api }}
+      workers: ${{ steps.filter.outputs.workers }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -84,6 +85,8 @@ jobs:
               - 'workers/**'
               - 'scripts/ci/suiteapi.sh'
               - 'tests/integration/**'
+            workers:
+              - 'workers/**'
 
   test-suite-api:
     needs: detect-changes
@@ -273,6 +276,76 @@ jobs:
         run: |
           cd Neurosense
           python -m pytest --tb=short --hypothesis-show-statistics
+
+  test-workers:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.workers == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+        workspace:
+          - neurobench_runner
+          - neurocnl_physics
+          - neurosense_hw
+          - neurochip_hw
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
+      - name: Install dependencies
+        run: python -m pip install -e "./workers/${{ matrix.workspace }}[dev]"
+      - name: Lint with ruff
+        run: |
+          cd workers/${{ matrix.workspace }}
+          python -m ruff check .
+          python -m ruff format --check .
+      - name: Type check with mypy
+        run: |
+          cd workers/${{ matrix.workspace }}
+          python -m mypy main.py
+      - name: Run tests
+        shell: bash
+        run: |
+          cd workers/${{ matrix.workspace }}
+          if compgen -G "test_*.py" > /dev/null 2>&1 || compgen -G "*_test.py" > /dev/null 2>&1 || [ -d tests ]; then
+            python -m pytest --tb=short --hypothesis-show-statistics
+          else
+            echo "No tests present for ${{ matrix.workspace }} yet; skipping."
+          fi
 
   test-neurohub:
     needs: detect-changes
@@ -673,6 +746,7 @@ jobs:
       - test-macos-installer-signing
       - test-windows-installer-signing
       - test-suite-api
+      - test-workers
     if: always()
     steps:
       - name: Check results
@@ -687,6 +761,7 @@ jobs:
           echo "  neurocnl:       ${{ needs.test-neurocnl-backend.result }}"
           echo "  neurotoolkit:   ${{ needs.test-neurotoolkit.result }}"
           echo "  suite-api:      ${{ needs.test-suite-api.result }}"
+          echo "  workers:        ${{ needs.test-workers.result }}"
           echo "  macos-installer: ${{ needs.test-macos-installer-signing.result }}"
           echo "  windows-installer: ${{ needs.test-windows-installer-signing.result }}"
 
@@ -704,6 +779,7 @@ jobs:
             "${{ needs.test-neurocnl-backend.result }}" \
             "${{ needs.test-neurotoolkit.result }}" \
             "${{ needs.test-suite-api.result }}" \
+            "${{ needs.test-workers.result }}" \
             "${{ needs.test-macos-installer-signing.result }}" \
             "${{ needs.test-windows-installer-signing.result }}"; do
             if [ "$result" = "failure" ]; then

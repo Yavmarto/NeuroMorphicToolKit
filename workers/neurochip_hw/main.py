@@ -13,6 +13,7 @@ here via HTTP proxy.
 On machines without Akida/PYNQ/Lava installed, hardware routers are
 skipped with a logged warning and the worker starts cleanly.
 """
+
 import importlib
 import logging
 from typing import Any
@@ -29,11 +30,27 @@ app = FastAPI(
 
 # Mount hardware routers — each guarded for machines without the SDK
 for _name, _module, _prefix in [
-    ("akida",  "neurochip.app.routers.akida",  None),   # carries own /api/neurochip/akida prefix
-    ("lava",   "neurochip.app.routers.lava",   None),   # carries own /api/neurochip/hardware/lava prefix
-    ("speck",  "neurochip.app.routers.speck",  None),   # carries own /api/neurochip/hardware/speck prefix
-    ("pynq",   "neurochip.app.routers.pynq",   None),   # carries own /hardware/pynq prefix
-    ("serial", "neurochip.app.routers.serial", None),   # carries own /api/neurochip/serial prefix
+    (
+        "akida",
+        "neurochip.app.routers.akida",
+        None,
+    ),  # carries own /api/neurochip/akida prefix
+    (
+        "lava",
+        "neurochip.app.routers.lava",
+        None,
+    ),  # carries own /api/neurochip/hardware/lava prefix
+    (
+        "speck",
+        "neurochip.app.routers.speck",
+        None,
+    ),  # carries own /api/neurochip/hardware/speck prefix
+    ("pynq", "neurochip.app.routers.pynq", None),  # carries own /hardware/pynq prefix
+    (
+        "serial",
+        "neurochip.app.routers.serial",
+        None,
+    ),  # carries own /api/neurochip/serial prefix
 ]:
     try:
         _mod = importlib.import_module(_module)
@@ -45,7 +62,8 @@ for _name, _module, _prefix in [
     except ImportError as exc:
         logger.warning(
             "neurochip_hw: %s router skipped (hardware SDK not installed): %s",
-            _name, exc,
+            _name,
+            exc,
         )
 
 
