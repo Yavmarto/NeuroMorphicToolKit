@@ -79,3 +79,8 @@ class TestInstallScriptForwardsProvisionEnv(unittest.TestCase):
         compose_run_call = provision_block.split("write_status", 1)[0]
         self.assertIn("-e NMTK_PROVISION_APP_USERNAME", compose_run_call)
         self.assertIn("-e NMTK_PROVISION_APP_PASSWORD", compose_run_call)
+        # launcher-control's cap_drop: ALL strips CAP_DAC_OVERRIDE, so --user
+        # 0:0 alone can't write users.json (owned by the deployment account,
+        # not root) -- needs this restored the same way --cap-add CHOWN
+        # restores it for the workspace-storage step above.
+        self.assertIn("--cap-add DAC_OVERRIDE", compose_run_call)

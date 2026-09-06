@@ -293,12 +293,15 @@ if [ -n "$APP_USERNAME" ] && [ -n "$APP_PASSWORD" ]; then
   write_status starting_containers 72 "Provisioning app credentials"
   # Hashing happens inside the already-pulled launcher-control image, which
   # already depends on bcrypt for launcher_auth.py, rather than requiring
-  # bcrypt on the host. --user 0:0 mirrors the workspace-storage step above:
-  # the users.json bind mount is owned by the deployment account (or real
-  # root under plain Docker), and container root can write it either way.
+  # bcrypt on the host. --user 0:0 mirrors the workspace-storage step above,
+  # but launcher-control's cap_drop: ALL also strips CAP_DAC_OVERRIDE, so
+  # root alone still can't write a file it doesn't own by permission bits --
+  # --cap-add DAC_OVERRIDE restores that for this one-off run, the same way
+  # --cap-add CHOWN does above.
   if ! NMTK_PROVISION_APP_USERNAME="$APP_USERNAME" \
     NMTK_PROVISION_APP_PASSWORD="$APP_PASSWORD" \
     compose run --rm --no-deps --user 0:0 \
+    --cap-add DAC_OVERRIDE \
     -e NMTK_PROVISION_APP_USERNAME -e NMTK_PROVISION_APP_PASSWORD \
     --entrypoint python3 launcher-control -c '
 import bcrypt, json, os
