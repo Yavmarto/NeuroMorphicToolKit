@@ -13,7 +13,7 @@ shift "$(($# < 7 ? $# : 7))"
 # Optional, additive to the positional args above: mints an app-credential
 # login (see launcher_auth.py) alongside the existing admin-token mechanism.
 # Neither flag is required -- an already-provisioned host with no flags
-# passed just leaves credentials/users.json untouched.
+# passed just leaves credentials/app/users.json untouched.
 APP_USERNAME=""
 APP_PASSWORD=""
 while [ $# -gt 0 ]; do
@@ -178,11 +178,20 @@ chmod 644 credentials/admin-token
 # The file always exists once the stack is up, whether or not
 # --app-username/--app-password was passed, because docker-compose.remote.yml
 # bind-mounts it unconditionally.
-if [ ! -s credentials/users.json ]; then
+#
+# Lives in its own subdirectory, not next to admin-token: when Compose sees
+# two file bind mounts sharing the same host source directory, it collapses
+# them into a single directory-level bind and applies the strictest of the
+# two modes -- so with both files under plain `credentials/`, admin-token's
+# `:ro` made users.json read-only too (confirmed on the live dev host: writes
+# failed with EROFS despite --user 0:0 and --cap-add DAC_OVERRIDE). A
+# separate source directory keeps the two bind mounts distinct.
+mkdir -p credentials/app
+if [ ! -s credentials/app/users.json ]; then
   umask 027
-  printf '{}' >credentials/users.json
+  printf '{}' >credentials/app/users.json
 fi
-chmod 644 credentials/users.json
+chmod 644 credentials/app/users.json
 
 export SUITE_API_PORT="$BACKEND_PORT"
 export LAUNCHER_CONTROL_PORT=8090

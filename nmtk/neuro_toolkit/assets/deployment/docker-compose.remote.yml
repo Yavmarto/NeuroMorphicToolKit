@@ -67,9 +67,18 @@ services:
     # install.sh mints new entries into it via `compose run` against this
     # same service definition, using --user 0:0 the same way as the
     # workspace-storage chown step above.
+    #
+    # It lives in credentials/app/, a different host directory than
+    # admin-token, not credentials/ itself: when two file bind mounts share
+    # the same source directory, Compose collapses them into one
+    # directory-level bind and applies the strictest mode of the two, so
+    # admin-token's :ro silently made users.json read-only as well (confirmed
+    # on the live dev host — writes failed with EROFS despite --user 0:0 and
+    # --cap-add DAC_OVERRIDE). A separate source directory keeps the bind
+    # mounts distinct so each keeps its own mode.
     volumes:
       - ./credentials/admin-token:/app/credentials/admin-token:ro
-      - ./credentials/users.json:/app/credentials/users.json
+      - ./credentials/app/users.json:/app/credentials/users.json
     environment:
       - NMTK_AUTH_REQUIRED=1
       - NMTK_ADMIN_TOKEN_FILE=/app/credentials/admin-token

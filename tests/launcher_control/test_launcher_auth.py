@@ -84,3 +84,20 @@ class TestInstallScriptForwardsProvisionEnv(unittest.TestCase):
         # not root) -- needs this restored the same way --cap-add CHOWN
         # restores it for the workspace-storage step above.
         self.assertIn("--cap-add DAC_OVERRIDE", compose_run_call)
+
+    def test_users_json_bind_mount_uses_its_own_source_directory(self) -> None:
+        # Compose collapses two file bind mounts that share a source
+        # directory into one directory-level bind, taking the strictest mode
+        # of the two -- so admin-token's :ro would silently make users.json
+        # read-only too if both lived directly under credentials/ (confirmed
+        # on the live dev host: writes failed with EROFS despite --user 0:0
+        # and --cap-add DAC_OVERRIDE). users.json must live in a subdirectory
+        # admin-token doesn't share.
+        repo_root = Path(__file__).resolve().parents[2]
+        compose_yml = (repo_root / "docker-compose.remote.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("./credentials/app/users.json:/app/credentials/users.json", compose_yml)
+        self.assertNotIn(
+            "./credentials/users.json:/app/credentials/users.json", compose_yml
+        )
