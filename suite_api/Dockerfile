@@ -32,6 +32,12 @@ COPY nmtk_sdk/ nmtk_sdk/
 
 # Copy source and install the package — heavy deps above already present
 COPY neurocnl/ neurocnl/
+# neurocnl depends on nmtk-contracts by name only (a relative `file:` URL
+# requirement is invalid per PEP 508 and pip rejects it outright). Install it
+# from source first so the name resolves as already-satisfied below.
+COPY nmtk_contracts/ nmtk_contracts/
+RUN ln -s /repo/nmtk_contracts /nmtk_contracts \
+ && pip install --no-cache-dir /repo/nmtk_contracts
 RUN pip install --no-cache-dir "./neurocnl[training,studio,rockpool,synsense,norse]" \
  && python -c "import nir; assert hasattr(nir, 'CubaLI'), 'nir>=1.0.5 required'; from neurocnl.runtime.sc_neurocore_simulator import sc_neurocore_nir_bridge_available; assert sc_neurocore_nir_bridge_available(), 'sc-neurocore NIR bridge missing'; import os; os._exit(0)"
 

@@ -47,18 +47,5 @@ select = ["E", "F"]
 
 [tool.mypy]
 python_version = "3.11"
-follow_imports = "skip"
 ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = [
-    "suite_api.errors",
-    "suite_api.storage",
-    "suite_api.proxy",
-]
-check_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_defs = true
-no_implicit_optional = true
-strict_equality = true
-warn_return_any = true
+strict = true

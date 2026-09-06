@@ -3,8 +3,9 @@
 import asyncio
 import json
 from types import SimpleNamespace
+from typing import cast
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from fastapi.testclient import TestClient
 
 from suite_api.main import app, http_exception_handler
@@ -37,10 +38,12 @@ def _fake_request() -> SimpleNamespace:
 def _run_handler(detail: object, status_code: int = 400) -> dict[str, object]:
     response = asyncio.run(
         http_exception_handler(
-            _fake_request(), HTTPException(status_code=status_code, detail=detail)
+            cast(Request, _fake_request()),
+            HTTPException(status_code=status_code, detail=detail),
         )
     )
-    return json.loads(response.body.decode())
+    body: dict[str, object] = json.loads(bytes(response.body).decode())
+    return body
 
 
 def test_dict_detail_uses_error_key_and_messages_list() -> None:

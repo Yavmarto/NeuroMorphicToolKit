@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import AsyncIterator
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -16,12 +19,12 @@ from suite_api.domains.neurocnl.router import router
 
 
 def test_suite_api_initializes_and_serves_neurocnl_workspaces(
-    tmp_path, monkeypatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(workspace_store, "db_path", tmp_path / "workspaces.db")
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await neurocnl_startup(app)
         try:
             yield

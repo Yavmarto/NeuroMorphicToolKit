@@ -74,7 +74,11 @@ def neurocnl_health() -> dict[str, Any]:
     disk = shutil.disk_usage(Path.cwd())
     return {
         "status": "ok",
-        "neurocnl_version": neurocnl.__version__,
+        # mypy resolves this import as the top-level "neurocnl" submodule
+        # checkout (a namespace package) rather than the installed
+        # neurocnl/neurocnl package, so __version__ looks missing statically
+        # even though it exists at runtime.
+        "neurocnl_version": neurocnl.__version__,  # type: ignore[attr-defined]
         "timestamp": datetime.now(UTC).isoformat(),
         "modules": {},
         "physics_worker": "configured",

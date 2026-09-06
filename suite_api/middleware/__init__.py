@@ -12,6 +12,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import Headers
+from starlette.middleware.base import RequestResponseEndpoint
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from suite_api.errors import error_response
@@ -110,7 +111,9 @@ def attach_middleware(app: FastAPI) -> None:
     )
 
     @app.middleware("http")
-    async def admin_auth_middleware(request: Request, call_next) -> Response:
+    async def admin_auth_middleware(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         protected = (
             request.url.path != "/api/suite/health" and request.method != "OPTIONS"
         )
@@ -148,7 +151,9 @@ def attach_middleware(app: FastAPI) -> None:
         return response
 
     @app.middleware("http")
-    async def request_id_middleware(request: Request, call_next) -> Response:
+    async def request_id_middleware(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         # Honour an incoming X-Request-ID so cross-service traces stay correlated.
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         request.state.request_id = request_id
@@ -157,7 +162,9 @@ def attach_middleware(app: FastAPI) -> None:
         return response
 
     @app.middleware("http")
-    async def response_time_middleware(request: Request, call_next) -> Response:
+    async def response_time_middleware(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         start = time.perf_counter()
         response = await call_next(request)
         elapsed_ms = (time.perf_counter() - start) * 1000

@@ -12,16 +12,20 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import TYPE_CHECKING
 
 # Ensure neurocnl/backend is importable (mirrors the __init__.py preamble)
 import suite_api.domains.neurocnl  # noqa: F401 (side-effect import)
 
+if TYPE_CHECKING:
+    from fastapi import FastAPI
+
 logger = logging.getLogger("suite_api.neurocnl.lifespan")
 
-_cleanup_task: asyncio.Task | None = None
+_cleanup_task: "asyncio.Task[None] | None" = None
 
 
-async def neurocnl_startup(app) -> None:  # type: ignore[type-arg]
+async def neurocnl_startup(app: "FastAPI") -> None:
     """Run neurocnl startup tasks inside suite_api's lifespan.
 
     * Configures structlog so request-level logs appear in the terminal.
@@ -53,7 +57,12 @@ async def neurocnl_startup(app) -> None:  # type: ignore[type-arg]
         from slowapi.errors import RateLimitExceeded
 
         app.state.limiter = limiter
-        app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+        # slowapi's handler predates Starlette's stricter exception-handler
+        # signature typing; the runtime shape is compatible.
+        app.add_exception_handler(
+            RateLimitExceeded,
+            _rate_limit_exceeded_handler,  # type: ignore[arg-type]
+        )
         logger.info("neurocnl rate limiter wired onto suite_api")
     except Exception as exc:
         logger.warning("neurocnl rate limiter setup failed (non-fatal): %s", exc)

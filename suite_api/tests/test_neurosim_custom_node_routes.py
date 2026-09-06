@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from suite_api.domains.neurosim.router import router
 
 
-def test_custom_node_source_validation_and_save_routes_are_mounted():
+def test_custom_node_source_validation_and_save_routes_are_mounted() -> None:
     app = FastAPI()
     app.include_router(router)
     paths = app.openapi()["paths"]

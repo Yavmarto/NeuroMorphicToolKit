@@ -20,15 +20,15 @@ def _make_client(
     app = FastAPI()
 
     @app.get("/probe")
-    async def probe() -> dict:
+    async def probe() -> dict[str, bool]:
         return {"ok": True}
 
     @app.get("/api/private")
-    async def private_probe() -> dict:
+    async def private_probe() -> dict[str, bool]:
         return {"ok": True}
 
     @app.get("/api/suite/health")
-    async def health() -> dict:
+    async def health() -> dict[str, str]:
         return {"status": "ok"}
 
     attach_middleware(app)

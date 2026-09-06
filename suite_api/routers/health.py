@@ -3,7 +3,7 @@ GET /api/suite/health  — suite_api's own health.
 GET /api/suite/health/modules — aggregated health of all module backends.
 """
 
-import asyncio
+import asyncio as asyncio  # re-exported: tests patch health.asyncio.to_thread
 import logging
 import os
 import sqlite3
@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import httpx
+import httpx as httpx  # re-exported: tests patch health.httpx.AsyncClient
 from fastapi import APIRouter
 
 from suite_api.config import settings
@@ -21,8 +21,8 @@ from suite_api.domains.jupyter.router import probe_jupyter_doctor
 from suite_api.schemas.doctor import (
     DoctorCheck,
     DoctorReport,
-    DoctorRequest,
-    DoctorStatus,
+    DoctorRequest as DoctorRequest,
+    DoctorStatus as DoctorStatus,
 )
 from suite_api.storage import default_neurocnl_data_dir
 
