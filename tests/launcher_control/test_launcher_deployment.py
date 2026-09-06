@@ -1390,7 +1390,7 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
             stage_label="Building Docker images on remote host",
         )
 
-        service._emit_log(job, "#5 [build] compiling wheels")
+        service._jobs._emit_log(job, "#5 [build] compiling wheels")
 
         self.assertEqual(job.stage, "installing")
         self.assertEqual(job.percent, 52.0)
@@ -1400,13 +1400,13 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         self.assertEqual(job.last_log_line, "#5 [build] compiling wheels")
         self.assertEqual(job.events[-1]["message"], "#5 [build] compiling wheels")
 
-        service._emit_log(job, "  indented server output")
+        service._jobs._emit_log(job, "  indented server output")
         self.assertEqual(job.terminal_output[-1], "  indented server output")
 
         # Empty/whitespace-only lines are dropped.
-        service._emit_log(job, "   ")
+        service._jobs._emit_log(job, "   ")
         self.assertEqual(len(job.logs), 2)
-        service._cancel_log_persistence(job.id)
+        service._jobs._cancel_log_persistence(job.id)
 
     def test_high_volume_terminal_output_debounces_persistence(self) -> None:
         from unittest import mock
@@ -1426,13 +1426,13 @@ class TestLauncherDeployment(LauncherControlServiceTestBase):
         )
 
         for index in range(1_000):
-            service._emit_log(job, f"server output {index}")
+            service._jobs._emit_log(job, f"server output {index}")
 
         writes_during_stream = store.save_job.call_count
         self.assertLess(writes_during_stream, 20)
         self.assertEqual(job.terminal_output[-1], "server output 999")
 
-        service._emit(job, "verifying", "Verifying", 80)
+        service._jobs._emit(job, "verifying", "Verifying", 80)
 
         self.assertEqual(store.save_job.call_count, writes_during_stream + 1)
         self.assertEqual(
@@ -1963,6 +1963,9 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
         with mock.patch(
             "nmtk.launcher_control.deployment_user_bootstrap.subprocess.run",
             side_effect=self._fake_ssh_success(captured),
+        ), mock.patch(
+            "nmtk.launcher_control.deployment_executors.shutil.which",
+            return_value="/usr/bin/sshpass",
         ):
             result = ssh_root_bootstrap(
                 host="10.0.0.9",
@@ -2031,6 +2034,9 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
         with mock.patch(
             "nmtk.launcher_control.deployment_user_bootstrap.subprocess.run",
             side_effect=self._fake_ssh_success(captured),
+        ), mock.patch(
+            "nmtk.launcher_control.deployment_executors.shutil.which",
+            return_value="/usr/bin/sshpass",
         ):
             ssh_root_bootstrap(
                 host="10.0.0.9",
@@ -2106,6 +2112,9 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
         with mock.patch(
             "nmtk.launcher_control.deployment_user_bootstrap.subprocess.run",
             side_effect=fake_run,
+        ), mock.patch(
+            "nmtk.launcher_control.deployment_executors.shutil.which",
+            return_value="/usr/bin/sshpass",
         ), self.assertRaises(RuntimeError) as excinfo:
             ssh_root_bootstrap(
                 host="10.0.0.9",
@@ -2183,6 +2192,9 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
         with mock.patch(
             "nmtk.launcher_control.deployment_user_bootstrap.subprocess.run",
             side_effect=fake_run,
+        ), mock.patch(
+            "nmtk.launcher_control.deployment_executors.shutil.which",
+            return_value="/usr/bin/sshpass",
         ), self.assertRaises(RuntimeError) as excinfo:
             ssh_root_bootstrap(
                 host="10.0.0.9",
@@ -2205,6 +2217,9 @@ class TestDeploymentUserBootstrap(LauncherControlServiceTestBase):
         with mock.patch(
             "nmtk.launcher_control.deployment_user_bootstrap.subprocess.run",
             side_effect=self._fake_ssh_success(captured),
+        ), mock.patch(
+            "nmtk.launcher_control.deployment_executors.shutil.which",
+            return_value="/usr/bin/sshpass",
         ), mock.patch.object(
             FileBackedSecretStore,
             "put",

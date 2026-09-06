@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import unittest
 from http import HTTPStatus
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+from unittest import mock
 
 from nmtk.launcher_control import server
 from nmtk.launcher_control.http_transport import read_json_body, send_json
@@ -20,8 +22,8 @@ from nmtk.launcher_control.runtime_errors import RuntimeRequestError
 
 
 class _TransportHandler:
-    def __init__(self, body: bytes = b"") -> None:
-        self.headers = {"Content-Length": str(len(body))}
+    def __init__(self, body: bytes = b"", origin: str = "") -> None:
+        self.headers = {"Content-Length": str(len(body)), "Origin": origin}
         self.rfile = io.BytesIO(body)
         self.wfile = io.BytesIO()
         self.responses: list[int] = []
@@ -40,6 +42,7 @@ class _TransportHandler:
 class _RouteHandler:
     def __init__(self, path: str, state: object) -> None:
         self.path = path
+        self.headers: dict[str, str] = {}
         self.server = SimpleNamespace(state=state)
         self.responses: list[tuple[HTTPStatus, object]] = []
 
@@ -69,11 +72,20 @@ class LauncherControlContractTest(unittest.TestCase):
         self.assertEqual(contract.pynq.runtime_port, 8002)
 
     def test_transport_preserves_object_only_body_and_cors_contract(self) -> None:
-        handler = _TransportHandler(b'{"enabled": true}')
+        handler = _TransportHandler(
+            b'{"enabled": true}', origin="https://allowed.example"
+        )
         self.assertEqual(read_json_body(handler), {"enabled": True})
-        send_json(handler, HTTPStatus.OK, {"status": "ok"})
+        with mock.patch.dict(
+            os.environ, {"NMTK_ALLOWED_ORIGINS": "https://allowed.example"}
+        ):
+            send_json(handler, HTTPStatus.OK, {"status": "ok"})
         self.assertEqual(handler.responses, [HTTPStatus.OK])
-        self.assertEqual(handler.response_headers["Access-Control-Allow-Origin"], "*")
+        self.assertEqual(
+            handler.response_headers["Access-Control-Allow-Origin"],
+            "https://allowed.example",
+        )
+        self.assertEqual(handler.response_headers["Vary"], "Origin")
         self.assertEqual(
             json.loads(handler.wfile.getvalue().decode("utf-8")), {"status": "ok"}
         )
