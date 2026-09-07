@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:neuro_toolkit/models/backend_deployment.dart';
+import 'package:neuro_toolkit/services/deployment/deployment_persistence.dart';
 import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 import 'package:yaml/yaml.dart';
 
@@ -111,6 +112,43 @@ class KubernetesDeploymentService {
     } finally {
       client.close();
     }
+  }
+
+  /// Deploys [request] to the cluster and persists the resulting external
+  /// host onto [target], reporting progress through [emit].
+  Future<void> deployAndPersist(
+    DeploymentJob job,
+    DeploymentTarget target,
+    DeploymentRequest request, {
+    required DeploymentPersistence persistence,
+    required Future<void> Function(
+      DeploymentJob job,
+      DeploymentPhase phase,
+      double percent,
+      String label,
+    )
+    emit,
+  }) async {
+    await emit(job, DeploymentPhase.connecting, 10, 'Connecting to Kubernetes');
+    final host = await deploy(
+      request,
+      onProgress: (phase, percent, message) =>
+          emit(job, phase, percent, message),
+    );
+    await persistence.saveTarget(
+      target.copyWith(
+        host: host,
+        lastReadiness: 'ready',
+        updatedAt: DateTime.now(),
+      ),
+      request,
+    );
+    await emit(
+      job,
+      DeploymentPhase.completed,
+      100,
+      'Kubernetes backend and launcher control are ready',
+    );
   }
 
   Future<_KubeCredentials> _credentials(DeploymentRequest request) async {

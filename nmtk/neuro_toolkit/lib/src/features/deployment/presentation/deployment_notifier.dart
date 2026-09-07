@@ -281,6 +281,17 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     return _service.diagnoseTarget(target.id);
   }
 
+  /// Attaches SSH credentials to an already-running server this app never
+  /// deployed (or whose saved credential was lost), so repair/reinstall have
+  /// something to authenticate with. Runs no install.
+  Future<DeploymentTarget> linkCredentialsForHost(
+    DeploymentRequest request,
+  ) async {
+    final target = await _service.linkExistingTarget(request);
+    await refresh();
+    return target;
+  }
+
   Future<SystemHealthReport?> repairLatestTarget({
     String? preferredHost,
   }) async {

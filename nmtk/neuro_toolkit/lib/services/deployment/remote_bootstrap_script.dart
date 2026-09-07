@@ -538,6 +538,19 @@ fi
 capture_step 30 "deploy_account_failed" 25 \
   "Removing legacy deployment permissions" "Legacy sudo rule removed" \
   rm -f /etc/sudoers.d/nmtk-deploy
+# The administrator account that ran setup needs to stay in the nmtk-deploy
+# group so it can traverse /home/nmtk-deploy (drwxr-x---) and read the admin
+# token later — without this, "Connect to existing server" silently fails and
+# demands a reinstall they do not need.
+# Under sudo, `id -un` is root — which already has access, so the grant
+# did nothing for the account the operator actually logs in with.
+ADMIN_USER="${SUDO_USER:-$(id -un)}"
+if [ "$ADMIN_USER" != "$DEPLOY_USER" ] && [ -n "$ADMIN_USER" ]; then
+  capture_step 30 "deploy_account_failed" 25 \
+    "Granting administrator token access" \
+    "Administrator account added to deployment group" \
+    usermod -aG "$DEPLOY_GROUP" "$ADMIN_USER"
+fi
 if getent group docker >/dev/null 2>&1; then
   capture_step 30 "deploy_account_failed" 25 \
     "Granting deployment account Docker access" \
@@ -564,6 +577,12 @@ if [ ! -d "$DEPLOY_HOME" ]; then
   capture_step 30 "deploy_account_failed" 25 \
     "Creating NMTK deployment home" "Deployment home created" \
     install -d -m 750 -o "$DEPLOY_USER" -g "$DEPLOY_GROUP" "$DEPLOY_HOME"
+else
+  chmod 750 "$DEPLOY_HOME" 2>/dev/null || true
+  if [ -d "$DEPLOY_HOME/.nmtk/deploy/credentials" ]; then
+    chmod 750 "$DEPLOY_HOME/.nmtk" "$DEPLOY_HOME/.nmtk/deploy" "$DEPLOY_HOME/.nmtk/deploy/credentials" 2>/dev/null || true
+    chmod 640 "$DEPLOY_HOME/.nmtk/deploy/credentials/admin-token" 2>/dev/null || true
+  fi
 fi
 capture_step 30 "deploy_account_failed" 26 \
   "Preparing deployment credential workspace" \

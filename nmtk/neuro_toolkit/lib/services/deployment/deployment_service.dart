@@ -201,6 +201,38 @@ class DeploymentRequest {
     cleanInstall: cleanInstall,
   );
 
+  /// Keeps the server's own deployment account while adopting a freshly
+  /// entered operator credential.
+  ///
+  /// The account that owns the backend is a property of the server, not of
+  /// whoever is signing in. Replacing it with the operator's own login sent
+  /// every later stack operation to that user's home directory and container
+  /// store, where it built a second, parallel stack that then collided with
+  /// the real one on its published ports.
+  DeploymentRequest withDeploymentIdentity({
+    required String username,
+    required String sshPrivateKey,
+    required String authMethod,
+  }) => DeploymentRequest(
+    targetType: targetType,
+    mode: mode,
+    displayName: displayName,
+    host: host,
+    username: username,
+    sshPort: sshPort,
+    authMethod: authMethod,
+    sshPassword: sshPassword,
+    sshPrivateKey: sshPrivateKey,
+    backendPort: backendPort,
+    namespace: namespace,
+    context: context,
+    apiServer: apiServer,
+    containerEngine: containerEngine,
+    kubeconfig: kubeconfig,
+    adminToken: adminToken,
+    cleanInstall: cleanInstall,
+  );
+
   Map<String, dynamic> toPublicJson({required String id}) => {
     'id': id,
     'displayName': displayName,
@@ -288,6 +320,16 @@ abstract class DeploymentService {
 
   Future<SystemHealthReport> repairTarget(String targetId) {
     throw UnsupportedError('Whole-system repair is not supported.');
+  }
+
+  /// Attaches SSH credentials to an already-running remote backend that was
+  /// never deployed by this app (or whose saved credential was lost), so
+  /// [repairTarget]/[reinstallTarget] have something to authenticate with.
+  /// Saves the target and its secret only — never runs install.
+  Future<DeploymentTarget> linkExistingTarget(DeploymentRequest request) {
+    throw UnsupportedError(
+      'Linking credentials to an existing server is not supported.',
+    );
   }
 
   Future<DeploymentJob> reinstallTarget(
