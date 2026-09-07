@@ -27,10 +27,11 @@ recordings_smoke_test/
 reports/
 output/
 
-# Runtime artifacts (root)
+# Runtime artifacts
+*.log
+**/*.log
 server.log
 simulation_report.json
-logs/*.log
 
 # Root scratch / notes (not product source)
 .tmp_manual_ui/
