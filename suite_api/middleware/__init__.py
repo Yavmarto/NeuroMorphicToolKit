@@ -9,6 +9,7 @@ import time
 import uuid
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import Headers
@@ -21,6 +22,32 @@ logger = logging.getLogger("suite_api")
 
 _ADMIN_HEADER = "X-NMTK-Admin-Token"
 _ADMIN_COOKIE = "nmtk_admin_session"
+
+
+def _launcher_control_url() -> str:
+    return os.getenv("NMTK_LAUNCHER_CONTROL_URL", "http://launcher-control:8091").strip()
+
+
+async def _session_token_valid(token: str) -> bool:
+    """Ask launcher-control whether a connect-session bearer token is live.
+
+    suite_api has no session store of its own -- launcher-control mints and
+    holds these tokens in memory (see launcher_auth.py), so a credential that
+    doesn't match the shared static admin-token is checked against
+    launcher-control's introspection endpoint over backend-net instead.
+    """
+    if not token:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{_launcher_control_url()}/api/launcher/auth/introspect",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+    except httpx.HTTPError:
+        logger.warning("session_token_introspection_failed")
+        return False
+    return resp.status_code == 200
 
 
 def _load_admin_token() -> str:
@@ -67,7 +94,13 @@ class _AdminWebSocketMiddleware:
             provided = (
                 headers.get(_ADMIN_HEADER, "") or _bearer_token(headers) or cookie_token
             )
-            if not admin_token_valid(provided):
+            if not (
+                provided
+                and (
+                    admin_token_valid(provided)
+                    or await _session_token_valid(provided)
+                )
+            ):
                 await send(
                     {
                         "type": "websocket.close",
@@ -129,8 +162,12 @@ def attach_middleware(app: FastAPI) -> None:
         bearer_token = _bearer_token(request.headers)
         request_token = header_token or bearer_token
         provided = request_token or request.cookies.get(_ADMIN_COOKIE, "")
-        if protected and (
-            not expected or not provided or not admin_token_valid(provided)
+        if protected and not (
+            provided
+            and (
+                (expected and admin_token_valid(provided))
+                or await _session_token_valid(provided)
+            )
         ):
             return error_response(
                 request,

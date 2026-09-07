@@ -58,7 +58,12 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
         try:
             if (
-                path not in {"/health", "/api/launcher/auth/login"}
+                path
+                not in {
+                    "/health",
+                    "/api/launcher/auth/login",
+                    "/api/launcher/auth/introspect",
+                }
                 and not self._is_authorized()
             ):
                 self._send_error(
@@ -96,6 +101,27 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                     HTTPStatus.OK,
                     self.server.state.login(body or {}),
                 )
+                return
+
+            if method == "GET" and path == "/api/launcher/auth/introspect":
+                # suite_api has no session-token store of its own -- a
+                # connect-session bearer token is only ever known to the
+                # launcher-control process that minted it (in-memory,
+                # launcher_auth.py:_sessions). This lets suite_api's
+                # admin_auth_middleware fall back to asking launcher-control
+                # "is this token live?" for any credential that doesn't match
+                # the shared static admin-token file, over backend-net.
+                authorization = str(self.headers.get("Authorization", "")).strip()
+                scheme, _, credential = authorization.partition(" ")
+                token = credential.strip() if scheme.lower() == "bearer" else ""
+                if token and self.server.state.is_session_token_valid(token):
+                    self._send_json(HTTPStatus.OK, {"valid": True})
+                else:
+                    self._send_error(
+                        HTTPStatus.UNAUTHORIZED,
+                        code="unauthorized",
+                        message="Invalid or expired session token.",
+                    )
                 return
 
             if method == "GET" and path == "/api/launcher/doctor":

@@ -26,6 +26,10 @@ services:
       - NEUROCNL_LAVA_REMOTE_TIMEOUT_S=${NEUROCNL_LAVA_REMOTE_TIMEOUT_S:-120}
       # Jupyter worker — internal URL for health probing
       - JUPYTER_WORKER_URL=http://jupyter-server:8008
+      # launcher-control is the only holder of connect-session bearer tokens
+      # (in-memory, launcher_auth.py); suite_api's auth middleware calls its
+      # /api/launcher/auth/introspect endpoint to validate one.
+      - NMTK_LAUNCHER_CONTROL_URL=http://launcher-control:8091
       # Public URL returned to the Flutter WebView.  Override on remote deployments
       # with the host's reachable address, e.g. http://my-server:8008/lab
       - JUPYTER_PUBLIC_URL=${JUPYTER_PUBLIC_URL:-http://localhost:8008/lab}
