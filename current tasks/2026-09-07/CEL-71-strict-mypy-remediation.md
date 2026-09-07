@@ -125,14 +125,55 @@ Commits (all on `dev`, in order):
 - `e2a8cdf7` — fixup: redundant-cast vs no-any-return on `_bin_sample`
 - `2ec69545` — integrated test-file fixes from worktree agent-ac894339
 
-## Suggested next pass
+## Third heartbeat: 145 → 0 errors — issue closed
 
-`arg-type` (58, now the biggest bucket) and `type-arg` (34) are what's
-left — both need real judgement (concrete type params, narrowing real
-mismatches) rather than mechanical annotation. No more known-safe
-mechanical passes remain; go file-by-file, verify with mypy + pytest,
-commit per batch, same as this session's approach.
+Worked through every remaining bucket file-by-file (arg-type, type-arg,
+union-attr, no-any-return, assignment, unused-ignore, call-arg,
+attr-defined, no-redef, name-defined, misc), verifying with mypy +
+pytest and committing per batch. `python -m mypy neurocnl` now reports
+**0 errors** under the target strict config
+(`disable_error_code=["import-untyped","no-untyped-call"]`, no
+per-package overrides) — the exact config CEL-66 wants to flip
+`pyproject.toml` to.
 
-After every bucket is at 0, hand back to CEL-66 to do the actual
-`pyproject.toml` flip and confirm `python -m mypy neurocnl` is clean with
-the real committed config (no scratch file needed at that point).
+Commits (continuing from the list above, all on `dev`):
+- `d162a58f` — test_layer2_validator ParsedSentence fixtures (25 arg-type)
+- `06a1efa3` — _CompilerRecord unions in shape/diagnostic property tests
+- `11656d1b` — dict/ndarray type-args in pynq contract + array-serialisation tests
+- `cd303ea5` — no-redef fallback import, Optional int(), anthropic cast
+- `12dcc5e2` — intentional-validation-error contract tests (call-arg ignores)
+- `4ce6f2c1` — weight-init test suite typing + legacy_rng_state() helper
+- `f7348d5b` — union-attr narrowing, compact_metadata casts
+- `04414c81` — three shadowed-variable bugs (checker/pop/src_sig)
+- `3b820810` — missing tuple comma, duplicate annotation, untyped SDK cast
+- `b49838f4` — explicit re-exports (parser/visualization), tuple literals
+- `f0aca194` — real missing-argument bug in Lava rejection tests
+- `f5c7820e` — PYNQ weight-typing gaps (exporter/planner/tests)
+- `e845430d` — last error (frozen-dataclass test, type: ignore[misc])
+
+### Found but explicitly NOT fixed (out of CEL-71's mypy-remediation scope)
+
+`neurocnl/export/nir_exporter.py`'s `ONLINE_LEARN_BACKENDS` derivation
+(`_derive_online_learn_backends()`) appears to produce an **empty set**
+at runtime today: `BACKEND_CAPABILITIES` marks every backend's
+`stdp_learning` as `"approximate"`, never `"faithful"`, so the derived
+set is always empty, silently discarding the hardcoded
+`{"lava","loihi","loihi2"}` fallback the code comments document as
+intentional (`# ponytail: hardcoded — capabilities registry marks stdp
+as "approximate" for all backends`). This means
+`validate_deployment_mode_fidelity` currently rejects `online_learn`
+deployment mode for every backend including Lava/Loihi. Only fixed the
+*type* mismatch (bare `set` → `frozenset`), preserved the exact
+existing (buggy-looking) runtime behavior — deciding whether the
+hardcoded set or the derived one should win is a product call, not a
+mypy fix. Worth a follow-up issue if this deployment mode is actually
+used anywhere yet.
+
+## Handoff to CEL-66
+
+Ready: delete the per-package `[[tool.mypy.overrides]]` blocks in
+`neurocnl/pyproject.toml`, shrink the top-level `disable_error_code` to
+`["import-untyped", "no-untyped-call"]`, confirm `python -m mypy
+neurocnl` reports 0 errors with the real committed config (should
+match this session's scratch-config result exactly), confirm
+`test-neurocnl-backend` CI still gates on it.
