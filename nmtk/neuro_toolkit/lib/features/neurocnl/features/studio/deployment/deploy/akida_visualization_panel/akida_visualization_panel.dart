@@ -34,6 +34,10 @@ class AkidaVisualizationPanel extends StatefulWidget {
 }
 
 class _AkidaVisualizationPanelState extends State<AkidaVisualizationPanel> {
+  // Local pane-width threshold, not a screen-level breakpoint: this panel is
+  // often embedded beside other panes, so it can go narrow well before the
+  // window itself crosses NmtkShellTokens.compactBreakpoint.
+  static const double _stackedLayoutWidth = 640;
   StudioResultView _view = StudioResultView.architecture;
   late bool _showAkida;
 
@@ -134,7 +138,7 @@ class _AkidaVisualizationPanelState extends State<AkidaVisualizationPanel> {
           );
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 640) {
+        if (constraints.maxWidth < _stackedLayoutWidth) {
           return SizedBox(
             height: 104,
             child: Column(

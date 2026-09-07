@@ -7,6 +7,11 @@ import 'package:neuro_toolkit/features/neurocnl/providers/canvas/validation_prov
 import 'package:neuro_toolkit/features/neurocnl/widgets/deploy/backend_support_banner.dart';
 
 class SimulationControlPanel extends ConsumerWidget {
+  // Local panel-width threshold, not a screen-level breakpoint: this panel
+  // is docked inside the canvas workspace, narrower than
+  // NmtkShellTokens.compactBreakpoint.
+  static const double _narrowLayoutWidth = 700;
+
   const SimulationControlPanel({super.key});
 
   @override
@@ -31,7 +36,7 @@ class SimulationControlPanel extends ConsumerWidget {
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final narrowLayout = constraints.maxWidth < 700;
+          final narrowLayout = constraints.maxWidth < _narrowLayoutWidth;
           final controls = [
             ZetaButton(
               key: const Key('simulation-run-button'),

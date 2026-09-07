@@ -26,6 +26,11 @@ class GeneratedCodePane extends StatefulWidget {
 }
 
 class _GeneratedCodePaneState extends State<GeneratedCodePane> {
+  // Local pane-width threshold, not a screen-level breakpoint: this header
+  // sits inside an embedded code pane, narrower than
+  // NmtkShellTokens.compactBreakpoint.
+  static const double _compactHeaderWidth = 360;
+
   bool _copied = false;
   _GeneratedCodeKind _selectedKind = _GeneratedCodeKind.cnl;
 
@@ -200,7 +205,7 @@ class _GeneratedCodePaneState extends State<GeneratedCodePane> {
             padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final compactHeader = constraints.maxWidth < 360;
+                final compactHeader = constraints.maxWidth < _compactHeaderWidth;
                 if (compactHeader) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

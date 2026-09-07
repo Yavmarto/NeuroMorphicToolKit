@@ -55,6 +55,11 @@ class NetworkGraphView extends ConsumerStatefulWidget {
 
 class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
   static const double _layoutPadding = 48;
+  // Local viewport-size thresholds, not screen-level breakpoints: this is
+  // the canvas viewport embedded within the workspace, which can be far
+  // smaller than the window, below NmtkShellTokens.compactBreakpoint.
+  static const double _compactViewportWidth = 480;
+  static const double _compactViewportHeight = 420;
 
   final Map<String, Offset> _positions = {};
   String? _selectedId; // selected node OR edge id
@@ -120,7 +125,8 @@ class _NetworkGraphViewState extends ConsumerState<NetworkGraphView> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compactBanner =
-            constraints.maxWidth < 480 || constraints.maxHeight < 420;
+            constraints.maxWidth < _compactViewportWidth ||
+            constraints.maxHeight < _compactViewportHeight;
         final detailsPanelMaxHeight = math.min(
           220.0,
           constraints.maxHeight * 0.28,

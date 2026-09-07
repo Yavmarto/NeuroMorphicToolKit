@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/widgets/workflow_step_row.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/workflow/pipeline_stepper.dart';
 import 'package:neuro_toolkit/ui_core/zeta_theme.dart';
 
@@ -464,10 +465,10 @@ class _StageCell extends StatelessWidget {
         ),
       ),
     );
-    if (!disabled) return destination;
-    return Tooltip(
-      message: disabledTooltip,
-      child: Opacity(opacity: 0.38, child: destination),
+    return NmtkWorkflowLockedTreatment(
+      locked: disabled,
+      tooltip: disabledTooltip,
+      child: destination,
     );
   }
 }

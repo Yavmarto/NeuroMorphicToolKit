@@ -7,6 +7,11 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/studio_sh
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deployment_feature.dart';
 
 class AkidaSetupPane extends ConsumerWidget {
+  // Local pane-width threshold, not a screen-level breakpoint: this is the
+  // width of an embedded pane's action row, well narrower than
+  // NmtkShellTokens.compactBreakpoint.
+  static const double _stackActionsWidth = 420;
+
   const AkidaSetupPane({
     super.key,
     required this.provider,
@@ -226,7 +231,7 @@ class AkidaSetupPane extends ConsumerWidget {
         const SizedBox(height: 8),
         LayoutBuilder(
           builder: (context, constraints) {
-            final stackActions = constraints.maxWidth < 420;
+            final stackActions = constraints.maxWidth < _stackActionsWidth;
             final actions = <Widget>[
               NmtkOutlinedButton(
                 onPressed: host == null || provider.isBusy

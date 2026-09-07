@@ -6,6 +6,11 @@ import 'package:neuro_toolkit/features/neurocnl/screens/hub/hub_artefact_present
 import 'package:neuro_toolkit/features/neurocnl/screens/hub/hub_tag_filter_chip.dart';
 
 class HubArtefactCard extends StatelessWidget {
+  // Local card-width threshold, not a screen-level breakpoint: this card is
+  // laid out in a grid/list and can be far narrower than the window, well
+  // below NmtkShellTokens.compactBreakpoint.
+  static const double _stackTrailingWidth = 520;
+
   const HubArtefactCard({
     super.key,
     required this.item,
@@ -45,7 +50,7 @@ class HubArtefactCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final stackTrailing = constraints.maxWidth < 520;
+                final stackTrailing = constraints.maxWidth < _stackTrailingWidth;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[

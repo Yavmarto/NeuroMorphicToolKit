@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/widgets/workflow_step_row.dart';
 import 'package:neuro_toolkit/ui_core/zeta_theme.dart';
 
 part 'pipeline_stepper_parts.dart';
@@ -325,19 +326,17 @@ class _NmtkPipelineStepperState extends State<NmtkPipelineStepper> {
       final disabled = widget.disabledStepIds.contains(step.id);
       if (disabled) {
         widgets.add(
-          Tooltip(
-            message: widget.disabledTooltip,
-            child: Opacity(
-              opacity: 0.38,
-              child: _PipelineStep(
-                key: _stepKeys[step.id],
-                data: step,
-                selected: false,
-                accentColor: widget.stepAccentColor,
-                style: widget.stepStyle,
-                width: widget.stepWidth,
-                onTap: null,
-              ),
+          NmtkWorkflowLockedTreatment(
+            locked: true,
+            tooltip: widget.disabledTooltip,
+            child: _PipelineStep(
+              key: _stepKeys[step.id],
+              data: step,
+              selected: false,
+              accentColor: widget.stepAccentColor,
+              style: widget.stepStyle,
+              width: widget.stepWidth,
+              onTap: null,
             ),
           ),
         );

@@ -33,6 +33,7 @@ import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.d
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers_test.mocks.dart';
+import '../../../helpers/mobile_viewport.dart';
 
 /// Test double for gaps that need a *failing* file/workspace pick.
 class _ThrowingNativeFileBackend implements NativeFileBackend {
@@ -1171,6 +1172,43 @@ void main() {
               'open a sheet at all',
         );
       },
+    );
+  });
+
+  // CEL-73 mobile viewport overflow baseline (gate for CEL-72). Reuses the
+  // same MockApiClient/ProviderScope setup as the rest of this file rather
+  // than the heavier `pumpStudio` helper, since testMobileViewports only
+  // needs a widget builder (it does its own pump/settle internally).
+  group('mobile viewport overflow baseline', () {
+    testMobileViewports(
+      'StudioScreen',
+      (context) => ProviderScope(
+        overrides: [
+          apiClientProvider.overrideWithValue(mockApi),
+          workspaceBootstrapProvider.overrideWithValue(
+            const WorkspaceBootstrap(initialLocation: '/'),
+          ),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: StudioScreen()),
+        ),
+      ),
+    );
+
+    testMobileViewports(
+      'CanvasScreen',
+      (context) => ProviderScope(
+        overrides: [apiClientProvider.overrideWithValue(mockApi)],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: CanvasScreen(lockedTab: CanvasTab.architecture),
+          ),
+        ),
+      ),
     );
   });
 }

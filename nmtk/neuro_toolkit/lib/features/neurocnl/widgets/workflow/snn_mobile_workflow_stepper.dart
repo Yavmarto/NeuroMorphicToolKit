@@ -8,6 +8,7 @@ import 'package:neuro_toolkit/features/neurocnl/widgets/workflow/snn_workflow_st
         kSnnStageLabels,
         kSnnStepLabels,
         snnStageForPhase;
+import 'package:neuro_toolkit/ui_core/widgets/workflow_step_row.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 
 /// Mobile-optimized stage-first stepper for the SNN workflow.
@@ -176,9 +177,11 @@ class SnnMobileWorkflowStepper extends StatelessWidget {
       ),
     );
 
-    if (isLocked) {
-      chip = Opacity(opacity: 0.3, child: chip);
-    }
+    chip = NmtkWorkflowLockedTreatment(
+      locked: isLocked,
+      opacity: 0.3,
+      child: chip,
+    );
 
     return chip;
   }
