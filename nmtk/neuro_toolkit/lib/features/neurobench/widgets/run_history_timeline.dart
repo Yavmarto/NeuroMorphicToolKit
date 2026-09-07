@@ -14,7 +14,6 @@ class RunHistoryTimeline extends ConsumerWidget {
 
     return NmtkSection(
       title: 'Run History',
-      subtitle: 'Recent benchmark runs preserved as stable result packets.',
       child: resultsAsync.when(
         data: (results) {
           if (results.isEmpty) {

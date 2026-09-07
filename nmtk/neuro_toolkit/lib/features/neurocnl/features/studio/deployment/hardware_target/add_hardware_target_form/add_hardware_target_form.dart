@@ -510,7 +510,6 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
             StudioFormField(
               controller: _controlApiUrlController,
               label: 'Control API URL',
-              helperText: 'Derived automatically from the host address',
             ),
             const SizedBox(height: 12),
             StudioFormField(

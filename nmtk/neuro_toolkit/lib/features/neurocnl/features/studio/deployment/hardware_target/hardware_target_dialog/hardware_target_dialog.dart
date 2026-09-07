@@ -277,7 +277,6 @@ class _HardwareTargetDialogState extends State<HardwareTargetDialog> {
               _activeFormEntry = SavedHardwareTargetEntry(
                 id: '',
                 title: '',
-                subtitle: '',
                 targetType: widget.data.targetType,
               );
             }),

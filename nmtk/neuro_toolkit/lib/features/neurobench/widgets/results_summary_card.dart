@@ -61,8 +61,6 @@ class ResultsSummaryCard extends ConsumerWidget {
 
         return NmtkSection(
           title: 'Results Summary',
-          subtitle:
-              'Latest result snapshot and metric breakdown from the existing benchmark payload.',
           trailing: _SummaryStatusChip(
             label: latestResult.metricProvenance == 'on_device'
                 ? 'On-Device'

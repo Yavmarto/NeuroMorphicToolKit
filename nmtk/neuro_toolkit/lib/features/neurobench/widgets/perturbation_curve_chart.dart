@@ -19,7 +19,6 @@ class PerturbationCurveChart extends ConsumerWidget {
     if (activeBenchmark == null) {
       return const NmtkSection(
         title: 'Perturbation',
-        subtitle: 'Noise tolerance across hardware platforms.',
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Text('Select a benchmark to view perturbation metrics.'),

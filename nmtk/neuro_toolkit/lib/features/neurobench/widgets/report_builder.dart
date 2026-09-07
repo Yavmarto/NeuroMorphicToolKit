@@ -42,8 +42,6 @@ class _ReportBuilderState extends ConsumerState<ReportBuilder> {
 
     return NmtkSection(
       title: 'Report Workbench',
-      subtitle:
-          'Build report exports from the current benchmark, result, and baseline payloads without altering their schema.',
       child: SingleChildScrollView(
         child: Form(
           key: _formKey,

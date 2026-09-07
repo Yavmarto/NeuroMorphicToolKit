@@ -26,8 +26,6 @@ class MetricDiffTable extends ConsumerWidget {
 
         return NmtkSection(
           title: 'Baseline Diff',
-          subtitle:
-              'Stable comparison table backed by existing diff payloads and baseline semantics.',
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(

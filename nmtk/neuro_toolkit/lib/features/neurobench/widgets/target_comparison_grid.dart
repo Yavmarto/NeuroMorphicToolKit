@@ -33,7 +33,6 @@ class TargetComparisonGrid extends ConsumerWidget {
 
     return NmtkSection(
       title: 'Platform Comparison',
-      subtitle: 'Metrics across hardware targets.',
       child: resultsAsync.when(
         data: (results) {
           final filtered = results

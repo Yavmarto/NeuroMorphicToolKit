@@ -20,7 +20,6 @@ class LavaResultsView extends ConsumerWidget {
 
     return NmtkSection(
       title: 'Lava run result',
-      subtitle: 'Output of the last NeuroCNL Lava simulator run.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

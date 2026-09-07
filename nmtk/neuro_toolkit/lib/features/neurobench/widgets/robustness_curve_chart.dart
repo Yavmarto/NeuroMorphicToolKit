@@ -19,7 +19,6 @@ class RobustnessCurveChart extends ConsumerWidget {
     if (activeBenchmark == null) {
       return const NmtkSection(
         title: 'Robustness',
-        subtitle: 'Accuracy under fault injection conditions.',
         child: Padding(
           padding: EdgeInsets.all(16),
           child: Text('Select a benchmark to view robustness metrics.'),

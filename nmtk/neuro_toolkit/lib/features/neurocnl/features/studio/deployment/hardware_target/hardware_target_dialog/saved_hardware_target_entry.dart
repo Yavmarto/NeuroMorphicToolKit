@@ -2,7 +2,7 @@ class SavedHardwareTargetEntry {
   const SavedHardwareTargetEntry({
     required this.id,
     required this.title,
-    required this.subtitle,
+    this.subtitle = '',
     this.targetType = 'akida',
     this.isDefault = false,
     this.targetData,

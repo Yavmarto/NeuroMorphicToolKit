@@ -89,13 +89,15 @@ class DialogTargetTile extends StatelessWidget {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      entry.subtitle,
-                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
-                        color: AppTheme.textSecondary,
+                    if (entry.subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        entry.subtitle,
+                        style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
