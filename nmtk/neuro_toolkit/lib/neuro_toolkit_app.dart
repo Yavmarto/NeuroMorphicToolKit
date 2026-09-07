@@ -28,7 +28,7 @@ class NeuroToolkitApp extends ConsumerWidget {
         themeMode: settings.isHighContrast ? settings.themeMode : mode,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const LauncherAppHost(),
+        home: const ServerAccessGate(child: LauncherAppHost()),
         builder: (BuildContext ctx, Widget? child) {
           final commands = ref.watch(commandStateProvider);
           return NmtkShortcutScope(

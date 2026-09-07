@@ -71,6 +71,19 @@ class LauncherAuthMixin:
             "expiresAt": int(expires_at),
         }
 
+    def is_session_token_valid(self, token: str) -> bool:
+        """True if `token` is a live (unexpired) session minted by `login`."""
+        if not token:
+            return False
+        with self._sessions_lock:
+            session = self._sessions.get(token)
+            if session is None:
+                return False
+            if session["expiresAt"] < time.time():
+                del self._sessions[token]
+                return False
+            return True
+
 
 def _load_app_users() -> dict[str, str]:
     users_file = os.environ.get("NMTK_APP_USERS_FILE", "").strip()

@@ -6,7 +6,6 @@ import 'package:zeta_flutter/zeta_flutter.dart' show ZetaDialog;
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
-import 'package:neuro_toolkit/widgets/server_setup_popup.dart';
 
 /// Hosts the launcher's single workspace surface and global lifecycle dialogs.
 class LauncherAppHost extends ConsumerStatefulWidget {
@@ -18,64 +17,15 @@ class LauncherAppHost extends ConsumerStatefulWidget {
 
 class _LauncherAppHostState extends ConsumerState<LauncherAppHost> {
   bool _updateDialogQueued = false;
-  bool _startupSetupPromptQueued = false;
 
   @override
   void initState() {
     super.initState();
     ref.listenManual(
-      launcherBootstrapProvider,
-      _handleBootstrapChange,
-      fireImmediately: true,
-    );
-    ref.listenManual(
       moduleProvider,
       (previous, next) => _handleModuleChange(next.value),
       fireImmediately: true,
     );
-  }
-
-  void _handleBootstrapChange(
-    AsyncValue<LauncherBootstrapData>? previous,
-    AsyncValue<LauncherBootstrapData> next,
-  ) {
-    if (next.isLoading && next.value == null) return;
-    if (ref.read(startupServerSetupPromptProvider) ||
-        _startupSetupPromptQueued) {
-      return;
-    }
-    if (next.value?.isReady == true) {
-      ref.read(startupServerSetupPromptProvider.notifier).markHandled();
-      return;
-    }
-
-    _startupSetupPromptQueued = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) {
-        _startupSetupPromptQueued = false;
-        return;
-      }
-      ref.read(startupServerSetupPromptProvider.notifier).markHandled();
-
-      final latestData = ref.read(launcherBootstrapProvider).value;
-      if (latestData?.isReady == true) {
-        _startupSetupPromptQueued = false;
-        return;
-      }
-      final savedHost = ref
-          .read(settingsProvider)
-          .value
-          ?.launcherControlApiBaseUrl;
-      await showAdaptiveServerSetupPopup(
-        context,
-        initialHost: latestData?.suggestedInstallHost ?? savedHost,
-        message:
-            latestData?.setupMessage ??
-            'Preflight failed while checking the launcher host. Confirm the '
-                'address and try again.',
-      );
-      _startupSetupPromptQueued = false;
-    });
   }
 
   void _handleModuleChange(ModuleState? moduleState) {

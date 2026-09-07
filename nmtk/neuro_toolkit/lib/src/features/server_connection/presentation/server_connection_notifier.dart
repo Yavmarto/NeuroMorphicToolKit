@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart'
-    show deploymentServiceProvider;
+    show selectedControlApiServiceProvider;
 import 'package:neuro_toolkit/services/control_api_service.dart';
-import 'package:neuro_toolkit/src/features/launcher_bootstrap/presentation/launcher_bootstrap_notifier.dart';
 
 enum ServerConnectionPhase { checking, connected, unstable, disconnected }
 
@@ -65,10 +65,7 @@ class ServerConnectionNotifier extends Notifier<ServerConnectionState> {
 
   @override
   ServerConnectionState build() {
-    final bootstrap = ref.watch(launcherBootstrapProvider).value;
-    final controlApi = bootstrap?.isReady == true
-        ? bootstrap?.controlApiService
-        : null;
+    final controlApi = ref.watch(selectedControlApiServiceProvider);
     final baseUri = controlApi?.baseUri;
 
     if (!_disposeRegistered) {
@@ -179,19 +176,10 @@ class ServerConnectionNotifier extends Notifier<ServerConnectionState> {
   Future<void> _repairAndRecheck(int generation) async {
     _repairInFlight = true;
     try {
-      final service = ref.read(deploymentServiceProvider);
-      final snapshot = await service.load();
-      if (snapshot.targets.isNotEmpty) {
-        final targets = [...snapshot.targets]
-          ..sort((left, right) {
-            final leftAt =
-                left.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-            final rightAt =
-                right.updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-            return rightAt.compareTo(leftAt);
-          });
-        await service.repairTarget(targets.first.id);
-      }
+      // ponytail: single best-effort reconnect attempt, no retry/backoff loop
+      // — re-authenticating the saved Connect session is the only "repair"
+      // available now that there's no SSH-managed target to provision.
+      await ref.read(connectNotifierProvider.notifier).reconnectOnOpen();
     } on Object {
       // The System Health card owns the actionable failure detail. Connection
       // monitoring stays disconnected and never loops repair for this outage.

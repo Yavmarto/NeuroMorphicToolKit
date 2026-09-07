@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/src/features/app/presentation/launcher_navigation_notifier.dart';
 import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
-import 'package:neuro_toolkit/widgets/server_setup_popup.dart';
 
 part 'module_picker_panel/module_card.dart';
 part 'module_picker_panel/module_activity_state.dart';
@@ -45,7 +45,7 @@ class ModulePickerPanel extends ConsumerWidget {
         tone: NmtkTone.danger,
         action: ConnectionErrorActions(
           onRetry: () => ref.invalidate(moduleProvider),
-          onChangeServer: () => showAdaptiveServerSetupPopup(context),
+          onChangeServer: () => ref.read(connectNotifierProvider.notifier).logout(),
         ),
       );
     }
@@ -85,7 +85,7 @@ class ModulePickerPanel extends ConsumerWidget {
             action: hasSelectedServer
                 ? null
                 : ZetaButton(
-                    onPressed: () => showAdaptiveServerSetupPopup(context),
+                    onPressed: () => ref.read(connectNotifierProvider.notifier).logout(),
                     label: 'Connect to server',
                   ),
           )

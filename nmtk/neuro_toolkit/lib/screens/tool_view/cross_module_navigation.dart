@@ -3,21 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
-import 'package:neuro_toolkit/widgets/server_setup_popup.dart';
 
 import 'package:neuro_toolkit/screens/tool_view/module_uri_resolver.dart'
     as uri_resolver;
 import 'package:neuro_toolkit/screens/tool_view/tool_view_workspace_controller.dart';
 
+/// Sends the user back to the connect screen for a new server pick.
+///
+/// Logs out of the current Connect session, which flips
+/// `connectNotifierProvider` to `idle`; `ServerAccessGate` (mounted above
+/// `LauncherAppHost`) reacts by swapping in `ServerConnectScreen`.
 Future<void> showServerConnectionPopup(BuildContext context, WidgetRef ref) {
-  return showAdaptiveServerSetupPopup(
-    context,
-    initialHost: uri_resolver.launcherBaseUri(ref)?.toString(),
-  );
+  ref.read(connectNotifierProvider.notifier).logout();
+  return Future<void>.value();
 }
 
 Future<bool> handleCrossModuleNavigation(
@@ -29,12 +32,7 @@ Future<bool> handleCrossModuleNavigation(
 ) async {
   if (!context.mounted) return false;
   if (requestUri.scheme == 'nmtk' && requestUri.host == 'system-health') {
-    await showAdaptiveServerSetupPopup(
-      context,
-      message:
-          'System Health checks the backend, storage, Jupyter, '
-          'snnTorch, launcher control, and configured hardware.',
-    );
+    await showServerConnectionPopup(context, ref);
     return true;
   }
   final moduleState = ref.read(moduleProvider).value;

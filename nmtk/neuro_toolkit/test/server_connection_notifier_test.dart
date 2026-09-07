@@ -2,131 +2,36 @@ import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:neuro_toolkit/services/control_api_service.dart';
-import 'package:neuro_toolkit/models/backend_deployment.dart';
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
-import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
 import 'package:neuro_toolkit/src/features/server_connection/presentation/server_connection_notifier.dart';
 
-const _readySettings = LauncherControlSettings(
-  logLevel: 'info',
-  mujocoAvailable: false,
-  pythonAvailable: true,
-  pynqBoards: [],
-  akidaHosts: [],
-  selectedAkidaHostId: null,
-  backendDeploymentReady: true,
+/// Lets a test swap the "selected" control API mid-run, since
+/// [selectedControlApiServiceProvider] is normally derived from the Connect
+/// session rather than settable directly.
+final _controlApiOverrideProvider = StateProvider<ControlApiService?>(
+  (ref) => null,
 );
 
-LauncherBootstrapData _readyAt(String url) {
-  final baseUri = Uri.parse(url);
-  return LauncherBootstrapData.ready(
-    bootstrapState: LauncherBootstrapState.ready(baseUri),
-    controlApiService: ControlApiService(baseUri: baseUri),
-    launcherSettings: _readySettings,
-  );
-}
+/// Counts calls to [reconnectOnOpen] instead of performing a real HTTP
+/// login, so tests can assert the notifier's repair path invokes it exactly
+/// once per outage without needing a fake server.
+class _CountingConnectNotifier extends ConnectNotifier {
+  _CountingConnectNotifier({this.throwsOnReconnect = false});
 
-class _SwitchableBootstrapNotifier extends LauncherBootstrapNotifier {
-  _SwitchableBootstrapNotifier(this.initial);
-
-  final LauncherBootstrapData initial;
+  final bool throwsOnReconnect;
+  int reconnectCalls = 0;
 
   @override
-  Future<LauncherBootstrapData> build() async => initial;
-
-  void select(LauncherBootstrapData selection) {
-    state = AsyncData(selection);
+  Future<void> reconnectOnOpen() async {
+    reconnectCalls++;
+    if (throwsOnReconnect) {
+      throw StateError('no saved credential to reconnect with');
+    }
   }
-}
-
-class _RepairService implements DeploymentService {
-  _RepairService({this.repairThrows = false});
-
-  int repairCalls = 0;
-  final bool repairThrows;
-
-  @override
-  Future<DeploymentSnapshot> load() async => const DeploymentSnapshot(
-    targets: [
-      DeploymentTarget(
-        id: 'target-1',
-        displayName: 'Server',
-        targetType: 'remote_host',
-        mode: 'docker',
-        authMode: 'ssh_key',
-        backendPort: 9000,
-        host: '192.168.2.90',
-      ),
-    ],
-  );
-
-  @override
-  Future<SystemHealthReport> repairTarget(String targetId) async {
-    repairCalls++;
-    if (repairThrows) throw StateError('saved credential missing');
-    return SystemHealthReport(
-      overall: SystemHealthStatus.failed,
-      checkedAt: DateTime.now(),
-      checks: const [],
-    );
-  }
-
-  @override
-  Future<SystemHealthReport> diagnoseTarget(String targetId) =>
-      repairTarget(targetId);
-
-  @override
-  Future<SystemHealthReport> diagnoseHost(
-    String host, {
-    int backendPort = 9000,
-  }) => repairTarget('target-1');
-
-  @override
-  Future<DeploymentJob> reinstallTarget(
-    String targetId, {
-    bool factoryReset = false,
-  }) => throw UnimplementedError();
-
-  @override
-  Future<DeploymentJob> setupRemoteServer(RemoteServerSetupRequest request) =>
-      throw UnimplementedError();
-
-  @override
-  Future<DeploymentJob> cancelJob(String jobId) => throw UnimplementedError();
-
-  @override
-  Future<DeploymentJob> deploy(DeploymentRequest request) =>
-      throw UnimplementedError();
-
-  @override
-  Future<DeploymentJob> fetchJob(String jobId) => throw UnimplementedError();
-
-  @override
-  Future<DeploymentPreflightResult> preflight(DeploymentRequest request) =>
-      throw UnimplementedError();
-
-  @override
-  Future<DeploymentJob?> retryJob(String jobId) => throw UnimplementedError();
-
-  @override
-  Future<void> retryJupyter(String targetId) => throw UnimplementedError();
-
-  @override
-  Future<RemoteUserBootstrapResult> bootstrapRemoteUser({
-    required String host,
-    required int sshPort,
-    required String rootUsername,
-    required String rootPassword,
-    required String rootPrivateKey,
-    required String containerEngine,
-  }) => throw UnimplementedError();
-
-  @override
-  Future<void> forgetHostKey({required String host, required int sshPort}) =>
-      throw UnimplementedError();
 }
 
 Future<void> _flushMicrotasks() async {
@@ -139,21 +44,21 @@ void main() {
 
   test('health state becomes unstable, disconnected, then recovers', () async {
     final responses = Queue<bool>.from([true, false, false, false, true]);
-    final repairService = _RepairService();
+    final connectNotifier = _CountingConnectNotifier();
     final container = ProviderContainer(
       overrides: [
-        launcherBootstrapProvider.overrideWith(
-          () => _SwitchableBootstrapNotifier(
-            _readyAt('http://192.168.2.90:8090'),
-          ),
+        selectedControlApiServiceProvider.overrideWith(
+          (ref) => ref.watch(_controlApiOverrideProvider),
         ),
+        connectNotifierProvider.overrideWith(() => connectNotifier),
         serverHealthProbeProvider.overrideWithValue(
           (_) async => responses.removeFirst(),
         ),
-        deploymentServiceProvider.overrideWithValue(repairService),
       ],
     );
     addTearDown(container.dispose);
+    container.read(_controlApiOverrideProvider.notifier).state =
+        ControlApiService(baseUri: Uri.parse('http://192.168.2.90:8090'));
 
     container.listen(serverConnectionProvider, (_, _) {});
     await _flushMicrotasks();
@@ -176,26 +81,26 @@ void main() {
       ServerConnectionPhase.disconnected,
     );
     await _flushMicrotasks();
-    expect(repairService.repairCalls, 1);
+    expect(connectNotifier.reconnectCalls, 1);
     final recovered = container.read(serverConnectionProvider);
     expect(recovered.phase, ServerConnectionPhase.connected);
     expect(recovered.consecutiveFailures, 0);
   });
 
   test('automatic repair runs only once during one outage', () async {
-    final repairService = _RepairService();
+    final connectNotifier = _CountingConnectNotifier();
     final container = ProviderContainer(
       overrides: [
-        launcherBootstrapProvider.overrideWith(
-          () => _SwitchableBootstrapNotifier(
-            _readyAt('http://192.168.2.90:8090'),
-          ),
+        selectedControlApiServiceProvider.overrideWith(
+          (ref) => ref.watch(_controlApiOverrideProvider),
         ),
+        connectNotifierProvider.overrideWith(() => connectNotifier),
         serverHealthProbeProvider.overrideWithValue((_) async => false),
-        deploymentServiceProvider.overrideWithValue(repairService),
       ],
     );
     addTearDown(container.dispose);
+    container.read(_controlApiOverrideProvider.notifier).state =
+        ControlApiService(baseUri: Uri.parse('http://192.168.2.90:8090'));
 
     container.listen(serverConnectionProvider, (_, _) {});
     await _flushMicrotasks();
@@ -205,23 +110,23 @@ void main() {
     }
     await _flushMicrotasks();
 
-    expect(repairService.repairCalls, 1);
+    expect(connectNotifier.reconnectCalls, 1);
   });
 
   test('missing repair credential does not create a repair loop', () async {
-    final repairService = _RepairService(repairThrows: true);
+    final connectNotifier = _CountingConnectNotifier(throwsOnReconnect: true);
     final container = ProviderContainer(
       overrides: [
-        launcherBootstrapProvider.overrideWith(
-          () => _SwitchableBootstrapNotifier(
-            _readyAt('http://192.168.2.90:8090'),
-          ),
+        selectedControlApiServiceProvider.overrideWith(
+          (ref) => ref.watch(_controlApiOverrideProvider),
         ),
+        connectNotifierProvider.overrideWith(() => connectNotifier),
         serverHealthProbeProvider.overrideWithValue((_) async => false),
-        deploymentServiceProvider.overrideWithValue(repairService),
       ],
     );
     addTearDown(container.dispose);
+    container.read(_controlApiOverrideProvider.notifier).state =
+        ControlApiService(baseUri: Uri.parse('http://192.168.2.90:8090'));
 
     container.listen(serverConnectionProvider, (_, _) {});
     await _flushMicrotasks();
@@ -231,7 +136,7 @@ void main() {
     }
     await _flushMicrotasks();
 
-    expect(repairService.repairCalls, 1);
+    expect(connectNotifier.reconnectCalls, 1);
     expect(
       container.read(serverConnectionProvider).phase,
       ServerConnectionPhase.disconnected,
@@ -240,12 +145,11 @@ void main() {
 
   test('late health response from the previous server is ignored', () async {
     final oldServerProbe = Completer<bool>();
-    final bootstrap = _SwitchableBootstrapNotifier(
-      _readyAt('http://192.168.2.90:8090'),
-    );
     final container = ProviderContainer(
       overrides: [
-        launcherBootstrapProvider.overrideWith(() => bootstrap),
+        selectedControlApiServiceProvider.overrideWith(
+          (ref) => ref.watch(_controlApiOverrideProvider),
+        ),
         serverHealthProbeProvider.overrideWithValue((controlApi) {
           if (controlApi.baseUri.host == '192.168.2.90') {
             return oldServerProbe.future;
@@ -255,11 +159,19 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    final overrideNotifier = container.read(
+      _controlApiOverrideProvider.notifier,
+    );
+    overrideNotifier.state = ControlApiService(
+      baseUri: Uri.parse('http://192.168.2.90:8090'),
+    );
 
     container.listen(serverConnectionProvider, (_, _) {});
     await _flushMicrotasks();
 
-    bootstrap.select(_readyAt('http://192.168.2.34:8090'));
+    overrideNotifier.state = ControlApiService(
+      baseUri: Uri.parse('http://192.168.2.34:8090'),
+    );
     await _flushMicrotasks();
     var state = container.read(serverConnectionProvider);
     expect(state.baseUri?.host, '192.168.2.34');

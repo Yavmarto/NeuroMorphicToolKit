@@ -47,7 +47,9 @@ class BackendTunnelService {
     final request = await persistence.requestForTarget(target);
     if (request.adminToken.isEmpty) {
       throw StateError(
-        'This backend needs an in-app update before it can be opened securely.',
+        'This app could not read the running backend\'s administrator '
+        'credential, so it cannot open a secure tunnel to it. Reinstall and '
+        'keep data to issue a new one.',
       );
     }
     _request = request;

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/services/analytics_service.dart';
 import 'package:neuro_toolkit/services/backend_tunnel_service.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
@@ -9,7 +10,6 @@ import 'package:neuro_toolkit/services/deployment/deployment_service.dart';
 import 'package:neuro_toolkit/services/environment_api_service.dart';
 import 'package:neuro_toolkit/services/launcher_control_bootstrap_service.dart';
 import 'package:neuro_toolkit/services/update_service.dart';
-import 'package:neuro_toolkit/src/features/launcher_bootstrap/presentation/launcher_bootstrap_notifier.dart';
 
 // Re-export generated Riverpod providers for convenience
 export 'package:neuro_toolkit/src/features/app/presentation/app_notifier.dart'
@@ -38,10 +38,6 @@ export 'package:neuro_toolkit/src/features/python_install/presentation/python_in
     show pythonInstallProvider, PythonInstallNotifier;
 export 'package:neuro_toolkit/src/features/python_install/domain/python_install_state.dart'
     show PythonInstallState;
-export 'package:neuro_toolkit/src/features/launcher_bootstrap/presentation/launcher_bootstrap_notifier.dart'
-    show launcherBootstrapProvider, LauncherBootstrapNotifier;
-export 'package:neuro_toolkit/src/features/launcher_bootstrap/domain/launcher_bootstrap_data.dart'
-    show LauncherBootstrapData;
 
 final analyticsServiceProvider = Provider<AnalyticsService>((ref) {
   throw UnimplementedError(
@@ -63,18 +59,34 @@ final updateServiceProvider = Provider<UpdateService>((ref) {
   return UpdateService();
 });
 
-final launcherBootstrapStateProvider = Provider<LauncherBootstrapState>((ref) {
-  final result = ref.watch(launcherBootstrapProvider).value;
-  return result?.bootstrapState ?? LauncherBootstrapState.noServerSelected();
+/// The currently resolved launcher service, sourced from the Connect
+/// session (see `features/server/connect/connect_notifier.dart`) rather than
+/// the old SSH/admin-token bootstrap flow. Presentation code uses this
+/// nullable provider so the normal app shell can remain mounted before a
+/// server is connected. Operations that require a launcher should continue
+/// to use [controlApiServiceProvider].
+final selectedControlApiServiceProvider = Provider<ControlApiService?>((ref) {
+  final state = ref.watch(connectNotifierProvider);
+  final session = state.session;
+  if (state.phase != ConnectPhase.connected || session == null) {
+    return null;
+  }
+  return ControlApiService(
+    baseUri: ControlApiService.normalizeBaseUri(session.host),
+    adminToken: session.sessionToken,
+    analyticsService: ref.read(analyticsServiceProvider),
+  );
 });
 
-/// The currently resolved launcher service, when bootstrap has reached one.
-///
-/// Presentation code uses this nullable provider so the normal app shell can
-/// remain mounted before a server is selected. Operations that require a
-/// launcher should continue to use [controlApiServiceProvider].
-final selectedControlApiServiceProvider = Provider<ControlApiService?>((ref) {
-  return ref.watch(launcherBootstrapProvider).value?.controlApiService;
+/// Bridges the Connect session into the [LauncherBootstrapState] shape that
+/// `ModuleNotifier`/`WorkspaceNotifier` still gate on. There is no longer a
+/// separate bootstrap phase — a connected session is immediately "ready".
+final launcherBootstrapStateProvider = Provider<LauncherBootstrapState>((ref) {
+  final controlApi = ref.watch(selectedControlApiServiceProvider);
+  if (controlApi == null) {
+    return LauncherBootstrapState.noServerSelected();
+  }
+  return LauncherBootstrapState.ready(controlApi.baseUri);
 });
 
 final controlApiServiceProvider = Provider<ControlApiService>((ref) {

@@ -58,6 +58,27 @@ class TestLauncherAppCredentialLogin(LauncherControlServiceTestBase):
         with self.assertRaises(ValueError):
             self.state.login({"username": "", "password": ""})
 
+    def test_session_token_from_login_is_valid_until_expiry(self) -> None:
+        password_hash = bcrypt.hashpw(b"correct horse", bcrypt.gensalt()).decode(
+            "utf-8"
+        )
+        users_file = self._write_users_file({"alice": password_hash})
+        with mock.patch.dict(
+            os.environ, {"NMTK_APP_USERS_FILE": users_file}, clear=False
+        ):
+            result = self.state.login(
+                {"username": "alice", "password": "correct horse"}
+            )
+
+        self.assertTrue(self.state.is_session_token_valid(result["token"]))
+        self.assertFalse(self.state.is_session_token_valid("not-a-real-token"))
+        self.assertFalse(self.state.is_session_token_valid(""))
+
+        # An expired session is rejected and pruned, not just rejected once.
+        self.state._sessions[result["token"]]["expiresAt"] = 0
+        self.assertFalse(self.state.is_session_token_valid(result["token"]))
+        self.assertNotIn(result["token"], self.state._sessions)
+
 
 class TestInstallScriptForwardsProvisionEnv(unittest.TestCase):
     def test_compose_run_forwards_app_credential_env_vars(self) -> None:

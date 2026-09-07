@@ -766,6 +766,8 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         scheme, _, credential = authorization.partition(" ")
         bearer_token = credential.strip() if scheme.lower() == "bearer" else ""
         provided = self.headers.get("X-NMTK-Admin-Token", "") or bearer_token
+        if provided and self.server.state.is_session_token_valid(provided):
+            return True
         return bool(expected and provided and hmac.compare_digest(expected, provided))
 
     def _send_json(self, status: HTTPStatus, payload: Any) -> None:
