@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -86,7 +87,30 @@ def test_remote_public_ports_are_loopback_only_and_authenticated() -> None:
     ):
         assert binding in remote_override
     assert remote_override.count("NMTK_AUTH_REQUIRED=1") == 2
-    assert remote_override.count("nmtk_admin_token") >= 5
+    # Both services must end up with a token file they can actually read, or
+    # they answer 401 to every request and the app reads them as broken.
+    #
+    # Neither may run as `user: "0:0"`. Both images end on an unprivileged
+    # user that owns the data directory their volume lands on, and
+    # `cap_drop: ALL` denies root CAP_DAC_OVERRIDE — so as root they can
+    # authenticate but cannot write their own state. A compose secret is not
+    # an option either: it mounts 0400 root:root, unreadable to those users.
+    # The token file is bind-mounted instead, as a file rather than its 0750
+    # directory, which rootless Podman would present as root-owned and
+    # untraversable.
+    for service in ("suite_api", "launcher-control"):
+        block = remote_override.split(f"\n  {service}:", 1)[1]
+        block = re.split(r"\n  [a-z_-]+:", block, maxsplit=1)[0]
+        assert '\n    user: "0:0"' not in block, service
+    assert remote_override.count("NMTK_ADMIN_TOKEN_FILE=/app/credentials/admin-token") == 2
+    assert (
+        remote_override.count(
+            "./credentials/admin-token:/app/credentials/admin-token:ro"
+        )
+        == 2
+    )
+    assert "./credentials:/app/credentials:ro" not in remote_override
+    assert "/run/secrets/" not in remote_override
     assert "neurosense-hw-worker:\n    ports: !reset []" in remote_override
     assert "neurobench-runner-worker:\n    ports: !reset []" in remote_override
     assert "neurochip-hw-worker:\n    ports: !reset []" in remote_override

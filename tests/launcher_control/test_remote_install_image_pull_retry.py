@@ -73,7 +73,20 @@ def _run_install(
     _fake_engine(bin_dir, failing_pulls=failing_pulls)
     # The health probes and the GNU timeout wrapper are not what these tests are
     # about, so they always succeed.
-    _write_executable(bin_dir, "curl", "#!/usr/bin/env bash\nexit 0\n")
+    # install.sh reads a status code back from its authenticated launcher
+    # check, so the stand-in has to honour --write-out rather than just
+    # succeeding silently.
+    _write_executable(
+        bin_dir,
+        "curl",
+        "#!/usr/bin/env bash\n"
+        'for arg in "$@"; do\n'
+        '  case "$arg" in\n'
+        "    --write-out|-w) echo 200; exit 0 ;;\n"
+        "  esac\n"
+        "done\n"
+        "exit 0\n",
+    )
     _write_executable(bin_dir, "systemctl", "#!/usr/bin/env bash\nexit 0\n")
     _write_executable(
         bin_dir,
