@@ -200,8 +200,11 @@ class _WorkbenchShellScreenState extends ConsumerState<WorkbenchShellScreen> {
       padding: EdgeInsets.all(tokens.sectionGap),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          // Phone viewports (below the compact breakpoint) use the stacked
+          // catalog → workbench wizard; tablets and desktops get the
+          // catalog-panel side-by-side layout.
           final useStackedLayout =
-              constraints.maxWidth < NmtkShellTokens.normalBreakpoint;
+              constraints.maxWidth < NmtkShellTokens.compactBreakpoint;
 
           if (useStackedLayout) {
             return NeurobenchMobileWizard(

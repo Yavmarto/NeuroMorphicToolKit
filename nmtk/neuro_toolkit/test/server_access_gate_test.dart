@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
-
 import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/features/server/connect/connect_service.dart';
 import 'package:neuro_toolkit/screens/server_access_gate.dart';
@@ -23,9 +21,9 @@ class _FakeConnectNotifier extends ConnectNotifier {
     state = state.copyWith(phase: ConnectPhase.reconnecting);
     await Future<void>.delayed(const Duration(milliseconds: 20));
     if (behavior == 'reconnect-ok') {
-      state = ConnectState(
+      state = const ConnectState(
         phase: ConnectPhase.connected,
-        session: const ConnectSession(
+        session: ConnectSession(
           host: '192.168.2.90',
           username: 'alice',
           sessionToken: 'token',
@@ -33,7 +31,7 @@ class _FakeConnectNotifier extends ConnectNotifier {
         savedHost: '192.168.2.90',
       );
     } else {
-      state = ConnectState(
+      state = const ConnectState(
         phase: ConnectPhase.failed,
         failureCause: 'Incorrect username or password.',
         savedHost: '192.168.2.90',
@@ -65,9 +63,9 @@ Widget _harness(_FakeConnectNotifier notifier) {
     overrides: [
       connectNotifierProvider.overrideWith(() => notifier),
     ],
-    child: MaterialApp(
+    child: const MaterialApp(
       home: ServerAccessGate(
-        child: const Scaffold(body: Center(child: Text('WORKSPACE'))),
+        child: Scaffold(body: Center(child: Text('WORKSPACE'))),
       ),
     ),
   );

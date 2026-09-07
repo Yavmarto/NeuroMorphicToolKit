@@ -65,19 +65,19 @@ void main() {
 
     expect(find.text('Sign in to your server'), findsOneWidget);
     expect(find.text('Server address'), findsWidgets);
-    expect(find.text('App username'), findsOneWidget);
+    expect(find.text('App account'), findsOneWidget);
     expect(find.text('Password'), findsWidgets);
 
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Server address'),
+      find.byKey(const Key('server-connect-host')),
       '192.168.2.90',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'App username'),
+      find.byKey(const Key('server-connect-username')),
       'alice',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Password'),
+      find.byKey(const Key('server-connect-password')),
       'secret',
     );
     await tester.ensureVisible(find.byKey(const Key('server-connect-sign-in')));
@@ -102,7 +102,7 @@ void main() {
     await tester.pumpWidget(_host(notifier: notifier));
 
     final hostField = tester.widget<NmtkTextInput>(
-      find.widgetWithText(NmtkTextInput, 'Server address'),
+      find.byKey(const Key('server-connect-host')),
     );
     expect(hostField.controller?.text, '192.168.2.90');
   });
@@ -113,15 +113,15 @@ void main() {
     await tester.pumpWidget(_host(notifier: notifier));
 
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Server address'),
+      find.byKey(const Key('server-connect-host')),
       '192.168.2.90',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'App username'),
+      find.byKey(const Key('server-connect-username')),
       'alice',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Password'),
+      find.byKey(const Key('server-connect-password')),
       'wrong',
     );
     await tester.ensureVisible(find.byKey(const Key('server-connect-sign-in')));
@@ -147,15 +147,15 @@ void main() {
     await tester.pumpWidget(_host(notifier: notifier));
 
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Server address'),
+      find.byKey(const Key('server-connect-host')),
       '192.168.2.90',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'App username'),
+      find.byKey(const Key('server-connect-username')),
       'alice',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Password'),
+      find.byKey(const Key('server-connect-password')),
       'secret',
     );
     await tester.ensureVisible(find.byKey(const Key('server-connect-sign-in')));

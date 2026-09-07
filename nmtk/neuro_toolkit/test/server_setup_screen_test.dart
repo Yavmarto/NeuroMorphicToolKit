@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/server/provision/provision_notifier.dart';
 import 'package:neuro_toolkit/features/server/provision/provision_service.dart';
@@ -77,21 +76,21 @@ void main() {
 
     expect(find.text('Set up your server'), findsOneWidget);
     expect(find.text('Server address'), findsWidgets);
-    expect(find.text('Administrator username'), findsOneWidget);
+    expect(find.text('Administrator account'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('Docker'), findsOneWidget);
     expect(find.text('Podman'), findsOneWidget);
 
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Server address'),
+      find.byKey(const Key('server-setup-host')),
       '192.168.2.90',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Administrator username'),
+      find.byKey(const Key('server-setup-username')),
       'moosebun2',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Password'),
+      find.byKey(const Key('server-setup-password')),
       'correct horse',
     );
     await tester.ensureVisible(find.byKey(const Key('server-setup-provision')));
@@ -111,15 +110,15 @@ void main() {
     await tester.pumpWidget(_host(notifier: notifier));
 
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Server address'),
+      find.byKey(const Key('server-setup-host')),
       '192.168.2.90',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Administrator username'),
+      find.byKey(const Key('server-setup-username')),
       'moosebun2',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Password'),
+      find.byKey(const Key('server-setup-password')),
       'secret',
     );
     await tester.ensureVisible(find.byKey(const Key('server-setup-provision')));
@@ -145,15 +144,15 @@ void main() {
     await tester.pumpWidget(_host(notifier: notifier));
 
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Server address'),
+      find.byKey(const Key('server-setup-host')),
       '192.168.2.90',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Administrator username'),
+      find.byKey(const Key('server-setup-username')),
       'moosebun2',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Password'),
+      find.byKey(const Key('server-setup-password')),
       'secret',
     );
     await tester.ensureVisible(find.byKey(const Key('server-setup-provision')));
@@ -195,15 +194,15 @@ void main() {
     );
 
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Server address'),
+      find.byKey(const Key('server-setup-host')),
       '192.168.2.90',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Administrator username'),
+      find.byKey(const Key('server-setup-username')),
       'moosebun2',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Password'),
+      find.byKey(const Key('server-setup-password')),
       'secret',
     );
     await tester.ensureVisible(find.byKey(const Key('server-setup-provision')));
@@ -240,15 +239,15 @@ void main() {
     await tester.pumpWidget(_host(notifier: notifier));
 
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Server address'),
+      find.byKey(const Key('server-setup-host')),
       '192.168.2.90',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Administrator username'),
+      find.byKey(const Key('server-setup-username')),
       'root',
     );
     await tester.enterText(
-      find.widgetWithText(NmtkTextInput, 'Password'),
+      find.byKey(const Key('server-setup-password')),
       'secret',
     );
     await tester.ensureVisible(find.byKey(const Key('server-setup-provision')));

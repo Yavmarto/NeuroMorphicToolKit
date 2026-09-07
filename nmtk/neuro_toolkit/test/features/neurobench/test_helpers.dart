@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/features/neurobench/models/workspace_route_state.dart';
 import 'package:neuro_toolkit/features/neurobench/screens/workbench_shell.dart';
 
-/// Workbench desktop layout requires width above 1080 logical pixels.
+/// Workbench desktop layout requires width at or above the compact
+/// breakpoint (840 logical pixels) — the catalog panel only appears there.
 void useDesktopViewport(WidgetTester tester) {
   tester.view.physicalSize = const Size(1400, 900);
   tester.view.devicePixelRatio = 1.0;

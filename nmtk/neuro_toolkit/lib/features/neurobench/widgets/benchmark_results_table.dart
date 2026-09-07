@@ -23,7 +23,6 @@ class BenchmarkResultsTable extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeBenchmark = ref.watch(activeBenchmarkProvider);
     final resultsAsync = ref.watch(activeBenchmarkResultsProvider);
-    final compareSelection = ref.watch(compareSelectionProvider);
     final primaryMetric = activeBenchmark?.scoring.primaryMetric ?? 'metric';
 
     return NmtkSection(
@@ -39,73 +38,201 @@ class BenchmarkResultsTable extends ConsumerWidget {
           final sorted = List<BenchmarkResult>.from(results)
             ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: [
-                const DataColumn(label: Text('Compare')),
-                const DataColumn(label: Text('Run ID')),
-                const DataColumn(label: Text('Timestamp')),
-                const DataColumn(label: Text('Target')),
-                DataColumn(label: Text(primaryMetric)),
-                const DataColumn(label: Text('Wall time')),
-                const DataColumn(label: Text('Actions')),
-              ],
-              rows: sorted.map((result) {
-                final selected = compareSelection.contains(result.id);
-                final metricValue = result.metrics[primaryMetric];
-
-                return DataRow(
-                  selected: selected,
-                  cells: [
-                    DataCell(
-                      ZetaCheckbox(
-                        value: selected,
-                        onChanged: (_) => ref
-                            .read(compareSelectionProvider.notifier)
-                            .toggle(result.id),
-                      ),
-                    ),
-                    DataCell(Text(_shortId(result.id))),
-                    DataCell(Text(result.timestamp)),
-                    DataCell(Text(result.targetId ?? '—')),
-                    DataCell(Text(metricValue?.toStringAsFixed(4) ?? '—')),
-                    DataCell(
-                      Text(
-                        '${result.wallTimeSeconds.toStringAsFixed(2)} s',
-                      ),
-                    ),
-                    DataCell(
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ZetaButton.text(
-                            onPressed: () => _loadResult(context, ref, result),
-                            label: 'Load',
-                            size: ZetaWidgetSize.small,
-                          ),
-                          ZetaButton.text(
-                            onPressed: () =>
-                                _saveBaseline(context, ref, result),
-                            label: 'Save',
-                            size: ZetaWidgetSize.small,
-                          ),
-                          ZetaButton.text(
-                            onPressed: () => _exportJson(context, result),
-                            label: 'Export',
-                            size: ZetaWidgetSize.small,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(growable: false),
-            ),
+          return NmtkAdaptiveLayout(
+            breakpoint: NmtkShellTokens.compactBreakpoint,
+            desktopBuilder: (_) =>
+                _buildDataTable(context, ref, sorted, primaryMetric),
+            mobileBuilder: (_) =>
+                _buildCardList(context, ref, sorted, primaryMetric),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Text('Error: $err'),
+      ),
+    );
+  }
+
+  Widget _buildDataTable(
+    BuildContext context,
+    WidgetRef ref,
+    List<BenchmarkResult> sorted,
+    String primaryMetric,
+  ) {
+    final compareSelection = ref.watch(compareSelectionProvider);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: [
+          const DataColumn(label: Text('Compare')),
+          const DataColumn(label: Text('Run ID')),
+          const DataColumn(label: Text('Timestamp')),
+          const DataColumn(label: Text('Target')),
+          DataColumn(label: Text(primaryMetric)),
+          const DataColumn(label: Text('Wall time')),
+          const DataColumn(label: Text('Actions')),
+        ],
+        rows: sorted
+            .map((result) {
+              final selected = compareSelection.contains(result.id);
+              final metricValue = result.metrics[primaryMetric];
+
+              return DataRow(
+                selected: selected,
+                cells: [
+                  DataCell(
+                    ZetaCheckbox(
+                      value: selected,
+                      onChanged: (_) => ref
+                          .read(compareSelectionProvider.notifier)
+                          .toggle(result.id),
+                    ),
+                  ),
+                  DataCell(Text(_shortId(result.id))),
+                  DataCell(Text(result.timestamp)),
+                  DataCell(Text(result.targetId ?? '—')),
+                  DataCell(Text(metricValue?.toStringAsFixed(4) ?? '—')),
+                  DataCell(
+                    Text('${result.wallTimeSeconds.toStringAsFixed(2)} s'),
+                  ),
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        ZetaButton.text(
+                          onPressed: () => _loadResult(context, ref, result),
+                          label: 'Load',
+                          size: ZetaWidgetSize.small,
+                        ),
+                        ZetaButton.text(
+                          onPressed: () => _saveBaseline(context, ref, result),
+                          label: 'Save',
+                          size: ZetaWidgetSize.small,
+                        ),
+                        ZetaButton.text(
+                          onPressed: () => _exportJson(context, result),
+                          label: 'Export',
+                          size: ZetaWidgetSize.small,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            })
+            .toList(growable: false),
+      ),
+    );
+  }
+
+  /// Card-per-row rendering for compact viewports (CEL-77): every run gets
+  /// its own surface card instead of a wide multi-column row.
+  Widget _buildCardList(
+    BuildContext context,
+    WidgetRef ref,
+    List<BenchmarkResult> sorted,
+    String primaryMetric,
+  ) {
+    final compareSelection = ref.watch(compareSelectionProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final result in sorted)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: NmtkSurfaceCard(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ZetaCheckbox(
+                          value: compareSelection.contains(result.id),
+                          onChanged: (_) => ref
+                              .read(compareSelectionProvider.notifier)
+                              .toggle(result.id),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _shortId(result.id),
+                            style: Zeta.of(context).textStyles.bodyMedium
+                                .copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _kvRow(context, 'Timestamp', result.timestamp),
+                    _kvRow(context, 'Target', result.targetId ?? '—'),
+                    _kvRow(
+                      context,
+                      primaryMetric,
+                      result.metrics[primaryMetric]?.toStringAsFixed(4) ?? '—',
+                    ),
+                    _kvRow(
+                      context,
+                      'Wall time',
+                      '${result.wallTimeSeconds.toStringAsFixed(2)} s',
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ZetaButton.text(
+                          onPressed: () => _loadResult(context, ref, result),
+                          label: 'Load',
+                          size: ZetaWidgetSize.small,
+                        ),
+                        ZetaButton.text(
+                          onPressed: () => _saveBaseline(context, ref, result),
+                          label: 'Save',
+                          size: ZetaWidgetSize.small,
+                        ),
+                        ZetaButton.text(
+                          onPressed: () => _exportJson(context, result),
+                          label: 'Export',
+                          size: ZetaWidgetSize.small,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _kvRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: Zeta.of(context).textStyles.bodySmall.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              style: Zeta.of(
+                context,
+              ).textStyles.bodySmall.copyWith(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }

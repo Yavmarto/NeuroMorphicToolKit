@@ -14,11 +14,7 @@ import 'package:neuro_toolkit/features/server/provision/provision_service.dart';
 /// engine if missing, running the install, minting the app credential — is
 /// handled automatically and reported here in plain English.
 class ServerSetupScreen extends ConsumerStatefulWidget {
-  const ServerSetupScreen({
-    super.key,
-    this.initialHost,
-    this.onProvisioned,
-  });
+  const ServerSetupScreen({super.key, this.initialHost, this.onProvisioned});
 
   /// Pre-fill for the server address (e.g. from a prior attempt).
   final String? initialHost;
@@ -106,96 +102,96 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         NmtkSurfaceCard(
-          child: Padding(
-            padding: EdgeInsets.all(tokens.sectionGap),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _fieldLabel('Server address'),
+          padding: EdgeInsets.all(tokens.sectionGap),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _fieldLabel('Server address'),
+              SizedBox(height: tokens.compactGap),
+              NmtkTextInput(
+                key: const Key('server-setup-host'),
+                controller: _host,
+                hintText: 'e.g. 192.168.2.90',
+                errorText: _hostError,
+                keyboardType: TextInputType.url,
+                valueSanitizer: _sanitizeHost,
+              ),
+              SizedBox(height: tokens.sectionGap),
+              _fieldLabel('Administrator account'),
+              SizedBox(height: tokens.compactGap),
+              NmtkTextInput(
+                key: const Key('server-setup-username'),
+                controller: _username,
+                hintText: 'e.g. moosebun2',
+                errorText: _usernameError,
+              ),
+              SizedBox(height: tokens.compactGap),
+              const Text(
+                'This account must be allowed to install software. Do not '
+                'use the root account.',
+              ),
+              SizedBox(height: tokens.sectionGap),
+              const Text('How does this account sign in?'),
+              SizedBox(height: tokens.compactGap),
+              _choiceRow(
+                tokens,
+                children: [
+                  _authChoice('Use a password', 'password'),
+                  _authChoice('Use a key', 'key'),
+                ],
+              ),
+              SizedBox(height: tokens.compactGap),
+              if (_authMethod == 'password') ...[
+                _fieldLabel('Password'),
                 SizedBox(height: tokens.compactGap),
                 NmtkTextInput(
-                  controller: _host,
-                  label: 'Server address',
-                  hintText: 'e.g. 192.168.2.90',
-                  errorText: _hostError,
-                  keyboardType: TextInputType.url,
-                  valueSanitizer: _sanitizeHost,
-                ),
-                SizedBox(height: tokens.sectionGap),
-                _fieldLabel('Administrator account'),
-                SizedBox(height: tokens.compactGap),
-                NmtkTextInput(
-                  controller: _username,
-                  label: 'Administrator username',
-                  hintText: 'e.g. moosebun2',
-                  errorText: _usernameError,
-                ),
-                SizedBox(height: tokens.compactGap),
-                const Text(
-                  'This account must be allowed to install software. Do not '
-                  'use the root account.',
-                ),
-                SizedBox(height: tokens.sectionGap),
-                const Text('How does this account sign in?'),
-                SizedBox(height: tokens.compactGap),
-                Wrap(
-                  spacing: tokens.compactGap,
-                  runSpacing: tokens.compactGap,
-                  children: [
-                    _authChoice('Use a password', 'password'),
-                    _authChoice('Use a key', 'key'),
-                  ],
-                ),
-                SizedBox(height: tokens.compactGap),
-                if (_authMethod == 'password')
-                  NmtkTextInput(
-                    controller: _password,
-                    label: 'Password',
-                    obscureText: _obscurePassword,
-                    errorText: _credentialError,
-                    suffix: Tooltip(
-                      message: _obscurePassword
+                  key: const Key('server-setup-password'),
+                  controller: _password,
+                  obscureText: _obscurePassword,
+                  errorText: _credentialError,
+                  suffix: Tooltip(
+                    message: _obscurePassword
+                        ? 'Show password'
+                        : 'Hide password',
+                    child: ZetaIconButton.text(
+                      icon: _obscurePassword
+                          ? ZetaIcons.visibility_off
+                          : ZetaIcons.visibility,
+                      semanticLabel: _obscurePassword
                           ? 'Show password'
                           : 'Hide password',
-                      child: ZetaIconButton.text(
-                        icon: _obscurePassword
-                            ? ZetaIcons.visibility_off
-                            : ZetaIcons.visibility,
-                        semanticLabel: _obscurePassword
-                            ? 'Show password'
-                            : 'Hide password',
-                        onPressed: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
-                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
-                  )
-                else
-                  NmtkCodeTextArea(
-                    controller: _privateKey,
-                    label: 'Private key',
-                    minLines: 4,
-                    maxLines: 8,
-                    errorText: _credentialError,
                   ),
-                SizedBox(height: tokens.sectionGap),
-                const Text('Which container engine?'),
-                SizedBox(height: tokens.compactGap),
-                const Text(
-                  'If the one you pick is not installed yet, NeuroToolkit '
-                  'installs it automatically.',
                 ),
+              ] else ...[
+                _fieldLabel('Private key'),
                 SizedBox(height: tokens.compactGap),
-                Wrap(
-                  spacing: tokens.compactGap,
-                  runSpacing: tokens.compactGap,
-                  children: [
-                    _engineChoice('Docker', 'docker'),
-                    _engineChoice('Podman', 'podman'),
-                  ],
+                NmtkCodeTextArea(
+                  key: const Key('server-setup-private-key'),
+                  controller: _privateKey,
+                  minLines: 4,
+                  maxLines: 8,
+                  errorText: _credentialError,
                 ),
               ],
-            ),
+              SizedBox(height: tokens.sectionGap),
+              const Text('Which container engine?'),
+              SizedBox(height: tokens.compactGap),
+              const Text(
+                'If the one you pick is not installed yet, NeuroToolkit '
+                'installs it automatically.',
+              ),
+              SizedBox(height: tokens.compactGap),
+              _choiceRow(
+                tokens,
+                children: [
+                  _engineChoice('Docker', 'docker'),
+                  _engineChoice('Podman', 'podman'),
+                ],
+              ),
+            ],
           ),
         ),
         SizedBox(height: tokens.sectionGap),
@@ -205,18 +201,68 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
           'account.',
         ),
         SizedBox(height: tokens.compactGap),
-        Wrap(
-          spacing: tokens.compactGap,
-          runSpacing: tokens.compactGap,
-          children: [
-            ZetaButton(
-              key: const Key('server-setup-provision'),
-              onPressed: _provision,
-              label: 'Set up server',
-            ),
-          ],
+        _actionArea(
+          tokens,
+          primary: ZetaButton(
+            key: const Key('server-setup-provision'),
+            onPressed: _provision,
+            label: 'Set up server',
+          ),
         ),
       ],
+    );
+  }
+
+  /// Lays out mutually-exclusive choices side by side on wide screens and
+  /// stacked on phones — no side-by-side field pairs below the compact
+  /// breakpoint (CEL-77).
+  Widget _choiceRow(NmtkShellTokens tokens, {required List<Widget> children}) {
+    return NmtkAdaptiveLayout(
+      breakpoint: NmtkShellTokens.compactBreakpoint,
+      desktopBuilder: (context) => Wrap(
+        spacing: tokens.compactGap,
+        runSpacing: tokens.compactGap,
+        children: children,
+      ),
+      mobileBuilder: (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) SizedBox(height: tokens.compactGap),
+            children[i],
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Primary action spans the full width with at least a 48dp tap target on
+  /// phones; keeps the desktop's compact inline layout (CEL-77).
+  Widget _actionArea(
+    NmtkShellTokens tokens, {
+    required Widget primary,
+    Widget? secondary,
+  }) {
+    return NmtkAdaptiveLayout(
+      breakpoint: NmtkShellTokens.compactBreakpoint,
+      desktopBuilder: (context) => Wrap(
+        spacing: tokens.compactGap,
+        runSpacing: tokens.compactGap,
+        children: [primary, ?secondary],
+      ),
+      mobileBuilder: (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: primary,
+          ),
+          if (secondary != null) ...[
+            SizedBox(height: tokens.compactGap),
+            secondary,
+          ],
+        ],
+      ),
     );
   }
 
@@ -278,23 +324,21 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
               'try again. Your data is not affected.',
             ),
             SizedBox(height: tokens.compactGap),
-            Wrap(
-              spacing: tokens.compactGap,
-              runSpacing: tokens.compactGap,
-              children: [
-                if (failure.retryable)
-                  ZetaButton(
-                    key: const Key('server-setup-retry'),
-                    onPressed: _provision,
-                    label: 'Try again',
-                  ),
-                ZetaButton.text(
-                  key: const Key('server-setup-change-details'),
-                  onPressed: () =>
-                      ref.read(provisionNotifierProvider.notifier).reset(),
-                  label: 'Change details',
-                ),
-              ],
+            _actionArea(
+              tokens,
+              primary: failure.retryable
+                  ? ZetaButton(
+                      key: const Key('server-setup-retry'),
+                      onPressed: _provision,
+                      label: 'Try again',
+                    )
+                  : const SizedBox.shrink(),
+              secondary: ZetaButton.text(
+                key: const Key('server-setup-change-details'),
+                onPressed: () =>
+                    ref.read(provisionNotifierProvider.notifier).reset(),
+                label: 'Change details',
+              ),
             ),
           ],
         ),
@@ -323,10 +367,13 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
             ),
             if (widget.onProvisioned != null) ...[
               SizedBox(height: tokens.compactGap),
-              ZetaButton(
-                key: const Key('server-setup-continue'),
-                onPressed: () => widget.onProvisioned!(result),
-                label: 'Continue',
+              _actionArea(
+                tokens,
+                primary: ZetaButton(
+                  key: const Key('server-setup-continue'),
+                  onPressed: () => widget.onProvisioned!(result),
+                  label: 'Continue',
+                ),
               ),
             ],
           ],
@@ -361,10 +408,8 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
     );
   }
 
-  Widget _fieldLabel(String text) => Text(
-    text,
-    style: Theme.of(context).textTheme.titleSmall,
-  );
+  Widget _fieldLabel(String text) =>
+      Text(text, style: Theme.of(context).textTheme.titleSmall);
 
   String _sanitizeHost(String value) {
     final trimmed = value.trim();
@@ -393,9 +438,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
                 : 'Enter the private key.'
           : null;
     });
-    return validHost &&
-        _usernameError == null &&
-        _credentialError == null;
+    return validHost && _usernameError == null && _credentialError == null;
   }
 
   bool get _credentialEmpty => _authMethod == 'password'
@@ -407,21 +450,25 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
     final credential = _authMethod == 'password'
         ? ProvisionCredential.password(_password.text)
         : ProvisionCredential.privateKey(_privateKey.text.trim());
-    await ref.read(provisionNotifierProvider.notifier).provision(
-      ProvisionRequest(
-        host: _host.text.trim(),
-        sudoUser: _username.text.trim(),
-        credential: credential,
-        engine: _engine,
-      ),
-    );
+    await ref
+        .read(provisionNotifierProvider.notifier)
+        .provision(
+          ProvisionRequest(
+            host: _host.text.trim(),
+            sudoUser: _username.text.trim(),
+            credential: credential,
+            engine: _engine,
+          ),
+        );
   }
 
   /// Maps internal provisioning phase labels to plain-English step text, so
   /// the user never reads SSH/administrator/deploy jargon.
   String _phaseLabel(String stageLabel) {
     final normalized = stageLabel.toLowerCase();
-    if (normalized.contains('queued')) return 'Preparing to set up your server…';
+    if (normalized.contains('queued')) {
+      return 'Preparing to set up your server…';
+    }
     if (normalized.contains('connecting with administrator access')) {
       return 'Connecting to your server…';
     }

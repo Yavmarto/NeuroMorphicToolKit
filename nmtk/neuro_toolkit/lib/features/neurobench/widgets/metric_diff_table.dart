@@ -26,145 +26,10 @@ class MetricDiffTable extends ConsumerWidget {
 
         return NmtkSection(
           title: 'Baseline Diff',
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('Metric')),
-                DataColumn(label: Text('Baseline (avg ± std)')),
-                DataColumn(label: Text('Current (avg ± std)')),
-                DataColumn(label: Text('Diff %')),
-                DataColumn(label: Text('Significance')),
-                DataColumn(label: Text('Status')),
-              ],
-              rows: diff.metrics.map((metric) {
-                final color = metric.status == MetricStatus.improved
-                    ? tokens.healthyColor
-                    : (metric.status == MetricStatus.regressed
-                        ? tokens.errorColor
-                        : tokens.metadataForeground);
-
-                final isSignificant = metric.isSignificant ?? false;
-                final rowColor = isSignificant
-                    ? (metric.status == MetricStatus.improved
-                        ? tokens.healthyColor.withValues(alpha: 0.05)
-                        : (metric.status == MetricStatus.regressed
-                            ? tokens.errorColor.withValues(alpha: 0.05)
-                            : null))
-                    : null;
-
-                return DataRow(
-                  color: WidgetStateProperty.resolveWith<Color?>(
-                    (states) => rowColor,
-                  ),
-                  cells: [
-                    DataCell(Text(metric.name)),
-                    DataCell(
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(metric.baselineValue.toStringAsFixed(2)),
-                          if (metric.baselineStd != null)
-                            Text(
-                              '±${metric.baselineStd!.toStringAsFixed(2)}',
-                              style: Zeta.of(context)
-                                  .textStyles
-                                  .bodyMedium
-                                  .copyWith(
-                                    fontSize: 10,
-                                    color: tokens.metadataForeground,
-                                  ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    DataCell(
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(metric.currentValue.toStringAsFixed(2)),
-                          if (metric.currentStd != null)
-                            Text(
-                              '±${metric.currentStd!.toStringAsFixed(2)}',
-                              style: Zeta.of(context)
-                                  .textStyles
-                                  .bodyMedium
-                                  .copyWith(
-                                    fontSize: 10,
-                                    color: tokens.metadataForeground,
-                                  ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    DataCell(
-                      Text(
-                        '${metric.deltaPct > 0 ? "+" : ""}${metric.deltaPct.toStringAsFixed(1)}%',
-                        style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                              color: color,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ),
-                    DataCell(
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isSignificant ? 'SIGNIFICANT' : 'Insignificant',
-                            style:
-                                Zeta.of(context).textStyles.bodyMedium.copyWith(
-                                      fontSize: 10,
-                                      fontWeight: isSignificant
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: isSignificant
-                                          ? color
-                                          : tokens.metadataForeground,
-                                    ),
-                          ),
-                          if (metric.pValueTtest != null)
-                            Text(
-                              'p=${metric.pValueTtest!.toStringAsExponential(2)}',
-                              style: Zeta.of(context)
-                                  .textStyles
-                                  .bodyMedium
-                                  .copyWith(
-                                    fontSize: 9,
-                                    color: tokens.metadataForeground,
-                                  ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    DataCell(
-                      Row(
-                        children: [
-                          Icon(
-                            metric.thresholdViolated
-                                ? ZetaIcons.error_outline
-                                : ZetaIcons.check_circle_outline,
-                            color: color,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            metric.status.name.toUpperCase(),
-                            style: Zeta.of(context)
-                                .textStyles
-                                .bodyMedium
-                                .copyWith(color: color, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ),
+          child: NmtkAdaptiveLayout(
+            breakpoint: NmtkShellTokens.compactBreakpoint,
+            desktopBuilder: (_) => _buildDataTable(context, diff, tokens),
+            mobileBuilder: (_) => _buildCardList(context, diff, tokens),
           ),
         );
       },
@@ -176,6 +41,273 @@ class MetricDiffTable extends ConsumerWidget {
         title: 'Baseline Diff',
         tone: NmtkTone.danger,
         child: Text('Error: $err'),
+      ),
+    );
+  }
+
+  Widget _buildDataTable(
+    BuildContext context,
+    DiffResult diff,
+    NmtkShellTokens tokens,
+  ) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Metric')),
+          DataColumn(label: Text('Baseline (avg ± std)')),
+          DataColumn(label: Text('Current (avg ± std)')),
+          DataColumn(label: Text('Diff %')),
+          DataColumn(label: Text('Significance')),
+          DataColumn(label: Text('Status')),
+        ],
+        rows: diff.metrics.map((metric) {
+          final color = _statusColor(metric.status, tokens);
+
+          final isSignificant = metric.isSignificant ?? false;
+          final rowColor = isSignificant
+              ? (metric.status == MetricStatus.improved
+                    ? tokens.healthyColor.withValues(alpha: 0.05)
+                    : (metric.status == MetricStatus.regressed
+                          ? tokens.errorColor.withValues(alpha: 0.05)
+                          : null))
+              : null;
+
+          return DataRow(
+            color: WidgetStateProperty.resolveWith<Color?>(
+              (states) => rowColor,
+            ),
+            cells: [
+              DataCell(Text(metric.name)),
+              DataCell(
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(metric.baselineValue.toStringAsFixed(2)),
+                    if (metric.baselineStd != null)
+                      Text(
+                        '±${metric.baselineStd!.toStringAsFixed(2)}',
+                        style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                          fontSize: 10,
+                          color: tokens.metadataForeground,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              DataCell(
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(metric.currentValue.toStringAsFixed(2)),
+                    if (metric.currentStd != null)
+                      Text(
+                        '±${metric.currentStd!.toStringAsFixed(2)}',
+                        style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                          fontSize: 10,
+                          color: tokens.metadataForeground,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              DataCell(
+                Text(
+                  '${metric.deltaPct > 0 ? "+" : ""}${metric.deltaPct.toStringAsFixed(1)}%',
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              DataCell(
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isSignificant ? 'SIGNIFICANT' : 'Insignificant',
+                      style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                        fontSize: 10,
+                        fontWeight: isSignificant
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                        color: isSignificant
+                            ? color
+                            : tokens.metadataForeground,
+                      ),
+                    ),
+                    if (metric.pValueTtest != null)
+                      Text(
+                        'p=${metric.pValueTtest!.toStringAsExponential(2)}',
+                        style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                          fontSize: 9,
+                          color: tokens.metadataForeground,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              DataCell(
+                Row(
+                  children: [
+                    Icon(
+                      metric.thresholdViolated
+                          ? ZetaIcons.error_outline
+                          : ZetaIcons.check_circle_outline,
+                      color: color,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      metric.status.name.toUpperCase(),
+                      style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                        color: color,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// Card-per-row rendering for compact viewports (CEL-77): every metric gets
+  /// its own surface card instead of a wide multi-column row.
+  Widget _buildCardList(
+    BuildContext context,
+    DiffResult diff,
+    NmtkShellTokens tokens,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final metric in diff.metrics)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: NmtkSurfaceCard(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            metric.name,
+                            style: Zeta.of(context).textStyles.bodyMedium
+                                .copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              metric.thresholdViolated
+                                  ? ZetaIcons.error_outline
+                                  : ZetaIcons.check_circle_outline,
+                              color: _statusColor(metric.status, tokens),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              metric.status.name.toUpperCase(),
+                              style: Zeta.of(context).textStyles.bodyMedium
+                                  .copyWith(
+                                    color: _statusColor(metric.status, tokens),
+                                    fontSize: 12,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _kvRow(
+                      context,
+                      'Baseline',
+                      _avgStd(metric.baselineValue, metric.baselineStd),
+                    ),
+                    _kvRow(
+                      context,
+                      'Current',
+                      _avgStd(metric.currentValue, metric.currentStd),
+                    ),
+                    _kvRow(
+                      context,
+                      'Diff %',
+                      '${metric.deltaPct > 0 ? "+" : ""}${metric.deltaPct.toStringAsFixed(1)}%',
+                      valueColor: _statusColor(metric.status, tokens),
+                      bold: true,
+                    ),
+                    _kvRow(
+                      context,
+                      'Significance',
+                      '${metric.isSignificant ?? false ? 'SIGNIFICANT' : 'Insignificant'}${metric.pValueTtest != null ? ' (p=${metric.pValueTtest!.toStringAsExponential(2)})' : ''}',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Color _statusColor(MetricStatus status, NmtkShellTokens tokens) {
+    return status == MetricStatus.improved
+        ? tokens.healthyColor
+        : (status == MetricStatus.regressed
+              ? tokens.errorColor
+              : tokens.metadataForeground);
+  }
+
+  String _avgStd(double value, double? std) {
+    return std == null
+        ? value.toStringAsFixed(2)
+        : '${value.toStringAsFixed(2)} ± ${std.toStringAsFixed(2)}';
+  }
+
+  Widget _kvRow(
+    BuildContext context,
+    String label,
+    String value, {
+    Color? valueColor,
+    bool bold = false,
+  }) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: Zeta.of(context).textStyles.bodySmall.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+              style: Zeta.of(context).textStyles.bodySmall.copyWith(
+                fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+                color: valueColor,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

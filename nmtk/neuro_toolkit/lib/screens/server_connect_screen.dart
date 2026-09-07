@@ -14,11 +14,7 @@ import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 /// On app open the caller tries [ConnectNotifier.reconnectOnOpen] first and
 /// only shows this form when that fails or there is no saved server.
 class ServerConnectScreen extends ConsumerStatefulWidget {
-  const ServerConnectScreen({
-    super.key,
-    this.initialHost,
-    this.onNewServer,
-  });
+  const ServerConnectScreen({super.key, this.initialHost, this.onNewServer});
 
   /// Pre-fill for the server address (overrides the saved host when set, e.g.
   /// right after a fresh provision).
@@ -99,57 +95,52 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         NmtkSurfaceCard(
-          child: Padding(
-            padding: EdgeInsets.all(tokens.sectionGap),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _fieldLabel('Server address'),
-                SizedBox(height: tokens.compactGap),
-                NmtkTextInput(
-                  controller: _host,
-                  label: 'Server address',
-                  hintText: 'e.g. 192.168.2.90',
-                  errorText: _hostError,
-                  keyboardType: TextInputType.url,
-                  valueSanitizer: _sanitizeHost,
-                ),
-                SizedBox(height: tokens.sectionGap),
-                _fieldLabel('App account'),
-                SizedBox(height: tokens.compactGap),
-                NmtkTextInput(
-                  controller: _username,
-                  label: 'App username',
-                  hintText: 'e.g. alice',
-                  errorText: _usernameError,
-                ),
-                SizedBox(height: tokens.sectionGap),
-                _fieldLabel('Password'),
-                SizedBox(height: tokens.compactGap),
-                NmtkTextInput(
-                  controller: _password,
-                  label: 'Password',
-                  obscureText: _obscurePassword,
-                  errorText: _credentialError,
-                  suffix: Tooltip(
-                    message: _obscurePassword
+          padding: EdgeInsets.all(tokens.sectionGap),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _fieldLabel('Server address'),
+              SizedBox(height: tokens.compactGap),
+              NmtkTextInput(
+                key: const Key('server-connect-host'),
+                controller: _host,
+                hintText: 'e.g. 192.168.2.90',
+                errorText: _hostError,
+                keyboardType: TextInputType.url,
+                valueSanitizer: _sanitizeHost,
+              ),
+              SizedBox(height: tokens.sectionGap),
+              _fieldLabel('App account'),
+              SizedBox(height: tokens.compactGap),
+              NmtkTextInput(
+                key: const Key('server-connect-username'),
+                controller: _username,
+                hintText: 'e.g. alice',
+                errorText: _usernameError,
+              ),
+              SizedBox(height: tokens.sectionGap),
+              _fieldLabel('Password'),
+              SizedBox(height: tokens.compactGap),
+              NmtkTextInput(
+                key: const Key('server-connect-password'),
+                controller: _password,
+                obscureText: _obscurePassword,
+                errorText: _credentialError,
+                suffix: Tooltip(
+                  message: _obscurePassword ? 'Show password' : 'Hide password',
+                  child: ZetaIconButton.text(
+                    icon: _obscurePassword
+                        ? ZetaIcons.visibility_off
+                        : ZetaIcons.visibility,
+                    semanticLabel: _obscurePassword
                         ? 'Show password'
                         : 'Hide password',
-                    child: ZetaIconButton.text(
-                      icon: _obscurePassword
-                          ? ZetaIcons.visibility_off
-                          : ZetaIcons.visibility,
-                      semanticLabel: _obscurePassword
-                          ? 'Show password'
-                          : 'Hide password',
-                      onPressed: () => setState(
-                        () => _obscurePassword = !_obscurePassword,
-                      ),
-                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         if (state.phase == ConnectPhase.failed &&
@@ -163,25 +154,53 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
           ),
         ],
         SizedBox(height: tokens.sectionGap),
-        Wrap(
-          spacing: tokens.compactGap,
-          runSpacing: tokens.compactGap,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            ZetaButton(
-              key: const Key('server-connect-sign-in'),
-              onPressed: _connect,
-              label: 'Sign in',
-            ),
-            if (widget.onNewServer != null)
-              ZetaButton.text(
-                key: const Key('server-connect-new-server'),
-                onPressed: widget.onNewServer,
-                label: 'Set up a new server',
-              ),
-          ],
+        _actionArea(
+          tokens,
+          primary: ZetaButton(
+            key: const Key('server-connect-sign-in'),
+            onPressed: _connect,
+            label: 'Sign in',
+          ),
+          secondary: widget.onNewServer != null
+              ? ZetaButton.text(
+                  key: const Key('server-connect-new-server'),
+                  onPressed: widget.onNewServer,
+                  label: 'Set up a new server',
+                )
+              : null,
         ),
       ],
+    );
+  }
+
+  /// Primary action spans the full width with at least a 48dp tap target on
+  /// phones; keeps the desktop's compact inline layout (CEL-77).
+  Widget _actionArea(
+    NmtkShellTokens tokens, {
+    required Widget primary,
+    Widget? secondary,
+  }) {
+    return NmtkAdaptiveLayout(
+      breakpoint: NmtkShellTokens.compactBreakpoint,
+      desktopBuilder: (context) => Wrap(
+        spacing: tokens.compactGap,
+        runSpacing: tokens.compactGap,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [primary, ?secondary],
+      ),
+      mobileBuilder: (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: primary,
+          ),
+          if (secondary != null) ...[
+            SizedBox(height: tokens.compactGap),
+            secondary,
+          ],
+        ],
+      ),
     );
   }
 
@@ -206,10 +225,8 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
     );
   }
 
-  Widget _fieldLabel(String text) => Text(
-    text,
-    style: Theme.of(context).textTheme.titleSmall,
-  );
+  Widget _fieldLabel(String text) =>
+      Text(text, style: Theme.of(context).textTheme.titleSmall);
 
   String _sanitizeHost(String value) {
     final trimmed = value.trim();
@@ -227,9 +244,7 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
       _usernameError = _username.text.trim().isEmpty
           ? 'Enter the app username.'
           : null;
-      _credentialError = _password.text.isEmpty
-          ? 'Enter the password.'
-          : null;
+      _credentialError = _password.text.isEmpty ? 'Enter the password.' : null;
     });
     return _hostError == null &&
         _usernameError == null &&
@@ -241,12 +256,14 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
     // ServerAccessGate watches connectNotifierProvider and swaps this screen
     // out for the workspace as soon as the phase flips to connected, which
     // can unmount this widget mid-await — so nothing below may touch `ref`.
-    await ref.read(connectNotifierProvider.notifier).connect(
-      ConnectRequest(
-        host: _host.text.trim(),
-        appUsername: _username.text.trim(),
-        credential: _password.text,
-      ),
-    );
+    await ref
+        .read(connectNotifierProvider.notifier)
+        .connect(
+          ConnectRequest(
+            host: _host.text.trim(),
+            appUsername: _username.text.trim(),
+            credential: _password.text,
+          ),
+        );
   }
 }
