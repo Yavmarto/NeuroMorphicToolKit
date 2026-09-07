@@ -133,9 +133,14 @@ RUN grep -vE '^torch(vision)?($|[<>=; ])' /app/requirements.txt > /tmp/reqs-join
 # Install neurocnl with all extras (brings nir and framework bindings).
 # Heavy torch/framework layers above are already cached so this is fast.
 COPY neurocnl/ /tmp/neurocnl/
+# neurocnl depends on nmtk-contracts by name only (a relative `file:` URL
+# requirement is invalid per PEP 508 and pip rejects it outright). Install it
+# from source first so the name resolves as already-satisfied below.
+COPY nmtk_contracts/ /nmtk_contracts/
+RUN pip install --no-cache-dir /nmtk_contracts
 RUN pip install --no-cache-dir "/tmp/neurocnl[training,rockpool,synsense,norse]" \
  && python -c "import nir; assert hasattr(nir, 'CubaLI'), 'nir>=1.0.4 required'; from neurocnl.runtime.sc_neurocore_simulator import sc_neurocore_nir_bridge_available; assert sc_neurocore_nir_bridge_available(), 'sc-neurocore NIR bridge missing'; import os; os._exit(0)" \
- && rm -rf /tmp/neurocnl
+ && rm -rf /tmp/neurocnl /nmtk_contracts
 
 # Register the kernel so JupyterLab discovers it on startup.
 # --sys-prefix writes to the current Python prefix — always visible to the

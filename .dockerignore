@@ -4,9 +4,10 @@
 __pycache__
 *.pyc
 *.egg-info
-.venv
-venv
-venv/
+**/.venv
+**/.venv/
+**/venv
+**/venv/
 .env.local
 **/node_modules
 **/.opencode

@@ -32,6 +32,9 @@ RUN pip install --no-cache-dir \
     snntorch \
     "sc-neurocore>=3.13.0,<4"
 
+COPY nmtk_contracts/ nmtk_contracts/
+RUN pip install --no-cache-dir ./nmtk_contracts
+
 # Neurobench/neurobench declares neurocnl ^0.6.0, but PyPI's "neurocnl" is a
 # squatted name stuck at 0.0.0 — pip can never satisfy that constraint from
 # PyPI. benchmark_runner.py also imports neurocnl.simulation directly at

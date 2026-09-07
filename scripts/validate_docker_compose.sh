@@ -4,6 +4,16 @@ set -e
 # Validate root docker-compose.yml configuration and profiles
 # Usage: ./scripts/validate_docker_compose.sh [--build] [--up]
 
+# Ensure Docker CLI and helper tools (e.g. docker-credential-osxkeychain) are on PATH
+for candidate in "/Applications/Docker.app/Contents/Resources/bin" "$HOME/.docker/bin"; do
+  if [ -d "$candidate" ]; then
+    case ":$PATH:" in
+      *":$candidate:"*) ;;
+      *) export PATH="$candidate:$PATH" ;;
+    esac
+  fi
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
