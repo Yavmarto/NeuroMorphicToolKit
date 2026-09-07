@@ -20,7 +20,7 @@ from suite_api.errors import error_response
 
 logger = logging.getLogger("suite_api")
 
-_ADMIN_HEADER = "X-NMTK-Admin-Token"
+ADMIN_HEADER = "X-NMTK-Admin-Token"
 _ADMIN_COOKIE = "nmtk_admin_session"
 
 
@@ -92,7 +92,7 @@ class _AdminWebSocketMiddleware:
                     cookie_token = value
                     break
             provided = (
-                headers.get(_ADMIN_HEADER, "") or _bearer_token(headers) or cookie_token
+                headers.get(ADMIN_HEADER, "") or _bearer_token(headers) or cookie_token
             )
             if not (
                 provided
@@ -158,7 +158,7 @@ def attach_middleware(app: FastAPI) -> None:
         if not required:
             return await call_next(request)
         expected = _load_admin_token()
-        header_token = request.headers.get(_ADMIN_HEADER, "")
+        header_token = request.headers.get(ADMIN_HEADER, "")
         bearer_token = _bearer_token(request.headers)
         request_token = header_token or bearer_token
         provided = request_token or request.cookies.get(_ADMIN_COOKIE, "")

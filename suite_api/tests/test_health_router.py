@@ -151,7 +151,9 @@ def test_module_health_redacts_private_response_and_transport_details(
         async def __aexit__(self, *_args: Any) -> None:
             return None
 
-        async def get(self, url: str) -> httpx.Response:
+        async def get(
+            self, url: str, headers: dict[str, str] | None = None
+        ) -> httpx.Response:
             if "8002" in url:
                 return httpx.Response(503, text="database at /private/jobs.db failed")
             raise httpx.ConnectError("connection refused for http://10.0.0.9:8003")
@@ -169,3 +171,37 @@ def test_module_health_redacts_private_response_and_transport_details(
     )
     assert "10.0.0" not in serialized
     assert "/private/jobs.db" not in serialized
+
+
+def test_module_health_probe_attaches_admin_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("NMTK_ADMIN_TOKEN", "secret-admin-token")
+    monkeypatch.setattr(
+        health, "MODULE_URLS", {"neurocnl": "http://127.0.0.1:9000/api/neurocnl/health"}
+    )
+
+    seen_headers: dict[str, str] = {}
+
+    class FakeClient:
+        def __init__(self, **_kwargs: Any) -> None:
+            pass
+
+        async def __aenter__(self) -> "FakeClient":
+            return self
+
+        async def __aexit__(self, *_args: Any) -> None:
+            return None
+
+        async def get(
+            self, url: str, headers: dict[str, str] | None = None
+        ) -> httpx.Response:
+            seen_headers.update(headers or {})
+            return httpx.Response(200)
+
+    monkeypatch.setattr(health.httpx, "AsyncClient", FakeClient)
+
+    payload = asyncio.run(health.modules_health())
+
+    assert seen_headers == {"X-NMTK-Admin-Token": "secret-admin-token"}
+    assert payload["modules"]["neurocnl"]["status"] == "online"
