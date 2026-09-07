@@ -1,0 +1,159 @@
+{
+  "akidaHosts": [
+    {
+      "baseUrl": "http://192.168.2.51:8002",
+      "controlApiUrl": "http://192.168.2.51:8090",
+      "displayName": "hp-prodesk",
+      "host": "192.168.2.51",
+      "hostOs": "linux",
+      "id": "9d6fdf8c-4189-4689-831d-142b8ee63587",
+      "lastPreflightMessage": "Akida hardware runtime is ready.",
+      "lastPreflightStatus": "ok",
+      "lastReadinessMessage": "Akida hardware runtime is ready.",
+      "lastRuntimeTarget": "hardware",
+      "lastSdkStatus": "unknown",
+      "pythonVersion": "3.12.3",
+      "runtimeApiUrl": "http://192.168.2.51:8002",
+      "runtimeMode": "unknown",
+      "sshPort": 22,
+      "state": "ready",
+      "username": "moosebuntu"
+    }
+  ],
+  "backendDeployment": {
+    "ready": false,
+    "selectedTarget": {
+      "apiServer": "",
+      "authMode": "ssh_password",
+      "backendPort": 9000,
+      "containerEngine": "podman",
+      "context": "",
+      "createdAt": "2026-07-27T11:12:27.879654+00:00",
+      "displayName": "Remote backend",
+      "domain": "",
+      "host": "192.168.2.34",
+      "id": "Remote-backend",
+      "imageTag": "latest",
+      "installRoot": "",
+      "lastDeployedVersion": "latest",
+      "lastFailureReason": "Required client-facing services are not reachable from launcher control at 192.168.2.34.",
+      "lastReadiness": "failed",
+      "mode": "docker",
+      "namespace": "nmtk",
+      "secretRefs": {
+        "sshPassword": "file-secret:60d27e34a303b8b265053d54"
+      },
+      "sshPort": 22,
+      "targetType": "remote_host",
+      "updatedAt": "2026-07-28T20:46:32.023140+00:00",
+      "username": "mooseryzen"
+    },
+    "targetCount": 1
+  },
+  "degradedCount": 1,
+  "fatalCount": 0,
+  "globalChecks": [
+    {
+      "capabilityWarnings": [],
+      "id": "flutter-sdk",
+      "name": "Flutter SDK",
+      "preflightMessage": "Flutter SDK cache ready: /Users/yoshimartodihardjo/flutter/bin/cache",
+      "preflightStatus": "ok"
+    },
+    {
+      "capabilityWarnings": [
+        "Setup may show download icons for unavailable framework targets."
+      ],
+      "id": "studio-framework-sdks",
+      "name": "Studio framework SDKs",
+      "preflightMessage": "Suite API reports optional Studio capability limits: NeuroChip Studio hardware extras (akida, brian2, snn-mlir) are not installable on this machine and have been disabled; other modules are unaffected.",
+      "preflightStatus": "degraded"
+    }
+  ],
+  "modules": [
+    {
+      "capabilityWarnings": [],
+      "effectivePort": 9000,
+      "environmentFingerprint": null,
+      "id": "neurocnl",
+      "name": "NeuroStudio",
+      "preflightMessage": "Suite API source entrypoint is available.",
+      "preflightStatus": "ok",
+      "status": "installed"
+    },
+    {
+      "capabilityWarnings": [],
+      "effectivePort": 9000,
+      "environmentFingerprint": null,
+      "id": "Neurochip",
+      "name": "NeuroChip",
+      "preflightMessage": "Module not installed",
+      "preflightStatus": "ok",
+      "status": "notInstalled"
+    },
+    {
+      "capabilityWarnings": [],
+      "effectivePort": 9000,
+      "environmentFingerprint": null,
+      "id": "Neurobench",
+      "name": "Bench",
+      "preflightMessage": "Suite API source entrypoint is available.",
+      "preflightStatus": "ok",
+      "status": "installed"
+    },
+    {
+      "capabilityWarnings": [],
+      "effectivePort": 9000,
+      "environmentFingerprint": null,
+      "id": "Neurosense",
+      "name": "NeuroSense",
+      "preflightMessage": "Module not installed",
+      "preflightStatus": "ok",
+      "status": "notInstalled"
+    },
+    {
+      "capabilityWarnings": [],
+      "effectivePort": 9000,
+      "environmentFingerprint": null,
+      "id": "Neurohub",
+      "name": "Share",
+      "preflightMessage": "Module not installed",
+      "preflightStatus": "ok",
+      "status": "notInstalled"
+    },
+    {
+      "capabilityWarnings": [],
+      "effectivePort": 8012,
+      "environmentFingerprint": null,
+      "id": "lava_backend",
+      "name": "Lava Backend",
+      "preflightMessage": "Module not installed",
+      "preflightStatus": "ok",
+      "status": "notInstalled"
+    },
+    {
+      "capabilityWarnings": [],
+      "effectivePort": 8008,
+      "environmentFingerprint": null,
+      "id": "jupyter",
+      "name": "Notebooks",
+      "preflightMessage": "Module not installed",
+      "preflightStatus": "ok",
+      "status": "notInstalled"
+    }
+  ],
+  "okCount": 10,
+  "pynqBoards": [
+    {
+      "displayName": "home",
+      "host": "192.168.2.99",
+      "id": "fe37de70-55ce-4357-8a28-ae941b5aba1d",
+      "lastPreflightMessage": "Hardware runtime and canonical overlay assets are ready.",
+      "lastPreflightStatus": "ok",
+      "runtimeApiUrl": "http://192.168.2.99:8002",
+      "runtimeApiUrlOverride": "",
+      "state": "ready"
+    }
+  ],
+  "status": "ok"
+}
