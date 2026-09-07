@@ -95,7 +95,10 @@ Widget buildModuleChild(
                       )),
                 ),
                 authentication: NmtkFeatureAuthentication(
-                  adminToken: uri_resolver.tunnelSession(ref)?.adminToken ?? '',
+                  adminToken:
+                      uri_resolver.connectSessionToken(ref) ??
+                      uri_resolver.tunnelSession(ref)?.adminToken ??
+                      '',
                 ),
                 initialLocation:
                     session.deepLink ??

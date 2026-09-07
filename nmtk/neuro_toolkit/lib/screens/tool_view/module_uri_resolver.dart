@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/backend_tunnel_service.dart';
@@ -12,6 +13,13 @@ Uri? launcherBaseUri(WidgetRef ref) =>
 
 BackendTunnelSession? tunnelSession(WidgetRef ref) =>
     ref.read(backendTunnelServiceProvider).currentSession;
+
+/// The token natively-embedded modules (NeuroStudio/Neurochip) must send to
+/// suite_api. A direct Connect-session connection has no SSH tunnel, so
+/// [tunnelSession] is always null there -- without this, native surfaces
+/// silently sent no admin token at all and every suite_api call 401'd.
+String? connectSessionToken(WidgetRef ref) =>
+    ref.read(connectNotifierProvider).session?.sessionToken;
 
 bool usesRemoteHostedServices(WidgetRef ref) {
   if (kIsWeb) {
