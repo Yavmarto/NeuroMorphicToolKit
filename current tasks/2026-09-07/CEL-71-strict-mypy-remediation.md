@@ -61,26 +61,59 @@ Along the way, fixing `test_round_trip_properties.py`'s
 in the `for kw in _KEYWORDS` loop) had been dropped by an earlier edit;
 restored it via a nested `def` with an explicit default.
 
-Current state: **550 → 279 errors**, 0 of them `no-untyped-def`.
+Current state (end of second heartbeat this session): **550 → 145 errors** (74% reduction), 0 of them `no-untyped-def`.
 
-Remaining buckets (from `/tmp/mypy_out6.txt` breakdown, will differ
-slightly by the time you re-run since paths under `/tmp` don't persist):
+### Second heartbeat: integrating two parallel worktree agents
+
+Mid-session, a board review comment (on this same issue) surfaced that
+two other agents had been working the same issue in parallel via git
+worktrees under `neurocnl/.claude/worktrees/` — `agent-ac894339cbd65c343`
+(test files) and `agent-af207f9c6e7828554` (source files, backend
+routers/schemas/services + neurocnl converter/layers/pipeline/runtime) —
+both terminated mid-task by an Anthropic session-quota reset, leaving
+real uncommitted progress stranded in their worktrees.
+
+Integrated both via `git diff` (from inside each worktree, scoped to
+files not already covered by this session's own commits) piped into
+`git apply --3way` on the main checkout. ~11 files turned out byte-identical
+between the worktree and main already (no-op, skipped); a handful of
+real 3-way conflicts were resolved by hand — see commits `8b5123f3` and
+`2ec69545` for the reasoning on each (one conflict in
+`neurosim/app/routers/custom_nodes.py` would have silently replaced a
+real 400-error branch with a bare `assert`; kept the existing correct
+behavior). One file's fix (`test_compiler_weight_init.py`) was dropped
+entirely — the file no longer exists on `dev` (split into three files by
+commit `5824f9bb` after the worktree branched), so resurrecting it would
+reintroduce dead code.
+
+**Worktree gotcha for next time**: `cd` into a worktree to inspect it,
+then `cd` back to the main checkout with an explicit absolute path
+before running anything else — the Bash tool's cwd persists across
+calls, and running `git worktree list` / `git branch --show-current`
+without pinning cwd first can make you think the main branch's history
+got reset when you're actually just still sitting inside a linked
+worktree.
+
+Both worktrees were removed after integration (`git worktree remove
+--force`) since everything usable was extracted and committed.
+
+Remaining buckets (from `/tmp/mypy_final.txt`, paths under `/tmp` don't
+persist across sessions):
 
 | code | count |
 |---|---|
-| type-arg | 121 |
-| arg-type | 68 |
-| no-any-return | 24 |
-| union-attr | 16 |
-| assignment | 12 |
+| arg-type | 58 |
+| type-arg | 34 |
+| no-any-return | 11 |
+| union-attr | 10 |
 | index | 8 |
-| no-redef | 7 |
-| comparison-overlap | 6 |
-| call-arg | 5 |
+| assignment | 8 |
 | unused-ignore | 4 |
-| misc | 3 |
+| call-arg | 4 |
 | attr-defined | 3 |
+| no-redef | 2 |
 | name-defined | 2 |
+| misc | 1 |
 
 Commits (all on `dev`, in order):
 - `d3589dcc` — 167 mechanical `-> None` fixes
@@ -88,18 +121,17 @@ Commits (all on `dev`, in order):
 - `8f6ce187` — hypothesis strategies + test_compile tmp_path
 - `24873aa2` — generation tests, capabilities dict, spinnaker2 exporter
 - `1e911728` — remaining export/nir_native_cnl no-untyped-def (closes the bucket)
+- `8b5123f3` — integrated source-file fixes from worktree agent-af207f9c
+- `e2a8cdf7` — fixup: redundant-cast vs no-any-return on `_bin_sample`
+- `2ec69545` — integrated test-file fixes from worktree agent-ac894339
 
 ## Suggested next pass
 
-`type-arg` (121, biggest remaining bucket) is next-most mechanical: bare
-`dict`/`list`/`np.ndarray`/`UserDict` etc. missing type parameters. Same
-approach — grep the mypy output for `[type-arg]`, group by file, fix in
-small verified batches, commit per batch. `arg-type` (68) will need more
-judgement since it's usually a real type mismatch, not just a missing
-annotation — some of what surfaced in this session (e.g. the
-`list[NIRNodeRecord | NIREdgeRecord]` vs `list[NIRNodeRecord]` invariance
-issue in `_weight_init_helpers.py`) is representative of what's left in
-`nir_native_cnl`.
+`arg-type` (58, now the biggest bucket) and `type-arg` (34) are what's
+left — both need real judgement (concrete type params, narrowing real
+mismatches) rather than mechanical annotation. No more known-safe
+mechanical passes remain; go file-by-file, verify with mypy + pytest,
+commit per batch, same as this session's approach.
 
 After every bucket is at 0, hand back to CEL-66 to do the actual
 `pyproject.toml` flip and confirm `python -m mypy neurocnl` is clean with
