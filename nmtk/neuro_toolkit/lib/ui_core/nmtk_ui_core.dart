@@ -1,5 +1,4 @@
 export 'app_theme.dart'; // TODO(T-DEBT): migrate test harnesses to NmtkZetaTheme, then delete
-export 'widgets/responsive_scaffold.dart'; // ResponsiveScaffold, NavigationDestinationData
 export 'zeta_theme.dart'; // NmtkZetaTheme + re-exports: ZetaProvider, Zeta, ZetaColors, ZetaButton, etc.
 export 'models/host_navigation_models.dart';
 export 'models/shell_models.dart';
@@ -41,7 +40,6 @@ export 'widgets/desktop_scaffold.dart'; // NmtkDesktopScaffold
 export 'widgets/mobile_scaffold.dart'; // NmtkMobileScaffold
 export 'widgets/shell_chrome_scope.dart'; // NmtkShellChromeScope
 export 'widgets/adaptive_layout.dart'; // NmtkAdaptiveLayout
-export 'widgets/mobile_bottom_bar.dart'; // NmtkMobileBottomBar
 export 'widgets/host_navigation_scope.dart';
 export 'widgets/surface_card.dart';
 export 'widgets/tone.dart';

@@ -5,6 +5,7 @@ import 'package:neuro_toolkit/ui_core/models/shell_models.dart';
 import 'package:neuro_toolkit/ui_core/models/scaffold_models.dart';
 import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
 import 'package:neuro_toolkit/ui_core/widgets/shell_chrome_scope.dart';
+import 'package:neuro_toolkit/ui_core/widgets/surface_card.dart';
 
 part 'mobile_scaffold_parts.dart';
 
@@ -154,56 +155,53 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
       ),
       builder: (context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  widget.fileActionsSheetTitle,
-                  style: Zeta.of(
-                    context,
-                  ).textStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ),
-              if (widget.onNewFile != null)
-                ZetaListItem(
-                  leading: const Icon(ZetaIcons.add),
-                  title: Text(widget.newFileLabel),
-                  onTap: () {
-                    Navigator.pop(context);
-                    widget.onNewFile!();
-                  },
-                ),
-              if (widget.onOpenFile != null)
-                ZetaListItem(
-                  leading: const Icon(ZetaIcons.folder_outline),
-                  title: Text(widget.openFileLabel),
-                  onTap: () {
-                    Navigator.pop(context);
-                    widget.onOpenFile!();
-                  },
-                ),
-              if (widget.onSaveFile != null)
-                ZetaListItem(
-                  leading: const Icon(ZetaIcons.save),
-                  title: Text(widget.saveFileLabel),
-                  onTap: () {
-                    Navigator.pop(context);
-                    widget.onSaveFile!();
-                  },
-                ),
-              if (widget.onSaveFileAs != null)
-                ZetaListItem(
-                  leading: const Icon(ZetaIcons.save),
-                  title: Text(widget.saveFileAsLabel),
-                  onTap: () {
-                    Navigator.pop(context);
-                    widget.onSaveFileAs!();
-                  },
-                ),
-              const SizedBox(height: 16),
-            ],
+          child: NmtkSurfaceCard(
+            margin: EdgeInsets.all(tokens.sectionGap),
+            title: widget.fileActionsSheetTitle,
+            titleStyle: Zeta.of(
+              context,
+            ).textStyles.titleLarge.copyWith(fontWeight: FontWeight.bold),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.onNewFile != null)
+                  ZetaListItem(
+                    leading: const Icon(ZetaIcons.add),
+                    title: Text(widget.newFileLabel),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onNewFile!();
+                    },
+                  ),
+                if (widget.onOpenFile != null)
+                  ZetaListItem(
+                    leading: const Icon(ZetaIcons.folder_outline),
+                    title: Text(widget.openFileLabel),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onOpenFile!();
+                    },
+                  ),
+                if (widget.onSaveFile != null)
+                  ZetaListItem(
+                    leading: const Icon(ZetaIcons.save),
+                    title: Text(widget.saveFileLabel),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onSaveFile!();
+                    },
+                  ),
+                if (widget.onSaveFileAs != null)
+                  ZetaListItem(
+                    leading: const Icon(ZetaIcons.save),
+                    title: Text(widget.saveFileAsLabel),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onSaveFileAs!();
+                    },
+                  ),
+              ],
+            ),
           ),
         );
       },

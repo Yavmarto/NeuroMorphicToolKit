@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:neuro_toolkit/ui_core/widgets/responsive_scaffold.dart';
+import 'package:neuro_toolkit/ui_core/models/shell_models.dart';
 
 /// A customized NavigationRail matching NMTK design patterns.
 ///

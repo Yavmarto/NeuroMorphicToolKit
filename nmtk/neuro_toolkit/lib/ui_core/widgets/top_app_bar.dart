@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 import 'package:neuro_toolkit/ui_core/models/shell_models.dart';
 import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
-import 'package:neuro_toolkit/ui_core/widgets/responsive_scaffold.dart';
 
 part 'top_app_bar_destination_chip.dart';
 

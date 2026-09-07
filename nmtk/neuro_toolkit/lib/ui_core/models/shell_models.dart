@@ -4,6 +4,20 @@ import 'package:neuro_toolkit/ui_core/widgets/tone.dart';
 
 enum NmtkShellMode { command, studio, instrument }
 
+/// A single top-bar / nav-rail destination shared by [NmtkTopAppBar] and
+/// [NmtkNavigationRail].
+class NavigationDestinationData {
+  final IconData icon;
+  final IconData? selectedIcon;
+  final String label;
+
+  const NavigationDestinationData({
+    required this.icon,
+    this.selectedIcon,
+    required this.label,
+  });
+}
+
 enum NmtkShellReadinessState { opening, warmingUp, ready, degraded, error }
 
 enum NmtkWorkspaceVisualState { active, idle, starting, degraded, error }
