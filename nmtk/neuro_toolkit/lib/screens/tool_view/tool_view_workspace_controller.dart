@@ -19,6 +19,10 @@ import 'package:neuro_toolkit/screens/tool_view/module_uri_resolver.dart'
     as uri_resolver;
 import 'package:neuro_toolkit/screens/tool_view/tool_view_workspace_host.dart';
 
+/// The single module surface the launcher mounts. Everything else in the
+/// module manifest is a backend capability descriptor, not an openable UI.
+const String kPrimaryModuleId = 'neurocnl';
+
 /// Owns module-workspace session lifecycle: which module is active, the
 /// live WebView controllers, per-module load failures, and the
 /// generation/guard state that prevents overlapping `initializeWorkspace`
@@ -276,6 +280,12 @@ class ToolViewWorkspaceController {
   }
 
   bool shouldOpenModule(Module module) {
+    // The launcher mounts exactly one frontend surface: NeuroStudio. Every
+    // other entry in the module manifest is a backend capability descriptor
+    // (Jupyter kernels, native services, etc.), not a separate tabbable UI.
+    if (module.id != kPrimaryModuleId) {
+      return false;
+    }
     if (!module.isEnabled || !module.showInLauncherNav) {
       return false;
     }

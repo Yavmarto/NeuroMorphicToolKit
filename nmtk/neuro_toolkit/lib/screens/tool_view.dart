@@ -12,7 +12,6 @@ import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/workspace/domain/workspace_state.dart';
 import 'package:neuro_toolkit/widgets/connection_error_actions.dart';
 import 'package:neuro_toolkit/widgets/module_icon.dart';
-import 'package:neuro_toolkit/widgets/module_picker_panel.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/screens/tool_view/cross_module_navigation.dart';
@@ -150,24 +149,37 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen>
     final isMobile = MediaQuery.sizeOf(context).width < 840;
 
     if (eligibleModules.isEmpty) {
+      final emptyState = NmtkEmptyState(
+        title: 'NeuroStudio Not Available',
+        message:
+            'No module surface could be opened for this server. This usually '
+            'means the backend is still starting or the server is out of '
+            'reach — reconnect or set up your server to continue.',
+        icon: ZetaIcons.cloud_off,
+        tone: NmtkTone.warning,
+        action: ConnectionErrorActions(
+          onRetry: () {
+            ref.invalidate(moduleProvider);
+            ref.invalidate(workspaceProvider);
+          },
+          onChangeServer: () => showServerConnectionPopup(context, ref),
+        ),
+      );
       if (isMobile) {
-        return const NmtkMobileScaffold(
+        return NmtkMobileScaffold(
           mode: NmtkShellMode.command,
-          navItems: [],
+          navItems: const [],
           selectedIndex: 0,
           pageTitle: 'NeuroToolkit',
-          child: ModulePickerPanel(),
+          child: emptyState,
         );
       }
       return Scaffold(
         backgroundColor: tokens.shellBackground,
-        body: const SafeArea(
+        body: SafeArea(
           top: false,
           bottom: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [Expanded(child: ModulePickerPanel())],
-          ),
+          child: emptyState,
         ),
       );
     }
