@@ -48,35 +48,17 @@ SnnWorkflowStage snnStageForPhase(SnnWorkflowPhase phase) => switch (phase) {
 
 const double _kStageGap = 8;
 
-/// Width of the stage pill's label segment (present whether or not it's the
-/// active/expanded stage).
-const double _kPhasePillWidth = 110;
-
-/// Width of the inline sub-step destination pills nested inside the active
-/// stage's pill. They stay smaller than the stage label they're nested under.
-const double _kSubstepPillWidth = 96;
-
 /// Horizontal inset around the whole stage row.
 const double _kRowInset = 12;
-
-/// Fixed width of a connector slot in [NmtkPipelineStepper] (arrow or +/−).
-const double _kConnectorSlotWidth = 30;
 
 /// Gap between a stage's label and its nested sub-step segment when expanded.
 const double _kLabelToSubstepGap = 8;
 
-/// Width reserved for the nested sub-step segment: the widest stage's set of
-/// sub-steps. Reserving the same width for every stage — rather than sizing to
-/// however many sub-steps the active stage actually has — keeps the panel from
-/// resizing, and the single-substep Setup pill from drifting to the centre,
-/// when the active stage changes.
-final double _kPhaseRailWidth = (() {
-  final maxPhases = kSnnPhasesByStage.values
-      .map((phases) => phases.length)
-      .reduce((a, b) => a > b ? a : b);
-  return maxPhases * _kSubstepPillWidth +
-      (maxPhases - 1) * _kConnectorSlotWidth;
-})();
+/// Non-text chrome of a sub-step chip: 10px horizontal padding on each side
+/// plus the 1px border on each side (see the `destination` chip in
+/// [NmtkPipelineStepper]). Added to the measured label width to get the
+/// pill's width.
+const double _kSubstepChipChrome = 22;
 
 /// Base step-name labels shared by the desktop, compact, and drawer steppers.
 const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
@@ -95,6 +77,10 @@ const Map<SnnWorkflowPhase, String> kSnnStepLabels = {
 /// nest inline inside its own pill; the other two stages stay collapsed to
 /// just their label — keeping navigation available without occupying a
 /// second row.
+///
+/// Every pill is sized to its actual text (measured, not guessed), and the
+/// whole row scales down when the host gives it less width than the content
+/// needs — so the third stage is never pushed out of view.
 class SnnWorkflowStepper extends StatefulWidget {
   final SnnWorkflowPhase currentPhase;
   final int epochPulseTick;
@@ -166,13 +152,14 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
     final reducedMotion = MediaQuery.disableAnimationsOf(context);
+    final substepPillWidth = _measureSubstepPillWidth(context);
 
     // Only the active stage carries its sub-steps, nested inline inside its
-    // own pill; the other two stages render as a plain label. Because exactly
-    // one stage is always active and every stage reserves the same sub-step
-    // width (see `_kPhaseRailWidth`), the row's total width never changes as
-    // the active stage moves — `AnimatedSize` on each pill just makes that
-    // handoff read as a smooth grow/shrink instead of a jump cut.
+    // own pill; the other two stages render as a plain label. Every pill is
+    // sized to its own text, so the row's natural width is roughly the sum
+    // of the visible labels. `AnimatedSize` on each pill makes the grow/
+    // shrink as the active stage moves read as a smooth morph rather than a
+    // jump cut.
     final stageRow = Padding(
       padding: const EdgeInsets.symmetric(horizontal: _kRowInset),
       child: Row(
@@ -191,7 +178,7 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
               disabledTooltip: widget.disabledTooltip,
               onTap: () => _selectStage(stage),
               substeps: stage == activeStage
-                  ? _buildChildRail(context, stage)
+                  ? _buildChildRail(context, stage, substepPillWidth)
                   : null,
               duration: tokens.standardMotion,
               reducedMotion: reducedMotion,
@@ -201,8 +188,12 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       ),
     );
 
-    final inner = SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+    // The row scales down (never up) to whatever width the host offers, so
+    // "Execute" stays on screen even in narrow split-pane layouts. Below
+    // that, the content simply shrinks instead of scrolling out of view.
+    final inner = FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.centerLeft,
       child: stageRow,
     );
 
@@ -221,7 +212,38 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
     );
   }
 
-  Widget _buildChildRail(BuildContext context, SnnWorkflowStage stage) {
+  /// Width every sub-step pill uses: the widest step label (measured at both
+  /// the regular and bold weights the chip can render at) plus the chip's
+  /// own padding and border. Measuring — instead of hard-coding a fixed
+  /// width — keeps pills snug around their text at any text scale while
+  /// staying uniform in size within and across stages.
+  double _measureSubstepPillWidth(BuildContext context) {
+    final baseStyle = Zeta.of(context).textStyles.bodyXSmall;
+    final textDirection = Directionality.of(context);
+    final textScaler = MediaQuery.textScalerOf(context);
+    var widest = 0.0;
+    for (final label in widget.stepLabels.values) {
+      for (final weight in const [FontWeight.w600, FontWeight.w700]) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: label,
+            style: baseStyle.copyWith(fontWeight: weight),
+          ),
+          textDirection: textDirection,
+          textScaler: textScaler,
+          maxLines: 1,
+        )..layout();
+        if (painter.width > widest) widest = painter.width;
+      }
+    }
+    return (widest + _kSubstepChipChrome).ceilToDouble();
+  }
+
+  Widget _buildChildRail(
+    BuildContext context,
+    SnnWorkflowStage stage,
+    double substepPillWidth,
+  ) {
     final stagePhases = kSnnPhasesByStage[stage]!;
     final secondary = widget.secondaryPhase;
     final localSecondary =
@@ -235,15 +257,15 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
       key: ValueKey<SnnWorkflowStage>(stage),
       bare: true,
       shrinkWrap: true,
-      // The stage rail has a fixed-width viewport inside the horizontally
-      // scrollable workflow bar. Let its substeps scroll within that viewport
-      // instead of forcing their row to overflow during split-pane layouts.
+      // The stage rail nests inside the pill whose width the parent row
+      // already dictates. Let the rail scroll within that viewport instead
+      // of forcing its row to overflow during split-pane layouts.
       scrollable: true,
       wrapOnCompact: false,
       contentPadding: EdgeInsets.zero,
       stepAccentColor: colors.mainPrimary,
       stepStyle: NmtkPipelineStepStyle.destination,
-      stepWidth: _kSubstepPillWidth,
+      stepWidth: substepPillWidth,
       statusBarSemanticsLabel:
           '${widget.stageLabels[stage] ?? stage.name} steps',
       selectedStepId: widget.currentPhase.name,
@@ -322,10 +344,10 @@ class _SnnWorkflowStepperState extends State<SnnWorkflowStepper> {
 /// sub-step chips inline, inside the same pill border.
 ///
 /// `AnimatedSize` on the appended segment turns the swap between stages into
-/// a smooth grow/shrink instead of a jump cut; because every stage reserves
-/// the same sub-step width regardless of how many sub-steps it actually has
-/// (see `_kPhaseRailWidth`), the row's total width never changes as the
-/// segment moves from one pill to another.
+/// a smooth grow/shrink instead of a jump cut; the row's natural width now
+/// follows the active stage's actual content, and the outer `FittedBox` in
+/// [SnnWorkflowStepper] scales the whole row down if the host is narrower
+/// than that.
 class _StageCell extends StatelessWidget {
   const _StageCell({
     required this.number,
@@ -375,20 +397,15 @@ class _StageCell extends StatelessWidget {
         : 'Available';
 
     final expanded = selected && substeps != null;
-    final labelWidget = SizedBox(
-      width: _kPhasePillWidth,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            label,
-            overflow: TextOverflow.ellipsis,
-            style: Zeta.of(context).textStyles.bodySmall.copyWith(
-              color: foreground,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-            ),
-          ),
+    final labelWidget = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Zeta.of(context).textStyles.bodySmall.copyWith(
+          color: foreground,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
         ),
       ),
     );
@@ -406,16 +423,7 @@ class _StageCell extends StatelessWidget {
                   color: colors.borderPrimary.withValues(alpha: 0.4),
                 ),
                 const SizedBox(width: _kLabelToSubstepGap),
-                // Every stage reserves the same width here regardless of
-                // how many sub-steps it actually has, so the row's total
-                // width stays constant across which stage is active.
-                SizedBox(
-                  width: _kPhaseRailWidth,
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: substeps!,
-                  ),
-                ),
+                substeps!,
               ],
             ),
           )

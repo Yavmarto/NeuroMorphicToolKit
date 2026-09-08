@@ -221,35 +221,56 @@ void main() {
       },
     );
 
-    testWidgets('panel size is consistent across phase changes', (
+    testWidgets('panel stays compact and fits its host across phase changes', (
       tester,
     ) async {
       final phase = ValueNotifier<SnnWorkflowPhase>(
         SnnWorkflowPhase.selectData,
       );
+      addTearDown(phase.dispose);
+      const hostWidth = 600.0;
       await tester.pumpWidget(
         _wrap(
           ValueListenableBuilder<SnnWorkflowPhase>(
             valueListenable: phase,
-            builder: (context, value, child) =>
-                SnnWorkflowStepper(currentPhase: value),
+            builder: (context, value, child) => Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: hostWidth,
+                child: SnnWorkflowStepper(currentPhase: value),
+              ),
+            ),
           ),
         ),
       );
 
       final panel = find.byKey(const ValueKey('snn-workflow-panel'));
-      final initialWidth = tester.getSize(panel).width;
-      final initialHeight = tester.getSize(panel).height;
 
-      phase.value = SnnWorkflowPhase.defineTrain;
-      await tester.pumpAndSettle();
-      expect(tester.getSize(panel).width, initialWidth);
-      expect(tester.getSize(panel).height, initialHeight);
-
-      phase.value = SnnWorkflowPhase.run;
-      await tester.pumpAndSettle();
-      expect(tester.getSize(panel).width, initialWidth);
-      expect(tester.getSize(panel).height, initialHeight);
+      // The row sizes itself to its content per stage — the old fixed
+      // reserved width made every stage ~750px wide and pushed Execute off
+      // screen. What must hold instead: the panel never exceeds its host,
+      // the row height stays one pill tall (allowing for scale-down in
+      // tight hosts), and the Execute stage stays visible.
+      for (final next in const [
+        SnnWorkflowPhase.defineTrain,
+        SnnWorkflowPhase.run,
+        SnnWorkflowPhase.selectData,
+      ]) {
+        phase.value = next;
+        await tester.pumpAndSettle();
+        final size = tester.getSize(panel);
+        expect(tester.takeException(), isNull);
+        expect(size.width, lessThanOrEqualTo(hostWidth));
+        expect(size.height, inInclusiveRange(30.0, 52.5));
+        final executeRight = tester
+            .getTopRight(find.text('Execute').hitTestable())
+            .dx;
+        expect(
+          executeRight,
+          lessThanOrEqualTo(hostWidth),
+          reason: 'Execute must stay inside the $next-active panel',
+        );
+      }
     });
 
     testWidgets(
