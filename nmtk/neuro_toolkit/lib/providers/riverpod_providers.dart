@@ -89,6 +89,22 @@ final launcherBootstrapStateProvider = Provider<LauncherBootstrapState>((ref) {
   return LauncherBootstrapState.ready(controlApi.baseUri);
 });
 
+/// Whether the neurocnl module's own backend (its `/health` probe, distinct
+/// from the launcher control-API ping) is degraded or unreachable. NeuroStudio
+/// writes to this so the top-right connection dot can reflect it without a
+/// second poll loop.
+class NeurocnlBackendDegradedNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool value) => state = value;
+}
+
+final neurocnlBackendDegradedProvider =
+    NotifierProvider<NeurocnlBackendDegradedNotifier, bool>(
+      NeurocnlBackendDegradedNotifier.new,
+    );
+
 final controlApiServiceProvider = Provider<ControlApiService>((ref) {
   final controlApiService = ref.watch(selectedControlApiServiceProvider);
   if (controlApiService == null) {

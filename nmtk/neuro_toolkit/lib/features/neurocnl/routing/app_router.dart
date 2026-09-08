@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
-import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/providers/server_config_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/canvas_host_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/studio_feature.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart'
+    show neurocnlBackendDegradedProvider;
 
 GoRouter createAppRouter({
   String initialLocation = '/',
@@ -139,6 +140,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     _checkHealth();
   }
 
+  @override
+  void dispose() {
+    // Leaving the neurocnl shell: stop reporting its backend health onto the
+    // shared connection dot so a stale degraded state doesn't linger.
+    ref.read(neurocnlBackendDegradedProvider.notifier).set(false);
+    super.dispose();
+  }
+
   Future<void> _checkHealth() async {
     try {
       final client = ref.read(apiClientProvider);
@@ -150,6 +159,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           _healthLoading = false;
         });
       }
+      _publishBackendDegraded(result.status.toLowerCase() == 'degraded');
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -157,7 +167,15 @@ class _AppShellState extends ConsumerState<AppShell> {
           _healthLoading = false;
         });
       }
+      _publishBackendDegraded(true);
     }
+  }
+
+  void _publishBackendDegraded(bool degraded) {
+    if (!mounted) {
+      return;
+    }
+    ref.read(neurocnlBackendDegradedProvider.notifier).set(degraded);
   }
 
   @override
@@ -172,79 +190,18 @@ class _AppShellState extends ConsumerState<AppShell> {
       }
     });
 
-    final status = _buildShellStatus();
-    final readiness = _buildReadinessCard(status);
-
     if (!widget.showNavigationChrome) {
       return Scaffold(
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              if (readiness != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: readiness,
-                ),
-              Expanded(child: widget.child),
-            ],
-          ),
-        ),
+        body: SafeArea(bottom: false, child: widget.child),
       );
     }
 
     // No shell-level top bar: the Studio screen renders its own IDE-style
     // bar (title + stepper + file IO + single settings cog), and other
     // screens expose navigation through their own chrome. Keeping the shell
-    // bar-less avoids duplicate top bars across the suite.
-    return Scaffold(
-      body: Column(
-        children: [
-          if (readiness != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: readiness,
-            ),
-          Expanded(child: widget.child),
-        ],
-      ),
-    );
-  }
-
-  NmtkShellStatusSpec _buildShellStatus() {
-    if (_healthLoading) {
-      return NmtkShellStatusSpec.fromReadinessState(
-        NmtkShellReadinessState.warmingUp,
-        detailText: 'Checking backend readiness for the authoring workspace.',
-      );
-    }
-    if (_backendOnline) {
-      return NmtkShellStatusSpec.fromReadinessState(
-        NmtkShellReadinessState.ready,
-        detailText: _mujocoAvailable
-            ? 'Authoring, diagnostics, and simulation services are available.'
-            : 'Core authoring is ready. Some advanced diagnostics remain degraded.',
-      );
-    }
-    return NmtkShellStatusSpec.fromReadinessState(
-      NmtkShellReadinessState.degraded,
-      detailText: 'Backend unreachable. Cached authoring remains available.',
-    );
-  }
-
-  Widget? _buildReadinessCard(NmtkShellStatusSpec status) {
-    if (_backendOnline && !_healthLoading) {
-      return null;
-    }
-    final state = _healthLoading
-        ? NmtkShellReadinessState.warmingUp
-        : NmtkShellReadinessState.degraded;
-    return NmtkShellReadinessStateView.fromState(
-      state,
-      message: status.detailText,
-      action: !_healthLoading
-          ? NmtkShellRetryButton(onPressed: _checkHealth)
-          : null,
-    );
+    // bar-less avoids duplicate top bars across the suite. Backend
+    // readiness is reflected by the top-right connection dot, not a card
+    // here (see neurocnlBackendDegradedProvider).
+    return Scaffold(body: widget.child);
   }
 }

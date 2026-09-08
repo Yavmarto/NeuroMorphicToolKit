@@ -19,6 +19,7 @@ class InlineServerConnectionControl extends ConsumerWidget {
     final controlApi = ref.watch(selectedControlApiServiceProvider);
     final connection = ref.watch(serverConnectionProvider);
     final backendVersion = ref.watch(backendVersionProvider).value;
+    final moduleBackendDegraded = ref.watch(neurocnlBackendDegradedProvider);
     final effectiveConnection = controlApi == null
         ? const ServerConnectionState.disconnected()
         : connection.baseUri == controlApi.baseUri
@@ -29,8 +30,11 @@ class InlineServerConnectionControl extends ConsumerWidget {
           );
     final hostLabel = controlApi?.baseUri.host ?? 'Connect server';
     final serverLabel = backendVersion != null ? 'v$backendVersion' : hostLabel;
+    final tooltipLabel = moduleBackendDegraded
+        ? 'Module backend degraded'
+        : effectiveConnection.label;
     return Tooltip(
-      message: 'Server connection · ${effectiveConnection.label}',
+      message: 'Server connection · $tooltipLabel',
       child: NmtkStatusBadge(
         key: ValueKey<String>(
           iconOnly
@@ -38,20 +42,28 @@ class InlineServerConnectionControl extends ConsumerWidget {
               : 'inline-server-connection',
         ),
         label: serverLabel,
-        semanticsLabel:
-            'Server connection: $serverLabel, ${effectiveConnection.label}',
+        semanticsLabel: 'Server connection: $serverLabel, $tooltipLabel',
         icon: ZetaIcons.radio_button_checked,
         compact: iconOnly,
-        tone: _toneForPhase(effectiveConnection.phase),
+        tone: _toneFor(effectiveConnection.phase, moduleBackendDegraded),
         onPressed: onPressed,
       ),
     );
   }
 
-  NmtkTone _toneForPhase(ServerConnectionPhase phase) => switch (phase) {
-    ServerConnectionPhase.checking => NmtkTone.info,
-    ServerConnectionPhase.connected => NmtkTone.success,
-    ServerConnectionPhase.unstable => NmtkTone.warning,
-    ServerConnectionPhase.disconnected => NmtkTone.danger,
-  };
+  NmtkTone _toneFor(ServerConnectionPhase phase, bool moduleBackendDegraded) {
+    final tone = switch (phase) {
+      ServerConnectionPhase.checking => NmtkTone.info,
+      ServerConnectionPhase.connected => NmtkTone.success,
+      ServerConnectionPhase.unstable => NmtkTone.warning,
+      ServerConnectionPhase.disconnected => NmtkTone.danger,
+    };
+    // The launcher control-API ping and the neurocnl module's own /health
+    // probe are independent; either reporting trouble should turn the dot
+    // orange, unless the launcher ping already escalated it to red.
+    if (moduleBackendDegraded && tone != NmtkTone.danger) {
+      return NmtkTone.warning;
+    }
+    return tone;
+  }
 }
