@@ -192,6 +192,7 @@ class MetricDiffTable extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: NmtkSurfaceCard(
+              key: ValueKey(metric.name),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(

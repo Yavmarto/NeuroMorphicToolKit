@@ -142,6 +142,7 @@ class BenchmarkResultsTable extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: NmtkSurfaceCard(
+              key: ValueKey(result.id),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
