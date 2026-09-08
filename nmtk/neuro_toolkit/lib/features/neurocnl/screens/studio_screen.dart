@@ -249,12 +249,6 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Restore previous session?'),
-        content: const Text(
-          'A previous workspace was found. Restore its model (CNL text and '
-          'graph), the step you were on, and the latest compact result '
-          'summary? Simulation arrays and live jobs are never restored. '
-          'Detailed activity and weights are fetched again when opened.',
-        ),
         actions: [
           ZetaButton.text(
             onPressed: () => Navigator.of(dialogContext).pop(false),

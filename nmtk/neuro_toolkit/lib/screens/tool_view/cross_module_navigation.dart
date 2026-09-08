@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -128,26 +130,38 @@ Future<bool> handleHostedModuleNavigationRequest(
   return true;
 }
 
+// Every failed request from the embedded module reports its own error, so a
+// dead backend can trigger this many times a second. Tracking whether one is
+// already on screen keeps it from re-queuing a fresh SnackBar per failure.
+bool _hostedFeatureErrorSnackBarVisible = false;
+
 Future<void> reportHostedFeatureError(
   BuildContext context,
   NmtkFeatureErrorEvent event, {
   required VoidCallback onOpenBackendSetup,
 }) async {
-  if (!context.mounted) return;
+  if (!context.mounted || _hostedFeatureErrorSnackBarVisible) return;
   final requiresBackendSetup =
       event.kind == NmtkFeatureErrorKind.connection ||
       event.kind == NmtkFeatureErrorKind.authentication;
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(event.message),
-      duration: const Duration(days: 1),
-      showCloseIcon: true,
-      action: requiresBackendSetup
-          ? SnackBarAction(
-              label: 'Backend Setup',
-              onPressed: onOpenBackendSetup,
-            )
-          : null,
-    ),
+  _hostedFeatureErrorSnackBarVisible = true;
+  unawaited(
+    ScaffoldMessenger.of(context)
+        .showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(event.message),
+            duration: const Duration(days: 1),
+            showCloseIcon: true,
+            action: requiresBackendSetup
+                ? SnackBarAction(
+                    label: 'Backend Setup',
+                    onPressed: onOpenBackendSetup,
+                  )
+                : null,
+          ),
+        )
+        .closed
+        .then((_) => _hostedFeatureErrorSnackBarVisible = false),
   );
 }
