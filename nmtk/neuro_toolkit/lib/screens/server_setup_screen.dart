@@ -59,6 +59,19 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
     final state = ref.watch(provisionNotifierProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        // ZETA-MIGRATION-EXEMPT: no Zeta app bar exists; this is the same
+        // rationale nmtk_ui_core's own mobile scaffold uses for its
+        // hamburger/title bar (see studio_screen.dart).
+        automaticallyImplyLeading: false,
+        leadingWidth: 180,
+        leading: ZetaButton.text(
+          key: const Key('server-setup-back'),
+          onPressed: _cancelSetup,
+          label: 'Back',
+          leadingIcon: ZetaIcons.arrow_back,
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -444,6 +457,17 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
   bool get _credentialEmpty => _authMethod == 'password'
       ? _password.text.isEmpty
       : _privateKey.text.trim().isEmpty;
+
+  /// Pops the setup route back to the connect screen. This is the one
+  /// reliable back/cancel affordance across mobile, desktop and web — the
+  /// failure and success panels otherwise only reset in place or move forward,
+  /// and desktop/web have no OS-level back gesture (CEL-88).
+  void _cancelSetup() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
 
   Future<void> _provision() async {
     if (!_validate()) return;
