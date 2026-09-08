@@ -390,8 +390,6 @@ The sidebar `navItems` list is dynamic — it is built from the installed module
 │   │   │   ├── module_error_view.dart
 │   │   │   ├── module_icon.dart
 │   │   │   ├── module_loading_view.dart
-│   │   │   ├── module_picker_panel.dart
-│   │   │   ├── module_tab_bar.dart
 │   │   │   └── tool_view_header_actions.dart
 │   │   └── workspace
 │   │       └── native_surface_registry.dart
