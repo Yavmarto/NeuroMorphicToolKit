@@ -176,11 +176,7 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen>
       }
       return Scaffold(
         backgroundColor: tokens.shellBackground,
-        body: SafeArea(
-          top: false,
-          bottom: false,
-          child: emptyState,
-        ),
+        body: SafeArea(top: false, bottom: false, child: emptyState),
       );
     }
 

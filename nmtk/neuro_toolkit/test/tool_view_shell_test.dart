@@ -223,49 +223,53 @@ void main() {
     expect(find.text('Waiting for Bench'), findsNothing);
   });
 
-  testWidgets('typed launcher navigation stays on the single NeuroStudio surface', (
-    tester,
-  ) async {
-    tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(1200, 800);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    addTearDown(tester.view.resetPhysicalSize);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          analyticsServiceProvider.overrideWithValue(AnalyticsService()),
-          selectedControlApiServiceProvider.overrideWithValue(
-            ControlApiService(
-              baseUri: Uri.parse('http://localhost:9000'),
-              analyticsService: AnalyticsService(),
+  testWidgets(
+    'typed launcher navigation stays on the single NeuroStudio surface',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1200, 800);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+            selectedControlApiServiceProvider.overrideWithValue(
+              ControlApiService(
+                baseUri: Uri.parse('http://localhost:9000'),
+                analyticsService: AnalyticsService(),
+              ),
             ),
-          ),
-          moduleProvider.overrideWith(_FakeModuleNotifier.new),
-          workspaceProvider.overrideWith(_FakeWorkspaceNotifier.new),
-        ],
-        child: const MaterialApp(home: ToolViewScreen()),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+            moduleProvider.overrideWith(_FakeModuleNotifier.new),
+            workspaceProvider.overrideWith(_FakeWorkspaceNotifier.new),
+          ],
+          child: const MaterialApp(home: ToolViewScreen()),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    final container = ProviderScope.containerOf(
-      tester.element(find.byType(ToolViewScreen)),
-    );
-    container
-        .read(launcherNavigationProvider.notifier)
-        .openModule('Neurobench');
-    expect(container.read(launcherNavigationProvider)?.moduleId, 'Neurobench');
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ToolViewScreen)),
+      );
+      container
+          .read(launcherNavigationProvider.notifier)
+          .openModule('Neurobench');
+      expect(
+        container.read(launcherNavigationProvider)?.moduleId,
+        'Neurobench',
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    // Only NeuroStudio is an openable surface. Navigating to another
-    // manifest entry must not switch away from it.
-    expect(
-      container.read(workspaceProvider).value?.focusedModuleId,
-      'neurocnl',
-    );
-    expect(find.text('Waiting for NeuroStudio'), findsOneWidget);
-    expect(find.text('Waiting for Bench'), findsNothing);
-  });
+      // Only NeuroStudio is an openable surface. Navigating to another
+      // manifest entry must not switch away from it.
+      expect(
+        container.read(workspaceProvider).value?.focusedModuleId,
+        'neurocnl',
+      );
+      expect(find.text('Waiting for NeuroStudio'), findsOneWidget);
+      expect(find.text('Waiting for Bench'), findsNothing);
+    },
+  );
 }
