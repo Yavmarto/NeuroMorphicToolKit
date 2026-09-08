@@ -69,6 +69,18 @@ Each module must pass its assigned `NmtkShellMode` to `NmtkDesktopScaffold` (or 
 
 Never leave the mode at the default when the module should be in a non-command mode — the three-mode design exists specifically to give each module a distinct visual identity in the shared shell.
 
+### Rendered contrast verification
+
+Using the theme API (`Zeta.of(context).colors`) is not proof of readable contrast. Any themed icon/button change must have its contrast measured on the actual rendered output in both dark and light themes before sign-off. The floating canvas toolbar passed a static theme-API audit but rendered at ~1:1 contrast in dark mode and 2.9:1 in light mode (fixed in commit 931136f8).
+
+### Back/cancel affordance in step/setup flows
+
+Every screen in a step/setup flow must have a working back or cancel affordance in all states (initial, loading, failure, success). Do not rely on an OS back gesture — none exists on desktop/web. `server_setup_screen.dart` shipped without this and had to be retrofitted.
+
+### Stepper/step-pill overflow
+
+Any stepper or step-pill bar must remain usable at all step counts and at the minimum supported screen width: wrap it in a horizontal `SingleChildScrollView` or `Wrap` (see `pipeline_stepper.dart`, `snn_workflow_stepper.dart`, `snn_mobile_workflow_stepper.dart`). New stepper widgets must include a test with a high step count.
+
 ### Status colour semantics
 
 Suite-wide status signals (pipeline states, health badges, run buttons, toasts) must always use the `NmtkShellTokens` semantic palette:

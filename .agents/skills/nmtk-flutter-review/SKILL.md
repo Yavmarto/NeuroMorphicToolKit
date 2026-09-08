@@ -155,6 +155,12 @@ For every Dart file reviewed, verify ALL of the following. ANY violation is P0.
 - [ ] Modals used only for blocking decisions; inline expansion or utility panel for detail
 - [ ] No layout property animations (width, height, padding, margin); only opacity and transform
 
+### UI Regression Checks (MANDATORY)
+
+- [ ] **Rendered contrast verification** — Themed icons/buttons must use theme-aware colors (`Zeta.of(context).colors`, e.g. `mainInverse`) AND have their actual rendered contrast measured in both dark and light themes. A static theme-API audit ("it calls `Zeta.of(context).colors`") is not proof: the floating canvas toolbar (`mobile_canvas_chrome.dart`) passed such an audit but rendered at ~1:1 contrast in dark mode and 2.9:1 in light mode, caught only by a QA contrast sweep (fixed in commit 931136f8 with 8 new contrast tests).
+- [ ] **Back/cancel affordance in step/setup flows** — Any screen added to a step/setup flow must have a working back or cancel affordance in EVERY state (initial, loading, failure, success), and must not rely on an OS back gesture (there isn't one on desktop/web). `server_setup_screen.dart` shipped without this as a real regression. This is in addition to, not a replacement for, the GoRouter-vs-`Navigator.push` rule under "AI Slop Tells" above — that rule covers routing mechanism, this one covers per-state affordance presence.
+- [ ] **Stepper/step-pill overflow** — Any stepper or step-pill bar must stay usable at all step counts and at the minimum supported screen width: wrap it in a horizontal `SingleChildScrollView` or `Wrap`. Compliant reference examples: `pipeline_stepper.dart`, `snn_workflow_stepper.dart`, `snn_mobile_workflow_stepper.dart`. Any NEW stepper widget must include a test with a high step count to catch overflow.
+
 ---
 
 ## Workflow Execution
@@ -170,11 +176,16 @@ Whenever you generate or review Dart code, you must:
    - Token border radius
    - Token status colours
    - No nested cards
-5. **nmtk_ui_core gate** — if editing `nmtk_ui_core/`:
+5. **Contrast verification gate (MANDATORY)** — before signing off any themed
+   icon/button change, verify contrast by measuring the actual rendered output
+   in both dark and light themes (e.g. rendered widget test asserting a
+   contrast ratio, or a manual screenshot check). Grepping for
+   `Zeta.of(context).colors` usage alone is NOT sufficient sign-off evidence.
+6. **nmtk_ui_core gate** — if editing `nmtk_ui_core/`:
    - Verify no `provider` or `flutter_riverpod` imports
    - Verify new widgets added to `lib/nmtk_ui_core.dart` barrel export
    - Verify widgets are self-contained and typed
-6. **Cross-module gate** — if a shared model or contract changed, update every
+7. **Cross-module gate** — if a shared model or contract changed, update every
    consumer package that imports it before treating the change as complete.
 
 ---
