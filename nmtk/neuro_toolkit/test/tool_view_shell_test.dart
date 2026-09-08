@@ -223,7 +223,7 @@ void main() {
     expect(find.text('Waiting for Bench'), findsNothing);
   });
 
-  testWidgets('typed launcher navigation focuses an eligible module', (
+  testWidgets('typed launcher navigation stays on the single NeuroStudio surface', (
     tester,
   ) async {
     tester.view.devicePixelRatio = 1;
@@ -258,12 +258,14 @@ void main() {
     expect(container.read(launcherNavigationProvider)?.moduleId, 'Neurobench');
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
+
+    // Only NeuroStudio is an openable surface. Navigating to another
+    // manifest entry must not switch away from it.
     expect(
       container.read(workspaceProvider).value?.focusedModuleId,
-      'Neurobench',
+      'neurocnl',
     );
-
-    expect(find.text('Waiting for Bench'), findsOneWidget);
-    expect(find.text('Waiting for NeuroStudio'), findsNothing);
+    expect(find.text('Waiting for NeuroStudio'), findsOneWidget);
+    expect(find.text('Waiting for Bench'), findsNothing);
   });
 }

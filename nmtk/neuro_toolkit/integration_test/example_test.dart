@@ -7,7 +7,6 @@ import 'package:neuro_toolkit/features/neurocnl/neurocnl_studio.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
-import 'package:neuro_toolkit/widgets/module_tab_bar.dart';
 import 'package:neuro_toolkit/src/features/module/presentation/module_notifier.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
 import 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart';
@@ -56,25 +55,14 @@ class _LauncherAdapterHarness extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          ModuleTabBar(
-            activeModuleId: 'Neurochip',
-            onTabSelected: (_) {},
-            onTabClosed: (_) {},
-          ),
-          Expanded(
-            child: NeurocnlShellAdapter(
-              launchContext: NmtkFeatureLaunchContext(
-                moduleId: NmtkModuleId.neurocnl,
-                backendUri: Uri.parse('http://127.0.0.1:9000/api/neurocnl'),
-                onNavigate: (_) async => false,
-                onReportError: (_) async {},
-                onEditServer: _noopEditServer,
-              ),
-            ),
-          ),
-        ],
+      body: NeurocnlShellAdapter(
+        launchContext: NmtkFeatureLaunchContext(
+          moduleId: NmtkModuleId.neurocnl,
+          backendUri: Uri.parse('http://127.0.0.1:9000/api/neurocnl'),
+          onNavigate: (_) async => false,
+          onReportError: (_) async {},
+          onEditServer: _noopEditServer,
+        ),
       ),
     );
   }
