@@ -36,7 +36,31 @@ _KEYCHAIN_SERVICE = "neurocli-ssh"
 _LOOPBACK = {"", "localhost", "127.0.0.1", "::1"}
 
 # Remote ports the app forwards; see BackendTunnelService.open().
-REMOTE_PORTS = {"launcher": 8090, "suite": 9000, "jupyter": 8008}
+# `launcher` is not a module (never in modules.json) so it stays a literal;
+# `suite` and `jupyter` are real modules whose ports MUST come from the
+# manifest, per neurocli/AGENTS.md. remote_ports() derives them at call time
+# and falls back to these literals only when the manifest is unreachable.
+_LITERAL_REMOTE_PORTS = {"launcher": 8090, "suite": 9000, "jupyter": 8008}
+
+
+def remote_ports() -> dict[str, int]:
+    """The three remote ports the app forwards, manifest-derived where possible."""
+    try:
+        from neurocli.manifest import find_module, load_manifest
+
+        modules = load_manifest(Path(__file__).parent.parent.parent)
+        suite = find_module(modules, "neurocnl")
+        jupyter = find_module(modules, "jupyter")
+        return {
+            "launcher": _LITERAL_REMOTE_PORTS["launcher"],
+            "suite": suite.port if suite and suite.port else _LITERAL_REMOTE_PORTS["suite"],
+            "jupyter": jupyter.port if jupyter and jupyter.port else _LITERAL_REMOTE_PORTS["jupyter"],
+        }
+    except (ImportError, OSError, ValueError):
+        return dict(_LITERAL_REMOTE_PORTS)
+
+
+REMOTE_PORTS = remote_ports()
 
 # Same probe the app runs (remote_deployment_runner.buildAdminTokenProbeScript):
 # try the isolated nmtk-deploy account's token first, then the login account's.
@@ -153,8 +177,7 @@ def resolve_target(target_id: str | None) -> Target:
             username, _, host = wanted.rpartition("@")
             return Target(wanted, wanted, host, username, 22, "ssh_key")
         raise SessionError(
-            f"No backend named {wanted!r}. Run `neuro backend targets` to list "
-            "the ones this machine knows about."
+            f"No backend named {wanted!r}. Run `neuro backend targets` to list " "the ones this machine knows about."
         )
     remote = [t for t in targets if not t.is_local]
     if len(remote) == 1:
@@ -191,7 +214,9 @@ def keychain_write(account: str, secret: str) -> None:
         # ponytail: macOS `security` has no stdin form for -w, so the secret goes
         # through argv here. Acceptable: macOS hides other users' argv, and this
         # is the same call the `security` man page documents.
-        done = subprocess.run(argv, input=None if sys.platform == "darwin" else secret, capture_output=True, text=True, check=False)
+        done = subprocess.run(
+            argv, input=None if sys.platform == "darwin" else secret, capture_output=True, text=True, check=False
+        )
     except FileNotFoundError as exc:
         raise SessionError(
             "No OS keychain helper found (`security` on macOS, `secret-tool` on "
@@ -314,7 +339,7 @@ def open_backend(target_id: str | None = None) -> Backend:
     if target.is_local:
         return Backend(
             target=target,
-            urls={name: f"http://127.0.0.1:{port}" for name, port in REMOTE_PORTS.items()},
+            urls={name: f"http://127.0.0.1:{port}" for name, port in remote_ports().items()},
             admin_token=_local_admin_token(),
         )
     return _open_tunnel(target)
@@ -323,7 +348,9 @@ def open_backend(target_id: str | None = None) -> Backend:
 def _open_tunnel(target: Target) -> Backend:
     tmp = tempfile.TemporaryDirectory(prefix="neurocli-ctl-")
     control_path = str(Path(tmp.name) / "ctl")
-    ports = {name: _free_port() for name in REMOTE_PORTS}  # ponytail: bind-then-release; a racing process could steal one
+    ports = {
+        name: _free_port() for name in remote_ports()
+    }  # ponytail: bind-then-release; a racing process could steal one
 
     ssh_base = [
         "ssh",
@@ -337,7 +364,7 @@ def _open_tunnel(target: Target) -> Backend:
         "ConnectTimeout=15",
     ]
     forwards: list[str] = []
-    for name, remote_port in REMOTE_PORTS.items():
+    for name, remote_port in remote_ports().items():
         forwards += ["-L", f"{ports[name]}:127.0.0.1:{remote_port}"]
 
     env = dict(os.environ)
@@ -376,7 +403,7 @@ def _open_tunnel(target: Target) -> Backend:
 
     backend = Backend(
         target=target,
-        urls={name: f"http://127.0.0.1:{ports[name]}" for name in REMOTE_PORTS},
+        urls={name: f"http://127.0.0.1:{ports[name]}" for name in remote_ports()},
         admin_token="",
         _tempdir=tmp,
         _control_path=control_path,

@@ -967,13 +967,14 @@ PY
 
 # The 'workspaces run end to end without the UI' check CEL-124 asks for: drive
 # the CLI over the same authenticated session the app uses (connect, list
-# modules, hit a representative endpoint on each backend service). Called after
+# modules, hit a representative endpoint on each backend service), then run the
+# full golden-path suite (every framework+target combo, CEL-126). Called after
 # every successful update from verify_health(). Non-fatal on purpose — the
 # backend deploy already succeeded by this point, so a smoke-test failure is a
 # signal to look at, not a reason to roll back.
 run_golden_path_smoke() {
   local host_ip="$1"
-  log "Running golden-path CLI smoke test against $host_ip..."
+  log "Running golden-path CLI checks against $host_ip..."
   local out
   if out="$(cd "$REPO_ROOT/neurocli" && uv run neuro ci smoke-test \
       --target "$host_ip" --json 2>&1)"; then
@@ -982,6 +983,18 @@ run_golden_path_smoke() {
     warn "Golden-path smoke test failed against $host_ip:"
     printf '%s\n' "$out" | sed 's/^/      /' >&2
     warn "  backend deploy itself succeeded — this is a smoke-test failure, not a rollback trigger."
+  fi
+
+  # The full golden-path suite (CEL-126): generate + run every representative
+  # framework+target combo against the freshly deployed backend. Slow, so it is
+  # skipped by the same --skip-smoke-test flag as the fast smoke test above.
+  if out="$(cd "$REPO_ROOT/neurocli" && uv run neuro ci golden-paths \
+      --api-url "http://$host_ip:9000" --json 2>&1)"; then
+    log "  golden-path suite passed."
+  else
+    warn "Golden-path suite failed against $host_ip:"
+    printf '%s\n' "$out" | sed 's/^/      /' >&2
+    warn "  backend deploy itself succeeded — this is a golden-path failure, not a rollback trigger."
   fi
 }
 

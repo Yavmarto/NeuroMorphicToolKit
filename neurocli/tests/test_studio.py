@@ -90,12 +90,12 @@ def test_run_generate_then_run_then_stream_success(tmp_path: Path) -> None:
         result = runner.invoke(app, ["studio", "run", str(workspace_file), "-r", "http://x.test", "--json"])
     assert result.exit_code == 0, result.output
     gen_call = mock_post.call_args_list[0]
-    assert gen_call.args[0] == "http://x.test/api/notebook/generate-v2"
+    assert gen_call.args[0] == "http://x.test/api/neurocnl/notebook/generate-v2"
     assert gen_call.kwargs["json"]["spec"] == "network kws { }"
     assert gen_call.kwargs["json"]["pipeline_config"]["framework"] == "snntorch_sim"
     assert gen_call.kwargs["json"]["pipeline_config"]["dataset"] == "mnist"
     run_call = mock_post.call_args_list[1]
-    assert run_call.args[0] == "http://x.test/api/notebook/run"
+    assert run_call.args[0] == "http://x.test/api/neurocnl/notebook/run"
     assert run_call.kwargs["json"]["notebook_path"] == "my-project/notebooks/pipeline_snntorch_sim.ipynb"
     lines = [line for line in result.output.strip().splitlines()]
     assert json.loads(lines[-1])["status"] == "done"

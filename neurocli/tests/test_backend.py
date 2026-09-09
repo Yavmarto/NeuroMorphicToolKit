@@ -16,7 +16,9 @@ from neurocli.cli import app
 
 runner = CliRunner()
 
-APP_SOURCE = Path(__file__).resolve().parents[2] / "nmtk" / "neuro_toolkit" / "lib" / "services" / "control_api_service.dart"
+APP_SOURCE = (
+    Path(__file__).resolve().parents[2] / "nmtk" / "neuro_toolkit" / "lib" / "services" / "control_api_service.dart"
+)
 LAUNCHER_SERVER = Path(__file__).resolve().parents[2] / "nmtk" / "launcher_control" / "http_server.py"
 
 
@@ -122,10 +124,7 @@ def test_routes_cover_every_launcher_endpoint_the_app_calls():
 def test_routes_cover_every_endpoint_the_app_uses():
     """Parity guard: every launcher path the Flutter app builds has a command."""
     source = APP_SOURCE.read_text()
-    app_paths = {
-        re.sub(r"\$\{?[\w\[\]'.]+\}?", "{x}", raw)
-        for raw in re.findall(r"'(/api/launcher/[^']*)'", source)
-    }
+    app_paths = {re.sub(r"\$\{?[\w\[\]'.]+\}?", "{x}", raw) for raw in re.findall(r"'(/api/launcher/[^']*)'", source)}
     covered = {re.sub(r"\{\w+\}", "{x}", route.path) for route in ROUTES}
     missing = {path for path in app_paths if path not in covered}
     assert missing == set(), f"App calls endpoints the CLI cannot: {sorted(missing)}"

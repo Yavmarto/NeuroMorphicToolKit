@@ -36,10 +36,14 @@ studio_app = typer.Typer(help="NeuroStudio (neurocnl): generate and run notebook
 
 _REPO_ROOT = Path(__file__).parent.parent.parent  # neurocli/ -> repo root
 _FALLBACK_BASE_URL = "http://127.0.0.1:9000"
+# The consolidated Suite API mounts the neurocnl routers under /api/neurocnl.
+# The standalone neurocnl backend served them at /api directly; the CLI follows
+# the suite layout because that is what `neuro run` and the launcher deploy.
+_NEUROCNL_API_PREFIX = "/api/neurocnl"
 
 
 def _resolve_base_url(flag: str | None) -> str:
-    """Resolve the neurocnl backend base URL: flag > NMTK_ROOT manifest > fallback."""
+    """Resolve the Suite API base URL: flag > NMTK_ROOT manifest > fallback."""
     if flag:
         return flag.rstrip("/")
     configured = os.environ.get("NMTK_SUITE_API_URL")
@@ -72,21 +76,28 @@ def _active_spec(workspace: dict[str, Any]) -> str:
     return canonical if canonical.strip() else active_file.get("content", "")
 
 
-def _post(url: str, base_url: str, json_mode: bool, error_msg: str, **kwargs: Any) -> httpx.Response:
+class StudioRunError(RuntimeError):
+    """A step of the studio run failed; carries the JSON payload and exit code."""
+
+    def __init__(self, payload: dict[str, Any], code: int) -> None:
+        super().__init__(str(payload))
+        self.payload = payload
+        self.code = code
+
+
+def _post(url: str, base_url: str, error_msg: str, **kwargs: Any) -> httpx.Response:
     try:
         resp = httpx.post(url, **kwargs)
         resp.raise_for_status()
         return resp
-    except httpx.ConnectError:
-        error_exit({"error": "backend_unreachable", "base_url": base_url}, json_mode, code=2)
-        raise  # unreachable, error_exit exits
+    except httpx.ConnectError as exc:
+        raise StudioRunError({"error": "backend_unreachable", "base_url": base_url}, code=2) from exc
     except httpx.HTTPStatusError as exc:
         detail = _safe_detail(exc.response)
         code = 2 if exc.response.status_code >= 500 else 1
-        error_exit(
-            {"error": error_msg, "status_code": exc.response.status_code, "detail": detail}, json_mode, code=code
-        )
-        raise
+        raise StudioRunError(
+            {"error": error_msg, "status_code": exc.response.status_code, "detail": detail}, code=code
+        ) from exc
 
 
 def _safe_detail(response: httpx.Response) -> str:
@@ -115,19 +126,105 @@ def run(
     json_mode: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ) -> None:
     """Generate a Jupyter notebook from a workspace file's CNL spec and run it."""
+    try:
+        result = run_workspace(
+            workspace_file,
+            epochs=epochs,
+            learning_rate=learning_rate,
+            optimizer=optimizer,
+            batch_size=batch_size,
+            framework=framework,
+            dataset=dataset,
+            registry=registry,
+        )
+    except StudioRunError as exc:
+        error_exit(exc.payload, json_mode, code=exc.code)
+    if json_mode:
+        # Compact single-line JSON (not print_result's indented form) so --json output
+        # stays one-JSON-object-per-line, matching the SSE events streamed above it.
+        print(json.dumps(result))
+    else:
+        print_result(result, json_mode)
+
+
+def run_workspace(
+    workspace_file: Path,
+    *,
+    epochs: int = 50,
+    learning_rate: float = 1e-3,
+    optimizer: str = "Adam",
+    batch_size: int = 32,
+    framework: str | None = None,
+    dataset: str | None = None,
+    registry: str | None = None,
+    json_mode: bool = False,
+    quiet: bool = False,
+) -> dict[str, Any]:
+    """Generate a notebook from *workspace_file*'s CNL spec and run it to completion.
+
+    Raises :class:`StudioRunError` on any failure (user input, compile error,
+    unreachable backend, or a failed notebook run). Returns a result dict with
+    ``status``, ``notebook_path`` and ``job_id`` on success. ``json_mode`` is
+    forwarded so the streamed progress events stay JSON-per-line; ``quiet``
+    suppresses progress output entirely (used by the golden-paths runner).
+    """
+    workspace, resolved_framework, base_url, pipeline_config = _prepare(
+        workspace_file,
+        framework,
+        dataset,
+        registry,
+        epochs=epochs,
+        learning_rate=learning_rate,
+        optimizer=optimizer,
+        batch_size=batch_size,
+    )
+    gen_data = generate_workspace(workspace_file, pipeline_config=pipeline_config, base_url=base_url)
+    notebooks = gen_data.get("notebooks") or []
+    if not notebooks:
+        raise StudioRunError({"error": "no_notebook_generated"}, code=2)
+    notebook_path = f"{gen_data['workspace_folder']}/{notebooks[0]['filename']}"
+
+    run_resp = _post(
+        f"{base_url}{_NEUROCNL_API_PREFIX}/notebook/run",
+        base_url,
+        "run_failed",
+        json={"notebook_path": notebook_path, "platform": resolved_framework, "kernel_name": "python3"},
+        timeout=30.0,
+    )
+    job_id = run_resp.json()["job_id"]
+
+    exit_code = _stream_progress(base_url, job_id, json_mode, quiet=quiet)
+    if exit_code != 0:
+        raise StudioRunError({"error": "run_failed", "job_id": job_id}, code=exit_code)
+    return {"status": "done", "notebook_path": notebook_path, "job_id": job_id}
+
+
+def _prepare(
+    workspace_file: Path,
+    framework: str | None,
+    dataset: str | None,
+    registry: str | None,
+    *,
+    epochs: int = 50,
+    learning_rate: float = 1e-3,
+    optimizer: str = "Adam",
+    batch_size: int = 32,
+) -> tuple[dict[str, Any], str, str, dict[str, Any]]:
+    """Load a workspace file and resolve framework/dataset/base_url/pipeline config.
+
+    Raises :class:`StudioRunError` for unreadable/empty workspace files.
+    """
     if not workspace_file.exists():
-        error_exit({"error": "file_not_found", "path": str(workspace_file)}, json_mode, code=1)
+        raise StudioRunError({"error": "file_not_found", "path": str(workspace_file)}, code=1)
 
     try:
         workspace = _load_workspace(workspace_file)
     except (json.JSONDecodeError, ValueError) as exc:
-        error_exit({"error": "invalid_workspace_file", "detail": str(exc)}, json_mode, code=1)
-        return
+        raise StudioRunError({"error": "invalid_workspace_file", "detail": str(exc)}, code=1) from exc
 
     spec = _active_spec(workspace)
     if not spec.strip():
-        error_exit({"error": "empty_spec", "hint": "The workspace's active file has no CNL spec."}, json_mode, code=1)
-        return
+        raise StudioRunError({"error": "empty_spec", "hint": "The workspace's active file has no CNL spec."}, code=1)
 
     resolved_framework = framework or (workspace.get("selectedPlatforms") or [None])[0] or "snntorch_sim"
     resolved_dataset = dataset if dataset is not None else workspace.get("selectedDataset")
@@ -143,47 +240,57 @@ def run(
     }
     if resolved_dataset:
         pipeline_config["dataset"] = resolved_dataset
+    return workspace, resolved_framework, base_url, pipeline_config
 
+
+def generate_workspace(
+    workspace_file: Path,
+    *,
+    pipeline_config: dict[str, Any] | None = None,
+    base_url: str | None = None,
+    epochs: int = 50,
+    learning_rate: float = 1e-3,
+    optimizer: str = "Adam",
+    batch_size: int = 32,
+    framework: str | None = None,
+    dataset: str | None = None,
+    registry: str | None = None,
+) -> dict[str, Any]:
+    """Generate a notebook from *workspace_file*'s CNL spec and return the generate payload.
+
+    The returned dict is the raw ``/notebook/generate-v2`` response body, so callers
+    can read the generated notebook's target and support level. Raises
+    :class:`StudioRunError` on compile/backend failures. No notebook is run.
+    """
+    _ws, resolved_framework, resolved_base, resolved_cfg = _prepare(
+        workspace_file,
+        framework,
+        dataset,
+        registry,
+        epochs=epochs,
+        learning_rate=learning_rate,
+        optimizer=optimizer,
+        batch_size=batch_size,
+    )
+    if pipeline_config is None:
+        pipeline_config = resolved_cfg
+    base_url = base_url or resolved_base
+
+    spec = _active_spec(_ws)
+    workspace_path = _ws.get("workspaceName", "") or ""
     gen_resp = _post(
-        f"{base_url}/api/notebook/generate-v2",
+        f"{base_url}{_NEUROCNL_API_PREFIX}/notebook/generate-v2",
         base_url,
-        json_mode,
         "generate_failed",
         json={"spec": spec, "pipeline_config": pipeline_config, "workspace_path": workspace_path},
         timeout=60.0,
     )
-    gen_data = gen_resp.json()
-    notebooks = gen_data.get("notebooks") or []
-    if not notebooks:
-        error_exit({"error": "no_notebook_generated"}, json_mode, code=2)
-        return
-    notebook_path = f"{gen_data['workspace_folder']}/{notebooks[0]['filename']}"
-
-    run_resp = _post(
-        f"{base_url}/api/notebook/run",
-        base_url,
-        json_mode,
-        "run_failed",
-        json={"notebook_path": notebook_path, "platform": resolved_framework, "kernel_name": "python3"},
-        timeout=30.0,
-    )
-    job_id = run_resp.json()["job_id"]
-
-    exit_code = _stream_progress(base_url, job_id, json_mode)
-    if exit_code != 0:
-        raise typer.Exit(code=exit_code)
-    result = {"status": "done", "notebook_path": notebook_path, "job_id": job_id}
-    if json_mode:
-        # Compact single-line JSON (not print_result's indented form) so --json output
-        # stays one-JSON-object-per-line, matching the SSE events streamed above it.
-        print(json.dumps(result))
-    else:
-        print_result(result, json_mode)
+    return gen_resp.json()
 
 
-def _stream_progress(base_url: str, job_id: str, json_mode: bool) -> int:
+def _stream_progress(base_url: str, job_id: str, json_mode: bool, quiet: bool = False) -> int:
     """Stream SSE progress for *job_id* until a terminal event; return its exit code."""
-    url = f"{base_url}/api/training/jobs/{job_id}/events"
+    url = f"{base_url}{_NEUROCNL_API_PREFIX}/training/jobs/{job_id}/events"
     try:
         with httpx.stream("GET", url, timeout=None) as response:
             response.raise_for_status()
@@ -191,26 +298,26 @@ def _stream_progress(base_url: str, job_id: str, json_mode: bool) -> int:
                 if not line.startswith("data: "):
                     continue
                 event = json.loads(line[len("data: ") :])
-                if json_mode:
-                    print(json.dumps(event))
-                else:
-                    _print_human_event(event)
+                if not quiet:
+                    if json_mode:
+                        print(json.dumps(event))
+                    else:
+                        _print_human_event(event)
                 if event.get("type") == "done":
                     return 0
                 if event.get("type") == "failed":
                     return 2
-    except httpx.ConnectError:
-        error_exit({"error": "backend_unreachable", "base_url": base_url}, json_mode, code=2)
+    except httpx.ConnectError as exc:
+        raise StudioRunError({"error": "backend_unreachable", "base_url": base_url}, code=2) from exc
     except httpx.HTTPStatusError as exc:
-        error_exit(
+        raise StudioRunError(
             {
                 "error": "progress_stream_failed",
                 "status_code": exc.response.status_code,
                 "detail": _safe_detail(exc.response),
             },
-            json_mode,
             code=2,
-        )
+        ) from exc
     return 2
 
 

@@ -32,7 +32,7 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["neurocli"]
-include = ["neurocli/templates/**"]
+include = ["neurocli/templates/**", "neurocli/golden_paths/**"]
 
 [tool.ruff]
 line-length = 120

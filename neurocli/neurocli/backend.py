@@ -55,14 +55,24 @@ ROUTES: tuple[Route, ...] = (
     # ── modules ────────────────────────────────────────────────────────────
     Route("modules", "list", "GET", "/api/launcher/modules", summary="List every module with install and run state"),
     Route("modules", "show", "GET", "/api/launcher/modules/{module_id}", summary="Show one module"),
-    Route("modules", "logs", "GET", "/api/launcher/modules/{module_id}/logs", summary="Read a module's recent log lines"),
+    Route(
+        "modules", "logs", "GET", "/api/launcher/modules/{module_id}/logs", summary="Read a module's recent log lines"
+    ),
     Route("modules", "install", "POST", "/api/launcher/modules/{module_id}/install", summary="Install a module"),
     Route("modules", "start", "POST", "/api/launcher/modules/{module_id}/start", summary="Start a module"),
     Route("modules", "stop", "POST", "/api/launcher/modules/{module_id}/stop", summary="Stop a module"),
     Route("modules", "uninstall", "POST", "/api/launcher/modules/{module_id}/uninstall", summary="Uninstall a module"),
     Route("modules", "update", "POST", "/api/launcher/modules/{module_id}/update", summary="Update a module"),
-    Route("modules", "repair", "POST", "/api/launcher/modules/{module_id}/repair", summary="Repair a broken module install"),
-    Route("modules", "settings", "PUT", "/api/launcher/modules/{module_id}/settings", summary="Change a module's settings"),
+    Route(
+        "modules",
+        "repair",
+        "POST",
+        "/api/launcher/modules/{module_id}/repair",
+        summary="Repair a broken module install",
+    ),
+    Route(
+        "modules", "settings", "PUT", "/api/launcher/modules/{module_id}/settings", summary="Change a module's settings"
+    ),
     Route(
         "modules",
         "prepare-akida-runtime",
@@ -78,10 +88,20 @@ ROUTES: tuple[Route, ...] = (
     Route("launcher", "logs", "GET", "/api/launcher/logs", summary="Read launcher logs"),
     Route("launcher", "crash-log", "GET", "/api/launcher/crash-log", summary="Read the last crash report"),
     Route("launcher", "activity-log", "GET", "/api/launcher/backend-activity-log", summary="Read backend activity"),
-    Route("launcher", "discover-hardware", "POST", "/api/launcher/hardware/discover", summary="Rescan for local hardware"),
+    Route(
+        "launcher", "discover-hardware", "POST", "/api/launcher/hardware/discover", summary="Rescan for local hardware"
+    ),
     # ── launcher auth ────────────────────────────────────────────────────────
-    Route("auth", "login", "POST", "/api/launcher/auth/login", summary="Authenticate with the launcher's admin password"),
-    Route("auth", "introspect", "GET", "/api/launcher/auth/introspect", summary="Check whether a bearer session token is still live"),
+    Route(
+        "auth", "login", "POST", "/api/launcher/auth/login", summary="Authenticate with the launcher's admin password"
+    ),
+    Route(
+        "auth",
+        "introspect",
+        "GET",
+        "/api/launcher/auth/introspect",
+        summary="Check whether a bearer session token is still live",
+    ),
     # ── workspace ──────────────────────────────────────────────────────────
     Route("workspace", "show", "GET", "/api/launcher/workspace", summary="Read the active workspace"),
     Route("workspace", "set", "PUT", "/api/launcher/workspace", summary="Change the active workspace"),
@@ -110,7 +130,13 @@ ROUTES: tuple[Route, ...] = (
         "/api/launcher/deployment/targets/{target_id}",
         summary="Remove a deployment target",
     ),
-    Route("deployment", "preflight", "POST", "/api/launcher/deployment/preflight", summary="Check a target before deploying"),
+    Route(
+        "deployment",
+        "preflight",
+        "POST",
+        "/api/launcher/deployment/preflight",
+        summary="Check a target before deploying",
+    ),
     Route(
         "deployment",
         "bootstrap-remote-user",
@@ -128,15 +154,25 @@ ROUTES: tuple[Route, ...] = (
         summary="Follow a deployment job's live progress",
         stream=True,
     ),
-    Route("deployment", "cancel", "POST", "/api/launcher/deployment/jobs/{job_id}/cancel", summary="Cancel a deployment job"),
-    Route("deployment", "retry", "POST", "/api/launcher/deployment/jobs/{job_id}/retry", summary="Retry a deployment job"),
+    Route(
+        "deployment",
+        "cancel",
+        "POST",
+        "/api/launcher/deployment/jobs/{job_id}/cancel",
+        summary="Cancel a deployment job",
+    ),
+    Route(
+        "deployment", "retry", "POST", "/api/launcher/deployment/jobs/{job_id}/retry", summary="Retry a deployment job"
+    ),
     # ── Akida hosts ────────────────────────────────────────────────────────
     Route("akida", "hosts", "GET", "/api/launcher/akida/hosts", summary="List Akida hosts"),
     Route("akida", "add-host", "POST", "/api/launcher/akida/hosts", summary="Add an Akida host"),
     Route("akida", "host", "GET", "/api/launcher/akida/hosts/{host_id}", summary="Show an Akida host"),
     Route("akida", "update-host", "PUT", "/api/launcher/akida/hosts/{host_id}", summary="Change an Akida host"),
     Route("akida", "remove-host", "DELETE", "/api/launcher/akida/hosts/{host_id}", summary="Remove an Akida host"),
-    Route("akida", "test", "POST", "/api/launcher/akida/hosts/{host_id}/connectivity-test", summary="Test the connection"),
+    Route(
+        "akida", "test", "POST", "/api/launcher/akida/hosts/{host_id}/connectivity-test", summary="Test the connection"
+    ),
     Route("akida", "provision", "POST", "/api/launcher/akida/hosts/{host_id}/provision", summary="Provision the host"),
     Route("akida", "repair", "POST", "/api/launcher/akida/hosts/{host_id}/repair", summary="Repair the host runtime"),
     Route(
@@ -164,7 +200,9 @@ ROUTES: tuple[Route, ...] = (
     ),
     Route("akida", "map", "POST", "/api/launcher/akida/hosts/{host_id}/map", summary="Map a model onto the device"),
     Route("akida", "run", "POST", "/api/launcher/akida/hosts/{host_id}/run", summary="Run a model on the device"),
-    Route("akida", "submit-model", "POST", "/api/launcher/akida/hosts/{host_id}/model-jobs", summary="Submit a model job"),
+    Route(
+        "akida", "submit-model", "POST", "/api/launcher/akida/hosts/{host_id}/model-jobs", summary="Submit a model job"
+    ),
     Route(
         "akida",
         "model-job",
@@ -199,7 +237,9 @@ ROUTES: tuple[Route, ...] = (
     Route("pynq", "board", "GET", "/api/launcher/pynq/boards/{board_id}", summary="Show a PYNQ board"),
     Route("pynq", "update-board", "PUT", "/api/launcher/pynq/boards/{board_id}", summary="Change a PYNQ board"),
     Route("pynq", "remove-board", "DELETE", "/api/launcher/pynq/boards/{board_id}", summary="Remove a PYNQ board"),
-    Route("pynq", "test", "POST", "/api/launcher/pynq/boards/{board_id}/connectivity-test", summary="Test the connection"),
+    Route(
+        "pynq", "test", "POST", "/api/launcher/pynq/boards/{board_id}/connectivity-test", summary="Test the connection"
+    ),
     Route("pynq", "provision", "POST", "/api/launcher/pynq/boards/{board_id}/provision", summary="Provision the board"),
     Route(
         "pynq",
@@ -215,7 +255,9 @@ ROUTES: tuple[Route, ...] = (
         "/api/launcher/pynq/boards/{board_id}/restart-runtime",
         summary="Restart the board runtime",
     ),
-    Route("pynq", "preflight", "POST", "/api/launcher/pynq/boards/{board_id}/preflight", summary="Pre-flight the board"),
+    Route(
+        "pynq", "preflight", "POST", "/api/launcher/pynq/boards/{board_id}/preflight", summary="Pre-flight the board"
+    ),
     Route("pynq", "status", "GET", "/api/launcher/pynq/boards/{board_id}/status", summary="Show board status"),
     Route(
         "pynq",
@@ -224,12 +266,16 @@ ROUTES: tuple[Route, ...] = (
         "/api/launcher/pynq/boards/{board_id}/runtime-status",
         summary="Show the board runtime status",
     ),
-    Route("pynq", "deploy", "POST", "/api/launcher/pynq/boards/{board_id}/deploy", summary="Deploy a package to the board"),
+    Route(
+        "pynq", "deploy", "POST", "/api/launcher/pynq/boards/{board_id}/deploy", summary="Deploy a package to the board"
+    ),
     Route("pynq", "verify", "POST", "/api/launcher/pynq/boards/{board_id}/verify", summary="Verify a board deployment"),
     Route("pynq", "run", "POST", "/api/launcher/pynq/boards/{board_id}/run", summary="Run a model on the board"),
     # ── Suite API ──────────────────────────────────────────────────────────
     Route("suite", "health", "GET", "/api/suite/health", service="suite", summary="Suite API health"),
-    Route("suite", "modules", "GET", "/api/suite/health/modules", service="suite", summary="Per-module Suite API health"),
+    Route(
+        "suite", "modules", "GET", "/api/suite/health/modules", service="suite", summary="Per-module Suite API health"
+    ),
     Route("suite", "doctor", "POST", "/api/suite/doctor", service="suite", summary="Run the Suite API doctor"),
     Route(
         "suite",
@@ -377,7 +423,11 @@ def _make_command(route: Route):
     hint = " ".join(f"<{name}>" for name in params)
 
     def command(
-        values: list[str] = typer.Argument(None, metavar=hint or None, help=f"Path values, in order: {', '.join(params)}" if params else "No path values needed."),
+        values: list[str] = typer.Argument(
+            None,
+            metavar=hint or None,
+            help=f"Path values, in order: {', '.join(params)}" if params else "No path values needed.",
+        ),
         data: str = typer.Option(None, "--data", help="JSON request body."),
         data_file: Path = typer.Option(None, "--data-file", help="File holding the JSON request body."),
         query: list[str] = typer.Option(None, "--query", "-q", help="Query parameter as key=value; repeatable."),
