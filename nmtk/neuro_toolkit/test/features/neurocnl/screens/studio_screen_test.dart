@@ -11,7 +11,8 @@ import 'package:neuro_toolkit/features/neurocnl/models/canonical_editor_document
     as canonical_doc;
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/pipeline_dag.dart';
-import 'package:neuro_toolkit/features/neurocnl/models/canvas/validation.dart' as canvas_model;
+import 'package:neuro_toolkit/features/neurocnl/models/canvas/validation.dart'
+    as canvas_model;
 import 'package:neuro_toolkit/features/neurocnl/models/network_graph.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/parsed_spec.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/sc_neurocore_synthesis_target.dart';
@@ -37,7 +38,8 @@ import 'package:neuro_toolkit/features/neurocnl/providers/training_provider.dart
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/canvas/canvas_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/studio_screen.dart';
-import 'package:neuro_toolkit/features/neurocnl/services/canvas_api_client.dart' as canvas_api;
+import 'package:neuro_toolkit/features/neurocnl/services/canvas_api_client.dart'
+    as canvas_api;
 import 'package:neuro_toolkit/features/neurocnl/services/file_adapter.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/sc_neurocore_target_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
@@ -616,7 +618,74 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(sameHostChecked(tester), isTrue);
-      expect(find.textContaining('Detected automatically'), findsOneWidget);
+    });
+
+    testWidgets('checking the box collapses the form to a name-only entry', (
+      WidgetTester tester,
+    ) async {
+      // A card in the same machine as the backend needs no separate SSH
+      // machine: the app already reaches the server, so once the box is ticked
+      // the host/SSH/credential fields disappear and only a display name is
+      // asked for.
+      await pumpAkidaForm(tester, backendUrl: 'http://backend.invalid:9000');
+
+      expect(find.text('Host address'), findsOneWidget);
+      expect(find.text('SSH user'), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('akida-same-host-as-backend-checkbox')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(sameHostChecked(tester), isTrue);
+      expect(find.text('Display name'), findsOneWidget);
+      expect(find.text('Host address'), findsNothing);
+      expect(find.text('SSH user'), findsNothing);
+      expect(find.text('SSH port'), findsNothing);
+      expect(find.text('SSH password'), findsNothing);
+      expect(find.text('Advanced settings'), findsNothing);
+      expect(find.text('Set as default target'), findsOneWidget);
+
+      // Unticking restores the full SSH form so a genuinely separate machine
+      // can still be added.
+      await tester.tap(
+        find.byKey(const Key('akida-same-host-as-backend-checkbox')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(sameHostChecked(tester), isFalse);
+      expect(find.text('Host address'), findsOneWidget);
+      expect(find.text('SSH user'), findsOneWidget);
+      expect(find.text('SSH password'), findsOneWidget);
+      expect(
+        find.byKey(const Key('akida-advanced-settings-toggle')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a name-only same-host save uses the backend connection', (
+      WidgetTester tester,
+    ) async {
+      // Checking "this is the same machine as your backend server" and giving
+      // only a display name must create the target against the backend's own
+      // address, with no SSH credentials in the payload.
+      await pumpAkidaForm(tester, backendUrl: 'http://backend.invalid:9000');
+
+      await tester.tap(
+        find.byKey(const Key('akida-same-host-as-backend-checkbox')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(_studioFieldFor('Display name'), 'Bench Akida');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(fakeTargetRegistry.lastSavedSameHostAsBackend, isTrue);
+      expect(fakeTargetRegistry.lastSavedAkidaHostAddress, 'backend.invalid');
+      expect(fakeTargetRegistry.lastSavedAkidaUsername, '');
+      expect(fakeTargetRegistry.lastSavedAkidaRuntimeApiUrl, '');
+      expect(fakeTargetRegistry.lastSavedAkidaControlApiUrl, '');
     });
 
     testWidgets('stays unticked for a genuinely separate machine', (
@@ -2956,6 +3025,10 @@ class _FakeStudioTargetRegistryService extends StudioTargetRegistryService {
   bool? lastSavedSameHostAsBackend;
   String? lastSavedPynqPassword;
   String? lastSelectedAkidaHostId;
+  String? lastSavedAkidaHostAddress;
+  String? lastSavedAkidaUsername;
+  String? lastSavedAkidaRuntimeApiUrl;
+  String? lastSavedAkidaControlApiUrl;
 
   /// Host ids passed to [testAkidaHostConnection], in order.
   final List<String> connectivityTestedHostIds = <String>[];
@@ -3068,6 +3141,10 @@ class _FakeStudioTargetRegistryService extends StudioTargetRegistryService {
   }) async {
     lastSavedAkidaPassword = password;
     lastSavedSameHostAsBackend = sameHostAsBackend;
+    lastSavedAkidaHostAddress = hostAddress;
+    lastSavedAkidaUsername = username;
+    lastSavedAkidaRuntimeApiUrl = runtimeApiUrl;
+    lastSavedAkidaControlApiUrl = controlApiUrl;
     return AkidaPairedHost(
       id: hostId ?? 'akida-1',
       displayName: displayName,

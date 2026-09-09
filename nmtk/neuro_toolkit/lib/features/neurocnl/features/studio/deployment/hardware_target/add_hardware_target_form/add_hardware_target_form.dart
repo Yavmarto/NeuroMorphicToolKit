@@ -101,11 +101,6 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
   /// Same intent as [_lastDerivedHost] for the URL fields: derive a sensible
   /// default, then never fight an explicit choice.
   bool _sameHostAsBackendTouched = false;
-
-  /// Whether [_sameHostAsBackend] was set by matching the backend address,
-  /// which only changes the helper text — a box that ticks itself is otherwise
-  /// mystifying.
-  bool _autoDetectedSameHost = false;
   bool _showAkidaAdvancedSettings = false;
   bool _showPynqAdvancedSettings = false;
 
@@ -265,7 +260,6 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
     if (matches == _sameHostAsBackend) return;
     setState(() {
       _sameHostAsBackend = matches;
-      _autoDetectedSameHost = matches;
     });
   }
 
@@ -348,7 +342,9 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
           const SizedBox(height: 12),
           Text(
             widget.errorMessage!,
-            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.error),
+            style: Zeta.of(
+              context,
+            ).textStyles.bodyXSmall.copyWith(color: AppTheme.error),
           ),
         ],
         if (widget.statusMessage != null) ...[
@@ -356,7 +352,9 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
           Text(
             widget.statusMessage!,
             key: const Key('hardware-target-form-status'),
-            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
+            style: Zeta.of(
+              context,
+            ).textStyles.bodyXSmall.copyWith(color: AppTheme.textSecondary),
           ),
         ],
         const SizedBox(height: 12),
@@ -391,6 +389,33 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
     );
   }
 
+  /// A checkbox rendered on the form's coloured card.
+  ///
+  /// The card that carries the form paints a background colour, and the
+  /// [ListTile] a [CheckboxListTile] builds paints its ink on the nearest
+  /// ancestor [Material] — which sits *above* that card, so the card would hide
+  /// the ripple. Current stable Flutter also trips a debug assertion over it.
+  /// Wrapping the tile in its own transparent [Material] is the
+  /// framework-recommended fix and leaves the look unchanged.
+  Widget _formCheckboxTile({
+    Key? key,
+    required String title,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return Material(
+      type: MaterialType.transparency,
+      child: CheckboxListTile(
+        key: key,
+        title: Text(title),
+        value: value,
+        onChanged: onChanged,
+        controlAffinity: ListTileControlAffinity.leading,
+        contentPadding: EdgeInsets.zero,
+      ),
+    );
+  }
+
   Widget _buildTypeSpecificForm(BuildContext context) {
     return switch (widget.targetType) {
       'akida' => Column(
@@ -401,137 +426,147 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
             label: 'Display name',
           ),
           const SizedBox(height: 12),
-          StudioFormField(controller: _hostController, label: 'Host address'),
-          const SizedBox(height: 12),
-          CheckboxListTile(
+          // A card that lives in the machine already running the backend needs
+          // no separate connection details: the app already reaches that server,
+          // so checking the box collapses the form to a name-only entry.
+          _formCheckboxTile(
             key: const Key('akida-same-host-as-backend-checkbox'),
-            title: const Text(
-              'This is the same machine as your backend server',
-            ),
-            subtitle: Text(
-              _autoDetectedSameHost
-                  ? 'Detected automatically: this address is the server you '
-                        'already set up, so the card is reached directly '
-                        'instead of over the network. Untick if that is wrong.'
-                  : 'Connect to it directly instead of over the network — '
-                        'check this if the Akida card is installed in the '
-                        'server you already set up, not on a separate remote '
-                        'machine.',
-            ),
+            title: 'This is the same machine as your backend server',
             value: _sameHostAsBackend,
             onChanged: (value) {
               setState(() {
                 _sameHostAsBackend = value ?? false;
                 // An explicit choice outranks detection from here on.
                 _sameHostAsBackendTouched = true;
-                _autoDetectedSameHost = false;
               });
             },
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: StudioFormField(
-                  controller: _usernameController,
-                  label: 'SSH user',
-                  helperText:
-                      'Your own login on the host — the one that can sudo. '
-                      'Not the service account.',
+          // The card's connection details are hidden (not removed) once the box
+          // is checked: Zeta text inputs bind an external controller in
+          // `initState` and never release the listener, so unmounting a field
+          // mid-dialog and re-adding it later makes the disposed instance call
+          // `setState` on the next keystroke. `Offstage` collapses the section
+          // without that dispose/re-add cycle.
+          Offstage(
+            offstage: _sameHostAsBackend,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+                StudioFormField(
+                  controller: _hostController,
+                  label: 'Host address',
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: StudioFormField(
-                  controller: _sshPortController,
-                  label: 'SSH port',
-                  keyboardType: TextInputType.number,
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: StudioFormField(
+                        controller: _usernameController,
+                        label: 'SSH user',
+                        helperText:
+                            'Your own login on the host — the one that can sudo. '
+                            'Not the service account.',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: StudioFormField(
+                        controller: _sshPortController,
+                        label: 'SSH port',
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          // The service account is created with `--shell /usr/sbin/nologin` and
-          // no password, so SSH as that name can never authenticate. Entering it
-          // here is an easy mistake — it is the default of the *service account*
-          // field in Advanced settings, and the two read as interchangeable.
-          // Warn rather than block: a host provisioned outside this app could
-          // legitimately have a real login by that name.
-          ValueListenableBuilder<bool>(
-            valueListenable: _usernameIsServiceAccount,
-            builder: (context, isServiceAccount, _) {
-              if (!isServiceAccount) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  '"${_usernameController.text.trim()}" is the service account '
-                  'this app creates on the host. It has no password and no '
-                  'login shell, so SSH with it always fails. Use your own '
-                  'account here; the service account is set under Advanced '
-                  'settings.',
-                  key: const Key('akida-service-account-as-ssh-user-warning'),
-                  style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
-                    color: NmtkShellTokens.of(context).degradedColor,
+                // The service account is created with `--shell /usr/sbin/nologin`
+                // and no password, so SSH as that name can never authenticate.
+                // Entering it here is an easy mistake — it is the default of the
+                // *service account* field in Advanced settings, and the two read as
+                // interchangeable. Warn rather than block: a host provisioned
+                // outside this app could legitimately have a real login by that
+                // name.
+                ValueListenableBuilder<bool>(
+                  valueListenable: _usernameIsServiceAccount,
+                  builder: (context, isServiceAccount, _) {
+                    if (!isServiceAccount) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        '"${_usernameController.text.trim()}" is the service '
+                        'account this app creates on the host. It has no password '
+                        'and no login shell, so SSH with it always fails. Use your '
+                        'own account here; the service account is set under '
+                        'Advanced settings.',
+                        key: const Key(
+                          'akida-service-account-as-ssh-user-warning',
+                        ),
+                        style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
+                          color: NmtkShellTokens.of(context).degradedColor,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                AuthCredentialSection(
+                  authMode: _authMode,
+                  onAuthModeChanged: (value) =>
+                      setState(() => _authMode = value),
+                  passwordController: _passwordController,
+                  sshKeyPathController: _sshKeyPathController,
+                  hasSavedPassword: _akidaHasSavedPassword,
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ZetaButton.text(
+                    key: const Key('akida-advanced-settings-toggle'),
+                    onPressed: () => setState(
+                      () => _showAkidaAdvancedSettings =
+                          !_showAkidaAdvancedSettings,
+                    ),
+                    label: _showAkidaAdvancedSettings
+                        ? 'Hide advanced settings'
+                        : 'Advanced settings',
                   ),
                 ),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          AuthCredentialSection(
-            authMode: _authMode,
-            onAuthModeChanged: (value) => setState(() => _authMode = value),
-            passwordController: _passwordController,
-            sshKeyPathController: _sshKeyPathController,
-            hasSavedPassword: _akidaHasSavedPassword,
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ZetaButton.text(
-              key: const Key('akida-advanced-settings-toggle'),
-              onPressed: () => setState(
-                () => _showAkidaAdvancedSettings = !_showAkidaAdvancedSettings,
-              ),
-              label: _showAkidaAdvancedSettings
-                  ? 'Hide advanced settings'
-                  : 'Advanced settings',
+                if (_showAkidaAdvancedSettings) ...[
+                  const SizedBox(height: 12),
+                  StudioFormField(
+                    controller: _runtimeApiUrlController,
+                    label: 'Neurochip runtime URL',
+                    helperText: 'Derived automatically from the host address',
+                  ),
+                  const SizedBox(height: 12),
+                  StudioFormField(
+                    controller: _controlApiUrlController,
+                    label: 'Control API URL',
+                  ),
+                  const SizedBox(height: 12),
+                  StudioFormField(
+                    controller: _remoteInstallRootController,
+                    label: 'Remote install root',
+                    helperText:
+                        'Leave blank to use the backend release default',
+                  ),
+                  const SizedBox(height: 12),
+                  StudioFormField(
+                    controller: _serviceUserController,
+                    label: 'Target service user',
+                  ),
+                ],
+              ],
             ),
           ),
-          if (_showAkidaAdvancedSettings) ...[
-            const SizedBox(height: 12),
-            StudioFormField(
-              controller: _runtimeApiUrlController,
-              label: 'Neurochip runtime URL',
-              helperText: 'Derived automatically from the host address',
-            ),
-            const SizedBox(height: 12),
-            StudioFormField(
-              controller: _controlApiUrlController,
-              label: 'Control API URL',
-            ),
-            const SizedBox(height: 12),
-            StudioFormField(
-              controller: _remoteInstallRootController,
-              label: 'Remote install root',
-              helperText: 'Leave blank to use the backend release default',
-            ),
-            const SizedBox(height: 12),
-            StudioFormField(
-              controller: _serviceUserController,
-              label: 'Target service user',
-            ),
-          ],
           const SizedBox(height: 12),
-          CheckboxListTile(
-            title: const Text('Set as default target'),
+          _formCheckboxTile(
+            title: 'Set as default target',
             value: _isDefault,
             onChanged: (value) {
               setState(() => _isDefault = value ?? false);
             },
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
           ),
         ],
       ),
@@ -628,15 +663,13 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
           ),
         ],
         const SizedBox(height: 12),
-        CheckboxListTile(
+        _formCheckboxTile(
           key: const Key('pynq-default-target-checkbox'),
-          title: const Text('Set as default target'),
+          title: 'Set as default target',
           value: _isDefault,
           onChanged: (value) {
             setState(() => _isDefault = value ?? false);
           },
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
         ),
       ],
     );
@@ -796,14 +829,12 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
           ),
         ],
         const SizedBox(height: 12),
-        CheckboxListTile(
-          title: const Text('Set as default target'),
+        _formCheckboxTile(
+          title: 'Set as default target',
           value: _isDefault,
           onChanged: (value) {
             setState(() => _isDefault = value ?? false);
           },
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
         ),
       ],
     );
@@ -846,27 +877,55 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
   }
 
   HardwareTargetFormResult _buildFormResult() {
-    final password = _submittedPassword();
+    var password = _submittedPassword();
+    final sameHostAsBackend =
+        widget.targetType == 'akida' && _sameHostAsBackend;
+    var host = _hostController.text.trim();
+    var username = _usernameController.text.trim();
+    var sshKeyPath = _sshKeyPathController.text.trim();
+    var runtimeApiUrl = _runtimeApiUrlController.text.trim();
+    var controlApiUrl = _controlApiUrlController.text.trim();
+
+    if (sameHostAsBackend && (widget.initialEntry?.id.isEmpty ?? true)) {
+      // "Same machine as your backend server" means the app already holds the
+      // connection to that box, so a brand-new target takes the backend's own
+      // address and needs no SSH credentials. The runtime/control URLs are
+      // cleared so launcher control derives them from the address using its
+      // contract ports. An existing record keeps whatever it was created with,
+      // which preserves a same-host target that already carries SSH details.
+      final backendHost = _backendHostAddress();
+      if (backendHost != null && backendHost.isNotEmpty) {
+        host = backendHost;
+        runtimeApiUrl = '';
+        controlApiUrl = '';
+      }
+      // Drop any SSH details the user typed before ticking the box: a same-host
+      // entry is name-only, so stale credentials must not ride along on save.
+      username = '';
+      sshKeyPath = '';
+      password = null;
+    }
+
     return HardwareTargetFormResult(
       editingEntryId: widget.initialEntry?.id,
       displayName: _displayNameController.text.trim().isEmpty
-          ? _hostController.text.trim()
+          ? host
           : _displayNameController.text.trim(),
-      host: _hostController.text.trim(),
-      username: _usernameController.text.trim(),
+      host: host,
+      username: username,
       sshPort: int.tryParse(_sshPortController.text.trim()) ?? 22,
       authMode: _authMode,
       credentialRef: _credentialRefController.text.trim(),
       password: password,
-      sshKeyPath: _sshKeyPathController.text.trim(),
+      sshKeyPath: sshKeyPath,
       runtimeApiUrlOverride: _runtimeApiUrlOverrideController.text.trim(),
       overlayVersion: _overlayVersionController.text.trim(),
-      runtimeApiUrl: _runtimeApiUrlController.text.trim(),
-      controlApiUrl: _controlApiUrlController.text.trim(),
+      runtimeApiUrl: runtimeApiUrl,
+      controlApiUrl: controlApiUrl,
       remoteInstallRoot: _remoteInstallRootController.text.trim(),
       serviceUser: _serviceUserController.text.trim(),
       isDefault: _isDefault,
-      sameHostAsBackend: _sameHostAsBackend,
+      sameHostAsBackend: sameHostAsBackend,
       // SC-NeuroCore FPGA synthesis fields.
       scFamily: _scFamily,
       scToolchain: _scToolchain,
@@ -922,7 +981,9 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
           'The selected toolchain could not be found on the server running CNL Studio. '
           'Synthesis will fail unless it is installed before deployment.\\n\\n'
           'Are you sure you want to save this target anyway?',
-          style: Zeta.of(context).textStyles.bodyMedium.copyWith(color: AppTheme.textPrimary),
+          style: Zeta.of(
+            context,
+          ).textStyles.bodyMedium.copyWith(color: AppTheme.textPrimary),
         ),
         actions: [
           ZetaButton.text(
