@@ -17,10 +17,17 @@ class _FakeConnectNotifier extends ConnectNotifier {
   final ConnectState? _initial;
 
   int connectCalls = 0;
+  int continueWithoutServerCalls = 0;
   ConnectRequest? lastRequest;
 
   @override
   ConnectState build() => _initial ?? const ConnectState();
+
+  @override
+  void continueWithoutServer() {
+    continueWithoutServerCalls++;
+    state = const ConnectState(phase: ConnectPhase.devOffline);
+  }
 
   @override
   Future<void> connect(ConnectRequest request) async {
@@ -48,18 +55,26 @@ class _FakeConnectNotifier extends ConnectNotifier {
   }
 }
 
-Widget _host({required _FakeConnectNotifier notifier}) {
+Widget _host({
+  required _FakeConnectNotifier notifier,
+  bool? showDevBypass,
+  VoidCallback? onContinueWithoutServer,
+}) {
   return ProviderScope(
-    overrides: [
-      connectNotifierProvider.overrideWith(() => notifier),
-    ],
-    child: const MaterialApp(home: ServerConnectScreen()),
+    overrides: [connectNotifierProvider.overrideWith(() => notifier)],
+    child: MaterialApp(
+      home: ServerConnectScreen(
+        showDevBypass: showDevBypass ?? true,
+        onContinueWithoutServer: onContinueWithoutServer,
+      ),
+    ),
   );
 }
 
 void main() {
-  testWidgets('connect form collects host, app username and password',
-      (tester) async {
+  testWidgets('connect form collects host, app username and password', (
+    tester,
+  ) async {
     final notifier = _FakeConnectNotifier('success');
     await tester.pumpWidget(_host(notifier: notifier));
 
@@ -90,7 +105,26 @@ void main() {
     expect(notifier.lastRequest?.credential, 'secret');
   });
 
-  testWidgets('pre-fills the saved host from the connect state', (tester) async {
+  testWidgets(
+    'connecting to an existing server never asks for an SSH credential',
+    (tester) async {
+      final notifier = _FakeConnectNotifier('success');
+      await tester.pumpWidget(_host(notifier: notifier));
+
+      // Only the app-level host/username/password fields exist; no SSH,
+      // key, or admin-credential fields are ever rendered on this screen.
+      expect(find.byKey(const Key('server-connect-host')), findsOneWidget);
+      expect(find.byKey(const Key('server-connect-username')), findsOneWidget);
+      expect(find.byKey(const Key('server-connect-password')), findsOneWidget);
+      for (final word in const ['SSH', 'sudo', 'private key']) {
+        expect(find.textContaining(word, findRichText: true), findsNothing);
+      }
+    },
+  );
+
+  testWidgets('pre-fills the saved host from the connect state', (
+    tester,
+  ) async {
     final notifier = _FakeConnectNotifier(
       'success',
       initialState: const ConnectState(
@@ -107,8 +141,9 @@ void main() {
     expect(hostField.controller?.text, '192.168.2.90');
   });
 
-  testWidgets('shows plain-English failure and a retry that re-invokes',
-      (tester) async {
+  testWidgets('shows plain-English failure and a retry that re-invokes', (
+    tester,
+  ) async {
     final notifier = _FakeConnectNotifier('failure');
     await tester.pumpWidget(_host(notifier: notifier));
 
@@ -141,49 +176,109 @@ void main() {
     expect(notifier.connectCalls, 2);
   });
 
-  testWidgets('shows a reconnecting panel while the connect call is in flight',
-      (tester) async {
-    final notifier = _FakeConnectNotifier('success');
-    await tester.pumpWidget(_host(notifier: notifier));
+  testWidgets(
+    'shows a reconnecting panel while the connect call is in flight',
+    (tester) async {
+      final notifier = _FakeConnectNotifier('success');
+      await tester.pumpWidget(_host(notifier: notifier));
 
-    await tester.enterText(
-      find.byKey(const Key('server-connect-host')),
-      '192.168.2.90',
-    );
-    await tester.enterText(
-      find.byKey(const Key('server-connect-username')),
-      'alice',
-    );
-    await tester.enterText(
-      find.byKey(const Key('server-connect-password')),
-      'secret',
-    );
-    await tester.ensureVisible(find.byKey(const Key('server-connect-sign-in')));
-    await tester.tap(find.byKey(const Key('server-connect-sign-in')));
-    await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('server-connect-host')),
+        '192.168.2.90',
+      );
+      await tester.enterText(
+        find.byKey(const Key('server-connect-username')),
+        'alice',
+      );
+      await tester.enterText(
+        find.byKey(const Key('server-connect-password')),
+        'secret',
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('server-connect-sign-in')),
+      );
+      await tester.tap(find.byKey(const Key('server-connect-sign-in')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('server-connect-reconnecting')),
+        findsOneWidget,
+      );
+      expect(find.text('Reconnecting to your server…'), findsOneWidget);
+
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'form validation rejects a blank address without calling the API',
+    (tester) async {
+      final notifier = _FakeConnectNotifier('success');
+      await tester.pumpWidget(_host(notifier: notifier));
+
+      await tester.ensureVisible(
+        find.byKey(const Key('server-connect-sign-in')),
+      );
+      await tester.tap(find.byKey(const Key('server-connect-sign-in')));
+      await tester.pumpAndSettle();
+
+      expect(notifier.connectCalls, 0);
+      expect(find.textContaining('Enter the server address'), findsWidgets);
+    },
+  );
+
+  testWidgets(
+    'shows dev bypass button and allows continuing without server in dev',
+    (tester) async {
+      final notifier = _FakeConnectNotifier('success');
+      await tester.pumpWidget(_host(notifier: notifier, showDevBypass: true));
+
+      final devButton = find.byKey(
+        const Key('server-connect-continue-offline'),
+      );
+      expect(devButton, findsOneWidget);
+      expect(find.text('Continue without server (Dev)'), findsOneWidget);
+
+      await tester.ensureVisible(devButton);
+      await tester.tap(devButton);
+      await tester.pumpAndSettle();
+
+      expect(notifier.continueWithoutServerCalls, 1);
+    },
+  );
+
+  testWidgets('hides dev bypass button when showDevBypass is false', (
+    tester,
+  ) async {
+    final notifier = _FakeConnectNotifier('success');
+    await tester.pumpWidget(_host(notifier: notifier, showDevBypass: false));
 
     expect(
-      find.byKey(const Key('server-connect-reconnecting')),
-      findsOneWidget,
+      find.byKey(const Key('server-connect-continue-offline')),
+      findsNothing,
     );
-    expect(find.text('Reconnecting to your server…'), findsOneWidget);
-
-    await tester.pumpAndSettle();
+    expect(find.text('Continue without server (Dev)'), findsNothing);
   });
 
-  testWidgets('form validation rejects a blank address without calling the API',
-      (tester) async {
+  testWidgets('calls custom onContinueWithoutServer callback if provided', (
+    tester,
+  ) async {
     final notifier = _FakeConnectNotifier('success');
-    await tester.pumpWidget(_host(notifier: notifier));
+    var callbackCalled = false;
+    await tester.pumpWidget(
+      _host(
+        notifier: notifier,
+        showDevBypass: true,
+        onContinueWithoutServer: () => callbackCalled = true,
+      ),
+    );
 
-    await tester.ensureVisible(find.byKey(const Key('server-connect-sign-in')));
-    await tester.tap(find.byKey(const Key('server-connect-sign-in')));
+    final devButton = find.byKey(const Key('server-connect-continue-offline'));
+    await tester.ensureVisible(devButton);
+    await tester.tap(devButton);
     await tester.pumpAndSettle();
 
-    expect(notifier.connectCalls, 0);
-    expect(
-      find.textContaining('Enter the server address'),
-      findsWidgets,
-    );
+    expect(callbackCalled, isTrue);
+    expect(notifier.continueWithoutServerCalls, 0);
   });
 }

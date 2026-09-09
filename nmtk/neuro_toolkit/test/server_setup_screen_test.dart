@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/features/server/provision/provision_notifier.dart';
 import 'package:neuro_toolkit/features/server/provision/provision_service.dart';
 import 'package:neuro_toolkit/screens/server_setup_screen.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Functional stand-in that drives [provisionNotifierProvider] through the
 /// exact state transitions the real notifier produces: idle → running (with
@@ -61,16 +62,60 @@ class _FakeProvisionNotifier extends ProvisionNotifier {
 
 Widget _host({required _FakeProvisionNotifier notifier}) {
   return ProviderScope(
-    overrides: [
-      provisionNotifierProvider.overrideWith(() => notifier),
-    ],
+    overrides: [provisionNotifierProvider.overrideWith(() => notifier)],
     child: const MaterialApp(home: ServerSetupScreen()),
   );
 }
 
+Widget _pushSetupHost({
+  required _FakeProvisionNotifier notifier,
+  required VoidCallback onPopped,
+}) {
+  return ProviderScope(
+    overrides: [provisionNotifierProvider.overrideWith(() => notifier)],
+    child: MaterialApp(
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: Center(
+            child: ZetaButton.text(
+              label: 'open setup',
+              onPressed: () => Navigator.of(context)
+                  .push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ServerSetupScreen(),
+                    ),
+                  )
+                  .then((_) => onPopped()),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _submitSetupForm(WidgetTester tester) async {
+  await tester.enterText(
+    find.byKey(const Key('server-setup-host')),
+    '192.168.2.90',
+  );
+  await tester.enterText(
+    find.byKey(const Key('server-setup-username')),
+    'moosebun2',
+  );
+  await tester.enterText(
+    find.byKey(const Key('server-setup-password')),
+    'secret',
+  );
+  await tester.ensureVisible(find.byKey(const Key('server-setup-provision')));
+  await tester.tap(find.byKey(const Key('server-setup-provision')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
-  testWidgets('provision form collects host, admin, credential and engine',
-      (tester) async {
+  testWidgets('provision form collects host, admin, credential and engine', (
+    tester,
+  ) async {
     final notifier = _FakeProvisionNotifier('success');
     await tester.pumpWidget(_host(notifier: notifier));
 
@@ -104,42 +149,47 @@ void main() {
     expect(notifier.lastEngine, 'docker');
   });
 
-  testWidgets('progress panel shows plain-English phase updates while running',
-      (tester) async {
-    final notifier = _FakeProvisionNotifier('success');
-    await tester.pumpWidget(_host(notifier: notifier));
+  testWidgets(
+    'progress panel shows plain-English phase updates while running',
+    (tester) async {
+      final notifier = _FakeProvisionNotifier('success');
+      await tester.pumpWidget(_host(notifier: notifier));
 
-    await tester.enterText(
-      find.byKey(const Key('server-setup-host')),
-      '192.168.2.90',
-    );
-    await tester.enterText(
-      find.byKey(const Key('server-setup-username')),
-      'moosebun2',
-    );
-    await tester.enterText(
-      find.byKey(const Key('server-setup-password')),
-      'secret',
-    );
-    await tester.ensureVisible(find.byKey(const Key('server-setup-provision')));
-    await tester.tap(find.byKey(const Key('server-setup-provision')));
-    await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('server-setup-host')),
+        '192.168.2.90',
+      );
+      await tester.enterText(
+        find.byKey(const Key('server-setup-username')),
+        'moosebun2',
+      );
+      await tester.enterText(
+        find.byKey(const Key('server-setup-password')),
+        'secret',
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('server-setup-provision')),
+      );
+      await tester.tap(find.byKey(const Key('server-setup-provision')));
+      await tester.pump();
 
-    expect(find.byKey(const Key('server-setup-progress')), findsOneWidget);
-    // "Connecting with administrator access" is mapped to plain English.
-    expect(find.text('Connecting to your server…'), findsOneWidget);
+      expect(find.byKey(const Key('server-setup-progress')), findsOneWidget);
+      // "Connecting with administrator access" is mapped to plain English.
+      expect(find.text('Connecting to your server…'), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 60));
-    expect(
-      find.text('Preparing the account that runs your server…'),
-      findsOneWidget,
-    );
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(
+        find.text('Preparing the account that runs your server…'),
+        findsOneWidget,
+      );
 
-    await tester.pumpAndSettle();
-  });
+      await tester.pumpAndSettle();
+    },
+  );
 
-  testWidgets('failure shows a plain-English cause and a retry that re-runs',
-      (tester) async {
+  testWidgets('failure shows a plain-English cause and a retry that re-runs', (
+    tester,
+  ) async {
     final notifier = _FakeProvisionNotifier('failure');
     await tester.pumpWidget(_host(notifier: notifier));
 
@@ -160,10 +210,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('server-setup-failure')), findsOneWidget);
-    expect(
-      find.textContaining('was not accepted'),
-      findsWidgets,
-    );
+    expect(find.textContaining('was not accepted'), findsWidgets);
     // No SSH / sudo / docker / jargon leaks into the failure copy.
     for (final word in const ['SSH', 'sudo', 'docker', 'exit code', 'stderr']) {
       expect(find.textContaining(word), findsNothing);
@@ -176,19 +223,16 @@ void main() {
     expect(notifier.provisionCalls, 2);
   });
 
-  testWidgets('success shows the provisioned host and a continue action',
-      (tester) async {
+  testWidgets('success shows the provisioned host and a continue action', (
+    tester,
+  ) async {
     final notifier = _FakeProvisionNotifier('success');
     var continued = false;
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          provisionNotifierProvider.overrideWith(() => notifier),
-        ],
+        overrides: [provisionNotifierProvider.overrideWith(() => notifier)],
         child: MaterialApp(
-          home: ServerSetupScreen(
-            onProvisioned: (_) => continued = true,
-          ),
+          home: ServerSetupScreen(onProvisioned: (_) => continued = true),
         ),
       ),
     );
@@ -217,24 +261,104 @@ void main() {
     expect(continued, isTrue);
   });
 
-  testWidgets('form validation rejects a blank address without calling the API',
-      (tester) async {
-    final notifier = _FakeProvisionNotifier('success');
-    await tester.pumpWidget(_host(notifier: notifier));
+  testWidgets(
+    'form validation rejects a blank address without calling the API',
+    (tester) async {
+      final notifier = _FakeProvisionNotifier('success');
+      await tester.pumpWidget(_host(notifier: notifier));
 
-    await tester.ensureVisible(find.byKey(const Key('server-setup-provision')));
-    await tester.tap(find.byKey(const Key('server-setup-provision')));
+      await tester.ensureVisible(
+        find.byKey(const Key('server-setup-provision')),
+      );
+      await tester.tap(find.byKey(const Key('server-setup-provision')));
+      await tester.pumpAndSettle();
+
+      expect(notifier.provisionCalls, 0);
+      expect(find.textContaining('Enter the server address'), findsWidgets);
+    },
+  );
+
+  testWidgets('back button pops the setup route off the navigator', (
+    tester,
+  ) async {
+    final notifier = _FakeProvisionNotifier('success');
+    var popped = false;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [provisionNotifierProvider.overrideWith(() => notifier)],
+        child: MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ZetaButton.text(
+                  label: 'open setup',
+                  onPressed: () => Navigator.of(context)
+                      .push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ServerSetupScreen(),
+                        ),
+                      )
+                      .then((_) => popped = true),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open setup'));
+    await tester.pumpAndSettle();
+    expect(find.text('Set up your server'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('server-setup-back')));
     await tester.pumpAndSettle();
 
-    expect(notifier.provisionCalls, 0);
-    expect(
-      find.textContaining('Enter the server address'),
-      findsWidgets,
-    );
+    // Back on the base route.
+    expect(find.text('Set up your server'), findsNothing);
+    expect(find.text('open setup'), findsOneWidget);
+    expect(popped, isTrue);
   });
 
-  testWidgets('provision rejects root as the administrator account',
-      (tester) async {
+  testWidgets('back button pops from the failure panel too', (tester) async {
+    final notifier = _FakeProvisionNotifier('failure');
+    var popped = false;
+    await tester.pumpWidget(
+      _pushSetupHost(notifier: notifier, onPopped: () => popped = true),
+    );
+
+    await tester.tap(find.text('open setup'));
+    await tester.pumpAndSettle();
+    await _submitSetupForm(tester);
+    expect(find.byKey(const Key('server-setup-failure')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('server-setup-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('Set up your server'), findsNothing);
+    expect(popped, isTrue);
+  });
+
+  testWidgets('back button pops from the success panel too', (tester) async {
+    final notifier = _FakeProvisionNotifier('success');
+    var popped = false;
+    await tester.pumpWidget(
+      _pushSetupHost(notifier: notifier, onPopped: () => popped = true),
+    );
+
+    await tester.tap(find.text('open setup'));
+    await tester.pumpAndSettle();
+    await _submitSetupForm(tester);
+    expect(find.byKey(const Key('server-setup-success')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('server-setup-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('Set up your server'), findsNothing);
+    expect(popped, isTrue);
+  });
+
+  testWidgets('provision rejects root as the administrator account', (
+    tester,
+  ) async {
     final notifier = _FakeProvisionNotifier('success');
     await tester.pumpWidget(_host(notifier: notifier));
 
@@ -255,9 +379,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(notifier.provisionCalls, 0);
-    expect(
-      find.textContaining('not root'),
-      findsWidgets,
-    );
+    expect(find.textContaining('not root'), findsWidgets);
   });
 }

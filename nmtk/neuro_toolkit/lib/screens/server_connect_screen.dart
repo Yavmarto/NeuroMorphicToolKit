@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
@@ -14,7 +15,14 @@ import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 /// On app open the caller tries [ConnectNotifier.reconnectOnOpen] first and
 /// only shows this form when that fails or there is no saved server.
 class ServerConnectScreen extends ConsumerStatefulWidget {
-  const ServerConnectScreen({super.key, this.initialHost, this.onNewServer});
+  const ServerConnectScreen({
+    super.key,
+    this.initialHost,
+    this.onNewServer,
+    this.onContinueWithoutServer,
+    this.showDevBypass = kDebugMode,
+    this.embedded = false,
+  });
 
   /// Pre-fill for the server address (overrides the saved host when set, e.g.
   /// right after a fresh provision).
@@ -22,6 +30,16 @@ class ServerConnectScreen extends ConsumerStatefulWidget {
 
   /// Called when the user chooses to set up a brand-new server instead.
   final void Function()? onNewServer;
+
+  /// Called when the user chooses to explore/navigate without a server in dev.
+  final void Function()? onContinueWithoutServer;
+
+  /// Whether to show the dev-only bypass button. Defaults to [kDebugMode].
+  final bool showDevBypass;
+
+  /// Render as dialog/bottom-sheet content (no outer Scaffold) rather than a
+  /// full screen. The host popup supplies the surface and scrolling.
+  final bool embedded;
 
   @override
   ConsumerState<ServerConnectScreen> createState() =>
@@ -57,6 +75,30 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
     final tokens = NmtkShellTokens.of(context);
     final state = ref.watch(connectNotifierProvider);
 
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Sign in to your server',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        SizedBox(height: tokens.compactGap),
+        const Text(
+          'Use the app account created when the server was set up. '
+          'No administrator access or terminal needed.',
+        ),
+        SizedBox(height: tokens.sectionGap * 1.5),
+        if (state.phase == ConnectPhase.reconnecting)
+          _buildReconnectingPanel(tokens)
+        else
+          _buildForm(state, tokens),
+      ],
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -64,25 +106,7 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
             constraints: const BoxConstraints(maxWidth: 980),
             child: SingleChildScrollView(
               padding: EdgeInsets.all(tokens.sectionGap * 1.5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Sign in to your server',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  SizedBox(height: tokens.compactGap),
-                  const Text(
-                    'Use the app account created when the server was set up. '
-                    'No administrator access or terminal needed.',
-                  ),
-                  SizedBox(height: tokens.sectionGap * 1.5),
-                  if (state.phase == ConnectPhase.reconnecting)
-                    _buildReconnectingPanel(tokens)
-                  else
-                    _buildForm(state, tokens),
-                ],
-              ),
+              child: content,
             ),
           ),
         ),
@@ -168,6 +192,13 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
                   label: 'Set up a new server',
                 )
               : null,
+          devAction: widget.showDevBypass
+              ? ZetaButton.text(
+                  key: const Key('server-connect-continue-offline'),
+                  onPressed: _continueWithoutServer,
+                  label: 'Continue without server (Dev)',
+                )
+              : null,
         ),
       ],
     );
@@ -179,6 +210,7 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
     NmtkShellTokens tokens, {
     required Widget primary,
     Widget? secondary,
+    Widget? devAction,
   }) {
     return NmtkAdaptiveLayout(
       breakpoint: NmtkShellTokens.compactBreakpoint,
@@ -186,7 +218,7 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
         spacing: tokens.compactGap,
         runSpacing: tokens.compactGap,
         crossAxisAlignment: WrapCrossAlignment.center,
-        children: [primary, ?secondary],
+        children: [primary, ?secondary, ?devAction],
       ),
       mobileBuilder: (context) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -198,6 +230,10 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
           if (secondary != null) ...[
             SizedBox(height: tokens.compactGap),
             secondary,
+          ],
+          if (devAction != null) ...[
+            SizedBox(height: tokens.compactGap),
+            devAction,
           ],
         ],
       ),
@@ -265,5 +301,13 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
             credential: _password.text,
           ),
         );
+  }
+
+  void _continueWithoutServer() {
+    if (widget.onContinueWithoutServer != null) {
+      widget.onContinueWithoutServer!();
+    } else {
+      ref.read(connectNotifierProvider.notifier).continueWithoutServer();
+    }
   }
 }

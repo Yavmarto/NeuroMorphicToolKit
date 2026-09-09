@@ -14,13 +14,28 @@ import 'package:neuro_toolkit/features/server/provision/provision_service.dart';
 /// engine if missing, running the install, minting the app credential — is
 /// handled automatically and reported here in plain English.
 class ServerSetupScreen extends ConsumerStatefulWidget {
-  const ServerSetupScreen({super.key, this.initialHost, this.onProvisioned});
+  const ServerSetupScreen({
+    super.key,
+    this.initialHost,
+    this.onProvisioned,
+    this.embedded = false,
+    this.onBack,
+  });
 
   /// Pre-fill for the server address (e.g. from a prior attempt).
   final String? initialHost;
 
   /// Called once provisioning succeeds with the provisioned host + app user.
   final void Function(ProvisionResult result)? onProvisioned;
+
+  /// Render as dialog/bottom-sheet content (no outer Scaffold) rather than a
+  /// full screen. The host popup supplies the surface and scrolling.
+  final bool embedded;
+
+  /// Invoked by the back affordance instead of popping the navigator. Used
+  /// when embedded so "Back" returns to the connect form rather than closing
+  /// the whole popup.
+  final VoidCallback? onBack;
 
   @override
   ConsumerState<ServerSetupScreen> createState() => _ServerSetupScreenState();
@@ -58,6 +73,36 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
     final tokens = NmtkShellTokens.of(context);
     final state = ref.watch(provisionNotifierProvider);
 
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Set up your server',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        SizedBox(height: tokens.compactGap),
+        const Text(
+          'This happens once per server. Tell us where it lives and '
+          'the administrator account that can install software, and '
+          'NeuroToolkit does the rest automatically — no terminal '
+          'needed.',
+        ),
+        SizedBox(height: tokens.sectionGap * 1.5),
+        if (state.failure != null)
+          _buildFailurePanel(state.failure!, tokens)
+        else if (state.result != null)
+          _buildSuccessPanel(state.result!, tokens)
+        else if (state.isRunning)
+          _buildRunningPanel(state, tokens)
+        else
+          _buildForm(tokens),
+      ],
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
+
     return Scaffold(
       appBar: AppBar(
         // ZETA-MIGRATION-EXEMPT: no Zeta app bar exists; this is the same
@@ -78,31 +123,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
             constraints: const BoxConstraints(maxWidth: 980),
             child: SingleChildScrollView(
               padding: EdgeInsets.all(tokens.sectionGap * 1.5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Set up your server',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  SizedBox(height: tokens.compactGap),
-                  const Text(
-                    'This happens once per server. Tell us where it lives and '
-                    'the administrator account that can install software, and '
-                    'NeuroToolkit does the rest automatically — no terminal '
-                    'needed.',
-                  ),
-                  SizedBox(height: tokens.sectionGap * 1.5),
-                  if (state.failure != null)
-                    _buildFailurePanel(state.failure!, tokens)
-                  else if (state.result != null)
-                    _buildSuccessPanel(state.result!, tokens)
-                  else if (state.isRunning)
-                    _buildRunningPanel(state, tokens)
-                  else
-                    _buildForm(tokens),
-                ],
-              ),
+              child: content,
             ),
           ),
         ),
@@ -463,6 +484,10 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
   /// failure and success panels otherwise only reset in place or move forward,
   /// and desktop/web have no OS-level back gesture (CEL-88).
   void _cancelSetup() {
+    if (widget.onBack != null) {
+      widget.onBack!();
+      return;
+    }
     final navigator = Navigator.of(context);
     if (navigator.canPop()) {
       navigator.pop();

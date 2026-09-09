@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:neuro_toolkit/features/server/connect/connect_service.dart';
 import 'package:neuro_toolkit/features/server/shared/target_store.dart';
 
-enum ConnectPhase { idle, reconnecting, connected, failed }
+enum ConnectPhase { idle, reconnecting, connected, devOffline, failed }
 
 /// What the connect form submits: an app username against a host, with a
 /// credential that is a password today. The shape leaves room for a passkey
@@ -70,11 +70,13 @@ class ConnectNotifier extends Notifier<ConnectState> {
   /// saved credential, else `failed` with [ConnectState.savedHost] set so the
   /// connect form can prefill the host that needs re-entering credentials.
   Future<void> reconnectOnOpen() async {
+    if (state.phase == ConnectPhase.connected ||
+        state.phase == ConnectPhase.devOffline) {
+      return;
+    }
     final store = await ref.read(targetStoreProvider.future);
     final last = await store.loadLastTarget();
-    if (last == null ||
-        last.sessionToken.isEmpty ||
-        last.credential.isEmpty) {
+    if (last == null || last.sessionToken.isEmpty || last.credential.isEmpty) {
       state = ConnectState(
         phase: ConnectPhase.failed,
         savedHost: last?.host,
@@ -111,7 +113,10 @@ class ConnectNotifier extends Notifier<ConnectState> {
     required String savedHost,
     String credential = '',
   }) async {
-    state = ConnectState(phase: ConnectPhase.reconnecting, savedHost: savedHost);
+    state = ConnectState(
+      phase: ConnectPhase.reconnecting,
+      savedHost: savedHost,
+    );
     try {
       final session = await attempt();
       final store = await ref.read(targetStoreProvider.future);
@@ -146,8 +151,29 @@ class ConnectNotifier extends Notifier<ConnectState> {
   void logout() {
     state = const ConnectState();
   }
+
+  /// Bypasses server sign-in to allow exploring/navigating the app in dev mode.
+  void continueWithoutServer() {
+    state = const ConnectState(phase: ConnectPhase.devOffline);
+  }
 }
 
 final connectNotifierProvider = NotifierProvider<ConnectNotifier, ConnectState>(
   ConnectNotifier.new,
 );
+
+/// Monotonic counter the workspace bumps to ask the connection gate to reopen
+/// its sign-in/setup popup. The gate compares consecutive values, so an
+/// explicit reopen request is observable even when `ConnectState` itself does
+/// not change (e.g. already logged out and just re-showing the form).
+class ServerAccessPopupRequestNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void request() => state++;
+}
+
+final serverAccessPopupRequestProvider =
+    NotifierProvider<ServerAccessPopupRequestNotifier, int>(
+      ServerAccessPopupRequestNotifier.new,
+    );
