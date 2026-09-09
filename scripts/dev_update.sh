@@ -5,6 +5,7 @@
 # Usage: scripts/dev_update.sh [OPTIONS]
 #   --skip-tests           don't run the changed-module test suites first
 #   --skip-jupyter-check   don't gate success on jupyter-server answering on :8008
+#   --skip-smoke-test      don't run the golden-path CLI smoke test after the update
 #   --no-rebuild           sync only; warn instead of rebuilding
 #   --force-rebuild SVC    rebuild SVC regardless of what changed (repeatable)
 #   --restart-suite-api-only  skip tests/sync entirely, just restart the suite_api
@@ -51,6 +52,7 @@ COMPOSE_ARGS="-f docker-compose.yml -f docker-compose.dev.yml"
 
 SKIP_TESTS=false
 SKIP_JUPYTER_CHECK=false
+SKIP_SMOKE_TEST=false
 NO_REBUILD=false
 RESTART_SUITE_API_ONLY=false
 DRY_RUN=false
@@ -88,6 +90,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --skip-tests)      SKIP_TESTS=true ;;
     --skip-jupyter-check) SKIP_JUPYTER_CHECK=true ;;
+    --skip-smoke-test) SKIP_SMOKE_TEST=true ;;
     --no-rebuild)      NO_REBUILD=true ;;
     --restart-suite-api-only) RESTART_SUITE_API_ONLY=true ;;
     --akida-native)    AKIDA_NATIVE=1 ;;
@@ -958,7 +961,28 @@ PY
   log "  Suite API ok (version: $version)"
   wait_for_control_api "http://${host_ip}:8090"
   check_jupyter_health "$host_ip"
+  $SKIP_SMOKE_TEST || run_golden_path_smoke "$host_ip"
   update_selected_akida_runtime "$host_ip"
+}
+
+# The 'workspaces run end to end without the UI' check CEL-124 asks for: drive
+# the CLI over the same authenticated session the app uses (connect, list
+# modules, hit a representative endpoint on each backend service). Called after
+# every successful update from verify_health(). Non-fatal on purpose — the
+# backend deploy already succeeded by this point, so a smoke-test failure is a
+# signal to look at, not a reason to roll back.
+run_golden_path_smoke() {
+  local host_ip="$1"
+  log "Running golden-path CLI smoke test against $host_ip..."
+  local out
+  if out="$(cd "$REPO_ROOT/neurocli" && uv run neuro ci smoke-test \
+      --target "$host_ip" --json 2>&1)"; then
+    log "  smoke test passed."
+  else
+    warn "Golden-path smoke test failed against $host_ip:"
+    printf '%s\n' "$out" | sed 's/^/      /' >&2
+    warn "  backend deploy itself succeeded — this is a smoke-test failure, not a rollback trigger."
+  fi
 }
 
 update_selected_akida_runtime() {

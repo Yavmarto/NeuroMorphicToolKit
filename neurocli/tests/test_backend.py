@@ -178,3 +178,22 @@ def test_askpass_helper_hands_ssh_the_password():
             check=True,
         )
     assert done.stdout == "hunter2"
+
+
+def test_login_json_mode_never_prompts_for_password():
+    """`neuro login --json` must fail loudly, not block on getpass in a headless runner."""
+    result = runner.invoke(app, ["login", "--target", "someone@10.0.0.5", "--json"])
+    assert result.exit_code == 1
+    assert "missing_password" in result.output
+
+
+def test_login_reads_password_from_env(monkeypatch):
+    """Headless CI can supply the SSH password via NEUROCLI_SSH_PASSWORD."""
+    from neurocli import backend
+
+    saved: list[tuple[str, str]] = []
+    monkeypatch.setenv("NEUROCLI_SSH_PASSWORD", "hunter2")
+    monkeypatch.setattr(backend, "keychain_write", lambda account, secret: saved.append((account, secret)))
+    result = runner.invoke(app, ["login", "--target", "someone@10.0.0.5", "--json"])
+    assert result.exit_code == 0, result.output
+    assert saved and saved[0] == ("someone@10.0.0.5:22", "hunter2")

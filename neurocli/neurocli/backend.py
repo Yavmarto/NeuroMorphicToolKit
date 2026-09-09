@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import getpass
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -78,6 +79,9 @@ ROUTES: tuple[Route, ...] = (
     Route("launcher", "crash-log", "GET", "/api/launcher/crash-log", summary="Read the last crash report"),
     Route("launcher", "activity-log", "GET", "/api/launcher/backend-activity-log", summary="Read backend activity"),
     Route("launcher", "discover-hardware", "POST", "/api/launcher/hardware/discover", summary="Rescan for local hardware"),
+    # ── launcher auth ────────────────────────────────────────────────────────
+    Route("auth", "login", "POST", "/api/launcher/auth/login", summary="Authenticate with the launcher's admin password"),
+    Route("auth", "introspect", "GET", "/api/launcher/auth/introspect", summary="Check whether a bearer session token is still live"),
     # ── workspace ──────────────────────────────────────────────────────────
     Route("workspace", "show", "GET", "/api/launcher/workspace", summary="Read the active workspace"),
     Route("workspace", "set", "PUT", "/api/launcher/workspace", summary="Change the active workspace"),
@@ -500,7 +504,11 @@ def login_command(
             json_mode,
             code=1,
         )
-    password = getpass.getpass(f"SSH password for {chosen.ssh_destination}: ")
+    password = os.environ.get("NEUROCLI_SSH_PASSWORD")
+    if not password:
+        if json_mode:
+            error_exit({"error": "missing_password"}, json_mode, code=1)
+        password = getpass.getpass(f"SSH password for {chosen.ssh_destination}: ")
     if not password:
         error_exit({"error": "empty_password"}, json_mode, code=1)
     try:
