@@ -32,6 +32,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/studio_view_mode_provi
 import 'package:neuro_toolkit/features/neurocnl/providers/template_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/hardware_auto_add_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/deploy_error_formatter.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/host_module_navigation.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurosim_handoff.dart';
@@ -1507,6 +1508,16 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
           final refreshed = await _loadHardwareTargetDialogData(targetId);
           return refreshed.entries;
         },
+        // Akida is the only chip type with a paired-host model today; PYNQ is
+        // network-attached with no local scan (CEL-120), so it gets no action.
+        onScanHardware: targetId == 'akida'
+            ? () async {
+                final result = await ref
+                    .read(hardwareAutoAddScannerProvider)
+                    .run();
+                return result.describe();
+              }
+            : null,
       ),
     );
   }

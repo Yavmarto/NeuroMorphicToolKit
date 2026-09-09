@@ -146,6 +146,7 @@ class AkidaHostRecord(TypedDict, total=False):
     isDefault: bool
     autoDiscovered: bool
     sameHostAsBackend: bool
+    deviceIdentifier: str
     hasPassword: NotRequired[bool]
 
 

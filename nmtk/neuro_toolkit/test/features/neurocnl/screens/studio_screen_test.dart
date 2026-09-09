@@ -26,6 +26,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/canvas/simulation_prov
     as canvas_sim;
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/sync_provider.dart'
     as canvas_sync;
+import 'package:neuro_toolkit/features/neurocnl/providers/hardware_auto_add_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/native_file_adapter_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/pipeline_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/running_notebook_tasks_provider.dart';
@@ -41,6 +42,7 @@ import 'package:neuro_toolkit/features/neurocnl/screens/studio_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/canvas_api_client.dart'
     as canvas_api;
 import 'package:neuro_toolkit/features/neurocnl/services/file_adapter.dart';
+import 'package:neuro_toolkit/features/neurocnl/services/hardware_auto_add.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/sc_neurocore_target_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/studio_target_registry_service.dart';
@@ -1042,6 +1044,51 @@ void main() {
     // Button is back to 'Save', not stuck on 'Saving...'.
     expect(find.text('Save'), findsOneWidget);
     expect(find.text('Saving...'), findsNothing);
+  });
+
+  testWidgets('Scan for hardware auto-adds detected targets from Manage '
+      'Targets', (WidgetTester tester) async {
+    // CEL-122 manual scan path: the manage-targets dialog surfaces the scan
+    // action and reports what the auto-add produced.
+    final scanner = _FakeHardwareAutoAddScanner(
+      result: const HardwareAutoAddResult(addedNames: ['Akida SER-123']),
+    );
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          apiClientProvider.overrideWithValue(mockApi),
+          studioTargetRegistryServiceProvider.overrideWithValue(
+            fakeTargetRegistry,
+          ),
+          hardwareAutoAddScannerProvider.overrideWithValue(scanner),
+          workspaceBootstrapProvider.overrideWithValue(
+            const WorkspaceBootstrap(
+              initialLocation: '/?panel=deploy&target=akida',
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: StudioScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _seedTrainingHistory(tester);
+    await _openManageTargetsFor(tester, 'akida');
+
+    expect(find.text('Scan for hardware'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hardware-scan-button')));
+    await tester.pumpAndSettle();
+
+    expect(scanner.runs, 1);
+    expect(find.textContaining('Added 1 detected device'), findsOneWidget);
   });
 
   /// Pumps StudioScreen with the fake registry and opens Manage Targets for
@@ -3018,6 +3065,24 @@ AkidaPairedHost _akidaHost({
   );
 }
 
+class _FakeHardwareAutoAddScanner extends HardwareTargetAutoScanner {
+  _FakeHardwareAutoAddScanner({required this.result})
+    : super(
+        detectDevices: ({required registeredIdentifiers}) async => const [],
+        fetchAkidaHosts: () async => const [],
+        createSameHostAkidaHost: (_) async => _akidaHost(),
+      );
+
+  final HardwareAutoAddResult result;
+  int runs = 0;
+
+  @override
+  Future<HardwareAutoAddResult> run() async {
+    runs++;
+    return result;
+  }
+}
+
 class _FakeStudioTargetRegistryService extends StudioTargetRegistryService {
   _FakeStudioTargetRegistryService() : super();
 
@@ -3029,6 +3094,7 @@ class _FakeStudioTargetRegistryService extends StudioTargetRegistryService {
   String? lastSavedAkidaUsername;
   String? lastSavedAkidaRuntimeApiUrl;
   String? lastSavedAkidaControlApiUrl;
+  String? lastSavedAkidaDeviceIdentifier;
 
   /// Host ids passed to [testAkidaHostConnection], in order.
   final List<String> connectivityTestedHostIds = <String>[];
@@ -3138,6 +3204,7 @@ class _FakeStudioTargetRegistryService extends StudioTargetRegistryService {
     required String serviceUser,
     bool isDefault = false,
     bool sameHostAsBackend = false,
+    String deviceIdentifier = '',
   }) async {
     lastSavedAkidaPassword = password;
     lastSavedSameHostAsBackend = sameHostAsBackend;
@@ -3145,6 +3212,7 @@ class _FakeStudioTargetRegistryService extends StudioTargetRegistryService {
     lastSavedAkidaUsername = username;
     lastSavedAkidaRuntimeApiUrl = runtimeApiUrl;
     lastSavedAkidaControlApiUrl = controlApiUrl;
+    lastSavedAkidaDeviceIdentifier = deviceIdentifier;
     return AkidaPairedHost(
       id: hostId ?? 'akida-1',
       displayName: displayName,

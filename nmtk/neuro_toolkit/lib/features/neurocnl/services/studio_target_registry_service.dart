@@ -307,6 +307,11 @@ class StudioTargetRegistryService {
     return (hostId == null || hostId.isEmpty) ? null : hostId;
   }
 
+  /// Persists an Akida host (create when [hostId] is null/empty, else update).
+  ///
+  /// [deviceIdentifier] carries the physical-device identifier of an
+  /// auto-created host so later hardware scans can report it as already
+  /// registered; it is empty for hand-entered hosts.
   Future<AkidaPairedHost> saveAkidaHost({
     String? hostId,
     required String displayName,
@@ -322,6 +327,7 @@ class StudioTargetRegistryService {
     required String serviceUser,
     bool isDefault = false,
     bool sameHostAsBackend = false,
+    String deviceIdentifier = '',
   }) async {
     final payload = <String, dynamic>{
       'displayName': displayName,
@@ -342,6 +348,7 @@ class StudioTargetRegistryService {
       'serviceUser': serviceUser,
       'isDefault': isDefault,
       'sameHostAsBackend': sameHostAsBackend,
+      if (deviceIdentifier.isNotEmpty) 'deviceIdentifier': deviceIdentifier,
     };
 
     final response = hostId == null || hostId.isEmpty

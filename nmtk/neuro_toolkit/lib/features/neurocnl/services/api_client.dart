@@ -22,6 +22,7 @@ import 'package:neuro_toolkit/features/neurocnl/models/crossbar_export_result.da
 import 'package:neuro_toolkit/features/neurocnl/models/sensor_frame.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/simulator_preflight.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/target_reachability.dart';
+import 'package:neuro_toolkit/features/neurocnl/models/detected_hardware_entry.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/deploy_preview_result.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/pipeline_cnl_result.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/base_http_client.dart';
@@ -929,6 +930,56 @@ class ApiClient extends BaseHttpClient {
   }
 
   // ── Hardware ──────────────────────────────────────────────────
+
+  /// Local hardware scan from the connected backend (CEL-121).
+  ///
+  /// Calls `GET /api/neurochip/hardware/detected`, proxied through the same
+  /// suite backend every other Neurochip route uses. [registeredIdentifiers]
+  /// are the device identifiers the caller already holds as saved targets;
+  /// each returned hit then carries `already_registered: true` when its
+  /// identifier is among them.
+  ///
+  /// The Neurochip routes live at the suite root, not under the Studio API
+  /// prefix, so any `/api/neurocnl`-style path on [baseUrl] is stripped first —
+  /// exactly what [NeurochipClient] does for its own calls.
+  Future<List<DetectedHardwareEntry>> fetchDetectedHardware({
+    List<String> registeredIdentifiers = const <String>[],
+  }) async {
+    final parsed = Uri.parse(baseUrl);
+    final root = Uri(
+      scheme: parsed.scheme,
+      host: parsed.host,
+      port: parsed.hasPort ? parsed.port : null,
+    );
+    final query = registeredIdentifiers
+        .where((id) => id.trim().isNotEmpty)
+        .map(
+          (id) =>
+              'registered_identifier=${Uri.encodeQueryComponent(id.trim())}',
+        )
+        .join('&');
+    final uri = Uri.parse(
+      '$root/api/neurochip/hardware/detected${query.isEmpty ? '' : '?$query'}',
+    );
+    final response = await rawHttpClient.get(
+      uri,
+      headers: apiKey.isNotEmpty ? {'X-API-Key': apiKey} : null,
+    );
+    if (response.statusCode != 200) {
+      throw ApiException(response.statusCode, response.body);
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) {
+      throw const ApiException(
+        200,
+        '{"detail":"Unexpected hardware-detection payload."}',
+      );
+    }
+    return decoded
+        .whereType<Map<String, dynamic>>()
+        .map(DetectedHardwareEntry.fromJson)
+        .toList(growable: false);
+  }
 
   Future<List<String>> listSerialPorts() async {
     final response = await _get('/prosthetic/hardware/serial');

@@ -739,6 +739,12 @@ def _normalize_akida_host(raw: Mapping[str, Any]) -> AkidaHostRecord:
         "capabilitySnapshot": capability_snapshot,
         "isDefault": bool(raw.get("isDefault")),
         "autoDiscovered": bool(raw.get("autoDiscovered", False)),
+        # Stable physical-device identifier (serial / USB address) captured
+        # when the host was auto-created from a backend hardware scan. Empty
+        # for hand-entered hosts. The launcher echoes saved identifiers back to
+        # GET /hardware/detected as registered_identifier so a re-scan reports
+        # the device as already_registered instead of creating a duplicate.
+        "deviceIdentifier": str(raw.get("deviceIdentifier") or "").strip(),
         # The card is on the same physical machine as launcher-control itself. SSH
         # from inside the container to the host's own LAN IP is refused (hairpin
         # NAT), so connections must instead go through the docker/podman gateway

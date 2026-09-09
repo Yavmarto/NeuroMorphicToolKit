@@ -321,4 +321,78 @@ void main() {
       expect(result.notTrainableReason, isEmpty);
     });
   });
+
+  group('ApiClient.fetchDetectedHardware', () {
+    test('calls the neurochip detection route at the suite root with repeated '
+        'registered identifiers', () async {
+      late http.Request captured;
+      final client = MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode([
+            {
+              'chip_type': 'akida',
+              'display_name': 'Akida SER-123',
+              'identifier': 'SER-123',
+              'already_registered': true,
+            },
+            {
+              'chip_type': 'speck',
+              'display_name': 'Speck 2e0018',
+              'identifier': '2e0018',
+              'already_registered': false,
+            },
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      // Neurochip routes are served at the suite root, not under the Studio API
+      // prefix — this asserts the /api/neurocnl path is stripped.
+      final api = ApiClient(
+        baseUrl: 'http://suite.test:8000/api/neurocnl',
+        httpClient: client,
+      );
+
+      final result = await api.fetchDetectedHardware(
+        registeredIdentifiers: const ['SER-123', 'other-device'],
+      );
+
+      expect(captured.url.toString(), isNot(contains('/api/neurocnl')));
+      expect(
+        captured.url.toString(),
+        'http://suite.test:8000/api/neurochip/hardware/detected'
+        '?registered_identifier=SER-123'
+        '&registered_identifier=other-device',
+      );
+      expect(result, hasLength(2));
+      expect(result.first.chipType, 'akida');
+      expect(result.first.alreadyRegistered, isTrue);
+      expect(result.last.chipType, 'speck');
+      expect(result.last.alreadyRegistered, isFalse);
+    });
+
+    test(
+      'omits the query string entirely when nothing is registered',
+      () async {
+        late http.Request captured;
+        final client = MockClient((request) async {
+          captured = request;
+          return http.Response('[]', 200);
+        });
+        final api = ApiClient(
+          baseUrl: 'http://suite.test:8000/api/neurocnl',
+          httpClient: client,
+        );
+
+        await api.fetchDetectedHardware();
+
+        expect(
+          captured.url.toString(),
+          'http://suite.test:8000/api/neurochip/hardware/detected',
+        );
+      },
+    );
+  });
 }

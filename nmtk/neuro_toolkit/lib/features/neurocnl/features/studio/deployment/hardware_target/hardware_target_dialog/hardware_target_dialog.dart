@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
@@ -19,6 +21,7 @@ class HardwareTargetDialog extends StatefulWidget {
     required this.onSaveTarget,
     this.onTestTarget,
     this.onReloadEntries,
+    this.onScanHardware,
   });
 
   final HardwareTargetDialogData data;
@@ -45,6 +48,11 @@ class HardwareTargetDialog extends StatefulWidget {
   /// list, and a second Edit in the same session worked off stale data.
   final Future<List<SavedHardwareTargetEntry>> Function()? onReloadEntries;
 
+  /// Runs a backend hardware scan and auto-adds detected targets, returning a
+  /// human-readable summary to show as the dialog's status message. Absent for
+  /// target types with no auto-scan (e.g. PYNQ).
+  final Future<String> Function()? onScanHardware;
+
   @override
   State<HardwareTargetDialog> createState() => _HardwareTargetDialogState();
 }
@@ -56,6 +64,7 @@ class _HardwareTargetDialogState extends State<HardwareTargetDialog> {
   bool _isSaving = false;
   List<SavedHardwareTargetEntry>? _entries;
   String? _testingEntryId;
+  bool _scanningHardware = false;
 
   List<SavedHardwareTargetEntry> get _currentEntries =>
       _entries ?? widget.data.entries;
@@ -126,6 +135,33 @@ class _HardwareTargetDialogState extends State<HardwareTargetDialog> {
       );
     } finally {
       if (mounted) setState(() => _testingEntryId = null);
+    }
+  }
+
+  Future<void> _scanHardware() async {
+    final scan = widget.onScanHardware;
+    if (scan == null) return;
+    setState(() {
+      _scanningHardware = true;
+      _saveErrorMessage = null;
+      _statusMessage = null;
+    });
+    try {
+      final message = await scan();
+      await _reloadEntries();
+      if (!mounted) return;
+      setState(() => _statusMessage = message);
+    } catch (error) {
+      if (!mounted) return;
+      setState(
+        () => _saveErrorMessage = formatDeployError(
+          error,
+          serviceName: 'neurochip backend',
+          action: 'scanning for hardware on this server',
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _scanningHardware = false);
     }
   }
 
@@ -262,15 +298,25 @@ class _HardwareTargetDialogState extends State<HardwareTargetDialog> {
                     const SizedBox(height: 12),
                     Text(
                       _saveErrorMessage!,
-                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
-                        color: AppTheme.error,
-                      ),
+                      style: Zeta.of(
+                        context,
+                      ).textStyles.bodyXSmall.copyWith(color: AppTheme.error),
                     ),
                   ],
                 ],
               ),
       ),
       actions: [
+        if (!showForm && widget.onScanHardware != null)
+          ZetaButton.text(
+            key: const Key('hardware-scan-button'),
+            onPressed: _scanningHardware
+                ? null
+                : () => unawaited(_scanHardware()),
+            label: _scanningHardware
+                ? 'Scanning for hardware…'
+                : 'Scan for hardware',
+          ),
         if (!showForm)
           ZetaButton.text(
             onPressed: () => setState(() {

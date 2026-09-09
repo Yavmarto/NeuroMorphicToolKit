@@ -516,6 +516,13 @@ class AkidaPairedHost {
   /// docker/podman gateway alias instead of the LAN address in [host], which
   /// a container in bridge-network mode can't dial back out to (hairpin NAT).
   final bool sameHostAsBackend;
+
+  /// Stable physical-device identifier (serial / USB address) captured when
+  /// this host was auto-created from a backend hardware scan. Empty for
+  /// hand-entered hosts. The launcher passes saved identifiers back to
+  /// `GET /hardware/detected` as `registered_identifier` so a re-scan reports
+  /// the device as `already_registered` instead of creating a duplicate.
+  final String deviceIdentifier;
   final AkidaEnvironmentChecks? capabilitySnapshot;
   final String installedRuntimeVersion;
   final String availableRuntimeVersion;
@@ -546,6 +553,7 @@ class AkidaPairedHost {
     required this.lastVerifiedAt,
     this.isDefault = false,
     this.sameHostAsBackend = false,
+    this.deviceIdentifier = '',
     this.capabilitySnapshot,
     this.installedRuntimeVersion = '',
     this.availableRuntimeVersion = '',
@@ -620,6 +628,10 @@ class AkidaPairedHost {
           '',
       isDefault: json['isDefault'] as bool? ?? false,
       sameHostAsBackend: json['sameHostAsBackend'] as bool? ?? false,
+      deviceIdentifier:
+          json['deviceIdentifier'] as String? ??
+          json['device_identifier'] as String? ??
+          '',
       capabilitySnapshot: json['capabilitySnapshot'] is Map<String, dynamic>
           ? AkidaEnvironmentChecks.fromJson(
               json['capabilitySnapshot'] as Map<String, dynamic>,
@@ -665,6 +677,7 @@ class AkidaPairedHost {
       'lastVerifiedAt': lastVerifiedAt,
       'isDefault': isDefault,
       'sameHostAsBackend': sameHostAsBackend,
+      'deviceIdentifier': deviceIdentifier,
       if (capabilitySnapshot != null)
         'capabilitySnapshot': capabilitySnapshot!.toJson(),
       'installedRuntimeVersion': installedRuntimeVersion,
@@ -699,6 +712,7 @@ class AkidaPairedHost {
     String? lastVerifiedAt,
     bool? isDefault,
     bool? sameHostAsBackend,
+    String? deviceIdentifier,
     AkidaEnvironmentChecks? capabilitySnapshot,
     String? installedRuntimeVersion,
     String? availableRuntimeVersion,
@@ -729,6 +743,7 @@ class AkidaPairedHost {
       lastVerifiedAt: lastVerifiedAt ?? this.lastVerifiedAt,
       isDefault: isDefault ?? this.isDefault,
       sameHostAsBackend: sameHostAsBackend ?? this.sameHostAsBackend,
+      deviceIdentifier: deviceIdentifier ?? this.deviceIdentifier,
       capabilitySnapshot: capabilitySnapshot ?? this.capabilitySnapshot,
       installedRuntimeVersion:
           installedRuntimeVersion ?? this.installedRuntimeVersion,
