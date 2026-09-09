@@ -37,7 +37,11 @@ class NeuroToolkitApp extends ConsumerWidget {
               data: MediaQuery.of(ctx).copyWith(
                 textScaler: TextScaler.linear(settings.fontSizeFactor),
               ),
-              child: child ?? const SizedBox.shrink(),
+              child: child == null
+                  ? const SizedBox.shrink()
+                  // App-wide top-right notification banners; mounted above the
+                  // Navigator so they paint over every route and dialog.
+                  : NmtkNotificationCenter(child: child),
             ),
           );
         },

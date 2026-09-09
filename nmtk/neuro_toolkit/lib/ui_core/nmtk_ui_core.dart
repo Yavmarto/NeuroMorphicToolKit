@@ -34,6 +34,7 @@ export 'widgets/shell_readiness_state_view.dart'; // NmtkShellReadinessStateView
 export 'widgets/shell_retry_button.dart'; // NmtkShellRetryButton
 export 'widgets/snack_bars.dart';
 export 'widgets/toasts.dart';
+export 'widgets/notification_center.dart'; // NmtkNotificationCenter, NmtkNotification
 export 'widgets/status_badge.dart';
 export 'models/scaffold_models.dart';
 export 'widgets/desktop_scaffold.dart'; // NmtkDesktopScaffold

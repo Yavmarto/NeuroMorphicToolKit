@@ -10,6 +10,7 @@ import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/services/cross_module_navigation.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/screens/tool_view/module_uri_resolver.dart'
     as uri_resolver;
@@ -131,19 +132,76 @@ Future<bool> handleHostedModuleNavigationRequest(
 }
 
 // Every failed request from the embedded module reports its own error, so a
-// dead backend can trigger this many times a second. Tracking whether one is
-// already on screen keeps it from re-queuing a fresh SnackBar per failure.
+// dead backend can trigger this many times a second. Connection/auth errors go
+// to the app-wide top-right notification stack, which coalesces repeat reports
+// for the same module+kind into a single card. The remaining kinds still use a
+// bottom SnackBar; this flag keeps that fallback from re-queuing a fresh
+// SnackBar per failure while one is already on screen.
 bool _hostedFeatureErrorSnackBarVisible = false;
+
+bool _requiresBackendSetup(NmtkFeatureErrorKind kind) {
+  return kind == NmtkFeatureErrorKind.connection ||
+      kind == NmtkFeatureErrorKind.authentication;
+}
+
+String _hostedFeatureErrorTitle(NmtkFeatureErrorKind kind) {
+  return switch (kind) {
+    NmtkFeatureErrorKind.connection => 'Connection Problem',
+    NmtkFeatureErrorKind.authentication => 'Authentication Problem',
+    NmtkFeatureErrorKind.navigation ||
+    NmtkFeatureErrorKind.unexpected => 'NeuroStudio Problem',
+  };
+}
+
+IconData _hostedFeatureErrorIcon(NmtkFeatureErrorKind kind) {
+  return switch (kind) {
+    NmtkFeatureErrorKind.connection => ZetaIcons.cloud_off,
+    NmtkFeatureErrorKind.authentication => ZetaIcons.error_outline,
+    NmtkFeatureErrorKind.navigation ||
+    NmtkFeatureErrorKind.unexpected => ZetaIcons.error_outline,
+  };
+}
 
 Future<void> reportHostedFeatureError(
   BuildContext context,
   NmtkFeatureErrorEvent event, {
   required VoidCallback onOpenBackendSetup,
 }) async {
-  if (!context.mounted || _hostedFeatureErrorSnackBarVisible) return;
-  final requiresBackendSetup =
-      event.kind == NmtkFeatureErrorKind.connection ||
-      event.kind == NmtkFeatureErrorKind.authentication;
+  if (!context.mounted) return;
+  final requiresBackendSetup = _requiresBackendSetup(event.kind);
+
+  // Connection/auth failures read as macOS-style banners in the top-right
+  // corner (see CEL-117): rounded card, icon, title/message and the same
+  // "Backend Setup" action as the previous bottom SnackBar. The key coalesces
+  // the per-request reports a dead backend produces, so only one card is live.
+  if (requiresBackendSetup) {
+    final notificationCenter = NmtkNotificationCenter.maybeControllerOf(
+      context,
+    );
+    if (notificationCenter != null) {
+      notificationCenter.push(
+        NmtkNotification(
+          key: 'hosted-feature-error:${event.kind}',
+          title: _hostedFeatureErrorTitle(event.kind),
+          message: event.message,
+          tone: NmtkTone.danger,
+          icon: _hostedFeatureErrorIcon(event.kind),
+          // Persistent until the user opens Backend Setup or closes the card.
+          duration: null,
+          action: NmtkNotificationAction(
+            label: 'Backend Setup',
+            onPressed: onOpenBackendSetup,
+          ),
+        ),
+      );
+      return;
+    }
+  }
+
+  // Non-connection failures (navigation/unexpected) keep the bottom SnackBar.
+  // This is also the fallback when no notification host is mounted above
+  // [context] (e.g. in a bare widget-test harness).
+  if (_hostedFeatureErrorSnackBarVisible) return;
   _hostedFeatureErrorSnackBarVisible = true;
   unawaited(
     ScaffoldMessenger.of(context)
