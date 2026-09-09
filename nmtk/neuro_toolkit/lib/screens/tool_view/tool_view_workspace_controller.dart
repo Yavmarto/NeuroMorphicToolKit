@@ -23,6 +23,12 @@ import 'package:neuro_toolkit/screens/tool_view/tool_view_workspace_host.dart';
 /// module manifest is a backend capability descriptor, not an openable UI.
 const String kPrimaryModuleId = 'neurocnl';
 
+/// The second openable native surface: the Neurohub "Share" workspace
+/// browser. Admitted alongside [kPrimaryModuleId] only because it ships a
+/// real native surface (see [NativeSurfaceRegistry]); every other manifest
+/// entry remains a backend capability descriptor.
+const String kNeurohubModuleId = 'Neurohub';
+
 /// Owns module-workspace session lifecycle: which module is active, the
 /// live WebView controllers, per-module load failures, and the
 /// generation/guard state that prevents overlapping `initializeWorkspace`
@@ -280,10 +286,11 @@ class ToolViewWorkspaceController {
   }
 
   bool shouldOpenModule(Module module) {
-    // The launcher mounts exactly one frontend surface: NeuroStudio. Every
+    // The launcher mounts NeuroStudio as its primary surface, plus the
+    // Neurohub "Share" surface as the second openable native module. Every
     // other entry in the module manifest is a backend capability descriptor
     // (Jupyter kernels, native services, etc.), not a separate tabbable UI.
-    if (module.id != kPrimaryModuleId) {
+    if (module.id != kPrimaryModuleId && module.id != kNeurohubModuleId) {
       return false;
     }
     if (!module.isEnabled || !module.showInLauncherNav) {

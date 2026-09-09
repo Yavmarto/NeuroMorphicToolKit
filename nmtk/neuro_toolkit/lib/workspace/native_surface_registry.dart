@@ -6,6 +6,7 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/features/neurocnl/neurocnl_studio.dart';
 // import 'package:neurochip/shell_adapter.dart';
 import 'package:neuro_toolkit/features/neurobench/shell_adapter.dart';
+import 'package:neuro_toolkit/features/neurocnl/screens/hub/neurohub_share_surface.dart';
 
 typedef NativeSurfaceBuilder =
     Widget Function(NmtkFeatureLaunchContext launchContext);
@@ -16,6 +17,7 @@ class NativeSurfaceRegistry {
         NmtkModuleId.neurocnl: _buildNeurocnl,
         NmtkModuleId.neurochip: _buildNeurocnl,
         NmtkModuleId.neurobench: _buildNeurobench,
+        NmtkModuleId.neurohub: _buildNeurohub,
       };
 
   static bool supportsModule(String moduleId) {
@@ -37,6 +39,13 @@ class NativeSurfaceRegistry {
     return NmtkHostNavigationScope(
       navigator: launchContext.onNavigate,
       child: NeurobenchShellAdapter(launchContext: launchContext),
+    );
+  }
+
+  static Widget _buildNeurohub(NmtkFeatureLaunchContext launchContext) {
+    return NmtkHostNavigationScope(
+      navigator: launchContext.onNavigate,
+      child: NeurohubShareSurface(launchContext: launchContext),
     );
   }
 

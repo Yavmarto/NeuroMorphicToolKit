@@ -35,15 +35,18 @@ import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/hardware_auto_add_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/deploy_error_formatter.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/host_module_navigation.dart';
+import 'package:neuro_toolkit/features/neurocnl/services/neurohub_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurosim_handoff.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurosim_handoff_coordinator.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/platform_helper.dart'
     as platform;
 import 'package:neuro_toolkit/features/neurocnl/services/sc_neurocore_target_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/template_load_guard.dart';
+import 'package:neuro_toolkit/features/neurocnl/services/workspace_payload_builder.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/studio_overlay_metrics.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/canvas/canvas_screen.dart';
+import 'package:neuro_toolkit/features/neurocnl/screens/hub/neurohub_workspace_save.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/studio_shared.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/workspace_feature.dart'
     show
@@ -149,6 +152,44 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
   void _setRunResultView(StudioResultView view) {
     if (_runResultView == view) return;
     setState(() => _runResultView = view);
+  }
+
+  /// Commits the current workspace to Neurohub: builds the portable payload
+  /// from the live canvas/CNL state and saves it to the bound GitHub repo
+  /// (or creates a new private workspace repo on first save). The
+  /// Neurohub save flow surfaces a workspace conflict with a real
+  /// reload/compare/save-copy choice instead of a generic failure.
+  Future<void> commitWorkspaceToNeurohub() async {
+    final workspace = ref.read(workspaceProvider);
+    final payload = buildCompleteWorkspacePayload(
+      workspace: workspace,
+      canvas: ref.read(canvasProvider),
+      simulation: ref.read(canvas_sim.simulationProvider),
+      resultSnapshot: ref
+          .read(studioResultSessionProvider)
+          .persistableSnapshot
+          ?.toJson(),
+    );
+    await saveCurrentWorkspaceToNeurohub(
+      context,
+      ref,
+      payload: payload,
+      workspaceName: workspace.workspaceName,
+      reloadWorkspace: _reloadNeurohubWorkspace,
+    );
+  }
+
+  /// Loads a Neurohub workspace document back into Studio after a conflict
+  /// "reload saved version" choice.
+  Future<void> _reloadNeurohubWorkspace(NeurohubWorkspace remote) async {
+    ref
+        .read(workspaceProvider.notifier)
+        .replaceFromWorkspacePayload(
+          remote.workspace,
+          sourceFileName: remote.displayName,
+          sourceFilePath: null,
+        );
+    restoreCanvasSectionFromPayload(ref, remote.workspace);
   }
 
   @override
@@ -990,6 +1031,15 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
                           onPressed: () => unawaited(_fileIo.saveWorkspace()),
                         ),
                       ),
+                      Tooltip(
+                        message: 'Save to Neurohub',
+                        child: ZetaIconButton.text(
+                          icon: ZetaIcons.cloud_upload,
+                          semanticLabel: 'Save to Neurohub',
+                          onPressed: () =>
+                              unawaited(commitWorkspaceToNeurohub()),
+                        ),
+                      ),
                     ],
                   ),
                   drawer: StudioStepDrawer(
@@ -1047,6 +1097,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
               onClosed: (id) =>
                   ref.read(workspaceProvider.notifier).closeFile(id),
               onSaveActiveFile: () => unawaited(_fileIo.saveWorkspace()),
+              onShareToNeurohub: () => unawaited(commitWorkspaceToNeurohub()),
             );
 
             final stageArea = PipelineStageArea(

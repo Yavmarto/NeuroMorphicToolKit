@@ -15,6 +15,7 @@ class StudioUtilityPill extends StatelessWidget {
     required this.onSelected,
     required this.onClosed,
     required this.onSaveActiveFile,
+    required this.onShareToNeurohub,
     this.workspaceHeaderAction,
   });
 
@@ -24,6 +25,9 @@ class StudioUtilityPill extends StatelessWidget {
   final ValueChanged<String> onSelected;
   final ValueChanged<String> onClosed;
   final VoidCallback onSaveActiveFile;
+
+  /// Commits the current workspace to the selected GitHub repo via Neurohub.
+  final VoidCallback onShareToNeurohub;
   final Widget? workspaceHeaderAction;
 
   @override
@@ -53,6 +57,15 @@ class StudioUtilityPill extends StatelessWidget {
                   icon: ZetaIcons.save,
                   semanticLabel: 'Save workspace',
                   onPressed: onSaveActiveFile,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Save to Neurohub',
+                child: ZetaIconButton.text(
+                  icon: ZetaIcons.cloud_upload,
+                  semanticLabel: 'Save to Neurohub',
+                  onPressed: onShareToNeurohub,
                 ),
               ),
               const SizedBox(width: 8),
