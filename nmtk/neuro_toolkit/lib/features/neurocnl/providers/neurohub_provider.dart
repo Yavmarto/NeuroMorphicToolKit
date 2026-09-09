@@ -101,7 +101,7 @@ final neurohubClientProvider = Provider<NeurohubClient>((ref) {
 
 final neurohubWorkspacesProvider =
     FutureProvider<List<NeurohubWorkspaceSummary>>((ref) async {
-      final session = ref.read(neurohubSessionProvider);
+      final session = ref.watch(neurohubSessionProvider);
       if (!session.isSignedIn) return const <NeurohubWorkspaceSummary>[];
       try {
         return await ref.read(neurohubClientProvider).listWorkspaces();
@@ -115,7 +115,7 @@ final neurohubWorkspacesProvider =
         }
         rethrow;
       }
-    });
+    }, retry: (_, _) => null);
 
 final neurohubWorkspaceProvider =
     FutureProvider.family<NeurohubWorkspace, ({String owner, String slug})>((
