@@ -4,6 +4,7 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/server/provision/provision_notifier.dart';
 import 'package:neuro_toolkit/features/server/provision/provision_service.dart';
+import 'package:neuro_toolkit/features/server/shared/module_deployment_fields.dart';
 
 /// One-time server setup (provision) form.
 ///
@@ -49,6 +50,8 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
   String _authMethod = 'password';
   String _engine = 'docker';
   bool _obscurePassword = true;
+  Map<String, String> _moduleEnvironment = const <String, String>{};
+  Map<String, String> _moduleSecrets = const <String, String>{};
   String? _hostError;
   String? _usernameError;
   String? _credentialError;
@@ -227,6 +230,15 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
               ),
             ],
           ),
+        ),
+        SizedBox(height: tokens.sectionGap),
+        ModuleDeploymentFields(
+          values: _moduleEnvironment,
+          secretValues: _moduleSecrets,
+          onChanged: (values, secrets) => setState(() {
+            _moduleEnvironment = values;
+            _moduleSecrets = secrets;
+          }),
         ),
         SizedBox(height: tokens.sectionGap),
         const Text(
@@ -507,6 +519,8 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
             sudoUser: _username.text.trim(),
             credential: credential,
             engine: _engine,
+            moduleEnvironment: _moduleEnvironment,
+            moduleSecrets: _moduleSecrets,
           ),
         );
   }

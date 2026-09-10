@@ -22,6 +22,8 @@ class ProvisionRequest {
     required this.engine,
     this.sshPort = 22,
     this.reinstallMode = RemoteReinstallMode.preserveData,
+    this.moduleEnvironment = const <String, String>{},
+    this.moduleSecrets = const <String, String>{},
   });
 
   final String host;
@@ -30,6 +32,8 @@ class ProvisionRequest {
   final String engine;
   final int sshPort;
   final RemoteReinstallMode reinstallMode;
+  final Map<String, String> moduleEnvironment;
+  final Map<String, String> moduleSecrets;
 }
 
 /// A plain-English provisioning failure — never a stack trace. [retryable]
@@ -90,6 +94,8 @@ class ProvisionNotifier extends Notifier<ProvisionState> {
             sudoPrivateKey: request.credential.privateKey,
             containerEngine: request.engine,
             reinstallMode: request.reinstallMode,
+            moduleEnvironment: request.moduleEnvironment,
+            moduleSecrets: request.moduleSecrets,
             onProgress: (job) {
               _activeJobId = job.id;
               state = ProvisionState(

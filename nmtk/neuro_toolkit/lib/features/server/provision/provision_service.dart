@@ -91,6 +91,8 @@ class ProvisionService {
     String sudoPrivateKey = '',
     required String containerEngine,
     RemoteReinstallMode reinstallMode = RemoteReinstallMode.preserveData,
+    Map<String, String> moduleEnvironment = const <String, String>{},
+    Map<String, String> moduleSecrets = const <String, String>{},
     void Function(DeploymentJob job)? onProgress,
     JobRegistry? registry,
   }) async {
@@ -109,6 +111,8 @@ class ProvisionService {
         adminPrivateKey: sudoPrivateKey,
         containerEngine: containerEngine,
         reinstallMode: reinstallMode,
+        moduleEnvironment: moduleEnvironment,
+        moduleSecrets: moduleSecrets,
       ),
       registry: jobRegistry,
       loadBundle: () => DeploymentAssetBundle.load(_assets),
@@ -191,6 +195,7 @@ class ProvisionService {
       username: 'nmtk-deploy',
       backendPort: 9000,
       containerEngine: request.containerEngine,
+      moduleEnvironment: request.moduleEnvironment,
       updatedAt: DateTime.now(),
     );
     final job = DeploymentJob(
@@ -297,6 +302,8 @@ class ProvisionService {
         containerEngine: setupRequest.containerEngine,
         cleanInstall:
             setupRequest.reinstallMode == RemoteReinstallMode.factoryReset,
+        moduleEnvironment: setupRequest.moduleEnvironment,
+        moduleSecrets: setupRequest.moduleSecrets,
       );
       registry.pendingTargets[job.id] = target;
       registry.pendingRequests[job.id] = deploymentRequest;

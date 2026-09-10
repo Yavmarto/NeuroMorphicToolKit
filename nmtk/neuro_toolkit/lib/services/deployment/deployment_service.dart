@@ -131,6 +131,8 @@ class RemoteServerSetupRequest {
     this.adminPrivateKey = '',
     this.sshPort = 22,
     this.reinstallMode = RemoteReinstallMode.preserveData,
+    this.moduleEnvironment = const <String, String>{},
+    this.moduleSecrets = const <String, String>{},
   });
 
   final String host;
@@ -140,6 +142,8 @@ class RemoteServerSetupRequest {
   final String adminPrivateKey;
   final String containerEngine;
   final RemoteReinstallMode reinstallMode;
+  final Map<String, String> moduleEnvironment;
+  final Map<String, String> moduleSecrets;
 }
 
 class DeploymentRequest {
@@ -161,6 +165,8 @@ class DeploymentRequest {
     this.kubeconfig = '',
     this.adminToken = '',
     this.cleanInstall = false,
+    this.moduleEnvironment = const <String, String>{},
+    this.moduleSecrets = const <String, String>{},
   });
 
   final String targetType;
@@ -180,6 +186,8 @@ class DeploymentRequest {
   final String kubeconfig;
   final String adminToken;
   final bool cleanInstall;
+  final Map<String, String> moduleEnvironment;
+  final Map<String, String> moduleSecrets;
 
   DeploymentRequest withAdminToken(String value) => DeploymentRequest(
     targetType: targetType,
@@ -199,6 +207,8 @@ class DeploymentRequest {
     kubeconfig: kubeconfig,
     adminToken: value,
     cleanInstall: cleanInstall,
+    moduleEnvironment: moduleEnvironment,
+    moduleSecrets: moduleSecrets,
   );
 
   /// Keeps the server's own deployment account while adopting a freshly
@@ -231,6 +241,8 @@ class DeploymentRequest {
     kubeconfig: kubeconfig,
     adminToken: adminToken,
     cleanInstall: cleanInstall,
+    moduleEnvironment: moduleEnvironment,
+    moduleSecrets: moduleSecrets,
   );
 
   Map<String, dynamic> toPublicJson({required String id}) => {
@@ -251,6 +263,7 @@ class DeploymentRequest {
     'context': context,
     'apiServer': apiServer,
     'containerEngine': containerEngine,
+    if (moduleEnvironment.isNotEmpty) 'moduleEnvironment': moduleEnvironment,
   };
 
   Map<String, dynamic> toSecretJson() => {
@@ -258,6 +271,7 @@ class DeploymentRequest {
     if (sshPrivateKey.isNotEmpty) 'sshPrivateKey': sshPrivateKey,
     if (kubeconfig.isNotEmpty) 'kubeconfig': kubeconfig,
     if (adminToken.isNotEmpty) 'adminToken': adminToken,
+    if (moduleSecrets.isNotEmpty) 'moduleSecrets': moduleSecrets,
   };
 }
 
