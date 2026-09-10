@@ -11,18 +11,20 @@ import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/nir_node_styles.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/canvas_projection_utils.dart'
     show spikeRateColor;
-import 'package:neuro_toolkit/features/neurocnl/utils/force_directed_layout.dart';
+import 'package:neuro_toolkit/features/neurocnl/utils/globe_layout.dart';
+import 'package:neuro_toolkit/features/neurocnl/utils/glow_sprite.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 
 /// 2.5D network renderer over a [CanvasGraph].
 ///
-/// The graph is laid out client-side by [ForceDirectedLayout] (repulsion +
-/// edge-spring + centering) and painted by [Network25DPainter]. There is no 3D
-/// or WebGL dependency: depth is simulated on a 2D canvas with a perspective
-/// projection (nearer nodes are larger and pushed outward from the focal
-/// point), z-sorted painting, per-node depth shading, and a depth fog. It is
-/// the same `CustomPainter` + `Paint.shader` rendering family as
-/// `network_graph_view.dart` and the `fragment_shader_renderer.dart` shaders.
+/// The graph is laid out client-side by [GlobeLayout] (AIS-OS-style spherical
+/// equal-area placement grouped by layer type) and painted by
+/// [Network25DPainter]. There is no 3D or WebGL dependency: depth is simulated
+/// on a 2D canvas with a perspective projection (nearer nodes are larger and
+/// pushed outward from the focal point), z-sorted painting, per-node depth
+/// shading, and a depth fog. It is the same `CustomPainter` + `Paint.shader`
+/// rendering family as `network_graph_view.dart` and the
+/// `fragment_shader_renderer.dart` shaders.
 ///
 /// Granularity is components/layers — tens of nodes — not raw neurons. Live
 /// per-node activity ([activity]) drives node glow; optional [edgeStrengths]
@@ -31,8 +33,8 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 ///
 /// The view also owns an [OrbitCamera]: dragging empty space rotates the whole
 /// scene, and the scroll wheel or a two-finger pinch zooms it. Orbiting is a
-/// pure re-projection — it never re-runs [ForceDirectedLayout], so it stays
-/// cheap on every frame. Dragging a node still moves that node, and tapping
+/// pure re-projection — it never re-runs [GlobeLayout], so it stays cheap on
+/// every frame. Dragging a node still moves that node, and tapping
 /// still selects it. A "Reset view" affordance appears once the camera moves.
 ///
 /// The widget is intentionally provider-free so it can be unit/widget tested
@@ -51,8 +53,7 @@ class Network25DView extends StatefulWidget {
     this.animate = true,
     this.showChrome = true,
     this.padding = 64.0,
-    this.config = const ForceDirectedLayoutConfig(),
-    this.useStoredPositions = false,
+    this.nodeClusterIndices,
   });
 
   /// Topology to lay out and draw.
@@ -71,8 +72,13 @@ class Network25DView extends StatefulWidget {
   final Map<String, double>? edgeStrengths;
 
   /// Optional NIR type registry (`nirNodeTypeMapProvider`) so nodes take their
-  /// type's category accent. Falls back to `node.metadata['category']`.
+  /// type's category accent and globe sectors. Falls back to
+  /// `node.metadata['category']`.
   final Map<String, NirNodeType>? nirTypes;
+
+  /// Optional node id → co-active cluster index. When set, clustered nodes use
+  /// a distinct accent instead of their layer-type color; singletons are omitted.
+  final Map<String, int>? nodeClusterIndices;
 
   /// Controlled selection. When null the view manages its own selection.
   final String? selectedNodeId;
@@ -90,21 +96,13 @@ class Network25DView extends StatefulWidget {
   /// Padding kept free on every edge when fitting the layout to the viewport.
   final double padding;
 
-  /// Force model tuning.
-  final ForceDirectedLayoutConfig config;
-
-  /// Seed the layout from each node's stored `position` instead of the
-  /// deterministic spiral, preserving a hand-arranged editor layout as the
-  /// starting point before relaxation.
-  final bool useStoredPositions;
-
   @override
   State<Network25DView> createState() => _Network25DViewState();
 }
 
 class _Network25DViewState extends State<Network25DView>
     with SingleTickerProviderStateMixin {
-  late ForceDirectedLayout _layout;
+  late GlobeNetworkLayout _layout;
   Ticker? _ticker;
   String? _internalSelectedId;
   String? _draggingNodeId;
@@ -133,8 +131,10 @@ class _Network25DViewState extends State<Network25DView>
   void didUpdateWidget(covariant Network25DView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_topologyChanged(oldWidget.graph, widget.graph)) {
-      _layout.updateGraph(widget.graph);
-      _layout.relax();
+      _layout.updateGraph(
+        widget.graph,
+        categoryOf: GlobeNetworkLayout.categoryResolver(widget.nirTypes),
+      );
       _smoothedActivity.clear();
     }
     if (widget.activity != oldWidget.activity ||
@@ -151,11 +151,10 @@ class _Network25DViewState extends State<Network25DView>
   }
 
   void _rebuildLayout() {
-    _layout = ForceDirectedLayout(
+    _layout = GlobeNetworkLayout(
       widget.graph,
-      config: widget.config,
-      useStoredPositions: widget.useStoredPositions,
-    )..relax();
+      categoryOf: GlobeNetworkLayout.categoryResolver(widget.nirTypes),
+    );
     _syncActivityTargets();
   }
 
@@ -192,8 +191,7 @@ class _Network25DViewState extends State<Network25DView>
 
   // ── Ticker ─────────────────────────────────────────────────────────────────
 
-  bool get _wantsAnimation =>
-      widget.animate && (!_layout.isSettled || widget.activity != null);
+  bool get _wantsAnimation => widget.animate && widget.activity != null;
 
   void _restartTickerIfNeeded() {
     if (!_wantsAnimation) {
@@ -211,10 +209,6 @@ class _Network25DViewState extends State<Network25DView>
 
   void _onTick(Duration _) {
     if (!mounted) return;
-
-    if (!_layout.isSettled) {
-      _layout.step();
-    }
 
     final target = widget.activity;
     if (target != null) {
@@ -389,6 +383,7 @@ class _Network25DViewState extends State<Network25DView>
                             activity: _smoothedActivity,
                             edgeStrengths: widget.edgeStrengths,
                             nirTypes: widget.nirTypes,
+                            nodeClusterIndices: widget.nodeClusterIndices,
                             selectedId: _selectedId,
                             nodeLabelStyle: zeta.textStyles.labelSmall.copyWith(
                               fontSize: 11,
@@ -712,8 +707,8 @@ class _Network25DViewState extends State<Network25DView>
 }
 
 /// Maps engine-space layout coordinates onto canvas pixels, preserving aspect
-/// ratio and centering. Mirrors the transform [ForceDirectedLayout.fitToSize]
-/// applies so drag interaction can invert it.
+/// ratio and centering. Mirrors the transform the layout bounds use so drag
+/// interaction can invert it.
 class _FitTransform {
   const _FitTransform({
     required this.size,
@@ -726,7 +721,7 @@ class _FitTransform {
   final Offset sourceCenter;
 
   factory _FitTransform.forLayout({
-    required ForceDirectedLayout layout,
+    required GlobeNetworkLayout layout,
     required Size size,
     required double padding,
   }) {
@@ -762,7 +757,7 @@ class _FitTransform {
 /// The camera is a pure value object: dragging rotates the *whole scene* by
 /// [yaw] (around the vertical axis) and [pitch] (around the horizontal axis),
 /// and the scroll wheel / pinch gesture changes [zoom]. It never touches the
-/// force layout, so orbiting does not re-run relaxation — the layout is solved
+/// globe layout, so orbiting does not re-run placement — the layout is solved
 /// once and every frame is a cheap re-projection.
 @immutable
 class OrbitCamera {
@@ -912,6 +907,16 @@ class Network25DProjection {
   }
 }
 
+/// Distinct accents for co-active clusters (singletons keep layer-type color).
+const List<Color> kCoactivationClusterPalette = <Color>[
+  Color(0xFFE91E63),
+  Color(0xFF00BCD4),
+  Color(0xFFFFC107),
+  Color(0xFF7C4DFF),
+  Color(0xFF66BB6A),
+  Color(0xFFFF7043),
+];
+
 /// Paints a [CanvasGraph] in 2.5D.
 ///
 /// Depth is simulated entirely on the 2D canvas: nodes are painted back-to-front
@@ -928,6 +933,7 @@ class Network25DPainter extends CustomPainter {
     required this.activity,
     required this.edgeStrengths,
     required this.nirTypes,
+    required this.nodeClusterIndices,
     required this.selectedId,
     required this.nodeLabelStyle,
     required this.secondaryLabelStyle,
@@ -945,6 +951,7 @@ class Network25DPainter extends CustomPainter {
   final Map<String, double> activity;
   final Map<String, double>? edgeStrengths;
   final Map<String, NirNodeType>? nirTypes;
+  final Map<String, int>? nodeClusterIndices;
   final String? selectedId;
   final TextStyle nodeLabelStyle;
   final TextStyle secondaryLabelStyle;
@@ -955,6 +962,7 @@ class Network25DPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     _paintBackground(canvas, size);
+    _paintOrbitalChrome(canvas, size);
 
     final ordered = graph.nodes.toList()
       ..sort((a, b) => (depths[a.id] ?? 0.5).compareTo(depths[b.id] ?? 0.5));
@@ -1010,6 +1018,86 @@ class Network25DPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1,
     );
+  }
+
+  // ── Orbital chrome (AIS-OS glow core + orbit rings) ───────────────────────
+
+  void _paintOrbitalChrome(Canvas canvas, Size size) {
+    if (graph.nodes.isEmpty) return;
+
+    final focal = Offset(
+      size.width * projection.focal.dx,
+      size.height * projection.focal.dy,
+    );
+    final minDim = math.min(size.width, size.height);
+    final zoom = projection.camera.zoom;
+    final meanActivity = _meanActivity();
+
+    final transformed = projection.transformScene(focal, 0.5);
+    final projected = projection.projectTransformed(
+      transformed.point,
+      transformed.depth,
+    );
+
+    canvas.save();
+    canvas.translate(projected.dx, projected.dy);
+    canvas.rotate(projection.camera.yaw);
+
+    final coreRadius = minDim * 0.11 * zoom;
+    canvas.drawCircle(
+      Offset.zero,
+      coreRadius,
+      GlowSprite.radial(
+        center: Offset.zero,
+        radius: coreRadius,
+        color: AppTheme.primary,
+        intensity: 0.28 + 0.32 * meanActivity,
+      ),
+    );
+
+    final hotspotRadius = coreRadius * 0.35;
+    canvas.drawCircle(
+      Offset.zero,
+      hotspotRadius,
+      GlowSprite.radial(
+        center: Offset.zero,
+        radius: hotspotRadius,
+        color: Colors.white,
+        intensity: 0.12 + 0.22 * meanActivity,
+        stops: const <GlowStop>[
+          GlowStop(0.0, 1.0),
+          GlowStop(0.7, 0.2),
+          GlowStop(1.0, 0.0),
+        ],
+      ),
+    );
+
+    final flatten = 0.35 + 0.65 * math.cos(projection.camera.pitch).abs();
+    GlowSprite.ring(
+      canvas,
+      radiusX: minDim * 0.24 * zoom,
+      radiusY: minDim * 0.24 * zoom * flatten,
+      color: AppTheme.primary,
+      alpha: 0.2 + 0.08 * meanActivity,
+    );
+    GlowSprite.ring(
+      canvas,
+      radiusX: minDim * 0.38 * zoom,
+      radiusY: minDim * 0.38 * zoom * flatten,
+      color: AppTheme.primaryDim,
+      alpha: 0.12 + 0.05 * meanActivity,
+    );
+
+    canvas.restore();
+  }
+
+  double _meanActivity() {
+    if (activity.isEmpty) return 0.0;
+    var sum = 0.0;
+    for (final value in activity.values) {
+      sum += value.clamp(0.0, 1.0);
+    }
+    return sum / activity.length;
   }
 
   // ── Edges ──────────────────────────────────────────────────────────────────
@@ -1166,6 +1254,22 @@ class Network25DPainter extends CustomPainter {
         ]),
     );
 
+    final clusterIndex = nodeClusterIndices?[node.id];
+    if (clusterIndex != null) {
+      final halo =
+          kCoactivationClusterPalette[clusterIndex %
+              kCoactivationClusterPalette.length];
+      canvas.drawCircle(
+        center,
+        radius + 14,
+        Paint()
+          ..shader = ui.Gradient.radial(center, radius + 14, [
+            halo.withValues(alpha: 0.42 * depthAlpha),
+            halo.withValues(alpha: 0.0),
+          ]),
+      );
+    }
+
     if (isSelected) {
       canvas.drawCircle(
         center,
@@ -1293,6 +1397,11 @@ class Network25DPainter extends CustomPainter {
   }
 
   Color _nodeColor(CanvasNode node) {
+    final clusterIndex = nodeClusterIndices?[node.id];
+    if (clusterIndex != null) {
+      return kCoactivationClusterPalette[clusterIndex %
+          kCoactivationClusterPalette.length];
+    }
     final category =
         nirTypes?[node.nirType ?? node.componentId]?.category ??
         node.metadata['category']?.toString() ??
@@ -1316,6 +1425,7 @@ class Network25DPainter extends CustomPainter {
       old.edgeStrengths != edgeStrengths ||
       old.selectedId != selectedId ||
       old.nirTypes != nirTypes ||
+      old.nodeClusterIndices != nodeClusterIndices ||
       old.projection.size != projection.size ||
       old.projection.camera != projection.camera;
 }

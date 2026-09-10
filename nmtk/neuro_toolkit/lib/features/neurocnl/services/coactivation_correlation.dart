@@ -342,6 +342,20 @@ Map<String, double> coactivationEdgeStrengths(
   return result;
 }
 
+/// Stable cluster index per node id (`0`-based). Singletons are omitted.
+Map<String, int> coactivationClusterIndices(CoactivationSnapshot? snapshot) {
+  if (snapshot == null || snapshot.isEmpty) return const <String, int>{};
+  final indices = <String, int>{};
+  var clusterIndex = 0;
+  for (final cluster in snapshot.clusters) {
+    for (final nodeId in cluster) {
+      indices[nodeId] = clusterIndex;
+    }
+    clusterIndex++;
+  }
+  return indices;
+}
+
 /// Pearson correlation coefficient of two equal-length samples. Returns
 /// `null` when either input is constant (undefined correlation) or too short.
 double? pearson(List<double> xs, List<double> ys) {

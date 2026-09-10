@@ -280,4 +280,17 @@ void main() {
       expect(copy.goldenTurn, config.goldenTurn);
     });
   });
+
+  group('GlobeNetworkLayout', () {
+    test('projects globe placements into 2D positions and depths', () {
+      final layout = GlobeNetworkLayout(_singleCategory(4));
+      expect(layout.isSettled, isTrue);
+      expect(layout.positions.length, 4);
+      expect(layout.depths.length, 4);
+      for (final id in layout.positions.keys) {
+        expect(layout.depths[id], inInclusiveRange(0.0, 1.0));
+      }
+      expect(layout.bounds(), isNotNull);
+    });
+  });
 }

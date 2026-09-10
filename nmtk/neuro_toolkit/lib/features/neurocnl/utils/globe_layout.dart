@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+import 'dart:ui' show Offset, Rect;
 
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
+import 'package:neuro_toolkit/features/neurocnl/models/nir_node_type.dart';
 
 /// An immutable point in the globe layout's origin-centred 3D space.
 ///
@@ -310,5 +312,102 @@ class GlobeLayout {
     }
 
     _sectors = sectors;
+  }
+}
+
+/// 2D layout + depth derived from a [GlobeLayout] for [Network25DView].
+///
+/// Positions use the globe's horizontal plane (`x`, `y`); depth comes from `z`
+/// so the orbit camera can rotate the sphere without re-running placement.
+class GlobeNetworkLayout {
+  GlobeNetworkLayout(
+    CanvasGraph graph, {
+    GlobeCategoryResolver? categoryOf,
+    List<String>? sectorOrder,
+  }) : _globe = GlobeLayout(
+         graph,
+         categoryOf: categoryOf,
+         sectorOrder: sectorOrder,
+       ) {
+    _syncFromGlobe();
+  }
+
+  GlobeLayout _globe;
+  final Map<String, Offset> _positions = <String, Offset>{};
+  final Map<String, double> _depths = <String, double>{};
+  final Set<String> _pinned = <String>{};
+
+  /// Globe layout is static — never needs a relax ticker.
+  bool get isSettled => true;
+
+  Map<String, Offset> get positions =>
+      Map<String, Offset>.unmodifiable(_positions);
+
+  Map<String, double> get depths => Map<String, double>.unmodifiable(_depths);
+
+  void updateGraph(
+    CanvasGraph graph, {
+    GlobeCategoryResolver? categoryOf,
+    List<String>? sectorOrder,
+  }) {
+    final previousPositions = Map<String, Offset>.from(_positions);
+    final previousPinned = Set<String>.from(_pinned);
+    _globe = GlobeLayout(
+      graph,
+      categoryOf: categoryOf,
+      sectorOrder: sectorOrder,
+    );
+    _syncFromGlobe();
+    for (final id in previousPinned) {
+      final previous = previousPositions[id];
+      if (previous != null && _positions.containsKey(id)) {
+        pin(id, previous);
+      }
+    }
+  }
+
+  void pin(String nodeId, Offset position) {
+    if (!_positions.containsKey(nodeId)) return;
+    _positions[nodeId] = position;
+    _pinned.add(nodeId);
+  }
+
+  Rect? bounds() {
+    if (_positions.isEmpty) return null;
+    var minX = double.infinity;
+    var minY = double.infinity;
+    var maxX = double.negativeInfinity;
+    var maxY = double.negativeInfinity;
+    for (final position in _positions.values) {
+      minX = math.min(minX, position.dx);
+      minY = math.min(minY, position.dy);
+      maxX = math.max(maxX, position.dx);
+      maxY = math.max(maxY, position.dy);
+    }
+    return Rect.fromLTRB(minX, minY, maxX, maxY);
+  }
+
+  void _syncFromGlobe() {
+    _positions.clear();
+    _depths.clear();
+    final outer = _globe.boundingRadius;
+    for (final placement in _globe.placements.values) {
+      final point = placement.position;
+      _positions[placement.id] = Offset(point.x, point.y);
+      _depths[placement.id] = outer <= 0 ? 0.5 : ((point.z / outer) + 1) / 2;
+    }
+    _pinned.removeWhere((id) => !_positions.containsKey(id));
+  }
+
+  /// Category resolver that prefers the NIR type registry, then metadata.
+  static GlobeCategoryResolver categoryResolver(
+    Map<String, NirNodeType>? nirTypes,
+  ) {
+    if (nirTypes == null) return GlobeLayout.defaultCategoryOf;
+    return (CanvasNode node) {
+      final type = nirTypes[node.nirType ?? node.componentId];
+      if (type != null && type.category.isNotEmpty) return type.category;
+      return GlobeLayout.defaultCategoryOf(node);
+    };
   }
 }

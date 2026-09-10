@@ -161,6 +161,23 @@ void main() {
     });
   });
 
+  group('coactivationClusterIndices', () {
+    test('assigns stable indices and omits singletons', () {
+      const snapshot = CoactivationSnapshot(
+        correlations: <String, Map<String, double>>{
+          'a': <String, double>{'b': 0.9, 'c': 0.1},
+          'b': <String, double>{'a': 0.9},
+          'c': <String, double>{'a': 0.1},
+        },
+      );
+      expect(coactivationClusterIndices(snapshot), <String, int>{
+        'a': 0,
+        'b': 0,
+      });
+      expect(coactivationClusterIndices(null), isEmpty);
+    });
+  });
+
   group('coactivationEdgeStrengths', () {
     test('maps each edge to its endpoint correlation', () {
       final graph = _graph(<CanvasEdge>[

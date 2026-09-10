@@ -1,7 +1,7 @@
 // Widget tests for the 2.5D network renderer: it lays out a CanvasGraph with
-// the force engine, paints it, reacts to taps (selection), and renders the
-// stat/depth/disclosure chrome. animate:false keeps the relax/pulse ticker out
-// of the picture so tests are deterministic.
+// the globe engine, paints it, reacts to taps (selection), and renders the
+// stat/depth/disclosure chrome. animate:false keeps the activity pulse ticker
+// out of the picture so tests are deterministic.
 
 import 'dart:math' as math;
 
@@ -10,7 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
-import 'package:neuro_toolkit/features/neurocnl/utils/force_directed_layout.dart';
+import 'package:neuro_toolkit/features/neurocnl/utils/globe_layout.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/network_2_5d_view.dart';
 
 CanvasNode _node(
@@ -73,7 +73,7 @@ Offset _projectedPosition(
   required String nodeId,
 }) {
   final size = tester.getSize(find.byType(CustomPaint).first);
-  final layout = ForceDirectedLayout(graph, useStoredPositions: true)..relax();
+  final layout = GlobeNetworkLayout(graph);
   final box = layout.bounds()!;
   final scale =
       (size.width - 128) / box.width < (size.height - 128) / box.height
@@ -108,13 +108,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      _wrap(
-        Network25DView(
-          graph: _threeLayerGraph(),
-          useStoredPositions: true,
-          animate: false,
-        ),
-      ),
+      _wrap(Network25DView(graph: _threeLayerGraph(), animate: false)),
     );
 
     expect(find.text('3 layers'), findsOneWidget);
@@ -128,9 +122,7 @@ void main() {
   ) async {
     final graph = _threeLayerGraph();
     await tester.pumpWidget(
-      _wrap(
-        Network25DView(graph: graph, useStoredPositions: true, animate: false),
-      ),
+      _wrap(Network25DView(graph: graph, animate: false)),
     );
 
     final position = _projectedPosition(tester, graph, nodeId: 'hidden');
@@ -155,7 +147,6 @@ void main() {
       _wrap(
         Network25DView(
           graph: graph,
-          useStoredPositions: true,
           animate: false,
           onNodeSelected: (node) => selected.add(node?.id),
         ),
@@ -174,7 +165,6 @@ void main() {
       _wrap(
         Network25DView(
           graph: _threeLayerGraph(),
-          useStoredPositions: true,
           animate: false,
           edgeStrengths: const {'e1': 0.8},
         ),
@@ -191,7 +181,6 @@ void main() {
       _wrap(
         Network25DView(
           graph: _threeLayerGraph(),
-          useStoredPositions: true,
           animate: true,
           activity: const {'hidden': 0.85},
         ),
@@ -300,13 +289,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      _wrap(
-        Network25DView(
-          graph: _threeLayerGraph(),
-          useStoredPositions: true,
-          animate: false,
-        ),
-      ),
+      _wrap(Network25DView(graph: _threeLayerGraph(), animate: false)),
     );
     expect(painterOf(tester).projection.camera.isIdentity, isTrue);
 
@@ -332,13 +315,7 @@ void main() {
 
   testWidgets('scroll wheel zooms the camera', (WidgetTester tester) async {
     await tester.pumpWidget(
-      _wrap(
-        Network25DView(
-          graph: _threeLayerGraph(),
-          useStoredPositions: true,
-          animate: false,
-        ),
-      ),
+      _wrap(Network25DView(graph: _threeLayerGraph(), animate: false)),
     );
 
     final center = tester.getCenter(find.byType(Network25DView));
@@ -354,13 +331,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      _wrap(
-        Network25DView(
-          graph: _threeLayerGraph(),
-          useStoredPositions: true,
-          animate: false,
-        ),
-      ),
+      _wrap(Network25DView(graph: _threeLayerGraph(), animate: false)),
     );
 
     final center = tester.getCenter(find.byType(Network25DView));
@@ -380,5 +351,39 @@ void main() {
     await tester.pump();
 
     expect(painterOf(tester).projection.camera.zoom, greaterThan(1.0));
+  });
+
+  testWidgets('paints orbital glow chrome for a populated graph', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        Network25DView(
+          graph: _threeLayerGraph(),
+          activity: const {'input': 0.8, 'hidden': 0.4, 'output': 0.1},
+          animate: false,
+        ),
+      ),
+    );
+
+    expect(painterOf(tester).graph.nodes.length, 3);
+  });
+
+  testWidgets('cluster indices tint clustered nodes', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        Network25DView(
+          graph: _threeLayerGraph(),
+          animate: false,
+          nodeClusterIndices: const {'input': 0, 'hidden': 0},
+        ),
+      ),
+    );
+
+    final painter = painterOf(tester);
+    expect(painter.nodeClusterIndices?['input'], 0);
+    expect(painter.nodeClusterIndices?['output'], isNull);
   });
 }
